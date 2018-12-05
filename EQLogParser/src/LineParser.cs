@@ -131,10 +131,19 @@ namespace EQLogParser
         record = func(line);
         if (record != null)
         {
-          // replace player pets or You with the player name
-          if (AttackerReplacement.ContainsKey(record.Attacker))
+          if (record.Attacker.Contains("you") || record.Attacker.Contains("You"))
           {
-            record.Attacker = AttackerReplacement[record.Attacker];
+            if (true)
+            {
+
+            }
+          }
+
+          // replace player pets or You with the player name
+          string replaced;
+          if (AttackerReplacement.TryGetValue(record.Attacker, out replaced))
+          {
+            record.Attacker = replaced;
           }
 
           if (VerifiedPlayers.ContainsKey(record.Defender) || CheckEye.IsMatch(record.Defender))
