@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -131,14 +130,6 @@ namespace EQLogParser
         record = func(line);
         if (record != null)
         {
-          if (record.Attacker.Contains("you") || record.Attacker.Contains("You"))
-          {
-            if (true)
-            {
-
-            }
-          }
-
           // replace player pets or You with the player name
           string replaced;
           if (AttackerReplacement.TryGetValue(record.Attacker, out replaced))
