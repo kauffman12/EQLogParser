@@ -187,6 +187,7 @@ namespace EQLogParser
         {
           PlayerName = parts[1];
           LineParser.AttackerReplacement.TryAdd("you", PlayerName);
+          LineParser.AttackerReplacement.TryAdd("You", PlayerName);
 
           if (LineParser.VerifiedPlayers.TryAdd(PlayerName, true))
           {
@@ -383,6 +384,7 @@ namespace EQLogParser
       if (result == true)
       {
         LogFile = dialog.FileName;
+        UpdatePlayerName();
         reset();
 
         progressWindow.IsOpen = true;
