@@ -1,0 +1,139 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:docking="http://schemas.actiprosoftware.com/winfx/xaml/docking"
+        xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+        x:Class="EQLogParser.MainWindow"
+        Style="{StaticResource StandardStyle}"
+        Title="" Height="700" Width="1300" Closed="Window_Closed">
+  <Window.Resources>
+  </Window.Resources>
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="20" />
+      <RowDefinition Height="500*" />
+    </Grid.RowDefinitions>
+    <Menu Margin="0" Height="20" VerticalAlignment="Top" Grid.Row="0">
+      <MenuItem Header="_File" Height="20" Width="35">
+        <MenuItem Header="Select EQ _Log File" Height="20" Click="MenuItemSelectLogFile_Click"/>
+        <Separator Height="0"/>
+        <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
+      </MenuItem>
+      <MenuItem Header="_View" Height="20" Width="40">
+        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="File _Progress" Height="20" />
+        <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
+        <Separator />
+        <MenuItem x:Name="petMappingWindowMenuItem" Header="_Pet Owners" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="playerDPSTextWindowMenuItem" Header="Player DPS _Text" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="verfifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Verified Non-NPC" Height="20" />
+        <Separator />
+        <MenuItem x:Name="debugWindowMenuItem" IsEnabled="False" Header="_Debug" Click="MenuItemWindow_Click" Height="20" />
+      </MenuItem>
+    </Menu>
+    <docking:DockSite Grid.Row="1" x:Name="docSite">
+      <docking:SplitContainer Orientation="Horizontal">
+        <docking:SplitContainer Orientation="Vertical">
+          <docking:ToolWindowContainer>
+            <docking:ToolWindow x:Name="npcWindow" Title="NPCs" ContainerAutoHideSize="310, 400" ContainerDockedSize="310,400">
+              <datagrid:ThemedDataGrid x:Name="npcDataGrid" AlternatingRowBackground="{x:Null}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="NonPlayerDataGrid_LoadingRow" SelectionChanged="NpcDataGrid_SelectionChanged" CanUserSortColumns="False">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="96" Width="96" MaxWidth="96"/>
+                  <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90*" />
+                </DataGrid.Columns>
+              </datagrid:ThemedDataGrid>
+            </docking:ToolWindow>
+          </docking:ToolWindowContainer>
+          <docking:ToolWindowContainer>
+            <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="File Progress" ContainerDockedSize="310,65">
+              <WrapPanel Orientation="Vertical">
+                <StackPanel Orientation="Horizontal">
+                  <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Total Bytes:</Label>
+                  <Label x:Name="fileSizeLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0</Label>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                  <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Processed:</Label>
+                  <Label x:Name="bytesProcessedLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0</Label>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                  <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Complete:</Label>
+                  <Label x:Name="completeLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                  <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Load Time:</Label>
+                  <Label x:Name="processedTimeLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0 sec</Label>
+                </StackPanel>
+              </WrapPanel>
+            </docking:ToolWindow>
+          </docking:ToolWindowContainer>
+        </docking:SplitContainer>
+        <docking:SplitContainer Orientation="Vertical">
+          <docking:Workspace>
+            <docking:TabbedMdiHost>
+              <docking:TabbedMdiContainer>
+                <docking:DocumentWindow x:Name="dpsWindow" Title="Player DPS Breakdown" Description="" ContainerDockedSize="400,800" CanClose="False">
+                  <Grid>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="30" />
+                      <RowDefinition Height="300*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel x:Name="dpsTitleContainer" Orientation="Vertical" Grid.Row="0" Margin="0" >
+                      <Border BorderBrush="#FF3F3F46" BorderThickness="1,1,2,1" Height="30" Padding="0" Margin="0">
+                        <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+                      </Border>
+                    </StackPanel>
+                    <datagrid:ThemedDataGrid x:Name="playerDataGrid" Grid.Row="1" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" >
+                      <DataGrid.Columns>
+                        <DataGridTextColumn Binding="{Binding Rank}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False" MinWidth="30" Width="30" />
+                        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90" />
+                        <DataGridTextColumn Binding="{Binding Damage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90"/>
+                        <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="20" Width="70" CanUserReorder="False"/>
+                        <DataGridTextColumn Binding="{Binding TimeDiff}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="55"/>
+                        <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="60"/>
+                        <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="70"/>
+                        <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Avg Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="70"/>
+                        <DataGridTextColumn Binding="{Binding Details}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Additional Details" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="120*" />
+                      </DataGrid.Columns>
+                    </datagrid:ThemedDataGrid>
+                  </Grid>
+                </docking:DocumentWindow>
+                <docking:DocumentWindow x:Name="debugWindow" Title="Debug" IsOpen="False" IsEnabled="True" Description="" ContainerDockedSize="400,800">
+                  <datagrid:ThemedDataGrid x:Name="debugDataGrid">
+                    <DataGrid.Columns>
+                      <DataGridTextColumn Binding="{Binding}" Header="Damage Lines Not Counted"/>
+                    </DataGrid.Columns>
+                  </datagrid:ThemedDataGrid>
+                </docking:DocumentWindow>
+              </docking:TabbedMdiContainer>
+            </docking:TabbedMdiHost>
+          </docking:Workspace>
+          <docking:ToolWindowContainer>
+            <docking:ToolWindow x:Name="playerDPSTextWindow" IsOpen="True" Title="Player DPS Text" ContainerDockedSize="400,140">
+              <TextBox x:Name="playerDPSTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="White" BorderThickness="0" FontSize="14" MouseEnter="PlayerDPSText_MouseEnter" SelectionBrush="#FF206CF1"/>
+            </docking:ToolWindow>
+          </docking:ToolWindowContainer>
+        </docking:SplitContainer>
+        <docking:SplitContainer Orientation="Vertical">
+          <docking:ToolWindowContainer>
+            <docking:ToolWindow x:Name="petMappingWindow" IsOpen="False" Title="Pet Owners" ContainerDockedSize="240,150">
+              <datagrid:ThemedDataGrid x:Name="petMappingGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Binding="{Binding Owner}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Owner" IsReadOnly="True" CanUserReorder="False" MinWidth="30" Width="30*"/>
+                  <DataGridTextColumn Binding="{Binding Pet}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Pet" IsReadOnly="True" CanUserReorder="False" MinWidth="30" Width="30*" />
+                </DataGrid.Columns>
+              </datagrid:ThemedDataGrid>
+            </docking:ToolWindow>
+          </docking:ToolWindowContainer>
+          <docking:ToolWindowContainer>
+            <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Non-NPC" ContainerDockedSize="240,150">
+              <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="30" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" CanUserReorder="False" MinWidth="30" Width="30*" />
+                </DataGrid.Columns>
+              </datagrid:ThemedDataGrid>
+            </docking:ToolWindow>
+          </docking:ToolWindowContainer>
+        </docking:SplitContainer>
+      </docking:SplitContainer>
+    </docking:DockSite>
+  </Grid>
+</Window>
