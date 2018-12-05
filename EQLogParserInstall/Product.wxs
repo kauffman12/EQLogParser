@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.2" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+		<Feature Id="ProductFeature" Title="EQLogParser" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+      <ComponentRef Id="ApplicationShortcut" />
+		</Feature>
+
+    <UI Id="WixUI_Advanced">
+      <UIRef Id="WixUI_InstallDir" />
+      <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+      <!-- Skip license dialog -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
+    </UI>    
+	</Product>
+
+	<Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="EQLogParser" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="EQLogParser" />
+      </Directory>
+    </Directory>
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="7D5D3FA6-1F71-411B-A1F0-EF477E38B3ED">
+        <Shortcut Id="ApplicationStartMenuShortcut" Name="EQLogParser" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+	</Fragment>
+
+	<Fragment>
+	  <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+	    <Component Win64="yes" Id="EQLogParser.exe" Guid="77922c99-ebcd-4ef7-ae22-f2c31a9bb63f">
+	      <File Id="EQLogParser.exe" Name="EQLogParser.exe" Source="$(var.EQLogParser_TargetDir)EQLogParser.exe" />
+	    </Component>
+	    <Component Win64="yes" Id="EQLogParser.exe.config" Guid="40f27a01-f148-4628-89a9-9c4745ef9672">
+	      <File Id="EQLogParser.exe.config" Name="EQLogParser.exe.config" Source="$(var.EQLogParser_TargetDir)EQLogParser.exe.config" />
+	    </Component>
+	    <Component Win64="yes" Id="ActiproSoftware.Docking.Wpf.dll" Guid="64f563f3-5c7e-45c8-a245-d04dd0ee8d0b">
+	      <File Id="ActiproSoftware.Docking.Wpf.dll" Name="ActiproSoftware.Docking.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.Docking.Wpf.dll" />
+	    </Component>
+	    <Component Win64="yes" Id="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Guid="c5f0c023-dcaf-43bb-9794-aab9856437cb">
+	      <File Id="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Name="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.DataGrid.Contrib.Wpf.dll" />
+	    </Component>
+	    <Component Win64="yes" Id="ActiproSoftware.Shared.Wpf.dll" Guid="3c8d2f9f-a96b-4dd8-b709-68e47832b14e">
+	      <File Id="ActiproSoftware.Shared.Wpf.dll" Name="ActiproSoftware.Shared.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.Shared.Wpf.dll" />
+	    </Component>
+	  </ComponentGroup>
+	</Fragment>
+</Wix>
