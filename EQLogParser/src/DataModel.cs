@@ -13,11 +13,15 @@ namespace EQLogParser
 
   public class DamageRecord
   {
-    public string Attacker { get; set; }
     public long Damage { get; set; }
+    public string Attacker { get; set; }
+    public string AttackerPet { get; set; }
+    public string AttackerOwner { get; set; }
     public string Defender { get; set; }
-    public bool IsPet { get; set; }
+    public string DefenderPet { get; set; }
+    public string DefenderOwner { get; set; }
     public string Type { get; set; }
+    public string Action { get; set; }
   }
 
   public class DamageStats
@@ -27,13 +31,16 @@ namespace EQLogParser
     public long Max { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
-    public bool PetIncluded { get; set; }
+    public string Pet { get; set; }
   }
 
   public class ProcessLine
   {
     public string Line { get; set; }
     public int State { get; set; }
+    public DateTime CurrentTime { get; set; }
+    public string TimeString { get; set; }
+    public string ActionPart { get; set; }
   }
 
   public class Player
@@ -49,6 +56,7 @@ namespace EQLogParser
     public Dictionary<string, DamageStats> DamageMap { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
+    public long ID { get; set; }
   }
 
   public class PetMapping
@@ -63,6 +71,7 @@ namespace EQLogParser
     public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
     public PlayerStats RaidStats { get; set; }
+    public SortedSet<long> NpcIDs { get; set; }
   }
 
   public class PlayerStats

@@ -9,14 +9,16 @@ namespace EQLogParser
     private Dictionary<string, NonPlayer> ActiveNonPlayerMap = new Dictionary<string, NonPlayer>();
     private Dictionary<string, bool> LifetimeNonPlayerMap = new Dictionary<string, bool>();
     private DateTime LastUpdateTime;
+    private long CurrentNpcID = 0;
 
     public DateTime GetLastUpdateTime()
     {
       return LastUpdateTime;
     }
 
-    public NonPlayer AddOrUpdateNpc(DamageRecord record, DateTime currentTime, String origTimeString)
+    public NonPlayer AddOrUpdateNpc(DamageRecord record, DateTime currentTime, String origTimeString, out bool newEntry)
     {
+      newEntry = false;
       NonPlayerEntry entry = Get(record, currentTime, origTimeString);
 
       // assume npc has been killed and create new entry
@@ -28,7 +30,7 @@ namespace EQLogParser
 
       if (!entry.Npc.DamageMap.ContainsKey(record.Attacker))
       {
-        entry.Npc.DamageMap.Add(record.Attacker, new DamageStats() { BeginTime = currentTime, PetIncluded = false });
+        entry.Npc.DamageMap.Add(record.Attacker, new DamageStats() { BeginTime = currentTime });
       }
 
       // update basic stats
@@ -39,15 +41,11 @@ namespace EQLogParser
       stats.LastTime = currentTime;
       LastUpdateTime = currentTime;
 
-      if (record.IsPet)
-      {
-        stats.PetIncluded = true;
-      }
-
+      stats.Pet = record.AttackerPet;
       entry.Npc.LastTime = currentTime;
-      NonPlayer result = entry.IsNew ? entry.Npc : null;
+      newEntry = entry.IsNew;
       entry.IsNew = false;
-      return result;
+      return entry.Npc;
     }
 
     public bool CheckForPlayer(string name)
@@ -103,7 +101,8 @@ namespace EQLogParser
           BeginTimeString = origTimeString,
           BeginTime = currentTime,
           LastTime = currentTime,
-          DamageMap = new Dictionary<string, DamageStats>()
+          DamageMap = new Dictionary<string, DamageStats>(),
+          ID = CurrentNpcID++
         };
 
         ActiveNonPlayerMap.Add(record.Defender, npc);
