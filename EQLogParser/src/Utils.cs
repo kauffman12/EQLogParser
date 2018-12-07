@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -7,6 +8,33 @@ namespace EQLogParser
 {
   class Utils
   {
+    static bool _connected;
+    internal static void WriteToConsole(string message)
+    {
+      _connected = _connected || AttachConsole(-1);
+      if (_connected)
+      {
+        Console.WriteLine(message);
+      }
+    }
+    [DllImport("Kernel32.dll")]
+    public static extern bool AttachConsole(int processId);
+
+    internal static long ParseLong(string str)
+    {
+      long y = 0;
+      for (int i = 0; i < str.Length; i++)
+      {
+        if (!Char.IsDigit(str[i]))
+        {
+          return long.MaxValue;
+        }
+
+        y = y * 10 + (str[i] - '0');
+      }
+      return y;
+    }
+
     internal static void OpenWindow(ActiproSoftware.Windows.Controls.Docking.DockingWindow window)
     {
       if (!window.IsOpen)
