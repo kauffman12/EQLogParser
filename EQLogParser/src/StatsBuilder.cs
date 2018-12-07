@@ -35,14 +35,19 @@ namespace EQLogParser
           // update player based on their pet if needed
           string player;
           string details = key;
+
           if (!LineParser.PetToPlayers.TryGetValue(key, out player))
           {
-            player = key;
-            details = "";
-          }
-          else if(npcStats.Pet != null && npcStats.Pet != "")
-          {
-            details = npcStats.Pet;
+            if (npcStats.Owner != "")
+            {
+              details = key;
+              player = npcStats.Owner;
+            }
+            else
+            {
+              player = key;
+              details = "";
+            }
           }
 
           if (!totalDamage.ContainsKey(player))
