@@ -227,10 +227,10 @@ namespace EQLogParser
         var selected = npcDataGrid.SelectedItems;
         if (selected.Count > 0)
         {
-          new Task((Action)(() =>
+          new Task(() =>
           {
             CurrentStats = StatsBuilder.BuildTotalStats(selected.Cast<NonPlayer>().ToList());
-            Dispatcher.BeginInvoke((Action)(() =>
+            Dispatcher.InvokeAsync((Action)(() =>
             {
               if (NeedStatsUpdate)
               {
@@ -240,7 +240,7 @@ namespace EQLogParser
                 playerDPSTextBox.Text = playerDPSTextBox.Text = DPS_SUMMARY_LABEL;
               }
             }));
-          })).Start();
+          }).Start();
         }
         else
         {
@@ -400,34 +400,31 @@ namespace EQLogParser
     private void FileLoadingCallback(string line)
     {
       ProcessLine pline = LineParser.KeepForProcessingState(line);
-      FileLoadingContinue(new ProcessLine[] { pline });
+      FileLoadingContinue(pline);
 
-      if (NpcDamageProcessor.QueueSize() > 20000)
+      if (NpcDamageProcessor.QueueSize() > 100000)
       {
         Thread.Sleep(50);
       }
     }
 
-    private void FileLoadingContinue(ProcessLine[] plines)
+    private void FileLoadingContinue(ProcessLine pline)
     {
-      foreach (var pline in plines)
+      if (pline != null && pline.State >= 0)
       {
-        if (pline.State >= 0)
+        // prioritize checking for players
+        if (pline.State >= 2)
         {
-          // prioritize checking for players
-          if (pline.State >= 2)
-          {
-            NpcDamageProcessor.PrependToQueue(pline);
-          }
-          else
-          {
-            NpcDamageProcessor.AppendToQueue(pline);
-          }
+          NpcDamageProcessor.PrependToQueue(pline);
         }
         else
         {
-          Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
+          NpcDamageProcessor.AppendToQueue(pline);
         }
+      }
+      else
+      {
+        Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
       }
     }
 
@@ -443,8 +440,6 @@ namespace EQLogParser
 
       try
       {
-
-
         // check for lines to verify player names
         string name;
         bool needRemove;
@@ -458,8 +453,8 @@ namespace EQLogParser
 
             if (name.Length > 0)
             {
-              Dispatcher.BeginInvoke((Action)(() => RemovePlayer(name)));
-              Dispatcher.BeginInvoke((Action)(() => VerifiedPlayersList.Add(new Player() { Name = name })));
+              Dispatcher.InvokeAsync(() => RemovePlayer(name));
+              Dispatcher.InvokeAsync(() => VerifiedPlayersList.Add(new Player() { Name = name }));
             }
 
             if (record != null)
@@ -472,10 +467,10 @@ namespace EQLogParser
                 if (lastUpdateTime != DateTime.MinValue && diff.TotalSeconds >= 60)
                 {
                   NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
-                  Dispatcher.BeginInvoke((Action)(() => NpcList.Add(divider)));
+                  Dispatcher.InvokeAsync(() => NpcList.Add(divider));
                 }
 
-                Dispatcher.BeginInvoke((Action)(() =>
+                Dispatcher.InvokeAsync(() =>
                 {
                   NpcList.Add(npc);
                   if (npcDataGrid.Items.Count > 0)
@@ -486,7 +481,7 @@ namespace EQLogParser
                       NeedScrollIntoView = true;
                     }
                   }
-                }));
+                });
               }
               else
               {
@@ -498,7 +493,7 @@ namespace EQLogParser
             }
             else
             {
-              Dispatcher.BeginInvoke((Action)(() =>
+              Dispatcher.InvokeAsync(() =>
               {
                 if (debugWindow.IsOpen && debugWindow.IsActive)
                 {
@@ -508,7 +503,7 @@ namespace EQLogParser
                     collection.Add(pline.ActionPart);
                   }
                 }
-              }));
+              });
             }
             break;
           case 1:
@@ -522,10 +517,10 @@ namespace EQLogParser
             {
               if (needRemove)
               {
-                Dispatcher.BeginInvoke((Action)(() => RemovePlayer(name)));
+                Dispatcher.InvokeAsync(() => RemovePlayer(name));
               }
 
-              Dispatcher.BeginInvoke((Action)(() => VerifiedPlayersList.Add(new Player() { Name = name })));
+              Dispatcher.InvokeAsync(() => VerifiedPlayersList.Add(new Player() { Name = name }));
             }
             break;
           case 5:
@@ -537,16 +532,16 @@ namespace EQLogParser
                 PetMapping mapping = new PetMapping() { Pet = name, Owner = LineParser.PetToPlayers[name] };
 
                 NeedStatsUpdate = true;
-                Dispatcher.BeginInvoke((Action)(() =>
+                Dispatcher.InvokeAsync(() =>
                 {
                   PetMappingList.Add(mapping);
-                }));
+                });
               }
             }
             break;
         }
       }
-      catch(Exception e)
+      catch (Exception e)
       {
         if (true)
         {

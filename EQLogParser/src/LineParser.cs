@@ -198,14 +198,15 @@ namespace EQLogParser
         {
           // replaces You and you and maybe more in the future
           string replaced;
+          bool failure = false;
           if (AttackerReplacement.TryGetValue(record.Attacker, out replaced))
           {
             record.Attacker = replaced;
           }
 
-          if (record.AttackerPet != "")
+          if (record.AttackerPetType != "")
           {
-            VerifiedPets.TryAdd(record.AttackerPet, true);
+            VerifiedPets.TryAdd(record.Attacker, true);
           }
 
           if (record.AttackerOwner != "")
@@ -213,22 +214,23 @@ namespace EQLogParser
             VerifiedPlayers.TryAdd(record.AttackerOwner, true);
           }
 
-          if (record.DefenderPet != "" && VerifiedPets.TryAdd(record.DefenderPet, true) && NpcDamageManagerInstance.CheckForPlayer(record.DefenderPet))
+          if (record.DefenderPetType != "" && VerifiedPets.TryAdd(record.Defender, true) && NpcDamageManagerInstance.CheckForPlayer(record.Defender))
           {
-            name = record.DefenderPet;
-            record = null;
+            name = record.Defender;
+            failure = true;
           }
           else if (record.DefenderOwner != "" && VerifiedPlayers.TryAdd(record.DefenderOwner, true) && NpcDamageManagerInstance.CheckForPlayer(record.DefenderOwner))
           {
             name = record.DefenderOwner;
-            record = null;
+            failure = true;
           }
 
           if (VerifiedPlayers.ContainsKey(record.Defender) || VerifiedPets.ContainsKey(record.Defender) || CheckEye.IsMatch(record.Defender))
           {
-            record = null;
+            failure = true;
           }
 
+          record = failure ? null : record;
           break;
         }
       }
@@ -251,9 +253,9 @@ namespace EQLogParser
           Attacker = matches[0].Groups[4].Value,
           Defender = matches[0].Groups[1].Value,
           Damage = damage,
-          AttackerPet = "",
+          AttackerPetType = "",
           AttackerOwner = "",
-          DefenderPet = "",
+          DefenderPetType = "",
           DefenderOwner = "",
           Action = "hit"
         };
@@ -271,9 +273,9 @@ namespace EQLogParser
         string action = null;
         string attacker = "";
         string attackerOwner = "";
-        string attackerPet = "";
+        string attackerPetType = "";
         string defender = "";
-        string defenderPet = "";
+        string defenderPetType = "";
         string defenderOwner = "";
         int afterAction = -1;
         long damage = 0;
@@ -290,7 +292,7 @@ namespace EQLogParser
               int len;
               if (IsPetOrMount(part, firstSpace + 1, out len))
               {
-                attackerPet = part.Substring(firstSpace + 1, len);
+                attackerPetType = part.Substring(firstSpace + 1, len);
                 attackerOwner = part.Substring(0, firstSpace - 2);
 
                 int sizeSoFar = firstSpace + 1 + len + 1;
@@ -344,7 +346,7 @@ namespace EQLogParser
                   if (IsPossiblePlayerName(defender, posessiveIndex))
                   {
                     defenderOwner = defender.Substring(0, posessiveIndex);
-                    defenderPet = defender;
+                    defenderPetType = defender.Substring(posessiveIndex +3, len);
                   }
                 }
               }
@@ -365,9 +367,9 @@ namespace EQLogParser
                         Type = "DD",
                         Action = action,
                         Damage = damage,
-                        AttackerPet = attackerPet,
+                        AttackerPetType = attackerPetType,
                         AttackerOwner = attackerOwner,
-                        DefenderPet = defenderPet,
+                        DefenderPetType = defenderPetType,
                         DefenderOwner = defenderOwner
                       };
                     }
