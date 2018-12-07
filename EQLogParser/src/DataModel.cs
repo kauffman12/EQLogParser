@@ -15,10 +15,10 @@ namespace EQLogParser
   {
     public long Damage { get; set; }
     public string Attacker { get; set; }
-    public string AttackerPet { get; set; }
+    public string AttackerPetType { get; set; }
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
-    public string DefenderPet { get; set; }
+    public string DefenderPetType { get; set; }
     public string DefenderOwner { get; set; }
     public string Type { get; set; }
     public string Action { get; set; }
@@ -31,7 +31,7 @@ namespace EQLogParser
     public long Max { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
-    public string Pet { get; set; }
+    public string Owner { get; set; }
   }
 
   public class ProcessLine
