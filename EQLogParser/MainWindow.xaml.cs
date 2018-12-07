@@ -23,7 +23,7 @@ namespace EQLogParser
     public static string PlayerName = "Unknown";
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.2";
+    private const string VERSION = "v1.0.3";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string DPS_SUMMARY_LABEL = "No Players Selected";
     private const int DISPATCHER_DELAY = 200; // millis
@@ -52,6 +52,7 @@ namespace EQLogParser
     private string LogFile = null;
     private ObservableCollection<NonPlayer> NpcList = new ObservableCollection<NonPlayer>();
     private ObservableCollection<PetMapping> PetMappingList = new ObservableCollection<PetMapping>();
+    private ObservableCollection<Player> VerifiedPetsList = new ObservableCollection<Player>();
     private ObservableCollection<Player> VerifiedPlayersList = new ObservableCollection<Player>();
 
     public MainWindow()
@@ -59,6 +60,7 @@ namespace EQLogParser
       InitializeComponent();
       npcDataGrid.ItemsSource = NpcList;
       petMappingGrid.ItemsSource = PetMappingList;
+      verifiedPetsGrid.ItemsSource = VerifiedPetsList;
       verifiedPlayersGrid.ItemsSource = VerifiedPlayersList;
       debugDataGrid.ItemsSource = new ObservableCollection<string>();
       UpdateWindowTitle();
@@ -265,13 +267,13 @@ namespace EQLogParser
       }
     }
 
-    private void RemovePlayer(string name)
+    private void RemovePlayers(List<string> players)
     {
       int i = 0;
       foreach (NonPlayer npc in NpcList.Reverse())
       {
         i++;
-        if (npc.Name == name)
+        if (players.Contains(npc.Name))
         {
           NpcList.Remove(npc);
           npcDataGrid.Items.Refresh(); // re-numbers
@@ -354,9 +356,13 @@ namespace EQLogParser
       {
         Utils.OpenWindow(petMappingWindow);
       }
-      else if (e.Source == verfifiedPlayersWindowMenuItem)
+      else if (e.Source == verifiedPlayersWindowMenuItem)
       {
         Utils.OpenWindow(verifiedPlayersWindow);
+      }
+      else if (e.Source == verifiedPetsWindowMenuItem)
+      {
+        Utils.OpenWindow(verifiedPetsWindow);
       }
       else if (e.Source == playerDPSTextWindowMenuItem)
       {
@@ -449,12 +455,26 @@ namespace EQLogParser
           case 0:
             // check for damage
             DateTime lastUpdateTime = NpcDamageManager.GetLastUpdateTime();
-            DamageRecord record = LineParser.ParseDamage(pline.ActionPart, out name);
+            List<string> newPlayers;
+            List<string> newPets;
+            bool needRemoved;
+            DamageRecord record = LineParser.ParseDamage(pline.ActionPart, out newPlayers, out newPets, out needRemoved);
 
-            if (name.Length > 0)
+            if (newPlayers.Count > 0 || newPets.Count > 0)
             {
-              Dispatcher.InvokeAsync(() => RemovePlayer(name));
-              Dispatcher.InvokeAsync(() => VerifiedPlayersList.Add(new Player() { Name = name }));
+              if (needRemoved)
+              {
+                Dispatcher.InvokeAsync(() => RemovePlayers(newPlayers.Concat(newPets).ToList()));
+              }
+
+              newPlayers.ForEach(player =>
+              {
+                Dispatcher.InvokeAsync(() => VerifiedPlayersList.Add(new Player() { Name = player }));
+              });
+              newPets.ForEach(pet =>
+              {
+                Dispatcher.InvokeAsync(() => VerifiedPetsList.Add(new Player() { Name = pet }));
+              });
             }
 
             if (record != null)
@@ -517,7 +537,7 @@ namespace EQLogParser
             {
               if (needRemove)
               {
-                Dispatcher.InvokeAsync(() => RemovePlayer(name));
+                Dispatcher.InvokeAsync(() => RemovePlayers(new List<string>() { name }));
               }
 
               Dispatcher.InvokeAsync(() => VerifiedPlayersList.Add(new Player() { Name = name }));
@@ -535,6 +555,7 @@ namespace EQLogParser
                 Dispatcher.InvokeAsync(() =>
                 {
                   PetMappingList.Add(mapping);
+                  VerifiedPetsList.Add(new Player() { Name = name });
                 });
               }
             }
@@ -543,10 +564,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        if (true)
-        {
-
-        }
+        Console.WriteLine(e.StackTrace);
       }
 
       Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
