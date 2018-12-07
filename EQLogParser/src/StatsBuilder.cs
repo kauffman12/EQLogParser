@@ -11,7 +11,7 @@ namespace EQLogParser
 
     internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)
     {
-      CombinedStats combined = new CombinedStats();
+      CombinedStats combined = new CombinedStats() { NpcIDs = new SortedSet<long>() };
       List<PlayerStats> dpsList = new List<PlayerStats>();
       Dictionary<string, PlayerStats> totalDamage = new Dictionary<string, PlayerStats>();
       PlayerStats raidTotals = new PlayerStats() { Name = RAID_PLAYER, Damage = 0, DPS = 0 };
@@ -24,10 +24,8 @@ namespace EQLogParser
           continue;
         }
 
-        if (title == null)
-        {
-          title = npc.Name;
-        }
+        combined.NpcIDs.Add(npc.ID);
+        title = (title == null) ? npc.Name : title;
 
         foreach (string key in npc.DamageMap.Keys)
         {
@@ -42,9 +40,9 @@ namespace EQLogParser
             player = key;
             details = "";
           }
-          else if(npcStats.PetIncluded)
+          else if(npcStats.Pet != null && npcStats.Pet != "")
           {
-            details = player + "`s pet/warder";
+            details = npcStats.Pet;
           }
 
           if (!totalDamage.ContainsKey(player))
