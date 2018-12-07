@@ -20,12 +20,14 @@
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
       </MenuItem>
       <MenuItem Header="_View" Height="20" Width="40">
-        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="File _Progress" Height="20" />
-        <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_Log File Progress" Height="20" />
         <Separator />
-        <MenuItem x:Name="petMappingWindowMenuItem" Header="_Pet Owners" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
         <MenuItem x:Name="playerDPSTextWindowMenuItem" Header="Player DPS _Text" Click="MenuItemWindow_Click" Height="20" />
-        <MenuItem x:Name="verfifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Verified Non-NPC" Height="20" />
+        <Separator />
+        <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="_Verified Pets" Height="20" />
+        <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="Verified _Players" Height="20" />
         <Separator />
         <MenuItem x:Name="debugWindowMenuItem" IsEnabled="False" Header="_Debug" Click="MenuItemWindow_Click" Height="20" />
       </MenuItem>
@@ -124,8 +126,15 @@
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Non-NPC" ContainerDockedSize="240,150">
+            <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Players" ContainerDockedSize="240,150">
               <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="30" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" CanUserReorder="False" MinWidth="30" Width="30*" />
+                </DataGrid.Columns>
+              </datagrid:ThemedDataGrid>
+            </docking:ToolWindow>
+            <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Verified Pets" ContainerDockedSize="240,150">
+              <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="30" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow">
                 <DataGrid.Columns>
                   <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" CanUserReorder="False" MinWidth="30" Width="30*" />
                 </DataGrid.Columns>

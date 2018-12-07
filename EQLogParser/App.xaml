@@ -17,7 +17,7 @@
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBackgroundHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBorderHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabControlBackgroundActiveFocusedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundSelectedBrushKey}" Color="#202020" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundSelectedBrushKey}" Color="White" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBorderActivePressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBackgroundActivePressedBrushKey}" Color="#202020" />
