@@ -17,7 +17,7 @@ namespace EQLogParser
     public ActionProcessor(ProcessActionCallback callback)
     {
       this.callback = callback;
-      Task.Run((Action)(() => Process()));
+      Task.Run((() => Process()));
     }
 
     public void AppendToQueue(object data)
