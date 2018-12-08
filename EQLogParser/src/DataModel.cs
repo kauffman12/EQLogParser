@@ -32,6 +32,7 @@ namespace EQLogParser
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
     public string Owner { get; set; }
+    public bool IsPet { get; set; }
   }
 
   public class ProcessLine
@@ -41,6 +42,7 @@ namespace EQLogParser
     public DateTime CurrentTime { get; set; }
     public string TimeString { get; set; }
     public string ActionPart { get; set; }
+    public int OptionalIndex { get; set; }
   }
 
   public class Player

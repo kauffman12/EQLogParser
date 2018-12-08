@@ -46,7 +46,7 @@
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="File Progress" ContainerDockedSize="310,65">
+            <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="Log File Progress" ContainerDockedSize="310,65">
               <WrapPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal">
                   <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Total Bytes:</Label>

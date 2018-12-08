@@ -23,7 +23,9 @@ namespace EQLogParser
 
     private delegate DamageRecord ParseDamageFunc(string line);
 
+    public static ConcurrentDictionary<string, bool> GeneratedPets = new ConcurrentDictionary<string, bool>();
     public static ConcurrentDictionary<string, bool> VerifiedPets = new ConcurrentDictionary<string, bool>();
+    public static ConcurrentDictionary<string, bool> NotNPC = new ConcurrentDictionary<string, bool>();
 
     public static ConcurrentDictionary<string, bool> VerifiedPlayers = new ConcurrentDictionary<string, bool>(
       new List<KeyValuePair<string, bool>>
@@ -56,83 +58,140 @@ namespace EQLogParser
       new KeyValuePair<string, string>("frenzies", "frenzies on"), new KeyValuePair<string, string>("frenzy", "frenzy on")
     });
 
-    private static List<string> KeepKeyWords = new List<string>
+    // still need to work on this
+    public static int PreCheck(ProcessLine pline)
     {
-      "damage",
-      "has been slain",
-      "shrinks.",
-      " tells the guild, ",
-      " Targeted (Play",
-      "My leader is"
-    };
+      int result = -1;
+
+      int index;
+
+      if (pline.ActionPart.Contains(" damage")) // damage. for DD
+      {
+        return 0;
+      }
+
+      if ((index = pline.ActionPart.IndexOf(" has been slain by")) > -1)
+      {
+        pline.OptionalIndex = index;
+        return 1;
+      }
+
+      if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.")) > -1)
+      {
+        pline.OptionalIndex = index;
+        return 2;
+      }
+
+      if (pline.ActionPart.Contains(" tells the guild, "))
+      {
+        return 3;
+      }
+
+      if (pline.ActionPart.StartsWith("Targeted(Play"))
+      {
+        return 4;
+      }
+
+      if (pline.ActionPart.Length <= 55 && pline.Line.Contains("My leader is"))
+      {
+        return 5;
+      }
+
+      return result;
+    }
 
     public static ProcessLine KeepForProcessingState(string line)
     {
       ProcessLine pline = new ProcessLine() { Line = line, State = -1 };
 
-      if (line.Length > MIN_LINE_LENGTH)
+      try
       {
-        pline.State = KeepKeyWords.FindIndex(word => line.Contains(word));
 
-        if (pline.State >= 0)
+        if (line.Length > MIN_LINE_LENGTH)
         {
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.ActionPart = pline.Line.Substring(27); // work with everything in lower case
+          pline.ActionPart = pline.Line.Substring(27);
+          pline.State = PreCheck(pline);
 
-          DateTime dateTime;
-          if (!DateTimeCache.ContainsKey(pline.TimeString))
+          if (pline.State >= 0)
           {
-            DateTime.TryParseExact(pline.TimeString, "ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
-            if (dateTime == DateTime.MinValue)
+            pline.TimeString = pline.Line.Substring(1, 24);
+
+            DateTime dateTime;
+            if (!DateTimeCache.ContainsKey(pline.TimeString))
             {
-              DateTime.TryParseExact(pline.TimeString, "ddd MMM  d HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
+              DateTime.TryParseExact(pline.TimeString, "ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
+              if (dateTime == DateTime.MinValue)
+              {
+                DateTime.TryParseExact(pline.TimeString, "ddd MMM  d HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
+              }
+
+              DateTimeCache.TryAdd(pline.TimeString, dateTime);
+            }
+            else
+            {
+              dateTime = DateTimeCache[pline.TimeString];
             }
 
-            DateTimeCache.TryAdd(pline.TimeString, dateTime);
-          }
-          else
-          {
-            dateTime = DateTimeCache[pline.TimeString];
+            // dont let it get too big but it coudl be re-used between different log files
+            if (DateTimeCache.TryAdd(pline.TimeString, dateTime))
+            {
+              DateCount++;
+            }
+
+            if (DateCount > 20000)
+            {
+              DateTimeCache.Clear();
+            }
+
+            pline.CurrentTime = dateTime;
           }
 
-          // dont let it get too big but it coudl be re-used between different log files
-          if (DateTimeCache.TryAdd(pline.TimeString, dateTime))
-          {
-            DateCount++;
-          }
-
-          if (DateCount > 20000)
-          {
-            DateTimeCache.Clear();
-          }
-
-          pline.CurrentTime = dateTime;
         }
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine(e.StackTrace);
       }
 
       return pline;
     }
 
-    public static void CheckForSlain(string line)
+    public static bool CheckForShrink(ProcessLine pline, out string name)
     {
-      // Regex was really slow for this
-      int index = line.IndexOf(" has been slain by");
-      if (index > 0)
+      bool needUpdate = false;
+      name = "";
+
+      if (IsPossiblePlayerName(pline.ActionPart, pline.OptionalIndex))
       {
-        string sub = line.Substring(0, index);
-        if (!VerifiedPlayers.ContainsKey(sub) && !VerifiedPets.ContainsKey(sub))
+        string test = pline.ActionPart.Substring(0, pline.OptionalIndex);
+        if (!VerifiedPlayers.ContainsKey(test) && !VerifiedPets.ContainsKey(test))
         {
-          NpcDamageManagerInstance.Slain(sub);
+          NotNPC.TryAdd(test, true);
+          needUpdate = NpcDamageManagerInstance.CheckForPlayer(test);
+          if (needUpdate)
+          {
+            name = test;
+          }
         }
+      }
+      return needUpdate;
+    }
+
+    public static void CheckForSlain(ProcessLine pline)
+    {
+      string sub = pline.ActionPart.Substring(0, pline.OptionalIndex);
+      if (!VerifiedPlayers.ContainsKey(sub) && !VerifiedPets.ContainsKey(sub))
+      {
+        NpcDamageManagerInstance.Slain(sub);
       }
     }
 
-    public static bool CheckForPetLeader(string line, out string name)
+    public static bool CheckForPetLeader(ProcessLine pline, out string name)
     {
       bool found = false;
       name = "";
 
-      MatchCollection matches = CheckLeader.Matches(line);
+      MatchCollection matches = CheckLeader.Matches(pline.ActionPart);
       if (matches.Count > 0 && matches[0].Groups.Count == 3)
       {
         string pet = matches[0].Groups[1].Value;
@@ -152,26 +211,26 @@ namespace EQLogParser
       return found;
     }
 
-    public static bool CheckForPlayers(string line, out string name, out bool needRemove)
+    public static bool CheckForPlayers(ProcessLine pline, out string name, out bool needRemove)
     {
       bool found = false;
       needRemove = false;
       name = "";
 
       string player = null;
-      if (line.StartsWith("Targeted (Player): "))
+      if (pline.ActionPart.StartsWith("Targeted (Player): "))
       {
-        player = line.Substring(19);
+        player = pline.ActionPart.Substring(19);
       }
       else
       {
-        int index = line.IndexOf(' ');
+        int index = pline.ActionPart.IndexOf(' ');
         if (index > 0)
         {
-          string action = line.Substring(index);
-          if (action == " shrinks." || action.StartsWith(" tells the guild,"))
+          string action = pline.ActionPart.Substring(index);
+          if (action.StartsWith(" tells the guild,"))
           {
-            player = line.Substring(0, index);
+            player = pline.ActionPart.Substring(0, index);
           }
         }
       }
@@ -204,24 +263,29 @@ namespace EQLogParser
         string replaced;
         bool failure = false;
 
+        // handle Attackers as a set
         if (AttackerReplacement.TryGetValue(record.Attacker, out replaced))
         {
           record.Attacker = replaced;
         }
-
-        if (record.AttackerPetType != "" && VerifiedPets.TryAdd(record.Attacker, true))
+        else
         {
-          newPets.Add(record.Attacker);
-          needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.Attacker);
+          if ((record.AttackerPetType != "" && VerifiedPets.TryAdd(record.Attacker, true)) ||
+            GeneratedPets.ContainsKey(record.Attacker) && VerifiedPets.TryAdd(record.Attacker, true))
+          {
+            newPets.Add(record.Attacker);
+            needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.Attacker);
+          }
+
+          if (record.AttackerOwner != "" && VerifiedPlayers.TryAdd(record.AttackerOwner, true))
+          {
+            newPlayers.Add(record.AttackerOwner);
+            needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.AttackerOwner);
+          }
         }
 
-        if (record.AttackerOwner != "" && VerifiedPlayers.TryAdd(record.AttackerOwner, true))
-        {
-          newPlayers.Add(record.AttackerOwner);
-          needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.AttackerOwner);
-        }
-
-        if (record.DefenderPetType != "" && VerifiedPets.TryAdd(record.Defender, true))
+        if ((record.DefenderPetType != "" && VerifiedPets.TryAdd(record.Defender, true)) ||
+          GeneratedPets.ContainsKey(record.Defender) && VerifiedPets.TryAdd(record.Defender, true))
         {
           newPets.Add(record.Defender);
           needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.Defender);
@@ -234,12 +298,16 @@ namespace EQLogParser
           failure = true;
         }
 
-        if (VerifiedPlayers.ContainsKey(record.Defender) || VerifiedPets.ContainsKey(record.Defender) || CheckEye.IsMatch(record.Defender))
+        if (!failure && (VerifiedPlayers.ContainsKey(record.Defender) || VerifiedPets.ContainsKey(record.Defender)
+          || NotNPC.ContainsKey(record.Defender) || GeneratedPets.ContainsKey(record.Defender) || CheckEye.IsMatch(record.Defender)))
         {
           failure = true;
         }
 
-        record = failure ? null : record;
+        if (failure)
+        {
+          record = null;
+        }
       }
 
       return record;
@@ -265,10 +333,10 @@ namespace EQLogParser
 
         // find first space and see if we have a name in the first  second
         int firstSpace = part.IndexOf(" ");
-        if (firstSpace > 3)
+        if (firstSpace > 0)
         {
           // check if name has a possessive
-          if (part.Substring(firstSpace - 2, 2) == "`s")
+          if (firstSpace >= 2 && part.Substring(firstSpace - 2, 2) == "`s")
           {
             if (IsPossiblePlayerName(part, firstSpace - 2))
             {
@@ -488,8 +556,8 @@ namespace EQLogParser
 
     private static bool IsPossiblePlayerName(string part, int stop)
     {
-      bool found = true;
-      for (int i = 0; i < stop; i++)
+      bool found = stop < 3 ? false : true;
+      for (int i = 0; found != false && i < stop; i++)
       {
         if (!Char.IsLetter(part, i))
         {
