@@ -6,7 +6,7 @@ namespace EQLogParser
 {
   class StatsBuilder
   {
-    public const string DETAILS_FORMAT = "{0} in {1} seconds, Total Damage = {2},  DPS = {3}";
+    public const string DETAILS_FORMAT = "{0} in {1}s, {2} @ {3}";
     private const string RAID_PLAYER = "Totals";
 
     internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)
