@@ -8,6 +8,6 @@
   </DirectoryMappings>
   <FileMappings />
   <DeploySymbols>false</DeploySymbols>
-  <DeployLocalizations>true</DeployLocalizations>
-  <DeployExternalLocalizations>false</DeployExternalLocalizations>
+  <DeployLocalizations>false</DeployLocalizations>
+  <DeployExternalLocalizations>true</DeployExternalLocalizations>
 </Configuration>

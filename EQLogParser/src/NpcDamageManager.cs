@@ -30,7 +30,7 @@ namespace EQLogParser
 
       if (!entry.Npc.DamageMap.ContainsKey(record.Attacker))
       {
-        entry.Npc.DamageMap.Add(record.Attacker, new DamageStats() { BeginTime = currentTime, Owner = "" });
+        entry.Npc.DamageMap.Add(record.Attacker, new DamageStats() { BeginTime = currentTime, Owner = "", IsPet = false });
       }
 
       // update basic stats
@@ -41,9 +41,19 @@ namespace EQLogParser
       stats.LastTime = currentTime;
       LastUpdateTime = currentTime;
 
-      if (record.AttackerPetType != "")
+      if (record.AttackerPetType != "" && record.AttackerOwner != "")
       {
+        stats.IsPet = true;
         stats.Owner = record.AttackerOwner;
+      }
+      else if (record.AttackerPetType == "" && LineParser.PetToPlayers.ContainsKey(record.Attacker))
+      {
+        stats.IsPet = true;
+        stats.Owner = LineParser.PetToPlayers[record.Attacker];
+      }
+      else if (LineParser.GeneratedPets.ContainsKey(record.Attacker))
+      {
+        stats.IsPet = true;
       }
 
       entry.Npc.LastTime = currentTime;

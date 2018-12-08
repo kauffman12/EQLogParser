@@ -2,7 +2,6 @@
 using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -23,10 +22,10 @@ namespace EQLogParser
     public static string PlayerName = "Unknown";
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.3";
+    private const string VERSION = "v1.0.4";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string DPS_SUMMARY_LABEL = "No Players Selected";
-    private const int DISPATCHER_DELAY = 200; // millis
+    private const int DISPATCHER_DELAY = 250; // millis
 
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
@@ -88,6 +87,14 @@ namespace EQLogParser
       NonPlayerSelectionTimer = new DispatcherTimer();
       NonPlayerSelectionTimer.Tick += NonPlayerSelectionTimer_Tick;
       NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
+
+      // Populated generate pets
+      long length = new System.IO.FileInfo(@"data\petnames.txt").Length;
+      if (length < 20000)
+      {
+        string[] lines = System.IO.File.ReadAllLines(@"data\petnames.txt");
+        lines.ToList().ForEach(line => LineParser.GeneratedPets.TryAdd(line.TrimEnd(), true));
+      }
 
       ThemeManager.BeginUpdate();
       try
@@ -390,7 +397,7 @@ namespace EQLogParser
 
       // show dialog and read result
       // if null result then dialog was probably canceled
-      System.Nullable<bool> result = dialog.ShowDialog();
+      Nullable<bool> result = dialog.ShowDialog();
       if (result == true)
       {
         LogFile = dialog.FileName;
@@ -408,7 +415,7 @@ namespace EQLogParser
       ProcessLine pline = LineParser.KeepForProcessingState(line);
       FileLoadingContinue(pline);
 
-      if (NpcDamageProcessor.QueueSize() > 100000)
+      if (NpcDamageProcessor.QueueSize() > 200000)
       {
         Thread.Sleep(50);
       }
@@ -528,12 +535,17 @@ namespace EQLogParser
             break;
           case 1:
             // check slain
-            LineParser.CheckForSlain(pline.ActionPart);
+            LineParser.CheckForSlain(pline);
             break;
           case 2:
+            if (LineParser.CheckForShrink(pline, out name))
+            {
+              Dispatcher.InvokeAsync(() => RemovePlayers(new List<string>() { name }));
+            }
+            break;
           case 3:
           case 4:
-            if (LineParser.CheckForPlayers(pline.ActionPart, out name, out needRemove))
+            if (LineParser.CheckForPlayers(pline, out name, out needRemove))
             {
               if (needRemove)
               {
@@ -545,7 +557,7 @@ namespace EQLogParser
             break;
           case 5:
             // map pet to player
-            if (LineParser.CheckForPetLeader(pline.ActionPart, out name))
+            if (LineParser.CheckForPetLeader(pline, out name))
             {
               if (name.Length > 0)
               {
