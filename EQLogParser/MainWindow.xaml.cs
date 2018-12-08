@@ -22,13 +22,18 @@ namespace EQLogParser
     public static string PlayerName = "Unknown";
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.4";
+    private const string VERSION = "v1.0.5";
     private const string DPS_LABEL = " No NPCs Selected";
-    private const string DPS_SUMMARY_LABEL = "No Players Selected";
+    private const string SHARE_DPS_LABEL = "No Players Selected";
+    private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
     private const int DISPATCHER_DELAY = 250; // millis
 
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
+    private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
+    private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));  
+    private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     // line queues
     private static ActionProcessor NpcDamageProcessor;
@@ -64,7 +69,6 @@ namespace EQLogParser
       debugDataGrid.ItemsSource = new ObservableCollection<string>();
       UpdateWindowTitle();
       dpsTitle.Content = DPS_LABEL;
-      playerDPSTextBox.Text = DPS_SUMMARY_LABEL;
 
       // fix player DPS table sorting
       playerDataGrid.Sorting += (s, e) =>
@@ -132,7 +136,6 @@ namespace EQLogParser
     private void reset()
     {
       dpsTitle.Content = DPS_LABEL;
-      playerDPSTextBox.Text = DPS_SUMMARY_LABEL;
       completeLabel.Foreground = new SolidColorBrush(Colors.White);
 
       if (EQLogReader != null)
@@ -184,7 +187,7 @@ namespace EQLogParser
         {
           percentComplete = 100;
           UpdatingProgress = false;
-          completeLabel.Foreground = new SolidColorBrush(Colors.LightGreen);
+          completeLabel.Foreground = GOOD_BRUSH;
         }
       }
     }
@@ -222,7 +225,7 @@ namespace EQLogParser
         }
         else
         {
-          playerDPSTextBox.Text = playerDPSTextBox.Text = DPS_SUMMARY_LABEL;
+          playerDPSTextBox.Text = "";
         }
 
         NeedDPSTextUpdate = false;
@@ -246,7 +249,6 @@ namespace EQLogParser
                 dpsTitle.Content = CurrentStats.Title;
                 playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
                 NeedStatsUpdate = false;
-                playerDPSTextBox.Text = playerDPSTextBox.Text = DPS_SUMMARY_LABEL;
               }
             }));
           }).Start();
@@ -258,7 +260,6 @@ namespace EQLogParser
             dpsTitle.Content = DPS_LABEL;
             list.Clear();
             NeedStatsUpdate = false;
-            playerDPSTextBox.Text = DPS_SUMMARY_LABEL;
           }
         }
       }
@@ -580,6 +581,46 @@ namespace EQLogParser
       }
 
       Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
+    }
+
+    private void PlayerDPSTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+      if (playerDPSTextBox.Text == "")
+      {
+        copyToEQButton.IsEnabled = false;
+        copyToEQButton.Foreground = LIGHTER_BRUSH;
+        sharePlayerDPSLabel.Text = SHARE_DPS_LABEL;
+        sharePlayerDPSLabel.Foreground = BRIGHT_TEXT_BRUSH;
+        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + "/" + 509;
+        sharePlayerDPSWarningLabel.Visibility = Visibility.Hidden;
+      }
+      else if (playerDPSTextBox.Text.Length > 509)
+      {
+        copyToEQButton.IsEnabled = false;
+        copyToEQButton.Foreground = LIGHTER_BRUSH;
+        sharePlayerDPSLabel.Text = SHARE_DPS_TOO_BIG_LABEL;
+        sharePlayerDPSLabel.Foreground = WARNING_BRUSH;
+        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + "/" + 509;
+        sharePlayerDPSWarningLabel.Foreground = WARNING_BRUSH;
+        sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
+      }
+      else if (playerDataGrid.SelectedItems.Count > 0)
+      {
+        copyToEQButton.IsEnabled = true;
+        copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
+        var count = playerDataGrid.SelectedItems.Count;
+        string players = count == 1 ? "Player" : "Players";
+        sharePlayerDPSLabel.Text = String.Format("{0} {1} Selected", count, players);
+        sharePlayerDPSLabel.Foreground = BRIGHT_TEXT_BRUSH;
+        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + " / " + 509;
+        sharePlayerDPSWarningLabel.Foreground = GOOD_BRUSH;
+        sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
+      }
+    }
+
+    private void CopyToEQ_Click(object sender, RoutedEventArgs e)
+    {
+      Clipboard.SetText(playerDPSTextBox.Text);
     }
   }
 }
