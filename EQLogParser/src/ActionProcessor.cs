@@ -7,7 +7,7 @@ namespace EQLogParser
 {
   class ActionProcessor
   {
-    public const int DELAY_TIME = 200;
+    public const int DELAY_TIME = 50;
     public delegate void ProcessActionCallback(object data);
     private ConcurrentQueue<object> Queue = new ConcurrentQueue<object>();
     private ConcurrentQueue<object> Priority = new ConcurrentQueue<object>();

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.3" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.4" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -8,6 +8,7 @@
 
 		<Feature Id="ProductFeature" Title="EQLogParser" Level="1">
 			<ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="ProductDataComponents" />
       <ComponentRef Id="ApplicationShortcut" />
 		</Feature>
 
@@ -24,7 +25,9 @@
 	<Fragment>
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
-        <Directory Id="INSTALLFOLDER" Name="EQLogParser" />
+        <Directory Id="INSTALLFOLDER" Name="EQLogParser">
+          <Directory Id="DATAFOLDER" Name="data" />
+        </Directory>
       </Directory>
       <Directory Id="ProgramMenuFolder">
         <Directory Id="ApplicationProgramsFolder" Name="EQLogParser" />
@@ -57,5 +60,10 @@
 	      <File Id="ActiproSoftware.Shared.Wpf.dll" Name="ActiproSoftware.Shared.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.Shared.Wpf.dll" />
 	    </Component>
 	  </ComponentGroup>
+    <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
+      <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
+        <File Id="petnames.txt" Name="petnames.txt" Source="$(var.EQLogParser_TargetDir)\data\petnames.txt" />
+      </Component>
+    </ComponentGroup>
 	</Fragment>
 </Wix>
