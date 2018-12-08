@@ -23,7 +23,7 @@
         <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_Log File Progress" Height="20" />
         <Separator />
         <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
-        <MenuItem x:Name="playerDPSTextWindowMenuItem" Header="Player DPS _Text" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="playerDPSTextWindowMenuItem" Header="_Share Player DPS" Click="MenuItemWindow_Click" Height="20" />
         <Separator />
         <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20" />
         <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="_Verified Pets" Height="20" />
@@ -36,7 +36,7 @@
       <docking:SplitContainer Orientation="Horizontal">
         <docking:SplitContainer Orientation="Vertical">
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="npcWindow" Title="NPCs" ContainerAutoHideSize="310, 400" ContainerDockedSize="310,400">
+            <docking:ToolWindow x:Name="npcWindow" Title="NPCs" ContainerAutoHideSize="320, 400" ContainerDockedSize="320,400">
               <datagrid:ThemedDataGrid x:Name="npcDataGrid" AlternatingRowBackground="{x:Null}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="NonPlayerDataGrid_LoadingRow" SelectionChanged="NpcDataGrid_SelectionChanged" CanUserSortColumns="False">
                 <DataGrid.Columns>
                   <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="96" Width="96" MaxWidth="96"/>
@@ -46,7 +46,7 @@
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="Log File Progress" ContainerDockedSize="310,65">
+            <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="Log File Progress" ContainerDockedSize="320,65">
               <WrapPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal">
                   <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Total Bytes:</Label>
@@ -72,7 +72,7 @@
           <docking:Workspace>
             <docking:TabbedMdiHost>
               <docking:TabbedMdiContainer>
-                <docking:DocumentWindow x:Name="dpsWindow" Title="Player DPS Breakdown" Description="" ContainerDockedSize="400,800" CanClose="False">
+                <docking:DocumentWindow x:Name="dpsWindow" Title="Damage Summary" Description="" ContainerDockedSize="400,800" CanClose="False">
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="30" />
@@ -109,8 +109,25 @@
             </docking:TabbedMdiHost>
           </docking:Workspace>
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="playerDPSTextWindow" IsOpen="True" Title="Player DPS Text" ContainerDockedSize="400,140">
-              <TextBox x:Name="playerDPSTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="White" BorderThickness="0" FontSize="14" MouseEnter="PlayerDPSText_MouseEnter" SelectionBrush="#FF206CF1"/>
+            <docking:ToolWindow x:Name="playerDPSTextWindow" IsOpen="True" Title="Share Player DPS" ContainerDockedSize="400,145">
+                <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="100" />
+                  <ColumnDefinition Width="400*" />
+                </Grid.ColumnDefinitions>
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="47*" />
+                    <RowDefinition Height="50" />
+                  </Grid.RowDefinitions>
+                  <TextBlock x:Name="sharePlayerDPSLabel" Grid.Row="0" TextWrapping="Wrap" FontSize="14" Margin="10,2,0,0" Foreground="White" >No Players Selected</TextBlock>
+                  <StackPanel Grid.Row="1" Orientation="Vertical">
+                    <TextBlock x:Name="sharePlayerDPSWarningLabel" TextWrapping="Wrap" FontSize="10" Margin="12,0,0,4" Foreground="LightGreen" FontStyle="Italic" Height="12" Visibility="Hidden">0 / 509</TextBlock>
+                    <Button x:Name="copyToEQButton" Width="80" Height="24" Margin="10,4,10,0" Content="Copy to EQ" IsEnabled="False" Foreground="#FF5A5A5A" BorderBrush="{x:Null}" Click="CopyToEQ_Click"/>
+                  </StackPanel>
+                </Grid>
+                <TextBox Grid.Column="1" x:Name="playerDPSTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="White" BorderThickness="0" FontSize="14" MouseEnter="PlayerDPSText_MouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerDPSTextBox_TextChanged"/>
+              </Grid>
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
         </docking:SplitContainer>
