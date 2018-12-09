@@ -28,8 +28,6 @@
         <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20" />
         <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="_Verified Pets" Height="20" />
         <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="Verified _Players" Height="20" />
-        <Separator />
-        <MenuItem x:Name="debugWindowMenuItem" IsEnabled="False" Header="_Debug" Click="MenuItemWindow_Click" Height="20" />
       </MenuItem>
     </Menu>
     <docking:DockSite Grid.Row="1" x:Name="docSite">
@@ -89,7 +87,7 @@
                         <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90" />
                         <DataGridTextColumn Binding="{Binding Damage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90"/>
                         <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="20" Width="70" CanUserReorder="False"/>
-                        <DataGridTextColumn Binding="{Binding TimeDiff}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="55"/>
+                        <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="55"/>
                         <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="60"/>
                         <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="70"/>
                         <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Avg Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="70"/>
@@ -97,13 +95,6 @@
                       </DataGrid.Columns>
                     </datagrid:ThemedDataGrid>
                   </Grid>
-                </docking:DocumentWindow>
-                <docking:DocumentWindow x:Name="debugWindow" Title="Debug" IsOpen="False" IsEnabled="True" Description="" ContainerDockedSize="400,800">
-                  <datagrid:ThemedDataGrid x:Name="debugDataGrid">
-                    <DataGrid.Columns>
-                      <DataGridTextColumn Binding="{Binding}" Header="Damage Lines Not Counted"/>
-                    </DataGrid.Columns>
-                  </datagrid:ThemedDataGrid>
                 </docking:DocumentWindow>
               </docking:TabbedMdiContainer>
             </docking:TabbedMdiHost>
