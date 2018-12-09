@@ -29,6 +29,11 @@ namespace EQLogParser
 
         foreach (string key in npc.DamageMap.Keys)
         {
+          if (DataManager.Instance.IsProbablyNotAPlayer(key))
+          {
+            continue;
+          }
+
           PlayerStats playerTotals;
           DamageStats npcStats = npc.DamageMap[key];
 
@@ -36,7 +41,13 @@ namespace EQLogParser
           string player;
           string details;
 
-          if (npcStats.Owner != "" && npcStats.IsPet)
+          // see if there's a pet mapping, check this first
+          if (LineParser.PetToPlayers.ContainsKey(key))
+          {
+            details = "+" + key;
+            player = LineParser.PetToPlayers[key];
+          }
+          else if (npcStats.Owner != "" && npcStats.IsPet)
           {
             details = "+" + key;
             player = npcStats.Owner;
@@ -51,7 +62,6 @@ namespace EQLogParser
             player = key;
             details = "";
           }
-
 
           if (!totalDamage.ContainsKey(player))
           {

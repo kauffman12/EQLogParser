@@ -2,12 +2,9 @@
 using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -19,8 +16,6 @@ namespace EQLogParser
 {
   public partial class MainWindow : Window
   {
-    public static string PlayerName = "Unknown";
-
     private const string APP_NAME = "EQLogParser";
     private const string VERSION = "v1.0.5";
     private const string DPS_LABEL = " No NPCs Selected";
@@ -35,8 +30,11 @@ namespace EQLogParser
     private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));  
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
-    // line queues
     private static ActionProcessor NpcDamageProcessor;
+
+    private ObservableCollection<string> VerifiedPetsView = new ObservableCollection<string>();
+    private ObservableCollection<string> VerifiedPlayersView = new ObservableCollection<string>();
+    private ObservableCollection<NonPlayer> NonPlayersView = new ObservableCollection<NonPlayer>();
 
     // stats
     private static bool NeedStatsUpdate = false;
@@ -53,22 +51,34 @@ namespace EQLogParser
     private LogReader EQLogReader = null;
 
     private bool NeedScrollIntoView = false;
-    private string LogFile = null;
-    private ObservableCollection<NonPlayer> NpcList = new ObservableCollection<NonPlayer>();
+
     private ObservableCollection<PetMapping> PetMappingList = new ObservableCollection<PetMapping>();
-    private ObservableCollection<Player> VerifiedPetsList = new ObservableCollection<Player>();
-    private ObservableCollection<Player> VerifiedPlayersList = new ObservableCollection<Player>();
 
     public MainWindow()
     {
       InitializeComponent();
-      npcDataGrid.ItemsSource = NpcList;
-      petMappingGrid.ItemsSource = PetMappingList;
-      verifiedPetsGrid.ItemsSource = VerifiedPetsList;
-      verifiedPlayersGrid.ItemsSource = VerifiedPlayersList;
-      debugDataGrid.ItemsSource = new ObservableCollection<string>();
-      UpdateWindowTitle();
+
+      // update titles
+      Title = APP_NAME + " " + VERSION;
       dpsTitle.Content = DPS_LABEL;
+
+      // verified pets table
+      verifiedPetsGrid.ItemsSource = VerifiedPetsView;
+      DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() => VerifiedPetsView.Add(name));
+
+      // verified player table
+      verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
+      DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() => VerifiedPlayersView.Add(name));
+
+      // List of NPCs to select from, damage is saved in the NonPlayer object
+      npcDataGrid.ItemsSource = NonPlayersView;
+      DataManager.Instance.EventsUpdatedNonPlayer += (sender, npc) => NeedStatsUpdate = (CurrentStats != null && CurrentStats.NpcIDs.Contains(npc.ID));
+      DataManager.Instance.EventsRemovedNonPlayer += (sender, name) => RemoveNonPlayer(name);
+      DataManager.Instance.EventsNewNonPlayer += (sender, npc) => AddNonPlayer(npc);
+      DataManager.Instance.EventsNewUnverifiedPetOrPlayer += (sender, name) => RemoveNonPlayer(name);
+
+      petMappingGrid.ItemsSource = PetMappingList;
+      debugDataGrid.ItemsSource = new ObservableCollection<string>();
 
       // fix player DPS table sorting
       playerDataGrid.Sorting += (s, e) =>
@@ -79,10 +89,6 @@ namespace EQLogParser
         }
       };
 
-      NpcDamageManager = new NpcDamageManager();
-      NpcDamageProcessor = new ActionProcessor(ProcessNPCDamage);
-      LineParser.NpcDamageManagerInstance = NpcDamageManager;
-
       DispatcherTimer dispatcherTimer = new DispatcherTimer();
       dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
       dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
@@ -91,14 +97,6 @@ namespace EQLogParser
       NonPlayerSelectionTimer = new DispatcherTimer();
       NonPlayerSelectionTimer.Tick += NonPlayerSelectionTimer_Tick;
       NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
-
-      // Populated generate pets
-      long length = new System.IO.FileInfo(@"data\petnames.txt").Length;
-      if (length < 20000)
-      {
-        string[] lines = System.IO.File.ReadAllLines(@"data\petnames.txt");
-        lines.ToList().ForEach(line => LineParser.GeneratedPets.TryAdd(line.TrimEnd(), true));
-      }
 
       ThemeManager.BeginUpdate();
       try
@@ -118,6 +116,36 @@ namespace EQLogParser
       }
     }
 
+    private void AddNonPlayer(NonPlayer npc)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        NonPlayersView.Add(npc);
+        npcDataGrid.Items.MoveCurrentToLast();
+        if (!npcDataGrid.IsMouseOver)
+        {
+          NeedScrollIntoView = true;
+        }
+      });
+    }
+
+    private void RemoveNonPlayer(string name)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        int i = 0;
+        foreach (NonPlayer item in NonPlayersView.Reverse())
+        {
+          i++;
+          if (name == item.Name)
+          {
+            NonPlayersView.Remove(item);
+            npcDataGrid.Items.Refresh(); // re-numbers
+          }
+        }
+      });
+    }
+
     private void Window_Closed(object sender, System.EventArgs e)
     {
       if (EQLogReader != null)
@@ -131,27 +159,6 @@ namespace EQLogParser
       }
 
       Application.Current.Shutdown();
-    }
-
-    private void reset()
-    {
-      dpsTitle.Content = DPS_LABEL;
-      completeLabel.Foreground = new SolidColorBrush(Colors.White);
-
-      if (EQLogReader != null)
-      {
-        EQLogReader.Stop();
-      }
-
-      UpdateWindowTitle();
-      NpcList.Clear();
-      NpcDamageManager = new NpcDamageManager();
-      LineParser.NpcDamageManagerInstance = NpcDamageManager;
-
-      NeedStatsUpdate = true;
-      UpdatingProgress = true;
-      ProcessedBytes = 0;
-      StartLoadTime = DateTime.Now;
     }
 
     private void DispatcherTimer_Tick(object sender, EventArgs e)
@@ -188,27 +195,6 @@ namespace EQLogParser
           percentComplete = 100;
           UpdatingProgress = false;
           completeLabel.Foreground = GOOD_BRUSH;
-        }
-      }
-    }
-
-    private void UpdatePlayerName()
-    {
-      if (LogFile.Length > 0)
-      {
-        string fileName = LogFile.Substring(LogFile.LastIndexOf("\\") + 1);
-        string[] parts = fileName.Split('_');
-
-        if (parts.Length > 1)
-        {
-          PlayerName = parts[1];
-          LineParser.AttackerReplacement.TryAdd("you", PlayerName);
-          LineParser.AttackerReplacement.TryAdd("You", PlayerName);
-
-          if (LineParser.VerifiedPlayers.TryAdd(PlayerName, true))
-          {
-            VerifiedPlayersList.Add(new Player() { Name = PlayerName });
-          }
         }
       }
     }
@@ -265,30 +251,6 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateWindowTitle()
-    {
-      Title = APP_NAME + " " + VERSION;
-
-      if (LogFile != null)
-      {
-        Title += " -- (" + LogFile + ")";
-      }
-    }
-
-    private void RemovePlayers(List<string> players)
-    {
-      int i = 0;
-      foreach (NonPlayer npc in NpcList.Reverse())
-      {
-        i++;
-        if (players.Contains(npc.Name))
-        {
-          NpcList.Remove(npc);
-          npcDataGrid.Items.Refresh(); // re-numbers
-        }
-      }
-    }
-
     private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       NeedDPSTextUpdate = true;
@@ -331,23 +293,6 @@ namespace EQLogParser
       {
         playerDPSTextBox.Focus();
       }
-    }
-
-    private void MenuItemTest_Click(object sender, RoutedEventArgs e)
-    {
-      Regex CheckDirectDamage = new Regex(@"^(?:(\w+)(?:`s (pet|ward|warder))?) (?:" + string.Join("|", DataTypes.DAMAGE_LIST) + @")[es]{0,2} (.+) for (\d+) points of (?:non-melee )?damage\.", RegexOptions.Singleline | RegexOptions.Compiled);
-      List<string> list = new List<string>();
-
-      DateTime start = DateTime.Now;
-      for (int i = 0; i < 20000000; i++)
-      {
-        DateTime obj;
-        DateTime.TryParseExact("Fri Nov 16 23:15:27 2018", "ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out obj);
-      }
-
-
-      list.ForEach(item => CheckDirectDamage.Matches(item));
-      Console.WriteLine((DateTime.Now - start).TotalSeconds);
     }
 
     private void MenuItemWindow_Click(object sender, RoutedEventArgs e)
@@ -398,15 +343,50 @@ namespace EQLogParser
 
       // show dialog and read result
       // if null result then dialog was probably canceled
-      Nullable<bool> result = dialog.ShowDialog();
+      bool? result = dialog.ShowDialog();
       if (result == true)
       {
-        LogFile = dialog.FileName;
-        UpdatePlayerName();
-        reset();
+        dpsTitle.Content = DPS_LABEL;
+        completeLabel.Foreground = new SolidColorBrush(Colors.White);
+        Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
+
+        NeedStatsUpdate = true;
+        UpdatingProgress = true;
+        ProcessedBytes = 0;
+        StartLoadTime = DateTime.Now;
+
+        if (NpcDamageProcessor != null)
+        {
+          NpcDamageProcessor.Stop();
+        }
+
+        if (EQLogReader != null)
+        {
+          EQLogReader.Stop();
+        }
+
+        NpcDamageProcessor = new ActionProcessor(ProcessNPCDamage);
+        NpcDamageManager = new NpcDamageManager();
+
+        string name = "Uknown";
+        if (dialog.FileName.Length > 0)
+        {
+          string fileName = dialog.FileName.Substring(dialog.FileName.LastIndexOf("\\") + 1);
+          string[] parts = fileName.Split('_');
+
+          if (parts.Length > 1)
+          {
+            name = parts[1];
+          }
+        }
+
+        DataManager.Instance.SetPlayerName(name);
+        DataManager.Instance.Clear();
+
+        NonPlayersView.Clear();
 
         progressWindow.IsOpen = true;
-        EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback);
+        EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, FileLoadingCompleteCallback);
         EQLogReader.Start();
       }
     }
@@ -416,10 +396,15 @@ namespace EQLogParser
       ProcessLine pline = LineParser.KeepForProcessingState(line);
       FileLoadingContinue(pline);
 
-      if (NpcDamageProcessor.QueueSize() > 200000)
+      if (NpcDamageProcessor.QueueSize() > 150000)
       {
-        Thread.Sleep(50);
+        Thread.Sleep(25);
       }
+    }
+
+    private void FileLoadingCompleteCallback()
+    {
+      NpcDamageProcessor.LowerPriority();
     }
 
     private void FileLoadingContinue(ProcessLine pline)
@@ -456,68 +441,24 @@ namespace EQLogParser
       {
         // check for lines to verify player names
         string name;
-        bool needRemove;
 
         switch (pline.State)
         {
           case 0:
             // check for damage
-            DateTime lastUpdateTime = NpcDamageManager.GetLastUpdateTime();
-            List<string> newPlayers;
-            List<string> newPets;
-            bool needRemoved;
-            DamageRecord record = LineParser.ParseDamage(pline.ActionPart, out newPlayers, out newPets, out needRemoved);
-
-            if (newPlayers.Count > 0 || newPets.Count > 0)
-            {
-              if (needRemoved)
-              {
-                Dispatcher.InvokeAsync(() => RemovePlayers(newPlayers.Concat(newPets).ToList()));
-              }
-
-              newPlayers.ForEach(player =>
-              {
-                Dispatcher.InvokeAsync(() => VerifiedPlayersList.Add(new Player() { Name = player }));
-              });
-              newPets.ForEach(pet =>
-              {
-                Dispatcher.InvokeAsync(() => VerifiedPetsList.Add(new Player() { Name = pet }));
-              });
-            }
+            DateTime lastUpdateTime = NpcDamageManager.LastUpdateTime;
+            DamageRecord record = LineParser.ParseDamage(pline.ActionPart);
 
             if (record != null)
             {
-              bool newEntry;
-              NonPlayer npc = NpcDamageManager.AddOrUpdateNpc(record, pline.CurrentTime, pline.TimeString.Substring(4, 15), out newEntry);
-              if (newEntry)
+              TimeSpan diff = pline.CurrentTime.Subtract(lastUpdateTime);
+              if (lastUpdateTime != DateTime.MinValue && diff.TotalSeconds >= 60)
               {
-                TimeSpan diff = pline.CurrentTime.Subtract(lastUpdateTime);
-                if (lastUpdateTime != DateTime.MinValue && diff.TotalSeconds >= 60)
-                {
-                  NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
-                  Dispatcher.InvokeAsync(() => NpcList.Add(divider));
-                }
+                NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
+                Dispatcher.InvokeAsync(() => NonPlayersView.Add(divider));
+              }
 
-                Dispatcher.InvokeAsync(() =>
-                {
-                  NpcList.Add(npc);
-                  if (npcDataGrid.Items.Count > 0)
-                  {
-                    npcDataGrid.Items.MoveCurrentToLast();
-                    if (!npcDataGrid.IsMouseOver)
-                    {
-                      NeedScrollIntoView = true;
-                    }
-                  }
-                });
-              }
-              else
-              {
-                if (CurrentStats != null && CurrentStats.NpcIDs.Contains(npc.ID))
-                {
-                  NeedStatsUpdate = true;
-                }
-              }
+              NpcDamageManager.AddOrUpdateNpc(record, pline.CurrentTime, pline.TimeString.Substring(4, 15));
             }
             else
             {
@@ -539,22 +480,11 @@ namespace EQLogParser
             LineParser.CheckForSlain(pline);
             break;
           case 2:
-            if (LineParser.CheckForShrink(pline, out name))
-            {
-              Dispatcher.InvokeAsync(() => RemovePlayers(new List<string>() { name }));
-            }
+            LineParser.CheckForShrink(pline);
             break;
           case 3:
           case 4:
-            if (LineParser.CheckForPlayers(pline, out name, out needRemove))
-            {
-              if (needRemove)
-              {
-                Dispatcher.InvokeAsync(() => RemovePlayers(new List<string>() { name }));
-              }
-
-              Dispatcher.InvokeAsync(() => VerifiedPlayersList.Add(new Player() { Name = name }));
-            }
+            LineParser.CheckForPlayers(pline);
             break;
           case 5:
             // map pet to player
@@ -568,10 +498,12 @@ namespace EQLogParser
                 Dispatcher.InvokeAsync(() =>
                 {
                   PetMappingList.Add(mapping);
-                  VerifiedPetsList.Add(new Player() { Name = name });
                 });
               }
             }
+            break;
+          case 6:
+            LineParser.CheckForHeal(pline);
             break;
         }
       }

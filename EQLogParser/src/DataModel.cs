@@ -3,14 +3,6 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  public class DataTypes
-  {
-    public static string[] DAMAGE_LIST = {
-      "bash", "bite", "backstab", "claw", "crush", "frenzies on", "frenzy on", "gore", "hit",
-      "kick", "maul", "punch", "pierce", "rend", "shoot", "slash", "slam", "slice", "smash", "sting", "strike"
-    };
-  }
-
   public class DamageRecord
   {
     public long Damage { get; set; }
@@ -59,6 +51,7 @@ namespace EQLogParser
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
     public long ID { get; set; }
+    public string CorrectMapKey {get; set;}
   }
 
   public class PetMapping

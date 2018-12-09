@@ -8,18 +8,20 @@ namespace EQLogParser
   class LogReader
   {
     public delegate void ParseLineCallback(string line);
-
+    public delegate void InitialLoadCompleteCallback();
     public long FileSize = 0;
     public long BytesRead = 0;
 
     private string FileName;
     private ParseLineCallback LoadingCallback;
+    private InitialLoadCompleteCallback CompleteCallback;
     private ThreadState LogThreadState;
 
-    public LogReader(string fileName, ParseLineCallback loadingCallback)
+    public LogReader(string fileName, ParseLineCallback loadingCallback, InitialLoadCompleteCallback completeCallback)
     {
       this.FileName = fileName;
       this.LoadingCallback = loadingCallback;
+      this.CompleteCallback = completeCallback;
     }
 
     public void Start()
@@ -50,6 +52,7 @@ namespace EQLogParser
             LoadingCallback(line);
           }
 
+          CompleteCallback();
           BytesRead += 2; // EOF
 
           // setup watcher

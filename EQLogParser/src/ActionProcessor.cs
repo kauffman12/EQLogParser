@@ -7,17 +7,22 @@ namespace EQLogParser
 {
   class ActionProcessor
   {
-    public const int DELAY_TIME = 50;
     public delegate void ProcessActionCallback(object data);
     private ConcurrentQueue<object> Queue = new ConcurrentQueue<object>();
     private ConcurrentQueue<object> Priority = new ConcurrentQueue<object>();
     private ProcessActionCallback callback;
-    private static bool stopped = false;
+    private bool stopped = false;
+    private int delayTime = 10;
 
     public ActionProcessor(ProcessActionCallback callback)
     {
       this.callback = callback;
       Task.Run((() => Process()));
+    }
+
+    public void LowerPriority()
+    {
+      delayTime = 200;
     }
 
     public void AppendToQueue(object data)
@@ -58,7 +63,7 @@ namespace EQLogParser
 
         if (Priority.IsEmpty && Queue.IsEmpty)
         {
-          Thread.Sleep(DELAY_TIME);
+          Thread.Sleep(delayTime);
         }
       }
     }

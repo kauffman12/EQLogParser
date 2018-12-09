@@ -146,14 +146,14 @@
             <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Players" ContainerDockedSize="240,150">
               <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="30" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow">
                 <DataGrid.Columns>
-                  <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" CanUserReorder="False" MinWidth="30" Width="30*" />
+                  <DataGridTextColumn Binding="{Binding}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" CanUserReorder="False" MinWidth="30" Width="30*" />
                 </DataGrid.Columns>
               </datagrid:ThemedDataGrid>
             </docking:ToolWindow>
             <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Verified Pets" ContainerDockedSize="240,150">
               <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="30" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow">
                 <DataGrid.Columns>
-                  <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" CanUserReorder="False" MinWidth="30" Width="30*" />
+                  <DataGridTextColumn Binding="{Binding}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" CanUserReorder="False" MinWidth="30" Width="30*" />
                 </DataGrid.Columns>
               </datagrid:ThemedDataGrid>
             </docking:ToolWindow>
