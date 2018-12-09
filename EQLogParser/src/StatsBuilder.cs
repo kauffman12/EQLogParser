@@ -6,7 +6,7 @@ namespace EQLogParser
 {
   class StatsBuilder
   {
-    public const string DETAILS_FORMAT = "{0} in {1}s, {2} @ {3}";
+    public const string DETAILS_FORMAT = "{0} in {1}s, {2} @ {3} DPS";
     private const string RAID_PLAYER = "Totals";
 
     internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)
@@ -14,7 +14,11 @@ namespace EQLogParser
       CombinedStats combined = new CombinedStats() { NpcIDs = new SortedSet<long>() };
       List<PlayerStats> dpsList = new List<PlayerStats>();
       Dictionary<string, PlayerStats> totalDamage = new Dictionary<string, PlayerStats>();
-      PlayerStats raidTotals = new PlayerStats() { Name = RAID_PLAYER, Damage = 0, DPS = 0 };
+      PlayerStats raidTotals = new PlayerStats()
+      {
+        Name = RAID_PLAYER, Damage = 0, DPS = 0,
+        BeginTimes = new Dictionary<int, DateTime>(), LastTimes = new Dictionary<int, DateTime>(), TimeDiffs = new Dictionary<int, double>()
+      };
 
       string title = null;
       foreach (NonPlayer npc in selected)
@@ -42,10 +46,9 @@ namespace EQLogParser
           string details;
 
           // see if there's a pet mapping, check this first
-          if (LineParser.PetToPlayers.ContainsKey(key))
+          if ((player = DataManager.Instance.GetPlayerFromPet(key)) != null)
           {
             details = "+" + key;
-            player = LineParser.PetToPlayers[key];
           }
           else if (npcStats.Owner != "" && npcStats.IsPet)
           {
@@ -65,7 +68,11 @@ namespace EQLogParser
 
           if (!totalDamage.ContainsKey(player))
           {
-            playerTotals = new PlayerStats() { Name = player, Damage = 0, DPS = 0, Details = details };
+            playerTotals = new PlayerStats()
+            {
+              Name = player, Damage = 0, DPS = 0, Details = details,
+              BeginTimes = new Dictionary<int, DateTime>(), LastTimes = new Dictionary<int, DateTime>(), TimeDiffs = new Dictionary<int, double>()
+            };
             totalDamage.Add(player, playerTotals);
             dpsList.Add(playerTotals);
           }
@@ -85,15 +92,15 @@ namespace EQLogParser
             }
           }
 
-          UpdateTotals(playerTotals, npcStats);
-          UpdateTotals(raidTotals, npcStats);
+          UpdateTotals(playerTotals, npcStats, npc.FightID);
+          UpdateTotals(raidTotals, npcStats, npc.FightID);
         }
       }
 
       combined.RaidStats = raidTotals;
-      combined.TimeDiff = raidTotals.TimeDiff;
+      combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
       combined.Title = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + 
-        String.Format(DETAILS_FORMAT, title, raidTotals.TimeDiff, Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
+        String.Format(DETAILS_FORMAT, title, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
       combined.StatsList = dpsList.OrderByDescending(item => item.Damage).ToList();
 
       for (int i=0; i<combined.StatsList.Count; i++)
@@ -124,35 +131,43 @@ namespace EQLogParser
       return result;
     }
 
-    private static void UpdateTotals(PlayerStats playerTotals, DamageStats npcStats)
+    private static void UpdateTotals(PlayerStats playerTotals, DamageStats npcStats, int FightID)
     {
+      if (!playerTotals.BeginTimes.ContainsKey(FightID))
+      {
+        playerTotals.BeginTimes[FightID] = new DateTime();
+        playerTotals.LastTimes[FightID] = new DateTime();
+        playerTotals.TimeDiffs[FightID] = 0;
+      }
+
       playerTotals.Damage += npcStats.Damage;
       playerTotals.Hits += npcStats.Hits;
       playerTotals.Max = (playerTotals.Max < npcStats.Max) ? npcStats.Max : playerTotals.Max;
 
       bool updateTime = false;
-      if (playerTotals.BeginTime == DateTime.MinValue || playerTotals.BeginTime > npcStats.BeginTime)
+      if (playerTotals.BeginTimes[FightID] == DateTime.MinValue || playerTotals.BeginTimes[FightID] > npcStats.BeginTime)
       {
-        playerTotals.BeginTime = npcStats.BeginTime;
+        playerTotals.BeginTimes[FightID] = npcStats.BeginTime;
         updateTime = true;
       }
 
-      if (playerTotals.LastTime == DateTime.MinValue || playerTotals.LastTime < npcStats.LastTime)
+      if (playerTotals.LastTimes[FightID] == DateTime.MinValue || playerTotals.LastTimes[FightID] < npcStats.LastTime)
       {
-        playerTotals.LastTime = npcStats.LastTime;
+        playerTotals.LastTimes[FightID] = npcStats.LastTime;
         updateTime = true;
       }
 
       if (updateTime)
       {
-        playerTotals.TimeDiff = playerTotals.LastTime.Subtract(playerTotals.BeginTime).TotalSeconds;
-        if (playerTotals.TimeDiff <= 0)
+        playerTotals.TimeDiffs[FightID] = playerTotals.LastTimes[FightID].Subtract(playerTotals.BeginTimes[FightID]).TotalSeconds;
+        if (playerTotals.TimeDiffs[FightID] <= 0)
         {
-          playerTotals.TimeDiff = 1;
+          playerTotals.TimeDiffs[FightID] = 1;
         }
       }
 
-      playerTotals.DPS = (long) Math.Round(playerTotals.Damage / playerTotals.TimeDiff);
+      playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
+      playerTotals.DPS = (long) Math.Round(playerTotals.Damage / playerTotals.TotalSeconds);
       playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.Damage) / playerTotals.Hits);
     }
   }

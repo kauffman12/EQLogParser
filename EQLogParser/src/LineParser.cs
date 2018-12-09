@@ -8,8 +8,6 @@ namespace EQLogParser
 {
   class LineParser
   {
-    public static ConcurrentDictionary<string, string> PetToPlayers = new ConcurrentDictionary<string, string>();
-
     // counting this thing is really slow
     private static int DateCount = 0;
     private static ConcurrentDictionary<string, DateTime> DateTimeCache = new ConcurrentDictionary<string, DateTime>();
@@ -18,8 +16,6 @@ namespace EQLogParser
     private static Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
     private static Regex CheckLeader = new Regex(@"^(\w+) says, 'My leader is (\w+)\.'", RegexOptions.Singleline | RegexOptions.Compiled);
     private static Regex CheckDoTDamage = new Regex(@"^(.+) has taken (\d+) damage from (.+) by (\w+)\.", RegexOptions.Singleline | RegexOptions.Compiled);
-
-    private delegate DamageRecord ParseDamageFunc(string line);
 
     public static ConcurrentDictionary<string, bool> HitMap = new ConcurrentDictionary<string, bool>(
       new List<KeyValuePair<string, bool>>
@@ -142,11 +138,8 @@ namespace EQLogParser
       }
     }
 
-    public static bool CheckForPetLeader(ProcessLine pline, out string name)
+    public static void CheckForPetLeader(ProcessLine pline)
     {
-      bool found = false;
-      name = "";
-
       MatchCollection matches = CheckLeader.Matches(pline.ActionPart);
       if (matches.Count > 0 && matches[0].Groups.Count == 3)
       {
@@ -155,16 +148,8 @@ namespace EQLogParser
 
         DataManager.Instance.UpdateVerifiedPlayers(owner);
         DataManager.Instance.UpdateVerifiedPets(pet);
-
-        if (PetToPlayers.TryAdd(pet, owner))
-        {
-          name = pet;
-        }
-
-        found = true;
+        DataManager.Instance.UpdatePetToPlayer(pet, owner);
       }
-
-      return found;
     }
 
     public static void CheckForPlayers(ProcessLine pline)

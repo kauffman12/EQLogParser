@@ -1,5 +1,4 @@
 ﻿
-using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
 using System;
 using System.Collections.ObjectModel;
@@ -17,7 +16,7 @@ namespace EQLogParser
   public partial class MainWindow : Window
   {
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.5";
+    private const string VERSION = "v1.0.7";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
@@ -35,12 +34,14 @@ namespace EQLogParser
     private ObservableCollection<string> VerifiedPetsView = new ObservableCollection<string>();
     private ObservableCollection<string> VerifiedPlayersView = new ObservableCollection<string>();
     private ObservableCollection<NonPlayer> NonPlayersView = new ObservableCollection<NonPlayer>();
+    private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
 
     // stats
     private static bool NeedStatsUpdate = false;
     private static bool NeedDPSTextUpdate = false;
     private static CombinedStats CurrentStats = null;
     private DispatcherTimer NonPlayerSelectionTimer;
+    private int CurrentFightID = 0;
 
     // progress window
     private static bool UpdatingProgress = false;
@@ -49,10 +50,7 @@ namespace EQLogParser
 
     private NpcDamageManager NpcDamageManager = null;
     private LogReader EQLogReader = null;
-
     private bool NeedScrollIntoView = false;
-
-    private ObservableCollection<PetMapping> PetMappingList = new ObservableCollection<PetMapping>();
 
     public MainWindow()
     {
@@ -61,6 +59,14 @@ namespace EQLogParser
       // update titles
       Title = APP_NAME + " " + VERSION;
       dpsTitle.Content = DPS_LABEL;
+
+      // pet -> players
+      petMappingGrid.ItemsSource = PetPlayersView;
+      DataManager.Instance.EventsNewPetMapping += (sender, mapping) => Dispatcher.InvokeAsync(() =>
+      {
+        PetPlayersView.Add(mapping);
+        NeedStatsUpdate = true;
+      });
 
       // verified pets table
       verifiedPetsGrid.ItemsSource = VerifiedPetsView;
@@ -76,9 +82,6 @@ namespace EQLogParser
       DataManager.Instance.EventsRemovedNonPlayer += (sender, name) => RemoveNonPlayer(name);
       DataManager.Instance.EventsNewNonPlayer += (sender, npc) => AddNonPlayer(npc);
       DataManager.Instance.EventsNewUnverifiedPetOrPlayer += (sender, name) => RemoveNonPlayer(name);
-
-      petMappingGrid.ItemsSource = PetMappingList;
-      debugDataGrid.ItemsSource = new ObservableCollection<string>();
 
       // fix player DPS table sorting
       playerDataGrid.Sorting += (s, e) =>
@@ -120,6 +123,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
+        npc.FightID = CurrentFightID;
         NonPlayersView.Add(npc);
         npcDataGrid.Items.MoveCurrentToLast();
         if (!npcDataGrid.IsMouseOver)
@@ -211,7 +215,7 @@ namespace EQLogParser
         }
         else
         {
-          playerDPSTextBox.Text = "";
+          playerDPSTextBox.Text = dpsTitle.Content.ToString();
         }
 
         NeedDPSTextUpdate = false;
@@ -233,6 +237,7 @@ namespace EQLogParser
               if (NeedStatsUpdate)
               {
                 dpsTitle.Content = CurrentStats.Title;
+                playerDPSTextBox.Text = CurrentStats.Title;
                 playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
                 NeedStatsUpdate = false;
               }
@@ -321,15 +326,7 @@ namespace EQLogParser
       {
         Utils.OpenWindow(playerDPSTextWindow);
       }
-      else if (e.Source == debugWindowMenuItem)
-      {
-        if (!debugWindow.IsOpen)
-        {
-          debugWindow = new DocumentWindow(docSite, "debugWindow", "Debug", null, debugDataGrid);
-        }
-
-        Utils.OpenWindow(debugWindow);
-      }
+      // debugWindow = new DocumentWindow(docSite, "debugWindow", "Debug", null, debugDataGrid);
     }
 
     private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
@@ -354,6 +351,7 @@ namespace EQLogParser
         UpdatingProgress = true;
         ProcessedBytes = 0;
         StartLoadTime = DateTime.Now;
+        CurrentFightID = 0;
 
         if (NpcDamageProcessor != null)
         {
@@ -439,9 +437,6 @@ namespace EQLogParser
 
       try
       {
-        // check for lines to verify player names
-        string name;
-
         switch (pline.State)
         {
           case 0:
@@ -455,24 +450,14 @@ namespace EQLogParser
               if (lastUpdateTime != DateTime.MinValue && diff.TotalSeconds >= 60)
               {
                 NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
-                Dispatcher.InvokeAsync(() => NonPlayersView.Add(divider));
+                Dispatcher.InvokeAsync(() =>
+                {
+                  CurrentFightID++;
+                  NonPlayersView.Add(divider);
+                });
               }
 
               NpcDamageManager.AddOrUpdateNpc(record, pline.CurrentTime, pline.TimeString.Substring(4, 15));
-            }
-            else
-            {
-              Dispatcher.InvokeAsync(() =>
-              {
-                if (debugWindow.IsOpen && debugWindow.IsActive)
-                {
-                  ObservableCollection<string> collection = debugDataGrid.ItemsSource as ObservableCollection<string>;
-                  if (collection != null)
-                  {
-                    collection.Add(pline.ActionPart);
-                  }
-                }
-              });
             }
             break;
           case 1:
@@ -487,20 +472,7 @@ namespace EQLogParser
             LineParser.CheckForPlayers(pline);
             break;
           case 5:
-            // map pet to player
-            if (LineParser.CheckForPetLeader(pline, out name))
-            {
-              if (name.Length > 0)
-              {
-                PetMapping mapping = new PetMapping() { Pet = name, Owner = LineParser.PetToPlayers[name] };
-
-                NeedStatsUpdate = true;
-                Dispatcher.InvokeAsync(() =>
-                {
-                  PetMappingList.Add(mapping);
-                });
-              }
-            }
+            LineParser.CheckForPetLeader(pline);
             break;
           case 6:
             LineParser.CheckForHeal(pline);
