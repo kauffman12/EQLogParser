@@ -52,6 +52,7 @@ namespace EQLogParser
     public DateTime LastTime { get; set; }
     public long ID { get; set; }
     public string CorrectMapKey {get; set;}
+    public int FightID { get; set; }
   }
 
   public class PetMapping
@@ -79,8 +80,9 @@ namespace EQLogParser
     public long Avg { get; set; }
     public string Details { get; set; }
     public string Name { get; set; }
-    public DateTime BeginTime { get; set; }
-    public DateTime LastTime { get; set; }
-    public double TimeDiff { get; set; }
+    public double TotalSeconds { get; set; }
+    public Dictionary<int, DateTime> BeginTimes { get; set; }
+    public Dictionary<int, DateTime> LastTimes { get; set; }
+    public Dictionary<int, double> TimeDiffs { get; set; }
   }
 }

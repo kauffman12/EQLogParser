@@ -9,6 +9,7 @@ namespace EQLogParser
   {
     public static DataManager Instance = new DataManager();
 
+    public event EventHandler<PetMapping> EventsNewPetMapping;
     public event EventHandler<string> EventsNewVerifiedPet;
     public event EventHandler<string> EventsNewVerifiedPlayer;
     public event EventHandler<string> EventsRemovedNonPlayer;
@@ -17,6 +18,7 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
 
     private Dictionary<string, NonPlayer> ActiveNonPlayerMap = new Dictionary<string, NonPlayer>();
+    private Dictionary<string, string> PetToPlayerMap = new Dictionary<string, string>();
     private Dictionary<string, byte> LifetimeNonPlayerMap = new Dictionary<string, byte>();
     private Dictionary<string, string> AttackerReplacement = new Dictionary<string, string>();
     private Dictionary<string, byte> GameGeneratedPets = new Dictionary<string, byte>();
@@ -101,6 +103,11 @@ namespace EQLogParser
       return ActiveNonPlayerMap.ContainsKey(name) ? ActiveNonPlayerMap[name] : null;
     }
 
+    public string GetPlayerFromPet(string pet)
+    {
+      return PetToPlayerMap.ContainsKey(pet) ? PetToPlayerMap[pet] : null;
+    }
+
     public bool IsProbablyNotAPlayer(string name)
     {
       bool probably = false;
@@ -143,6 +150,15 @@ namespace EQLogParser
       {
         UnverifiedPetOrPlayer[name] = 1;
         EventsNewUnverifiedPetOrPlayer(this, name);
+      }
+    }
+
+    public void UpdatePetToPlayer(string pet, string player)
+    {
+      if (!PetToPlayerMap.ContainsKey(pet))
+      {
+        PetToPlayerMap[pet] = player;
+        EventsNewPetMapping(this, new PetMapping() { Pet = pet, Owner = player });
       }
     }
 
