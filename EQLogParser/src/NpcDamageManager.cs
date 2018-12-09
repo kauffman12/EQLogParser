@@ -6,109 +6,59 @@ namespace EQLogParser
   class NpcDamageManager
   {
     private const int NPC_DEATH_TIME = 25;
-    private Dictionary<string, NonPlayer> ActiveNonPlayerMap = new Dictionary<string, NonPlayer>();
-    private Dictionary<string, bool> LifetimeNonPlayerMap = new Dictionary<string, bool>();
-    private DateTime LastUpdateTime;
+    public DateTime LastUpdateTime { get; set; }
     private long CurrentNpcID = 0;
 
-    public DateTime GetLastUpdateTime()
+    public void AddOrUpdateNpc(DamageRecord record, DateTime currentTime, String origTimeString)
     {
-      return LastUpdateTime;
-    }
-
-    public NonPlayer AddOrUpdateNpc(DamageRecord record, DateTime currentTime, String origTimeString, out bool newEntry)
-    {
-      newEntry = false;
-      NonPlayerEntry entry = Get(record, currentTime, origTimeString);
+      NonPlayer npc = Get(record, currentTime, origTimeString);
 
       // assume npc has been killed and create new entry
-      if (currentTime.Subtract(entry.Npc.LastTime).TotalSeconds > NPC_DEATH_TIME)
+      if (currentTime.Subtract(npc.LastTime).TotalSeconds > NPC_DEATH_TIME)
       {
-        ActiveNonPlayerMap.Remove(record.Defender);
-        entry = Get(record, currentTime, origTimeString);
+        DataManager.Instance.RemoveActiveNonPlayer(npc.CorrectMapKey);
+        npc = Get(record, currentTime, origTimeString);
       }
 
-      if (!entry.Npc.DamageMap.ContainsKey(record.Attacker))
+      if (!npc.DamageMap.ContainsKey(record.Attacker))
       {
-        entry.Npc.DamageMap.Add(record.Attacker, new DamageStats() { BeginTime = currentTime, Owner = "", IsPet = false });
+        npc.DamageMap.Add(record.Attacker, new DamageStats() { BeginTime = currentTime, Owner = "", IsPet = false });
       }
 
       // update basic stats
-      DamageStats stats = entry.Npc.DamageMap[record.Attacker];
+      DamageStats stats = npc.DamageMap[record.Attacker];
       stats.Damage += record.Damage;
       stats.Hits++;
       stats.Max = (stats.Max < record.Damage) ? record.Damage : stats.Max;
       stats.LastTime = currentTime;
       LastUpdateTime = currentTime;
+      npc.LastTime = currentTime;
 
-      if (record.AttackerPetType != "" && record.AttackerOwner != "")
+      if (record.AttackerPetType != "")
       {
         stats.IsPet = true;
         stats.Owner = record.AttackerOwner;
       }
-      else if (record.AttackerPetType == "" && LineParser.PetToPlayers.ContainsKey(record.Attacker))
-      {
-        stats.IsPet = true;
-        stats.Owner = LineParser.PetToPlayers[record.Attacker];
-      }
-      else if (LineParser.GeneratedPets.ContainsKey(record.Attacker))
-      {
-        stats.IsPet = true;
-      }
 
-      entry.Npc.LastTime = currentTime;
-      newEntry = entry.IsNew;
-      entry.IsNew = false;
-      return entry.Npc;
+      DataManager.Instance.UpdateIfNewNonPlayerMap(npc.CorrectMapKey, npc);
     }
 
-    public bool CheckForPlayer(string name)
+    private  NonPlayer Get(DamageRecord record, DateTime currentTime, String origTimeString)
     {
-      bool needUpdate = false;
-      if (ActiveNonPlayerMap.ContainsKey(name))
+      NonPlayer npc = DataManager.Instance.GetNonPlayer(record.Defender);
+
+      if (npc == null && Char.IsUpper(record.Defender[0]) && record.Type == "DoT")
       {
-        ActiveNonPlayerMap.Remove(name);
-        needUpdate = true;
+        // DoTs will show upper case when they shouldn't because they start a sentence
+        npc = DataManager.Instance.GetNonPlayer(Char.ToLower(record.Defender[0]) + record.Defender.Substring(1));
+      } else if (npc == null && Char.IsLower(record.Defender[0]) && record.Type == "DD")
+      {
+        // DDs deal with having to work around DoTs
+        npc = DataManager.Instance.GetNonPlayer(Char.ToUpper(record.Defender[0]) + record.Defender.Substring(1));
       }
 
-      if (LifetimeNonPlayerMap.ContainsKey(name))
+      if (npc == null)
       {
-        LifetimeNonPlayerMap.Remove(name);
-        needUpdate = true;
-      }
-      return needUpdate;
-    }
-
-    public void Slain(string name)
-    {
-      if (ActiveNonPlayerMap.ContainsKey(name))
-      {
-        ActiveNonPlayerMap.Remove(name);
-      } else if (ActiveNonPlayerMap.ContainsKey(name.ToLower()))
-      {
-        ActiveNonPlayerMap.Remove(name.ToLower());
-      }
-    }
-
-    private  NonPlayerEntry Get(DamageRecord record, DateTime currentTime, String origTimeString)
-    {
-      NonPlayer npc;
-      bool isNew = false;
-
-      bool alreadyExists = ActiveNonPlayerMap.ContainsKey(record.Defender);
-      if (!alreadyExists && record.Type == "DoT")
-      {
-        // DoTs will show upper case when they shouldn't
-        if(ActiveNonPlayerMap.ContainsKey(record.Defender.ToLower()))
-        {
-          alreadyExists = true;
-          record.Defender = record.Defender.ToLower();
-        }
-      }
-
-      if (!alreadyExists)
-      {
-        isNew = true;
         npc = new NonPlayer()
         {
           Name = record.Defender,
@@ -116,27 +66,12 @@ namespace EQLogParser
           BeginTime = currentTime,
           LastTime = currentTime,
           DamageMap = new Dictionary<string, DamageStats>(),
-          ID = CurrentNpcID++
+          ID = CurrentNpcID++,
+          CorrectMapKey = record.Defender
         };
-
-        ActiveNonPlayerMap.Add(record.Defender, npc);
-        if (!LifetimeNonPlayerMap.ContainsKey(record.Defender))
-        {
-          LifetimeNonPlayerMap.Add(record.Defender, true);
-        }
-      }
-      else
-      {
-        npc = ActiveNonPlayerMap[record.Defender];
       }
 
-      return new NonPlayerEntry() { Npc = npc, IsNew = isNew };
-    }
-
-    private class NonPlayerEntry
-    {
-      public NonPlayer Npc { get; set; }
-      public bool IsNew { get; set; }
+      return npc;
     }
   }
 }
