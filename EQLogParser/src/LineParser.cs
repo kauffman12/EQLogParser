@@ -8,8 +8,6 @@ namespace EQLogParser
 {
   class LineParser
   {
-    public static NpcDamageManager NpcDamageManagerInstance;
-    public static ConcurrentDictionary<string, string> AttackerReplacement = new ConcurrentDictionary<string, string>();
     public static ConcurrentDictionary<string, string> PetToPlayers = new ConcurrentDictionary<string, string>();
 
     // counting this thing is really slow
@@ -22,16 +20,6 @@ namespace EQLogParser
     private static Regex CheckDoTDamage = new Regex(@"^(.+) has taken (\d+) damage from (.+) by (\w+)\.", RegexOptions.Singleline | RegexOptions.Compiled);
 
     private delegate DamageRecord ParseDamageFunc(string line);
-
-    public static ConcurrentDictionary<string, bool> GeneratedPets = new ConcurrentDictionary<string, bool>();
-    public static ConcurrentDictionary<string, bool> VerifiedPets = new ConcurrentDictionary<string, bool>();
-    public static ConcurrentDictionary<string, bool> NotNPC = new ConcurrentDictionary<string, bool>();
-
-    public static ConcurrentDictionary<string, bool> VerifiedPlayers = new ConcurrentDictionary<string, bool>(
-      new List<KeyValuePair<string, bool>>
-    {
-      new KeyValuePair<string, bool>("himself", true), new KeyValuePair<string, bool>("you", true), new KeyValuePair<string, bool>("YOU", true)
-    });
 
     public static ConcurrentDictionary<string, bool> HitMap = new ConcurrentDictionary<string, bool>(
       new List<KeyValuePair<string, bool>>
@@ -57,48 +45,6 @@ namespace EQLogParser
     {
       new KeyValuePair<string, string>("frenzies", "frenzies on"), new KeyValuePair<string, string>("frenzy", "frenzy on")
     });
-
-    // still need to work on this
-    public static int PreCheck(ProcessLine pline)
-    {
-      int result = -1;
-
-      int index;
-
-      if (pline.ActionPart.Contains(" damage")) // damage. for DD
-      {
-        return 0;
-      }
-
-      if ((index = pline.ActionPart.IndexOf(" has been slain by")) > -1)
-      {
-        pline.OptionalIndex = index;
-        return 1;
-      }
-
-      if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.")) > -1)
-      {
-        pline.OptionalIndex = index;
-        return 2;
-      }
-
-      if (pline.ActionPart.Contains(" tells the guild, "))
-      {
-        return 3;
-      }
-
-      if (pline.ActionPart.StartsWith("Targeted(Play"))
-      {
-        return 4;
-      }
-
-      if (pline.ActionPart.Length <= 55 && pline.Line.Contains("My leader is"))
-      {
-        return 5;
-      }
-
-      return result;
-    }
 
     public static ProcessLine KeepForProcessingState(string line)
     {
@@ -156,33 +102,43 @@ namespace EQLogParser
       return pline;
     }
 
-    public static bool CheckForShrink(ProcessLine pline, out string name)
+    public static void CheckForShrink(ProcessLine pline)
     {
-      bool needUpdate = false;
-      name = "";
-
       if (IsPossiblePlayerName(pline.ActionPart, pline.OptionalIndex))
       {
         string test = pline.ActionPart.Substring(0, pline.OptionalIndex);
-        if (!VerifiedPlayers.ContainsKey(test) && !VerifiedPets.ContainsKey(test))
-        {
-          NotNPC.TryAdd(test, true);
-          needUpdate = NpcDamageManagerInstance.CheckForPlayer(test);
-          if (needUpdate)
-          {
-            name = test;
-          }
-        }
+        DataManager.Instance.UpdateUnverifiedPetOrPlayer(test);
       }
-      return needUpdate;
+    }
+
+    public static void CheckForHeal(ProcessLine pline)
+    {
+      string healer = pline.ActionPart.Substring(0, pline.OptionalIndex);     
+      int space = pline.ActionPart.IndexOf(" ", pline.OptionalIndex + 8);
+      string healed = pline.ActionPart.Substring(pline.OptionalIndex + 8, space - pline.OptionalIndex - 8);
+
+      bool foundHealer = DataManager.Instance.CheckNameForPlayer(healer);
+      bool foundHealed = DataManager.Instance.CheckNameForPlayer(healed) || DataManager.Instance.CheckNameForPlayer(healed);
+
+      if (foundHealer && !foundHealed)
+      {
+        DataManager.Instance.UpdateUnverifiedPetOrPlayer(healed, true);
+      }
+      else if (!foundHealer && foundHealed)
+      {
+        DataManager.Instance.UpdateVerifiedPlayers(healer);
+      }
     }
 
     public static void CheckForSlain(ProcessLine pline)
     {
-      string sub = pline.ActionPart.Substring(0, pline.OptionalIndex);
-      if (!VerifiedPlayers.ContainsKey(sub) && !VerifiedPets.ContainsKey(sub))
+      string test = pline.ActionPart.Substring(0, pline.OptionalIndex);
+      if (!DataManager.Instance.CheckNameForPlayer(test) && !DataManager.Instance.CheckNameForPet(test))
       {
-        NpcDamageManagerInstance.Slain(sub);
+        if (!DataManager.Instance.RemoveActiveNonPlayer(test) && Char.IsUpper(test[0]))
+        {
+          DataManager.Instance.RemoveActiveNonPlayer(Char.ToLower(test[0]) + test.Substring(1));
+        }
       }
     }
 
@@ -197,8 +153,8 @@ namespace EQLogParser
         string pet = matches[0].Groups[1].Value;
         string owner = matches[0].Groups[2].Value;
 
-        VerifiedPlayers.TryAdd(owner, true);
-        VerifiedPets.TryAdd(pet, true);
+        DataManager.Instance.UpdateVerifiedPlayers(owner);
+        DataManager.Instance.UpdateVerifiedPets(pet);
 
         if (PetToPlayers.TryAdd(pet, owner))
         {
@@ -211,106 +167,160 @@ namespace EQLogParser
       return found;
     }
 
-    public static bool CheckForPlayers(ProcessLine pline, out string name, out bool needRemove)
+    public static void CheckForPlayers(ProcessLine pline)
     {
-      bool found = false;
-      needRemove = false;
-      name = "";
-
-      string player = null;
-      if (pline.ActionPart.StartsWith("Targeted (Player): "))
+      if (pline.State == 4)
       {
-        player = pline.ActionPart.Substring(19);
+        DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
       }
-      else
+      else if (pline.State == 3)
       {
-        int index = pline.ActionPart.IndexOf(' ');
-        if (index > 0)
-        {
-          string action = pline.ActionPart.Substring(index);
-          if (action.StartsWith(" tells the guild,"))
-          {
-            player = pline.ActionPart.Substring(0, index);
-          }
-        }
+        string name = pline.ActionPart.Substring(0, pline.OptionalIndex);
+        DataManager.Instance.UpdateVerifiedPlayers(name);
       }
-
-      if (player != null && VerifiedPlayers.TryAdd(player, true))
-      {
-        if (NpcDamageManagerInstance.CheckForPlayer(player))
-        {
-          needRemove = true;
-        }
-
-        name = player;
-        found = true;
-      }
-
-      return found;
     }
 
-    public static DamageRecord ParseDamage(string line, out List<string> newPlayers, out List<string> newPets, out bool needRemoved)
+    public static DamageRecord ParseDamage(string part)
     {
       DamageRecord record = null;
-      needRemoved = false;
-      newPlayers = new List<string>();
-      newPets = new List<string>();
 
-      record = ParseAllDamage(line);
+      record = ParseAllDamage(part);
       if (record != null)
       {
-        // replaces You and you and maybe more in the future
-        string replaced;
-        bool failure = false;
+        // Needed to replace 'You' and 'you', etc
+        bool replaced;
+        record.Attacker = DataManager.Instance.ReplaceAttacker(record.Attacker, out replaced);
 
-        // handle Attackers as a set
-        if (AttackerReplacement.TryGetValue(record.Attacker, out replaced))
+        bool isDefenderPet, isAttackerPet;
+        CheckDamageRecordForPet(record, replaced, out isDefenderPet, out isAttackerPet);
+
+        bool isDefenderPlayer;
+        CheckDamageRecordForPlayer(record, replaced, out isDefenderPlayer);
+
+        if (isDefenderPlayer || isDefenderPet || DataManager.Instance.CheckNameForUnverifiedPetOrPlayer(record.Defender))
         {
-          record.Attacker = replaced;
-        }
-        else
-        {
-          if ((record.AttackerPetType != "" && VerifiedPets.TryAdd(record.Attacker, true)) ||
-            GeneratedPets.ContainsKey(record.Attacker) && VerifiedPets.TryAdd(record.Attacker, true))
+          if (record.Attacker != record.Defender)
           {
-            newPets.Add(record.Attacker);
-            needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.Attacker);
+            DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker);
           }
-
-          if (record.AttackerOwner != "" && VerifiedPlayers.TryAdd(record.AttackerOwner, true))
-          {
-            newPlayers.Add(record.AttackerOwner);
-            needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.AttackerOwner);
-          }
+          record = null;
         }
-
-        if ((record.DefenderPetType != "" && VerifiedPets.TryAdd(record.Defender, true)) ||
-          GeneratedPets.ContainsKey(record.Defender) && VerifiedPets.TryAdd(record.Defender, true))
-        {
-          newPets.Add(record.Defender);
-          needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.Defender);
-          failure = true;
-        }
-        else if (record.DefenderOwner != "" && VerifiedPlayers.TryAdd(record.DefenderOwner, true))
-        {
-          newPlayers.Add(record.DefenderOwner);
-          needRemoved = needRemoved || NpcDamageManagerInstance.CheckForPlayer(record.DefenderOwner);
-          failure = true;
-        }
-
-        if (!failure && (VerifiedPlayers.ContainsKey(record.Defender) || VerifiedPets.ContainsKey(record.Defender)
-          || NotNPC.ContainsKey(record.Defender) || GeneratedPets.ContainsKey(record.Defender) || CheckEye.IsMatch(record.Defender)))
-        {
-          failure = true;
-        }
-
-        if (failure)
+        else if (CheckEye.IsMatch(record.Defender))
         {
           record = null;
+        }
+
+        if (record != null && record.Attacker != record.Defender)
+        {
+          DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender);
         }
       }
 
       return record;
+    }
+
+    private static void CheckDamageRecordForPet(DamageRecord record, bool replacedAttacker, out bool isDefenderPet, out bool isAttackerPet)
+    {
+      isDefenderPet = false;
+      isAttackerPet = false;
+
+      if (!replacedAttacker)
+      {
+        if (record.AttackerPetType != "")
+        {
+          DataManager.Instance.UpdateVerifiedPets(record.Attacker);
+          isAttackerPet = true;
+        }
+        else
+        {
+          isAttackerPet = DataManager.Instance.CheckNameForPet(record.Attacker);
+          if (isAttackerPet)
+          {
+            record.AttackerPetType = "pet";
+          }
+        }
+      }
+
+      if (record.DefenderPetType != "")
+      {
+        DataManager.Instance.UpdateVerifiedPets(record.Defender);
+        isDefenderPet = true;
+      }
+      else
+      {
+        isDefenderPet = DataManager.Instance.CheckNameForPet(record.Defender);
+      }
+    }
+
+    private static void CheckDamageRecordForPlayer(DamageRecord record, bool replacedAttacker, out bool isDefenderPlayer)
+    {
+      if (!replacedAttacker)
+      {
+        if (record.AttackerOwner != "")
+        {
+          DataManager.Instance.UpdateVerifiedPlayers(record.AttackerOwner);
+        }
+
+        if (record.DefenderOwner != "")
+        {
+          DataManager.Instance.UpdateVerifiedPlayers(record.DefenderOwner);
+        }
+      }
+
+      isDefenderPlayer = (record.DefenderPetType == "" && DataManager.Instance.CheckNameForPlayer(record.Defender));
+    }
+
+    // still need to work on this
+    private static int PreCheck(ProcessLine pline)
+    {
+      int result = -1;
+
+      int index;
+
+      if (pline.ActionPart.Contains(" damage")) // damage. for DD
+      {
+        return 0;
+      }
+
+      if (pline.ActionPart.Length < 75 && (index = pline.ActionPart.IndexOf(" has been slain by")) > -1)
+      {
+        pline.OptionalIndex = index;
+        return 1;
+      }
+
+      if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.")) > -1)
+      {
+        pline.OptionalIndex = index;
+        return 2;
+      }
+
+      if (pline.ActionPart.Length < 34 && (index = pline.ActionPart.IndexOf(" tells the guild, ")) > -1)
+      {
+        int firstSpace = pline.ActionPart.IndexOf(" ");
+        if (firstSpace > -1 && firstSpace == index)
+        {
+          pline.OptionalIndex = index;
+          return 3;
+        }
+      }
+
+      if (pline.ActionPart.Length < 35 && pline.ActionPart.StartsWith("Targeted (Player)"))
+      {
+        return 4;
+      }
+
+      if (pline.ActionPart.Length >= 35 && pline.ActionPart.Length < 58 && pline.ActionPart.Substring(0, 35).Contains("My leader is"))
+      {
+        return 5;
+      }
+
+      if (pline.ActionPart.Length >= 24 && (index = pline.ActionPart.Substring(0, 24).IndexOf(" healed ")) > -1 && char.IsUpper(pline.ActionPart[index + 8]))
+      {
+        pline.OptionalIndex = index;
+        return 6;
+      }
+
+      return result;
     }
 
     private static DamageRecord ParseAllDamage(string part)
