@@ -3,12 +3,14 @@ using ActiproSoftware.Windows.Themes;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -26,8 +28,11 @@ namespace EQLogParser
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
     private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
     private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
-    private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));  
+    private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
+    private static SolidColorBrush EXPANDED_BRUSH = new SolidColorBrush(Color.FromRgb(104, 114, 122));
+    private static BitmapImage EXPAND_IMAGE = new BitmapImage(new Uri("pack://application:,,/EQLogParser;component/icons/Expand_16x.png"));
+    private static BitmapImage COLLAPSE_IMAGE = new BitmapImage(new Uri("pack://application:,,/EQLogParser;component/icons/Collapse_16x.png"));
 
     private static ActionProcessor NpcDamageProcessor;
 
@@ -266,11 +271,6 @@ namespace EQLogParser
       // adds a delay where a drag-select doesn't keep sending events
       NonPlayerSelectionTimer.Stop();
       NonPlayerSelectionTimer.Start();
-    }
-
-    private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      e.Row.Header = (e.Row.GetIndex() + 1).ToString();
     }
 
     private void NonPlayerDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
@@ -525,6 +525,86 @@ namespace EQLogParser
     private void CopyToEQ_Click(object sender, RoutedEventArgs e)
     {
       Clipboard.SetText(playerDPSTextBox.Text);
+    }
+
+    private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+    {
+      e.Row.Header = (e.Row.GetIndex() + 1).ToString();
+    }
+
+    private void PlayerDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+    {
+      var visible = (e.Row.DetailsVisibility == Visibility.Visible);
+
+      if (visible && e.Row.Background != EXPANDED_BRUSH)
+      {
+        e.Row.Background = EXPANDED_BRUSH;
+      }
+      else if (!visible && e.Row.Background == EXPANDED_BRUSH)
+      {
+        e.Row.Background = null;
+      }
+    }
+
+    private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
+    {
+      var subDataGrid = e.DetailsElement as DataGrid;
+      if (subDataGrid != null && CurrentStats != null && CurrentStats.SubStatsList.Count > e.Row.GetIndex())
+      {
+        PlayerStats stats = e.Row.Item as PlayerStats;
+        if (stats != null && subDataGrid.ItemsSource != CurrentStats.SubStatsList[stats.Rank - 1])
+        {
+          subDataGrid.ItemsSource = CurrentStats.SubStatsList[stats.Rank - 1];
+        }
+      }
+    }
+
+    private void PlayerDataGrid_ExpandClick(object sender, RoutedEventArgs e)
+    {
+      var image = (sender as Image);
+      PlayerStats stats = image != null ? image.DataContext as PlayerStats : null;
+
+      if (stats != null)
+      {
+        var dataGridRow = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
+
+        var visible = (dataGridRow.DetailsVisibility == Visibility.Visible);
+        if (visible)
+        {
+          dataGridRow.Background = null;
+          dataGridRow.DetailsVisibility = Visibility.Collapsed;
+        }
+        else
+        {
+          dataGridRow.Background = EXPANDED_BRUSH;
+          dataGridRow.DetailsVisibility = Visibility.Visible;
+        }
+
+        (sender as Image).Source = visible ? EXPAND_IMAGE : COLLAPSE_IMAGE;
+      }
+    }
+
+    private void PlayerDataGrid_ExpandLoaded(object sender, RoutedEventArgs e)
+    {
+      var image = (sender as Image);
+      PlayerStats stats = image != null ? image.DataContext as PlayerStats : null;
+
+      if (stats != null)
+      {
+        var dataGridRow = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
+        if (dataGridRow != null)
+        {
+          var visible = (dataGridRow.DetailsVisibility == Visibility.Visible);
+          if (visible && image.Source != COLLAPSE_IMAGE)
+          {
+            image.Source = COLLAPSE_IMAGE;
+          }
+          else if (!visible && image.Source != EXPAND_IMAGE)
+          {
+            image.Source = EXPAND_IMAGE;
+          }
+        }
+      }
     }
   }
 }

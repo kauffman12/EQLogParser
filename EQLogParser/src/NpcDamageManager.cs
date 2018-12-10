@@ -22,14 +22,33 @@ namespace EQLogParser
 
       if (!npc.DamageMap.ContainsKey(record.Attacker))
       {
-        npc.DamageMap.Add(record.Attacker, new DamageStats() { BeginTime = currentTime, Owner = "", IsPet = false });
+        npc.DamageMap.Add(record.Attacker, new DamageStats()
+        {
+          BeginTime = currentTime,
+          Owner = "",
+          IsPet = false,
+          TotalDamage = 0,
+          Max = 0,
+          Count = 0,
+          HitMap = new Dictionary<string, Hit>()
+        });
       }
 
       // update basic stats
       DamageStats stats = npc.DamageMap[record.Attacker];
-      stats.Damage += record.Damage;
-      stats.Hits++;
+      if (!stats.HitMap.ContainsKey(record.Type))
+      {
+        stats.HitMap[record.Type] = new Hit() { Count = 0, Max = 0, TotalDamage = 0, Values = new List<long>() };
+      }
+
+      stats.Count++;
+      stats.TotalDamage += record.Damage;
       stats.Max = (stats.Max < record.Damage) ? record.Damage : stats.Max;
+      stats.HitMap[record.Type].Count++;
+      stats.HitMap[record.Type].TotalDamage += record.Damage;
+      stats.HitMap[record.Type].Max = (stats.HitMap[record.Type].Max < record.Damage) ? record.Damage : stats.HitMap[record.Type].Max;
+      stats.HitMap[record.Type].Values.Add(record.Damage);
+
       stats.LastTime = currentTime;
       LastUpdateTime = currentTime;
       npc.LastTime = currentTime;
@@ -47,11 +66,11 @@ namespace EQLogParser
     {
       NonPlayer npc = DataManager.Instance.GetNonPlayer(record.Defender);
 
-      if (npc == null && Char.IsUpper(record.Defender[0]) && record.Type == "DoT")
+      if (npc == null && Char.IsUpper(record.Defender[0]) && record.Action == "DoT")
       {
         // DoTs will show upper case when they shouldn't because they start a sentence
         npc = DataManager.Instance.GetNonPlayer(Char.ToLower(record.Defender[0]) + record.Defender.Substring(1));
-      } else if (npc == null && Char.IsLower(record.Defender[0]) && record.Type == "DD")
+      } else if (npc == null && Char.IsLower(record.Defender[0]) && record.Action == "DD")
       {
         // DDs deal with having to work around DoTs
         npc = DataManager.Instance.GetNonPlayer(Char.ToUpper(record.Defender[0]) + record.Defender.Substring(1));
