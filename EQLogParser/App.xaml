@@ -37,6 +37,14 @@
     <Style x:Key="RightAlignGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
       <Setter Property="TextBlock.TextAlignment" Value="Right" />
     </Style>
+    <Style x:Key="RightAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
+      <Setter Property="TextBlock.TextAlignment" Value="Right" />
+      <Setter Property="Foreground" Value="Black" />
+    </Style>
+    <Style x:Key="LeftAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
+      <Setter Property="TextBlock.TextAlignment" Value="Left" />
+      <Setter Property="Foreground" Value="Black" />
+    </Style>
     <Style TargetType="TextBox">
       <Setter Property="local:TextBoxBehavior.TripleClickSelectAll" Value="True" />
     </Style>

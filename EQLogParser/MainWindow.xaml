@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:docking="http://schemas.actiprosoftware.com/winfx/xaml/docking"
         xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+        xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
         Title="" Height="700" Width="1300" Closed="Window_Closed">
@@ -81,18 +82,53 @@
                         <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
                       </Border>
                     </StackPanel>
-                    <datagrid:ThemedDataGrid x:Name="playerDataGrid" Grid.Row="1" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" >
+                    <datagrid:ThemedDataGrid x:Name="playerDataGrid" Grid.Row="1" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" LoadingRow="PlayerDataGrid_LoadingRow"  Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" RowDetailsVisibilityChanged="PlayerSubGrid_RowDetailsVis" >
                       <DataGrid.Columns>
                         <DataGridTextColumn Binding="{Binding Rank}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False" MinWidth="30" Width="30" />
-                        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90" />
-                        <DataGridTextColumn Binding="{Binding Damage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90"/>
-                        <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="20" Width="70" CanUserReorder="False"/>
-                        <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="55"/>
-                        <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="60"/>
-                        <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="70"/>
-                        <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Avg Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="70"/>
-                        <DataGridTextColumn Binding="{Binding Details}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Additional Details" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="120*" />
+                        <DataGridTemplateColumn ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="120" Width="120">
+                          <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                              <StackPanel Orientation="Horizontal">
+                                <Image Margin="4,0,0,0" Height="18" Loaded="PlayerDataGrid_ExpandLoaded" PreviewMouseLeftButtonDown="PlayerDataGrid_ExpandClick" />
+                                <TextBlock Height="18" Margin="6,0,0,0" FontSize="12" FontFamily="Segoe UI" Text="{Binding Name}"></TextBlock>
+                              </StackPanel>
+                            </DataTemplate>
+                          </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Binding="{Binding Damage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90"/>
+                        <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="70" Width="70" CanUserReorder="False"/>
+                        <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                        <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                        <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
+                        <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Avg Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
+                        <DataGridTextColumn Binding="{Binding Details}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Additional Details" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="120*" />
                       </DataGrid.Columns>
+                      <DataGrid.RowDetailsTemplate>
+                        <DataTemplate>
+                          <datagrid:ThemedDataGrid x:Name="playerSubDataGrid" IsHitTestVisible="False" HeadersVisibility="None" Grid.Row="1" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed">
+                            <DataGrid.RowStyle>
+                              <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="#dee3ff" />
+                                   <Style.Triggers>
+                                  <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#dee3ff"/>
+                                  </Trigger>
+                                </Style.Triggers>
+                              </Style>
+                            </DataGrid.RowStyle>
+                            <DataGrid.Columns>
+                              <DataGridTextColumn ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False" MinWidth="30" Width="30" />
+                              <DataGridTextColumn Binding="{Binding HitType}" CellStyle="{StaticResource LeftAlignSubGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="120" Width="120" />
+                              <DataGridTextColumn Binding="{Binding Damage}" CellStyle="{StaticResource RightAlignSubGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90"/>
+                              <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignSubGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" MinWidth="70" Width="70" CanUserReorder="False"/>
+                              <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignSubGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                              <DataGridTextColumn Binding="{Binding Hits}" CellStyle="{StaticResource RightAlignSubGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                              <DataGridTextColumn Binding="{Binding Max}" CellStyle="{StaticResource RightAlignSubGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
+                              <DataGridTextColumn Binding="{Binding Avg}" CellStyle="{StaticResource RightAlignSubGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
+                            </DataGrid.Columns>
+                          </datagrid:ThemedDataGrid>
+                        </DataTemplate>
+                      </DataGrid.RowDetailsTemplate>
                     </datagrid:ThemedDataGrid>
                   </Grid>
                 </docking:DocumentWindow>
