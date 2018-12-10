@@ -14,11 +14,7 @@ namespace EQLogParser
       CombinedStats combined = new CombinedStats() { NpcIDs = new SortedSet<long>() };
       List<PlayerStats> dpsList = new List<PlayerStats>();
       Dictionary<string, PlayerStats> totalDamage = new Dictionary<string, PlayerStats>();
-      PlayerStats raidTotals = new PlayerStats()
-      {
-        Name = RAID_PLAYER, Damage = 0, DPS = 0,
-        BeginTimes = new Dictionary<int, DateTime>(), LastTimes = new Dictionary<int, DateTime>(), TimeDiffs = new Dictionary<int, double>()
-      };
+      PlayerStats raidTotals = CreatePlayerStats(RAID_PLAYER);
 
       string title = null;
       foreach (NonPlayer npc in selected)
@@ -42,8 +38,7 @@ namespace EQLogParser
           DamageStats npcStats = npc.DamageMap[key];
 
           // update player based on their pet if needed
-          string player;
-          string details;
+          string player, details;
 
           // see if there's a pet mapping, check this first
           if ((player = DataManager.Instance.GetPlayerFromPet(key)) != null)
@@ -66,13 +61,18 @@ namespace EQLogParser
             details = "";
           }
 
+          if (player.Contains("Pie"))
+          {
+            if (true)
+            {
+
+            }
+          }
+
           if (!totalDamage.ContainsKey(player))
           {
-            playerTotals = new PlayerStats()
-            {
-              Name = player, Damage = 0, DPS = 0, Details = details,
-              BeginTimes = new Dictionary<int, DateTime>(), LastTimes = new Dictionary<int, DateTime>(), TimeDiffs = new Dictionary<int, double>()
-            };
+            playerTotals = CreatePlayerStats(player);
+            playerTotals.Details = details;
             totalDamage.Add(player, playerTotals);
             dpsList.Add(playerTotals);
           }
@@ -103,9 +103,11 @@ namespace EQLogParser
         String.Format(DETAILS_FORMAT, title, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
       combined.StatsList = dpsList.OrderByDescending(item => item.Damage).ToList();
 
+      combined.SubStatsList = new List<List<PlayerSubStats>>();
       for (int i=0; i<combined.StatsList.Count; i++)
       {
         combined.StatsList[i].Rank = i + 1;
+        combined.SubStatsList.Add(combined.StatsList[i].SubStats.Values.OrderByDescending(item => item.Damage).ToList());
       }
 
       return combined;
@@ -131,19 +133,20 @@ namespace EQLogParser
       return result;
     }
 
-    private static void UpdateTotals(PlayerStats playerTotals, DamageStats npcStats, int FightID)
+    internal static void UpdateTotals(PlayerStats playerTotals, DamageStats npcStats, int FightID)
     {
       if (!playerTotals.BeginTimes.ContainsKey(FightID))
       {
         playerTotals.BeginTimes[FightID] = new DateTime();
         playerTotals.LastTimes[FightID] = new DateTime();
         playerTotals.TimeDiffs[FightID] = 0;
+        playerTotals.SubStats = new Dictionary<string, PlayerSubStats>();
       }
 
-      playerTotals.Damage += npcStats.Damage;
-      playerTotals.Hits += npcStats.Hits;
+      playerTotals.Damage += npcStats.TotalDamage;
+      playerTotals.Hits += npcStats.Count;
       playerTotals.Max = (playerTotals.Max < npcStats.Max) ? npcStats.Max : playerTotals.Max;
-
+      
       bool updateTime = false;
       if (playerTotals.BeginTimes[FightID] == DateTime.MinValue || playerTotals.BeginTimes[FightID] > npcStats.BeginTime)
       {
@@ -169,6 +172,40 @@ namespace EQLogParser
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
       playerTotals.DPS = (long) Math.Round(playerTotals.Damage / playerTotals.TotalSeconds);
       playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.Damage) / playerTotals.Hits);
+
+      foreach (string key in npcStats.HitMap.Keys)
+      {
+        if (!playerTotals.SubStats.ContainsKey(key))
+        {
+          playerTotals.SubStats[key] = new PlayerSubStats() { Details = "", Name = "", HitType = key };
+        }
+
+        playerTotals.SubStats[key].Damage += npcStats.HitMap[key].TotalDamage;
+        playerTotals.SubStats[key].Hits += npcStats.HitMap[key].Count;
+        playerTotals.SubStats[key].Max = (playerTotals.SubStats[key].Max < npcStats.HitMap[key].Max) ? npcStats.HitMap[key].Max : playerTotals.SubStats[key].Max;
+        playerTotals.SubStats[key].TotalSeconds = playerTotals.TotalSeconds;
+        playerTotals.SubStats[key].DPS = (long)Math.Round(playerTotals.SubStats[key].Damage / playerTotals.SubStats[key].TotalSeconds);
+        playerTotals.SubStats[key].Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].Damage) / playerTotals.SubStats[key].Hits);
+      }
+    }
+
+    internal static PlayerStats CreatePlayerStats(string name)
+    {
+      return new PlayerStats()
+      {
+        Name = name,
+        Damage = 0,
+        DPS = 0,
+        Details = "",
+        HitType = "All",
+        Max = 0,
+        Avg = 0,
+        TotalSeconds = 0,
+        Hits = 0,
+        BeginTimes = new Dictionary<int, DateTime>(),
+        LastTimes = new Dictionary<int, DateTime>(),
+        TimeDiffs = new Dictionary<int, double>()
+      };
     }
   }
 }

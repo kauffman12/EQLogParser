@@ -315,7 +315,7 @@ namespace EQLogParser
       try
       {
         bool found = false;
-        string action = "";
+        string type = "";
         string attacker = "";
         string attackerOwner = "";
         string attackerPetType = "";
@@ -324,7 +324,7 @@ namespace EQLogParser
         string defenderOwner = "";
         int afterAction = -1;
         long damage = 0;
-        string type = "";
+        string action = "";
 
         // find first space and see if we have a name in the first  second
         int firstSpace = part.IndexOf(" ");
@@ -353,15 +353,15 @@ namespace EQLogParser
                     {
                       if (HitAdditionalMap.ContainsKey(testAction))
                       {
-                        action = HitAdditionalMap[testAction];
+                        type = HitAdditionalMap[testAction];
                       }
                       else
                       {
-                        action = testAction;
+                        type = testAction;
                       }
 
-                      type = "DD";
-                      afterAction = sizeSoFar + action.Length + 1;
+                      action = "DD";
+                      afterAction = sizeSoFar + type.Length + 1;
                       attackerPetType = petType;
                       attackerOwner = owner;
                       attacker = player;
@@ -370,9 +370,9 @@ namespace EQLogParser
                     {
                       if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
                       {
-                        type = "DoT";
-                        action = "has taken";
-                        afterAction = sizeSoFar + action.Length + 1;
+                        action = "DoT";
+                        type = "DoT Tick";
+                        afterAction = sizeSoFar + "has taken".Length + 1;
                         defenderPetType = petType;
                         defenderOwner = owner;
                         defender = player;
@@ -395,46 +395,46 @@ namespace EQLogParser
               {
                 if (HitAdditionalMap.ContainsKey(testAction))
                 {
-                  action = HitAdditionalMap[testAction];
+                  type = HitAdditionalMap[testAction];
                 }
                 else
                 {
-                  action = testAction;
+                  type = testAction;
                 }
 
-                type = "DD";
-                afterAction = sizeSoFar + action.Length + 1;
+                action = "DD";
+                afterAction = sizeSoFar + type.Length + 1;
                 attacker = player;
               }
               else
               {
                 if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
                 {
-                  type = "DoT";
-                  action = "has taken";
-                  afterAction = sizeSoFar + action.Length + 1;
+                  action = "DoT";
+                  type = "DoT Tick";
+                  afterAction = sizeSoFar + "has taken".Length + 1;
                   defender = player;
                 }
               }
             }
           }
 
-          if (type == "")
+          if (action == "")
           {
             // only check if it's an NPC if it's a DoT and they're the defender
             int hasTakenIndex = part.IndexOf("has taken ", firstSpace + 1);
             if (hasTakenIndex > -1)
             {
-              type = "DoT";
+              action = "DoT";
               defender = part.Substring(0, hasTakenIndex - 1);
-              action = "has taken";
+              type = "DoT Tick";
               afterAction = hasTakenIndex + 10;
             }
           }
 
-          if (action != "" && type != "" && part.Length > afterAction)
+          if (type != "" && action != "" && part.Length > afterAction)
           {
-            if (type == "DD")
+            if (action == "DD")
             {
               int forIndex = part.IndexOf(" for ", afterAction);
               if (forIndex > -1)
@@ -463,16 +463,21 @@ namespace EQLogParser
                     damage = Utils.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
                     if (damage != long.MaxValue)
                     {
-                      if (part.IndexOf(" points ", afterDmg) > -1)
+                      int points;
+                      if ((points = part.IndexOf(" points ", afterDmg)) > -1)
                       {
                         found = true;
+                        if (part.Substring(points + 8, 6) == "of non")
+                        {
+                          type = "Direct Damage";
+                        }
                       }
                     }
                   }
                 }
               }
             }
-            else if (type == "DoT")
+            else if (action == "DoT")
             {
               //     @"^(.+) has taken (\d+) damage from (.+) by (\w+)\."
               // Kizant`s pet has taken
@@ -496,7 +501,7 @@ namespace EQLogParser
                         {
                           // damage parsed above
                           attacker = player;
-                          type = "DoT";
+                          action = "DoT";
                           found = true;
                         }
                       }
@@ -513,7 +518,7 @@ namespace EQLogParser
             {
               Attacker = attacker,
               Defender = defender,
-              Type = type,
+              Type = Char.ToUpper(type[0]) + type.Substring(1),
               Action = action,
               Damage = damage,
               AttackerPetType = attackerPetType,

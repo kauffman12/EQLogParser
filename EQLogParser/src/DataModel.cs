@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace EQLogParser
 {
@@ -16,10 +17,19 @@ namespace EQLogParser
     public string Action { get; set; }
   }
 
+  public class Hit
+  {
+    public long Max { get; set; }
+    public long Count { get; set; }
+    public long TotalDamage { get; set; }
+    public List<long> Values { get; set; }
+  }
+
   public class DamageStats
   {
-    public long Damage { get; set; }
-    public long Hits { get; set; }
+    public Dictionary<string, Hit> HitMap { get; set; }
+    public long TotalDamage { get; set; }
+    public long Count { get; set; }
     public long Max { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
@@ -66,23 +76,35 @@ namespace EQLogParser
     public string Title { get; set; }
     public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
+    public List<List<PlayerSubStats>> SubStatsList { get; set; }
     public PlayerStats RaidStats { get; set; }
     public SortedSet<long> NpcIDs { get; set; }
   }
 
-  public class PlayerStats
+  public class PlayerSubStats
   {
     public int Rank { get; set; }
+    public string Name { get; set; }
     public long Damage { get; set; }
+    public double TotalSeconds { get; set; }
     public long DPS { get; set; }
     public long Hits { get; set; }
+    public string HitType { get; set; }
     public long Max { get; set; }
     public long Avg { get; set; }
     public string Details { get; set; }
-    public string Name { get; set; }
-    public double TotalSeconds { get; set; }
+  }
+
+  public class PlayerStats : PlayerSubStats
+  {
+    public Dictionary<string, PlayerSubStats> SubStats { get; set; }
     public Dictionary<int, DateTime> BeginTimes { get; set; }
     public Dictionary<int, DateTime> LastTimes { get; set; }
     public Dictionary<int, double> TimeDiffs { get; set; }
+  }
+
+  public class PlayerStatsCollection<PlayerStats> : ObservableCollection<PlayerStats>
+  {
+
   }
 }
