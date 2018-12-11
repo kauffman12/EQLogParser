@@ -109,7 +109,7 @@ namespace EQLogParser
 
     public static void CheckForHeal(ProcessLine pline)
     {
-      string healer = pline.ActionPart.Substring(0, pline.OptionalIndex);     
+      string healer = pline.ActionPart.Substring(0, pline.OptionalIndex);
       int space = pline.ActionPart.IndexOf(" ", pline.OptionalIndex + 8);
       string healed = pline.ActionPart.Substring(pline.OptionalIndex + 8, space - pline.OptionalIndex - 8);
 
@@ -524,8 +524,22 @@ namespace EQLogParser
               AttackerPetType = attackerPetType,
               AttackerOwner = attackerOwner,
               DefenderPetType = defenderPetType,
-              DefenderOwner = defenderOwner
+              DefenderOwner = defenderOwner,
+              Modifiers = new Dictionary<string, byte>()
             };
+
+            if (part[part.Length - 1] == ')')
+            {
+              // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
+              int firstParen = part.LastIndexOf('(', part.Length - 4);
+              if (firstParen > -1)
+              {
+                foreach (string modifier in part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1).Split(' '))
+                {
+                  record.Modifiers[modifier] = 1;
+                }
+              }
+            }
           }
         }
       }

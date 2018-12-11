@@ -30,6 +30,7 @@ namespace EQLogParser
           TotalDamage = 0,
           Max = 0,
           Count = 0,
+          CritCount = 0,
           HitMap = new Dictionary<string, Hit>()
         });
       }
@@ -42,9 +43,11 @@ namespace EQLogParser
       }
 
       stats.Count++;
+      stats.CritCount += record.Modifiers.ContainsKey("Critical") ? 1 : 0;
       stats.TotalDamage += record.Damage;
       stats.Max = (stats.Max < record.Damage) ? record.Damage : stats.Max;
       stats.HitMap[record.Type].Count++;
+      stats.HitMap[record.Type].CritCount += record.Modifiers.ContainsKey("Critical") ? 1 : 0;
       stats.HitMap[record.Type].TotalDamage += record.Damage;
       stats.HitMap[record.Type].Max = (stats.HitMap[record.Type].Max < record.Damage) ? record.Damage : stats.HitMap[record.Type].Max;
       stats.HitMap[record.Type].Values.Add(record.Damage);

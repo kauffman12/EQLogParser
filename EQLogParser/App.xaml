@@ -17,7 +17,7 @@
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBackgroundHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBorderHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabControlBackgroundActiveFocusedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundSelectedBrushKey}" Color="White" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundSelectedBrushKey}" Color="#c2c2c0" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBorderActivePressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBackgroundActivePressedBrushKey}" Color="#202020" />
@@ -25,11 +25,9 @@
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderPressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderHoverBrushKey}" Color="Transparent" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundNormalBrushKey}" Color="#101010" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonForegroundDefaultedBrushKey}" Color="White" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonForegroundDefaultedBrushKey}" Color="#c2c2c0" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundDisabledBrushKey}" Color="#2d2d30" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderDefaultedBrushKey}" Color="Transparent" />
-
-
 
     <Style x:Key="CenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
       <Setter Property="HorizontalContentAlignment"  Value="Center"/>

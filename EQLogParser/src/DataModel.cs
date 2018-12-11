@@ -15,12 +15,14 @@ namespace EQLogParser
     public string DefenderOwner { get; set; }
     public string Type { get; set; }
     public string Action { get; set; }
+    public Dictionary<string, byte> Modifiers { get; set; }
   }
 
   public class Hit
   {
     public long Max { get; set; }
     public long Count { get; set; }
+    public long CritCount { get; set; }
     public long TotalDamage { get; set; }
     public List<long> Values { get; set; }
   }
@@ -31,6 +33,7 @@ namespace EQLogParser
     public long TotalDamage { get; set; }
     public long Count { get; set; }
     public long Max { get; set; }
+    public long CritCount { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
     public string Owner { get; set; }
@@ -73,7 +76,8 @@ namespace EQLogParser
 
   public class CombinedStats
   {
-    public string Title { get; set; }
+    public string TargetTitle { get; set; }
+    public string DamageTitle { get; set; }
     public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
     public List<List<PlayerSubStats>> SubStatsList { get; set; }
@@ -92,6 +96,8 @@ namespace EQLogParser
     public string HitType { get; set; }
     public long Max { get; set; }
     public long Avg { get; set; }
+    public long CritHits { get; set; }
+    public decimal CritRate { get; set; }
     public string Details { get; set; }
   }
 
