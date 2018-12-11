@@ -1,6 +1,8 @@
 ﻿
+using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
@@ -27,12 +29,9 @@ namespace EQLogParser
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
     private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
-    private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Color.FromRgb(194, 194, 192));
     private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
-    private static SolidColorBrush EXPANDED_BRUSH = new SolidColorBrush(Color.FromRgb(104, 114, 122));
-    private static BitmapImage EXPAND_IMAGE = new BitmapImage(new Uri("pack://application:,,/EQLogParser;component/icons/Expand_16x.png"));
-    private static BitmapImage COLLAPSE_IMAGE = new BitmapImage(new Uri("pack://application:,,/EQLogParser;component/icons/Collapse_16x.png"));
 
     private static ActionProcessor NpcDamageProcessor;
 
@@ -212,15 +211,31 @@ namespace EQLogParser
     {
       if (NeedDPSTextUpdate)
       {
-        var selected = playerDataGrid.SelectedItems;
+        DataGrid grid;
+        Label label;
+        bool selectedOnly = false;
+        if (dpsWindow.IsVisible)
+        {
+          grid = playerDataGrid;
+          label = dpsTitle;
+        }
+        else
+        {
+          grid = playerDamageDataGrid;
+          label = damageTitle;
+          selectedOnly = true;
+        }
+
+        var selected = grid.SelectedItems;
         if (selected != null && selected.Count > 0)
         {
-          playerDPSTextBox.Text = StatsBuilder.GetSummary(CurrentStats, selected.Cast<PlayerStats>().ToList());
+          Tuple<string, string> result = StatsBuilder.GetSummary(CurrentStats, selected.Cast<PlayerStats>().ToList(), selectedOnly);
+          playerDPSTextBox.Text = result.Item1 + result.Item2;
           playerDPSTextBox.SelectAll();
         }
         else
         {
-          playerDPSTextBox.Text = dpsTitle.Content.ToString();
+          playerDPSTextBox.Text = label.Content.ToString();
         }
 
         NeedDPSTextUpdate = false;
@@ -241,8 +256,8 @@ namespace EQLogParser
             {
               if (NeedStatsUpdate)
               {
-                dpsTitle.Content = CurrentStats.Title;
-                playerDPSTextBox.Text = CurrentStats.Title;
+                dpsTitle.Content = CurrentStats.TargetTitle + CurrentStats.DamageTitle;
+                playerDPSTextBox.Text = dpsTitle.Content.ToString();
                 playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
                 NeedStatsUpdate = false;
               }
@@ -254,6 +269,7 @@ namespace EQLogParser
           if (playerDataGrid.ItemsSource is ObservableCollection<PlayerStats> list)
           {
             dpsTitle.Content = DPS_LABEL;
+            playerDPSTextBox.Text = "";
             list.Clear();
             NeedStatsUpdate = false;
           }
@@ -263,6 +279,17 @@ namespace EQLogParser
 
     private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      NeedDPSTextUpdate = true;
+    }
+
+    private void PlayerDamageDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      var list = playerDamageDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+      if (list.Count == 0)
+      {
+        list = playerDamageDataGrid.ItemsSource as List<PlayerStats>;
+      }
+      damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
       NeedDPSTextUpdate = true;
     }
 
@@ -326,7 +353,6 @@ namespace EQLogParser
       {
         Utils.OpenWindow(playerDPSTextWindow);
       }
-      // debugWindow = new DocumentWindow(docSite, "debugWindow", "Debug", null, debugDataGrid);
     }
 
     private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
@@ -344,7 +370,7 @@ namespace EQLogParser
       if (result == true)
       {
         dpsTitle.Content = DPS_LABEL;
-        completeLabel.Foreground = new SolidColorBrush(Colors.White);
+        completeLabel.Foreground = BRIGHT_TEXT_BRUSH;
         Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
 
         NeedStatsUpdate = true;
@@ -532,20 +558,6 @@ namespace EQLogParser
       e.Row.Header = (e.Row.GetIndex() + 1).ToString();
     }
 
-    private void PlayerDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      var visible = (e.Row.DetailsVisibility == Visibility.Visible);
-
-      if (visible && e.Row.Background != EXPANDED_BRUSH)
-      {
-        e.Row.Background = EXPANDED_BRUSH;
-      }
-      else if (!visible && e.Row.Background == EXPANDED_BRUSH)
-      {
-        e.Row.Background = null;
-      }
-    }
-
     private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
     {
       var subDataGrid = e.DetailsElement as DataGrid;
@@ -559,51 +571,20 @@ namespace EQLogParser
       }
     }
 
-    private void PlayerDataGrid_ExpandClick(object sender, RoutedEventArgs e)
+    private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
     {
-      var image = (sender as Image);
-      PlayerStats stats = image != null ? image.DataContext as PlayerStats : null;
-
-      if (stats != null)
+      if (playerDataGrid.SelectedItems.Count > 0)
       {
-        var dataGridRow = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
-
-        var visible = (dataGridRow.DetailsVisibility == Visibility.Visible);
-        if (visible)
+        var list = playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+        playerDamageDataGrid.ItemsSource = list;
+        damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
+        if (!damageWindow.IsOpen)
         {
-          dataGridRow.Background = null;
-          dataGridRow.DetailsVisibility = Visibility.Collapsed;
-        }
-        else
-        {
-          dataGridRow.Background = EXPANDED_BRUSH;
-          dataGridRow.DetailsVisibility = Visibility.Visible;
+          damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
         }
 
-        (sender as Image).Source = visible ? EXPAND_IMAGE : COLLAPSE_IMAGE;
-      }
-    }
-
-    private void PlayerDataGrid_ExpandLoaded(object sender, RoutedEventArgs e)
-    {
-      var image = (sender as Image);
-      PlayerStats stats = image != null ? image.DataContext as PlayerStats : null;
-
-      if (stats != null)
-      {
-        var dataGridRow = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
-        if (dataGridRow != null)
-        {
-          var visible = (dataGridRow.DetailsVisibility == Visibility.Visible);
-          if (visible && image.Source != COLLAPSE_IMAGE)
-          {
-            image.Source = COLLAPSE_IMAGE;
-          }
-          else if (!visible && image.Source != EXPAND_IMAGE)
-          {
-            image.Source = EXPAND_IMAGE;
-          }
-        }
+        Utils.OpenWindow(damageWindow);
+        damageWindow.MoveToLast();
       }
     }
   }

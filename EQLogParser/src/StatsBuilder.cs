@@ -6,7 +6,7 @@ namespace EQLogParser
 {
   class StatsBuilder
   {
-    public const string DETAILS_FORMAT = "{0} in {1}s, {2} @ {3} DPS";
+    public const string DETAILS_FORMAT = " in {0}s, {1} @ {2} DPS";
     private const string RAID_PLAYER = "Totals";
 
     internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)
@@ -99,8 +99,8 @@ namespace EQLogParser
 
       combined.RaidStats = raidTotals;
       combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
-      combined.Title = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + 
-        String.Format(DETAILS_FORMAT, title, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
+      combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
+      combined.DamageTitle = String.Format(DETAILS_FORMAT, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
       combined.StatsList = dpsList.OrderByDescending(item => item.Damage).ToList();
 
       combined.SubStatsList = new List<List<PlayerSubStats>>();
@@ -113,10 +113,13 @@ namespace EQLogParser
       return combined;
     }
 
-    internal static string GetSummary(CombinedStats currentStats, List<PlayerStats> selected)
+    internal static Tuple<string, string> GetSummary(CombinedStats currentStats, List<PlayerStats> selected, bool selectedTitleOnly)
     {
-      string result = "";
       List<string> list = new List<string>();
+
+      string title = "";
+      string details = "";
+      long selectedTotal = 0;
 
       if (selected != null && currentStats != null)
       {
@@ -125,14 +128,28 @@ namespace EQLogParser
         {
           count++;
           list.Add(String.Format("{0}. {1} = {2} @ {3} DPS", count, stats.Name, Utils.FormatDamage(stats.Damage), Utils.FormatDamage(stats.DPS)));
+
+          if (selectedTitleOnly)
+          {
+            selectedTotal += stats.Damage;
+          }
         }
 
-        result = currentStats.Title + ", " + string.Join(", ", list);
+        details = ", " + string.Join(", ", list); ;
+        if (selectedTitleOnly)
+        {
+          long selectedDPS = (long)Math.Round(selectedTotal / currentStats.TimeDiff);
+          string damageTitle = String.Format(DETAILS_FORMAT, currentStats.TimeDiff, Utils.FormatDamage(selectedTotal), Utils.FormatDamage(selectedDPS));
+          title = currentStats.TargetTitle + damageTitle;
+        }
+        else
+        {
+          title = currentStats.TargetTitle + currentStats.DamageTitle; 
+        }
       }
 
-      return result;
+      return new Tuple<string, string>(title, details);
     }
-
     internal static void UpdateTotals(PlayerStats playerTotals, DamageStats npcStats, int FightID)
     {
       if (!playerTotals.BeginTimes.ContainsKey(FightID))
@@ -145,6 +162,7 @@ namespace EQLogParser
 
       playerTotals.Damage += npcStats.TotalDamage;
       playerTotals.Hits += npcStats.Count;
+      playerTotals.CritHits += npcStats.CritCount;
       playerTotals.Max = (playerTotals.Max < npcStats.Max) ? npcStats.Max : playerTotals.Max;
       
       bool updateTime = false;
@@ -172,6 +190,7 @@ namespace EQLogParser
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
       playerTotals.DPS = (long) Math.Round(playerTotals.Damage / playerTotals.TotalSeconds);
       playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.Damage) / playerTotals.Hits);
+      playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 1);
 
       foreach (string key in npcStats.HitMap.Keys)
       {
@@ -182,10 +201,12 @@ namespace EQLogParser
 
         playerTotals.SubStats[key].Damage += npcStats.HitMap[key].TotalDamage;
         playerTotals.SubStats[key].Hits += npcStats.HitMap[key].Count;
+        playerTotals.SubStats[key].CritHits += npcStats.HitMap[key].CritCount;
         playerTotals.SubStats[key].Max = (playerTotals.SubStats[key].Max < npcStats.HitMap[key].Max) ? npcStats.HitMap[key].Max : playerTotals.SubStats[key].Max;
         playerTotals.SubStats[key].TotalSeconds = playerTotals.TotalSeconds;
         playerTotals.SubStats[key].DPS = (long)Math.Round(playerTotals.SubStats[key].Damage / playerTotals.SubStats[key].TotalSeconds);
         playerTotals.SubStats[key].Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].Damage) / playerTotals.SubStats[key].Hits);
+        playerTotals.SubStats[key].CritRate = Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].CritHits) / playerTotals.SubStats[key].Hits * 100, 1);
       }
     }
 
@@ -197,11 +218,12 @@ namespace EQLogParser
         Damage = 0,
         DPS = 0,
         Details = "",
-        HitType = "All",
+        HitType = "",
         Max = 0,
         Avg = 0,
         TotalSeconds = 0,
         Hits = 0,
+        CritRate = 0,
         BeginTimes = new Dictionary<int, DateTime>(),
         LastTimes = new Dictionary<int, DateTime>(),
         TimeDiffs = new Dictionary<int, double>()
