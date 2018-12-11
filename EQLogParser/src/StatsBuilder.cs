@@ -9,110 +9,6 @@ namespace EQLogParser
     public const string DETAILS_FORMAT = " in {0}s, {1} @ {2} DPS";
     private const string RAID_PLAYER = "Totals";
 
-    internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)
-    {
-      CombinedStats combined = new CombinedStats() { NpcIDs = new SortedSet<long>() };
-      List<PlayerStats> dpsList = new List<PlayerStats>();
-      Dictionary<string, PlayerStats> totalDamage = new Dictionary<string, PlayerStats>();
-      PlayerStats raidTotals = CreatePlayerStats(RAID_PLAYER);
-
-      string title = null;
-      foreach (NonPlayer npc in selected)
-      {
-        if (npc.BeginTimeString == NonPlayer.BREAK_TIME)
-        {
-          continue;
-        }
-
-        combined.NpcIDs.Add(npc.ID);
-        title = (title == null) ? npc.Name : title;
-
-        foreach (string key in npc.DamageMap.Keys)
-        {
-          if (DataManager.Instance.IsProbablyNotAPlayer(key))
-          {
-            continue;
-          }
-
-          PlayerStats playerTotals;
-          DamageStats npcStats = npc.DamageMap[key];
-
-          // update player based on their pet if needed
-          string player, details;
-
-          // see if there's a pet mapping, check this first
-          if ((player = DataManager.Instance.GetPlayerFromPet(key)) != null)
-          {
-            details = "+" + key;
-          }
-          else if (npcStats.Owner != "" && npcStats.IsPet)
-          {
-            details = "+" + key;
-            player = npcStats.Owner;
-          }
-          else if (npcStats.Owner == "" && npcStats.IsPet)
-          {
-            player = key;
-            details = "Unassigned pet";
-          }
-          else
-          {
-            player = key;
-            details = "";
-          }
-
-          if (player.Contains("Pie"))
-          {
-            if (true)
-            {
-
-            }
-          }
-
-          if (!totalDamage.ContainsKey(player))
-          {
-            playerTotals = CreatePlayerStats(player);
-            playerTotals.Details = details;
-            totalDamage.Add(player, playerTotals);
-            dpsList.Add(playerTotals);
-          }
-          else
-          {
-            playerTotals = totalDamage[player];
-            if (details.Length > 0)
-            {
-              if (playerTotals.Details.Length == 0)
-              {
-                playerTotals.Details = details;
-              }
-              else if (!playerTotals.Details.Contains(details))
-              {
-                playerTotals.Details += ", " + details;
-              }
-            }
-          }
-
-          UpdateTotals(playerTotals, npcStats, npc.FightID);
-          UpdateTotals(raidTotals, npcStats, npc.FightID);
-        }
-      }
-
-      combined.RaidStats = raidTotals;
-      combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
-      combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
-      combined.DamageTitle = String.Format(DETAILS_FORMAT, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
-      combined.StatsList = dpsList.OrderByDescending(item => item.Damage).ToList();
-
-      combined.SubStatsList = new List<List<PlayerSubStats>>();
-      for (int i=0; i<combined.StatsList.Count; i++)
-      {
-        combined.StatsList[i].Rank = i + 1;
-        combined.SubStatsList.Add(combined.StatsList[i].SubStats.Values.OrderByDescending(item => item.Damage).ToList());
-      }
-
-      return combined;
-    }
-
     internal static Tuple<string, string> GetSummary(CombinedStats currentStats, List<PlayerStats> selected, bool selectedTitleOnly)
     {
       List<string> list = new List<string>();
@@ -144,12 +40,133 @@ namespace EQLogParser
         }
         else
         {
-          title = currentStats.TargetTitle + currentStats.DamageTitle; 
+          title = currentStats.TargetTitle + currentStats.DamageTitle;
         }
       }
 
       return new Tuple<string, string>(title, details);
     }
+
+    internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)
+    {
+      CombinedStats combined = new CombinedStats() { NpcIDs = new SortedSet<long>() };
+      Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
+      PlayerStats raidTotals = CreatePlayerStats(RAID_PLAYER);
+
+      Dictionary<string, List<string>> needAggregate = new Dictionary<string, List<string>>();
+      Dictionary<string, List<NonPlayer>> aggregateNpcStats = new Dictionary<string, List<NonPlayer>>();
+      DictionaryListHelper<string, string> needAggregateHelper = new DictionaryListHelper<string, string>();
+      DictionaryListHelper<string, NonPlayer> aggregateNpcStatsHelper = new DictionaryListHelper<string, NonPlayer>();
+      DictionaryListHelper<string, PlayerStats> statsHelper = new DictionaryListHelper<string, PlayerStats>();
+
+
+      try
+      {
+        string title = selected.First().Name;
+        foreach (NonPlayer npc in selected)
+        {
+          if (npc.BeginTimeString == NonPlayer.BREAK_TIME)
+          {
+            continue;
+          }
+
+          combined.NpcIDs.Add(npc.ID);
+          foreach (string key in npc.DamageMap.Keys)
+          {
+            if (DataManager.Instance.IsProbablyNotAPlayer(key))
+            {
+              continue;
+            }
+
+            PlayerStats playerTotals;
+            DamageStats npcStats = npc.DamageMap[key];
+
+            if (!individualStats.ContainsKey(key))
+            {
+              playerTotals = CreatePlayerStats(key);
+              individualStats[key] = playerTotals;
+            }
+            else
+            {
+              playerTotals = individualStats[key];
+            }
+
+            // see if there's a pet mapping, check this first
+            string parent = DataManager.Instance.GetPlayerFromPet(key);
+            if (parent != null)
+            {
+              needAggregateHelper.AddToList(needAggregate, parent, key);
+            }
+            else if (npcStats.Owner != "" && npcStats.IsPet)
+            {
+              needAggregateHelper.AddToList(needAggregate, npcStats.Owner, key);
+            } else if (npcStats.Owner == "" && npcStats.IsPet)
+            {
+              playerTotals.Details = "Unassigned Pet";
+            }
+
+            aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
+
+            UpdateTotals(playerTotals, npcStats, npc.FightID);
+            UpdateTotals(raidTotals, npcStats, npc.FightID);
+          }
+        }
+
+        combined.RaidStats = raidTotals;
+        combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
+        combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
+        combined.DamageTitle = String.Format(DETAILS_FORMAT, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
+
+        combined.Children = new Dictionary<string, List<PlayerStats>>();
+        if (needAggregate.Count > 0)
+        {
+          foreach (string key in needAggregate.Keys)
+          {
+            PlayerStats aggregatePlayerStats = CreatePlayerStats(key);
+            List<string> all = needAggregate[key].ToList();
+            all.Add(key);
+
+            foreach (string child in all)
+            {
+              if (aggregateNpcStats.ContainsKey(child))
+              {
+                statsHelper.AddToList(combined.Children, key, individualStats[child]);
+                individualStats.Remove(child);
+
+                foreach (NonPlayer npc in aggregateNpcStats[child])
+                {
+                  UpdateTotals(aggregatePlayerStats, npc.DamageMap[child], npc.FightID);
+                }
+              }
+            }
+
+            individualStats.Add(key, aggregatePlayerStats);
+            aggregatePlayerStats.Details = "With Pets";
+          }
+        }
+
+        combined.StatsList = individualStats.Values.OrderByDescending(item => item.Damage).ToList();
+
+        combined.SubStats = new Dictionary<string, List<PlayerSubStats>>();
+        for (int i = 0; i < combined.StatsList.Count; i++)
+        {
+          string name = combined.StatsList[i].Name;
+          combined.StatsList[i].Rank = i + 1;
+          combined.SubStats[name] = combined.StatsList[i].SubStats.Values.OrderByDescending(item => item.Damage).ToList();
+          if (combined.Children.ContainsKey(name))
+          {
+            combined.Children[name] = combined.Children[name].OrderByDescending(item => item.Damage).ToList();
+          }
+        }
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine(e.StackTrace);
+      }
+
+      return combined;
+    }
+
     internal static void UpdateTotals(PlayerStats playerTotals, DamageStats npcStats, int FightID)
     {
       if (!playerTotals.BeginTimes.ContainsKey(FightID))
@@ -164,7 +181,7 @@ namespace EQLogParser
       playerTotals.Hits += npcStats.Count;
       playerTotals.CritHits += npcStats.CritCount;
       playerTotals.Max = (playerTotals.Max < npcStats.Max) ? npcStats.Max : playerTotals.Max;
-      
+
       bool updateTime = false;
       if (playerTotals.BeginTimes[FightID] == DateTime.MinValue || playerTotals.BeginTimes[FightID] > npcStats.BeginTime)
       {
@@ -188,8 +205,8 @@ namespace EQLogParser
       }
 
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
-      playerTotals.DPS = (long) Math.Round(playerTotals.Damage / playerTotals.TotalSeconds);
-      playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.Damage) / playerTotals.Hits);
+      playerTotals.DPS = (long)Math.Round(playerTotals.Damage / playerTotals.TotalSeconds);
+      playerTotals.Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.Damage) / playerTotals.Hits);
       playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 1);
 
       foreach (string key in npcStats.HitMap.Keys)

@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -29,7 +28,7 @@ namespace EQLogParser
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
     private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
-    private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Color.FromRgb(194, 194, 192));
+    private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
@@ -252,7 +251,7 @@ namespace EQLogParser
           new Task(() =>
           {
             CurrentStats = StatsBuilder.BuildTotalStats(selected.Cast<NonPlayer>().ToList());
-            Dispatcher.InvokeAsync((Action)(() =>
+            Dispatcher.InvokeAsync((() =>
             {
               if (NeedStatsUpdate)
               {
@@ -558,15 +557,28 @@ namespace EQLogParser
       e.Row.Header = (e.Row.GetIndex() + 1).ToString();
     }
 
+    private void PlayerChildrenGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
+    {
+      PlayerStats stats = e.Row.Item as PlayerStats;
+      var childrenDataGrid = e.DetailsElement as DataGrid;
+      if (stats != null && childrenDataGrid != null && CurrentStats != null && CurrentStats.Children.ContainsKey(stats.Name))
+      {
+        if (childrenDataGrid.ItemsSource != CurrentStats.Children[stats.Name])
+        {
+          childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
+        }
+      }
+    }
+
     private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
     {
-      var subDataGrid = e.DetailsElement as DataGrid;
-      if (subDataGrid != null && CurrentStats != null && CurrentStats.SubStatsList.Count > e.Row.GetIndex())
+      PlayerStats stats = e.Row.Item as PlayerStats;
+      var subStatsDataGrid = e.DetailsElement as DataGrid;
+      if (stats != null && subStatsDataGrid != null && CurrentStats != null && CurrentStats.SubStats.ContainsKey(stats.Name))
       {
-        PlayerStats stats = e.Row.Item as PlayerStats;
-        if (stats != null && subDataGrid.ItemsSource != CurrentStats.SubStatsList[stats.Rank - 1])
+        if (subStatsDataGrid.ItemsSource != CurrentStats.SubStats[stats.Name])
         {
-          subDataGrid.ItemsSource = CurrentStats.SubStatsList[stats.Rank - 1];
+          subStatsDataGrid.ItemsSource = CurrentStats.SubStats[stats.Name];
         }
       }
     }

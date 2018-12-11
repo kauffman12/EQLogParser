@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -89,6 +90,22 @@ namespace EQLogParser
       }
 
       return result;
+    }
+  }
+
+  internal class DictionaryListHelper<T1, T2>
+  {
+    internal void AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
+    {
+      if (!dict.ContainsKey(key))
+      {
+        dict[key] = new List<T2>();
+      }
+
+      if (!dict[key].Contains(value))
+      {
+        dict[key].Add(value);
+      }
     }
   }
 
