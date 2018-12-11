@@ -80,7 +80,8 @@ namespace EQLogParser
     public string DamageTitle { get; set; }
     public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
-    public List<List<PlayerSubStats>> SubStatsList { get; set; }
+    public Dictionary<string, List<PlayerStats>> Children { get; set; }
+    public Dictionary<string, List<PlayerSubStats>> SubStats { get; set; }
     public PlayerStats RaidStats { get; set; }
     public SortedSet<long> NpcIDs { get; set; }
   }
@@ -107,10 +108,5 @@ namespace EQLogParser
     public Dictionary<int, DateTime> BeginTimes { get; set; }
     public Dictionary<int, DateTime> LastTimes { get; set; }
     public Dictionary<int, double> TimeDiffs { get; set; }
-  }
-
-  public class PlayerStatsCollection<PlayerStats> : ObservableCollection<PlayerStats>
-  {
-
   }
 }
