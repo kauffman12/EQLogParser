@@ -27,7 +27,7 @@ namespace EQLogParser
     private Dictionary<string, byte> VerifiedPets = new Dictionary<string, byte>();
     private Dictionary<string, byte> VerifiedPlayers = new Dictionary<string, byte>()
     {
-      { "himself", 1 }, { "herself", 1 }, { "itself", 1}, { "you",  1 }, { "YOU", 1 }, {"You", 1}
+      { "himself", 1 }, { "herself", 1 }, { "itself", 1}, { "you",  1 }, { "YOU", 1 }, {"You", 1}, {"your", 1}, {"Your", 1}, {"YOUR", 1}
     };
 
     private DataManager()
@@ -54,6 +54,9 @@ namespace EQLogParser
       AttackerReplacement["you"] = name;
       AttackerReplacement["You"] = name;
       AttackerReplacement["YOU"] = name;
+      AttackerReplacement["your"] = name;
+      AttackerReplacement["Your"] = name;
+      AttackerReplacement["YOUR"] = name;
     }
 
     public string ReplaceAttacker(string attacker, out bool replaced)

@@ -16,12 +16,14 @@ namespace EQLogParser
     private ParseLineCallback LoadingCallback;
     private InitialLoadCompleteCallback CompleteCallback;
     private ThreadState LogThreadState;
+    private bool MonitorOnly;
 
-    public LogReader(string fileName, ParseLineCallback loadingCallback, InitialLoadCompleteCallback completeCallback)
+    public LogReader(string fileName, bool monitorOnly, ParseLineCallback loadingCallback, InitialLoadCompleteCallback completeCallback)
     {
-      this.FileName = fileName;
-      this.LoadingCallback = loadingCallback;
-      this.CompleteCallback = completeCallback;
+      FileName = fileName;
+      LoadingCallback = loadingCallback;
+      CompleteCallback = completeCallback;
+      MonitorOnly = monitorOnly;
     }
 
     public void Start()
@@ -45,6 +47,12 @@ namespace EQLogParser
           string logFileName = FileName.Substring(FileName.LastIndexOf("\\") + 1);
 
           FileSize = fs.Length;
+
+          if (MonitorOnly)
+          {
+            fs.Seek(FileSize, 0);
+          }
+
           while (!reader.EndOfStream && myState.isRunning())
           {
             string line = reader.ReadLine();

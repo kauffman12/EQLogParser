@@ -16,7 +16,8 @@
     </Grid.RowDefinitions>
     <Menu Margin="0" Height="20" VerticalAlignment="Top" Grid.Row="0">
       <MenuItem Header="_File" Height="20" Width="35">
-        <MenuItem Header="Select EQ _Log File" Height="20" Click="MenuItemSelectLogFile_Click"/>
+        <MenuItem Header="_Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFile_Click"/>
+        <MenuItem Header="Open Entire _Log File" Height="20" Click="MenuItemSelectLogFile_Click"/>
         <Separator Height="0"/>
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
       </MenuItem>
@@ -45,7 +46,7 @@
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="Log File Progress" ContainerDockedSize="320,65">
+            <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="Log File Status" ContainerDockedSize="320,65">
               <WrapPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal">
                   <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Total Bytes:</Label>
