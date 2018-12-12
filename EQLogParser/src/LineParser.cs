@@ -294,7 +294,7 @@ namespace EQLogParser
         return 4;
       }
 
-      if (pline.ActionPart.Length >= 35 && pline.ActionPart.Length < 58 && pline.ActionPart.Substring(0, 35).Contains("My leader is"))
+      if (pline.ActionPart.Length >= 29 && pline.ActionPart.Length < 60 && pline.ActionPart.Contains("My leader is"))
       {
         return 5;
       }
@@ -490,19 +490,30 @@ namespace EQLogParser
                 {
                   if (part.Length > afterDmg + 12 && part.Substring(afterDmg, 12) == " damage from")
                   {
-                    int byIndex = part.IndexOf("by ", afterDmg + 12);
-                    if (byIndex > -1)
+                    if (part.Substring(afterDmg + 13, 4) == "your")
                     {
-                      int endIndex = part.IndexOf(".", byIndex + 3);
-                      if (endIndex > -1)
+                      attacker = "your";
+                      action = "DoT";
+                      found = true;
+                    }
+                    else
+                    {
+                      // Horizon of Destiny has taken 30812 damage from Strangulate Rk. III by Kimb.
+                      // Warm Heart Flickers has taken 55896 damage from your Strangulate Rk. III.
+                      int byIndex = part.IndexOf("by ", afterDmg + 12);
+                      if (byIndex > -1)
                       {
-                        string player = part.Substring(byIndex + 3, endIndex - byIndex - 3);
-                        if (IsPossiblePlayerName(player, player.Length))
+                        int endIndex = part.IndexOf(".", byIndex + 3);
+                        if (endIndex > -1)
                         {
-                          // damage parsed above
-                          attacker = player;
-                          action = "DoT";
-                          found = true;
+                          string player = part.Substring(byIndex + 3, endIndex - byIndex - 3);
+                          if (IsPossiblePlayerName(player, player.Length))
+                          {
+                            // damage parsed above
+                            attacker = player;
+                            action = "DoT";
+                            found = true;
+                          }
                         }
                       }
                     }

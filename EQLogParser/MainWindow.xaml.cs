@@ -19,7 +19,7 @@ namespace EQLogParser
   public partial class MainWindow : Window
   {
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.7";
+    private const string VERSION = "v1.0.9";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
@@ -50,6 +50,7 @@ namespace EQLogParser
     private static bool UpdatingProgress = false;
     private static long ProcessedBytes = 0; // EOF
     private static DateTime StartLoadTime; // millis
+    private static bool MonitorOnly;
 
     private NpcDamageManager NpcDamageManager = null;
     private LogReader EQLogReader = null;
@@ -191,7 +192,8 @@ namespace EQLogParser
     {
       if (EQLogReader != null && UpdatingProgress)
       {
-        double percentComplete = Convert.ToInt32((double)(ProcessedBytes + 2) / EQLogReader.FileSize * 100);
+        progressWindow.Title = "Reading Log";
+        double percentComplete = Convert.ToInt32((double)ProcessedBytes / EQLogReader.FileSize * 100);
         fileSizeLabel.Content = Math.Ceiling(EQLogReader.FileSize / 1024.0) + " KB";
         bytesProcessedLabel.Content = Math.Ceiling(EQLogReader.BytesRead / 1024.0) + " KB";
         completeLabel.Content = percentComplete + "%";
@@ -199,6 +201,7 @@ namespace EQLogParser
 
         if (percentComplete >= 100.0)
         {
+          progressWindow.Title = "Monitoring Log";
           percentComplete = 100;
           UpdatingProgress = false;
           completeLabel.Foreground = GOOD_BRUSH;
@@ -354,8 +357,20 @@ namespace EQLogParser
       }
     }
 
+    private void MenuItemSelectMonitorLogFile_Click(object sender, RoutedEventArgs e)
+    {
+      OpenLogFile(true);
+    }
+
     private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
     {
+      OpenLogFile();
+    }
+
+    private void OpenLogFile(bool monitorOnly = false)
+    {
+      MonitorOnly = monitorOnly;
+
       // WPF doesn't have its own file chooser so use Win32 Version
       Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
 
@@ -409,7 +424,7 @@ namespace EQLogParser
         NonPlayersView.Clear();
 
         progressWindow.IsOpen = true;
-        EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, FileLoadingCompleteCallback);
+        EQLogReader = new LogReader(dialog.FileName, monitorOnly, FileLoadingCallback, FileLoadingCompleteCallback);
         EQLogReader.Start();
       }
     }
@@ -428,6 +443,11 @@ namespace EQLogParser
     private void FileLoadingCompleteCallback()
     {
       NpcDamageProcessor.LowerPriority();
+
+      if (MonitorOnly)
+      {
+        Interlocked.Exchange(ref ProcessedBytes, EQLogReader.FileSize);
+      }
     }
 
     private void FileLoadingContinue(ProcessLine pline)
