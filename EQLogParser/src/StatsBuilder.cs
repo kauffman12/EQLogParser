@@ -6,6 +6,8 @@ namespace EQLogParser
 {
   class StatsBuilder
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     public const string DETAILS_FORMAT = " in {0}s, {1} @ {2} DPS";
     private const string RAID_PLAYER = "Totals";
 
@@ -117,20 +119,28 @@ namespace EQLogParser
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
         combined.DamageTitle = String.Format(DETAILS_FORMAT, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
 
+        // do this before figuring out children removes values from the main stats list
+        combined.SubStats = new Dictionary<string, List<PlayerSubStats>>();
+        foreach (var stat in individualStats.Values)
+        {
+          combined.SubStats[stat.Name] = stat.SubStats.Values.OrderByDescending(item => item.Damage).ToList();
+        }
+
         combined.Children = new Dictionary<string, List<PlayerStats>>();
         if (needAggregate.Count > 0)
         {
           foreach (string key in needAggregate.Keys)
           {
-            PlayerStats aggregatePlayerStats = CreatePlayerStats(key);
+            string aggregateName = key + " +Pets";
+            PlayerStats aggregatePlayerStats = CreatePlayerStats(aggregateName);
             List<string> all = needAggregate[key].ToList();
             all.Add(key);
 
             foreach (string child in all)
             {
-              if (aggregateNpcStats.ContainsKey(child))
+              if (aggregateNpcStats.ContainsKey(child) && individualStats.ContainsKey(child))
               {
-                statsHelper.AddToList(combined.Children, key, individualStats[child]);
+                statsHelper.AddToList(combined.Children, aggregateName, individualStats[child]);
                 individualStats.Remove(child);
 
                 foreach (NonPlayer npc in aggregateNpcStats[child])
@@ -140,19 +150,15 @@ namespace EQLogParser
               }
             }
 
-            individualStats.Add(key, aggregatePlayerStats);
-            aggregatePlayerStats.Details = "With Pets";
+            individualStats.Add(aggregateName, aggregatePlayerStats);
           }
         }
 
         combined.StatsList = individualStats.Values.OrderByDescending(item => item.Damage).ToList();
-
-        combined.SubStats = new Dictionary<string, List<PlayerSubStats>>();
         for (int i = 0; i < combined.StatsList.Count; i++)
         {
           string name = combined.StatsList[i].Name;
           combined.StatsList[i].Rank = i + 1;
-          combined.SubStats[name] = combined.StatsList[i].SubStats.Values.OrderByDescending(item => item.Damage).ToList();
           if (combined.Children.ContainsKey(name))
           {
             combined.Children[name] = combined.Children[name].OrderByDescending(item => item.Damage).ToList();
@@ -161,7 +167,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        Console.WriteLine(e.StackTrace);
+        LOG.Error(e);
       }
 
       return combined;

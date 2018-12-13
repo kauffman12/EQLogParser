@@ -7,6 +7,8 @@ namespace EQLogParser
 {
   class LogReader
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     public delegate void ParseLineCallback(string line);
     public delegate void InitialLoadCompleteCallback();
     public long FileSize = 0;
@@ -110,7 +112,7 @@ namespace EQLogParser
         }
         catch (Exception e)
         {
-          MessageBox.Show(e.Message);
+          LOG.Error(e);
         }
       }).Start();
     }

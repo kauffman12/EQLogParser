@@ -11,19 +11,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EQLogParser
 {
   public partial class MainWindow : Window
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.9";
+    private const string VERSION = "v1.0.11";
+    private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
-    private const int DISPATCHER_DELAY = 250; // millis
+    private const int DISPATCHER_DELAY = 150; // millis
 
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
@@ -31,6 +36,8 @@ namespace EQLogParser
     private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
+    private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
+    private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private static ActionProcessor NpcDamageProcessor;
 
@@ -58,68 +65,84 @@ namespace EQLogParser
 
     public MainWindow()
     {
-      InitializeComponent();
-
-      // update titles
-      Title = APP_NAME + " " + VERSION;
-      dpsTitle.Content = DPS_LABEL;
-
-      // pet -> players
-      petMappingGrid.ItemsSource = PetPlayersView;
-      DataManager.Instance.EventsNewPetMapping += (sender, mapping) => Dispatcher.InvokeAsync(() =>
-      {
-        PetPlayersView.Add(mapping);
-        NeedStatsUpdate = true;
-      });
-
-      // verified pets table
-      verifiedPetsGrid.ItemsSource = VerifiedPetsView;
-      DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() => VerifiedPetsView.Add(name));
-
-      // verified player table
-      verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
-      DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() => VerifiedPlayersView.Add(name));
-
-      // List of NPCs to select from, damage is saved in the NonPlayer object
-      npcDataGrid.ItemsSource = NonPlayersView;
-      DataManager.Instance.EventsUpdatedNonPlayer += (sender, npc) => NeedStatsUpdate = (CurrentStats != null && CurrentStats.NpcIDs.Contains(npc.ID));
-      DataManager.Instance.EventsRemovedNonPlayer += (sender, name) => RemoveNonPlayer(name);
-      DataManager.Instance.EventsNewNonPlayer += (sender, npc) => AddNonPlayer(npc);
-      DataManager.Instance.EventsNewUnverifiedPetOrPlayer += (sender, name) => RemoveNonPlayer(name);
-
-      // fix player DPS table sorting
-      playerDataGrid.Sorting += (s, e) =>
-      {
-        if (e.Column.Header != null && (e.Column.Header.ToString() != "Name" && e.Column.Header.ToString() != "Additional Details"))
-        {
-          e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
-        }
-      };
-
-      DispatcherTimer dispatcherTimer = new DispatcherTimer();
-      dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
-      dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
-      dispatcherTimer.Start();
-
-      NonPlayerSelectionTimer = new DispatcherTimer();
-      NonPlayerSelectionTimer.Tick += NonPlayerSelectionTimer_Tick;
-      NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
-
-      ThemeManager.BeginUpdate();
       try
       {
-        // Use the Actipro styles for native WPF controls that look great with Actipro's control products
-        ThemeManager.AreNativeThemesEnabled = true;
+        InitializeComponent();
+        LOG.Info("Initialized Components");
 
-        SharedThemeCatalogRegistrar.Register();
-        DockingThemeCatalogRegistrar.Register();
+        // update titles
+        Title = APP_NAME + " " + VERSION;
+        dpsTitle.Content = DPS_LABEL;
 
-        // Default the theme to Metro Light
-        ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
+        // pet -> players
+        petMappingGrid.ItemsSource = PetPlayersView;
+        DataManager.Instance.EventsNewPetMapping += (sender, mapping) => Dispatcher.InvokeAsync(() =>
+        {
+          PetPlayersView.Add(mapping);
+          NeedStatsUpdate = true;
+        });
+
+        // verified pets table
+        verifiedPetsGrid.ItemsSource = VerifiedPetsView;
+        DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
+        {
+          VerifiedPetsView.Add(name);
+          verifiedPetsWindow.Title = "Verified Pets (" + VerifiedPetsView.Count + ")";
+        });
+
+        // verified player table
+        verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
+        DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
+        {
+          VerifiedPlayersView.Add(name);
+          verifiedPlayersWindow.Title = "Verified Players (" + VerifiedPlayersView.Count + ")";
+        });
+
+        // List of NPCs to select from, damage is saved in the NonPlayer object
+        npcDataGrid.ItemsSource = NonPlayersView;
+        DataManager.Instance.EventsUpdatedNonPlayer += (sender, npc) => NeedStatsUpdate = (CurrentStats != null && CurrentStats.NpcIDs.Contains(npc.ID));
+        DataManager.Instance.EventsRemovedNonPlayer += (sender, name) => RemoveNonPlayer(name);
+        DataManager.Instance.EventsNewNonPlayer += (sender, npc) => AddNonPlayer(npc);
+        DataManager.Instance.EventsNewUnverifiedPetOrPlayer += (sender, name) => RemoveNonPlayer(name);
+
+        // fix player DPS table sorting
+        playerDataGrid.Sorting += (s, e) =>
+        {
+          if (e.Column.Header != null && (e.Column.Header.ToString() != "Name" && e.Column.Header.ToString() != "Additional Details"))
+          {
+            e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
+          }
+        };
+
+        DispatcherTimer dispatcherTimer = new DispatcherTimer();
+        dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
+        dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
+        dispatcherTimer.Start();
+
+        NonPlayerSelectionTimer = new DispatcherTimer();
+        NonPlayerSelectionTimer.Tick += NonPlayerSelectionTimer_Tick;
+        NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
+
+        ThemeManager.BeginUpdate();
+        try
+        {
+          // Use the Actipro styles for native WPF controls that look great with Actipro's control products
+          ThemeManager.AreNativeThemesEnabled = true;
+
+          SharedThemeCatalogRegistrar.Register();
+          DockingThemeCatalogRegistrar.Register();
+
+          // Default the theme to Metro Light
+          ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
+        }
+        finally
+        {
+          ThemeManager.EndUpdate();
+        }
       }
-      finally
+      catch (Exception e)
       {
-        ThemeManager.EndUpdate();
+        LOG.Error(e);
       }
     }
 
@@ -318,7 +341,118 @@ namespace EQLogParser
       {
         e.Row.Background = NORMAL_BRUSH;
       }
+    }
 
+    private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+    {
+      e.Row.Header = (e.Row.GetIndex() + 1).ToString();
+    }
+
+    private void PlayerDataGridExpander_Loaded(object sender, RoutedEventArgs e)
+    {
+      Image image = (sender as Image);
+      PlayerStats stats = image.DataContext as PlayerStats;
+      if (stats != null && CurrentStats.Children.ContainsKey(stats.Name) && CurrentStats.Children[stats.Name].Count > 1)
+      {
+        image.Source = EXPAND_BITMAP;
+      }
+    }
+
+    private void PlayerDataGridExpander_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+      Image image = (sender as Image);
+      PlayerStats stats = image.DataContext as PlayerStats;
+      var container = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
+
+      if (image != null && container != null)
+      {
+        if (image.Source == COLLAPSE_BITMAP)
+        {
+          image.Source = EXPAND_BITMAP;
+          container.DetailsVisibility = Visibility.Collapsed;
+        }
+        else if (image.Source == EXPAND_BITMAP)
+        {
+          image.Source = COLLAPSE_BITMAP;
+          container.DetailsVisibility = Visibility.Visible;
+        }
+      }
+    }
+
+    private void PlayerChildrenGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
+    {
+      PlayerStats stats = e.Row.Item as PlayerStats;
+      var childrenDataGrid = e.DetailsElement as DataGrid;
+      if (stats != null && childrenDataGrid != null && CurrentStats != null && CurrentStats.Children.ContainsKey(stats.Name))
+      {
+        if (childrenDataGrid.ItemsSource != CurrentStats.Children[stats.Name])
+        {
+          childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
+        }
+      }
+    }
+
+    private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
+    {
+      PlayerStats stats = e.Row.Item as PlayerStats;
+      var subStatsDataGrid = e.DetailsElement as DataGrid;
+      if (stats != null && subStatsDataGrid != null && CurrentStats != null && CurrentStats.SubStats.ContainsKey(stats.Name))
+      {
+        if (subStatsDataGrid.ItemsSource != CurrentStats.SubStats[stats.Name])
+        {
+          subStatsDataGrid.ItemsSource = CurrentStats.SubStats[stats.Name];
+        }
+      }
+    }
+
+    private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
+    {
+      if (playerDataGrid.SelectedItems.Count > 0)
+      {
+        List<PlayerStats> list = new List<PlayerStats>();
+        foreach (var playerStat in playerDataGrid.SelectedItems.Cast<PlayerStats>())
+        {
+          if (CurrentStats.Children.ContainsKey(playerStat.Name))
+          {
+            foreach (var childStat in CurrentStats.Children[playerStat.Name])
+            {
+              list.Add(childStat);
+            }
+          }
+          else
+          {
+            list.Add(playerStat);
+          }
+        }
+
+        playerDamageDataGrid.ItemsSource = list;
+        damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
+        if (!damageWindow.IsOpen)
+        {
+          damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
+        }
+
+        Utils.OpenWindow(damageWindow);
+        damageWindow.MoveToLast();
+      }
+    }
+
+    private void PlayerChildrenDataGrid_PrevMouseWheel(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+      if (!e.Handled)
+      {
+        e.Handled = true;
+        MouseWheelEventArgs wheelArgs = e as MouseWheelEventArgs;
+        var newEvent = new MouseWheelEventArgs(wheelArgs.MouseDevice, wheelArgs.Timestamp, wheelArgs.Delta);
+        newEvent.RoutedEvent = UIElement.MouseWheelEvent;
+        var container = playerDataGrid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
+        container.RaiseEvent(newEvent);
+      }
+    }
+
+    private void PlayerChildrenDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      e.Handled = true;
     }
 
     private void PlayerDPSText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
@@ -369,63 +503,71 @@ namespace EQLogParser
 
     private void OpenLogFile(bool monitorOnly = false)
     {
-      MonitorOnly = monitorOnly;
-
-      // WPF doesn't have its own file chooser so use Win32 Version
-      Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
-
-      // filter to txt files
-      dialog.DefaultExt = ".txt";
-      dialog.Filter = "eqlog_player_server (.txt)|*.txt";
-
-      // show dialog and read result
-      // if null result then dialog was probably canceled
-      bool? result = dialog.ShowDialog();
-      if (result == true)
+      try
       {
-        dpsTitle.Content = DPS_LABEL;
-        completeLabel.Foreground = BRIGHT_TEXT_BRUSH;
-        Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
+        MonitorOnly = monitorOnly;
 
-        NeedStatsUpdate = true;
-        UpdatingProgress = true;
-        ProcessedBytes = 0;
-        StartLoadTime = DateTime.Now;
-        CurrentFightID = 0;
+        // WPF doesn't have its own file chooser so use Win32 Version
+        Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
 
-        if (NpcDamageProcessor != null)
+        // filter to txt files
+        dialog.DefaultExt = ".txt";
+        dialog.Filter = "eqlog_player_server (.txt)|*.txt";
+
+        // show dialog and read result
+        // if null result then dialog was probably canceled
+        bool? result = dialog.ShowDialog();
+        if (result == true)
         {
-          NpcDamageProcessor.Stop();
-        }
+          dpsTitle.Content = DPS_LABEL;
+          completeLabel.Foreground = BRIGHT_TEXT_BRUSH;
+          Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
 
-        if (EQLogReader != null)
-        {
-          EQLogReader.Stop();
-        }
+          NeedStatsUpdate = true;
+          UpdatingProgress = true;
+          ProcessedBytes = 0;
+          StartLoadTime = DateTime.Now;
+          CurrentFightID = 0;
 
-        NpcDamageProcessor = new ActionProcessor(ProcessNPCDamage);
-        NpcDamageManager = new NpcDamageManager();
-
-        string name = "Uknown";
-        if (dialog.FileName.Length > 0)
-        {
-          string fileName = dialog.FileName.Substring(dialog.FileName.LastIndexOf("\\") + 1);
-          string[] parts = fileName.Split('_');
-
-          if (parts.Length > 1)
+          if (NpcDamageProcessor != null)
           {
-            name = parts[1];
+            NpcDamageProcessor.Stop();
           }
+
+          if (EQLogReader != null)
+          {
+            EQLogReader.Stop();
+          }
+
+          NpcDamageProcessor = new ActionProcessor(ProcessNPCDamage);
+          NpcDamageManager = new NpcDamageManager();
+
+          string name = "Uknown";
+          if (dialog.FileName.Length > 0)
+          {
+            LOG.Info("Selected Log File: " + dialog.FileName);
+            string fileName = dialog.FileName.Substring(dialog.FileName.LastIndexOf("\\") + 1);
+            string[] parts = fileName.Split('_');
+
+            if (parts.Length > 1)
+            {
+              name = parts[1];
+            }
+          }
+
+          DataManager.Instance.SetPlayerName(name);
+          DataManager.Instance.Clear();
+
+          NonPlayersView.Clear();
+
+          progressWindow.IsOpen = true;
+          EQLogReader = new LogReader(dialog.FileName, monitorOnly, FileLoadingCallback, FileLoadingCompleteCallback);
+          EQLogReader.Start();
         }
-
-        DataManager.Instance.SetPlayerName(name);
-        DataManager.Instance.Clear();
-
-        NonPlayersView.Clear();
-
-        progressWindow.IsOpen = true;
-        EQLogReader = new LogReader(dialog.FileName, monitorOnly, FileLoadingCallback, FileLoadingCompleteCallback);
-        EQLogReader.Start();
+      }
+      catch (Exception e)
+      {
+        LOG.Error(e);
       }
     }
 
@@ -442,6 +584,7 @@ namespace EQLogParser
 
     private void FileLoadingCompleteCallback()
     {
+      LOG.Info("Finished Loading Log File");
       NpcDamageProcessor.LowerPriority();
 
       if (MonitorOnly)
@@ -473,60 +616,62 @@ namespace EQLogParser
     private void ProcessNPCDamage(object data)
     {
       ProcessLine pline = data as ProcessLine;
-
-      if (pline.CurrentTime == DateTime.MinValue)
+      if (pline != null)
       {
-        Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
-        return; // abort
-      }
-
-      try
-      {
-        switch (pline.State)
+        if (pline.CurrentTime == DateTime.MinValue)
         {
-          case 0:
-            // check for damage
-            DateTime lastUpdateTime = NpcDamageManager.LastUpdateTime;
-            DamageRecord record = LineParser.ParseDamage(pline.ActionPart);
-
-            if (record != null)
-            {
-              TimeSpan diff = pline.CurrentTime.Subtract(lastUpdateTime);
-              if (lastUpdateTime != DateTime.MinValue && diff.TotalSeconds >= 60)
-              {
-                NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
-                Dispatcher.InvokeAsync(() =>
-                {
-                  CurrentFightID++;
-                  NonPlayersView.Add(divider);
-                });
-              }
-
-              NpcDamageManager.AddOrUpdateNpc(record, pline.CurrentTime, pline.TimeString.Substring(4, 15));
-            }
-            break;
-          case 1:
-            // check slain
-            LineParser.CheckForSlain(pline);
-            break;
-          case 2:
-            LineParser.CheckForShrink(pline);
-            break;
-          case 3:
-          case 4:
-            LineParser.CheckForPlayers(pline);
-            break;
-          case 5:
-            LineParser.CheckForPetLeader(pline);
-            break;
-          case 6:
-            LineParser.CheckForHeal(pline);
-            break;
+          Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
+          return; // abort
         }
-      }
-      catch (Exception e)
-      {
-        Console.WriteLine(e.StackTrace);
+
+        try
+        {
+          switch (pline.State)
+          {
+            case 0:
+              // check for damage
+              DateTime lastUpdateTime = NpcDamageManager.LastUpdateTime;
+              DamageRecord record = LineParser.ParseDamage(pline.ActionPart);
+
+              if (record != null)
+              {
+                TimeSpan diff = pline.CurrentTime.Subtract(lastUpdateTime);
+                if (lastUpdateTime != DateTime.MinValue && diff.TotalSeconds >= 60)
+                {
+                  NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
+                  Dispatcher.InvokeAsync(() =>
+                  {
+                    CurrentFightID++;
+                    NonPlayersView.Add(divider);
+                  });
+                }
+
+                NpcDamageManager.AddOrUpdateNpc(record, pline.CurrentTime, pline.TimeString.Substring(4, 15));
+              }
+              break;
+            case 1:
+              // check slain
+              LineParser.CheckForSlain(pline);
+              break;
+            case 2:
+              LineParser.CheckForShrink(pline);
+              break;
+            case 3:
+            case 4:
+              LineParser.CheckForPlayers(pline);
+              break;
+            case 5:
+              LineParser.CheckForPetLeader(pline);
+              break;
+            case 6:
+              LineParser.CheckForHeal(pline);
+              break;
+          }
+        }
+        catch (Exception e)
+        {
+          LOG.Error(e);
+        }
       }
 
       Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
@@ -570,54 +715,6 @@ namespace EQLogParser
     private void CopyToEQ_Click(object sender, RoutedEventArgs e)
     {
       Clipboard.SetText(playerDPSTextBox.Text);
-    }
-
-    private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      e.Row.Header = (e.Row.GetIndex() + 1).ToString();
-    }
-
-    private void PlayerChildrenGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
-    {
-      PlayerStats stats = e.Row.Item as PlayerStats;
-      var childrenDataGrid = e.DetailsElement as DataGrid;
-      if (stats != null && childrenDataGrid != null && CurrentStats != null && CurrentStats.Children.ContainsKey(stats.Name))
-      {
-        if (childrenDataGrid.ItemsSource != CurrentStats.Children[stats.Name])
-        {
-          childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
-        }
-      }
-    }
-
-    private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
-    {
-      PlayerStats stats = e.Row.Item as PlayerStats;
-      var subStatsDataGrid = e.DetailsElement as DataGrid;
-      if (stats != null && subStatsDataGrid != null && CurrentStats != null && CurrentStats.SubStats.ContainsKey(stats.Name))
-      {
-        if (subStatsDataGrid.ItemsSource != CurrentStats.SubStats[stats.Name])
-        {
-          subStatsDataGrid.ItemsSource = CurrentStats.SubStats[stats.Name];
-        }
-      }
-    }
-
-    private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
-    {
-      if (playerDataGrid.SelectedItems.Count > 0)
-      {
-        var list = playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-        playerDamageDataGrid.ItemsSource = list;
-        damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
-        if (!damageWindow.IsOpen)
-        {
-          damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
-        }
-
-        Utils.OpenWindow(damageWindow);
-        damageWindow.MoveToLast();
-      }
     }
   }
 }
