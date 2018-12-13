@@ -46,7 +46,7 @@ namespace EQLogParser
     }
 
     private void Process()
-    {
+    {       
       while(!stopped)
       {
         object data;

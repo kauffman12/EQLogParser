@@ -8,6 +8,8 @@ namespace EQLogParser
 {
   class LineParser
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     // counting this thing is really slow
     private static int DateCount = 0;
     private static ConcurrentDictionary<string, DateTime> DateTimeCache = new ConcurrentDictionary<string, DateTime>();
@@ -48,7 +50,6 @@ namespace EQLogParser
 
       try
       {
-
         if (line.Length > MIN_LINE_LENGTH)
         {
           pline.ActionPart = pline.Line.Substring(27);
@@ -92,7 +93,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        Console.WriteLine(e.StackTrace);
+        LOG.Error(e);
       }
 
       return pline;
@@ -260,49 +261,55 @@ namespace EQLogParser
     {
       int result = -1;
 
-      int index;
-
-      if (pline.ActionPart.Contains(" damage")) // damage. for DD
+      try
       {
-        return 0;
-      }
+        int index;
+        if (pline.ActionPart.Contains(" damage")) // damage. for DD
+        {
+          return 0;
+        }
 
-      if (pline.ActionPart.Length < 75 && (index = pline.ActionPart.IndexOf(" has been slain by")) > -1)
-      {
-        pline.OptionalIndex = index;
-        return 1;
-      }
-
-      if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.")) > -1)
-      {
-        pline.OptionalIndex = index;
-        return 2;
-      }
-
-      if (pline.ActionPart.Length < 34 && (index = pline.ActionPart.IndexOf(" tells the guild, ")) > -1)
-      {
-        int firstSpace = pline.ActionPart.IndexOf(" ");
-        if (firstSpace > -1 && firstSpace == index)
+        if (pline.ActionPart.Length < 75 && (index = pline.ActionPart.IndexOf(" has been slain by")) > -1)
         {
           pline.OptionalIndex = index;
-          return 3;
+          return 1;
+        }
+
+        if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.")) > -1)
+        {
+          pline.OptionalIndex = index;
+          return 2;
+        }
+
+        if (pline.ActionPart.Length < 34 && (index = pline.ActionPart.IndexOf(" tells the guild, ")) > -1)
+        {
+          int firstSpace = pline.ActionPart.IndexOf(" ");
+          if (firstSpace > -1 && firstSpace == index)
+          {
+            pline.OptionalIndex = index;
+            return 3;
+          }
+        }
+
+        if (pline.ActionPart.Length < 35 && pline.ActionPart.StartsWith("Targeted (Player)"))
+        {
+          return 4;
+        }
+
+        if (pline.ActionPart.Length >= 29 && pline.ActionPart.Length < 60 && pline.ActionPart.Contains("My leader is"))
+        {
+          return 5;
+        }
+
+        if (pline.ActionPart.Length >= 24 && (index = pline.ActionPart.Substring(0, 24).IndexOf(" healed ")) > -1 && char.IsUpper(pline.ActionPart[index + 8]))
+        {
+          pline.OptionalIndex = index;
+          return 6;
         }
       }
-
-      if (pline.ActionPart.Length < 35 && pline.ActionPart.StartsWith("Targeted (Player)"))
+      catch (Exception e)
       {
-        return 4;
-      }
-
-      if (pline.ActionPart.Length >= 29 && pline.ActionPart.Length < 60 && pline.ActionPart.Contains("My leader is"))
-      {
-        return 5;
-      }
-
-      if (pline.ActionPart.Length >= 24 && (index = pline.ActionPart.Substring(0, 24).IndexOf(" healed ")) > -1 && char.IsUpper(pline.ActionPart[index + 8]))
-      {
-        pline.OptionalIndex = index;
-        return 6;
+        LOG.Error(e);
       }
 
       return result;
@@ -556,7 +563,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        Console.WriteLine(e.StackTrace);
+        LOG.Error(e);
       }
 
       return record;

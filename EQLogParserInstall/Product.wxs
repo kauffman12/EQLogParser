@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.8" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.11" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -27,6 +27,7 @@
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="EQLogParser">
           <Directory Id="DATAFOLDER" Name="data" />
+          <Directory Id="LOGFOLDER" Name="logs" />
         </Directory>
       </Directory>
       <Directory Id="ProgramMenuFolder">
@@ -59,6 +60,12 @@
 	    <Component Win64="yes" Id="ActiproSoftware.Shared.Wpf.dll" Guid="3c8d2f9f-a96b-4dd8-b709-68e47832b14e">
 	      <File Id="ActiproSoftware.Shared.Wpf.dll" Name="ActiproSoftware.Shared.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.Shared.Wpf.dll" />
 	    </Component>
+      <Component Win64="yes" Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F">
+        <File Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser_TargetDir)log4net.dll" />
+      </Component>
+      <Component Win64="yes" Id="log4net.xml" Guid="31F69EDE-0F50-4A7F-AEB9-E2CE3CA674A5">
+        <File Id="log4net.xmll" Name="log4net.xml" Source="$(var.EQLogParser_TargetDir)log4net.xml" />
+      </Component>
 	  </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
