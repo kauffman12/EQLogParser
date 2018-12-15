@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -21,19 +22,23 @@ namespace EQLogParser
   public class Hit
   {
     public long Max { get; set; }
-    public long Count { get; set; }
-    public long CritCount { get; set; }
+    public int Count { get; set; }
+    public int CritCount { get; set; }
+    public int DoubleBowShotCount { get; set; }
+    public int FlurryCount { get; set; }
+    public int LuckyCount { get; set; }
+    public int TwincastCount { get; set; }
+    public int RampageCount { get; set; }
+    public int SlayUndeadCount { get; set; }
+    public int WildRampageCount { get; set; }
     public long TotalDamage { get; set; }
-    public List<long> Values { get; set; }
+    public long TotalCritDamage { get; set; }
+    public long TotalLuckyDamage { get; set; }
   }
 
-  public class DamageStats
+  public class DamageStats : Hit
   {
     public Dictionary<string, Hit> HitMap { get; set; }
-    public long TotalDamage { get; set; }
-    public long Count { get; set; }
-    public long Max { get; set; }
-    public long CritCount { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
     public string Owner { get; set; }
@@ -80,8 +85,8 @@ namespace EQLogParser
     public string DamageTitle { get; set; }
     public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
-    public Dictionary<string, List<PlayerStats>> Children { get; set; }
-    public Dictionary<string, List<PlayerSubStats>> SubStats { get; set; }
+    public ConcurrentDictionary<string, List<PlayerStats>> Children { get; set; }
+    public ConcurrentDictionary<string, List<PlayerSubStats>> SubStats { get; set; }
     public PlayerStats RaidStats { get; set; }
     public SortedSet<long> NpcIDs { get; set; }
   }
@@ -90,16 +95,26 @@ namespace EQLogParser
   {
     public int Rank { get; set; }
     public string Name { get; set; }
-    public long Damage { get; set; }
+    public long TotalDamage { get; set; }
+    public long TotalCritDamage { get; set; }
+    public long TotalLuckyDamage { get; set; }
     public double TotalSeconds { get; set; }
     public long DPS { get; set; }
-    public long Hits { get; set; }
+    public int Hits { get; set; }
     public string HitType { get; set; }
     public long Max { get; set; }
     public long Avg { get; set; }
-    public long CritHits { get; set; }
+    public long AvgCrit { get; set; }
+    public long AvgLucky { get; set; }
+    public int CritHits { get; set; }
+    public int LuckyHits { get; set; }
+    public int TwincastHits { get; set; }
     public decimal CritRate { get; set; }
+    public decimal LuckRate { get; set; }
+    public decimal TwincastRate { get; set; }
     public string Details { get; set; }
+    public decimal Percent { get; set; }
+    public string PercentString { get; set; }
   }
 
   public class PlayerStats : PlayerSubStats

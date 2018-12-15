@@ -9,6 +9,7 @@ namespace EQLogParser
   {
     public static DataManager Instance = new DataManager();
 
+    public const string UNASSIGNED_PET_OWNER = "Unassigned Pets";
     public event EventHandler<PetMapping> EventsNewPetMapping;
     public event EventHandler<string> EventsNewVerifiedPet;
     public event EventHandler<string> EventsNewVerifiedPlayer;
@@ -87,6 +88,8 @@ namespace EQLogParser
       {
         UpdateVerifiedPets(name);
         isPet = true;
+
+        UpdatePetToPlayer(name, UNASSIGNED_PET_OWNER);
       }
       else
       {

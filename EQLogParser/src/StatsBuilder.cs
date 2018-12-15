@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -22,14 +24,14 @@ namespace EQLogParser
       if (selected != null && currentStats != null)
       {
         int count = 0;
-        foreach (PlayerStats stats in selected.OrderByDescending(item => item.Damage))
+        foreach (PlayerStats stats in selected.OrderByDescending(item => item.TotalDamage))
         {
           count++;
-          list.Add(String.Format("{0}. {1} = {2} @ {3} DPS", count, stats.Name, Utils.FormatDamage(stats.Damage), Utils.FormatDamage(stats.DPS)));
+          list.Add(String.Format("{0}. {1} = {2} @ {3} DPS", count, stats.Name, Utils.FormatDamage(stats.TotalDamage), Utils.FormatDamage(stats.DPS)));
 
           if (selectedTitleOnly)
           {
-            selectedTotal += stats.Damage;
+            selectedTotal += stats.TotalDamage;
           }
         }
 
@@ -52,7 +54,7 @@ namespace EQLogParser
     internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)
     {
       CombinedStats combined = new CombinedStats() { NpcIDs = new SortedSet<long>() };
-      Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
+      ConcurrentDictionary<string, PlayerStats> individualStats = new ConcurrentDictionary<string, PlayerStats>();
       PlayerStats raidTotals = CreatePlayerStats(RAID_PLAYER);
 
       Dictionary<string, List<string>> needAggregate = new Dictionary<string, List<string>>();
@@ -60,7 +62,6 @@ namespace EQLogParser
       DictionaryListHelper<string, string> needAggregateHelper = new DictionaryListHelper<string, string>();
       DictionaryListHelper<string, NonPlayer> aggregateNpcStatsHelper = new DictionaryListHelper<string, NonPlayer>();
       DictionaryListHelper<string, PlayerStats> statsHelper = new DictionaryListHelper<string, PlayerStats>();
-
 
       try
       {
@@ -104,7 +105,7 @@ namespace EQLogParser
               needAggregateHelper.AddToList(needAggregate, npcStats.Owner, key);
             } else if (npcStats.Owner == "" && npcStats.IsPet)
             {
-              playerTotals.Details = "Unassigned Pet";
+              playerTotals.Details = DataManager.UNASSIGNED_PET_OWNER;
             }
 
             aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
@@ -117,21 +118,17 @@ namespace EQLogParser
         combined.RaidStats = raidTotals;
         combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
-        combined.DamageTitle = String.Format(DETAILS_FORMAT, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.Damage), Utils.FormatDamage(raidTotals.DPS));
+        combined.DamageTitle = String.Format(DETAILS_FORMAT, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.TotalDamage), Utils.FormatDamage(raidTotals.DPS));
 
-        // do this before figuring out children removes values from the main stats list
-        combined.SubStats = new Dictionary<string, List<PlayerSubStats>>();
-        foreach (var stat in individualStats.Values)
-        {
-          combined.SubStats[stat.Name] = stat.SubStats.Values.OrderByDescending(item => item.Damage).ToList();
-        }
+        // save them all before child code removes
+        var allStatValues = individualStats.Values.ToList();
 
-        combined.Children = new Dictionary<string, List<PlayerStats>>();
+        combined.Children = new ConcurrentDictionary<string, List<PlayerStats>>();
         if (needAggregate.Count > 0)
         {
-          foreach (string key in needAggregate.Keys)
+          Parallel.ForEach(needAggregate.Keys, (key) =>
           {
-            string aggregateName = key + " +Pets";
+            string aggregateName = (key == DataManager.UNASSIGNED_PET_OWNER) ? key : key + " +Pets";
             PlayerStats aggregatePlayerStats = CreatePlayerStats(aggregateName);
             List<string> all = needAggregate[key].ToList();
             all.Add(key);
@@ -141,7 +138,9 @@ namespace EQLogParser
               if (aggregateNpcStats.ContainsKey(child) && individualStats.ContainsKey(child))
               {
                 statsHelper.AddToList(combined.Children, aggregateName, individualStats[child]);
-                individualStats.Remove(child);
+
+                PlayerStats removed;
+                individualStats.TryRemove(child, out removed);
 
                 foreach (NonPlayer npc in aggregateNpcStats[child])
                 {
@@ -150,18 +149,36 @@ namespace EQLogParser
               }
             }
 
-            individualStats.Add(aggregateName, aggregatePlayerStats);
-          }
+            individualStats[aggregateName] = aggregatePlayerStats;
+
+            // figure out percents
+            foreach (PlayerStats childStat in combined.Children[aggregateName])
+            {
+              childStat.Percent = Math.Round(((decimal)childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
+              childStat.PercentString = childStat.Percent.ToString();
+            }
+          });
         }
 
-        combined.StatsList = individualStats.Values.OrderByDescending(item => item.Damage).ToList();
+        combined.SubStats = new ConcurrentDictionary<string, List<PlayerSubStats>>();
+        Parallel.ForEach(allStatValues, (stat) =>
+        {
+          combined.SubStats[stat.Name] = stat.SubStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
+          foreach (var subStat in combined.SubStats[stat.Name])
+          {
+            subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal)subStat.TotalDamage / stat.TotalDamage) * 100, 2);
+            subStat.PercentString = subStat.Percent.ToString();
+          }
+        });
+
+        combined.StatsList = individualStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
         for (int i = 0; i < combined.StatsList.Count; i++)
         {
           string name = combined.StatsList[i].Name;
           combined.StatsList[i].Rank = i + 1;
           if (combined.Children.ContainsKey(name))
           {
-            combined.Children[name] = combined.Children[name].OrderByDescending(item => item.Damage).ToList();
+            combined.Children[name] = combined.Children[name].OrderByDescending(item => item.TotalDamage).ToList();
           }
         }
       }
@@ -180,12 +197,20 @@ namespace EQLogParser
         playerTotals.BeginTimes[FightID] = new DateTime();
         playerTotals.LastTimes[FightID] = new DateTime();
         playerTotals.TimeDiffs[FightID] = 0;
-        playerTotals.SubStats = new Dictionary<string, PlayerSubStats>();
+
+        if (playerTotals.SubStats == null)
+        {
+          playerTotals.SubStats = new Dictionary<string, PlayerSubStats>();
+        }
       }
 
-      playerTotals.Damage += npcStats.TotalDamage;
+      playerTotals.TotalDamage += npcStats.TotalDamage;
+      playerTotals.TotalCritDamage += npcStats.TotalCritDamage;
+      playerTotals.TotalLuckyDamage += npcStats.TotalLuckyDamage;
       playerTotals.Hits += npcStats.Count;
       playerTotals.CritHits += npcStats.CritCount;
+      playerTotals.LuckyHits += npcStats.LuckyCount;
+      playerTotals.TwincastHits += npcStats.TwincastCount;
       playerTotals.Max = (playerTotals.Max < npcStats.Max) ? npcStats.Max : playerTotals.Max;
 
       bool updateTime = false;
@@ -211,9 +236,19 @@ namespace EQLogParser
       }
 
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
-      playerTotals.DPS = (long)Math.Round(playerTotals.Damage / playerTotals.TotalSeconds);
-      playerTotals.Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.Damage) / playerTotals.Hits);
+      playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
+      playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
+      if (playerTotals.CritHits > 0)
+      {
+        playerTotals.AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / playerTotals.CritHits);
+      }
+      if (playerTotals.LuckyHits > 0)
+      {
+        playerTotals.AvgLucky = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalLuckyDamage) / playerTotals.LuckyHits);
+      }
       playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 1);
+      playerTotals.LuckRate = Math.Round(Convert.ToDecimal(playerTotals.LuckyHits) / playerTotals.Hits * 100, 1);
+      playerTotals.TwincastRate = Math.Round(Convert.ToDecimal(playerTotals.TwincastHits) / playerTotals.Hits * 100, 1);
 
       foreach (string key in npcStats.HitMap.Keys)
       {
@@ -222,14 +257,28 @@ namespace EQLogParser
           playerTotals.SubStats[key] = new PlayerSubStats() { Details = "", Name = "", HitType = key };
         }
 
-        playerTotals.SubStats[key].Damage += npcStats.HitMap[key].TotalDamage;
+        playerTotals.SubStats[key].TotalDamage += npcStats.HitMap[key].TotalDamage;
+        playerTotals.SubStats[key].TotalCritDamage += npcStats.HitMap[key].TotalCritDamage;
+        playerTotals.SubStats[key].TotalLuckyDamage += npcStats.HitMap[key].TotalLuckyDamage;
         playerTotals.SubStats[key].Hits += npcStats.HitMap[key].Count;
         playerTotals.SubStats[key].CritHits += npcStats.HitMap[key].CritCount;
+        playerTotals.SubStats[key].LuckyHits += npcStats.HitMap[key].LuckyCount;
+        playerTotals.SubStats[key].TwincastHits += npcStats.HitMap[key].TwincastCount;
         playerTotals.SubStats[key].Max = (playerTotals.SubStats[key].Max < npcStats.HitMap[key].Max) ? npcStats.HitMap[key].Max : playerTotals.SubStats[key].Max;
         playerTotals.SubStats[key].TotalSeconds = playerTotals.TotalSeconds;
-        playerTotals.SubStats[key].DPS = (long)Math.Round(playerTotals.SubStats[key].Damage / playerTotals.SubStats[key].TotalSeconds);
-        playerTotals.SubStats[key].Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].Damage) / playerTotals.SubStats[key].Hits);
+        playerTotals.SubStats[key].DPS = (long) Math.Round(playerTotals.SubStats[key].TotalDamage / playerTotals.SubStats[key].TotalSeconds);
+        playerTotals.SubStats[key].Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalDamage) / playerTotals.SubStats[key].Hits);
+        if (playerTotals.SubStats[key].CritHits > 0)
+        {
+          playerTotals.SubStats[key].AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalCritDamage) / playerTotals.SubStats[key].CritHits);
+        }
+        if (playerTotals.SubStats[key].LuckyHits > 0)
+        {
+          playerTotals.SubStats[key].AvgLucky = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalLuckyDamage) / playerTotals.SubStats[key].LuckyHits);
+        }
         playerTotals.SubStats[key].CritRate = Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].CritHits) / playerTotals.SubStats[key].Hits * 100, 1);
+        playerTotals.SubStats[key].LuckRate = Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].LuckyHits) / playerTotals.SubStats[key].Hits * 100, 1);
+        playerTotals.SubStats[key].TwincastRate = Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TwincastHits) / playerTotals.SubStats[key].Hits * 100, 1);
       }
     }
 
@@ -238,15 +287,10 @@ namespace EQLogParser
       return new PlayerStats()
       {
         Name = name,
-        Damage = 0,
-        DPS = 0,
         Details = "",
         HitType = "",
-        Max = 0,
-        Avg = 0,
         TotalSeconds = 0,
-        Hits = 0,
-        CritRate = 0,
+        PercentString = "-",
         BeginTimes = new Dictionary<int, DateTime>(),
         LastTimes = new Dictionary<int, DateTime>(),
         TimeDiffs = new Dictionary<int, double>()
