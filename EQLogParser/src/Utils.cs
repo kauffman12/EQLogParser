@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -96,6 +97,19 @@ namespace EQLogParser
   internal class DictionaryListHelper<T1, T2>
   {
     internal void AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
+    {
+      if (!dict.ContainsKey(key))
+      {
+        dict[key] = new List<T2>();
+      }
+
+      if (!dict[key].Contains(value))
+      {
+        dict[key].Add(value);
+      }
+    }
+
+    internal void AddToList(ConcurrentDictionary<T1, List<T2>> dict, T1 key, T2 value)
     {
       if (!dict.ContainsKey(key))
       {

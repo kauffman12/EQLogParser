@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.11" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.13" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -10,6 +10,7 @@
 			<ComponentGroupRef Id="ProductComponents" />
       <ComponentGroupRef Id="ProductDataComponents" />
       <ComponentRef Id="ApplicationShortcut" />
+      <ComponentRef Id="Logs" />
 		</Feature>
 
     <UI Id="WixUI_Advanced">
@@ -21,13 +22,24 @@
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
     </UI>    
 	</Product>
-
+ 
 	<Fragment>
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="EQLogParser">
           <Directory Id="DATAFOLDER" Name="data" />
-          <Directory Id="LOGFOLDER" Name="logs" />
+        </Directory>
+      </Directory>
+      <Directory Id="AppDataFolder">
+        <Directory Id="MyAppData" Name="EQLogParser">
+          <Directory Id="LogsFolder" Name="logs">
+            <Component Id="Logs" Guid="D3E18092-1C19-4923-ACB0-2ED354653167">
+              <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+              <RemoveFile Id="RemoveLogs" Name="*.*" On="uninstall" />
+              <RemoveFolder Id="RemoveLogsFolder" Directory="LogsFolder" On="uninstall"/>
+              <RemoveFolder Id="RemoveMyAppData" Directory="MyAppData" On="uninstall"/>
+            </Component>
+          </Directory>
         </Directory>
       </Directory>
       <Directory Id="ProgramMenuFolder">
