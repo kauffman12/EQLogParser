@@ -29,10 +29,10 @@
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundDisabledBrushKey}" Color="#2d2d30" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderDefaultedBrushKey}" Color="Transparent" />
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
-      <Setter Property="Background" Value="#21452a" />
+      <Setter Property="Background" Value="#3a543f" />
       <Style.Triggers>
         <Trigger Property="IsMouseOver" Value="True">
-          <Setter Property="Background" Value="#21452a"/>
+          <Setter Property="Background" Value="#3a543f"/>
         </Trigger>
       </Style.Triggers>
     </Style>
@@ -57,6 +57,9 @@
     </Style>
     <Style TargetType="TextBox">
       <Setter Property="local:TextBoxBehavior.TripleClickSelectAll" Value="True" />
+    </Style>
+    <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Based on Critical, Crippling Blow, and Deadly Strike" />
     </Style>
     <Style x:Key="StandardStyle" TargetType="{x:Type local:MainWindow}">
       <Setter Property="WindowChrome.WindowChrome">

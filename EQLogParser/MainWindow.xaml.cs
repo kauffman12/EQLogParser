@@ -23,12 +23,12 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.11";
+    private const string VERSION = "v1.0.13";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
-    private const int DISPATCHER_DELAY = 150; // millis
+    private const int DISPATCHER_DELAY = 200; // millis
 
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
@@ -48,6 +48,7 @@ namespace EQLogParser
 
     // stats
     private static bool NeedStatsUpdate = false;
+    private static bool UpdatingStats = false;
     private static bool NeedDPSTextUpdate = false;
     private static CombinedStats CurrentStats = null;
     private DispatcherTimer NonPlayerSelectionTimer;
@@ -146,6 +147,75 @@ namespace EQLogParser
       }
     }
 
+    private void Window_Closed(object sender, System.EventArgs e)
+    {
+      if (EQLogReader != null)
+      {
+        EQLogReader.Stop();
+      }
+
+      if (NpcDamageProcessor != null)
+      {
+        NpcDamageProcessor.Stop();
+      }
+
+      Application.Current.Shutdown();
+    }
+
+    private void DispatcherTimer_Tick(object sender, EventArgs e)
+    {
+      UpdateLoadingProgress();
+      UpdateStats();
+      UpdateDPSText();
+
+      if (NeedScrollIntoView)
+      {
+        npcDataGrid.ScrollIntoView(npcDataGrid.Items.CurrentItem);
+        NeedScrollIntoView = false;
+      }
+    }
+
+    // Main Menu
+    private void MenuItemWindow_Click(object sender, RoutedEventArgs e)
+    {
+      if (e.Source == npcWindowMenuitem)
+      {
+        Utils.OpenWindow(npcWindow);
+      }
+      else if (e.Source == fileProgressWindowMenuItem)
+      {
+        Utils.OpenWindow(progressWindow);
+      }
+      else if (e.Source == petMappingWindowMenuItem)
+      {
+        Utils.OpenWindow(petMappingWindow);
+      }
+      else if (e.Source == verifiedPlayersWindowMenuItem)
+      {
+        Utils.OpenWindow(verifiedPlayersWindow);
+      }
+      else if (e.Source == verifiedPetsWindowMenuItem)
+      {
+        Utils.OpenWindow(verifiedPetsWindow);
+      }
+      else if (e.Source == playerDPSTextWindowMenuItem)
+      {
+        Utils.OpenWindow(playerDPSTextWindow);
+      }
+    }
+
+    // Main Menu Op File
+    private void MenuItemSelectMonitorLogFile_Click(object sender, RoutedEventArgs e)
+    {
+      OpenLogFile(true);
+    }
+
+    private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
+    {
+      OpenLogFile();
+    }
+
+    // NonPlayer Window
     private void AddNonPlayer(NonPlayer npc)
     {
       Dispatcher.InvokeAsync(() =>
@@ -177,38 +247,186 @@ namespace EQLogParser
       });
     }
 
-    private void Window_Closed(object sender, System.EventArgs e)
-    {
-      if (EQLogReader != null)
-      {
-        EQLogReader.Stop();
-      }
-
-      if (NpcDamageProcessor != null)
-      {
-        NpcDamageProcessor.Stop();
-      }
-
-      Application.Current.Shutdown();
-    }
-
-    private void DispatcherTimer_Tick(object sender, EventArgs e)
-    {
-      UpdateLoadingProgress();
-      UpdateStats();
-      UpdateDPSText();
-
-      if (NeedScrollIntoView)
-      {
-        npcDataGrid.ScrollIntoView(npcDataGrid.Items.CurrentItem);
-        NeedScrollIntoView = false;
-      }
-    }
-
     private void NonPlayerSelectionTimer_Tick(object sender, EventArgs e)
     {
       NeedStatsUpdate = true;
       NonPlayerSelectionTimer.Stop();
+    }
+
+    private void NonPlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      // adds a delay where a drag-select doesn't keep sending events
+      NonPlayerSelectionTimer.Stop();
+      NonPlayerSelectionTimer.Start();
+    }
+
+    private void NonPlayerDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+    {
+      DataGrid_LoadingRow(sender, e);
+
+      NonPlayer npc = e.Row.Item as NonPlayer;
+      if (npc != null && npc.BeginTimeString == NonPlayer.BREAK_TIME)
+      {
+        if (e.Row.Background != BREAK_TIME_BRUSH)
+        {
+          e.Row.Background = BREAK_TIME_BRUSH;
+        }
+      }
+      else if (e.Row.Background != NORMAL_BRUSH)
+      {
+        e.Row.Background = NORMAL_BRUSH;
+      }
+    }
+
+    private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+    {
+      e.Row.Header = (e.Row.GetIndex() + 1).ToString();
+    }
+
+    // Player DPS Data Grid
+    private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      NeedDPSTextUpdate = true;
+    }
+
+    private void PlayerDataGridExpander_Loaded(object sender, RoutedEventArgs e)
+    {
+      Image image = (sender as Image);
+      PlayerStats stats = image.DataContext as PlayerStats;
+      if (stats != null && CurrentStats.Children.ContainsKey(stats.Name) && (CurrentStats.Children[stats.Name].Count > 1 || stats.Name == DataManager.UNASSIGNED_PET_OWNER))
+      {
+        var container = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
+        if (container != null)
+        {
+          if (container.DetailsVisibility != Visibility.Visible)
+          {
+            image.Source = EXPAND_BITMAP;
+          }
+          else
+          {
+            image.Source = COLLAPSE_BITMAP;
+          }
+        }
+      }
+    }
+
+    private void PlayerDataGridExpander_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+      Image image = (sender as Image);
+      PlayerStats stats = image.DataContext as PlayerStats;
+      var container = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
+
+      if (image != null && container != null)
+      {
+        if (image.Source == COLLAPSE_BITMAP)
+        {
+          image.Source = EXPAND_BITMAP;
+          container.DetailsVisibility = Visibility.Collapsed;
+        }
+        else if (image.Source == EXPAND_BITMAP)
+        {
+          image.Source = COLLAPSE_BITMAP;
+          container.DetailsVisibility = Visibility.Visible;
+        }
+      }
+    }
+
+    private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
+    {
+      if (playerDataGrid.SelectedItems.Count > 0)
+      {
+        List<PlayerStats> list = new List<PlayerStats>();
+        foreach (var playerStat in playerDataGrid.SelectedItems.Cast<PlayerStats>())
+        {
+          if (CurrentStats.Children.ContainsKey(playerStat.Name))
+          {
+            foreach (var childStat in CurrentStats.Children[playerStat.Name])
+            {
+              list.Add(childStat);
+            }
+          }
+          else
+          {
+            list.Add(playerStat);
+          }
+        }
+
+        playerDamageDataGrid.ItemsSource = list;
+        damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
+        if (!damageWindow.IsOpen)
+        {
+          damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
+        }
+
+        Utils.OpenWindow(damageWindow);
+        damageWindow.MoveToLast();
+      }
+    }
+
+    // Player DPS Child Grid
+    private void PlayerChildrenDataGrid_PrevMouseWheel(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+      if (!e.Handled)
+      {
+        e.Handled = true;
+        MouseWheelEventArgs wheelArgs = e as MouseWheelEventArgs;
+        var newEvent = new MouseWheelEventArgs(wheelArgs.MouseDevice, wheelArgs.Timestamp, wheelArgs.Delta);
+        newEvent.RoutedEvent = MouseWheelEvent;
+        var container = playerDataGrid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
+        container.RaiseEvent(newEvent);
+      }
+    }
+
+    private void PlayerChildrenGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
+    {
+      PlayerStats stats = e.Row.Item as PlayerStats;
+      var childrenDataGrid = e.DetailsElement as DataGrid;
+      if (stats != null && childrenDataGrid != null && CurrentStats != null && CurrentStats.Children.ContainsKey(stats.Name))
+      {
+        if (childrenDataGrid.ItemsSource != CurrentStats.Children[stats.Name])
+        {
+          childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
+        }
+      }
+    }
+
+    // Player Damage Details Grid
+    private void PlayerDamageDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      var list = playerDamageDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+      if (list.Count == 0)
+      {
+        list = playerDamageDataGrid.ItemsSource as List<PlayerStats>;
+      }
+      damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
+      NeedDPSTextUpdate = true;
+    }
+
+    private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
+    {
+      PlayerStats stats = e.Row.Item as PlayerStats;
+      var subStatsDataGrid = e.DetailsElement as DataGrid;
+      if (stats != null && subStatsDataGrid != null && CurrentStats != null && CurrentStats.SubStats.ContainsKey(stats.Name))
+      {
+        if (subStatsDataGrid.ItemsSource != CurrentStats.SubStats[stats.Name])
+        {
+          subStatsDataGrid.ItemsSource = CurrentStats.SubStats[stats.Name];
+        }
+      }
+    }
+
+    // Player DPS Text/Send to EQ Window
+    private void CopyToEQ_Click(object sender, RoutedEventArgs e)
+    {
+      Clipboard.SetText(playerDPSTextBox.Text);
+    }
+
+    private void PlayerDPSText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+      if (!playerDPSTextBox.IsFocused)
+      {
+        playerDPSTextBox.Focus();
+      }
     }
 
     private void UpdateLoadingProgress()
@@ -269,236 +487,48 @@ namespace EQLogParser
 
     private void UpdateStats()
     {
-      if (NeedStatsUpdate)
+      if (NeedStatsUpdate && !UpdatingStats)
       {
+        bool taskStarted = false;
+        UpdatingStats = true;
         var selected = npcDataGrid.SelectedItems;
         if (selected.Count > 0)
         {
-          new Task(() =>
+          var realItems = selected.Cast<NonPlayer>().Where(item => !item.Name.Contains("Inactivity >")).ToList();
+          if (realItems.Count > 0)
           {
-            CurrentStats = StatsBuilder.BuildTotalStats(selected.Cast<NonPlayer>().ToList());
-            Dispatcher.InvokeAsync((() =>
+            taskStarted = true;
+            new Task(() =>
             {
-              if (NeedStatsUpdate)
+              CurrentStats = StatsBuilder.BuildTotalStats(realItems);
+              Dispatcher.InvokeAsync((() =>
               {
-                dpsTitle.Content = CurrentStats.TargetTitle + CurrentStats.DamageTitle;
-                playerDPSTextBox.Text = dpsTitle.Content.ToString();
-                playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
-                NeedStatsUpdate = false;
-              }
-            }));
-          }).Start();
+                if (NeedStatsUpdate)
+                {
+                  dpsTitle.Content = CurrentStats.TargetTitle + CurrentStats.DamageTitle;
+                  playerDPSTextBox.Text = dpsTitle.Content.ToString();
+                  playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
+                  NeedStatsUpdate = false;
+                  UpdatingStats = false;
+                }
+              }));
+            }).Start();
+          }
         }
-        else
+
+        if (!taskStarted)
         {
           if (playerDataGrid.ItemsSource is ObservableCollection<PlayerStats> list)
           {
             dpsTitle.Content = DPS_LABEL;
             playerDPSTextBox.Text = "";
             list.Clear();
-            NeedStatsUpdate = false;
           }
+
+          NeedStatsUpdate = false;
+          UpdatingStats = false;
         }
       }
-    }
-
-    private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      NeedDPSTextUpdate = true;
-    }
-
-    private void PlayerDamageDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      var list = playerDamageDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-      if (list.Count == 0)
-      {
-        list = playerDamageDataGrid.ItemsSource as List<PlayerStats>;
-      }
-      damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
-      NeedDPSTextUpdate = true;
-    }
-
-    private void NpcDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      // adds a delay where a drag-select doesn't keep sending events
-      NonPlayerSelectionTimer.Stop();
-      NonPlayerSelectionTimer.Start();
-    }
-
-    private void NonPlayerDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      DataGrid_LoadingRow(sender, e);
-
-      NonPlayer npc = e.Row.Item as NonPlayer;
-      if (npc != null && npc.BeginTimeString == NonPlayer.BREAK_TIME)
-      {
-        if (e.Row.Background != BREAK_TIME_BRUSH)
-        {
-          e.Row.Background = BREAK_TIME_BRUSH;
-        }
-      }
-      else if (e.Row.Background != NORMAL_BRUSH)
-      {
-        e.Row.Background = NORMAL_BRUSH;
-      }
-    }
-
-    private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      e.Row.Header = (e.Row.GetIndex() + 1).ToString();
-    }
-
-    private void PlayerDataGridExpander_Loaded(object sender, RoutedEventArgs e)
-    {
-      Image image = (sender as Image);
-      PlayerStats stats = image.DataContext as PlayerStats;
-      if (stats != null && CurrentStats.Children.ContainsKey(stats.Name) && CurrentStats.Children[stats.Name].Count > 1)
-      {
-        image.Source = EXPAND_BITMAP;
-      }
-    }
-
-    private void PlayerDataGridExpander_MouseDown(object sender, MouseButtonEventArgs e)
-    {
-      Image image = (sender as Image);
-      PlayerStats stats = image.DataContext as PlayerStats;
-      var container = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
-
-      if (image != null && container != null)
-      {
-        if (image.Source == COLLAPSE_BITMAP)
-        {
-          image.Source = EXPAND_BITMAP;
-          container.DetailsVisibility = Visibility.Collapsed;
-        }
-        else if (image.Source == EXPAND_BITMAP)
-        {
-          image.Source = COLLAPSE_BITMAP;
-          container.DetailsVisibility = Visibility.Visible;
-        }
-      }
-    }
-
-    private void PlayerChildrenGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
-    {
-      PlayerStats stats = e.Row.Item as PlayerStats;
-      var childrenDataGrid = e.DetailsElement as DataGrid;
-      if (stats != null && childrenDataGrid != null && CurrentStats != null && CurrentStats.Children.ContainsKey(stats.Name))
-      {
-        if (childrenDataGrid.ItemsSource != CurrentStats.Children[stats.Name])
-        {
-          childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
-        }
-      }
-    }
-
-    private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
-    {
-      PlayerStats stats = e.Row.Item as PlayerStats;
-      var subStatsDataGrid = e.DetailsElement as DataGrid;
-      if (stats != null && subStatsDataGrid != null && CurrentStats != null && CurrentStats.SubStats.ContainsKey(stats.Name))
-      {
-        if (subStatsDataGrid.ItemsSource != CurrentStats.SubStats[stats.Name])
-        {
-          subStatsDataGrid.ItemsSource = CurrentStats.SubStats[stats.Name];
-        }
-      }
-    }
-
-    private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
-    {
-      if (playerDataGrid.SelectedItems.Count > 0)
-      {
-        List<PlayerStats> list = new List<PlayerStats>();
-        foreach (var playerStat in playerDataGrid.SelectedItems.Cast<PlayerStats>())
-        {
-          if (CurrentStats.Children.ContainsKey(playerStat.Name))
-          {
-            foreach (var childStat in CurrentStats.Children[playerStat.Name])
-            {
-              list.Add(childStat);
-            }
-          }
-          else
-          {
-            list.Add(playerStat);
-          }
-        }
-
-        playerDamageDataGrid.ItemsSource = list;
-        damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
-        if (!damageWindow.IsOpen)
-        {
-          damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
-        }
-
-        Utils.OpenWindow(damageWindow);
-        damageWindow.MoveToLast();
-      }
-    }
-
-    private void PlayerChildrenDataGrid_PrevMouseWheel(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-      if (!e.Handled)
-      {
-        e.Handled = true;
-        MouseWheelEventArgs wheelArgs = e as MouseWheelEventArgs;
-        var newEvent = new MouseWheelEventArgs(wheelArgs.MouseDevice, wheelArgs.Timestamp, wheelArgs.Delta);
-        newEvent.RoutedEvent = UIElement.MouseWheelEvent;
-        var container = playerDataGrid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
-        container.RaiseEvent(newEvent);
-      }
-    }
-
-    private void PlayerChildrenDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      e.Handled = true;
-    }
-
-    private void PlayerDPSText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-      if (!playerDPSTextBox.IsFocused)
-      {
-        playerDPSTextBox.Focus();
-      }
-    }
-
-    private void MenuItemWindow_Click(object sender, RoutedEventArgs e)
-    {
-      if (e.Source == npcWindowMenuitem)
-      {
-        Utils.OpenWindow(npcWindow);
-      }
-      else if (e.Source == fileProgressWindowMenuItem)
-      {
-        Utils.OpenWindow(progressWindow);
-      }
-      else if (e.Source == petMappingWindowMenuItem)
-      {
-        Utils.OpenWindow(petMappingWindow);
-      }
-      else if (e.Source == verifiedPlayersWindowMenuItem)
-      {
-        Utils.OpenWindow(verifiedPlayersWindow);
-      }
-      else if (e.Source == verifiedPetsWindowMenuItem)
-      {
-        Utils.OpenWindow(verifiedPetsWindow);
-      }
-      else if (e.Source == playerDPSTextWindowMenuItem)
-      {
-        Utils.OpenWindow(playerDPSTextWindow);
-      }
-    }
-
-    private void MenuItemSelectMonitorLogFile_Click(object sender, RoutedEventArgs e)
-    {
-      OpenLogFile(true);
-    }
-
-    private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
-    {
-      OpenLogFile();
     }
 
     private void OpenLogFile(bool monitorOnly = false)
@@ -712,9 +742,5 @@ namespace EQLogParser
       }
     }
 
-    private void CopyToEQ_Click(object sender, RoutedEventArgs e)
-    {
-      Clipboard.SetText(playerDPSTextBox.Text);
-    }
   }
 }
