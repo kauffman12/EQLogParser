@@ -12,20 +12,22 @@ namespace EQLogParser
     public delegate void ParseLineCallback(string line);
     public delegate void InitialLoadCompleteCallback();
     public long FileSize = 0;
-    public long BytesRead = 0;
+    public long BytesNeededToProcess = 0;
 
     private string FileName;
     private ParseLineCallback LoadingCallback;
     private InitialLoadCompleteCallback CompleteCallback;
     private ThreadState LogThreadState;
     private bool MonitorOnly;
+    private int LastMins;
 
-    public LogReader(string fileName, bool monitorOnly, ParseLineCallback loadingCallback, InitialLoadCompleteCallback completeCallback)
+    public LogReader(string fileName, ParseLineCallback loadingCallback, InitialLoadCompleteCallback completeCallback, bool monitorOnly, int lastMins)
     {
       FileName = fileName;
       LoadingCallback = loadingCallback;
       CompleteCallback = completeCallback;
       MonitorOnly = monitorOnly;
+      LastMins = lastMins;
     }
 
     public void Start()
@@ -53,17 +55,57 @@ namespace EQLogParser
           if (MonitorOnly)
           {
             fs.Seek(FileSize, 0);
+            BytesNeededToProcess = 0;
+          }
+          else if (LastMins > -1 && FileSize > 0)
+          {
+            DateTime now = DateTime.Now;
+            long position = fs.Length / 2;
+            long lastPos = 0;
+            long value = -1;
+
+            fs.Seek(position, SeekOrigin.Begin);
+            reader.ReadLine();
+
+            while (!reader.EndOfStream && value != 0)
+            {
+              string line = reader.ReadLine();
+              bool inRange = Utils.HasTimeInRange(now, line, LastMins);
+              value = Math.Abs(lastPos - position) / 2;
+
+              lastPos = position;
+
+              if (!inRange)
+              {
+                position += value;
+              }
+              else
+              {
+                position -= value;
+              }
+
+              fs.Seek(position, SeekOrigin.Begin);
+              reader.DiscardBufferedData();
+              reader.ReadLine(); // seek will lead to partial line
+            }
+
+            fs.Seek(lastPos, SeekOrigin.Begin);
+            reader.DiscardBufferedData();
+            reader.ReadLine(); // seek will lead to partial line
+            BytesNeededToProcess = (FileSize - fs.Position);
+          }
+          else
+          {
+            BytesNeededToProcess = FileSize;
           }
 
           while (!reader.EndOfStream && myState.isRunning())
           {
             string line = reader.ReadLine();
-            BytesRead += line.Length + 2; // EOL
             LoadingCallback(line);
           }
 
           CompleteCallback();
-          BytesRead += 2; // EOF
 
           // setup watcher
           FileSystemWatcher fsw = new FileSystemWatcher

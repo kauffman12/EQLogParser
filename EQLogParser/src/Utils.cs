@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,17 +10,9 @@ namespace EQLogParser
 {
   class Utils
   {
-    static bool _connected;
-    internal static void WriteToConsole(string message)
-    {
-      _connected = _connected || AttachConsole(-1);
-      if (_connected)
-      {
-        Console.WriteLine(message);
-      }
-    }
-    [DllImport("Kernel32.dll")]
-    public static extern bool AttachConsole(int processId);
+    // counting this thing is really slow
+    private static int DateCount = 0;
+    private static ConcurrentDictionary<string, DateTime> DateTimeCache = new ConcurrentDictionary<string, DateTime>();
 
     internal static long ParseLong(string str)
     {
@@ -35,6 +27,52 @@ namespace EQLogParser
         y = y * 10 + (str[i] - '0');
       }
       return y;
+    }
+
+    internal static DateTime ParseDate(string timeString)
+    {
+      DateTime dateTime;
+
+      if (!DateTimeCache.ContainsKey(timeString))
+      {
+        DateTime.TryParseExact(timeString, "ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
+        if (dateTime == DateTime.MinValue)
+        {
+          DateTime.TryParseExact(timeString, "ddd MMM  d HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
+        }
+
+        DateTimeCache.TryAdd(timeString, dateTime);
+      }
+      else
+      {
+        dateTime = DateTimeCache[timeString];
+      }
+
+      // dont let it get too big but it coudl be re-used between different log files
+      if (DateTimeCache.TryAdd(timeString, dateTime))
+      {
+        DateCount++;
+      }
+
+      if (DateCount > 50000)
+      {
+        DateTimeCache.Clear();
+        DateCount = 0;
+      }
+
+      return dateTime;
+    }
+
+    internal static bool HasTimeInRange(DateTime now, string line, int lastMins)
+    {
+      bool found = false;
+      if (line.Length > 24)
+      {
+        DateTime dateTime = ParseDate(line.Substring(1, 24));
+        TimeSpan diff = now.Subtract(dateTime);
+        found = (diff.TotalMinutes < lastMins);
+      }
+      return found;
     }
 
     internal static void OpenWindow(ActiproSoftware.Windows.Controls.Docking.DockingWindow window)
