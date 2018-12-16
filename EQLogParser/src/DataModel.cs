@@ -79,6 +79,11 @@ namespace EQLogParser
     public string Pet { get; set; }
   }
 
+  public class SortableName
+  {
+    public string Name { get; set; }
+  }
+
   public class CombinedStats
   {
     public string TargetTitle { get; set; }

@@ -49,8 +49,8 @@ namespace EQLogParser
 
       updateModifiers(stats, record);
       stats.LastTime = currentTime;
-      LastUpdateTime = currentTime;
       npc.LastTime = currentTime;
+      LastUpdateTime = currentTime;
 
       if (record.AttackerPetType != "")
       {
