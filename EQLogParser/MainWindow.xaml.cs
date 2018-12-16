@@ -23,11 +23,12 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.13";
+    private const string VERSION = "v1.0.14";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
+    private const int MIN_LINE_LENGTH = 33;
     private const int DISPATCHER_DELAY = 200; // millis
 
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
@@ -39,10 +40,11 @@ namespace EQLogParser
     private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
-    private static ActionProcessor NpcDamageProcessor;
+    private static ActionProcessor LineProcessor;
+    private static ActionProcessor LinePreProcessor;
 
-    private ObservableCollection<string> VerifiedPetsView = new ObservableCollection<string>();
-    private ObservableCollection<string> VerifiedPlayersView = new ObservableCollection<string>();
+    private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
+    private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<NonPlayer> NonPlayersView = new ObservableCollection<NonPlayer>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
 
@@ -87,7 +89,7 @@ namespace EQLogParser
         verifiedPetsGrid.ItemsSource = VerifiedPetsView;
         DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          VerifiedPetsView.Add(name);
+          VerifiedPetsView.Add(new SortableName() { Name = name });
           verifiedPetsWindow.Title = "Verified Pets (" + VerifiedPetsView.Count + ")";
         });
 
@@ -95,7 +97,7 @@ namespace EQLogParser
         verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
         DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          VerifiedPlayersView.Add(name);
+          VerifiedPlayersView.Add(new SortableName() { Name = name });
           verifiedPlayersWindow.Title = "Verified Players (" + VerifiedPlayersView.Count + ")";
         });
 
@@ -154,9 +156,14 @@ namespace EQLogParser
         EQLogReader.Stop();
       }
 
-      if (NpcDamageProcessor != null)
+      if (LineProcessor != null)
       {
-        NpcDamageProcessor.Stop();
+        LineProcessor.Stop();
+      }
+
+      if (LinePreProcessor != null)
+      {
+        LinePreProcessor.Stop();
       }
 
       Application.Current.Shutdown();
@@ -212,7 +219,14 @@ namespace EQLogParser
 
     private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
     {
-      OpenLogFile();
+      MenuItem item = sender as MenuItem;
+      int lastMins = -1;
+      if (item != null && item.Tag != null && item.Tag.ToString() != "")
+      {
+        lastMins = Convert.ToInt32(item.Tag.ToString()) * 60;
+      }
+
+      OpenLogFile(false, lastMins);
     }
 
     // NonPlayer Window
@@ -434,9 +448,9 @@ namespace EQLogParser
       if (EQLogReader != null && UpdatingProgress)
       {
         progressWindow.Title = "Reading Log";
-        double percentComplete = Convert.ToInt32((double)ProcessedBytes / EQLogReader.FileSize * 100);
+        double percentComplete = EQLogReader.BytesNeededToProcess > 0 ? Math.Min(Convert.ToInt32((double)ProcessedBytes / EQLogReader.BytesNeededToProcess * 100), 100) : 100;
         fileSizeLabel.Content = Math.Ceiling(EQLogReader.FileSize / 1024.0) + " KB";
-        bytesProcessedLabel.Content = Math.Ceiling(EQLogReader.BytesRead / 1024.0) + " KB";
+        bytesProcessedLabel.Content = Math.Ceiling(ProcessedBytes / 1024.0) + " KB";
         completeLabel.Content = percentComplete + "%";
         processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
 
@@ -531,7 +545,7 @@ namespace EQLogParser
       }
     }
 
-    private void OpenLogFile(bool monitorOnly = false)
+    private void OpenLogFile(bool monitorOnly = false, int lastMins = -1)
     {
       try
       {
@@ -559,9 +573,14 @@ namespace EQLogParser
           StartLoadTime = DateTime.Now;
           CurrentFightID = 0;
 
-          if (NpcDamageProcessor != null)
+          if (LineProcessor != null)
           {
-            NpcDamageProcessor.Stop();
+            LineProcessor.Stop();
+          }
+
+          if (LinePreProcessor != null)
+          {
+            LinePreProcessor.Stop();
           }
 
           if (EQLogReader != null)
@@ -569,7 +588,8 @@ namespace EQLogParser
             EQLogReader.Stop();
           }
 
-          NpcDamageProcessor = new ActionProcessor(ProcessNPCDamage);
+          LinePreProcessor = new ActionProcessor("LinePreProcessor", PreProcessLine);
+          LineProcessor = new ActionProcessor("LineProcessor", ProcessLine);
           NpcDamageManager = new NpcDamageManager();
 
           string name = "Uknown";
@@ -591,7 +611,7 @@ namespace EQLogParser
           NonPlayersView.Clear();
 
           progressWindow.IsOpen = true;
-          EQLogReader = new LogReader(dialog.FileName, monitorOnly, FileLoadingCallback, FileLoadingCompleteCallback);
+          EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, FileLoadingCompleteCallback, monitorOnly, lastMins);
           EQLogReader.Start();
         }
       }
@@ -603,47 +623,43 @@ namespace EQLogParser
 
     private void FileLoadingCallback(string line)
     {
-      ProcessLine pline = LineParser.KeepForProcessingState(line);
-      FileLoadingContinue(pline);
-
-      if (NpcDamageProcessor.QueueSize() > 150000)
+      if (line.Length > MIN_LINE_LENGTH)
       {
-        Thread.Sleep(25);
+       LinePreProcessor.AppendToQueue(line);
+      }
+      else
+      {
+        Interlocked.Add(ref ProcessedBytes, line.Length + 2);
+      }
+
+      if (LinePreProcessor.QueueSize() > 200000 || LineProcessor.QueueSize() > 200000)
+      {
+        Thread.Sleep(20);
       }
     }
 
     private void FileLoadingCompleteCallback()
     {
       LOG.Info("Finished Loading Log File");
-      NpcDamageProcessor.LowerPriority();
-
-      if (MonitorOnly)
-      {
-        Interlocked.Exchange(ref ProcessedBytes, EQLogReader.FileSize);
-      }
+      LinePreProcessor.LowerPriority();
+      LineProcessor.LowerPriority();
     }
 
-    private void FileLoadingContinue(ProcessLine pline)
+    private void PreProcessLine(object data)
     {
+      string line = data as string;
+      ProcessLine pline = LineParser.KeepForProcessing(line);
       if (pline != null && pline.State >= 0)
       {
-        // prioritize checking for players
-        if (pline.State >= 2)
-        {
-          NpcDamageProcessor.PrependToQueue(pline);
-        }
-        else
-        {
-          NpcDamageProcessor.AppendToQueue(pline);
-        }
+        LineProcessor.AppendToQueue(pline);
       }
       else
       {
-        Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
+        Interlocked.Add(ref ProcessedBytes, line.Length + 2);
       }
     }
 
-    private void ProcessNPCDamage(object data)
+    private void ProcessLine(object data)
     {
       ProcessLine pline = data as ProcessLine;
       if (pline != null)
@@ -660,20 +676,21 @@ namespace EQLogParser
           {
             case 0:
               // check for damage
-              DateTime lastUpdateTime = NpcDamageManager.LastUpdateTime;
               DamageRecord record = LineParser.ParseDamage(pline.ActionPart);
-
               if (record != null)
               {
-                TimeSpan diff = pline.CurrentTime.Subtract(lastUpdateTime);
-                if (lastUpdateTime != DateTime.MinValue && diff.TotalSeconds >= 60)
+                if (NpcDamageManager.LastUpdateTime != DateTime.MinValue)
                 {
-                  NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
-                  Dispatcher.InvokeAsync(() =>
+                  TimeSpan diff = pline.CurrentTime.Subtract(NpcDamageManager.LastUpdateTime);
+                  if (diff.TotalSeconds >= 61)
                   {
-                    CurrentFightID++;
-                    NonPlayersView.Add(divider);
-                  });
+                    NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                      CurrentFightID++;
+                      NonPlayersView.Add(divider);
+                    });
+                  }
                 }
 
                 NpcDamageManager.AddOrUpdateNpc(record, pline.CurrentTime, pline.TimeString.Substring(4, 15));
@@ -684,16 +701,6 @@ namespace EQLogParser
               LineParser.CheckForSlain(pline);
               break;
             case 2:
-              LineParser.CheckForShrink(pline);
-              break;
-            case 3:
-            case 4:
-              LineParser.CheckForPlayers(pline);
-              break;
-            case 5:
-              LineParser.CheckForPetLeader(pline);
-              break;
-            case 6:
               LineParser.CheckForHeal(pline);
               break;
           }

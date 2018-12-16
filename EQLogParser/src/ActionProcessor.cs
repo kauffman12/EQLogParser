@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,13 +10,14 @@ namespace EQLogParser
   {
     public delegate void ProcessActionCallback(object data);
     private ConcurrentQueue<object> Queue = new ConcurrentQueue<object>();
-    private ConcurrentQueue<object> Priority = new ConcurrentQueue<object>();
     private ProcessActionCallback callback;
     private bool stopped = false;
     private int delayTime = 10;
+    private string name;
 
-    public ActionProcessor(ProcessActionCallback callback)
+    public ActionProcessor(string name, ProcessActionCallback callback)
     {
+      this.name = name;
       this.callback = callback;
       Task.Run((() => Process()));
     }
@@ -30,14 +32,9 @@ namespace EQLogParser
       Queue.Enqueue(data);
     }
 
-    public void PrependToQueue(object data)
-    {
-      Priority.Enqueue(data);
-    }
-
     public long QueueSize()
     {
-      return Queue.Count + Priority.Count;
+      return Queue.Count;
     }
 
     public void Stop()
@@ -51,17 +48,12 @@ namespace EQLogParser
       {
         object data;
 
-        while (!stopped && !Priority.IsEmpty && Priority.TryDequeue(out data))
+        while (!stopped && !Queue.IsEmpty && Queue.TryDequeue(out data))
         {
           callback(data);
         }
 
-        if (!stopped && !Queue.IsEmpty && Queue.TryDequeue(out data))
-        {
-          callback(data);
-        }
-
-        if (Priority.IsEmpty && Queue.IsEmpty)
+        if (Queue.IsEmpty)
         {
           Thread.Sleep(delayTime);
         }

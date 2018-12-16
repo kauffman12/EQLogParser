@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,18 +19,15 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsNewNonPlayer;
     public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
 
-    private Dictionary<string, NonPlayer> ActiveNonPlayerMap = new Dictionary<string, NonPlayer>();
-    private Dictionary<string, string> PetToPlayerMap = new Dictionary<string, string>();
-    private Dictionary<string, byte> LifetimeNonPlayerMap = new Dictionary<string, byte>();
-    private Dictionary<string, string> AttackerReplacement = new Dictionary<string, string>();
-    private Dictionary<string, byte> GameGeneratedPets = new Dictionary<string, byte>();
-    private Dictionary<string, long> ProbablyNotAPlayer = new Dictionary<string, long>();
-    private Dictionary<string, byte> UnverifiedPetOrPlayer = new Dictionary<string, byte>();
-    private Dictionary<string, byte> VerifiedPets = new Dictionary<string, byte>();
-    private Dictionary<string, byte> VerifiedPlayers = new Dictionary<string, byte>()
-    {
-      { "himself", 1 }, { "herself", 1 }, { "itself", 1}, { "you",  1 }, { "YOU", 1 }, {"You", 1}, {"your", 1}, {"Your", 1}, {"YOUR", 1}
-    };
+    private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
+    private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
+    private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
+    private ConcurrentDictionary<string, string> AttackerReplacement = new ConcurrentDictionary<string, string>();
+    private ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
+    private ConcurrentDictionary<string, long> ProbablyNotAPlayer = new ConcurrentDictionary<string, long>();
+    private ConcurrentDictionary<string, byte> UnverifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
+    private ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
+    private ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
 
     private DataManager()
     {
@@ -40,6 +38,16 @@ namespace EQLogParser
         string[] lines = System.IO.File.ReadAllLines(@"data\petnames.txt");
         lines.ToList().ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
       }
+
+      VerifiedPlayers["himself"] = 1;
+      VerifiedPlayers["herself"] = 1;
+      VerifiedPlayers["itself"] = 1;
+      VerifiedPlayers["you"] = 1;
+      VerifiedPlayers["YOU"] = 1;
+      VerifiedPlayers["You"] = 1;
+      VerifiedPlayers["your"] = 1;
+      VerifiedPlayers["Your"] = 1;
+      VerifiedPlayers["YOUR"] = 1;
     }
 
     public void Clear()
@@ -106,7 +114,9 @@ namespace EQLogParser
 
     public NonPlayer GetNonPlayer(string name)
     {
-      return ActiveNonPlayerMap.ContainsKey(name) ? ActiveNonPlayerMap[name] : null;
+      NonPlayer npc = null;
+      ActiveNonPlayerMap.TryGetValue(name, out npc);
+      return npc;
     }
 
     public string GetPlayerFromPet(string pet)
@@ -129,7 +139,8 @@ namespace EQLogParser
 
     public bool RemoveActiveNonPlayer(string name)
     {
-      return ActiveNonPlayerMap.Remove(name);
+      NonPlayer npc;
+      return ActiveNonPlayerMap.TryRemove(name, out npc);
     }
 
     public void UpdateIfNewNonPlayerMap(string name, NonPlayer npc)
@@ -201,8 +212,10 @@ namespace EQLogParser
 
     private void CheckNonPlayerMap(string name)
     {
-      bool removed = ActiveNonPlayerMap.Remove(name);
-      removed = LifetimeNonPlayerMap.Remove(name) || removed;
+      NonPlayer npc;
+      byte bnpc;
+      bool removed = ActiveNonPlayerMap.TryRemove(name, out npc);
+      removed = LifetimeNonPlayerMap.TryRemove(name, out bnpc) || removed;
 
       if (removed)
       {
