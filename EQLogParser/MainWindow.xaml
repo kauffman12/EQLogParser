@@ -94,7 +94,11 @@
                     <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" HorizontalScrollBarVisibility="Disabled" Grid.Row="1" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
                       <DataGrid.ContextMenu>
                         <ContextMenu>
-                          <MenuItem Header="View Damage Breakdown for Selected Players" Click="PlayerDataGridShowDamage_Click" />
+                          <MenuItem x:Name="pdgMenuItemShowDamage" IsEnabled="False" Header="Damage Breakdown" Click="PlayerDataGridShowDamage_Click" />
+                          <MenuItem x:Name="pdgMenuItemShowSpellCasts" IsEnabled="False" Header="Spell Casts" Click="PlayerDataGridShowSpellCasts_Click" />
+                          <Separator />
+                          <MenuItem x:Name="pdgMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="PlayerDataGridSelectAll_Click"/>
+                          <MenuItem x:Name="pdgMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="PlayerDataGridUnselectAll_Click"/>
                         </ContextMenu>
                       </DataGrid.ContextMenu>
                       <DataGrid.Columns>

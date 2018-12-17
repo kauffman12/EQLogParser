@@ -81,7 +81,8 @@ namespace EQLogParser
       try
       {
         string title = selected.First().Name;
-        foreach (NonPlayer npc in selected)
+
+        foreach (NonPlayer npc in selected.OrderBy(item => item.FightID))
         {
           if (npc.BeginTimeString == NonPlayer.BREAK_TIME)
           {
@@ -133,7 +134,7 @@ namespace EQLogParser
         combined.RaidStats = raidTotals;
         combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
-        combined.TimeTitle = String.Format(TIME_FORMAT, raidTotals.TimeDiffs.Values.Sum());
+        combined.TimeTitle = String.Format(TIME_FORMAT, combined.TimeDiff);
         combined.DamageTitle = String.Format(DAMAGE_FORMAT, Utils.FormatDamage(raidTotals.TotalDamage), Utils.FormatDamage(raidTotals.DPS));
 
         // save them all before child code removes
@@ -219,6 +220,9 @@ namespace EQLogParser
           playerTotals.SubStats = new Dictionary<string, PlayerSubStats>();
         }
       }
+
+      playerTotals.FirstFightID = Math.Min(playerTotals.FirstFightID, FightID);
+      playerTotals.LastFightID = Math.Max(playerTotals.LastFightID, FightID);
 
       playerTotals.TotalDamage += npcStats.TotalDamage;
       playerTotals.TotalCritDamage += npcStats.TotalCritDamage;
@@ -309,7 +313,9 @@ namespace EQLogParser
         PercentString = "-",
         BeginTimes = new Dictionary<int, DateTime>(),
         LastTimes = new Dictionary<int, DateTime>(),
-        TimeDiffs = new Dictionary<int, double>()
+        TimeDiffs = new Dictionary<int, double>(),
+        FirstFightID = int.MaxValue,
+        LastFightID = int.MinValue
       };
     }
   }
