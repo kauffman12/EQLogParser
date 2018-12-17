@@ -24,7 +24,7 @@ namespace EQLogParser
 
     public void LowerPriority()
     {
-      delayTime = 200;
+      delayTime = 300;
     }
 
     public void AppendToQueue(object data)

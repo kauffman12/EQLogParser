@@ -23,7 +23,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.14";
+    private const string VERSION = "v1.0.15";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -40,7 +40,8 @@ namespace EQLogParser
     private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
-    private static ActionProcessor LineProcessor;
+    private static ActionProcessor CastLineProcessor;
+    private static ActionProcessor DamageLineProcessor;
     private static ActionProcessor LinePreProcessor;
 
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
@@ -151,21 +152,7 @@ namespace EQLogParser
 
     private void Window_Closed(object sender, System.EventArgs e)
     {
-      if (EQLogReader != null)
-      {
-        EQLogReader.Stop();
-      }
-
-      if (LineProcessor != null)
-      {
-        LineProcessor.Stop();
-      }
-
-      if (LinePreProcessor != null)
-      {
-        LinePreProcessor.Stop();
-      }
-
+      StopProcessors();
       Application.Current.Shutdown();
     }
 
@@ -366,7 +353,6 @@ namespace EQLogParser
         }
 
         playerDamageDataGrid.ItemsSource = list;
-        damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
         if (!damageWindow.IsOpen)
         {
           damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
@@ -404,16 +390,9 @@ namespace EQLogParser
       }
     }
 
-    // Player Damage Details Grid
-    private void PlayerDamageDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void PlayerDamageGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
-      var list = playerDamageDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-      if (list.Count == 0)
-      {
-        list = playerDamageDataGrid.ItemsSource as List<PlayerStats>;
-      }
-      damageTitle.Content = "Selected Players " + StatsBuilder.GetSummary(CurrentStats, list, true).Item1;
-      NeedDPSTextUpdate = true;
+      e.Row.IsHitTestVisible = false;
     }
 
     private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
@@ -464,30 +443,23 @@ namespace EQLogParser
       }
     }
 
+    private void PlayerDPSTextCheckChange(object sender, RoutedEventArgs e)
+    {
+      NeedDPSTextUpdate = true;
+    }
+
     private void UpdateDPSText()
     {
       if (NeedDPSTextUpdate)
       {
-        DataGrid grid;
-        Label label;
-        bool selectedOnly = false;
-        if (dpsWindow.IsVisible)
-        {
-          grid = playerDataGrid;
-          label = dpsTitle;
-        }
-        else
-        {
-          grid = playerDamageDataGrid;
-          label = damageTitle;
-          selectedOnly = true;
-        }
+        DataGrid grid = playerDataGrid;
+        Label label = dpsTitle;
 
         var selected = grid.SelectedItems;
-        if (selected != null && selected.Count > 0)
+        if (selected != null)
         {
-          Tuple<string, string> result = StatsBuilder.GetSummary(CurrentStats, selected.Cast<PlayerStats>().ToList(), selectedOnly);
-          playerDPSTextBox.Text = result.Item1 + result.Item2;
+          StatsSummary summary = StatsBuilder.BuildSummary(CurrentStats, selected.Cast<PlayerStats>().ToList(), playerDPSTextDoTotals.IsChecked ?? false, playerDPSTextDoRank.IsChecked ?? false);
+          playerDPSTextBox.Text = summary.Title + summary.RankedPlayers;
           playerDPSTextBox.SelectAll();
         }
         else
@@ -519,7 +491,7 @@ namespace EQLogParser
               {
                 if (NeedStatsUpdate)
                 {
-                  dpsTitle.Content = CurrentStats.TargetTitle + CurrentStats.DamageTitle;
+                  dpsTitle.Content = StatsBuilder.BuildTitle(CurrentStats);
                   playerDPSTextBox.Text = dpsTitle.Content.ToString();
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
                   NeedStatsUpdate = false;
@@ -573,24 +545,13 @@ namespace EQLogParser
           StartLoadTime = DateTime.Now;
           CurrentFightID = 0;
 
-          if (LineProcessor != null)
-          {
-            LineProcessor.Stop();
-          }
+          StopProcessors();
 
-          if (LinePreProcessor != null)
-          {
-            LinePreProcessor.Stop();
-          }
-
-          if (EQLogReader != null)
-          {
-            EQLogReader.Stop();
-          }
-
-          LinePreProcessor = new ActionProcessor("LinePreProcessor", PreProcessLine);
-          LineProcessor = new ActionProcessor("LineProcessor", ProcessLine);
           NpcDamageManager = new NpcDamageManager();
+          LinePreProcessor = new ActionProcessor("LinePreProcessor", PreProcessLine);
+          DamageLineProcessor = new ActionProcessor("DamageLineProcessor", ProcessDamageLine);
+          CastLineProcessor = new ActionProcessor("CastLineProcessor", ProcessCastLine);
+          CastLineProcessor.LowerPriority();
 
           string name = "Uknown";
           if (dialog.FileName.Length > 0)
@@ -632,7 +593,7 @@ namespace EQLogParser
         Interlocked.Add(ref ProcessedBytes, line.Length + 2);
       }
 
-      if (LinePreProcessor.QueueSize() > 200000 || LineProcessor.QueueSize() > 200000)
+      if (LinePreProcessor.QueueSize() > 200000 || DamageLineProcessor.QueueSize() > 200000)
       {
         Thread.Sleep(20);
       }
@@ -642,24 +603,34 @@ namespace EQLogParser
     {
       LOG.Info("Finished Loading Log File");
       LinePreProcessor.LowerPriority();
-      LineProcessor.LowerPriority();
+      DamageLineProcessor.LowerPriority();
     }
 
     private void PreProcessLine(object data)
     {
       string line = data as string;
       ProcessLine pline = LineParser.KeepForProcessing(line);
-      if (pline != null && pline.State >= 0)
+      if (pline != null && pline.State >= 0 && pline.State < 10)
       {
-        LineProcessor.AppendToQueue(pline);
+        DamageLineProcessor.AppendToQueue(pline);
       }
       else
       {
         Interlocked.Add(ref ProcessedBytes, line.Length + 2);
+
+        if (pline != null && pline.State == 10)
+        {
+          CastLineProcessor.AppendToQueue(pline);
+        }
       }
     }
 
-    private void ProcessLine(object data)
+    private void ProcessCastLine(object data)
+    {
+
+    }
+
+    private void ProcessDamageLine(object data)
     {
       ProcessLine pline = data as ProcessLine;
       if (pline != null)
@@ -735,7 +706,7 @@ namespace EQLogParser
         sharePlayerDPSWarningLabel.Foreground = WARNING_BRUSH;
         sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
       }
-      else if (playerDataGrid.SelectedItems.Count > 0)
+      else if (playerDPSTextBox.Text.Length > 0)
       {
         copyToEQButton.IsEnabled = true;
         copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
@@ -749,5 +720,27 @@ namespace EQLogParser
       }
     }
 
+    private void StopProcessors()
+    {
+      if (CastLineProcessor != null)
+      {
+        CastLineProcessor.Stop();
+      }
+
+      if (DamageLineProcessor != null)
+      {
+        DamageLineProcessor.Stop();
+      }
+
+      if (LinePreProcessor != null)
+      {
+        LinePreProcessor.Stop();
+      }
+
+      if (EQLogReader != null)
+      {
+        EQLogReader.Stop();
+      }
+    }
   }
 }

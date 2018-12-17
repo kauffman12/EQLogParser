@@ -59,6 +59,15 @@ namespace EQLogParser
           pline = new ProcessLine() { Line = line, State = 1, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
         }
+        else if (line.Length > 44 && (index = line.IndexOf(" begins to ", StringComparison.Ordinal)) > -1)
+        {
+          var test = line.Substring(index + 11, 4);
+          if (test == "cast" || test == "sing")
+          {
+            pline = new ProcessLine() { Line = line, State = 10, ActionPart = line.Substring(ACTION_PART_INDEX) };
+            pline.OptionalIndex = index - ACTION_PART_INDEX;
+          }
+        }
         else
         {
           pline = new ProcessLine() { Line = line, State = -1 };
