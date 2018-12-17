@@ -130,6 +130,7 @@
     </ApplicationDefinition>
     <Compile Include="src\ActionProcessor.cs" />
     <Compile Include="src\DataManager.cs" />
+    <Compile Include="src\SpellCastManager.cs" />
     <Compile Include="src\StatsBuilder.cs" />
     <Compile Include="src\Utils.cs" />
     <Page Include="MainWindow.xaml">

@@ -19,6 +19,7 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsNewNonPlayer;
     public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
 
+    private List<SpellCast> AllSpellCasts = new List<SpellCast>();
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
     private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
@@ -56,6 +57,25 @@ namespace EQLogParser
       LifetimeNonPlayerMap.Clear();
       ProbablyNotAPlayer.Clear();
       UnverifiedPetOrPlayer.Clear();
+      AllSpellCasts.Clear();
+    }
+
+    public void AddSpellCast(SpellCast cast)
+    {
+      lock(AllSpellCasts)
+      {
+        AllSpellCasts.Add(cast);
+      }
+    }
+
+    public List<SpellCast> GetSpellCasts()
+    {
+      List<SpellCast> list;
+      lock(AllSpellCasts)
+      {
+        list = AllSpellCasts.ToList();
+      }
+      return list;
     }
 
     public void SetPlayerName(string name)

@@ -1,4 +1,5 @@
 ﻿
+using ActiproSoftware.Windows.Controls.DataGrid;
 using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
 using System;
@@ -11,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -63,7 +65,8 @@ namespace EQLogParser
     private static DateTime StartLoadTime; // millis
     private static bool MonitorOnly;
 
-    private NpcDamageManager NpcDamageManager = null;
+    private static NpcDamageManager NpcDamageManager = null;
+    private static SpellCastManager SpellCastManager = null;
     private LogReader EQLogReader = null;
     private bool NeedScrollIntoView = false;
 
@@ -288,6 +291,11 @@ namespace EQLogParser
     private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       NeedDPSTextUpdate = true;
+
+      ThemedDataGrid callingDataGrid = sender as ThemedDataGrid;
+      pdgMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
+      pdgMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
+      pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = callingDataGrid.SelectedItems.Count > 0;
     }
 
     private void PlayerDataGridExpander_Loaded(object sender, RoutedEventArgs e)
@@ -332,27 +340,134 @@ namespace EQLogParser
       }
     }
 
+    private void PlayerDataGridSelectAll_Click(object sender, RoutedEventArgs e)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      callingDataGrid.SelectAll();
+    }
+
+    private void PlayerDataGridUnselectAll_Click(object sender, RoutedEventArgs e)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      callingDataGrid.UnselectAll();
+    }
+
+    private void PlayerDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+
+      if (callingDataGrid.SelectedItems.Count > 0)
+      {
+        ThemedDataGrid dataGrid = new ThemedDataGrid();
+        dataGrid.AutoGenerateColumns = false;
+        dataGrid.RowHeaderWidth = 0;
+
+        dataGrid.Sorting += (s, e2) =>
+        {
+          if (e2.Column.Header != null && (e2.Column.Header.ToString() != "Spell"))
+          {
+            e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Ascending;
+          }
+        };
+
+        ObservableCollection<SpellCountRow> rows = new ObservableCollection<SpellCountRow>();
+        dataGrid.ItemsSource = rows;
+        dataGrid.Columns.Add(new DataGridTextColumn() { Header = "", Binding = new Binding("Spell") });
+
+        DocumentWindow docWindow = new DocumentWindow(docSite, "spellCastsWindow", "Spell Casts", null, dataGrid);
+        Utils.OpenWindow(docWindow);
+        docWindow.MoveToLast();
+
+        var selected = callingDataGrid.SelectedItems.Cast<PlayerStats>();
+        Task.Delay(10).ContinueWith(task =>
+        {
+          try
+          {
+            int colCount = 0;
+            List<string> playerList = new List<string>();
+            foreach (var stats in selected)
+            {
+              string name = stats.Name;
+              if (CurrentStats.Children.ContainsKey(stats.Name) && CurrentStats.Children[stats.Name].Count > 1)
+              {
+                name = CurrentStats.Children[stats.Name].First().Name;
+              }
+
+              string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
+              Dispatcher.InvokeAsync(() =>
+              {
+                DataGridTextColumn col = new DataGridTextColumn() { Header = name, Binding = new Binding(colBinding) };
+                col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
+                col.HeaderStyle = Application.Current.Resources["CenterGridHeaderStyle"] as Style;
+                dataGrid.Columns.Add(col);
+              });
+
+              playerList.Add(name);
+              colCount++;
+            }
+
+            Dispatcher.InvokeAsync(() =>
+            {
+              // totals column
+              dataGrid.Columns.Add(new DataGridTextColumn()
+              {
+                Header = "Total Casts",
+                CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style,
+                HeaderStyle = Application.Current.Resources["CenterGridHeaderStyle"] as Style,
+                Binding = new Binding("Values[" + colCount + "]")
+              });
+            });
+
+            var raidStats = CurrentStats.RaidStats;
+            if (raidStats.FirstFightID < int.MaxValue && raidStats.LastFightID > int.MinValue &&
+              raidStats.BeginTimes.ContainsKey(raidStats.FirstFightID) && raidStats.LastTimes.ContainsKey(raidStats.LastFightID))
+            {
+              DateTime start = raidStats.BeginTimes[CurrentStats.RaidStats.FirstFightID];
+              DateTime end = raidStats.LastTimes[CurrentStats.RaidStats.LastFightID];
+              SpellCounts counts = SpellCastManager.GetSpellCounts(playerList, start.AddSeconds(-10), end);
+
+              int spellsSoFar = 0;
+              foreach (var spell in counts.SpellList)
+              {
+                SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[playerList.Count + 1] };
+                for (int i = 0; i < playerList.Count; i++)
+                {
+                  if (counts.PlayerCountMap.ContainsKey(playerList[i]))
+                  {
+                    row.Values[i] = counts.PlayerCountMap[playerList[i]].ContainsKey(spell) ? counts.PlayerCountMap[playerList[i]][spell] : 0;
+                  }
+                }
+
+                if (spellsSoFar % 25 == 0)
+                {
+                  Thread.Sleep(100);
+                }
+
+                row.Values[playerList.Count] = counts.TotalCountMap[spell];
+                Dispatcher.InvokeAsync(() => rows.Add(row));
+                spellsSoFar++;
+              }
+            }
+          }
+          catch (Exception err)
+          {
+            LOG.Error(err);
+          }
+        });
+      }
+    }
+
     private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
     {
       if (playerDataGrid.SelectedItems.Count > 0)
       {
-        List<PlayerStats> list = new List<PlayerStats>();
-        foreach (var playerStat in playerDataGrid.SelectedItems.Cast<PlayerStats>())
-        {
-          if (CurrentStats.Children.ContainsKey(playerStat.Name))
-          {
-            foreach (var childStat in CurrentStats.Children[playerStat.Name])
-            {
-              list.Add(childStat);
-            }
-          }
-          else
-          {
-            list.Add(playerStat);
-          }
-        }
-
+        ObservableCollection<PlayerStats> list = new ObservableCollection<PlayerStats>();
         playerDamageDataGrid.ItemsSource = list;
+        var selected = playerDataGrid.SelectedItems.Cast<PlayerStats>();
+
         if (!damageWindow.IsOpen)
         {
           damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
@@ -360,6 +475,30 @@ namespace EQLogParser
 
         Utils.OpenWindow(damageWindow);
         damageWindow.MoveToLast();
+
+        Task.Delay(20).ContinueWith(task =>
+        {
+          int count = 0;
+          foreach (var playerStat in selected)
+          {
+            if (CurrentStats.Children.ContainsKey(playerStat.Name))
+            {
+              foreach (var childStat in CurrentStats.Children[playerStat.Name])
+              {
+                Dispatcher.InvokeAsync(() => list.Add(childStat));
+              }
+            }
+            else
+            {
+              Dispatcher.InvokeAsync(() => list.Add(playerStat));
+            }
+
+            if (count % 4 == 0)
+            {
+              Thread.Sleep(120);
+            }
+          }
+        });
       }
     }
 
@@ -511,6 +650,7 @@ namespace EQLogParser
             list.Clear();
           }
 
+          pdgMenuItemSelectAll.IsEnabled = pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = false;
           NeedStatsUpdate = false;
           UpdatingStats = false;
         }
@@ -548,6 +688,7 @@ namespace EQLogParser
           StopProcessors();
 
           NpcDamageManager = new NpcDamageManager();
+          SpellCastManager = new SpellCastManager();
           LinePreProcessor = new ActionProcessor("LinePreProcessor", PreProcessLine);
           DamageLineProcessor = new ActionProcessor("DamageLineProcessor", ProcessDamageLine);
           CastLineProcessor = new ActionProcessor("CastLineProcessor", ProcessCastLine);
@@ -586,14 +727,14 @@ namespace EQLogParser
     {
       if (line.Length > MIN_LINE_LENGTH)
       {
-       LinePreProcessor.AppendToQueue(line);
+        LinePreProcessor.AppendToQueue(line);
       }
       else
       {
         Interlocked.Add(ref ProcessedBytes, line.Length + 2);
       }
 
-      if (LinePreProcessor.QueueSize() > 200000 || DamageLineProcessor.QueueSize() > 200000)
+      if ((LinePreProcessor.QueueSize() + DamageLineProcessor.QueueSize() + CastLineProcessor.QueueSize()) >200000)
       {
         Thread.Sleep(20);
       }
@@ -627,7 +768,22 @@ namespace EQLogParser
 
     private void ProcessCastLine(object data)
     {
-
+      ProcessLine pline = data as ProcessLine;
+      if (pline != null)
+      {
+        try
+        {
+          SpellCast cast = LineParser.ParseSpellCast(pline);
+          if (cast != null)
+          {
+            SpellCastManager.Add(cast);
+          }
+        }
+        catch (Exception e)
+        {
+          LOG.Error(e);
+        }
+      }
     }
 
     private void ProcessDamageLine(object data)
@@ -653,7 +809,7 @@ namespace EQLogParser
                 if (NpcDamageManager.LastUpdateTime != DateTime.MinValue)
                 {
                   TimeSpan diff = pline.CurrentTime.Subtract(NpcDamageManager.LastUpdateTime);
-                  if (diff.TotalSeconds >= 61)
+                  if (diff.TotalSeconds > 120)
                   {
                     NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
                     Dispatcher.InvokeAsync(() =>

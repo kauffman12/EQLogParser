@@ -9,8 +9,6 @@ namespace EQLogParser
     public DateTime LastUpdateTime { get; set; }
     private long CurrentNpcID = 0;
 
-    private static Dictionary<string, byte> Unique = new Dictionary<string, byte>();
-
     public void AddOrUpdateNpc(DamageRecord record, DateTime currentTime, String origTimeString)
     {
       NonPlayer npc = Get(record, currentTime, origTimeString);
