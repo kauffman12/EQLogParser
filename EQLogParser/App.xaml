@@ -5,6 +5,13 @@
              xmlns:local="clr-namespace:EQLogParser"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ApplicationButtonBorderHoverBrushKey}" Color="#202020" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderPressedBrushKey}" Color="#202020" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderHoverBrushKey}" Color="Transparent" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundNormalBrushKey}" Color="#101010" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonForegroundDefaultedBrushKey}" Color="#c2c2c0" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundDisabledBrushKey}" Color="#2d2d30" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderDefaultedBrushKey}" Color="Transparent" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedFocusedBrushKey}" Color="#2660b7" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedHoverBrushKey}" Color="#2660b7" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedNormalBrushKey}" Color="#2660b7" />
@@ -17,17 +24,14 @@
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBackgroundHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBorderHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabControlBackgroundActiveFocusedBrushKey}" Color="#202020" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolBarButtonBorderCheckedHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundSelectedBrushKey}" Color="#c2c2c0" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBorderActivePressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBackgroundActivePressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowBorderActiveBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderPressedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderHoverBrushKey}" Color="Transparent" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundNormalBrushKey}" Color="#101010" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonForegroundDefaultedBrushKey}" Color="#c2c2c0" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundDisabledBrushKey}" Color="#2d2d30" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderDefaultedBrushKey}" Color="Transparent" />
+
+    
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
       <Setter Property="Background" Value="#3a543f" />
       <Style.Triggers>

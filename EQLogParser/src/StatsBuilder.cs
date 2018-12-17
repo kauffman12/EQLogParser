@@ -10,16 +10,43 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public const string DETAILS_FORMAT = " in {0}s, {1} @ {2} DPS";
     private const string RAID_PLAYER = "Totals";
+    public const string TIME_FORMAT = "in {0}s";
+    public const string DAMAGE_FORMAT = "{0} @ {1} DPS";
+    private const string PLAYER_FORMAT = "{0} = ";
+    private const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
 
-    internal static Tuple<string, string> GetSummary(CombinedStats currentStats, List<PlayerStats> selected, bool selectedTitleOnly)
+    internal static string BuildTitle(CombinedStats currentStats, bool showTotals = true)
+    {
+      string result;
+      if (showTotals)
+      {
+        result = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, currentStats.DamageTitle);
+      }
+      else
+      {
+        result = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle);
+      }
+      return result;
+    }
+
+    internal static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
+    {
+      string result;
+      result = targetTitle + " " + timeTitle;
+      if (damageTitle != "")
+      {
+        result += ", " + damageTitle;
+      }
+      return result;
+    }
+
+    internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
     {
       List<string> list = new List<string>();
 
       string title = "";
       string details = "";
-      long selectedTotal = 0;
 
       if (selected != null && currentStats != null)
       {
@@ -27,28 +54,16 @@ namespace EQLogParser
         foreach (PlayerStats stats in selected.OrderByDescending(item => item.TotalDamage))
         {
           count++;
-          list.Add(String.Format("{0}. {1} = {2} @ {3} DPS", count, stats.Name, Utils.FormatDamage(stats.TotalDamage), Utils.FormatDamage(stats.DPS)));
-
-          if (selectedTitleOnly)
-          {
-            selectedTotal += stats.TotalDamage;
-          }
+          string playerFormat = rankPlayers ? String.Format(PLAYER_RANK_FORMAT, stats.Rank + 1, stats.Name) : String.Format(PLAYER_FORMAT, stats.Name);
+          string damageFormat = String.Format(DAMAGE_FORMAT, Utils.FormatDamage(stats.TotalDamage), Utils.FormatDamage(stats.DPS));
+          list.Add(playerFormat + damageFormat);
         }
 
-        details = ", " + string.Join(", ", list); ;
-        if (selectedTitleOnly)
-        {
-          long selectedDPS = (long)Math.Round(selectedTotal / currentStats.TimeDiff);
-          string damageTitle = String.Format(DETAILS_FORMAT, currentStats.TimeDiff, Utils.FormatDamage(selectedTotal), Utils.FormatDamage(selectedDPS));
-          title = currentStats.TargetTitle + damageTitle;
-        }
-        else
-        {
-          title = currentStats.TargetTitle + currentStats.DamageTitle;
-        }
+        details = list.Count > 0 ? ", " + string.Join(", ", list) : ""; 
+        title = BuildTitle(currentStats, showTotals);
       }
 
-      return new Tuple<string, string>(title, details);
+      return new StatsSummary() { Title = title, RankedPlayers = details };
     }
 
     internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)
@@ -118,7 +133,8 @@ namespace EQLogParser
         combined.RaidStats = raidTotals;
         combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
-        combined.DamageTitle = String.Format(DETAILS_FORMAT, raidTotals.TimeDiffs.Values.Sum(), Utils.FormatDamage(raidTotals.TotalDamage), Utils.FormatDamage(raidTotals.DPS));
+        combined.TimeTitle = String.Format(TIME_FORMAT, raidTotals.TimeDiffs.Values.Sum());
+        combined.DamageTitle = String.Format(DAMAGE_FORMAT, Utils.FormatDamage(raidTotals.TotalDamage), Utils.FormatDamage(raidTotals.DPS));
 
         // save them all before child code removes
         var allStatValues = individualStats.Values.ToList();

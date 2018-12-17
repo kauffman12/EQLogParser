@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace EQLogParser
 {
@@ -84,9 +83,17 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
+  public class SpellCast
+  {
+    public string Name { get; set; }
+    public string Player { get; set; }
+    public DateTime BeginTime { get; set; }
+  }
+
   public class CombinedStats
   {
     public string TargetTitle { get; set; }
+    public string TimeTitle { get; set; }
     public string DamageTitle { get; set; }
     public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
@@ -94,6 +101,12 @@ namespace EQLogParser
     public ConcurrentDictionary<string, List<PlayerSubStats>> SubStats { get; set; }
     public PlayerStats RaidStats { get; set; }
     public SortedSet<long> NpcIDs { get; set; }
+  }
+
+  public class StatsSummary
+  {
+    public string Title { get; set; }
+    public string RankedPlayers { get; set; }
   }
 
   public class PlayerSubStats
