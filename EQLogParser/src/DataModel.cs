@@ -52,6 +52,7 @@ namespace EQLogParser
     public string TimeString { get; set; }
     public string ActionPart { get; set; }
     public int OptionalIndex { get; set; }
+    public string OptionalData { get; set; }
   }
 
   public class Player
@@ -85,9 +86,22 @@ namespace EQLogParser
 
   public class SpellCast
   {
-    public string Name { get; set; }
-    public string Player { get; set; }
+    public string Spell { get; set; }
+    public string Caster { get; set; }
     public DateTime BeginTime { get; set; }
+  }
+
+  public class SpellCounts
+  {
+    public List<string> SpellList { get; set; }
+    public Dictionary<string, int> TotalCountMap { get; set; }
+    public Dictionary<string, Dictionary<string, int>> PlayerCountMap { get; set; }
+  }
+
+  public class SpellCountRow
+  {
+    public string Spell { get; set; }
+    public int[] Values { get; set; }
   }
 
   public class CombinedStats
@@ -101,6 +115,8 @@ namespace EQLogParser
     public ConcurrentDictionary<string, List<PlayerSubStats>> SubStats { get; set; }
     public PlayerStats RaidStats { get; set; }
     public SortedSet<long> NpcIDs { get; set; }
+    public DateTime BeginTime { get; set; }
+    public DateTime EndTime { get; set; }
   }
 
   public class StatsSummary
@@ -141,5 +157,7 @@ namespace EQLogParser
     public Dictionary<int, DateTime> BeginTimes { get; set; }
     public Dictionary<int, DateTime> LastTimes { get; set; }
     public Dictionary<int, double> TimeDiffs { get; set; }
+    public int FirstFightID { get; set; }
+    public int LastFightID { get; set; }
   }
 }

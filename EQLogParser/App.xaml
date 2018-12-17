@@ -31,7 +31,6 @@
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBackgroundActivePressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowBorderActiveBrushKey}" Color="#202020" />
 
-    
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
       <Setter Property="Background" Value="#3a543f" />
       <Style.Triggers>

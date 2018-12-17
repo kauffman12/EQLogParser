@@ -59,13 +59,31 @@ namespace EQLogParser
           pline = new ProcessLine() { Line = line, State = 1, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
         }
-        else if (line.Length > 44 && (index = line.IndexOf(" begins to ", StringComparison.Ordinal)) > -1)
+        else if (line.Length > 44 && (index = line.IndexOf(" begin", ACTION_PART_INDEX + 3, StringComparison.Ordinal)) > -1)
         {
-          var test = line.Substring(index + 11, 4);
-          if (test == "cast" || test == "sing")
+          int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX);
+          if (firstSpace > -1 && firstSpace == index)
           {
-            pline = new ProcessLine() { Line = line, State = 10, ActionPart = line.Substring(ACTION_PART_INDEX) };
-            pline.OptionalIndex = index - ACTION_PART_INDEX;
+            if (firstSpace == (ACTION_PART_INDEX + 3) && line.Substring(ACTION_PART_INDEX, 3) == "You")
+            {
+              var test = line.Substring(index + 7, 4);
+              if (test == "cast" || test == "sing")
+              {
+                pline = new ProcessLine() { Line = line, State = 10, ActionPart = line.Substring(ACTION_PART_INDEX) };
+                pline.OptionalIndex = index - ACTION_PART_INDEX;
+                pline.OptionalData = "you" + test;
+              }
+            }
+            else
+            {
+              var test = line.Substring(index + 11, 4);
+              if (test == "cast" || test == "sing")
+              {
+                pline = new ProcessLine() { Line = line, State = 10, ActionPart = line.Substring(ACTION_PART_INDEX) };
+                pline.OptionalIndex = index - ACTION_PART_INDEX;
+                pline.OptionalData = test;
+              }
+            }
           }
         }
         else
@@ -128,6 +146,44 @@ namespace EQLogParser
       {
         DataManager.Instance.UpdateVerifiedPlayers(healer);
       }
+    }
+
+    public static SpellCast ParseSpellCast(ProcessLine pline)
+    {
+      SpellCast cast = null;
+      string caster = pline.ActionPart.Substring(0, pline.OptionalIndex);
+
+      switch(pline.OptionalData)
+      {
+        case "cast":
+        case "sing":
+          int bracketIndex = (pline.OptionalData == "cast") ? 25 : 24;
+          if (pline.ActionPart.Length > pline.OptionalIndex + bracketIndex)
+          {
+            int finalBracket;
+            int index = pline.ActionPart.IndexOf("<", pline.OptionalIndex + bracketIndex);
+            if (index > -1 && (finalBracket = pline.ActionPart.IndexOf(">", pline.OptionalIndex + bracketIndex, StringComparison.Ordinal)) > -1)
+            {
+              cast = new SpellCast() { Caster = caster, Spell = pline.ActionPart.Substring(index + 1, finalBracket - index - 1), BeginTime = pline.CurrentTime };
+            }
+          }
+          break;
+        case "youcast":
+        case "yousing":
+          //[Tue Dec 04 19:56:41 2018] You begin casting Ethereal Skyfire Rk. III.
+          //[Tue Dec 04 19:56:41 2018] You begin singing Ethereal Skyfire Rk. III.
+          if (pline.ActionPart.Length > pline.OptionalIndex + 15)
+          {
+            int period = pline.ActionPart.IndexOf(".", pline.OptionalIndex + 15, StringComparison.Ordinal);
+            if (period > -1)
+            {
+              cast = new SpellCast() { Caster = caster, Spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, period - pline.OptionalIndex - 15), BeginTime = pline.CurrentTime };
+            }
+          }
+          break;
+      }
+
+      return cast;
     }
 
     public static DamageRecord ParseDamage(string part)
