@@ -311,6 +311,7 @@ namespace EQLogParser
         HitType = "",
         TotalSeconds = 0,
         PercentString = "-",
+        Percent = 100, // until something says otherwise
         BeginTimes = new Dictionary<int, DateTime>(),
         LastTimes = new Dictionary<int, DateTime>(),
         TimeDiffs = new Dictionary<int, double>(),

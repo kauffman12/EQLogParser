@@ -87,6 +87,7 @@ namespace EQLogParser
   public class SpellCast
   {
     public string Spell { get; set; }
+    public string SpellAbbrv { get; set; }
     public string Caster { get; set; }
     public DateTime BeginTime { get; set; }
   }
@@ -96,6 +97,7 @@ namespace EQLogParser
     public List<string> SpellList { get; set; }
     public Dictionary<string, int> TotalCountMap { get; set; }
     public Dictionary<string, Dictionary<string, int>> PlayerCountMap { get; set; }
+    public List<string> SortedPlayers { get; set; }
   }
 
   public class SpellCountRow

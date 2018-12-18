@@ -25,13 +25,13 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.15";
+    private const string VERSION = "v1.0.17";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
     private const int MIN_LINE_LENGTH = 33;
-    private const int DISPATCHER_DELAY = 200; // millis
+    private const int DISPATCHER_DELAY = 100; // millis
 
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
@@ -65,8 +65,10 @@ namespace EQLogParser
     private static DateTime StartLoadTime; // millis
     private static bool MonitorOnly;
 
+    // tab counts
+    private static DocumentWindow spellCastsWindow = null;
+
     private static NpcDamageManager NpcDamageManager = null;
-    private static SpellCastManager SpellCastManager = null;
     private LogReader EQLogReader = null;
     private bool NeedScrollIntoView = false;
 
@@ -128,7 +130,7 @@ namespace EQLogParser
 
         NonPlayerSelectionTimer = new DispatcherTimer();
         NonPlayerSelectionTimer.Tick += NonPlayerSelectionTimer_Tick;
-        NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
+        NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, 300);
 
         ThemeManager.BeginUpdate();
         try
@@ -262,6 +264,10 @@ namespace EQLogParser
       // adds a delay where a drag-select doesn't keep sending events
       NonPlayerSelectionTimer.Stop();
       NonPlayerSelectionTimer.Start();
+
+      ThemedDataGrid callingDataGrid = sender as ThemedDataGrid;
+      npcMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
+      npcMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
     }
 
     private void NonPlayerDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
@@ -279,6 +285,11 @@ namespace EQLogParser
       else if (e.Row.Background != NORMAL_BRUSH)
       {
         e.Row.Background = NORMAL_BRUSH;
+      }
+
+      if (npcMenuItemSelectFight.IsEnabled == false)
+      {
+        npcMenuItemSelectFight.IsEnabled = true;
       }
     }
 
@@ -340,14 +351,31 @@ namespace EQLogParser
       }
     }
 
-    private void PlayerDataGridSelectAll_Click(object sender, RoutedEventArgs e)
+    private void NonPlayerDataGridSelectFight_Click(object sender, RoutedEventArgs e)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
+      if (npc != null && npc.FightID > -1)
+      {
+        Parallel.ForEach(NonPlayersView, (one) =>
+        {
+          if (one.FightID == npc.FightID)
+          {
+            Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one));
+          }
+        });
+      }
+    }
+
+    private void DataGridSelectAll_Click(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
       callingDataGrid.SelectAll();
     }
 
-    private void PlayerDataGridUnselectAll_Click(object sender, RoutedEventArgs e)
+    private void DataGridUnselectAll_Click(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
@@ -362,9 +390,10 @@ namespace EQLogParser
       if (callingDataGrid.SelectedItems.Count > 0)
       {
         ThemedDataGrid dataGrid = new ThemedDataGrid();
+        dataGrid.AlternatingRowBackground = null;
         dataGrid.AutoGenerateColumns = false;
         dataGrid.RowHeaderWidth = 0;
-
+        dataGrid.Columns.Add(new DataGridTextColumn() { Header = "", Binding = new Binding("Spell") });
         dataGrid.Sorting += (s, e2) =>
         {
           if (e2.Column.Header != null && (e2.Column.Header.ToString() != "Spell"))
@@ -373,90 +402,87 @@ namespace EQLogParser
           }
         };
 
+        List<string> playerList = new List<string>();
+        foreach (var stats in callingDataGrid.SelectedItems.Cast<PlayerStats>())
+        {
+          string name = stats.Name;
+          if (CurrentStats.Children.ContainsKey(stats.Name) && CurrentStats.Children[stats.Name].Count > 1)
+          {
+            name = CurrentStats.Children[stats.Name].First().Name;
+          }
+
+          playerList.Add(name);
+        }
+
         ObservableCollection<SpellCountRow> rows = new ObservableCollection<SpellCountRow>();
         dataGrid.ItemsSource = rows;
-        dataGrid.Columns.Add(new DataGridTextColumn() { Header = "", Binding = new Binding("Spell") });
 
-        DocumentWindow docWindow = new DocumentWindow(docSite, "spellCastsWindow", "Spell Casts", null, dataGrid);
-        Utils.OpenWindow(docWindow);
-        docWindow.MoveToLast();
-
-        var selected = callingDataGrid.SelectedItems.Cast<PlayerStats>();
-        Task.Delay(10).ContinueWith(task =>
+        busyIcon.Visibility = Visibility.Visible;
+        Task.Delay(20).ContinueWith(task =>
         {
           try
           {
-            int colCount = 0;
-            List<string> playerList = new List<string>();
-            foreach (var stats in selected)
-            {
-              string name = stats.Name;
-              if (CurrentStats.Children.ContainsKey(stats.Name) && CurrentStats.Children[stats.Name].Count > 1)
-              {
-                name = CurrentStats.Children[stats.Name].First().Name;
-              }
-
-              string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
-              Dispatcher.InvokeAsync(() =>
-              {
-                DataGridTextColumn col = new DataGridTextColumn() { Header = name, Binding = new Binding(colBinding) };
-                col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
-                col.HeaderStyle = Application.Current.Resources["CenterGridHeaderStyle"] as Style;
-                dataGrid.Columns.Add(col);
-              });
-
-              playerList.Add(name);
-              colCount++;
-            }
-
-            Dispatcher.InvokeAsync(() =>
-            {
-              // totals column
-              dataGrid.Columns.Add(new DataGridTextColumn()
-              {
-                Header = "Total Casts",
-                CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style,
-                HeaderStyle = Application.Current.Resources["CenterGridHeaderStyle"] as Style,
-                Binding = new Binding("Values[" + colCount + "]")
-              });
-            });
-
             var raidStats = CurrentStats.RaidStats;
-            if (raidStats.FirstFightID < int.MaxValue && raidStats.LastFightID > int.MinValue &&
-              raidStats.BeginTimes.ContainsKey(raidStats.FirstFightID) && raidStats.LastTimes.ContainsKey(raidStats.LastFightID))
+            if (raidStats.FirstFightID < int.MaxValue && raidStats.LastFightID > int.MinValue && raidStats.BeginTimes.ContainsKey(raidStats.FirstFightID)
+              && raidStats.LastTimes.ContainsKey(raidStats.LastFightID))
             {
               DateTime start = raidStats.BeginTimes[CurrentStats.RaidStats.FirstFightID];
               DateTime end = raidStats.LastTimes[CurrentStats.RaidStats.LastFightID];
-              SpellCounts counts = SpellCastManager.GetSpellCounts(playerList, start.AddSeconds(-10), end);
+              SpellCounts counts = SpellCountBuilder.GetSpellCounts(playerList, start.AddSeconds(-10), end);
 
-              int spellsSoFar = 0;
+              int colCount = 0;
+              foreach (string name in counts.SortedPlayers)
+              {
+                string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
+                int total = counts.TotalCountMap.ContainsKey(name) ? counts.TotalCountMap[name] : 0;
+
+                Dispatcher.InvokeAsync(() =>
+                {
+                  DataGridTextColumn col = new DataGridTextColumn() { Header = name + " = " + total, Binding = new Binding(colBinding) };
+                  col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
+                  col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
+                  dataGrid.Columns.Add(col);
+                });
+
+                Thread.Sleep(10);
+                colCount++;
+               }
+
               foreach (var spell in counts.SpellList)
               {
-                SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[playerList.Count + 1] };
-                for (int i = 0; i < playerList.Count; i++)
+                SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count] };
+                for (int i = 0; i < counts.SortedPlayers.Count; i++)
                 {
-                  if (counts.PlayerCountMap.ContainsKey(playerList[i]))
+                  if (counts.PlayerCountMap.ContainsKey(counts.SortedPlayers[i]))
                   {
-                    row.Values[i] = counts.PlayerCountMap[playerList[i]].ContainsKey(spell) ? counts.PlayerCountMap[playerList[i]][spell] : 0;
+                    row.Values[i] = counts.PlayerCountMap[counts.SortedPlayers[i]].ContainsKey(spell) ? counts.PlayerCountMap[counts.SortedPlayers[i]][spell] : 0;
                   }
                 }
 
-                if (spellsSoFar % 25 == 0)
-                {
-                  Thread.Sleep(100);
-                }
-
-                row.Values[playerList.Count] = counts.TotalCountMap[spell];
                 Dispatcher.InvokeAsync(() => rows.Add(row));
-                spellsSoFar++;
+                Thread.Sleep(10);
               }
             }
+
+            Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
           }
           catch (Exception err)
           {
             LOG.Error(err);
           }
         });
+
+        if (spellCastsWindow == null || !spellCastsWindow.IsOpen)
+        {
+          spellCastsWindow = new DocumentWindow(docSite, "spellCastsWindow", "Spell Casts", null, dataGrid);
+        }
+        else
+        {
+          spellCastsWindow.Content = dataGrid;
+        }
+
+        Utils.OpenWindow(spellCastsWindow);
+        spellCastsWindow.MoveToLast();
       }
     }
 
@@ -468,17 +494,9 @@ namespace EQLogParser
         playerDamageDataGrid.ItemsSource = list;
         var selected = playerDataGrid.SelectedItems.Cast<PlayerStats>();
 
-        if (!damageWindow.IsOpen)
-        {
-          damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
-        }
-
-        Utils.OpenWindow(damageWindow);
-        damageWindow.MoveToLast();
-
+        busyIcon.Visibility = Visibility.Visible;
         Task.Delay(20).ContinueWith(task =>
         {
-          int count = 0;
           foreach (var playerStat in selected)
           {
             if (CurrentStats.Children.ContainsKey(playerStat.Name))
@@ -493,12 +511,19 @@ namespace EQLogParser
               Dispatcher.InvokeAsync(() => list.Add(playerStat));
             }
 
-            if (count % 4 == 0)
-            {
-              Thread.Sleep(120);
-            }
+            Thread.Sleep(100);
           }
+
+          Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
         });
+
+        if (!damageWindow.IsOpen)
+        {
+          damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
+        }
+
+        Utils.OpenWindow(damageWindow);
+        damageWindow.MoveToLast();
       }
     }
 
@@ -565,6 +590,7 @@ namespace EQLogParser
     {
       if (EQLogReader != null && UpdatingProgress)
       {
+        busyIcon.Visibility = Visibility.Visible;
         progressWindow.Title = "Reading Log";
         double percentComplete = EQLogReader.BytesNeededToProcess > 0 ? Math.Min(Convert.ToInt32((double)ProcessedBytes / EQLogReader.BytesNeededToProcess * 100), 100) : 100;
         fileSizeLabel.Content = Math.Ceiling(EQLogReader.FileSize / 1024.0) + " KB";
@@ -578,6 +604,7 @@ namespace EQLogParser
           percentComplete = 100;
           UpdatingProgress = false;
           completeLabel.Foreground = GOOD_BRUSH;
+          busyIcon.Visibility = Visibility.Hidden;
         }
       }
     }
@@ -591,6 +618,7 @@ namespace EQLogParser
     {
       if (NeedDPSTextUpdate)
       {
+        busyIcon.Visibility = Visibility.Visible;
         DataGrid grid = playerDataGrid;
         Label label = dpsTitle;
 
@@ -606,6 +634,7 @@ namespace EQLogParser
           playerDPSTextBox.Text = label.Content.ToString();
         }
 
+        busyIcon.Visibility = Visibility.Hidden;
         NeedDPSTextUpdate = false;
       }
     }
@@ -623,6 +652,7 @@ namespace EQLogParser
           if (realItems.Count > 0)
           {
             taskStarted = true;
+            busyIcon.Visibility = Visibility.Visible;
             new Task(() =>
             {
               CurrentStats = StatsBuilder.BuildTotalStats(realItems);
@@ -636,6 +666,7 @@ namespace EQLogParser
                   NeedStatsUpdate = false;
                   UpdatingStats = false;
                 }
+                Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
               }));
             }).Start();
           }
@@ -688,7 +719,6 @@ namespace EQLogParser
           StopProcessors();
 
           NpcDamageManager = new NpcDamageManager();
-          SpellCastManager = new SpellCastManager();
           LinePreProcessor = new ActionProcessor("LinePreProcessor", PreProcessLine);
           DamageLineProcessor = new ActionProcessor("DamageLineProcessor", ProcessDamageLine);
           CastLineProcessor = new ActionProcessor("CastLineProcessor", ProcessCastLine);
@@ -711,6 +741,7 @@ namespace EQLogParser
           DataManager.Instance.Clear();
 
           NonPlayersView.Clear();
+          npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
 
           progressWindow.IsOpen = true;
           EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, FileLoadingCompleteCallback, monitorOnly, lastMins);
@@ -734,7 +765,7 @@ namespace EQLogParser
         Interlocked.Add(ref ProcessedBytes, line.Length + 2);
       }
 
-      if ((LinePreProcessor.QueueSize() + DamageLineProcessor.QueueSize() + CastLineProcessor.QueueSize()) >200000)
+      if ((LinePreProcessor.QueueSize() + DamageLineProcessor.QueueSize() + CastLineProcessor.QueueSize()) > 200000)
       {
         Thread.Sleep(20);
       }
@@ -755,14 +786,13 @@ namespace EQLogParser
       {
         DamageLineProcessor.AppendToQueue(pline);
       }
+      else if (pline != null && pline.State == 10)
+      {
+        CastLineProcessor.AppendToQueue(pline);
+      }
       else
       {
         Interlocked.Add(ref ProcessedBytes, line.Length + 2);
-
-        if (pline != null && pline.State == 10)
-        {
-          CastLineProcessor.AppendToQueue(pline);
-        }
       }
     }
 
@@ -776,8 +806,10 @@ namespace EQLogParser
           SpellCast cast = LineParser.ParseSpellCast(pline);
           if (cast != null)
           {
-            SpellCastManager.Add(cast);
+            DataManager.Instance.AddSpellCast(cast);
           }
+
+          Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
         }
         catch (Exception e)
         {
@@ -811,7 +843,7 @@ namespace EQLogParser
                   TimeSpan diff = pline.CurrentTime.Subtract(NpcDamageManager.LastUpdateTime);
                   if (diff.TotalSeconds > 120)
                   {
-                    NonPlayer divider = new NonPlayer() { BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
+                    NonPlayer divider = new NonPlayer() { FightID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
                     Dispatcher.InvokeAsync(() =>
                     {
                       CurrentFightID++;

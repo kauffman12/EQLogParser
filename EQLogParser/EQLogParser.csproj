@@ -103,6 +103,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v18.1.0673\Assemblies\ActiproSoftware.Shared.Wpf.dll</HintPath>
     </Reference>
+    <Reference Include="FontAwesome.WPF, Version=4.7.0.37774, Culture=neutral, PublicKeyToken=0758b07a11a4f466, processorArchitecture=MSIL">
+      <HintPath>..\packages\FontAwesome.WPF.4.7.0.9\lib\net40\FontAwesome.WPF.dll</HintPath>
+    </Reference>
     <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
     </Reference>
@@ -130,7 +133,7 @@
     </ApplicationDefinition>
     <Compile Include="src\ActionProcessor.cs" />
     <Compile Include="src\DataManager.cs" />
-    <Compile Include="src\SpellCastManager.cs" />
+    <Compile Include="src\SpellCountBuilder.cs" />
     <Compile Include="src\StatsBuilder.cs" />
     <Compile Include="src\Utils.cs" />
     <Page Include="MainWindow.xaml">
@@ -171,9 +174,6 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <None Include="EQLogParser_TemporaryKey.pfx" />
-    <None Include="logs\EQLogParser.log">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
