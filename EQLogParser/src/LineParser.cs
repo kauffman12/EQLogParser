@@ -153,7 +153,7 @@ namespace EQLogParser
       SpellCast cast = null;
       string caster = pline.ActionPart.Substring(0, pline.OptionalIndex);
 
-      switch(pline.OptionalData)
+      switch (pline.OptionalData)
       {
         case "cast":
         case "sing":
@@ -170,19 +170,22 @@ namespace EQLogParser
           break;
         case "youcast":
         case "yousing":
-          //[Tue Dec 04 19:56:41 2018] You begin casting Ethereal Skyfire Rk. III.
-          //[Tue Dec 04 19:56:41 2018] You begin singing Ethereal Skyfire Rk. III.
           if (pline.ActionPart.Length > pline.OptionalIndex + 15)
           {
-            int period = pline.ActionPart.IndexOf(".", pline.OptionalIndex + 15, StringComparison.Ordinal);
-            if (period > -1)
+            cast = new SpellCast()
             {
-              cast = new SpellCast() { Caster = caster, Spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, period - pline.OptionalIndex - 15), BeginTime = pline.CurrentTime };
-            }
+              Caster = caster,
+              Spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1),
+              BeginTime = pline.CurrentTime
+            };
           }
           break;
       }
 
+      if (cast != null)
+      {
+        cast.SpellAbbrv = abbreviateSpellName(cast.Spell);
+      }
       return cast;
     }
 
@@ -223,6 +226,39 @@ namespace EQLogParser
       }
 
       return record;
+    }
+
+    private static string abbreviateSpellName(string spell)
+    {
+      string result = spell;
+
+      int index = -1;
+      if ((index = spell.IndexOf("Rk. ", StringComparison.Ordinal)) > -1)
+      {
+        result = spell.Substring(0, index);
+      }
+      else if((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
+      {
+        bool isARank = true;
+        for (int i=index+1; i<spell.Length && isARank; i++)
+        {
+          switch(spell[i])
+          {
+            case 'V': case 'X': case 'I': case 'L': case 'C':
+              break;
+            default:
+              isARank = false;
+              break;
+          }
+        }
+
+        if (isARank)
+        {
+          result = spell.Substring(0, index);
+        }
+      }
+
+      return result;
     }
 
     private static void CheckDamageRecordForPet(DamageRecord record, bool replacedAttacker, out bool isDefenderPet, out bool isAttackerPet)
@@ -306,7 +342,7 @@ namespace EQLogParser
       if (pline.ActionPart.Length < 35)
       {
         int index = -1;
-        if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1 
+        if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
           && IsPossiblePlayerName(pline.ActionPart, index))
         {
           string test = pline.ActionPart.Substring(0, index);

@@ -62,7 +62,10 @@ namespace EQLogParser
 
     public void AddSpellCast(SpellCast cast)
     {
-      lock(AllSpellCasts)
+      bool replaced;
+      cast.Caster = ReplaceAttacker(cast.Caster, out replaced);
+
+      lock (AllSpellCasts)
       {
         AllSpellCasts.Add(cast);
       }

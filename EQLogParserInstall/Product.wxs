@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.15" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.17" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -75,9 +75,9 @@
       <Component Win64="yes" Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F">
         <File Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser_TargetDir)log4net.dll" />
       </Component>
-      <Component Win64="yes" Id="log4net.xml" Guid="31F69EDE-0F50-4A7F-AEB9-E2CE3CA674A5">
-        <File Id="log4net.xmll" Name="log4net.xml" Source="$(var.EQLogParser_TargetDir)log4net.xml" />
-      </Component>
+      <Component Win64="yes" Id="FontAwesome.WPF.dll" Guid="ED08AC03-21A2-4664-A99A-0E41F73FDC40">
+        <File Id="FontAwesome.WPF.dll" Name="FontAwesome.WPF.dll" Source="$(var.EQLogParser_TargetDir)FontAwesome.WPF.dll" />
+      </Component> 
 	  </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
