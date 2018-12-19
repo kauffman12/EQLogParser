@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace EQLogParser
@@ -184,7 +183,7 @@ namespace EQLogParser
 
       if (cast != null)
       {
-        cast.SpellAbbrv = abbreviateSpellName(cast.Spell);
+        cast.SpellAbbrv = Utils.AbbreviateSpellName(cast.Spell);
       }
       return cast;
     }
@@ -226,39 +225,6 @@ namespace EQLogParser
       }
 
       return record;
-    }
-
-    private static string abbreviateSpellName(string spell)
-    {
-      string result = spell;
-
-      int index = -1;
-      if ((index = spell.IndexOf("Rk. ", StringComparison.Ordinal)) > -1)
-      {
-        result = spell.Substring(0, index);
-      }
-      else if((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
-      {
-        bool isARank = true;
-        for (int i=index+1; i<spell.Length && isARank; i++)
-        {
-          switch(spell[i])
-          {
-            case 'V': case 'X': case 'I': case 'L': case 'C':
-              break;
-            default:
-              isARank = false;
-              break;
-          }
-        }
-
-        if (isARank)
-        {
-          result = spell.Substring(0, index);
-        }
-      }
-
-      return result;
     }
 
     private static void CheckDamageRecordForPet(DamageRecord record, bool replacedAttacker, out bool isDefenderPet, out bool isAttackerPet)
@@ -321,13 +287,16 @@ namespace EQLogParser
         if (index > -1)
         {
           string pet = pline.ActionPart.Substring(0, index);
-          int period = pline.ActionPart.IndexOf(".", index + 24, StringComparison.Ordinal);
-          if (period > -1)
+          if (!DataManager.Instance.CheckNameForPlayer(pet)) // thanks idiots for this
           {
-            string owner = pline.ActionPart.Substring(index + 21, period - index - 21);
-            DataManager.Instance.UpdateVerifiedPlayers(owner);
-            DataManager.Instance.UpdateVerifiedPets(pet);
-            DataManager.Instance.UpdatePetToPlayer(pet, owner);
+            int period = pline.ActionPart.IndexOf(".", index + 24, StringComparison.Ordinal);
+            if (period > -1)
+            {
+              string owner = pline.ActionPart.Substring(index + 21, period - index - 21);
+              DataManager.Instance.UpdateVerifiedPlayers(owner);
+              DataManager.Instance.UpdateVerifiedPets(pet);
+              DataManager.Instance.UpdatePetToPlayer(pet, owner);
+            }
           }
 
           found = true;
