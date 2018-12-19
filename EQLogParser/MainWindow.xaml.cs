@@ -17,7 +17,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using static EQLogParser.DataManager;
 
 namespace EQLogParser
 {
@@ -386,7 +385,7 @@ namespace EQLogParser
     private void PlayerDataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCasts(Utils.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
+      ShowSpellCasts(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
     }
 
     private void PlayerDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
@@ -405,7 +404,14 @@ namespace EQLogParser
       dataGrid.AlternatingRowBackground = null;
       dataGrid.AutoGenerateColumns = false;
       dataGrid.RowHeaderWidth = 0;
-      dataGrid.Columns.Add(new DataGridTextColumn() { Header = "", Binding = new Binding("Spell") });
+
+      dataGrid.Columns.Add(new DataGridTextColumn()
+      {
+        Header = "",
+        Binding = new Binding("Spell"),
+        CellStyle = Application.Current.Resources["SpellGridCellStyle"] as Style
+      });
+
       dataGrid.Sorting += (s, e2) =>
       {
         if (e2.Column.Header != null && (e2.Column.Header.ToString() != "Spell"))
@@ -463,6 +469,8 @@ namespace EQLogParser
             foreach (var spell in counts.SpellList)
             {
               SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count] };
+              row.IsReceived = spell.StartsWith("Received");
+
               for (int i = 0; i < counts.SortedPlayers.Count; i++)
               {
                 if (counts.PlayerCountMap.ContainsKey(counts.SortedPlayers[i]))
@@ -500,7 +508,7 @@ namespace EQLogParser
     private void PlayerDataGridShowDamagByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowDamage(Utils.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
+      ShowDamage(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
     }
 
     private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
@@ -822,16 +830,19 @@ namespace EQLogParser
     private void PreProcessLine(object data)
     {
       string line = data as string;
-      ProcessLine pline = LineParser.KeepForProcessing(line);
-      if (pline != null && pline.State >= 0 && pline.State < 10)
+      ProcessLine damagePline = LineParser.KeepForDamageProcessing(line);
+      if (damagePline != null && damagePline.State >= 0)
       {
-        DamageLineProcessor.AppendToQueue(pline);
+        DamageLineProcessor.AppendToQueue(damagePline);
       }
-      else if (pline != null && pline.State == 10)
+
+      ProcessLine castPline = LineParser.KeepForSpellCastProcessing(line);
+      if (castPline != null && castPline.State >= 0)
       {
-        CastLineProcessor.AppendToQueue(pline);
+        CastLineProcessor.AppendToQueue(castPline);
       }
-      else
+
+      if (damagePline == null && castPline == null)
       {
         Interlocked.Add(ref ProcessedBytes, line.Length + 2);
       }
@@ -844,10 +855,24 @@ namespace EQLogParser
       {
         try
         {
-          SpellCast cast = LineParser.ParseSpellCast(pline);
-          if (cast != null)
+          switch(pline.State)
           {
-            DataManager.Instance.AddSpellCast(cast);
+            case 10:
+              SpellCast cast = LineParser.ParseSpellCast(pline);
+              if (cast != null)
+              {
+                DataManager.Instance.AddSpellCast(cast);
+              }
+              break;
+            case 11:
+              LineParser.CheckForLandsOnYou(pline);
+              break;
+            case 12:
+              LineParser.CheckForPosessiveLandsOnOther(pline);
+              break;
+            case 13:
+              LineParser.CheckForNonPosessiveLandsOnOther(pline);
+              break;
           }
 
           Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);

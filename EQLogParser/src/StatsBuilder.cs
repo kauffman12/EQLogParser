@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Controls;
+using static EQLogParser.DataManager;
 
 namespace EQLogParser
 {
@@ -329,6 +331,24 @@ namespace EQLogParser
         FirstFightID = int.MaxValue,
         LastFightID = int.MinValue
       };
+    }
+
+    internal static List<PlayerStats> GetSelectedPlayerStatsByClass(string classString, ItemCollection items)
+    {
+      SpellClasses type = (SpellClasses)Enum.Parse(typeof(SpellClasses), classString);
+      string className = DataManager.Instance.GetClassName(type);
+
+      List<PlayerStats> selectedStats = new List<PlayerStats>();
+      foreach (var item in items)
+      {
+        PlayerStats stats = item as PlayerStats;
+        if (stats.ClassName == className)
+        {
+          selectedStats.Add(stats);
+        }
+      }
+
+      return selectedStats;
     }
   }
 }
