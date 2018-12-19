@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using static EQLogParser.DataManager;
 
 namespace EQLogParser
 {
@@ -13,6 +14,71 @@ namespace EQLogParser
     // counting this thing is really slow
     private static int DateCount = 0;
     private static ConcurrentDictionary<string, DateTime> DateTimeCache = new ConcurrentDictionary<string, DateTime>();
+
+    internal static string AbbreviateSpellName(string spell)
+    {
+      string result = spell;
+
+      int index = -1;
+      if ((index = spell.IndexOf(" Rk. ", StringComparison.Ordinal)) > -1)
+      {
+        result = spell.Substring(0, index);
+      }
+      else if ((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
+      {
+        bool isARank = true;
+        for (int i = index + 1; i < spell.Length && isARank; i++)
+        {
+          switch (spell[i])
+          {
+            case 'I':
+            case 'V':
+            case 'X':
+            case 'L':
+            case 'C':
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+              break;
+            default:
+              isARank = false;
+              break;
+          }
+        }
+
+        if (isARank)
+        {
+          result = spell.Substring(0, index);
+        }
+      }
+
+      return result;
+    }
+
+    internal static List<PlayerStats> GetSelectedPlayerStatsByClass(string classString, ItemCollection items)
+    {
+      SpellClasses type = (SpellClasses)Enum.Parse(typeof(SpellClasses), classString);
+      string className = DataManager.Instance.GetClassName(type);
+
+      List<PlayerStats> selectedStats = new List<PlayerStats>();
+      foreach (var item in items)
+      {
+        PlayerStats stats = item as PlayerStats;
+        if (stats.ClassName == className)
+        {
+          selectedStats.Add(stats);
+        }
+      }
+
+      return selectedStats;
+    }
 
     internal static long ParseLong(string str)
     {

@@ -77,6 +77,7 @@ namespace EQLogParser
       DictionaryListHelper<string, string> needAggregateHelper = new DictionaryListHelper<string, string>();
       DictionaryListHelper<string, NonPlayer> aggregateNpcStatsHelper = new DictionaryListHelper<string, NonPlayer>();
       DictionaryListHelper<string, PlayerStats> statsHelper = new DictionaryListHelper<string, PlayerStats>();
+      Dictionary<string, byte> uniqueClasses = new Dictionary<string, byte>();
 
       try
       {
@@ -104,6 +105,10 @@ namespace EQLogParser
             {
               playerTotals = CreatePlayerStats(key);
               individualStats[key] = playerTotals;
+              if (playerTotals.ClassName != "")
+              {
+                uniqueClasses[playerTotals.ClassName] = 1;
+              }
             }
             else
             {
@@ -119,9 +124,6 @@ namespace EQLogParser
             else if (npcStats.Owner != "" && npcStats.IsPet)
             {
               needAggregateHelper.AddToList(needAggregate, npcStats.Owner, key);
-            } else if (npcStats.Owner == "" && npcStats.IsPet)
-            {
-              playerTotals.Details = DataManager.UNASSIGNED_PET_OWNER;
             }
 
             aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
@@ -136,6 +138,7 @@ namespace EQLogParser
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
         combined.TimeTitle = String.Format(TIME_FORMAT, combined.TimeDiff);
         combined.DamageTitle = String.Format(DAMAGE_FORMAT, Utils.FormatDamage(raidTotals.TotalDamage), Utils.FormatDamage(raidTotals.DPS));
+        combined.UniqueClasses = uniqueClasses;
 
         // save them all before child code removes
         var allStatValues = individualStats.Values.ToList();
@@ -146,7 +149,7 @@ namespace EQLogParser
           Parallel.ForEach(needAggregate.Keys, (key) =>
           {
             string aggregateName = (key == DataManager.UNASSIGNED_PET_OWNER) ? key : key + " +Pets";
-            PlayerStats aggregatePlayerStats = CreatePlayerStats(aggregateName);
+            PlayerStats aggregatePlayerStats = CreatePlayerStats(aggregateName, key);
             List<string> all = needAggregate[key].ToList();
             all.Add(key);
 
@@ -274,7 +277,7 @@ namespace EQLogParser
       {
         if (!playerTotals.SubStats.ContainsKey(key))
         {
-          playerTotals.SubStats[key] = new PlayerSubStats() { Details = "", Name = "", HitType = key };
+          playerTotals.SubStats[key] = new PlayerSubStats() { ClassName = "", Name = "", HitType = key };
         }
 
         playerTotals.SubStats[key].TotalDamage += npcStats.HitMap[key].TotalDamage;
@@ -302,12 +305,20 @@ namespace EQLogParser
       }
     }
 
-    internal static PlayerStats CreatePlayerStats(string name)
+    internal static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
+      string className = "";
+      origName = origName == null ? name : origName;
+
+      if (!DataManager.Instance.CheckNameForPet(origName))
+      {
+        className = DataManager.Instance.GetPlayerClass(origName);
+      }
+
       return new PlayerStats()
       {
         Name = name,
-        Details = "",
+        ClassName = className,
         HitType = "",
         TotalSeconds = 0,
         PercentString = "-",

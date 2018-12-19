@@ -17,6 +17,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using static EQLogParser.DataManager;
 
 namespace EQLogParser
 {
@@ -25,7 +26,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.17";
+    private const string VERSION = "v1.0.18";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -270,6 +271,23 @@ namespace EQLogParser
       npcMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
     }
 
+    private void NonPlayerDataGridSelectFight_Click(object sender, RoutedEventArgs e)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
+      if (npc != null && npc.FightID > -1)
+      {
+        Parallel.ForEach(NonPlayersView, (one) =>
+        {
+          if (one.FightID == npc.FightID)
+          {
+            Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one));
+          }
+        });
+      }
+    }
+
     private void NonPlayerDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
       DataGrid_LoadingRow(sender, e);
@@ -351,23 +369,6 @@ namespace EQLogParser
       }
     }
 
-    private void NonPlayerDataGridSelectFight_Click(object sender, RoutedEventArgs e)
-    {
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
-      NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
-      if (npc != null && npc.FightID > -1)
-      {
-        Parallel.ForEach(NonPlayersView, (one) =>
-        {
-          if (one.FightID == npc.FightID)
-          {
-            Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one));
-          }
-        });
-      }
-    }
-
     private void DataGridSelectAll_Click(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
@@ -382,149 +383,168 @@ namespace EQLogParser
       callingDataGrid.UnselectAll();
     }
 
+    private void PlayerDataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
+    {
+      MenuItem menuItem = (sender as MenuItem);
+      ShowSpellCasts(Utils.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
+    }
+
     private void PlayerDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
-
       if (callingDataGrid.SelectedItems.Count > 0)
       {
-        ThemedDataGrid dataGrid = new ThemedDataGrid();
-        dataGrid.AlternatingRowBackground = null;
-        dataGrid.AutoGenerateColumns = false;
-        dataGrid.RowHeaderWidth = 0;
-        dataGrid.Columns.Add(new DataGridTextColumn() { Header = "", Binding = new Binding("Spell") });
-        dataGrid.Sorting += (s, e2) =>
-        {
-          if (e2.Column.Header != null && (e2.Column.Header.ToString() != "Spell"))
-          {
-            e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Ascending;
-          }
-        };
+        ShowSpellCasts(callingDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
+      }
+    }
 
-        List<string> playerList = new List<string>();
-        foreach (var stats in callingDataGrid.SelectedItems.Cast<PlayerStats>())
+    private void ShowSpellCasts(List<PlayerStats> selectedStats)
+    {
+      ThemedDataGrid dataGrid = new ThemedDataGrid();
+      dataGrid.AlternatingRowBackground = null;
+      dataGrid.AutoGenerateColumns = false;
+      dataGrid.RowHeaderWidth = 0;
+      dataGrid.Columns.Add(new DataGridTextColumn() { Header = "", Binding = new Binding("Spell") });
+      dataGrid.Sorting += (s, e2) =>
+      {
+        if (e2.Column.Header != null && (e2.Column.Header.ToString() != "Spell"))
         {
-          string name = stats.Name;
-          if (CurrentStats.Children.ContainsKey(stats.Name) && CurrentStats.Children[stats.Name].Count > 1)
-          {
-            name = CurrentStats.Children[stats.Name].First().Name;
-          }
+          e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Ascending;
+        }
+      };
 
-          playerList.Add(name);
+      List<string> playerList = new List<string>();
+      foreach (var stats in selectedStats)
+      {
+        string name = stats.Name;
+        if (CurrentStats.Children.ContainsKey(stats.Name) && CurrentStats.Children[stats.Name].Count > 1)
+        {
+          name = CurrentStats.Children[stats.Name].First().Name;
         }
 
-        ObservableCollection<SpellCountRow> rows = new ObservableCollection<SpellCountRow>();
-        dataGrid.ItemsSource = rows;
+        playerList.Add(name);
+      }
 
-        busyIcon.Visibility = Visibility.Visible;
-        Task.Delay(20).ContinueWith(task =>
+      ObservableCollection<SpellCountRow> rows = new ObservableCollection<SpellCountRow>();
+      dataGrid.ItemsSource = rows;
+
+      busyIcon.Visibility = Visibility.Visible;
+      Task.Delay(20).ContinueWith(task =>
+      {
+        try
         {
-          try
+          var raidStats = CurrentStats.RaidStats;
+          if (raidStats.FirstFightID < int.MaxValue && raidStats.LastFightID > int.MinValue && raidStats.BeginTimes.ContainsKey(raidStats.FirstFightID)
+            && raidStats.LastTimes.ContainsKey(raidStats.LastFightID))
           {
-            var raidStats = CurrentStats.RaidStats;
-            if (raidStats.FirstFightID < int.MaxValue && raidStats.LastFightID > int.MinValue && raidStats.BeginTimes.ContainsKey(raidStats.FirstFightID)
-              && raidStats.LastTimes.ContainsKey(raidStats.LastFightID))
+            DateTime start = raidStats.BeginTimes[CurrentStats.RaidStats.FirstFightID];
+            DateTime end = raidStats.LastTimes[CurrentStats.RaidStats.LastFightID];
+            SpellCounts counts = SpellCountBuilder.GetSpellCounts(playerList, start.AddSeconds(-10), end);
+
+            int colCount = 0;
+            foreach (string name in counts.SortedPlayers)
             {
-              DateTime start = raidStats.BeginTimes[CurrentStats.RaidStats.FirstFightID];
-              DateTime end = raidStats.LastTimes[CurrentStats.RaidStats.LastFightID];
-              SpellCounts counts = SpellCountBuilder.GetSpellCounts(playerList, start.AddSeconds(-10), end);
+              string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
+              int total = counts.TotalCountMap.ContainsKey(name) ? counts.TotalCountMap[name] : 0;
 
-              int colCount = 0;
-              foreach (string name in counts.SortedPlayers)
+              Dispatcher.InvokeAsync(() =>
               {
-                string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
-                int total = counts.TotalCountMap.ContainsKey(name) ? counts.TotalCountMap[name] : 0;
+                DataGridTextColumn col = new DataGridTextColumn() { Header = name + " = " + total, Binding = new Binding(colBinding) };
+                col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
+                col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
+                dataGrid.Columns.Add(col);
+              });
 
-                Dispatcher.InvokeAsync(() =>
-                {
-                  DataGridTextColumn col = new DataGridTextColumn() { Header = name + " = " + total, Binding = new Binding(colBinding) };
-                  col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
-                  col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
-                  dataGrid.Columns.Add(col);
-                });
-
-                Thread.Sleep(10);
-                colCount++;
-               }
-
-              foreach (var spell in counts.SpellList)
-              {
-                SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count] };
-                for (int i = 0; i < counts.SortedPlayers.Count; i++)
-                {
-                  if (counts.PlayerCountMap.ContainsKey(counts.SortedPlayers[i]))
-                  {
-                    row.Values[i] = counts.PlayerCountMap[counts.SortedPlayers[i]].ContainsKey(spell) ? counts.PlayerCountMap[counts.SortedPlayers[i]][spell] : 0;
-                  }
-                }
-
-                Dispatcher.InvokeAsync(() => rows.Add(row));
-                Thread.Sleep(10);
-              }
+              Thread.Sleep(5);
+              colCount++;
             }
 
-            Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
-          }
-          catch (Exception err)
-          {
-            LOG.Error(err);
-          }
-        });
+            foreach (var spell in counts.SpellList)
+            {
+              SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count] };
+              for (int i = 0; i < counts.SortedPlayers.Count; i++)
+              {
+                if (counts.PlayerCountMap.ContainsKey(counts.SortedPlayers[i]))
+                {
+                  row.Values[i] = counts.PlayerCountMap[counts.SortedPlayers[i]].ContainsKey(spell) ? counts.PlayerCountMap[counts.SortedPlayers[i]][spell] : 0;
+                }
+              }
 
-        if (spellCastsWindow == null || !spellCastsWindow.IsOpen)
-        {
-          spellCastsWindow = new DocumentWindow(docSite, "spellCastsWindow", "Spell Casts", null, dataGrid);
-        }
-        else
-        {
-          spellCastsWindow.Content = dataGrid;
-        }
+              Dispatcher.InvokeAsync(() => rows.Add(row));
+              Thread.Sleep(5);
+            }
+          }
 
-        Utils.OpenWindow(spellCastsWindow);
-        spellCastsWindow.MoveToLast();
+          Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
+        }
+        catch (Exception err)
+        {
+          LOG.Error(err);
+        }
+      });
+
+      if (spellCastsWindow == null || !spellCastsWindow.IsOpen)
+      {
+        spellCastsWindow = new DocumentWindow(docSite, "spellCastsWindow", "Spell Casts", null, dataGrid);
       }
+      else
+      {
+        spellCastsWindow.Content = dataGrid;
+      }
+
+      Utils.OpenWindow(spellCastsWindow);
+      spellCastsWindow.MoveToLast();
+    }
+
+    private void PlayerDataGridShowDamagByClass_Click(object sender, RoutedEventArgs e)
+    {
+      MenuItem menuItem = (sender as MenuItem);
+      ShowDamage(Utils.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
     }
 
     private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
     {
       if (playerDataGrid.SelectedItems.Count > 0)
       {
-        ObservableCollection<PlayerStats> list = new ObservableCollection<PlayerStats>();
-        playerDamageDataGrid.ItemsSource = list;
-        var selected = playerDataGrid.SelectedItems.Cast<PlayerStats>();
+        ShowDamage(playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
+      }
+    }
 
-        busyIcon.Visibility = Visibility.Visible;
-        Task.Delay(20).ContinueWith(task =>
+    private void ShowDamage(List<PlayerStats> selected)
+    {
+      ObservableCollection<PlayerStats> list = new ObservableCollection<PlayerStats>();
+      playerDamageDataGrid.ItemsSource = list; busyIcon.Visibility = Visibility.Visible;
+
+      Task.Delay(20).ContinueWith(task =>
+      {
+        foreach (var playerStat in selected)
         {
-          foreach (var playerStat in selected)
+          if (CurrentStats.Children.ContainsKey(playerStat.Name))
           {
-            if (CurrentStats.Children.ContainsKey(playerStat.Name))
+            foreach (var childStat in CurrentStats.Children[playerStat.Name])
             {
-              foreach (var childStat in CurrentStats.Children[playerStat.Name])
-              {
-                Dispatcher.InvokeAsync(() => list.Add(childStat));
-              }
+              Dispatcher.InvokeAsync(() => list.Add(childStat));
             }
-            else
-            {
-              Dispatcher.InvokeAsync(() => list.Add(playerStat));
-            }
-
-            Thread.Sleep(100);
+          }
+          else
+          {
+            Dispatcher.InvokeAsync(() => list.Add(playerStat));
           }
 
-          Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
-        });
-
-        if (!damageWindow.IsOpen)
-        {
-          damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
+          Thread.Sleep(120);
         }
 
-        Utils.OpenWindow(damageWindow);
-        damageWindow.MoveToLast();
+        Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
+      });
+
+      if (!damageWindow.IsOpen)
+      {
+        damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
       }
+
+      Utils.OpenWindow(damageWindow);
+      damageWindow.MoveToLast();
     }
 
     // Player DPS Child Grid
@@ -665,6 +685,27 @@ namespace EQLogParser
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
                   NeedStatsUpdate = false;
                   UpdatingStats = false;
+
+                  if (CurrentStats.StatsList.Count > 0)
+                  {
+                    foreach (var item in pdgMenuItemShowDamage.Items)
+                    {
+                      MenuItem menuItem = item as MenuItem;
+                      if (CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string))
+                      {
+                        menuItem.IsEnabled = true;
+                      }
+                    }
+
+                    foreach (var item in pdgMenuItemShowSpellCasts.Items)
+                    {
+                      MenuItem menuItem = item as MenuItem;
+                      if (CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string))
+                      {
+                        menuItem.IsEnabled = true;
+                      }
+                    }
+                  }
                 }
                 Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
               }));
@@ -681,7 +722,7 @@ namespace EQLogParser
             list.Clear();
           }
 
-          pdgMenuItemSelectAll.IsEnabled = pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = false;
+          pdgMenuItemSelectAll.IsEnabled = pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = false;
           NeedStatsUpdate = false;
           UpdatingStats = false;
         }

@@ -2,14 +2,22 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 
 {
   class DataManager
   {
-    public static DataManager Instance = new DataManager();
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    public enum SpellClasses
+    {
+      WAR = 1, CLR = 2, PAL = 4, RNG = 8, SHD = 16, DRU = 32, MNK = 64, BRD = 128, ROG = 256,
+      SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768
+    }
+
+    public static DataManager Instance = new DataManager();
     public const string UNASSIGNED_PET_OWNER = "Unassigned Pets";
     public event EventHandler<PetMapping> EventsNewPetMapping;
     public event EventHandler<string> EventsNewVerifiedPet;
@@ -20,35 +28,90 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
 
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
+    private Dictionary<SpellClasses, string> ClassNames = new Dictionary<SpellClasses, string>();
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
-    private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
-    private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> AttackerReplacement = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
+    private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
+    private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
+    private ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
     private ConcurrentDictionary<string, long> ProbablyNotAPlayer = new ConcurrentDictionary<string, long>();
+    private ConcurrentDictionary<string, SpellData> SpellsDB = new ConcurrentDictionary<string, SpellData>();
+    private ConcurrentDictionary<string, SpellClasses> SpellsToClass = new ConcurrentDictionary<string, SpellClasses>();
     private ConcurrentDictionary<string, byte> UnverifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
 
     private DataManager()
     {
-      // Populated generated pets
-      long length = new System.IO.FileInfo(@"data\petnames.txt").Length;
-      if (length < 20000)
+      try
       {
+        // Populated generated pets
         string[] lines = System.IO.File.ReadAllLines(@"data\petnames.txt");
         lines.ToList().ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
+
+        VerifiedPlayers["himself"] = 1;
+        VerifiedPlayers["herself"] = 1;
+        VerifiedPlayers["itself"] = 1;
+        VerifiedPlayers["you"] = 1;
+        VerifiedPlayers["YOU"] = 1;
+        VerifiedPlayers["You"] = 1;
+        VerifiedPlayers["your"] = 1;
+        VerifiedPlayers["Your"] = 1;
+        VerifiedPlayers["YOUR"] = 1;
+
+        lines = System.IO.File.ReadAllLines(@"data\spells.txt");
+        foreach (string line in lines)
+        {
+          string[] data = line.Split('^');
+          int beneficial;
+          Int32.TryParse(data[1], out beneficial);
+          int classMask;
+          Int32.TryParse(data[2], out classMask);
+          SpellData spellData = new SpellData()
+          {
+            Spell = data[0],
+            SpellAbbrv = Utils.AbbreviateSpellName(data[0]),
+            Beneficial = (beneficial != 0),
+            ClassMask = classMask,
+            LandsOnYou = data[3],
+            LandsOnOther = data[4]
+          };
+
+          SpellsDB[spellData.Spell] = spellData;
+        }
+      }
+      catch(Exception e)
+      {
+        LOG.Error(e);
       }
 
-      VerifiedPlayers["himself"] = 1;
-      VerifiedPlayers["herself"] = 1;
-      VerifiedPlayers["itself"] = 1;
-      VerifiedPlayers["you"] = 1;
-      VerifiedPlayers["YOU"] = 1;
-      VerifiedPlayers["You"] = 1;
-      VerifiedPlayers["your"] = 1;
-      VerifiedPlayers["Your"] = 1;
-      VerifiedPlayers["YOUR"] = 1;
+      var classEnums = Enum.GetValues(typeof(SpellClasses)).Cast<SpellClasses>().ToList();
+      foreach(var spell in SpellsDB.Values)
+      {
+        // exact match meaning class-only spell
+        if (classEnums.Contains((SpellClasses) spell.ClassMask))
+        {
+          SpellsToClass[spell.Spell] = (SpellClasses) spell.ClassMask;
+        }
+      }
+
+      ClassNames[SpellClasses.WAR] = "Warrior";
+      ClassNames[SpellClasses.CLR] = "Cleric";
+      ClassNames[SpellClasses.PAL] = "Paladin";
+      ClassNames[SpellClasses.RNG] = "Ranger";
+      ClassNames[SpellClasses.SHD] = "Shadow Knight";
+      ClassNames[SpellClasses.DRU] = "Druid";
+      ClassNames[SpellClasses.MNK] = "Monk";
+      ClassNames[SpellClasses.BRD] = "Bard";
+      ClassNames[SpellClasses.ROG] = "Rogue";
+      ClassNames[SpellClasses.SHM] = "Shaman";
+      ClassNames[SpellClasses.NEC] = "Necromancer";
+      ClassNames[SpellClasses.WIZ] = "Wizard";
+      ClassNames[SpellClasses.MAG] = "Magician";
+      ClassNames[SpellClasses.ENC] = "Enchanter";
+      ClassNames[SpellClasses.BST] = "Beastlord";
+      ClassNames[SpellClasses.BER] = "Berserker";
     }
 
     public void Clear()
@@ -69,6 +132,8 @@ namespace EQLogParser
       {
         AllSpellCasts.Add(cast);
       }
+
+      UpdatePlayerClassFromSpell(cast);
     }
 
     public List<SpellCast> GetSpellCasts()
@@ -142,6 +207,27 @@ namespace EQLogParser
       return npc;
     }
 
+    public string GetClassName(SpellClasses type)
+    {
+      string name = "";
+      if (ClassNames.ContainsKey(type))
+      {
+        name = ClassNames[type];
+      }
+      return name;
+    }
+
+    public string GetPlayerClass(string name)
+    {
+      string className = "";
+      SpellClassCounter counter;
+      if (PlayerToClass.TryGetValue(name, out counter))
+      {
+        className = ClassNames[counter.CurrentClass];
+      }
+      return className;
+    }
+
     public string GetPlayerFromPet(string pet)
     {
       return PetToPlayerMap.ContainsKey(pet) ? PetToPlayerMap[pet] : null;
@@ -181,6 +267,35 @@ namespace EQLogParser
       else
       {
         EventsUpdatedNonPlayer(this, npc);
+      }
+    }
+
+    public void UpdatePlayerClassFromSpell(SpellCast cast)
+    {
+      SpellClasses theClass;
+      if (SpellsToClass.TryGetValue(cast.Spell, out theClass))
+      {
+        SpellClassCounter counter;
+        if (!PlayerToClass.TryGetValue(cast.Caster, out counter))
+        {
+          PlayerToClass.TryAdd(cast.Caster, new SpellClassCounter() { ClassCounts = new ConcurrentDictionary<SpellClasses, int>() });
+          counter = PlayerToClass[cast.Caster];
+        }
+
+        if (!counter.ClassCounts.ContainsKey(theClass))
+        {
+          counter.ClassCounts.TryAdd(theClass, 0);
+        }
+
+        lock (counter)
+        {
+          int value = ++counter.ClassCounts[theClass];
+          if (value > counter.CurrentMax)
+          {
+            counter.CurrentMax = value;
+            counter.CurrentClass = theClass;
+          }
+        }
       }
     }
 
@@ -244,6 +359,13 @@ namespace EQLogParser
       {
         EventsRemovedNonPlayer(this, name);
       }
+    }
+
+    private class SpellClassCounter
+    {
+      public int CurrentMax { get; set; }
+      public SpellClasses CurrentClass { get; set; }
+      public ConcurrentDictionary<SpellClasses, int> ClassCounts { get; set; }
     }
   }
 }
