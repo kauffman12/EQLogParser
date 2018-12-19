@@ -84,11 +84,16 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
-  public class SpellCast
+  public class SpellCast : ReceivedSpell
   {
     public string Spell { get; set; }
-    public string SpellAbbrv { get; set; }
     public string Caster { get; set; }
+  }
+
+  public class ReceivedSpell
+  {
+    public string SpellAbbrv { get; set; }
+    public string Receiver { get; set; }
     public DateTime BeginTime { get; set; }
   }
 
@@ -114,6 +119,7 @@ namespace EQLogParser
   {
     public string Spell { get; set; }
     public int[] Values { get; set; }
+    public bool IsReceived { get; set; }
   }
 
   public class CombinedStats

@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using static EQLogParser.DataManager;
 
 namespace EQLogParser
 {
@@ -60,24 +59,6 @@ namespace EQLogParser
       }
 
       return result;
-    }
-
-    internal static List<PlayerStats> GetSelectedPlayerStatsByClass(string classString, ItemCollection items)
-    {
-      SpellClasses type = (SpellClasses)Enum.Parse(typeof(SpellClasses), classString);
-      string className = DataManager.Instance.GetClassName(type);
-
-      List<PlayerStats> selectedStats = new List<PlayerStats>();
-      foreach (var item in items)
-      {
-        PlayerStats stats = item as PlayerStats;
-        if (stats.ClassName == className)
-        {
-          selectedStats.Add(stats);
-        }
-      }
-
-      return selectedStats;
     }
 
     internal static long ParseLong(string str)
@@ -195,6 +176,43 @@ namespace EQLogParser
       }
 
       return result;
+    }
+
+    internal static bool IsPetOrMount(string part, int start, out int len)
+    {
+      bool found = false;
+      len = -1;
+
+      int end = 2;
+      if (part.Length >= (start + ++end) && part.Substring(start, 3) == "pet" ||
+        part.Length >= (start + ++end) && part.Substring(start, 4) == "ward" && !(part.Length > (start + 5) && part[start + 5] != 'e') ||
+        part.Length >= (start + ++end) && part.Substring(start, 5) == "Mount" ||
+        part.Length >= (start + ++end) && part.Substring(start, 6) == "warder")
+      {
+        found = true;
+        len = end;
+      }
+      return found;
+    }
+
+    internal static bool IsPossiblePlayerName(string part, int stop = -1)
+    {
+      if (stop == -1)
+      {
+        stop = part.Length;
+      }
+
+      bool found = stop < 3 ? false : true;
+      for (int i = 0; found != false && i < stop; i++)
+      {
+        if (!Char.IsLetter(part, i))
+        {
+          found = false;
+          break;
+        }
+      }
+
+      return found;
     }
   }
 

@@ -37,7 +37,18 @@ namespace EQLogParser
       new KeyValuePair<string, string>("frenzies", "frenzies on"), new KeyValuePair<string, string>("frenzy", "frenzy on")
     });
 
-    public static ProcessLine KeepForProcessing(string line)
+    public static ConcurrentDictionary<string, byte> IgnoreMap = new ConcurrentDictionary<string, byte>(
+      new List<KeyValuePair<string, byte>>
+    {
+      new KeyValuePair<string, byte>("Players", 1), new KeyValuePair<string, byte>("GUILD", 1),
+      new KeyValuePair<string, byte>("Autojoining", 1), new KeyValuePair<string, byte>("Welcome", 1),
+      new KeyValuePair<string, byte>("There", 1), new KeyValuePair<string, byte>("The", 1),
+      new KeyValuePair<string, byte>("Fellowship", 1), new KeyValuePair<string, byte>("Targeted", 1),
+      new KeyValuePair<string, byte>("Right", 1), new KeyValuePair<string, byte>("Beginning", 1),
+      new KeyValuePair<string, byte>("Stand", 1), new KeyValuePair<string, byte>("MESSAGE", 1)
+    });
+
+    public static ProcessLine KeepForDamageProcessing(string line)
     {
       ProcessLine pline = null;
 
@@ -50,6 +61,7 @@ namespace EQLogParser
         }
         else if (line.Length >= 51 && (index = line.IndexOf(" healed ", ACTION_PART_INDEX, 24, StringComparison.Ordinal)) > -1 && char.IsUpper(line[index + 8]))
         {
+          // WARNING -- this is only a subset of all heal lines
           pline = new ProcessLine() { Line = line, State = 2, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
         }
@@ -58,7 +70,40 @@ namespace EQLogParser
           pline = new ProcessLine() { Line = line, State = 1, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
         }
-        else if (line.Length > 44 && (index = line.IndexOf(" begin", ACTION_PART_INDEX + 3, StringComparison.Ordinal)) > -1)
+        else
+        {
+          ProcessLine preProcessOnly = new ProcessLine() { Line = line, State = -1 };
+          preProcessOnly.ActionPart = line.Substring(ACTION_PART_INDEX);
+
+          // check other things
+          if (!CheckForPlayers(preProcessOnly))
+          {
+            CheckForPetLeader(preProcessOnly);
+          }
+        }
+
+        if (pline != null && pline.State >= 0)
+        {
+          pline.TimeString = pline.Line.Substring(1, 24);
+          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+        }
+      }
+      catch (Exception e)
+      {
+        LOG.Error(e);
+      }
+
+      return pline;
+    }
+
+    public static ProcessLine KeepForSpellCastProcessing(string line)
+    {
+      ProcessLine pline = null;
+
+      try
+      {
+        int index = -1;
+        if (line.Length > 44 && (index = line.IndexOf(" begin", ACTION_PART_INDEX + 3, StringComparison.Ordinal)) > -1)
         {
           int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX);
           if (firstSpace > -1 && firstSpace == index)
@@ -85,15 +130,37 @@ namespace EQLogParser
             }
           }
         }
-        else
+        else // lands on messages
         {
-          pline = new ProcessLine() { Line = line, State = -1 };
-          pline.ActionPart = line.Substring(ACTION_PART_INDEX);
-
-          // check other things
-          if (!CheckForPlayers(pline))
+          if (line.Length > ACTION_PART_INDEX + 6)
           {
-            CheckForPetLeader(pline);
+            if (line.IndexOf("You", ACTION_PART_INDEX, 3, StringComparison.OrdinalIgnoreCase) > -1 && line[ACTION_PART_INDEX + 3] == ' ' || 
+              (line[ACTION_PART_INDEX + 3] == 'r' && line[ACTION_PART_INDEX + 4] == ' ' && Char.IsLower(line[ACTION_PART_INDEX + 5])))
+            {
+              pline = new ProcessLine() { Line = line, State = 11, ActionPart = line.Substring(ACTION_PART_INDEX) };
+            }
+            else
+            {
+              int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal);
+              if (firstSpace > -1 && line[firstSpace - 2] == '\'' && line[firstSpace - 1] == 's')
+              {
+                pline = new ProcessLine() { Line = line, State = 12, ActionPart = line.Substring(ACTION_PART_INDEX) };
+                pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
+              }
+              else if (firstSpace > -1)
+              {
+                string player = line.Substring(ACTION_PART_INDEX, firstSpace - ACTION_PART_INDEX);
+                if (!IgnoreMap.ContainsKey(player) && (Utils.IsPossiblePlayerName(player)))
+                {
+                  if (line.Length > firstSpace + 6)
+                  {
+                    pline = new ProcessLine() { Line = line, State = 13, ActionPart = line.Substring(ACTION_PART_INDEX) };
+                    pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
+                    pline.OptionalData = player;
+                  }
+                }
+              }
+            }
           }
         }
 
@@ -109,6 +176,57 @@ namespace EQLogParser
       }
 
       return pline;
+    }
+
+    public static void CheckForLandsOnYou(ProcessLine pline)
+    {
+      List<string> results = DataManager.Instance.GetLandsOnYou(pline.ActionPart);
+      if (results != null && results.Count > 0)
+      {
+        if (results.Count == 1)
+        {
+          DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
+          {
+            Receiver = "You",
+            BeginTime = pline.CurrentTime,
+            SpellAbbrv = results[0]
+          });
+        }
+      }
+    }
+
+    public static void CheckForNonPosessiveLandsOnOther(ProcessLine pline)
+    {
+      List<string> results = DataManager.Instance.GetNonPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
+      if (results != null && results.Count > 0)
+      {
+        if (results.Count == 1)
+        {
+          DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
+          {
+            Receiver = pline.OptionalData,
+            BeginTime = pline.CurrentTime,
+            SpellAbbrv = results[0]
+          });
+        }
+      }
+    }
+
+    public static void CheckForPosessiveLandsOnOther(ProcessLine pline)
+    {
+      List<string> results = DataManager.Instance.GetPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
+      if (results != null && results.Count > 0)
+      {
+        if (results.Count == 1)
+        {
+          DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
+          {
+            Receiver = pline.ActionPart.Substring(0, pline.OptionalIndex - 3),
+            BeginTime = pline.CurrentTime,
+            SpellAbbrv = results[0]
+          });
+        }
+      }
     }
 
     public static void CheckForSlain(ProcessLine pline)
@@ -137,11 +255,11 @@ namespace EQLogParser
       bool foundHealer = DataManager.Instance.CheckNameForPlayer(healer);
       bool foundHealed = DataManager.Instance.CheckNameForPlayer(healed) || DataManager.Instance.CheckNameForPet(healed);
 
-      if (foundHealer && !foundHealed && IsPossiblePlayerName(healed, healed.Length))
+      if (foundHealer && !foundHealed && Utils.IsPossiblePlayerName(healed, healed.Length))
       {
         DataManager.Instance.UpdateUnverifiedPetOrPlayer(healed, true);
       }
-      else if (!foundHealer && foundHealed && IsPossiblePlayerName(healer, healer.Length))
+      else if (!foundHealer && foundHealed && Utils.IsPossiblePlayerName(healer, healer.Length))
       {
         DataManager.Instance.UpdateVerifiedPlayers(healer);
       }
@@ -312,7 +430,7 @@ namespace EQLogParser
       {
         int index = -1;
         if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
-          && IsPossiblePlayerName(pline.ActionPart, index))
+          && Utils.IsPossiblePlayerName(pline.ActionPart, index))
         {
           string test = pline.ActionPart.Substring(0, index);
           DataManager.Instance.UpdateUnverifiedPetOrPlayer(test);
@@ -362,10 +480,10 @@ namespace EQLogParser
           // check if name has a possessive
           if (firstSpace >= 2 && part.Substring(firstSpace - 2, 2) == "`s")
           {
-            if (IsPossiblePlayerName(part, firstSpace - 2))
+            if (Utils.IsPossiblePlayerName(part, firstSpace - 2))
             {
               int len;
-              if (IsPetOrMount(part, firstSpace + 1, out len))
+              if (Utils.IsPetOrMount(part, firstSpace + 1, out len))
               {
                 string petType = part.Substring(firstSpace + 1, len);
                 string owner = part.Substring(0, firstSpace - 2);
@@ -412,7 +530,7 @@ namespace EQLogParser
               }
             }
           }
-          else if (IsPossiblePlayerName(part, firstSpace))
+          else if (Utils.IsPossiblePlayerName(part, firstSpace))
           {
             int sizeSoFar = firstSpace + 1;
             int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
@@ -473,9 +591,9 @@ namespace EQLogParser
                 if (posessiveIndex > -1)
                 {
                   int len;
-                  if (IsPetOrMount(defender, posessiveIndex + 3, out len))
+                  if (Utils.IsPetOrMount(defender, posessiveIndex + 3, out len))
                   {
-                    if (IsPossiblePlayerName(defender, posessiveIndex))
+                    if (Utils.IsPossiblePlayerName(defender, posessiveIndex))
                     {
                       defenderOwner = defender.Substring(0, posessiveIndex);
                       defenderPetType = defender.Substring(posessiveIndex + 3, len);
@@ -536,7 +654,7 @@ namespace EQLogParser
                         if (endIndex > -1)
                         {
                           string player = part.Substring(byIndex + 3, endIndex - byIndex - 3);
-                          if (IsPossiblePlayerName(player, player.Length))
+                          if (Utils.IsPossiblePlayerName(player, player.Length))
                           {
                             // damage parsed above
                             attacker = player;
@@ -589,38 +707,6 @@ namespace EQLogParser
       }
 
       return record;
-    }
-
-    private static bool IsPetOrMount(string part, int start, out int len)
-    {
-      bool found = false;
-      len = -1;
-
-      int end = 2;
-      if (part.Length >= (start + ++end) && part.Substring(start, 3) == "pet" ||
-        part.Length >= (start + ++end) && part.Substring(start, 4) == "ward" && !(part.Length > (start + 5) && part[start + 5] != 'e') ||
-        part.Length >= (start + ++end) && part.Substring(start, 5) == "Mount" ||
-        part.Length >= (start + ++end) && part.Substring(start, 6) == "warder")
-      {
-        found = true;
-        len = end;
-      }
-      return found;
-    }
-
-    private static bool IsPossiblePlayerName(string part, int stop)
-    {
-      bool found = stop < 3 ? false : true;
-      for (int i = 0; found != false && i < stop; i++)
-      {
-        if (!Char.IsLetter(part, i))
-        {
-          found = false;
-          break;
-        }
-      }
-
-      return found;
     }
   }
 }

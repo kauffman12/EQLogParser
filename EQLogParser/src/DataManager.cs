@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 
@@ -28,6 +27,7 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
 
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
+    private List<ReceivedSpell> AllReceivedSpells = new List<ReceivedSpell>();
     private Dictionary<SpellClasses, string> ClassNames = new Dictionary<SpellClasses, string>();
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
     private ConcurrentDictionary<string, string> AttackerReplacement = new ConcurrentDictionary<string, string>();
@@ -35,6 +35,9 @@ namespace EQLogParser
     private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
+    private ConcurrentDictionary<string, List<string>> PosessiveLandsOnOthers = new ConcurrentDictionary<string, List<string>>();
+    private ConcurrentDictionary<string, List<string>> NonPosessiveLandsOnOthers = new ConcurrentDictionary<string, List<string>>();
+    private ConcurrentDictionary<string, List<string>> LandsOnYou = new ConcurrentDictionary<string, List<string>>();
     private ConcurrentDictionary<string, long> ProbablyNotAPlayer = new ConcurrentDictionary<string, long>();
     private ConcurrentDictionary<string, SpellData> SpellsDB = new ConcurrentDictionary<string, SpellData>();
     private ConcurrentDictionary<string, SpellClasses> SpellsToClass = new ConcurrentDictionary<string, SpellClasses>();
@@ -60,7 +63,9 @@ namespace EQLogParser
         VerifiedPlayers["Your"] = 1;
         VerifiedPlayers["YOUR"] = 1;
 
+        DictionaryListHelper<string, string> helper = new DictionaryListHelper<string, string>();
         lines = System.IO.File.ReadAllLines(@"data\spells.txt");
+
         foreach (string line in lines)
         {
           string[] data = line.Split('^');
@@ -79,6 +84,20 @@ namespace EQLogParser
           };
 
           SpellsDB[spellData.Spell] = spellData;
+
+          if (spellData.LandsOnOther.StartsWith("'s "))
+          {
+            helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData.SpellAbbrv);
+          }
+          else if (spellData.LandsOnOther.Length > 1)
+          {
+            helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData.SpellAbbrv);
+          }
+
+          if (spellData.LandsOnYou != "" && spellData.LandsOnOther != "") // just do stuff in common
+          {
+            helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData.SpellAbbrv);
+          }
         }
       }
       catch(Exception e)
@@ -136,14 +155,15 @@ namespace EQLogParser
       UpdatePlayerClassFromSpell(cast);
     }
 
-    public List<SpellCast> GetSpellCasts()
+    public void AddReceivedSpell(ReceivedSpell received)
     {
-      List<SpellCast> list;
-      lock(AllSpellCasts)
+      bool replaced;
+      received.Receiver = ReplaceAttacker(received.Receiver, out replaced);
+
+      lock (AllReceivedSpells)
       {
-        list = AllSpellCasts.ToList();
+        AllReceivedSpells.Add(received);
       }
-      return list;
     }
 
     public void SetPlayerName(string name)
@@ -200,6 +220,26 @@ namespace EQLogParser
       return VerifiedPlayers.ContainsKey(name);
     }
 
+    public List<SpellCast> GetSpellCasts()
+    {
+      List<SpellCast> list;
+      lock (AllSpellCasts)
+      {
+        list = AllSpellCasts.ToList();
+      }
+      return list;
+    }
+
+    public List<ReceivedSpell> GetAllReceivedSpells()
+    {
+      List<ReceivedSpell> list;
+      lock (AllReceivedSpells)
+      {
+        list = AllReceivedSpells.ToList();
+      }
+      return list;
+    }
+
     public NonPlayer GetNonPlayer(string name)
     {
       NonPlayer npc = null;
@@ -231,6 +271,27 @@ namespace EQLogParser
     public string GetPlayerFromPet(string pet)
     {
       return PetToPlayerMap.ContainsKey(pet) ? PetToPlayerMap[pet] : null;
+    }
+
+    public List<string> GetNonPosessiveLandsOnOther(string value)
+    {
+      List<string> result = null;
+      NonPosessiveLandsOnOthers.TryGetValue(value, out result);
+      return result;
+    }
+
+    public List<string> GetPosessiveLandsOnOther(string value)
+    {
+      List<string> result = null;
+      PosessiveLandsOnOthers.TryGetValue(value, out result);
+      return result;
+    }
+
+    public List<string> GetLandsOnYou(string value)
+    {
+      List<string> result = null;
+      LandsOnYou.TryGetValue(value, out result);
+      return result;
     }
 
     public bool IsProbablyNotAPlayer(string name)
