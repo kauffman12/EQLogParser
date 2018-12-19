@@ -92,6 +92,16 @@ namespace EQLogParser
     public DateTime BeginTime { get; set; }
   }
 
+  public class SpellData
+  {
+    public string Spell { get; set; }
+    public string SpellAbbrv { get; set; }
+    public bool Beneficial { get; set; }
+    public int ClassMask { get; set; }
+    public string LandsOnYou { get; set; }
+    public string LandsOnOther { get; set; }
+  }
+
   public class SpellCounts
   {
     public List<string> SpellList { get; set; }
@@ -119,6 +129,7 @@ namespace EQLogParser
     public SortedSet<long> NpcIDs { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime EndTime { get; set; }
+    public Dictionary<string, byte> UniqueClasses { get; set; }
   }
 
   public class StatsSummary
@@ -148,9 +159,9 @@ namespace EQLogParser
     public decimal CritRate { get; set; }
     public decimal LuckRate { get; set; }
     public decimal TwincastRate { get; set; }
-    public string Details { get; set; }
     public decimal Percent { get; set; }
     public string PercentString { get; set; }
+    public string ClassName { get; set; }
   }
 
   public class PlayerStats : PlayerSubStats

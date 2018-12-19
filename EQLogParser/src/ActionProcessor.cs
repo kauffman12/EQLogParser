@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -48,7 +47,7 @@ namespace EQLogParser
       {
         object data;
 
-        while (!stopped && !Queue.IsEmpty && Queue.TryDequeue(out data))
+        while (!stopped && Queue.TryDequeue(out data))
         {
           callback(data);
         }
