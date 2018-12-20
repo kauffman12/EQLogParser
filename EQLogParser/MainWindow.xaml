@@ -67,20 +67,20 @@
             <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="Log File Status" ContainerDockedSize="320,65">
               <WrapPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal">
-                  <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Total Bytes:</Label>
-                  <Label x:Name="fileSizeLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0</Label>
+                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">File Read:</Label>
+                  <Label x:Name="bytesReadLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                  <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Processed:</Label>
-                  <Label x:Name="bytesProcessedLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0</Label>
+                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Spell Parse:</Label>
+                  <Label x:Name="processedCastsLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                  <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Complete:</Label>
-                  <Label x:Name="completeLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                  <Label Width="70" HorizontalContentAlignment="Right" Margin="6,0,0,0">Load Time:</Label>
+                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Load Time:</Label>
                   <Label x:Name="processedTimeLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0 sec</Label>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                  <Label Width="85" HorizontalContentAlignment="left" Margin="4,0,0,0">DMG Parse:</Label>
+                  <Label x:Name="processedDamageLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
                 </StackPanel>
               </WrapPanel>
             </docking:ToolWindow>
@@ -124,7 +124,7 @@
                             <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
                           </MenuItem>
                           <Separator />
-                          <MenuItem x:Name="pdgMenuItemShowSpellCasts" IsEnabled="False" Header="Show Spell Casts" PreviewMouseDown="PlayerDataGridShowSpellCasts_Click">
+                          <MenuItem x:Name="pdgMenuItemShowSpellCasts" IsEnabled="False" Header="Show Spell Counts" PreviewMouseDown="PlayerDataGridShowSpellCasts_Click">
                             <MenuItem Header="Selected" IsEnabled="True"/>
                             <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
                             <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>

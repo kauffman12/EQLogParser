@@ -132,6 +132,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="src\ActionProcessor.cs" />
+    <Compile Include="src\CastLineParser.cs" />
     <Compile Include="src\DataManager.cs" />
     <Compile Include="src\SpellCountBuilder.cs" />
     <Compile Include="src\StatsBuilder.cs" />
@@ -145,7 +146,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\DataModel.cs" />
-    <Compile Include="src\LineParser.cs" />
+    <Compile Include="src\DamageLineParser.cs" />
     <Compile Include="src\LogReader.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
