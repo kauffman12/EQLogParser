@@ -71,14 +71,6 @@ namespace EQLogParser
             stats.DoubleBowShotCount++;
             stats.HitMap[record.Type].DoubleBowShotCount++;
             break;
-          case "Critical":
-          case "Crippling": // Crippling Blow
-          case "Deadly":    // Deadly Strike
-            stats.CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            stats.HitMap[record.Type].CritCount++;
-            stats.HitMap[record.Type].TotalCritDamage += record.Damage;
-            break;
           case "Flurry":
             stats.FlurryCount++;
             break;
@@ -87,6 +79,17 @@ namespace EQLogParser
             stats.TotalLuckyDamage += record.Damage;
             stats.HitMap[record.Type].LuckyCount++;
             stats.HitMap[record.Type].TotalLuckyDamage += record.Damage;
+            // workaround to keep better keep track of avg base crit damage
+            stats.TotalCritDamage -= record.Damage;
+            stats.HitMap[record.Type].TotalCritDamage -= record.Damage;
+            break;
+          case "Critical":
+          case "Crippling": // Crippling Blow
+          case "Deadly":    // Deadly Strike
+            stats.CritCount++;
+            stats.TotalCritDamage += record.Damage;
+            stats.HitMap[record.Type].CritCount++;
+            stats.HitMap[record.Type].TotalCritDamage += record.Damage;
             break;
           case "Rampage":
             rampage = true;
