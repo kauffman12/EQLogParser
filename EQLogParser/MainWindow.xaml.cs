@@ -25,7 +25,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.19";
+    private const string VERSION = "v1.0.20";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -666,12 +666,13 @@ namespace EQLogParser
         processedCastsLabel.Content = castPercent;
         processedDamageLabel.Content = damagePercent;
 
-        if (filePercent >= 100 && EQLogReader.FileLoadComplete)
+        if ((filePercent >= 100 || MonitorOnly) && EQLogReader.FileLoadComplete)
         {
+          bytesReadLabel.Content = "100%";
           bytesReadLabel.Foreground = GOOD_BRUSH;
         }
 
-        if (filePercent >= 100 && castPercent >= 10 && damagePercent >= 10 && EQLogReader.FileLoadComplete)
+        if (MonitorOnly || (filePercent >= 100 && castPercent >= 10 && damagePercent >= 10 && EQLogReader.FileLoadComplete))
         {
           progressWindow.Title = "Monitoring Log";
           UpdatingProgress = false;
