@@ -9,23 +9,20 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public delegate void ParseLineCallback(string line);
-    public delegate void InitialLoadCompleteCallback();
-    public long FileSize = 0;
-    public long BytesNeededToProcess = 0;
+    public delegate void ParseLineCallback(string line, long position);
+    public bool FileLoadComplete = false;
+    public long FileSize;
 
     private string FileName;
     private ParseLineCallback LoadingCallback;
-    private InitialLoadCompleteCallback CompleteCallback;
     private ThreadState LogThreadState;
     private bool MonitorOnly;
     private int LastMins;
 
-    public LogReader(string fileName, ParseLineCallback loadingCallback, InitialLoadCompleteCallback completeCallback, bool monitorOnly, int lastMins)
+    public LogReader(string fileName, ParseLineCallback loadingCallback, bool monitorOnly, int lastMins)
     {
       FileName = fileName;
       LoadingCallback = loadingCallback;
-      CompleteCallback = completeCallback;
       MonitorOnly = monitorOnly;
       LastMins = lastMins;
     }
@@ -51,13 +48,11 @@ namespace EQLogParser
           string logFileName = FileName.Substring(FileName.LastIndexOf("\\") + 1);
 
           FileSize = fs.Length;
-
           if (MonitorOnly)
           {
-            fs.Seek(FileSize, 0);
-            BytesNeededToProcess = 0;
+            fs.Seek(fs.Length, 0);
           }
-          else if (LastMins > -1 && FileSize > 0)
+          else if (LastMins > -1 && fs.Length > 0)
           {
             DateTime now = DateTime.Now;
             long position = fs.Length / 2;
@@ -92,20 +87,15 @@ namespace EQLogParser
             fs.Seek(lastPos, SeekOrigin.Begin);
             reader.DiscardBufferedData();
             reader.ReadLine(); // seek will lead to partial line
-            BytesNeededToProcess = (FileSize - fs.Position);
-          }
-          else
-          {
-            BytesNeededToProcess = FileSize;
-          }
+           }
 
           while (!reader.EndOfStream && myState.isRunning())
           {
             string line = reader.ReadLine();
-            LoadingCallback(line);
+            LoadingCallback(line, fs.Position);
           }
 
-          CompleteCallback();
+          FileLoadComplete = true;
 
           // setup watcher
           FileSystemWatcher fsw = new FileSystemWatcher
@@ -142,7 +132,7 @@ namespace EQLogParser
                   while (!reader.EndOfStream)
                   {
                     string line = reader.ReadLine();
-                    LoadingCallback(line);
+                    LoadingCallback(line, fs.Length);
                   }
                 }
                 break;

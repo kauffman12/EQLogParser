@@ -44,10 +44,15 @@ namespace EQLogParser
     public bool IsPet { get; set; }
   }
 
+  public class DamageProcessedEvent
+  {
+    public ProcessLine ProcessLine { get; set; }
+    public DamageRecord Record { get; set; }
+  }
+
   public class ProcessLine
   {
     public string Line { get; set; }
-    public int State { get; set; }
     public DateTime CurrentTime { get; set; }
     public string TimeString { get; set; }
     public string ActionPart { get; set; }

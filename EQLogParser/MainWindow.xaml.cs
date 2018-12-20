@@ -42,9 +42,13 @@ namespace EQLogParser
     private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
+    private static long CastLineCount = 0;
+    private static long DamageLineCount = 0;
+    private static long CastLinesProcessed = 0;
+    private static long DamageLinesProcessed = 0;
+    private static long FilePosition = 0;
     private static ActionProcessor CastLineProcessor;
     private static ActionProcessor DamageLineProcessor;
-    private static ActionProcessor LinePreProcessor;
 
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
@@ -61,7 +65,6 @@ namespace EQLogParser
 
     // progress window
     private static bool UpdatingProgress = false;
-    private static long ProcessedBytes = 0; // EOF
     private static DateTime StartLoadTime; // millis
     private static bool MonitorOnly;
 
@@ -123,6 +126,9 @@ namespace EQLogParser
           }
         };
 
+        DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
+        CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
+
         DispatcherTimer dispatcherTimer = new DispatcherTimer();
         dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
         dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
@@ -131,27 +137,25 @@ namespace EQLogParser
         NonPlayerSelectionTimer = new DispatcherTimer();
         NonPlayerSelectionTimer.Tick += NonPlayerSelectionTimer_Tick;
         NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, 300);
+        DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
 
         ThemeManager.BeginUpdate();
-        try
-        {
-          // Use the Actipro styles for native WPF controls that look great with Actipro's control products
-          ThemeManager.AreNativeThemesEnabled = true;
+        // Use the Actipro styles for native WPF controls that look great with Actipro's control products
+        ThemeManager.AreNativeThemesEnabled = true;
 
-          SharedThemeCatalogRegistrar.Register();
-          DockingThemeCatalogRegistrar.Register();
+        SharedThemeCatalogRegistrar.Register();
+        DockingThemeCatalogRegistrar.Register();
 
-          // Default the theme to Metro Light
-          ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
-        }
-        finally
-        {
-          ThemeManager.EndUpdate();
-        }
+        // Default the theme to Metro Light
+        ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
       }
       catch (Exception e)
       {
         LOG.Error(e);
+      }
+      finally
+      {
+        ThemeManager.EndUpdate();
       }
     }
 
@@ -200,6 +204,28 @@ namespace EQLogParser
       else if (e.Source == playerDPSTextWindowMenuItem)
       {
         Utils.OpenWindow(playerDPSTextWindow);
+      }
+    }
+
+    private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
+    {
+      if (processed.Record != null)
+      {
+        if (NpcDamageManager.LastUpdateTime != DateTime.MinValue)
+        {
+          TimeSpan diff = processed.ProcessLine.CurrentTime.Subtract(NpcDamageManager.LastUpdateTime);
+          if (diff.TotalSeconds > 120)
+          {
+            NonPlayer divider = new NonPlayer() { FightID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
+            Dispatcher.InvokeAsync(() =>
+            {
+              CurrentFightID++;
+              NonPlayersView.Add(divider);
+            });
+          }
+        }
+
+        NpcDamageManager.AddOrUpdateNpc(processed.Record, processed.ProcessLine.CurrentTime, processed.ProcessLine.TimeString.Substring(4, 15));
       }
     }
 
@@ -469,7 +495,7 @@ namespace EQLogParser
             Dispatcher.InvokeAsync(() =>
             {
               int total = counts.UniqueSpellCounts.Values.Sum();
-              DataGridTextColumn col = new DataGridTextColumn() { Header = "Total Casts = " + total, Binding = new Binding("Values[" + colCount + "]") };
+              DataGridTextColumn col = new DataGridTextColumn() { Header = "Total Count = " + total, Binding = new Binding("Values[" + colCount + "]") };
               col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
               col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
               dataGrid.Columns.Add(col);
@@ -505,7 +531,7 @@ namespace EQLogParser
 
       if (spellCastsWindow == null || !spellCastsWindow.IsOpen)
       {
-        spellCastsWindow = new DocumentWindow(docSite, "spellCastsWindow", "Spell Casts", null, dataGrid);
+        spellCastsWindow = new DocumentWindow(docSite, "spellCastsWindow", "Spell Counts", null, dataGrid);
       }
       else
       {
@@ -631,19 +657,39 @@ namespace EQLogParser
       {
         busyIcon.Visibility = Visibility.Visible;
         progressWindow.Title = "Reading Log";
-        double percentComplete = EQLogReader.BytesNeededToProcess > 0 ? Math.Min(Convert.ToInt32((double)ProcessedBytes / EQLogReader.BytesNeededToProcess * 100), 100) : 100;
-        fileSizeLabel.Content = Math.Ceiling(EQLogReader.FileSize / 1024.0) + " KB";
-        bytesProcessedLabel.Content = Math.Ceiling(ProcessedBytes / 1024.0) + " KB";
-        completeLabel.Content = percentComplete + "%";
         processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
 
-        if (percentComplete >= 100.0)
+        double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
+        double castPercent = CastLineCount > 0 ? Math.Min(Convert.ToInt32((double)CastLinesProcessed / CastLineCount * 100), 100) : 100;
+        double damagePercent = DamageLineCount > 0 ? Math.Min(Convert.ToInt32((double)DamageLinesProcessed / DamageLineCount * 100), 100) : 100;
+        bytesReadLabel.Content = filePercent + "%";
+        processedCastsLabel.Content = castPercent + "%";
+        processedDamageLabel.Content = damagePercent + "%";
+
+        if (filePercent >= 100 && EQLogReader.FileLoadComplete)
+        {
+          bytesReadLabel.Foreground = GOOD_BRUSH;
+        }
+
+        if (castPercent >= 100 && EQLogReader.FileLoadComplete)
+        {
+          processedCastsLabel.Foreground = GOOD_BRUSH;
+        }
+
+        if (damagePercent >= 100 && EQLogReader.FileLoadComplete)
+        {
+          processedDamageLabel.Foreground = GOOD_BRUSH;
+        }
+
+        if (filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && EQLogReader.FileLoadComplete)
         {
           progressWindow.Title = "Monitoring Log";
-          percentComplete = 100;
           UpdatingProgress = false;
-          completeLabel.Foreground = GOOD_BRUSH;
           busyIcon.Visibility = Visibility.Hidden;
+
+          LOG.Info("Finished Loading Log File");
+          DamageLineProcessor.LowerPriority();
+          CastLineProcessor.LowerPriority();
         }
       }
     }
@@ -767,22 +813,20 @@ namespace EQLogParser
         if (result == true)
         {
           dpsTitle.Content = DPS_LABEL;
-          completeLabel.Foreground = BRIGHT_TEXT_BRUSH;
+          bytesReadLabel.Foreground = BRIGHT_TEXT_BRUSH;
+          processedCastsLabel.Foreground = BRIGHT_TEXT_BRUSH;
+          processedDamageLabel.Foreground = BRIGHT_TEXT_BRUSH;
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
 
-          NeedStatsUpdate = true;
-          UpdatingProgress = true;
-          ProcessedBytes = 0;
+          NeedStatsUpdate = UpdatingProgress = true;
           StartLoadTime = DateTime.Now;
           CurrentFightID = 0;
+          CastLineCount = DamageLineCount = CastLinesProcessed = DamageLinesProcessed = FilePosition = 0;
 
           StopProcessors();
-
           NpcDamageManager = new NpcDamageManager();
-          LinePreProcessor = new ActionProcessor("LinePreProcessor", PreProcessLine);
-          DamageLineProcessor = new ActionProcessor("DamageLineProcessor", ProcessDamageLine);
-          CastLineProcessor = new ActionProcessor("CastLineProcessor", ProcessCastLine);
-          CastLineProcessor.LowerPriority();
+          DamageLineProcessor = new ActionProcessor("DamageLineProcessor", DamageLineParser.Process);
+          CastLineProcessor = new ActionProcessor("CastLineProcessor", CastLineParser.Process);
 
           string name = "Uknown";
           if (dialog.FileName.Length > 0)
@@ -804,7 +848,7 @@ namespace EQLogParser
           npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
 
           progressWindow.IsOpen = true;
-          EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, FileLoadingCompleteCallback, monitorOnly, lastMins);
+          EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, monitorOnly, lastMins);
           EQLogReader.Start();
         }
       }
@@ -814,137 +858,22 @@ namespace EQLogParser
       }
     }
 
-    private void FileLoadingCallback(string line)
+    private void FileLoadingCallback(string line, long position)
     {
+      Interlocked.Exchange(ref FilePosition,  position);
+
       if (line.Length > MIN_LINE_LENGTH)
       {
-        LinePreProcessor.AppendToQueue(line);
-      }
-      else
-      {
-        Interlocked.Add(ref ProcessedBytes, line.Length + 2);
+        CastLineCount++;
+        DamageLineCount++;
+        CastLineProcessor.AppendToQueue(line);
+        DamageLineProcessor.AppendToQueue(line);
       }
 
-      if ((LinePreProcessor.QueueSize() + DamageLineProcessor.QueueSize() + CastLineProcessor.QueueSize()) > 200000)
+      if ((DamageLineProcessor.QueueSize() + CastLineProcessor.QueueSize()) > 200000)
       {
         Thread.Sleep(20);
       }
-    }
-
-    private void FileLoadingCompleteCallback()
-    {
-      LOG.Info("Finished Loading Log File");
-      LinePreProcessor.LowerPriority();
-      DamageLineProcessor.LowerPriority();
-    }
-
-    private void PreProcessLine(object data)
-    {
-      string line = data as string;
-      ProcessLine damagePline = LineParser.KeepForDamageProcessing(line);
-      if (damagePline != null && damagePline.State >= 0)
-      {
-        DamageLineProcessor.AppendToQueue(damagePline);
-      }
-
-      ProcessLine castPline = LineParser.KeepForSpellCastProcessing(line);
-      if (castPline != null && castPline.State >= 0)
-      {
-        CastLineProcessor.AppendToQueue(castPline);
-      }
-
-      if (damagePline == null && castPline == null)
-      {
-        Interlocked.Add(ref ProcessedBytes, line.Length + 2);
-      }
-    }
-
-    private void ProcessCastLine(object data)
-    {
-      ProcessLine pline = data as ProcessLine;
-      if (pline != null)
-      {
-        try
-        {
-          switch(pline.State)
-          {
-            case 10:
-              SpellCast cast = LineParser.ParseSpellCast(pline);
-              if (cast != null)
-              {
-                DataManager.Instance.AddSpellCast(cast);
-              }
-              break;
-            case 11:
-              LineParser.CheckForPosessiveLandsOnOther(pline);
-              break;
-            case 12:
-              LineParser.CheckForOtherLandsOnCases(pline);
-              break;
-          }
-
-          Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
-        }
-        catch (Exception e)
-        {
-          LOG.Error(e);
-        }
-      }
-    }
-
-    private void ProcessDamageLine(object data)
-    {
-      ProcessLine pline = data as ProcessLine;
-      if (pline != null)
-      {
-        if (pline.CurrentTime == DateTime.MinValue)
-        {
-          Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
-          return; // abort
-        }
-
-        try
-        {
-          switch (pline.State)
-          {
-            case 0:
-              // check for damage
-              DamageRecord record = LineParser.ParseDamage(pline.ActionPart);
-              if (record != null)
-              {
-                if (NpcDamageManager.LastUpdateTime != DateTime.MinValue)
-                {
-                  TimeSpan diff = pline.CurrentTime.Subtract(NpcDamageManager.LastUpdateTime);
-                  if (diff.TotalSeconds > 120)
-                  {
-                    NonPlayer divider = new NonPlayer() { FightID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
-                    Dispatcher.InvokeAsync(() =>
-                    {
-                      CurrentFightID++;
-                      NonPlayersView.Add(divider);
-                    });
-                  }
-                }
-
-                NpcDamageManager.AddOrUpdateNpc(record, pline.CurrentTime, pline.TimeString.Substring(4, 15));
-              }
-              break;
-            case 1:
-              // check slain
-              LineParser.CheckForSlain(pline);
-              break;
-            case 2:
-              LineParser.CheckForHeal(pline);
-              break;
-          }
-        }
-        catch (Exception e)
-        {
-          LOG.Error(e);
-        }
-      }
-
-      Interlocked.Add(ref ProcessedBytes, pline.Line.Length + 2);
     }
 
     private void PlayerDPSTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -992,11 +921,6 @@ namespace EQLogParser
       if (DamageLineProcessor != null)
       {
         DamageLineProcessor.Stop();
-      }
-
-      if (LinePreProcessor != null)
-      {
-        LinePreProcessor.Stop();
       }
 
       if (EQLogReader != null)
