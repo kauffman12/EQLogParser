@@ -263,9 +263,10 @@ namespace EQLogParser
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
       playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
       playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
-      if (playerTotals.CritHits > 0)
+      int adjusted = playerTotals.CritHits - playerTotals.LuckyHits;
+      if (adjusted > 0)
       {
-        playerTotals.AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / playerTotals.CritHits);
+        playerTotals.AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / adjusted);
       }
       if (playerTotals.LuckyHits > 0)
       {
@@ -293,9 +294,10 @@ namespace EQLogParser
         playerTotals.SubStats[key].TotalSeconds = playerTotals.TotalSeconds;
         playerTotals.SubStats[key].DPS = (long) Math.Round(playerTotals.SubStats[key].TotalDamage / playerTotals.SubStats[key].TotalSeconds);
         playerTotals.SubStats[key].Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalDamage) / playerTotals.SubStats[key].Hits);
-        if (playerTotals.SubStats[key].CritHits > 0)
+        adjusted = (playerTotals.SubStats[key].CritHits - playerTotals.SubStats[key].LuckyHits);
+        if (adjusted > 0)
         {
-          playerTotals.SubStats[key].AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalCritDamage) / playerTotals.SubStats[key].CritHits);
+          playerTotals.SubStats[key].AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalCritDamage) / adjusted);
         }
         if (playerTotals.SubStats[key].LuckyHits > 0)
         {
