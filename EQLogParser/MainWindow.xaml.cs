@@ -25,7 +25,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.18";
+    private const string VERSION = "v1.0.19";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -440,7 +440,7 @@ namespace EQLogParser
 
       dataGrid.Sorting += (s, e2) =>
       {
-        if (e2.Column.Header != null && (e2.Column.Header.ToString() != "Spell"))
+        if (e2.Column.Header != null && (e2.Column.Header.ToString() != ""))
         {
           e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Ascending;
         }
@@ -660,32 +660,24 @@ namespace EQLogParser
         processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
 
         double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-        double castPercent = CastLineCount > 0 ? Math.Min(Convert.ToInt32((double)CastLinesProcessed / CastLineCount * 100), 100) : 100;
-        double damagePercent = DamageLineCount > 0 ? Math.Min(Convert.ToInt32((double)DamageLinesProcessed / DamageLineCount * 100), 100) : 100;
+        double castPercent = CastLineCount > 0 ? Math.Round((double)CastLinesProcessed / CastLineCount * 10, 1) : 0;
+        double damagePercent = DamageLineCount > 0 ? Math.Round((double)DamageLinesProcessed / DamageLineCount * 10, 1) : 0;
         bytesReadLabel.Content = filePercent + "%";
-        processedCastsLabel.Content = castPercent + "%";
-        processedDamageLabel.Content = damagePercent + "%";
+        processedCastsLabel.Content = castPercent;
+        processedDamageLabel.Content = damagePercent;
 
         if (filePercent >= 100 && EQLogReader.FileLoadComplete)
         {
           bytesReadLabel.Foreground = GOOD_BRUSH;
         }
 
-        if (castPercent >= 100 && EQLogReader.FileLoadComplete)
-        {
-          processedCastsLabel.Foreground = GOOD_BRUSH;
-        }
-
-        if (damagePercent >= 100 && EQLogReader.FileLoadComplete)
-        {
-          processedDamageLabel.Foreground = GOOD_BRUSH;
-        }
-
-        if (filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && EQLogReader.FileLoadComplete)
+        if (filePercent >= 100 && castPercent >= 10 && damagePercent >= 10 && EQLogReader.FileLoadComplete)
         {
           progressWindow.Title = "Monitoring Log";
           UpdatingProgress = false;
           busyIcon.Visibility = Visibility.Hidden;
+          processedCastsLabel.Content = "-";
+          processedDamageLabel.Content = "-";
 
           LOG.Info("Finished Loading Log File");
           DamageLineProcessor.LowerPriority();
@@ -870,7 +862,7 @@ namespace EQLogParser
         DamageLineProcessor.AppendToQueue(line);
       }
 
-      if ((DamageLineProcessor.QueueSize() + CastLineProcessor.QueueSize()) > 200000)
+      if (DamageLineProcessor.QueueSize() > 100000 || CastLineProcessor.QueueSize() > 100000)
       {
         Thread.Sleep(20);
       }
