@@ -29,6 +29,7 @@ namespace EQLogParser
       SpellCounts totals = new SpellCounts() { PlayerCountMap = playerCounts, TotalCountMap = totalCountMap };
       totals.SpellList = uniqueSpells.Keys.OrderByDescending(key => uniqueSpells[key]).ToList();
       totals.SortedPlayers = playerCounts.Keys.OrderByDescending(key => totalCountMap[key]).ToList();
+      totals.UniqueSpellCounts = uniqueSpells;
       return totals;
     }
 

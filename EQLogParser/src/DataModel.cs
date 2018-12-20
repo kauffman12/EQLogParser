@@ -112,6 +112,7 @@ namespace EQLogParser
     public List<string> SpellList { get; set; }
     public Dictionary<string, int> TotalCountMap { get; set; }
     public Dictionary<string, Dictionary<string, int>> PlayerCountMap { get; set; }
+    public Dictionary<string, int> UniqueSpellCounts { get; set; }
     public List<string> SortedPlayers { get; set; }
   }
 

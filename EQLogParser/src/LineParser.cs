@@ -132,33 +132,22 @@ namespace EQLogParser
         }
         else // lands on messages
         {
-          if (line.Length > ACTION_PART_INDEX + 6)
+          int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal);
+          if (firstSpace > -1 && line[firstSpace - 2] == '\'' && line[firstSpace - 1] == 's')
           {
-            if (line.IndexOf("You", ACTION_PART_INDEX, 3, StringComparison.OrdinalIgnoreCase) > -1 && line[ACTION_PART_INDEX + 3] == ' ' || 
-              (line[ACTION_PART_INDEX + 3] == 'r' && line[ACTION_PART_INDEX + 4] == ' ' && Char.IsLower(line[ACTION_PART_INDEX + 5])))
+            pline = new ProcessLine() { Line = line, State = 11, ActionPart = line.Substring(ACTION_PART_INDEX) };
+            pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
+          }
+          else if (firstSpace > -1)
+          {
+            string player = line.Substring(ACTION_PART_INDEX, firstSpace - ACTION_PART_INDEX);
+            if (!IgnoreMap.ContainsKey(player))
             {
-              pline = new ProcessLine() { Line = line, State = 11, ActionPart = line.Substring(ACTION_PART_INDEX) };
-            }
-            else
-            {
-              int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal);
-              if (firstSpace > -1 && line[firstSpace - 2] == '\'' && line[firstSpace - 1] == 's')
+              if (line.Length > firstSpace + 6)
               {
                 pline = new ProcessLine() { Line = line, State = 12, ActionPart = line.Substring(ACTION_PART_INDEX) };
                 pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
-              }
-              else if (firstSpace > -1)
-              {
-                string player = line.Substring(ACTION_PART_INDEX, firstSpace - ACTION_PART_INDEX);
-                if (!IgnoreMap.ContainsKey(player) && (Utils.IsPossiblePlayerName(player)))
-                {
-                  if (line.Length > firstSpace + 6)
-                  {
-                    pline = new ProcessLine() { Line = line, State = 13, ActionPart = line.Substring(ACTION_PART_INDEX) };
-                    pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
-                    pline.OptionalData = player;
-                  }
-                }
+                pline.OptionalData = player;
               }
             }
           }
@@ -178,54 +167,41 @@ namespace EQLogParser
       return pline;
     }
 
-    public static void CheckForLandsOnYou(ProcessLine pline)
+    public static void CheckForOtherLandsOnCases(ProcessLine pline)
     {
-      List<string> results = DataManager.Instance.GetLandsOnYou(pline.ActionPart);
-      if (results != null && results.Count > 0)
+      string player = pline.OptionalData;
+      List<string> results = DataManager.Instance.GetNonPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
+      if (results == null)
       {
-        if (results.Count == 1)
+        results = DataManager.Instance.GetLandsOnYou(pline.ActionPart);
+        if (results != null)
         {
-          DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
-          {
-            Receiver = "You",
-            BeginTime = pline.CurrentTime,
-            SpellAbbrv = results[0]
-          });
+          player = "You";
         }
       }
-    }
 
-    public static void CheckForNonPosessiveLandsOnOther(ProcessLine pline)
-    {
-      List<string> results = DataManager.Instance.GetNonPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
-      if (results != null && results.Count > 0)
+      if (results != null && results.Count == 1)
       {
-        if (results.Count == 1)
+        DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
         {
-          DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
-          {
-            Receiver = pline.OptionalData,
-            BeginTime = pline.CurrentTime,
-            SpellAbbrv = results[0]
-          });
-        }
+          Receiver = player,
+          BeginTime = pline.CurrentTime,
+          SpellAbbrv = results[0]
+        });
       }
     }
 
     public static void CheckForPosessiveLandsOnOther(ProcessLine pline)
     {
       List<string> results = DataManager.Instance.GetPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
-      if (results != null && results.Count > 0)
+      if (results != null && results.Count == 1)
       {
-        if (results.Count == 1)
+        DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
         {
-          DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
-          {
-            Receiver = pline.ActionPart.Substring(0, pline.OptionalIndex - 3),
-            BeginTime = pline.CurrentTime,
-            SpellAbbrv = results[0]
-          });
-        }
+          Receiver = pline.ActionPart.Substring(0, pline.OptionalIndex - 3),
+          BeginTime = pline.CurrentTime,
+          SpellAbbrv = results[0]
+        });
       }
     }
 
