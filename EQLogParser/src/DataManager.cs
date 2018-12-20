@@ -28,19 +28,20 @@ namespace EQLogParser
 
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
     private List<ReceivedSpell> AllReceivedSpells = new List<ReceivedSpell>();
+    private Dictionary<string, List<string>> PosessiveLandsOnOthers = new Dictionary<string, List<string>>();
+    private Dictionary<string, List<string>> NonPosessiveLandsOnOthers = new Dictionary<string, List<string>>();
+    private Dictionary<string, List<string>> LandsOnYou = new Dictionary<string, List<string>>();
     private Dictionary<SpellClasses, string> ClassNames = new Dictionary<SpellClasses, string>();
+    private Dictionary<string, SpellData> SpellsDB = new Dictionary<string, SpellData>();
+    private Dictionary<string, SpellClasses> SpellsToClass = new Dictionary<string, SpellClasses>();
+
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
     private ConcurrentDictionary<string, string> AttackerReplacement = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
-    private ConcurrentDictionary<string, List<string>> PosessiveLandsOnOthers = new ConcurrentDictionary<string, List<string>>();
-    private ConcurrentDictionary<string, List<string>> NonPosessiveLandsOnOthers = new ConcurrentDictionary<string, List<string>>();
-    private ConcurrentDictionary<string, List<string>> LandsOnYou = new ConcurrentDictionary<string, List<string>>();
     private ConcurrentDictionary<string, long> ProbablyNotAPlayer = new ConcurrentDictionary<string, long>();
-    private ConcurrentDictionary<string, SpellData> SpellsDB = new ConcurrentDictionary<string, SpellData>();
-    private ConcurrentDictionary<string, SpellClasses> SpellsToClass = new ConcurrentDictionary<string, SpellClasses>();
     private ConcurrentDictionary<string, byte> UnverifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();

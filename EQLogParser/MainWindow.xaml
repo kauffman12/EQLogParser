@@ -67,20 +67,20 @@
             <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="Log File Status" ContainerDockedSize="320,65">
               <WrapPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal">
-                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">File Read:</Label>
-                  <Label x:Name="bytesReadLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
+                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Progress:</Label>
+                  <Label x:Name="bytesReadLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Spell Parse:</Label>
-                  <Label x:Name="processedCastsLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
+                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Spell Rate:</Label>
+                  <Label x:Name="processedCastsLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">-</Label>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                   <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Load Time:</Label>
-                  <Label x:Name="processedTimeLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0 sec</Label>
+                  <Label x:Name="processedTimeLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">0 sec</Label>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                  <Label Width="85" HorizontalContentAlignment="left" Margin="4,0,0,0">DMG Parse:</Label>
-                  <Label x:Name="processedDamageLabel" Width="75" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
+                  <Label Width="85" HorizontalContentAlignment="left" Margin="4,0,0,0">DMG Rate:</Label>
+                  <Label x:Name="processedDamageLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">-</Label>
                 </StackPanel>
               </WrapPanel>
             </docking:ToolWindow>
