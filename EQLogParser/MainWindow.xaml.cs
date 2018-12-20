@@ -466,12 +466,22 @@ namespace EQLogParser
               colCount++;
             }
 
+            Dispatcher.InvokeAsync(() =>
+            {
+              int total = counts.UniqueSpellCounts.Values.Sum();
+              DataGridTextColumn col = new DataGridTextColumn() { Header = "Total Casts = " + total, Binding = new Binding("Values[" + colCount + "]") };
+              col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
+              col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
+              dataGrid.Columns.Add(col);
+            });
+
             foreach (var spell in counts.SpellList)
             {
-              SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count] };
+              SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count + 1] };
               row.IsReceived = spell.StartsWith("Received");
 
-              for (int i = 0; i < counts.SortedPlayers.Count; i++)
+              int i;
+              for (i = 0; i < counts.SortedPlayers.Count; i++)
               {
                 if (counts.PlayerCountMap.ContainsKey(counts.SortedPlayers[i]))
                 {
@@ -479,6 +489,7 @@ namespace EQLogParser
                 }
               }
 
+              row.Values[i] = counts.UniqueSpellCounts[spell]; 
               Dispatcher.InvokeAsync(() => rows.Add(row));
               Thread.Sleep(5);
             }
@@ -865,13 +876,10 @@ namespace EQLogParser
               }
               break;
             case 11:
-              LineParser.CheckForLandsOnYou(pline);
-              break;
-            case 12:
               LineParser.CheckForPosessiveLandsOnOther(pline);
               break;
-            case 13:
-              LineParser.CheckForNonPosessiveLandsOnOther(pline);
+            case 12:
+              LineParser.CheckForOtherLandsOnCases(pline);
               break;
           }
 
