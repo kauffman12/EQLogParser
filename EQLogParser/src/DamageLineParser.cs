@@ -5,9 +5,11 @@ using System.Text.RegularExpressions;
 
 namespace EQLogParser
 {
-  class LineParser
+  class DamageLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
+    public static event EventHandler<object> EventsLineProcessed; 
 
     private const int ACTION_PART_INDEX = 27;
     private static Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
@@ -37,55 +39,52 @@ namespace EQLogParser
       new KeyValuePair<string, string>("frenzies", "frenzies on"), new KeyValuePair<string, string>("frenzy", "frenzy on")
     });
 
-    public static ConcurrentDictionary<string, byte> IgnoreMap = new ConcurrentDictionary<string, byte>(
-      new List<KeyValuePair<string, byte>>
+    public static void Process(object data)
     {
-      new KeyValuePair<string, byte>("Players", 1), new KeyValuePair<string, byte>("GUILD", 1),
-      new KeyValuePair<string, byte>("Autojoining", 1), new KeyValuePair<string, byte>("Welcome", 1),
-      new KeyValuePair<string, byte>("There", 1), new KeyValuePair<string, byte>("The", 1),
-      new KeyValuePair<string, byte>("Fellowship", 1), new KeyValuePair<string, byte>("Targeted", 1),
-      new KeyValuePair<string, byte>("Right", 1), new KeyValuePair<string, byte>("Beginning", 1),
-      new KeyValuePair<string, byte>("Stand", 1), new KeyValuePair<string, byte>("MESSAGE", 1)
-    });
-
-    public static ProcessLine KeepForDamageProcessing(string line)
-    {
-      ProcessLine pline = null;
+      string line = data as string;
 
       try
       {
         int index;
         if (line.Length >= 40 && line.IndexOf(" damage", ACTION_PART_INDEX + 13, StringComparison.Ordinal) > -1)
         {
-          pline = new ProcessLine() { Line = line, State = 0, ActionPart = line.Substring(ACTION_PART_INDEX) };
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+          pline.TimeString = pline.Line.Substring(1, 24);
+          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+
+          DamageRecord record = ParseDamage(pline.ActionPart);
+          if (record != null)
+          {
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, ProcessLine = pline };
+            EventsDamageProcessed(record, e);
+          }
         }
         else if (line.Length >= 51 && (index = line.IndexOf(" healed ", ACTION_PART_INDEX, 24, StringComparison.Ordinal)) > -1 && char.IsUpper(line[index + 8]))
         {
           // WARNING -- this is only a subset of all heal lines
-          pline = new ProcessLine() { Line = line, State = 2, ActionPart = line.Substring(ACTION_PART_INDEX) };
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
+          pline.TimeString = pline.Line.Substring(1, 24);
+          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+          HandleHealed(pline);
         }
         else if (line.Length < 102 && (index = line.IndexOf(" has been slain by", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
         {
-          pline = new ProcessLine() { Line = line, State = 1, ActionPart = line.Substring(ACTION_PART_INDEX) };
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
+          pline.TimeString = pline.Line.Substring(1, 24);
+          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+          HandleSlain(pline);
         }
         else
         {
-          ProcessLine preProcessOnly = new ProcessLine() { Line = line, State = -1 };
-          preProcessOnly.ActionPart = line.Substring(ACTION_PART_INDEX);
+          ProcessLine pline= new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
 
           // check other things
-          if (!CheckForPlayers(preProcessOnly))
+          if (!CheckForPlayers(pline))
           {
-            CheckForPetLeader(preProcessOnly);
+            CheckForPetLeader(pline);
           }
-        }
-
-        if (pline != null && pline.State >= 0)
-        {
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
         }
       }
       catch (Exception e)
@@ -93,119 +92,10 @@ namespace EQLogParser
         LOG.Error(e);
       }
 
-      return pline;
+      EventsLineProcessed(data, data);
     }
 
-    public static ProcessLine KeepForSpellCastProcessing(string line)
-    {
-      ProcessLine pline = null;
-
-      try
-      {
-        int index = -1;
-        if (line.Length > 44 && (index = line.IndexOf(" begin", ACTION_PART_INDEX + 3, StringComparison.Ordinal)) > -1)
-        {
-          int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX);
-          if (firstSpace > -1 && firstSpace == index)
-          {
-            if (firstSpace == (ACTION_PART_INDEX + 3) && line.Substring(ACTION_PART_INDEX, 3) == "You")
-            {
-              var test = line.Substring(index + 7, 4);
-              if (test == "cast" || test == "sing")
-              {
-                pline = new ProcessLine() { Line = line, State = 10, ActionPart = line.Substring(ACTION_PART_INDEX) };
-                pline.OptionalIndex = index - ACTION_PART_INDEX;
-                pline.OptionalData = "you" + test;
-              }
-            }
-            else
-            {
-              var test = line.Substring(index + 11, 4);
-              if (test == "cast" || test == "sing")
-              {
-                pline = new ProcessLine() { Line = line, State = 10, ActionPart = line.Substring(ACTION_PART_INDEX) };
-                pline.OptionalIndex = index - ACTION_PART_INDEX;
-                pline.OptionalData = test;
-              }
-            }
-          }
-        }
-        else // lands on messages
-        {
-          int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal);
-          if (firstSpace > -1 && line[firstSpace - 2] == '\'' && line[firstSpace - 1] == 's')
-          {
-            pline = new ProcessLine() { Line = line, State = 11, ActionPart = line.Substring(ACTION_PART_INDEX) };
-            pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
-          }
-          else if (firstSpace > -1)
-          {
-            string player = line.Substring(ACTION_PART_INDEX, firstSpace - ACTION_PART_INDEX);
-            if (!IgnoreMap.ContainsKey(player))
-            {
-              if (line.Length > firstSpace + 6)
-              {
-                pline = new ProcessLine() { Line = line, State = 12, ActionPart = line.Substring(ACTION_PART_INDEX) };
-                pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
-                pline.OptionalData = player;
-              }
-            }
-          }
-        }
-
-        if (pline != null && pline.State >= 0)
-        {
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
-        }
-      }
-      catch (Exception e)
-      {
-        LOG.Error(e);
-      }
-
-      return pline;
-    }
-
-    public static void CheckForOtherLandsOnCases(ProcessLine pline)
-    {
-      string player = pline.OptionalData;
-      List<string> results = DataManager.Instance.GetNonPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
-      if (results == null)
-      {
-        results = DataManager.Instance.GetLandsOnYou(pline.ActionPart);
-        if (results != null)
-        {
-          player = "You";
-        }
-      }
-
-      if (results != null && results.Count == 1)
-      {
-        DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
-        {
-          Receiver = player,
-          BeginTime = pline.CurrentTime,
-          SpellAbbrv = results[0]
-        });
-      }
-    }
-
-    public static void CheckForPosessiveLandsOnOther(ProcessLine pline)
-    {
-      List<string> results = DataManager.Instance.GetPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
-      if (results != null && results.Count == 1)
-      {
-        DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
-        {
-          Receiver = pline.ActionPart.Substring(0, pline.OptionalIndex - 3),
-          BeginTime = pline.CurrentTime,
-          SpellAbbrv = results[0]
-        });
-      }
-    }
-
-    public static void CheckForSlain(ProcessLine pline)
+    private static void HandleSlain(ProcessLine pline)
     {
       string test = pline.ActionPart.Substring(0, pline.OptionalIndex);
       if (!DataManager.Instance.CheckNameForPlayer(test) && !DataManager.Instance.CheckNameForPet(test))
@@ -217,7 +107,7 @@ namespace EQLogParser
       }
     }
 
-    public static void CheckForHeal(ProcessLine pline)
+    private static void HandleHealed(ProcessLine pline)
     {
       string healed = null;
       string healer = pline.ActionPart.Substring(0, pline.OptionalIndex);
@@ -241,48 +131,66 @@ namespace EQLogParser
       }
     }
 
-    public static SpellCast ParseSpellCast(ProcessLine pline)
+    private static bool CheckForPetLeader(ProcessLine pline)
     {
-      SpellCast cast = null;
-      string caster = pline.ActionPart.Substring(0, pline.OptionalIndex);
-
-      switch (pline.OptionalData)
+      bool found = false;
+      if (pline.ActionPart.Length >= 28 && pline.ActionPart.Length < 55)
       {
-        case "cast":
-        case "sing":
-          int bracketIndex = (pline.OptionalData == "cast") ? 25 : 24;
-          if (pline.ActionPart.Length > pline.OptionalIndex + bracketIndex)
+        int index = pline.ActionPart.IndexOf(" says, 'My leader is ", StringComparison.Ordinal);
+        if (index > -1)
+        {
+          string pet = pline.ActionPart.Substring(0, index);
+          if (!DataManager.Instance.CheckNameForPlayer(pet)) // thanks idiots for this
           {
-            int finalBracket;
-            int index = pline.ActionPart.IndexOf("<", pline.OptionalIndex + bracketIndex);
-            if (index > -1 && (finalBracket = pline.ActionPart.IndexOf(">", pline.OptionalIndex + bracketIndex, StringComparison.Ordinal)) > -1)
+            int period = pline.ActionPart.IndexOf(".", index + 24, StringComparison.Ordinal);
+            if (period > -1)
             {
-              cast = new SpellCast() { Caster = caster, Spell = pline.ActionPart.Substring(index + 1, finalBracket - index - 1), BeginTime = pline.CurrentTime };
+              string owner = pline.ActionPart.Substring(index + 21, period - index - 21);
+              DataManager.Instance.UpdateVerifiedPlayers(owner);
+              DataManager.Instance.UpdateVerifiedPets(pet);
+              DataManager.Instance.UpdatePetToPlayer(pet, owner);
             }
           }
-          break;
-        case "youcast":
-        case "yousing":
-          if (pline.ActionPart.Length > pline.OptionalIndex + 15)
-          {
-            cast = new SpellCast()
-            {
-              Caster = caster,
-              Spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1),
-              BeginTime = pline.CurrentTime
-            };
-          }
-          break;
-      }
 
-      if (cast != null)
-      {
-        cast.SpellAbbrv = Utils.AbbreviateSpellName(cast.Spell);
+          found = true;
+        }
       }
-      return cast;
+      return found;
     }
 
-    public static DamageRecord ParseDamage(string part)
+    private static bool CheckForPlayers(ProcessLine pline)
+    {
+      bool found = false;
+      if (pline.ActionPart.Length < 35)
+      {
+        int index = -1;
+        if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
+          && Utils.IsPossiblePlayerName(pline.ActionPart, index))
+        {
+          string test = pline.ActionPart.Substring(0, index);
+          DataManager.Instance.UpdateUnverifiedPetOrPlayer(test);
+          found = true;
+        }
+        else if ((index = pline.ActionPart.IndexOf(" tells the guild, ", StringComparison.Ordinal)) > -1)
+        {
+          int firstSpace = pline.ActionPart.IndexOf(" ", StringComparison.Ordinal);
+          if (firstSpace > -1 && firstSpace == index)
+          {
+            string name = pline.ActionPart.Substring(0, index);
+            DataManager.Instance.UpdateVerifiedPlayers(name);
+          }
+          found = true; // found chat, not that it had to work
+        }
+        else if (pline.ActionPart.StartsWith("Targeted (Player)", StringComparison.Ordinal))
+        {
+          DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
+          found = true;
+        }
+      }
+      return found;
+    }
+
+    private static DamageRecord ParseDamage(string part)
     {
       DamageRecord record = null;
 
@@ -370,65 +278,6 @@ namespace EQLogParser
       }
 
       isDefenderPlayer = (record.DefenderPetType == "" && DataManager.Instance.CheckNameForPlayer(record.Defender));
-    }
-
-    private static bool CheckForPetLeader(ProcessLine pline)
-    {
-      bool found = false;
-      if (pline.ActionPart.Length >= 28 && pline.ActionPart.Length < 55)
-      {
-        int index = pline.ActionPart.IndexOf(" says, 'My leader is ", StringComparison.Ordinal);
-        if (index > -1)
-        {
-          string pet = pline.ActionPart.Substring(0, index);
-          if (!DataManager.Instance.CheckNameForPlayer(pet)) // thanks idiots for this
-          {
-            int period = pline.ActionPart.IndexOf(".", index + 24, StringComparison.Ordinal);
-            if (period > -1)
-            {
-              string owner = pline.ActionPart.Substring(index + 21, period - index - 21);
-              DataManager.Instance.UpdateVerifiedPlayers(owner);
-              DataManager.Instance.UpdateVerifiedPets(pet);
-              DataManager.Instance.UpdatePetToPlayer(pet, owner);
-            }
-          }
-
-          found = true;
-        }
-      }
-      return found;
-    }
-
-    private static bool CheckForPlayers(ProcessLine pline)
-    {
-      bool found = false;
-      if (pline.ActionPart.Length < 35)
-      {
-        int index = -1;
-        if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
-          && Utils.IsPossiblePlayerName(pline.ActionPart, index))
-        {
-          string test = pline.ActionPart.Substring(0, index);
-          DataManager.Instance.UpdateUnverifiedPetOrPlayer(test);
-          found = true;
-        }
-        else if ((index = pline.ActionPart.IndexOf(" tells the guild, ", StringComparison.Ordinal)) > -1)
-        {
-          int firstSpace = pline.ActionPart.IndexOf(" ", StringComparison.Ordinal);
-          if (firstSpace > -1 && firstSpace == index)
-          {
-            string name = pline.ActionPart.Substring(0, index);
-            DataManager.Instance.UpdateVerifiedPlayers(name);
-          }
-          found = true; // found chat, not that it had to work
-        }
-        else if (pline.ActionPart.StartsWith("Targeted (Player)", StringComparison.Ordinal))
-        {
-          DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
-          found = true;
-        }
-      }
-      return found;
     }
 
     private static DamageRecord ParseAllDamage(string part)
