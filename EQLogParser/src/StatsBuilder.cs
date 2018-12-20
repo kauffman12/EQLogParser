@@ -52,10 +52,8 @@ namespace EQLogParser
 
       if (selected != null && currentStats != null)
       {
-        int count = 0;
         foreach (PlayerStats stats in selected.OrderByDescending(item => item.TotalDamage))
         {
-          count++;
           string playerFormat = rankPlayers ? String.Format(PLAYER_RANK_FORMAT, stats.Rank + 1, stats.Name) : String.Format(PLAYER_FORMAT, stats.Name);
           string damageFormat = String.Format(DAMAGE_FORMAT, Utils.FormatDamage(stats.TotalDamage), Utils.FormatDamage(stats.DPS));
           list.Add(playerFormat + damageFormat);
@@ -93,45 +91,46 @@ namespace EQLogParser
           }
 
           combined.NpcIDs.Add(npc.ID);
-          foreach (string key in npc.DamageMap.Keys)
+          foreach (var key in npc.DamageMap.Keys)
           {
-            if (DataManager.Instance.IsProbablyNotAPlayer(key))
+            if (!DataManager.Instance.IsProbablyNotAPlayer(key))
             {
-              continue;
-            }
+              PlayerStats playerTotals;
+              DamageStats npcStats = npc.DamageMap[key];
 
-            PlayerStats playerTotals;
-            DamageStats npcStats = npc.DamageMap[key];
-
-            if (!individualStats.ContainsKey(key))
-            {
-              playerTotals = CreatePlayerStats(key);
-              individualStats[key] = playerTotals;
-              if (playerTotals.ClassName != "")
+              if (!individualStats.ContainsKey(key))
               {
-                uniqueClasses[playerTotals.ClassName] = 1;
+                playerTotals = CreatePlayerStats(key);
+                individualStats[key] = playerTotals;
+                if (playerTotals.ClassName != "")
+                {
+                  lock(uniqueClasses)
+                  {
+                    uniqueClasses[playerTotals.ClassName] = 1;
+                  }
+                }
               }
-            }
-            else
-            {
-              playerTotals = individualStats[key];
-            }
+              else
+              {
+                playerTotals = individualStats[key];
+              }
 
-            // see if there's a pet mapping, check this first
-            string parent = DataManager.Instance.GetPlayerFromPet(key);
-            if (parent != null)
-            {
-              needAggregateHelper.AddToList(needAggregate, parent, key);
-            }
-            else if (npcStats.Owner != "" && npcStats.IsPet)
-            {
-              needAggregateHelper.AddToList(needAggregate, npcStats.Owner, key);
-            }
+              // see if there's a pet mapping, check this first
+              string parent = DataManager.Instance.GetPlayerFromPet(key);
+              if (parent != null)
+              {
+                needAggregateHelper.AddToList(needAggregate, parent, key);
+              }
+              else if (npcStats.Owner != "" && npcStats.IsPet)
+              {
+                needAggregateHelper.AddToList(needAggregate, npcStats.Owner, key);
+              }
 
-            aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
+              aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
 
-            UpdateTotals(playerTotals, npcStats, npc.FightID);
-            UpdateTotals(raidTotals, npcStats, npc.FightID);
+              UpdateTotals(playerTotals, npcStats, npc.FightID);
+              UpdateTotals(raidTotals, npcStats, npc.FightID);
+            }
           }
         }
 
@@ -145,7 +144,7 @@ namespace EQLogParser
         // save them all before child code removes
         var allStatValues = individualStats.Values.ToList();
 
-        combined.Children = new ConcurrentDictionary<string, List<PlayerStats>>();
+        combined.Children = new Dictionary<string, List<PlayerStats>>();
         if (needAggregate.Count > 0)
         {
           Parallel.ForEach(needAggregate.Keys, (key) =>
@@ -182,27 +181,32 @@ namespace EQLogParser
           });
         }
 
-        combined.SubStats = new ConcurrentDictionary<string, List<PlayerSubStats>>();
+        combined.SubStats = new Dictionary<string, List<PlayerSubStats>>();
         Parallel.ForEach(allStatValues, (stat) =>
         {
-          combined.SubStats[stat.Name] = stat.SubStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
-          foreach (var subStat in combined.SubStats[stat.Name])
+          List<PlayerSubStats> subStatsList = stat.SubStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
+          foreach (var subStat in subStatsList)
           {
             subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal)subStat.TotalDamage / stat.TotalDamage) * 100, 2);
             subStat.PercentString = subStat.Percent.ToString();
           }
+
+          lock(combined.SubStats)
+          {
+            combined.SubStats[stat.Name] = subStatsList;
+          }
         });
 
         combined.StatsList = individualStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
-        for (int i = 0; i < combined.StatsList.Count; i++)
+
+        Parallel.ForEach(combined.StatsList, (stat, state, index) =>
         {
-          string name = combined.StatsList[i].Name;
-          combined.StatsList[i].Rank = i + 1;
-          if (combined.Children.ContainsKey(name))
+          stat.Rank = (int) index + 1;
+          if (combined.Children.ContainsKey(stat.Name))
           {
-            combined.Children[name] = combined.Children[name].OrderByDescending(item => item.TotalDamage).ToList();
+            combined.Children[stat.Name] = combined.Children[stat.Name].OrderByDescending(item => item.TotalDamage).ToList();
           }
-        }
+        });
       }
       catch (Exception e)
       {
@@ -226,9 +230,6 @@ namespace EQLogParser
         }
       }
 
-      playerTotals.FirstFightID = Math.Min(playerTotals.FirstFightID, FightID);
-      playerTotals.LastFightID = Math.Max(playerTotals.LastFightID, FightID);
-
       playerTotals.TotalDamage += npcStats.TotalDamage;
       playerTotals.TotalCritDamage += npcStats.TotalCritDamage;
       playerTotals.TotalLuckyDamage += npcStats.TotalLuckyDamage;
@@ -237,6 +238,8 @@ namespace EQLogParser
       playerTotals.LuckyHits += npcStats.LuckyCount;
       playerTotals.TwincastHits += npcStats.TwincastCount;
       playerTotals.Max = (playerTotals.Max < npcStats.Max) ? npcStats.Max : playerTotals.Max;
+      playerTotals.FirstFightID = Math.Min(playerTotals.FirstFightID, FightID);
+      playerTotals.LastFightID = Math.Max(playerTotals.LastFightID, FightID);
 
       bool updateTime = false;
       if (playerTotals.BeginTimes[FightID] == DateTime.MinValue || playerTotals.BeginTimes[FightID] > npcStats.BeginTime)
@@ -261,52 +264,63 @@ namespace EQLogParser
       }
 
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
+
       playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
       playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
-      int adjusted = playerTotals.CritHits - playerTotals.LuckyHits;
-      if (adjusted > 0)
-      {
-        playerTotals.AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / adjusted);
-      }
-      if (playerTotals.LuckyHits > 0)
-      {
-        playerTotals.AvgLucky = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalLuckyDamage) / playerTotals.LuckyHits);
-      }
       playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 1);
       playerTotals.LuckRate = Math.Round(Convert.ToDecimal(playerTotals.LuckyHits) / playerTotals.Hits * 100, 1);
       playerTotals.TwincastRate = Math.Round(Convert.ToDecimal(playerTotals.TwincastHits) / playerTotals.Hits * 100, 1);
 
-      foreach (string key in npcStats.HitMap.Keys)
+      if ((playerTotals.CritHits - playerTotals.LuckyHits) > 0)
       {
-        if (!playerTotals.SubStats.ContainsKey(key))
+        playerTotals.AvgCrit = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / (playerTotals.CritHits - playerTotals.LuckyHits));
+      }
+      if (playerTotals.LuckyHits > 0)
+      {
+        playerTotals.AvgLucky = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalLuckyDamage) / playerTotals.LuckyHits);
+      }
+
+      Parallel.ForEach(npcStats.HitMap.Keys, (key) =>
+      {
+        PlayerSubStats subStats = null;
+        lock(playerTotals)
         {
-          playerTotals.SubStats[key] = new PlayerSubStats() { ClassName = "", Name = "", HitType = key };
+          subStats = new PlayerSubStats() { ClassName = "", Name = "", HitType = key };
+          if (!playerTotals.SubStats.ContainsKey(key))
+          {
+            playerTotals.SubStats[key] = subStats;
+          }
+          else
+          {
+            subStats = playerTotals.SubStats[key];
+          }
         }
 
-        playerTotals.SubStats[key].TotalDamage += npcStats.HitMap[key].TotalDamage;
-        playerTotals.SubStats[key].TotalCritDamage += npcStats.HitMap[key].TotalCritDamage;
-        playerTotals.SubStats[key].TotalLuckyDamage += npcStats.HitMap[key].TotalLuckyDamage;
-        playerTotals.SubStats[key].Hits += npcStats.HitMap[key].Count;
-        playerTotals.SubStats[key].CritHits += npcStats.HitMap[key].CritCount;
-        playerTotals.SubStats[key].LuckyHits += npcStats.HitMap[key].LuckyCount;
-        playerTotals.SubStats[key].TwincastHits += npcStats.HitMap[key].TwincastCount;
-        playerTotals.SubStats[key].Max = (playerTotals.SubStats[key].Max < npcStats.HitMap[key].Max) ? npcStats.HitMap[key].Max : playerTotals.SubStats[key].Max;
-        playerTotals.SubStats[key].TotalSeconds = playerTotals.TotalSeconds;
-        playerTotals.SubStats[key].DPS = (long) Math.Round(playerTotals.SubStats[key].TotalDamage / playerTotals.SubStats[key].TotalSeconds);
-        playerTotals.SubStats[key].Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalDamage) / playerTotals.SubStats[key].Hits);
-        adjusted = (playerTotals.SubStats[key].CritHits - playerTotals.SubStats[key].LuckyHits);
-        if (adjusted > 0)
+        Hit hitMap = npcStats.HitMap[key];
+        subStats.TotalDamage += hitMap.TotalDamage;
+        subStats.TotalCritDamage += hitMap.TotalCritDamage;
+        subStats.TotalLuckyDamage += hitMap.TotalLuckyDamage;
+        subStats.Hits += hitMap.Count;
+        subStats.CritHits += hitMap.CritCount;
+        subStats.LuckyHits += hitMap.LuckyCount;
+        subStats.TwincastHits += hitMap.TwincastCount;
+        subStats.Max = (subStats.Max < hitMap.Max) ? hitMap.Max : subStats.Max;
+        subStats.TotalSeconds = playerTotals.TotalSeconds;
+        subStats.DPS = (long) Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
+        subStats.Avg = (long) Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
+        subStats.CritRate = Math.Round(Convert.ToDecimal(subStats.CritHits) / subStats.Hits * 100, 1);
+        subStats.LuckRate = Math.Round(Convert.ToDecimal(subStats.LuckyHits) / subStats.Hits * 100, 1);
+        subStats.TwincastRate = Math.Round(Convert.ToDecimal(subStats.TwincastHits) / subStats.Hits * 100, 1);
+
+        if ((subStats.CritHits - subStats.LuckyHits) > 0)
         {
-          playerTotals.SubStats[key].AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalCritDamage) / adjusted);
+          subStats.AvgCrit = (long)Math.Round(Convert.ToDecimal(subStats.TotalCritDamage) / (subStats.CritHits - subStats.LuckyHits));
         }
-        if (playerTotals.SubStats[key].LuckyHits > 0)
+        if (subStats.LuckyHits > 0)
         {
-          playerTotals.SubStats[key].AvgLucky = (long) Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TotalLuckyDamage) / playerTotals.SubStats[key].LuckyHits);
+          subStats.AvgLucky = (long)Math.Round(Convert.ToDecimal(subStats.TotalLuckyDamage) / subStats.LuckyHits);
         }
-        playerTotals.SubStats[key].CritRate = Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].CritHits) / playerTotals.SubStats[key].Hits * 100, 1);
-        playerTotals.SubStats[key].LuckRate = Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].LuckyHits) / playerTotals.SubStats[key].Hits * 100, 1);
-        playerTotals.SubStats[key].TwincastRate = Math.Round(Convert.ToDecimal(playerTotals.SubStats[key].TwincastHits) / playerTotals.SubStats[key].Hits * 100, 1);
-      }
+      });
     }
 
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)

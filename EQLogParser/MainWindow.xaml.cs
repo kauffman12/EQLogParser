@@ -25,13 +25,13 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.21";
+    private const string VERSION = "v1.0.22";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
     private const int MIN_LINE_LENGTH = 33;
-    private const int DISPATCHER_DELAY = 100; // millis
+    private const int DISPATCHER_DELAY = 150; // millis
 
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
@@ -136,7 +136,7 @@ namespace EQLogParser
 
         NonPlayerSelectionTimer = new DispatcherTimer();
         NonPlayerSelectionTimer.Tick += NonPlayerSelectionTimer_Tick;
-        NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, 300);
+        NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
         DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
 
         ThemeManager.BeginUpdate();
@@ -726,6 +726,9 @@ namespace EQLogParser
         var selected = npcDataGrid.SelectedItems;
         if (selected.Count > 0)
         {
+          dpsTitle.Content = "Calculating DPS...";
+          playerDataGrid.ItemsSource = null;
+
           var realItems = selected.Cast<NonPlayer>().Where(item => !item.Name.Contains("Inactivity >")).ToList();
           if (realItems.Count > 0)
           {
