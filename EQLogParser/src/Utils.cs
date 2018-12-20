@@ -220,27 +220,17 @@ namespace EQLogParser
   {
     internal void AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
     {
-      if (!dict.ContainsKey(key))
+      lock(dict)
       {
-        dict[key] = new List<T2>();
-      }
+        if (!dict.ContainsKey(key))
+        {
+          dict[key] = new List<T2>();
+        }
 
-      if (!dict[key].Contains(value))
-      {
-        dict[key].Add(value);
-      }
-    }
-
-    internal void AddToList(ConcurrentDictionary<T1, List<T2>> dict, T1 key, T2 value)
-    {
-      if (!dict.ContainsKey(key))
-      {
-        dict[key] = new List<T2>();
-      }
-
-      if (!dict[key].Contains(value))
-      {
-        dict[key].Add(value);
+        if (!dict[key].Contains(value))
+        {
+          dict[key].Add(value);
+        }
       }
     }
   }
