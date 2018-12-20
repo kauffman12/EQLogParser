@@ -135,8 +135,8 @@ namespace EQLogParser
     public string DamageTitle { get; set; }
     public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
-    public ConcurrentDictionary<string, List<PlayerStats>> Children { get; set; }
-    public ConcurrentDictionary<string, List<PlayerSubStats>> SubStats { get; set; }
+    public Dictionary<string, List<PlayerStats>> Children { get; set; }
+    public Dictionary<string, List<PlayerSubStats>> SubStats { get; set; }
     public PlayerStats RaidStats { get; set; }
     public SortedSet<long> NpcIDs { get; set; }
     public DateTime BeginTime { get; set; }
