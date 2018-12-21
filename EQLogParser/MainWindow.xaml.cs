@@ -25,7 +25,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.22";
+    private const string VERSION = "v1.0.23";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -345,11 +345,7 @@ namespace EQLogParser
     private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       NeedDPSTextUpdate = true;
-
-      ThemedDataGrid callingDataGrid = sender as ThemedDataGrid;
-      pdgMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
-      pdgMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
-      pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = callingDataGrid.SelectedItems.Count > 0;
+      updatePlayerDataGridMenuItems();
     }
 
     private void PlayerDataGridExpander_Loaded(object sender, RoutedEventArgs e)
@@ -430,6 +426,7 @@ namespace EQLogParser
       dataGrid.AlternatingRowBackground = null;
       dataGrid.AutoGenerateColumns = false;
       dataGrid.RowHeaderWidth = 0;
+      dataGrid.IsReadOnly = true;
 
       dataGrid.Columns.Add(new DataGridTextColumn()
       {
@@ -746,27 +743,7 @@ namespace EQLogParser
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
                   NeedStatsUpdate = false;
                   UpdatingStats = false;
-
-                  if (CurrentStats.StatsList.Count > 0)
-                  {
-                    foreach (var item in pdgMenuItemShowDamage.Items)
-                    {
-                      MenuItem menuItem = item as MenuItem;
-                      if (CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string))
-                      {
-                        menuItem.IsEnabled = true;
-                      }
-                    }
-
-                    foreach (var item in pdgMenuItemShowSpellCasts.Items)
-                    {
-                      MenuItem menuItem = item as MenuItem;
-                      if (CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string))
-                      {
-                        menuItem.IsEnabled = true;
-                      }
-                    }
-                  }
+                  updatePlayerDataGridMenuItems();
                 }
                 Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
               }));
@@ -783,10 +760,50 @@ namespace EQLogParser
             list.Clear();
           }
 
-          pdgMenuItemSelectAll.IsEnabled = pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = false;
+          updatePlayerDataGridMenuItems();
           NeedStatsUpdate = false;
           UpdatingStats = false;
         }
+      }
+    }
+
+    private void updatePlayerDataGridMenuItems()
+    {
+      if (CurrentStats != null && CurrentStats.StatsList.Count > 0)
+      {
+        pdgMenuItemSelectAll.IsEnabled = playerDataGrid.SelectedItems.Count < playerDataGrid.Items.Count;
+        pdgMenuItemUnselectAll.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
+        pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = true;
+
+        foreach (var item in pdgMenuItemShowDamage.Items)
+        {
+          MenuItem menuItem = item as MenuItem;
+          if (menuItem.Header as string == "Selected")
+          {
+            menuItem.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
+          }
+          else if (CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string))
+          {
+            menuItem.IsEnabled = true;
+          }
+        }
+
+        foreach (var item in pdgMenuItemShowSpellCasts.Items)
+        {
+          MenuItem menuItem = item as MenuItem;
+          if (menuItem.Header as string == "Selected")
+          {
+            menuItem.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
+          }
+          else if (CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string))
+          {
+            menuItem.IsEnabled = true;
+          }
+        }
+      }
+      else
+      {
+        pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemSelectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = false;
       }
     }
 

@@ -114,7 +114,9 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -131,6 +133,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Settings.cs" />
     <Compile Include="src\ActionProcessor.cs" />
     <Compile Include="src\CastLineParser.cs" />
     <Compile Include="src\DataManager.cs" />
@@ -174,7 +177,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <None Include="EQLogParser_TemporaryKey.pfx" />
+    <EmbeddedResource Include="resources\EQLogParser_TemporaryKey.pfx" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -202,12 +205,8 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="icons\Collapse_16x.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="icons\Expand_16x.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    <Resource Include="icons\Collapse_16x.png" />
+    <Resource Include="icons\Expand_16x.png" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="data\spells.txt">
