@@ -106,6 +106,12 @@
     <Reference Include="FontAwesome.WPF, Version=4.7.0.37774, Culture=neutral, PublicKeyToken=0758b07a11a4f466, processorArchitecture=MSIL">
       <HintPath>..\packages\FontAwesome.WPF.4.7.0.9\lib\net40\FontAwesome.WPF.dll</HintPath>
     </Reference>
+    <Reference Include="LiveCharts, Version=0.9.7.0, Culture=neutral, PublicKeyToken=0bc1f845d1ebb8df, processorArchitecture=MSIL">
+      <HintPath>..\packages\LiveCharts.0.9.7\lib\net45\LiveCharts.dll</HintPath>
+    </Reference>
+    <Reference Include="LiveCharts.Wpf, Version=0.9.7.0, Culture=neutral, PublicKeyToken=0bc1f845d1ebb8df, processorArchitecture=MSIL">
+      <HintPath>..\packages\LiveCharts.Wpf.0.9.7\lib\net45\LiveCharts.Wpf.dll</HintPath>
+    </Reference>
     <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
     </Reference>
@@ -134,12 +140,12 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Settings.cs" />
-    <Compile Include="src\ActionProcessor.cs" />
-    <Compile Include="src\CastLineParser.cs" />
-    <Compile Include="src\DataManager.cs" />
-    <Compile Include="src\SpellCountBuilder.cs" />
-    <Compile Include="src\StatsBuilder.cs" />
-    <Compile Include="src\Utils.cs" />
+    <Compile Include="src\parsing\CastLineParser.cs" />
+    <Compile Include="src\data\DataManager.cs" />
+    <Compile Include="src\control\SpellCountBuilder.cs" />
+    <Compile Include="src\control\StatsBuilder.cs" />
+    <Compile Include="src\util\ActionProcessor.cs" />
+    <Compile Include="src\util\Helpers.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -148,16 +154,16 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\DataModel.cs" />
-    <Compile Include="src\DamageLineParser.cs" />
-    <Compile Include="src\LogReader.cs" />
+    <Compile Include="src\data\DataModel.cs" />
+    <Compile Include="src\parsing\DamageLineParser.cs" />
+    <Compile Include="src\util\LogReader.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="src\NpcDamageManager.cs" />
+    <Compile Include="src\control\NpcDamageManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

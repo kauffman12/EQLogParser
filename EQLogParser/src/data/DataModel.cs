@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace EQLogParser
@@ -63,6 +62,13 @@ namespace EQLogParser
   public class Player
   {
     public string Name { get; set; }
+  }
+
+  public class DamageAtTime
+  {
+    public DateTime CurrentTime { get; set; }
+    public Dictionary<string, long> PlayerDamage { get; set; }
+    public int FightID { get; set; }
   }
 
   public class NonPlayer
@@ -139,9 +145,20 @@ namespace EQLogParser
     public Dictionary<string, List<PlayerSubStats>> SubStats { get; set; }
     public PlayerStats RaidStats { get; set; }
     public SortedSet<long> NpcIDs { get; set; }
-    public DateTime BeginTime { get; set; }
-    public DateTime EndTime { get; set; }
     public Dictionary<string, byte> UniqueClasses { get; set; }
+  }
+
+  public class DPSChartData
+  {
+    public List<Dictionary<string, List<long>>> Values { get; set; }
+    public List<string> XAxisLabels { get; set; }
+  }
+
+  public class DPSSnapshotEvent
+  {
+    public long DPS { get; set; }
+    public string Name { get; set; }
+    public DateTime CurrentTime { get; set; }
   }
 
   public class StatsSummary

@@ -14,7 +14,7 @@ namespace EQLogParser
 
     private const string RAID_PLAYER = "Totals";
     public const string TIME_FORMAT = "in {0}s";
-    public const string DAMAGE_FORMAT = "{0} @ {1} DPS";
+    public const string DAMAGE_FORMAT = "{0} @{1}";
     private const string PLAYER_FORMAT = "{0} = ";
     private const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
 
@@ -54,9 +54,10 @@ namespace EQLogParser
       {
         foreach (PlayerStats stats in selected.OrderByDescending(item => item.TotalDamage))
         {
-          string playerFormat = rankPlayers ? String.Format(PLAYER_RANK_FORMAT, stats.Rank + 1, stats.Name) : String.Format(PLAYER_FORMAT, stats.Name);
-          string damageFormat = String.Format(DAMAGE_FORMAT, Utils.FormatDamage(stats.TotalDamage), Utils.FormatDamage(stats.DPS));
-          list.Add(playerFormat + damageFormat);
+          string playerFormat = rankPlayers ? String.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : String.Format(PLAYER_FORMAT, stats.Name);
+          string damageFormat = String.Format(DAMAGE_FORMAT, Helpers.FormatDamage(stats.TotalDamage), Helpers.FormatDamage(stats.DPS));
+          string timeFormat = String.Format(TIME_FORMAT, stats.TotalSeconds);
+          list.Add(playerFormat + damageFormat + " " + timeFormat);
         }
 
         details = list.Count > 0 ? ", " + string.Join(", ", list) : ""; 
@@ -127,7 +128,6 @@ namespace EQLogParser
               }
 
               aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
-
               UpdateTotals(playerTotals, npcStats, npc.FightID);
               UpdateTotals(raidTotals, npcStats, npc.FightID);
             }
@@ -138,7 +138,7 @@ namespace EQLogParser
         combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
         combined.TimeTitle = String.Format(TIME_FORMAT, combined.TimeDiff);
-        combined.DamageTitle = String.Format(DAMAGE_FORMAT, Utils.FormatDamage(raidTotals.TotalDamage), Utils.FormatDamage(raidTotals.DPS));
+        combined.DamageTitle = String.Format(DAMAGE_FORMAT, Helpers.FormatDamage(raidTotals.TotalDamage), Helpers.FormatDamage(raidTotals.DPS));
         combined.UniqueClasses = uniqueClasses;
 
         // save them all before child code removes
@@ -222,7 +222,6 @@ namespace EQLogParser
       {
         playerTotals.BeginTimes[FightID] = new DateTime();
         playerTotals.LastTimes[FightID] = new DateTime();
-        playerTotals.TimeDiffs[FightID] = 0;
 
         if (playerTotals.SubStats == null)
         {
@@ -256,15 +255,11 @@ namespace EQLogParser
 
       if (updateTime)
       {
-        playerTotals.TimeDiffs[FightID] = playerTotals.LastTimes[FightID].Subtract(playerTotals.BeginTimes[FightID]).TotalSeconds;
-        if (playerTotals.TimeDiffs[FightID] <= 0)
-        {
-          playerTotals.TimeDiffs[FightID] = 1;
-        }
+        // each fight that takes 0 time in the log should count as 1 seconds
+        playerTotals.TimeDiffs[FightID] = playerTotals.LastTimes[FightID].Subtract(playerTotals.BeginTimes[FightID]).TotalSeconds + 1;
       }
 
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
-
       playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
       playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
       playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 1);
@@ -338,7 +333,6 @@ namespace EQLogParser
         Name = name,
         ClassName = className,
         HitType = "",
-        TotalSeconds = 0,
         PercentString = "-",
         Percent = 100, // until something says otherwise
         BeginTimes = new Dictionary<int, DateTime>(),

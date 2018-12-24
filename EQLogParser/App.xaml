@@ -25,11 +25,18 @@
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBorderHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabControlBackgroundActiveFocusedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolBarButtonBorderCheckedHoverBrushKey}" Color="#202020" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolTipBackgroundNormalBrushKey}" Color="#c2c2c0" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolTipForegroundNormalBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundSelectedBrushKey}" Color="#c2c2c0" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundHoverBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBorderActivePressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBackgroundActivePressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowBorderActiveBrushKey}" Color="#202020" />
+
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemForegroundHoverBrushKey}" Color="#c2c2c0" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemBorderHoverBrushKey}" Color="#101010" />
+
+
 
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
       <Setter Property="Background" Value="#3a543f" />
