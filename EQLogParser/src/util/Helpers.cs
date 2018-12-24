@@ -1,19 +1,18 @@
-﻿using System;
+﻿using LiveCharts;
+using LiveCharts.Wpf;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace EQLogParser
 {
-  class Utils
+  class Helpers
   {
-    // counting this thing is really slow
-    private static int DateCount = 0;
-    private static ConcurrentDictionary<string, DateTime> DateTimeCache = new ConcurrentDictionary<string, DateTime>();
-
     internal static string AbbreviateSpellName(string spell)
     {
       string result = spell;
@@ -61,6 +60,37 @@ namespace EQLogParser
       return result;
     }
 
+    internal static void ChartResetView(CartesianChart theChart)
+    {
+      theChart.AxisY[0].MaxValue = double.NaN;
+      theChart.AxisY[0].MinValue = 0;
+      theChart.AxisX[0].MinValue = double.NaN;
+      theChart.AxisX[0].MaxValue = double.NaN;
+    }
+
+    internal static SeriesCollection CreateLineChartSeries(List<Dictionary<string, List<long>>> chartData = null)
+    {
+      var seriesCollection = new SeriesCollection();
+      Dictionary<string, LineSeries> seriesPerPlayer = new Dictionary<string, LineSeries>();
+      foreach (var playerValues in chartData)
+      {
+        foreach (string player in playerValues.Keys)
+        {
+          if (!seriesPerPlayer.ContainsKey(player))
+          {
+            seriesPerPlayer[player] = new LineSeries();
+            seriesPerPlayer[player].Title = player;
+            seriesPerPlayer[player].Values = new ChartValues<long>();
+            seriesCollection.Add(seriesPerPlayer[player]);
+          }
+
+          seriesPerPlayer[player].Values.AddRange(playerValues[player].Cast<object>());
+        }
+      }
+
+      return seriesCollection;
+    }
+
     internal static long ParseLong(string str)
     {
       long y = 0;
@@ -74,52 +104,6 @@ namespace EQLogParser
         y = y * 10 + (str[i] - '0');
       }
       return y;
-    }
-
-    internal static DateTime ParseDate(string timeString)
-    {
-      DateTime dateTime;
-
-      if (!DateTimeCache.ContainsKey(timeString))
-      {
-        DateTime.TryParseExact(timeString, "ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
-        if (dateTime == DateTime.MinValue)
-        {
-          DateTime.TryParseExact(timeString, "ddd MMM  d HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
-        }
-
-        DateTimeCache.TryAdd(timeString, dateTime);
-      }
-      else
-      {
-        dateTime = DateTimeCache[timeString];
-      }
-
-      // dont let it get too big but it coudl be re-used between different log files
-      if (DateTimeCache.TryAdd(timeString, dateTime))
-      {
-        DateCount++;
-      }
-
-      if (DateCount > 50000)
-      {
-        DateTimeCache.Clear();
-        DateCount = 0;
-      }
-
-      return dateTime;
-    }
-
-    internal static bool HasTimeInRange(DateTime now, string line, int lastMins)
-    {
-      bool found = false;
-      if (line.Length > 24)
-      {
-        DateTime dateTime = ParseDate(line.Substring(1, 24));
-        TimeSpan diff = now.Subtract(dateTime);
-        found = (diff.TotalMinutes < lastMins);
-      }
-      return found;
     }
 
     internal static void OpenWindow(ActiproSoftware.Windows.Controls.Docking.DockingWindow window)
@@ -137,6 +121,11 @@ namespace EQLogParser
       {
         window.Activate();
       }
+    }
+
+    internal static string FormatDateTime(DateTime dateTime)
+    {
+      return dateTime.ToString("MMM dd HH:mm:ss");
     }
 
     internal static string FormatTimeSpan(TimeSpan diff)
@@ -216,6 +205,44 @@ namespace EQLogParser
     }
   }
 
+  internal class DateUtil
+  {
+    // counting this thing is really slow
+    private String LastDateTimeString = "";
+    private DateTime LastDateTime;
+
+    internal bool HasTimeInRange(DateTime now, string line, int lastMins)
+    {
+      bool found = false;
+      if (line.Length > 24)
+      {
+        DateTime dateTime = ParseDate(line.Substring(1, 24));
+        TimeSpan diff = now.Subtract(dateTime);
+        found = (diff.TotalMinutes < lastMins);
+      }
+      return found;
+    }
+
+    internal DateTime ParseDate(string timeString)
+    {
+      if (LastDateTimeString == timeString)
+      {
+        return LastDateTime;
+      }
+
+      DateTime dateTime;
+      DateTime.TryParseExact(timeString, "ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
+      if (dateTime == DateTime.MinValue)
+      {
+        DateTime.TryParseExact(timeString, "ddd MMM  d HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
+      }
+
+      LastDateTime = dateTime;
+      LastDateTimeString = timeString;
+      return dateTime;
+    }
+  }
+
   internal class DictionaryListHelper<T1, T2>
   {
     internal void AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
@@ -232,6 +259,21 @@ namespace EQLogParser
           dict[key].Add(value);
         }
       }
+    }
+  }
+
+  internal class DictionaryAddHelper<T1, T2>
+  {
+    internal void Add(Dictionary<T1, T2> dict, T1 key, T2 value)
+    {
+      if (!dict.ContainsKey(key))
+      {
+        dict[key] = default(T2);
+      }
+
+      dynamic temp = dict[key];
+      temp += value;
+      dict[key] = temp;
     }
   }
 

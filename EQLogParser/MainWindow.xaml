@@ -4,6 +4,7 @@
         xmlns:docking="http://schemas.actiprosoftware.com/winfx/xaml/docking"
         xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
+        xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
@@ -15,7 +16,7 @@
       <RowDefinition Height="20" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
-    <Menu Margin="0" Height="20" VerticalAlignment="Top" Grid.Row="0">
+    <Menu Grid.Row="0" Margin="0" Height="20" VerticalAlignment="Top">
       <MenuItem Header="_File" Height="20" Width="35">
         <MenuItem Header="Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFile_Click" />
         <MenuItem Header="Open and Monitor _Log File" Height="20">
@@ -24,7 +25,6 @@
           <MenuItem Header="Last  7 Days" Tag="168" Height="20" Click="MenuItemSelectLogFile_Click" />
           <MenuItem Header="Last 14 Days" Tag="336" Height="20" Click="MenuItemSelectLogFile_Click" />
           <MenuItem Header="Last 30 Days" Tag="720" Height="20" Click="MenuItemSelectLogFile_Click" />
-          <MenuItem Header="Last 90 Days" Tag="2160" Height="20" Click="MenuItemSelectLogFile_Click" />
           <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFile_Click" />
         </MenuItem>
         <Separator Height="0"/>
@@ -36,13 +36,13 @@
         <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
         <MenuItem x:Name="playerDPSTextWindowMenuItem" Header="_Share Player DPS" Click="MenuItemWindow_Click" Height="20" />
         <Separator />
+        <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Players" Height="20" />
+        <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="P_ets" Height="20" />
         <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20" />
-        <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="_Verified Pets" Height="20" />
-        <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="Verified _Players" Height="20" />
       </MenuItem>
     </Menu>
-    <fa:ImageAwesome x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,4,15,0"/>
-    <docking:DockSite Grid.Row="1" x:Name="docSite">
+    <fa:ImageAwesome Grid.Row="0" x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,4,15,0"/>
+    <docking:DockSite Grid.Row="1" x:Name="dockSite">
       <docking:SplitContainer Orientation="Horizontal">
         <docking:SplitContainer Orientation="Vertical">
           <docking:ToolWindowContainer>
@@ -54,6 +54,8 @@
                     <Separator />
                     <MenuItem x:Name="npcMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
                     <MenuItem x:Name="npcMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
+                    <Separator />
+                    <MenuItem x:Name="npcMenuItemClear" IsEnabled="False" Header="Clear" Click="DataGridClear_Click"/>
                   </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
@@ -64,252 +66,272 @@
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="progressWindow" IsOpen="False" Title="Log File Status" ContainerDockedSize="320,65">
+            <docking:ToolWindow x:Name="progressWindow" CanFloat="False" CanAutoHide="False" IsOpen="False" Title="Log File Status" ContainerDockedSize="320,35">
               <WrapPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal">
-                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Progress:</Label>
+                  <Label Width="85" x:Name="bytesReadTitle" HorizontalContentAlignment="Left" Margin="4,0,0,0">Reading:</Label>
                   <Label x:Name="bytesReadLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Spell Rate:</Label>
-                  <Label x:Name="processedCastsLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">-</Label>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                   <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Load Time:</Label>
                   <Label x:Name="processedTimeLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">0 sec</Label>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" Visibility="Hidden">
+                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Spell Rate:</Label>
+                  <Label x:Name="processedCastsLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">-</Label>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Visibility="Hidden">
                   <Label Width="85" HorizontalContentAlignment="left" Margin="4,0,0,0">DMG Rate:</Label>
                   <Label x:Name="processedDamageLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">-</Label>
                 </StackPanel>
-              </WrapPanel>
+                </WrapPanel>
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
         </docking:SplitContainer>
         <docking:SplitContainer Orientation="Vertical">
           <docking:Workspace>
-            <docking:TabbedMdiHost>
-              <docking:TabbedMdiContainer>
-                <docking:DocumentWindow x:Name="dpsWindow" Title="Top DPS" Description="" ContainerDockedSize="400,800" CanClose="False">
-                  <Grid>
-                    <Grid.RowDefinitions>
-                      <RowDefinition Height="30" />
-                      <RowDefinition Height="300*" />
-                    </Grid.RowDefinitions>
-                    <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
-                      <Border BorderBrush="#FF3F3F46" BorderThickness="1,1,2,1" Height="30" Padding="0" Margin="0">
-                        <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
-                      </Border>
-                    </StackPanel>
-                    <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" HorizontalScrollBarVisibility="Disabled" Grid.Row="1" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
-                      <DataGrid.ContextMenu>
-                        <ContextMenu>
-                          <MenuItem x:Name="pdgMenuItemShowDamage" IsEnabled="False" Header="Show Damage Breakdown" PreviewMouseDown="PlayerDataGridShowDamage_Click">
-                            <MenuItem Header="Selected" IsEnabled="True"/>
-                            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" PreviewMouseDown="PlayerDataGridShowDamagByClass_Click"/>
-                          </MenuItem>
-                          <Separator />
-                          <MenuItem x:Name="pdgMenuItemShowSpellCasts" IsEnabled="False" Header="Show Spell Counts" PreviewMouseDown="PlayerDataGridShowSpellCasts_Click">
-                            <MenuItem Header="Selected" IsEnabled="True"/>
-                            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" PreviewMouseDown="PlayerDataGridSpellCastsByClass_Click"/>
-                          </MenuItem>
-                          <Separator />
-                          <MenuItem x:Name="pdgMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
-                          <MenuItem x:Name="pdgMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
-                        </ContextMenu>
-                      </DataGrid.ContextMenu>
-                      <DataGrid.Columns>
-                        <DataGridTemplateColumn MinWidth="48" Width="48">
-                          <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                              <StackPanel Orientation="Horizontal">
-                                <Image PreviewMouseLeftButtonDown="PlayerDataGridExpander_MouseDown" Loaded="PlayerDataGridExpander_Loaded" Margin="0,0,2,0" Width="15"></Image>
-                                <TextBlock Width="20" TextAlignment="Right" Text="{Binding Rank}"></TextBlock>
-                              </StackPanel>
-                            </DataTemplate>
-                          </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124"/>
-                        <DataGridTextColumn Binding="{Binding TotalDamage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
-                        <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
-                        <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                        <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
-                        <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
-                        <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                        <DataGridTextColumn Binding="{Binding AvgCrit}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                        <DataGridTextColumn Binding="{Binding AvgLucky}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
-                        <DataGridTextColumn Binding="{Binding CritRate}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                        <DataGridTextColumn Binding="{Binding LuckRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                        <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% TC" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
-                        <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="False"  CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                        <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="120*" />
-                      </DataGrid.Columns>
-                      <DataGrid.RowDetailsTemplate>
-                        <DataTemplate>
-                          <datagrid:ThemedDataGrid x:Name="playerChildrenDataGrid"  IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="PlayerChildrenDataGrid_PrevMouseWheel" HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" EnableRowVirtualization="False" GridLinesVisibility="Vertical">
+              <docking:TabbedMdiHost>
+              <docking:SplitContainer Orientation="Vertical">
+                <docking:TabbedMdiContainer>
+                  <docking:DocumentWindow x:Name="dpsWindow" Title="Player DPS" Description="" ContainerDockedSize="400, 800" CanClose="False">
+                    <Grid>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="30" />
+                        <RowDefinition Height="300*" />
+                      </Grid.RowDefinitions>
+                      <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
+                        <Border BorderBrush="#FF3F3F46" BorderThickness="1,1,2,1" Height="30" Padding="0" Margin="0">
+                          <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+                        </Border>
+                      </StackPanel>
+                      <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" HorizontalScrollBarVisibility="Disabled" Grid.Row="1" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
+                        <DataGrid.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem IsEnabled="True" x:Name="copyToEQRightClick" Header="Copy To EQ" Click="CopyToEQ_Click"></MenuItem>
+                            <Separator />
+                            <MenuItem x:Name="pdgMenuItemShowDamage" IsEnabled="False" Header="Show Damage Breakdown" Click="PlayerDataGridShowDamage_Click">
+                              <MenuItem Header="Selected" IsEnabled="False" Click="PlayerDataGridShowDamage_Click"/>
+                              <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                            </MenuItem>
+                            <MenuItem x:Name="pdgMenuItemShowSpellCasts" IsEnabled="False" Header="Show Spell Counts" Click="PlayerDataGridShowSpellCasts_Click">
+                              <MenuItem Header="Selected" IsEnabled="False" Click="PlayerDataGridShowSpellCasts_Click"/>
+                              <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem x:Name="pdgMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
+                            <MenuItem x:Name="pdgMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
+                          </ContextMenu>
+                        </DataGrid.ContextMenu>
+                        <DataGrid.Columns>
+                          <DataGridTemplateColumn MinWidth="48" Width="48">
+                            <DataGridTemplateColumn.CellTemplate>
+                              <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                  <Image PreviewMouseLeftButtonDown="PlayerDataGridExpander_MouseDown" Loaded="PlayerDataGridExpander_Loaded" Margin="0,0,2,0" Width="15"></Image>
+                                  <TextBlock Width="20" TextAlignment="Right" Text="{Binding Rank}"></TextBlock>
+                                </StackPanel>
+                              </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                          </DataGridTemplateColumn>
+                          <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124"/>
+                          <DataGridTextColumn Binding="{Binding TotalDamage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
+                          <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
+                          <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                          <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
+                          <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
+                          <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <DataGridTextColumn Binding="{Binding AvgCrit}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <DataGridTextColumn Binding="{Binding AvgLucky}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
+                          <DataGridTextColumn Binding="{Binding CritRate}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                          <DataGridTextColumn Binding="{Binding LuckRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% TC" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
+                          <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="False"  CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="120*" />
+                        </DataGrid.Columns>
+                        <DataGrid.RowDetailsTemplate>
+                          <DataTemplate>
+                            <datagrid:ThemedDataGrid x:Name="playerChildrenDataGrid"  IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="PlayerChildrenDataGrid_PrevMouseWheel" HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" EnableRowVirtualization="False" GridLinesVisibility="Vertical">
                               <DataGrid.Columns>
-                              <DataGridTextColumn ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False" MinWidth="47" Width="47" />
-                              <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124"/>
-                              <DataGridTextColumn Binding="{Binding TotalDamage}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
-                              <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
-                              <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                              <DataGridTextColumn Binding="{Binding Hits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
-                              <DataGridTextColumn Binding="{Binding Max}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
-                              <DataGridTextColumn Binding="{Binding Avg}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                              <DataGridTextColumn Binding="{Binding AvgCrit}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                              <DataGridTextColumn Binding="{Binding AvgLucky}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
-                              <DataGridTextColumn Binding="{Binding CritRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                              <DataGridTextColumn Binding="{Binding LuckRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                              <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
-                              <DataGridTextColumn Binding="{Binding PercentString}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                              <DataGridTextColumn Binding="{Binding ClassName}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="120*" />
-                            </DataGrid.Columns>
-                          </datagrid:ThemedDataGrid>
-                        </DataTemplate>
+                                <DataGridTextColumn ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False" MinWidth="47" Width="47" />
+                                <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124"/>
+                                <DataGridTextColumn Binding="{Binding TotalDamage}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
+                                <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                                <DataGridTextColumn Binding="{Binding Hits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
+                                <DataGridTextColumn Binding="{Binding Max}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
+                                <DataGridTextColumn Binding="{Binding Avg}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                                <DataGridTextColumn Binding="{Binding AvgCrit}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                                <DataGridTextColumn Binding="{Binding AvgLucky}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
+                                <DataGridTextColumn Binding="{Binding CritRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                                <DataGridTextColumn Binding="{Binding LuckRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                                <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
+                                <DataGridTextColumn Binding="{Binding PercentString}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                                <DataGridTextColumn Binding="{Binding ClassName}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="120*" />
+                              </DataGrid.Columns>
+                            </datagrid:ThemedDataGrid>
+                          </DataTemplate>
                         </DataGrid.RowDetailsTemplate>
-                    </datagrid:ThemedDataGrid>
-                  </Grid>
-                </docking:DocumentWindow>
-                <docking:DocumentWindow x:Name="damageWindow" Title="Damage Breakdown" IsOpen="False" IsEnabled="True" Description="" ContainerDockedSize="400,800" CanClose="True">
-                  <Grid x:Name="playerDamageParent">
-                    <Grid.RowDefinitions>
-                      <RowDefinition Height="300*" />
-                    </Grid.RowDefinitions>
-                    <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" LoadingRow="PlayerDamageGrid_LoadingRow" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Visible"  RowDetailsVisibilityChanged="PlayerSubGrid_RowDetailsVis" GridLinesVisibility="Horizontal" EnableRowVirtualization="False" SelectionMode="Single">
-                      <DataGrid.Columns>
-                        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124"/>
-                        <DataGridTextColumn Binding="{Binding TotalDamage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
-                        <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
-                        <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                        <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
-                        <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
-                        <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                        <DataGridTextColumn Binding="{Binding AvgCrit}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                        <DataGridTextColumn Binding="{Binding AvgLucky}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
-                        <DataGridTextColumn Binding="{Binding CritRate}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                        <DataGridTextColumn Binding="{Binding LuckRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                        <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                        <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% TC" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
-                      </DataGrid.Columns>
-                      <DataGrid.RowDetailsTemplate>
-                        <DataTemplate>
-                          <datagrid:ThemedDataGrid x:Name="playerSubStatsDataGrid" RowStyle="{StaticResource DetailsDataGridRowSyle}" IsHitTestVisible="False" HeadersVisibility="None" Grid.Row="1" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" GridLinesVisibility="Vertical" EnableRowVirtualization="False">
-                            <DataGrid.Columns>
-                              <DataGridTextColumn Binding="{Binding HitType}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124" />
-                              <DataGridTextColumn Binding="{Binding TotalDamage}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
-                              <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
-                              <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                              <DataGridTextColumn Binding="{Binding Hits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
-                              <DataGridTextColumn Binding="{Binding Max}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
-                              <DataGridTextColumn Binding="{Binding Avg}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                              <DataGridTextColumn Binding="{Binding AvgCrit}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                              <DataGridTextColumn Binding="{Binding AvgLucky}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
-                              <DataGridTextColumn Binding="{Binding CritRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                              <DataGridTextColumn Binding="{Binding LuckRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                              <DataGridTextColumn Binding="{Binding PercentString}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                              <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
-                            </DataGrid.Columns>
-                          </datagrid:ThemedDataGrid>
-                        </DataTemplate>
-                      </DataGrid.RowDetailsTemplate>
-                    </datagrid:ThemedDataGrid>
-                  </Grid>
-                </docking:DocumentWindow>
-              </docking:TabbedMdiContainer>
+                      </datagrid:ThemedDataGrid>
+                    </Grid>
+                  </docking:DocumentWindow>
+                  <docking:DocumentWindow x:Name="damageWindow" Title="Damage Breakdown" IsOpen="False" IsEnabled="True" Description="" ContainerDockedSize="400,800" CanClose="True">
+                    <Grid x:Name="playerDamageParent">
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="300*" />
+                      </Grid.RowDefinitions>
+                      <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" LoadingRow="PlayerDamageGrid_LoadingRow" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Visible"  RowDetailsVisibilityChanged="PlayerSubGrid_RowDetailsVis" GridLinesVisibility="Horizontal" EnableRowVirtualization="False" SelectionMode="Single">
+                        <DataGrid.Columns>
+                          <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124"/>
+                          <DataGridTextColumn Binding="{Binding TotalDamage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
+                          <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
+                          <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                          <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
+                          <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
+                          <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <DataGridTextColumn Binding="{Binding AvgCrit}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <DataGridTextColumn Binding="{Binding AvgLucky}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
+                          <DataGridTextColumn Binding="{Binding CritRate}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                          <DataGridTextColumn Binding="{Binding LuckRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% TC" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
+                        </DataGrid.Columns>
+                        <DataGrid.RowDetailsTemplate>
+                          <DataTemplate>
+                            <datagrid:ThemedDataGrid x:Name="playerSubStatsDataGrid" RowStyle="{StaticResource DetailsDataGridRowSyle}" IsHitTestVisible="False" HeadersVisibility="None" Grid.Row="1" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" GridLinesVisibility="Vertical" EnableRowVirtualization="False">
+                              <DataGrid.Columns>
+                                <DataGridTextColumn Binding="{Binding HitType}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124" />
+                                <DataGridTextColumn Binding="{Binding TotalDamage}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
+                                <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                                <DataGridTextColumn Binding="{Binding Hits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
+                                <DataGridTextColumn Binding="{Binding Max}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
+                                <DataGridTextColumn Binding="{Binding Avg}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                                <DataGridTextColumn Binding="{Binding AvgCrit}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                                <DataGridTextColumn Binding="{Binding AvgLucky}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
+                                <DataGridTextColumn Binding="{Binding CritRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
+                                <DataGridTextColumn Binding="{Binding LuckRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                                <DataGridTextColumn Binding="{Binding PercentString}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                                <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
+                              </DataGrid.Columns>
+                            </datagrid:ThemedDataGrid>
+                          </DataTemplate>
+                        </DataGrid.RowDetailsTemplate>
+                      </datagrid:ThemedDataGrid>
+                    </Grid>
+                  </docking:DocumentWindow>
+                </docking:TabbedMdiContainer>
+                <docking:TabbedMdiContainer>
+                  <docking:DocumentWindow x:Name="chartWindow" Title="Top DPS Over Time" Description="" ContainerDockedSize="400,300" CanFloat="True" CanClose="True">
+                    <lvc:CartesianChart Zoom="Xy" Pan="Xy"  LegendLocation="Right" DisableAnimations="True" MouseDoubleClick="DPSChart_DoubleClick">
+                      <lvc:CartesianChart.AxisY>
+                        <lvc:Axis Title="DPS" MinValue="0"></lvc:Axis>
+                      </lvc:CartesianChart.AxisY>
+                      <lvc:CartesianChart.AxisX>
+                        <lvc:Axis MinValue="0"></lvc:Axis>
+                      </lvc:CartesianChart.AxisX>
+                      <lvc:CartesianChart.Series>
+                        <lvc:LineSeries Values="0"></lvc:LineSeries>
+                      </lvc:CartesianChart.Series>
+                    </lvc:CartesianChart>
+                  </docking:DocumentWindow>
+                </docking:TabbedMdiContainer>
+              </docking:SplitContainer>
             </docking:TabbedMdiHost>
           </docking:Workspace>
-          <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="playerDPSTextWindow" IsOpen="True" Title="Share Player DPS" ContainerDockedSize="400,145">
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="100" />
-                  <ColumnDefinition Width="400*" />
-                </Grid.ColumnDefinitions>
-                <Grid Grid.Column="0">
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="47*" />
-                    <RowDefinition Height="50" />
-                    </Grid.RowDefinitions>
-                  <TextBlock x:Name="sharePlayerDPSLabel" Grid.Row="0" TextWrapping="Wrap" FontSize="14" Margin="10,2,0,0" Foreground="#c2c2c0" >No Players Selected</TextBlock>
-                  <StackPanel Grid.Row="1" Orientation="Vertical">
-                    <TextBlock x:Name="sharePlayerDPSWarningLabel" TextWrapping="Wrap" FontSize="10" Margin="12,0,0,4" Foreground="LightGreen" FontStyle="Italic" Height="12" Visibility="Hidden">0 / 509</TextBlock>
-                    <Button x:Name="copyToEQButton" Width="80" Height="24" Margin="10,4,10,0" Content="Copy to EQ" IsEnabled="False" Foreground="#FF5A5A5A" BorderBrush="{x:Null}" Click="CopyToEQ_Click"/>
-                  </StackPanel>
-                </Grid>
-                <Grid Grid.Column="1">
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="20" />
-                    <RowDefinition Height="50*" />
-                  </Grid.RowDefinitions>
-                  <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
-                    <CheckBox x:Name="playerDPSTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalContentAlignment="Top" Checked="PlayerDPSTextCheckChange" Unchecked="PlayerDPSTextCheckChange">Total Damage</CheckBox>
-                    <CheckBox x:Name="playerDPSTextDoRank" IsChecked="True" Margin="0,2,15,0" VerticalContentAlignment="Top" Checked="PlayerDPSTextCheckChange" Unchecked="PlayerDPSTextCheckChange">Rank Players</CheckBox>
-                  </StackPanel>
-                  <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerDPSTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="#c2c2c0" BorderThickness="0" FontSize="14" MouseEnter="PlayerDPSText_MouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerDPSTextBox_TextChanged"/>
-                </Grid>
-              </Grid>
-            </docking:ToolWindow>
-          </docking:ToolWindowContainer>
-        </docking:SplitContainer>
-        <docking:SplitContainer Orientation="Vertical">
-          <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="petMappingWindow" IsOpen="False" Title="Pet Owners" ContainerDockedSize="240,150">
-              <datagrid:ThemedDataGrid x:Name="petMappingGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
-                <DataGrid.Columns>
-                  <DataGridTextColumn Binding="{Binding Owner}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Owner" IsReadOnly="True" MinWidth="30" Width="30*"/>
-                  <DataGridTextColumn Binding="{Binding Pet}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Pet" IsReadOnly="True" MinWidth="30" Width="30*" />
-                </DataGrid.Columns>
-              </datagrid:ThemedDataGrid>
-            </docking:ToolWindow>
-          </docking:ToolWindowContainer>
-          <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Players" ContainerDockedSize="240,150">
-              <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
-                <DataGrid.Columns>
-                  <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
-                </DataGrid.Columns>
-              </datagrid:ThemedDataGrid>
-            </docking:ToolWindow>
-            <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Verified Pets" ContainerDockedSize="240,150">
-              <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
-                <DataGrid.Columns>
-                  <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
-                </DataGrid.Columns>
-              </datagrid:ThemedDataGrid>
-            </docking:ToolWindow>
-          </docking:ToolWindowContainer>
         </docking:SplitContainer>
       </docking:SplitContainer>
+      <docking:DockSite.AutoHideRightContainers>
+        <docking:ToolWindowContainer>
+          <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Players" ContainerDockedSize="240,150">
+            <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
+              <DataGrid.Columns>
+                <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
+              </DataGrid.Columns>
+            </datagrid:ThemedDataGrid>
+          </docking:ToolWindow>
+          <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Pets" ContainerDockedSize="240,150">
+            <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
+              <DataGrid.Columns>
+                <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
+              </DataGrid.Columns>
+            </datagrid:ThemedDataGrid>
+          </docking:ToolWindow>
+        </docking:ToolWindowContainer>
+        <docking:ToolWindowContainer>
+          <docking:ToolWindow x:Name="petMappingWindow" IsOpen="True" Title="Pet Owners" ContainerDockedSize="240,150">
+            <datagrid:ThemedDataGrid x:Name="petMappingGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
+              <DataGrid.Columns>
+                <DataGridTextColumn Binding="{Binding Owner}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Owner" IsReadOnly="True" MinWidth="30" Width="30*"/>
+                <DataGridTextColumn Binding="{Binding Pet}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Pet" IsReadOnly="True" MinWidth="30" Width="30*" />
+              </DataGrid.Columns>
+            </datagrid:ThemedDataGrid>
+          </docking:ToolWindow>
+        </docking:ToolWindowContainer>
+      </docking:DockSite.AutoHideRightContainers>
+      <docking:DockSite.AutoHideBottomContainers>
+        <docking:ToolWindowContainer>
+          <docking:ToolWindow x:Name="playerDPSTextWindow" IsOpen="True" Title="Share Player DPS" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="400*" />
+              </Grid.ColumnDefinitions>
+              <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="47*" />
+                  <RowDefinition Height="50" />
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="sharePlayerDPSLabel" Grid.Row="0" TextWrapping="Wrap" FontSize="14" Margin="10,2,0,0" Foreground="#c2c2c0" >No Players Selected</TextBlock>
+                <StackPanel Grid.Row="1" Orientation="Vertical">
+                  <TextBlock x:Name="sharePlayerDPSWarningLabel" TextWrapping="Wrap" FontSize="10" Margin="12,0,0,4" Foreground="LightGreen" FontStyle="Italic" Height="12" Visibility="Hidden">0 / 509</TextBlock>
+                  <Button x:Name="copyToEQButton" Width="80" Height="24" Margin="10,4,10,0" Content="Copy to EQ" IsEnabled="False" Foreground="#FF5A5A5A" BorderBrush="{x:Null}" Click="CopyToEQ_Click"/>
+                </StackPanel>
+              </Grid>
+              <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="20" />
+                  <RowDefinition Height="50*" />
+                </Grid.RowDefinitions>
+                <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
+                  <CheckBox x:Name="playerDPSTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalContentAlignment="Top" Checked="PlayerDPSTextCheckChange" Unchecked="PlayerDPSTextCheckChange">Total Damage</CheckBox>
+                  <CheckBox x:Name="playerDPSTextDoRank" IsChecked="True" Margin="0,2,15,0" VerticalContentAlignment="Top" Checked="PlayerDPSTextCheckChange" Unchecked="PlayerDPSTextCheckChange">Rank Players</CheckBox>
+                </StackPanel>
+                <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerDPSTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="#c2c2c0" BorderThickness="0" FontSize="14" MouseEnter="PlayerDPSText_MouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerDPSTextBox_TextChanged"/>
+              </Grid>
+            </Grid>
+          </docking:ToolWindow>
+        </docking:ToolWindowContainer>
+      </docking:DockSite.AutoHideBottomContainers>      
     </docking:DockSite>
   </Grid>
 </Window>

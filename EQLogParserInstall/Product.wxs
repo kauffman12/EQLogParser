@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.0.23" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.1.0" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -77,8 +77,14 @@
       </Component>
       <Component Win64="yes" Id="FontAwesome.WPF.dll" Guid="ED08AC03-21A2-4664-A99A-0E41F73FDC40">
         <File Id="FontAwesome.WPF.dll" Name="FontAwesome.WPF.dll" Source="$(var.EQLogParser_TargetDir)FontAwesome.WPF.dll" />
-      </Component> 
-	  </ComponentGroup>
+      </Component>
+      <Component Win64="yes" Id="LiveCharts.dll" Guid="301B6781-24FD-4534-801B-B3CBE2A01927">
+        <File Id="LiveCharts.dll" Name="LiveCharts.dll" Source="$(var.EQLogParser_TargetDir)LiveCharts.dll" />
+      </Component>
+      <Component Win64="yes" Id="LiveCharts.Wpf.dll" Guid="DC2B7F21-1FF6-44F8-A496-2DACBBCA7AB4">
+        <File Id="LiveCharts.Wpf.dll" Name="LiveCharts.Wpf.dll" Source="$(var.EQLogParser_TargetDir)LiveCharts.Wpf.dll" />
+      </Component>
+    </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
         <File Id="petnames.txt" Name="petnames.txt" Source="$(var.EQLogParser_TargetDir)\data\petnames.txt" />
@@ -87,5 +93,5 @@
         <File Id="spells.txt" Name="spells.txt" Source="$(var.EQLogParser_TargetDir)\data\spells.txt" />
       </Component>      
     </ComponentGroup>
-	</Fragment>
+  </Fragment>
 </Wix>

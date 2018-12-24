@@ -2,6 +2,8 @@
 using ActiproSoftware.Windows.Controls.DataGrid;
 using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
+using LiveCharts;
+using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,34 +24,33 @@ namespace EQLogParser
 {
   public partial class MainWindow : Window
   {
+    public static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
+    public static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
+    public static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
+    public static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    public static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
+    public static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
+    public static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
+    public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
+
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.0.23";
+    private const string VERSION = "v1.1.0";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
     private const int MIN_LINE_LENGTH = 33;
     private const int DISPATCHER_DELAY = 150; // millis
-
-    private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
-    private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
-    private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
-    private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
-    private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
-    private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
-    private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
-    private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
-
     private static long CastLineCount = 0;
     private static long DamageLineCount = 0;
     private static long CastLinesProcessed = 0;
     private static long DamageLinesProcessed = 0;
     private static long FilePosition = 0;
-    private static ActionProcessor CastLineProcessor;
-    private static ActionProcessor DamageLineProcessor;
 
+    private static ActionProcessor<string> CastProcessor = null;
+    private static ActionProcessor<string> DamageProcessor = null;
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<NonPlayer> NonPlayersView = new ObservableCollection<NonPlayer>();
@@ -61,7 +62,6 @@ namespace EQLogParser
     private static bool NeedDPSTextUpdate = false;
     private static CombinedStats CurrentStats = null;
     private DispatcherTimer NonPlayerSelectionTimer;
-    private int CurrentFightID = 0;
 
     // progress window
     private static bool UpdatingProgress = false;
@@ -86,11 +86,23 @@ namespace EQLogParser
         Title = APP_NAME + " " + VERSION;
         dpsTitle.Content = DPS_LABEL;
 
+        // Clear/Reset
+        DataManager.Instance.EventsClearedActiveData += (sender, cleared) =>
+        {
+          CurrentStats = null;
+          NonPlayersView.Clear();
+          playerDataGrid.ItemsSource = null;
+          npcMenuItemClear.IsEnabled = npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
+          dpsTitle.Content = DPS_LABEL;
+          NeedStatsUpdate = NeedDPSTextUpdate = true;
+        };
+
         // pet -> players
         petMappingGrid.ItemsSource = PetPlayersView;
         DataManager.Instance.EventsNewPetMapping += (sender, mapping) => Dispatcher.InvokeAsync(() =>
         {
           PetPlayersView.Add(mapping);
+          petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
           NeedStatsUpdate = true;
         });
 
@@ -99,7 +111,7 @@ namespace EQLogParser
         DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           VerifiedPetsView.Add(new SortableName() { Name = name });
-          verifiedPetsWindow.Title = "Verified Pets (" + VerifiedPetsView.Count + ")";
+          verifiedPetsWindow.Title = "Pets (" + VerifiedPetsView.Count + ")";
         });
 
         // verified player table
@@ -107,7 +119,7 @@ namespace EQLogParser
         DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           VerifiedPlayersView.Add(new SortableName() { Name = name });
-          verifiedPlayersWindow.Title = "Verified Players (" + VerifiedPlayersView.Count + ")";
+          verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersView.Count + ")";
         });
 
         // List of NPCs to select from, damage is saved in the NonPlayer object
@@ -128,6 +140,7 @@ namespace EQLogParser
 
         DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
+        NpcDamageManager = new NpcDamageManager();
 
         DispatcherTimer dispatcherTimer = new DispatcherTimer();
         dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
@@ -137,17 +150,23 @@ namespace EQLogParser
         NonPlayerSelectionTimer = new DispatcherTimer();
         NonPlayerSelectionTimer.Tick += NonPlayerSelectionTimer_Tick;
         NonPlayerSelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, DISPATCHER_DELAY);
-        DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
 
+        // Setup themes
         ThemeManager.BeginUpdate();
-        // Use the Actipro styles for native WPF controls that look great with Actipro's control products
         ThemeManager.AreNativeThemesEnabled = true;
-
         SharedThemeCatalogRegistrar.Register();
         DockingThemeCatalogRegistrar.Register();
-
-        // Default the theme to Metro Light
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
+
+        // reverse regular tooltip
+        var theChart = chartWindow.Content as CartesianChart;
+        theChart.DataTooltip.Foreground = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
+        theChart.DataTooltip.Background = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
+        theChart.ChartLegend.Foreground = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
+        theChart.ChartLegend.Background = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
+
+        // default values
+        InitDPSChart();
       }
       catch (Exception e)
       {
@@ -161,8 +180,13 @@ namespace EQLogParser
 
     private void Window_Closed(object sender, System.EventArgs e)
     {
-      StopProcessors();
+      StopProcessing();
       Application.Current.Shutdown();
+    }
+
+    private void PlayerDPSTextWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+      playerDPSTextWindow.State = DockingWindowState.AutoHide;
     }
 
     private void DispatcherTimer_Tick(object sender, EventArgs e)
@@ -183,49 +207,27 @@ namespace EQLogParser
     {
       if (e.Source == npcWindowMenuitem)
       {
-        Utils.OpenWindow(npcWindow);
+        Helpers.OpenWindow(npcWindow);
       }
       else if (e.Source == fileProgressWindowMenuItem)
       {
-        Utils.OpenWindow(progressWindow);
+        Helpers.OpenWindow(progressWindow);
       }
       else if (e.Source == petMappingWindowMenuItem)
       {
-        Utils.OpenWindow(petMappingWindow);
+        Helpers.OpenWindow(petMappingWindow);
       }
       else if (e.Source == verifiedPlayersWindowMenuItem)
       {
-        Utils.OpenWindow(verifiedPlayersWindow);
+        Helpers.OpenWindow(verifiedPlayersWindow);
       }
       else if (e.Source == verifiedPetsWindowMenuItem)
       {
-        Utils.OpenWindow(verifiedPetsWindow);
+        Helpers.OpenWindow(verifiedPetsWindow);
       }
       else if (e.Source == playerDPSTextWindowMenuItem)
       {
-        Utils.OpenWindow(playerDPSTextWindow);
-      }
-    }
-
-    private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
-    {
-      if (processed.Record != null)
-      {
-        if (NpcDamageManager.LastUpdateTime != DateTime.MinValue)
-        {
-          TimeSpan diff = processed.ProcessLine.CurrentTime.Subtract(NpcDamageManager.LastUpdateTime);
-          if (diff.TotalSeconds > 120)
-          {
-            NonPlayer divider = new NonPlayer() { FightID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = Utils.FormatTimeSpan(diff) };
-            Dispatcher.InvokeAsync(() =>
-            {
-              CurrentFightID++;
-              NonPlayersView.Add(divider);
-            });
-          }
-        }
-
-        NpcDamageManager.AddOrUpdateNpc(processed.Record, processed.ProcessLine.CurrentTime, processed.ProcessLine.TimeString.Substring(4, 15));
+        Helpers.OpenWindow(playerDPSTextWindow);
       }
     }
 
@@ -252,7 +254,6 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        npc.FightID = CurrentFightID;
         NonPlayersView.Add(npc);
         npcDataGrid.Items.MoveCurrentToLast();
         if (!npcDataGrid.IsMouseOver)
@@ -294,6 +295,7 @@ namespace EQLogParser
       ThemedDataGrid callingDataGrid = sender as ThemedDataGrid;
       npcMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
       npcMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
+      npcMenuItemClear.IsEnabled = callingDataGrid.Items.Count > 0;
     }
 
     private void NonPlayerDataGridSelectFight_Click(object sender, RoutedEventArgs e)
@@ -336,6 +338,11 @@ namespace EQLogParser
       }
     }
 
+    private void DataGridClear_Click(object sender, RoutedEventArgs e)
+    {
+      DataManager.Instance.Clear();
+    }
+
     private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
       e.Row.Header = (e.Row.GetIndex() + 1).ToString();
@@ -345,7 +352,7 @@ namespace EQLogParser
     private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       NeedDPSTextUpdate = true;
-      updatePlayerDataGridMenuItems();
+      UpdatePlayerDataGridMenuItems();
     }
 
     private void PlayerDataGridExpander_Loaded(object sender, RoutedEventArgs e)
@@ -413,10 +420,13 @@ namespace EQLogParser
     private void PlayerDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
-      if (callingDataGrid.SelectedItems.Count > 0)
+      if (menu != null)
       {
-        ShowSpellCasts(callingDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
+        ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+        if (callingDataGrid.SelectedItems.Count > 0)
+        {
+          ShowSpellCasts(callingDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
+        }
       }
     }
 
@@ -512,7 +522,7 @@ namespace EQLogParser
                 }
               }
 
-              row.Values[i] = counts.UniqueSpellCounts[spell]; 
+              row.Values[i] = counts.UniqueSpellCounts[spell];
               Dispatcher.InvokeAsync(() => rows.Add(row));
               Thread.Sleep(5);
             }
@@ -528,14 +538,14 @@ namespace EQLogParser
 
       if (spellCastsWindow == null || !spellCastsWindow.IsOpen)
       {
-        spellCastsWindow = new DocumentWindow(docSite, "spellCastsWindow", "Spell Counts", null, dataGrid);
+        spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, dataGrid);
       }
       else
       {
         spellCastsWindow.Content = dataGrid;
       }
 
-      Utils.OpenWindow(spellCastsWindow);
+      Helpers.OpenWindow(spellCastsWindow);
       spellCastsWindow.MoveToLast();
     }
 
@@ -582,10 +592,10 @@ namespace EQLogParser
 
       if (!damageWindow.IsOpen)
       {
-        damageWindow = new DocumentWindow(docSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
+        damageWindow = new DocumentWindow(dockSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
       }
 
-      Utils.OpenWindow(damageWindow);
+      Helpers.OpenWindow(damageWindow);
       damageWindow.MoveToLast();
     }
 
@@ -653,9 +663,8 @@ namespace EQLogParser
       if (EQLogReader != null && UpdatingProgress)
       {
         busyIcon.Visibility = Visibility.Visible;
-        progressWindow.Title = "Reading Log";
+        bytesReadTitle.Content = "Reading:";
         processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
-
         double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
         double castPercent = CastLineCount > 0 ? Math.Round((double)CastLinesProcessed / CastLineCount * 10, 1) : 0;
         double damagePercent = DamageLineCount > 0 ? Math.Round((double)DamageLinesProcessed / DamageLineCount * 10, 1) : 0;
@@ -665,21 +674,19 @@ namespace EQLogParser
 
         if ((filePercent >= 100 || MonitorOnly) && EQLogReader.FileLoadComplete)
         {
-          bytesReadLabel.Content = "100%";
+          bytesReadTitle.Content = "Monitoring:";
+          bytesReadLabel.Content = "Active";
           bytesReadLabel.Foreground = GOOD_BRUSH;
         }
 
         if (MonitorOnly || (filePercent >= 100 && castPercent >= 10 && damagePercent >= 10 && EQLogReader.FileLoadComplete))
         {
-          progressWindow.Title = "Monitoring Log";
           UpdatingProgress = false;
+          bytesReadTitle.Content = "Monitoring";
           busyIcon.Visibility = Visibility.Hidden;
           processedCastsLabel.Content = "-";
           processedDamageLabel.Content = "-";
-
           LOG.Info("Finished Loading Log File");
-          DamageLineProcessor.LowerPriority();
-          CastLineProcessor.LowerPriority();
         }
       }
     }
@@ -698,20 +705,57 @@ namespace EQLogParser
         Label label = dpsTitle;
 
         var selected = grid.SelectedItems;
-        if (selected != null)
+        if (selected != null && CurrentStats != null && selected.Count > 0)
         {
-          StatsSummary summary = StatsBuilder.BuildSummary(CurrentStats, selected.Cast<PlayerStats>().ToList(), playerDPSTextDoTotals.IsChecked ?? false, playerDPSTextDoRank.IsChecked ?? false);
+          List<PlayerStats> list = selected.Cast<PlayerStats>().ToList();
+          StatsSummary summary = StatsBuilder.BuildSummary(CurrentStats, list, playerDPSTextDoTotals.IsChecked ?? false, playerDPSTextDoRank.IsChecked ?? false);
           playerDPSTextBox.Text = summary.Title + summary.RankedPlayers;
           playerDPSTextBox.SelectAll();
+
+          if (chartWindow.IsOpen)
+          {
+            UpdateDPSChart("Selected Players DPS Over Time", list);
+          }
         }
         else
         {
-          playerDPSTextBox.Text = label.Content.ToString();
+          playerDPSTextBox.Text = SHARE_DPS_LABEL;
+
+          if (CurrentStats != null)
+          {
+            var list = CurrentStats.StatsList.Take(5).ToList();
+            UpdateDPSChart("Top " + list.Count + " DPS Over Time", CurrentStats.StatsList.Take(5).ToList());
+          }
         }
 
         busyIcon.Visibility = Visibility.Hidden;
         NeedDPSTextUpdate = false;
       }
+    }
+
+    private void InitDPSChart()
+    {
+      var theChart = chartWindow.Content as CartesianChart;
+      chartWindow.Title = "DPS Over Time";
+      LineSeries series = new LineSeries();
+      series.Values = new ChartValues<long>() { 0 };
+      SeriesCollection collection = new SeriesCollection();
+      collection.Add(series);
+      theChart.AxisX[0].Labels = new List<string>() { "Jan 01 12:00:00", "15", "30" };
+      theChart.AxisY[0].Labels = new List<string>() { "0", "500000" };
+      theChart.Series = collection;
+    }
+
+    private void UpdateDPSChart(string title, List<PlayerStats> list)
+    {
+      var chartData = NpcDamageManager.GetDPSValues(CurrentStats, list);
+      var series = Helpers.CreateLineChartSeries(chartData.Values);
+      var theChart = chartWindow.Content as CartesianChart;
+      Helpers.ChartResetView(theChart);
+      theChart.AxisX[0].Labels = chartData.XAxisLabels;
+      theChart.AxisY[0].Labels = null;
+      theChart.Series = series;
+      chartWindow.Title = title;
     }
 
     private void UpdateStats()
@@ -741,9 +785,15 @@ namespace EQLogParser
                   dpsTitle.Content = StatsBuilder.BuildTitle(CurrentStats);
                   playerDPSTextBox.Text = dpsTitle.Content.ToString();
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
+
+                  if (chartWindow.IsOpen)
+                  {
+                    var list = CurrentStats.StatsList.Take(5).ToList();
+                    UpdateDPSChart("Top " + list.Count + " DPS Over Time", CurrentStats.StatsList.Take(5).ToList());
+                  }
                   NeedStatsUpdate = false;
                   UpdatingStats = false;
-                  updatePlayerDataGridMenuItems();
+                  UpdatePlayerDataGridMenuItems();
                 }
                 Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
               }));
@@ -755,19 +805,21 @@ namespace EQLogParser
         {
           if (playerDataGrid.ItemsSource is ObservableCollection<PlayerStats> list)
           {
+            CurrentStats = null;
             dpsTitle.Content = DPS_LABEL;
             playerDPSTextBox.Text = "";
             list.Clear();
+            InitDPSChart();
           }
 
-          updatePlayerDataGridMenuItems();
+          UpdatePlayerDataGridMenuItems();
           NeedStatsUpdate = false;
           UpdatingStats = false;
         }
       }
     }
 
-    private void updatePlayerDataGridMenuItems()
+    private void UpdatePlayerDataGridMenuItems()
     {
       if (CurrentStats != null && CurrentStats.StatsList.Count > 0)
       {
@@ -782,9 +834,9 @@ namespace EQLogParser
           {
             menuItem.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
           }
-          else if (CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string))
+          else
           {
-            menuItem.IsEnabled = true;
+            menuItem.IsEnabled = CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string);
           }
         }
 
@@ -795,15 +847,51 @@ namespace EQLogParser
           {
             menuItem.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
           }
-          else if (CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string))
+          else
           {
-            menuItem.IsEnabled = true;
+            menuItem.IsEnabled = CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string);
           }
         }
       }
       else
       {
         pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemSelectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = false;
+      }
+    }
+
+
+    private void PlayerDPSTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+      if (playerDPSTextBox.Text == "" || playerDPSTextBox.Text == SHARE_DPS_LABEL)
+      {
+        copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = false;
+        copyToEQButton.Foreground = LIGHTER_BRUSH;
+        sharePlayerDPSLabel.Text = SHARE_DPS_LABEL;
+        sharePlayerDPSLabel.Foreground = BRIGHT_TEXT_BRUSH;
+        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + "/" + 509;
+        sharePlayerDPSWarningLabel.Visibility = Visibility.Hidden;
+      }
+      else if (playerDPSTextBox.Text.Length > 509)
+      {
+        copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = false;
+        copyToEQButton.Foreground = LIGHTER_BRUSH;
+        sharePlayerDPSLabel.Text = SHARE_DPS_TOO_BIG_LABEL;
+        sharePlayerDPSLabel.Foreground = WARNING_BRUSH;
+        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + "/" + 509;
+        sharePlayerDPSWarningLabel.Foreground = WARNING_BRUSH;
+        sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
+      }
+      else if (playerDPSTextBox.Text.Length > 0 && playerDPSTextBox.Text != SHARE_DPS_LABEL)
+      {
+        copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = true;
+        copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
+        var count = playerDataGrid.SelectedItems.Count;
+        string players = count == 1 ? "Player" : "Players";
+        sharePlayerDPSLabel.Text = String.Format("{0} {1} Selected", count, players);
+        sharePlayerDPSLabel.Foreground = BRIGHT_TEXT_BRUSH;
+        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + " / " + 509;
+        sharePlayerDPSWarningLabel.Foreground = GOOD_BRUSH;
+        sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
       }
     }
 
@@ -825,21 +913,16 @@ namespace EQLogParser
         bool? result = dialog.ShowDialog();
         if (result == true)
         {
-          dpsTitle.Content = DPS_LABEL;
+          StopProcessing();
+          CastProcessor = new ActionProcessor<string>("CastProcessor", CastLineParser.Process);
+          DamageProcessor = new ActionProcessor<string>("DamageProcessor", DamageLineParser.Process);
+
           bytesReadLabel.Foreground = BRIGHT_TEXT_BRUSH;
           processedCastsLabel.Foreground = BRIGHT_TEXT_BRUSH;
           processedDamageLabel.Foreground = BRIGHT_TEXT_BRUSH;
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
-
-          NeedStatsUpdate = UpdatingProgress = true;
           StartLoadTime = DateTime.Now;
-          CurrentFightID = 0;
           CastLineCount = DamageLineCount = CastLinesProcessed = DamageLinesProcessed = FilePosition = 0;
-
-          StopProcessors();
-          NpcDamageManager = new NpcDamageManager();
-          DamageLineProcessor = new ActionProcessor("DamageLineProcessor", DamageLineParser.Process);
-          CastLineProcessor = new ActionProcessor("CastLineProcessor", CastLineParser.Process);
 
           string name = "Uknown";
           if (dialog.FileName.Length > 0)
@@ -854,13 +937,10 @@ namespace EQLogParser
             }
           }
 
+          InitDPSChart();
           DataManager.Instance.SetPlayerName(name);
           DataManager.Instance.Clear();
-
-          NonPlayersView.Clear();
-          npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
-
-          progressWindow.IsOpen = true;
+          progressWindow.IsOpen = UpdatingProgress = true;
           EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, monitorOnly, lastMins);
           EQLogReader.Start();
         }
@@ -873,73 +953,44 @@ namespace EQLogParser
 
     private void FileLoadingCallback(string line, long position)
     {
-      Interlocked.Exchange(ref FilePosition,  position);
+      Interlocked.Exchange(ref FilePosition, position);
 
       if (line.Length > MIN_LINE_LENGTH)
       {
         CastLineCount++;
+        CastProcessor.Add(line);
+
         DamageLineCount++;
-        CastLineProcessor.AppendToQueue(line);
-        DamageLineProcessor.AppendToQueue(line);
+        DamageProcessor.Add(line);
       }
 
-      if (DamageLineProcessor.QueueSize() > 100000 || CastLineProcessor.QueueSize() > 100000)
+      if (DamageProcessor.Size() > 100000 || CastProcessor.Size() > 100000)
       {
         Thread.Sleep(20);
       }
     }
 
-    private void PlayerDPSTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void StopProcessing()
     {
-      if (playerDPSTextBox.Text == "")
-      {
-        copyToEQButton.IsEnabled = false;
-        copyToEQButton.Foreground = LIGHTER_BRUSH;
-        sharePlayerDPSLabel.Text = SHARE_DPS_LABEL;
-        sharePlayerDPSLabel.Foreground = BRIGHT_TEXT_BRUSH;
-        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + "/" + 509;
-        sharePlayerDPSWarningLabel.Visibility = Visibility.Hidden;
-      }
-      else if (playerDPSTextBox.Text.Length > 509)
-      {
-        copyToEQButton.IsEnabled = false;
-        copyToEQButton.Foreground = LIGHTER_BRUSH;
-        sharePlayerDPSLabel.Text = SHARE_DPS_TOO_BIG_LABEL;
-        sharePlayerDPSLabel.Foreground = WARNING_BRUSH;
-        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + "/" + 509;
-        sharePlayerDPSWarningLabel.Foreground = WARNING_BRUSH;
-        sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
-      }
-      else if (playerDPSTextBox.Text.Length > 0)
-      {
-        copyToEQButton.IsEnabled = true;
-        copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
-        var count = playerDataGrid.SelectedItems.Count;
-        string players = count == 1 ? "Player" : "Players";
-        sharePlayerDPSLabel.Text = String.Format("{0} {1} Selected", count, players);
-        sharePlayerDPSLabel.Foreground = BRIGHT_TEXT_BRUSH;
-        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + " / " + 509;
-        sharePlayerDPSWarningLabel.Foreground = GOOD_BRUSH;
-        sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
-      }
-    }
-
-    private void StopProcessors()
-    {
-      if (CastLineProcessor != null)
-      {
-        CastLineProcessor.Stop();
-      }
-
-      if (DamageLineProcessor != null)
-      {
-        DamageLineProcessor.Stop();
-      }
-
       if (EQLogReader != null)
       {
         EQLogReader.Stop();
       }
+
+      if (CastProcessor != null)
+      {
+        CastProcessor.Stop();
+      }
+
+      if (DamageProcessor != null)
+      {
+        DamageProcessor.Stop();
+      }
+    }
+
+    private void DPSChart_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+      Helpers.ChartResetView(chartWindow.Content as CartesianChart);
     }
   }
 }

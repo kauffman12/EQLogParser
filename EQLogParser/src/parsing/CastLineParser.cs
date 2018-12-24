@@ -7,9 +7,10 @@ namespace EQLogParser
   class CastLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    public static event EventHandler<object> EventsLineProcessed;
+    public static event EventHandler<string> EventsLineProcessed;
 
     private const int ACTION_PART_INDEX = 27;
+    private static DateUtil DateUtil = new DateUtil();
 
     public static ConcurrentDictionary<string, byte> IgnoreMap = new ConcurrentDictionary<string, byte>(
       new List<KeyValuePair<string, byte>>
@@ -22,10 +23,8 @@ namespace EQLogParser
       new KeyValuePair<string, byte>("Stand", 1), new KeyValuePair<string, byte>("MESSAGE", 1)
     });
 
-    public static void Process(object data)
+    public static void Process(string line)
     {
-      string line = data as string;
-
       try
       {
         int index = -1;
@@ -44,7 +43,7 @@ namespace EQLogParser
                 pline.OptionalIndex = index - ACTION_PART_INDEX;
                 pline.OptionalData = "you" + test;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
                 cast = HandleSpellCast(pline);
               }
             }
@@ -57,7 +56,7 @@ namespace EQLogParser
                 pline.OptionalIndex = index - ACTION_PART_INDEX;
                 pline.OptionalData = test;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
                 cast = HandleSpellCast(pline);
               }
             }
@@ -76,7 +75,7 @@ namespace EQLogParser
             ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
             pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
             pline.TimeString = pline.Line.Substring(1, 24);
-            pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+            pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
             HandlePosessiveLandsOnOther(pline);
           }
           else if (firstSpace > -1)
@@ -90,7 +89,7 @@ namespace EQLogParser
                 pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
                 pline.OptionalData = player;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
                 HandleOtherLandsOnCases(pline);
               }
             }
@@ -102,7 +101,7 @@ namespace EQLogParser
         LOG.Error(e);
       }
 
-      EventsLineProcessed(data, data);
+      EventsLineProcessed(line, line);
     }
 
     public static void HandleOtherLandsOnCases(ProcessLine pline)
@@ -179,7 +178,7 @@ namespace EQLogParser
 
       if (cast != null)
       {
-        cast.SpellAbbrv = Utils.AbbreviateSpellName(cast.Spell);
+        cast.SpellAbbrv = Helpers.AbbreviateSpellName(cast.Spell);
       }
 
       return cast;
