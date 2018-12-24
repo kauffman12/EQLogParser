@@ -91,6 +91,7 @@ namespace EQLogParser
         {
           CurrentStats = null;
           NonPlayersView.Clear();
+          InitDPSChart();
           playerDataGrid.ItemsSource = null;
           npcMenuItemClear.IsEnabled = npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
           dpsTitle.Content = DPS_LABEL;
@@ -228,6 +229,24 @@ namespace EQLogParser
       else if (e.Source == playerDPSTextWindowMenuItem)
       {
         Helpers.OpenWindow(playerDPSTextWindow);
+      }
+      else if (e.Source == dpsChartMenuItem)
+      {
+        if (chartWindow.IsOpen)
+        {
+          // just focus
+          Helpers.OpenWindow(chartWindow);
+        }
+        else
+        {
+          chartWindow = new DocumentWindow(dockSite, "dpsChart", "DPS Over Time", null, dpsChart);
+          chartWindow.ContainerDockedSize = new Size(400, 300);
+          Helpers.OpenWindow(chartWindow);
+          InitDPSChart();
+          chartWindow.CanFloat = true;
+          chartWindow.CanClose = true;
+          chartWindow.MoveToNewHorizontalContainer();
+        }
       }
     }
 
@@ -711,11 +730,7 @@ namespace EQLogParser
           StatsSummary summary = StatsBuilder.BuildSummary(CurrentStats, list, playerDPSTextDoTotals.IsChecked ?? false, playerDPSTextDoRank.IsChecked ?? false);
           playerDPSTextBox.Text = summary.Title + summary.RankedPlayers;
           playerDPSTextBox.SelectAll();
-
-          if (chartWindow.IsOpen)
-          {
-            UpdateDPSChart("Selected Players DPS Over Time", list);
-          }
+          UpdateDPSChart("Selected Players DPS Over Time", list);
         }
         else
         {
@@ -733,29 +748,42 @@ namespace EQLogParser
       }
     }
 
+    private void DPSChart_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+      Helpers.ChartResetView(chartWindow.Content as CartesianChart);
+    }
+
     private void InitDPSChart()
     {
-      var theChart = chartWindow.Content as CartesianChart;
-      chartWindow.Title = "DPS Over Time";
-      LineSeries series = new LineSeries();
-      series.Values = new ChartValues<long>() { 0 };
-      SeriesCollection collection = new SeriesCollection();
-      collection.Add(series);
-      theChart.AxisX[0].Labels = new List<string>() { "Jan 01 12:00:00", "15", "30" };
-      theChart.AxisY[0].Labels = new List<string>() { "0", "500000" };
-      theChart.Series = collection;
+      if (chartWindow != null && chartWindow.IsOpen)
+      {
+        var theChart = chartWindow.Content as CartesianChart;
+        chartWindow.Title = "DPS Over Time";
+        LineSeries series = new LineSeries();
+        series.Values = new ChartValues<long>() { 0 };
+        SeriesCollection collection = new SeriesCollection();
+        collection.Add(series);
+        theChart.AxisX[0].Labels = new List<string>() { "Jan 01 12:00:00", "15", "30" };
+        theChart.AxisY[0].Labels = new List<string>() { "0", "100000", "200000", "300000" };
+        theChart.AxisY[0].MaxValue = 300000;
+        theChart.Series = collection;
+      }
     }
 
     private void UpdateDPSChart(string title, List<PlayerStats> list)
     {
-      var chartData = NpcDamageManager.GetDPSValues(CurrentStats, list);
-      var series = Helpers.CreateLineChartSeries(chartData.Values);
-      var theChart = chartWindow.Content as CartesianChart;
-      Helpers.ChartResetView(theChart);
-      theChart.AxisX[0].Labels = chartData.XAxisLabels;
-      theChart.AxisY[0].Labels = null;
-      theChart.Series = series;
-      chartWindow.Title = title;
+      if (chartWindow != null && chartWindow.IsOpen)
+      {
+        var chartData = NpcDamageManager.GetDPSValues(CurrentStats, list);
+        var series = Helpers.CreateLineChartSeries(chartData.Values);
+        var theChart = chartWindow.Content as CartesianChart;
+        Helpers.ChartResetView(theChart);
+        theChart.AxisX[0].Labels = chartData.XAxisLabels;
+        theChart.AxisY[0].Labels = null;
+        theChart.AxisY[0].MaxValue = double.NaN;
+        theChart.Series = series;
+        chartWindow.Title = title;
+      }
     }
 
     private void UpdateStats()
@@ -786,11 +814,8 @@ namespace EQLogParser
                   playerDPSTextBox.Text = dpsTitle.Content.ToString();
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
 
-                  if (chartWindow.IsOpen)
-                  {
-                    var list = CurrentStats.StatsList.Take(5).ToList();
-                    UpdateDPSChart("Top " + list.Count + " DPS Over Time", CurrentStats.StatsList.Take(5).ToList());
-                  }
+                  var list = CurrentStats.StatsList.Take(5).ToList();
+                  UpdateDPSChart("Top " + list.Count + " DPS Over Time", CurrentStats.StatsList.Take(5).ToList());
                   NeedStatsUpdate = false;
                   UpdatingStats = false;
                   UpdatePlayerDataGridMenuItems();
@@ -937,7 +962,6 @@ namespace EQLogParser
             }
           }
 
-          InitDPSChart();
           DataManager.Instance.SetPlayerName(name);
           DataManager.Instance.Clear();
           progressWindow.IsOpen = UpdatingProgress = true;
@@ -986,11 +1010,6 @@ namespace EQLogParser
       {
         DamageProcessor.Stop();
       }
-    }
-
-    private void DPSChart_DoubleClick(object sender, MouseButtonEventArgs e)
-    {
-      Helpers.ChartResetView(chartWindow.Content as CartesianChart);
     }
   }
 }

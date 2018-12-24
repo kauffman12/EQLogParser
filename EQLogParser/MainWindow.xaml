@@ -31,9 +31,11 @@
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
       </MenuItem>
       <MenuItem Header="_View" Height="20" Width="40">
-        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_Log File Progress" Height="20" />
+        <MenuItem x:Name="dpsChartMenuItem" Click="MenuItemWindow_Click" Header="_DPS Over Time (Chart)" Height="20" />
         <Separator />
+        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="File _Status" Height="20" />
         <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
+        <Separator />
         <MenuItem x:Name="playerDPSTextWindowMenuItem" Header="_Share Player DPS" Click="MenuItemWindow_Click" Height="20" />
         <Separator />
         <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Players" Height="20" />
@@ -66,7 +68,7 @@
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="progressWindow" CanFloat="False" CanAutoHide="False" IsOpen="False" Title="Log File Status" ContainerDockedSize="320,35">
+            <docking:ToolWindow x:Name="progressWindow" CanFloat="False" CanAutoHide="False" IsOpen="False" Title="File Status" ContainerDockedSize="320,35">
               <WrapPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal">
                   <Label Width="85" x:Name="bytesReadTitle" HorizontalContentAlignment="Left" Margin="4,0,0,0">Reading:</Label>
@@ -251,8 +253,8 @@
                   </docking:DocumentWindow>
                 </docking:TabbedMdiContainer>
                 <docking:TabbedMdiContainer>
-                  <docking:DocumentWindow x:Name="chartWindow" Title="Top DPS Over Time" Description="" ContainerDockedSize="400,300" CanFloat="True" CanClose="True">
-                    <lvc:CartesianChart Zoom="Xy" Pan="Xy"  LegendLocation="Right" DisableAnimations="True" MouseDoubleClick="DPSChart_DoubleClick">
+                  <docking:DocumentWindow x:Name="chartWindow" Title="DPS Over Time" Description="" ContainerDockedSize="400,300" CanFloat="True" CanClose="True">
+                    <lvc:CartesianChart x:Name="dpsChart" Zoom="Xy" Pan="Xy"  LegendLocation="Right" DisableAnimations="True" MouseDoubleClick="DPSChart_DoubleClick">
                       <lvc:CartesianChart.AxisY>
                         <lvc:Axis Title="DPS" MinValue="0"></lvc:Axis>
                       </lvc:CartesianChart.AxisY>
