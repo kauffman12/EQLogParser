@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace EQLogParser
-
 {
   class DataManager
   {
@@ -25,6 +24,7 @@ namespace EQLogParser
     public event EventHandler<string> EventsNewUnverifiedPetOrPlayer;
     public event EventHandler<NonPlayer> EventsNewNonPlayer;
     public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
+    public event EventHandler<bool> EventsClearedActiveData;
 
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
     private List<ReceivedSpell> AllReceivedSpells = new List<ReceivedSpell>();
@@ -77,7 +77,7 @@ namespace EQLogParser
           SpellData spellData = new SpellData()
           {
             Spell = data[0],
-            SpellAbbrv = Utils.AbbreviateSpellName(data[0]),
+            SpellAbbrv = Helpers.AbbreviateSpellName(data[0]),
             Beneficial = (beneficial != 0),
             ClassMask = classMask,
             LandsOnYou = data[3],
@@ -141,6 +141,13 @@ namespace EQLogParser
       ProbablyNotAPlayer.Clear();
       UnverifiedPetOrPlayer.Clear();
       AllSpellCasts.Clear();
+      EventsClearedActiveData(this, true);
+    }
+
+    public void AddNonPlayerMapBreak(string text)
+    {
+      NonPlayer divider = new NonPlayer() { FightID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = text };
+      EventsNewNonPlayer(this, divider);
     }
 
     public void AddSpellCast(SpellCast cast)

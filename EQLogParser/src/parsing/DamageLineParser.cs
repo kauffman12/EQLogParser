@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -9,9 +8,10 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
-    public static event EventHandler<object> EventsLineProcessed; 
+    public static event EventHandler<string> EventsLineProcessed; 
 
     private const int ACTION_PART_INDEX = 27;
+    private static DateUtil DateUtil = new DateUtil();
     private static Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
 
     private static Dictionary<string, byte> HitMap = new Dictionary<string, byte>()
@@ -30,10 +30,8 @@ namespace EQLogParser
       { "frenzies", "frenzies on" }, { "frenzy", "frenzy on" }
     };
 
-    public static void Process(object data)
+    public static void Process(string line)
     {
-      string line = data as string;
-
       try
       {
         int index;
@@ -41,7 +39,7 @@ namespace EQLogParser
         {
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
 
           DamageRecord record = ParseDamage(pline.ActionPart);
           if (record != null)
@@ -56,7 +54,7 @@ namespace EQLogParser
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
           HandleHealed(pline);
         }
         else if (line.Length < 102 && (index = line.IndexOf(" has been slain by", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
@@ -64,7 +62,7 @@ namespace EQLogParser
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = Utils.ParseDate(pline.TimeString);
+          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
           HandleSlain(pline);
         }
         else
@@ -83,7 +81,7 @@ namespace EQLogParser
         LOG.Error(e);
       }
 
-      EventsLineProcessed(data, data);
+      EventsLineProcessed(line, line);
     }
 
     private static void HandleSlain(ProcessLine pline)
@@ -112,11 +110,11 @@ namespace EQLogParser
       bool foundHealer = DataManager.Instance.CheckNameForPlayer(healer);
       bool foundHealed = DataManager.Instance.CheckNameForPlayer(healed) || DataManager.Instance.CheckNameForPet(healed);
 
-      if (foundHealer && !foundHealed && Utils.IsPossiblePlayerName(healed, healed.Length))
+      if (foundHealer && !foundHealed && Helpers.IsPossiblePlayerName(healed, healed.Length))
       {
         DataManager.Instance.UpdateUnverifiedPetOrPlayer(healed, true);
       }
-      else if (!foundHealer && foundHealed && Utils.IsPossiblePlayerName(healer, healer.Length))
+      else if (!foundHealer && foundHealed && Helpers.IsPossiblePlayerName(healer, healer.Length))
       {
         DataManager.Instance.UpdateVerifiedPlayers(healer);
       }
@@ -156,7 +154,7 @@ namespace EQLogParser
       {
         int index = -1;
         if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
-          && Utils.IsPossiblePlayerName(pline.ActionPart, index))
+          && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
         {
           string test = pline.ActionPart.Substring(0, index);
           DataManager.Instance.UpdateUnverifiedPetOrPlayer(test);
@@ -296,10 +294,10 @@ namespace EQLogParser
           // check if name has a possessive
           if (firstSpace >= 2 && part.Substring(firstSpace - 2, 2) == "`s")
           {
-            if (Utils.IsPossiblePlayerName(part, firstSpace - 2))
+            if (Helpers.IsPossiblePlayerName(part, firstSpace - 2))
             {
               int len;
-              if (Utils.IsPetOrMount(part, firstSpace + 1, out len))
+              if (Helpers.IsPetOrMount(part, firstSpace + 1, out len))
               {
                 string petType = part.Substring(firstSpace + 1, len);
                 string owner = part.Substring(0, firstSpace - 2);
@@ -346,7 +344,7 @@ namespace EQLogParser
               }
             }
           }
-          else if (Utils.IsPossiblePlayerName(part, firstSpace))
+          else if (Helpers.IsPossiblePlayerName(part, firstSpace))
           {
             int sizeSoFar = firstSpace + 1;
             int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
@@ -407,9 +405,9 @@ namespace EQLogParser
                 if (posessiveIndex > -1)
                 {
                   int len;
-                  if (Utils.IsPetOrMount(defender, posessiveIndex + 3, out len))
+                  if (Helpers.IsPetOrMount(defender, posessiveIndex + 3, out len))
                   {
-                    if (Utils.IsPossiblePlayerName(defender, posessiveIndex))
+                    if (Helpers.IsPossiblePlayerName(defender, posessiveIndex))
                     {
                       defenderOwner = defender.Substring(0, posessiveIndex);
                       defenderPetType = defender.Substring(posessiveIndex + 3, len);
@@ -423,7 +421,7 @@ namespace EQLogParser
                   int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
                   if (afterDmg > -1)
                   {
-                    damage = Utils.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
+                    damage = Helpers.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
                     if (damage != long.MaxValue)
                     {
                       int points;
@@ -448,7 +446,7 @@ namespace EQLogParser
               int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
               if (afterDmg > -1)
               {
-                damage = Utils.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
+                damage = Helpers.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
                 if (damage != long.MaxValue)
                 {
                   if (part.Length > afterDmg + 12 && part.Substring(afterDmg, 12) == " damage from")
@@ -470,7 +468,7 @@ namespace EQLogParser
                         if (endIndex > -1)
                         {
                           string player = part.Substring(byIndex + 3, endIndex - byIndex - 3);
-                          if (Utils.IsPossiblePlayerName(player, player.Length))
+                          if (Helpers.IsPossiblePlayerName(player, player.Length))
                           {
                             // damage parsed above
                             attacker = player;

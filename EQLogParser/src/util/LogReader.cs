@@ -1,23 +1,22 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using System.Windows;
 
 namespace EQLogParser
 {
   class LogReader
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     public delegate void ParseLineCallback(string line, long position);
+
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public bool FileLoadComplete = false;
     public long FileSize;
-
     private string FileName;
     private ParseLineCallback LoadingCallback;
-    private ThreadState LogThreadState;
+    private bool Running = false;
     private bool MonitorOnly;
     private int LastMins;
+    private DateUtil DateUtil = new DateUtil();
 
     public LogReader(string fileName, ParseLineCallback loadingCallback, bool monitorOnly, int lastMins)
     {
@@ -29,14 +28,7 @@ namespace EQLogParser
 
     public void Start()
     {
-      if (LogThreadState != null)
-      {
-        LogThreadState.stop();
-      }
-
-      LogThreadState = new ThreadState();
-      ThreadState myState = LogThreadState;
-
+      Running = true;
       new Thread(() =>
       {
         try
@@ -65,19 +57,11 @@ namespace EQLogParser
             while (!reader.EndOfStream && value != 0)
             {
               string line = reader.ReadLine();
-              bool inRange = Utils.HasTimeInRange(now, line, LastMins);
+              bool inRange = DateUtil.HasTimeInRange(now, line, LastMins);
               value = Math.Abs(lastPos - position) / 2;
 
               lastPos = position;
-
-              if (!inRange)
-              {
-                position += value;
-              }
-              else
-              {
-                position -= value;
-              }
+              position += inRange ? -value : value;
 
               fs.Seek(position, SeekOrigin.Begin);
               reader.DiscardBufferedData();
@@ -87,9 +71,9 @@ namespace EQLogParser
             fs.Seek(lastPos, SeekOrigin.Begin);
             reader.DiscardBufferedData();
             reader.ReadLine(); // seek will lead to partial line
-           }
+          }
 
-          while (!reader.EndOfStream && myState.isRunning())
+          while (!reader.EndOfStream && Running)
           {
             string line = reader.ReadLine();
             LoadingCallback(line, fs.Position);
@@ -106,19 +90,12 @@ namespace EQLogParser
 
           // events to notify for changes
           fsw.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.CreationTime;
-
           fsw.EnableRaisingEvents = true;
 
           bool exitOnError = false;
-          while (myState.isRunning() && !exitOnError)
+          while (Running && !exitOnError)
           {
             WaitForChangedResult result = fsw.WaitForChanged(WatcherChangeTypes.Deleted | WatcherChangeTypes.Changed, 2000);
-
-            // check if exit during wait period
-            if (!myState.isRunning() || exitOnError)
-            {
-              break;
-            }
 
             switch (result.ChangeType)
             {
@@ -129,7 +106,7 @@ namespace EQLogParser
               case WatcherChangeTypes.Changed:
                 if (reader != null)
                 {
-                  while (!reader.EndOfStream)
+                  while (Running && !reader.EndOfStream)
                   {
                     string line = reader.ReadLine();
                     LoadingCallback(line, fs.Length);
@@ -151,25 +128,7 @@ namespace EQLogParser
 
     public void Stop()
     {
-      if (LogThreadState != null)
-      {
-        LogThreadState.stop();
-      }
-    }
-  }
-
-  public class ThreadState
-  {
-    private bool running = true;
-
-    public void stop()
-    {
-      running = false;
-    }
-
-    public bool isRunning()
-    {
-      return running;
+      Running = false;
     }
   }
 }
