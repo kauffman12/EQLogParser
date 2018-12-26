@@ -2540,7 +2540,6 @@ Garrison's Mighty Mana Shock^0^2048^Your skin blisters as it is consumed by pure
 Minor Familiar^1^2048^You summon forth a minor familiar.^ summons forth a minor familiar.
 Elnerick's Entombment of Ice^0^2048^You are entombed in elemental ice.^ is entombed by elemental ice.
 Lesser Familiar^1^2048^You summon forth a lesser familiar.^ summons forth a lesser familiar.
-NA Firetree's Familiar Augment^1^0^^ is covered in a red glow.
 Familiar^1^2048^You summon forth a familiar.^ summons forth a familiar.
 Decession^2^2048^^ fades away.
 Spellshield^1^2048^A barrier of magical energies surrounds you.^ is surrounded by a barrier of magical energies.
@@ -2847,7 +2846,6 @@ Fireclaw^0^0^You are struck by a burning claw.^ is struck by a burning claw.
 Phantasmal Armor^1^4096^You are covered in illusionary armor.^ dons gleaming armor.
 Remove Greater Curse^1^550^You feel divine energy cleansing your soul.^'s aura glows slightly.
 Everlasting Breath^1^8736^You feel no need to breathe.^ doesn't seem to be breathing anymore.
-NA Firetree's Familiar Enhancement^1^0^^ is covered in a red glow.
 Elnerick's Electrical Rending^0^2048^Your body is rent by vicious arcs of electricity.^'s body is rent by vicious arcs of electricity.
 Garrison's Superior Sundering^0^2048^Your body is torn asunder by a blast of intense heat.^'s body is torn asunder by a blast of intense heat.
 Funeral Pyre of Kelador^0^1024^Your skin burns as you are caught in a funeral pyre.^ is enveloped in a funeral pyre.
@@ -26625,9 +26623,6 @@ Inner Rejuvenation Rk. III^1^33089^You are rejuvenated.^ is rejuvenated.
 Weapon Bond^1^257^You become one with your weapons.^'s weapons begin to move much easier.
 Weapon Bond Rk. II^1^257^You become one with your weapons.^'s weapons begin to move much easier.
 Weapon Bond Rk. III^1^257^You become one with your weapons.^'s weapons begin to move much easier.
-NA Jab Through^1^0^You jab through your opponent's defenses.^ jabs through their opponent's defenses.
-NA Jab Through Rk. II^1^0^You jab through your opponent's defenses.^ jabs through their opponent's defenses.
-NA Jab Through Rk. III^1^0^You jab through your opponent's defenses.^ jabs through their opponent's defenses.
 Armor of Mystical Runes^1^1^You are surrounded by an aura of mystical runes.^ is surrounded by an aura of mystical runes.
 Armor of Mystical Runes Rk. II^1^1^You are surrounded by an aura of mystical runes.^ is surrounded by an aura of mystical runes.
 Armor of Mystical Runes Rk. III^1^1^You are surrounded by an aura of mystical runes.^ is surrounded by an aura of mystical runes.
@@ -26682,9 +26677,6 @@ Scorn Recourse III^1^0^You brace yourself for an attack.^
 Stalwart Defense^1^1^You have determined to stand your ground at all costs.^ prepares a stalwart defense.
 Stalwart Defense Rk. II^1^1^You have determined to stand your ground at all costs.^ prepares a stalwart defense.
 Stalwart Defense Rk. III^1^1^You have determined to stand your ground at all costs.^ prepares a stalwart defense.
-NA Stalwart Defense Effect^1^0^You have determined to stand your ground at all costs.^ prepares a stalwart defense.
-NA Stalwart Defense Effect II^1^0^You have determined to stand your ground at all costs.^ prepares a stalwart defense.
-NA Stalwart Defense Effect III^1^0^You have determined to stand your ground at all costs.^ prepares a stalwart defense.
 Abolish the Undead^0^6^You are abolished.^ staggers.
 Abolish the Undead Rk. II^0^6^You are abolished.^ staggers.
 Abolish the Undead Rk. III^0^6^You are abolished.^ staggers.
@@ -26828,9 +26820,6 @@ Chromacleave Rk. III^0^2^You are outlined in colored flames.^ is outlined in col
 Hand of Faithful Infusion^1^2^Your weapons are infused with healing power.^'s weapons begin glowing.
 Hand of Faithful Infusion Rk. II^1^2^Your weapons are infused with healing power.^'s weapons begin glowing.
 Hand of Faithful Infusion Rk. III^1^2^Your weapons are infused with healing power.^'s weapons begin glowing.
-NA New Infusion Heal^1^0^You waffle.^ waffles.
-NA New Infusion Heal II^1^0^You waffle.^ waffles.
-NA New Infusion Heal III^1^0^You waffle.^ waffles.
 Mark of the Adherent^0^2^You are bound by the mark of the adherent.^ is bound by the mark of the adherent.
 Mark of the Adherent Rk. II^0^2^You are bound by the mark of the adherent.^ is bound by the mark of the adherent.
 Mark of the Adherent Rk. III^0^2^You are bound by the mark of the adherent.^ is bound by the mark of the adherent.
@@ -27176,15 +27165,6 @@ Summer's Squall Burn III^0^8^You are caught in a hot summer's squall.^ is caught
 Summer's Squall Splash^0^8^The squall's splash chills you.^ is chilled by the squall's splash.
 Summer's Squall Splash II^0^8^The squall's splash chills you.^ is chilled by the squall's splash.
 Summer's Squall Splash III^0^8^The squall's splash chills you.^ is chilled by the squall's splash.
-NA Bewilderbolt^0^0^Your head is smashed by a blunt projectile.^ is struck by a blusterbolt.
-NA Bewilderbolt Rk. II^0^0^Your head is smashed by a blunt projectile.^ is struck by a blusterbolt.
-NA Bewilderbolt Rk. III^0^0^Your head is smashed by a blunt projectile.^ is struck by a blusterbolt.
-NA Bewilderbolt Root^0^0^^
-NA Bewilderbolt Root II^0^0^^
-NA Bewilderbolt Root III^0^0^^
-NA Bewilderbolt Doom^0^0^^
-NA Bewilderbolt Doom II^0^0^^
-NA Bewilderbolt Doom III^0^0^^
 Deafening Edges^1^8^Your weapons crackle with electrical energy.^'s weapons crackle with electrical energy.
 Deafening Edges Rk. II^1^8^Your weapons crackle with electrical energy.^'s weapons crackle with electrical energy.
 Deafening Edges Rk. III^1^8^Your weapons crackle with electrical energy.^'s weapons crackle with electrical energy.
@@ -27252,9 +27232,6 @@ Provocation for Power Recourse III^1^0^^ begins a provocation for power.
 Suppurating Darkness^0^16^You are engulfed by a suppurating darkness.^ is engulfed by a suppurating darkness.
 Suppurating Darkness Rk. II^0^16^You are engulfed by a suppurating darkness.^ is engulfed by a suppurating darkness.
 Suppurating Darkness Rk. III^0^16^You are engulfed by a suppurating darkness.^ is engulfed by a suppurating darkness.
-NA New Darkness^0^0^You are engulfed by darkness.^ is engulfed by darkness.
-NA New Darkness II^0^0^You are engulfed by darkness.^ is engulfed by darkness.
-NA New Darkness III^0^0^You are engulfed by darkness.^ is engulfed by darkness.
 Insidious Audacity^0^16^You are enraged by insidious audacity.^ is enraged by insidious audacity.
 Insidious Audacity Rk. II^0^16^You are enraged by insidious audacity.^ is enraged by insidious audacity.
 Insidious Audacity Rk. III^0^16^You are enraged by insidious audacity.^ is enraged by insidious audacity.
@@ -27325,9 +27302,6 @@ Undivided Acrimony Effect III^0^0^You find your attention drawn to a new target!
 Undivided Acrimony Reflection^1^0^You've certainly gained someone's acrimony.^ suddenly has someone's complete attention.
 Undivided Acrimony Reflection II^1^0^You've certainly gained someone's acrimony.^ suddenly has someone's complete attention.
 Undivided Acrimony Reflection III^1^0^You've certainly gained someone's acrimony.^ suddenly has someone's complete attention.
-NA New Curse of Enfeeblement^0^0^You are afflicted by an enfeebling curse.^ is afflicted by an enfeebling curse.
-NA New Curse of Enfeeblement Rk. II^0^0^You are afflicted by an enfeebling curse.^ is afflicted by an enfeebling curse.
-NA New Curse of Enfeeblement Rk. III^0^0^You are afflicted by an enfeebling curse.^ is afflicted by an enfeebling curse.
 Dire Allegation^0^16^You stagger under a dire allegation.^ staggers under a dire allegation.
 Dire Allegation Rk. II^0^16^You stagger under a dire allegation.^ staggers under a dire allegation.
 Dire Allegation Rk. III^0^16^You stagger under a dire allegation.^ staggers under a dire allegation.
@@ -28387,7 +28361,6 @@ Embercoat^1^4096^Your skin is covered in burning embers.^'s skin is covered in b
 Embercoat Rk. II^1^4096^Your skin is covered in burning embers.^'s skin is covered in burning embers.
 Embercoat Rk. III^1^4096^Your skin is covered in burning embers.^'s skin is covered in burning embers.
 Grant Sphere of Air^1^4096^A Sphere of Air forms in your hands.^
-NA New Grant Sphere of Air^1^0^You waffle.^ waffles.
 Grant Manaforged Plate^1^4096^A pack of manaforged plate forms in your hands.^
 Unfold Armor Pack^1^0^You open your pack of armor.^
 Grant Atleris' Heirlooms^1^4096^A pack of heirlooms appears in your hands.^
@@ -28680,12 +28653,6 @@ Echo of Coercion Effect III^1^0^You are enveloped in the coercing echo.^ is enve
 Legion of Tonmek^1^8192^A blue aura surrounds you.^ is surrounded in a blue aura.
 Legion of Tonmek Rk. II^1^8192^A blue aura surrounds you.^ is surrounded in a blue aura.
 Legion of Tonmek Rk. III^1^8192^A blue aura surrounds you.^ is surrounded in a blue aura.
-NA New Manastorm^1^0^You are infused with crackling magical energy.^ is infused with magical energy.
-NA New Manastorm Rk. II^1^0^You are infused with crackling magical energy.^ is infused with magical energy.
-NA New Manastorm Rk. III^1^0^You are infused with crackling magical energy.^ is infused with magical energy.
-NA New Manastorm Strike^0^0^You are struck by pure magic.^ is struck by pure magic.
-NA New Manastorm Strike II^0^0^You are struck by pure magic.^ is struck by pure magic.
-NA New Manastorm Strike III^0^0^You are struck by pure magic.^ is struck by pure magic.
 Peaceful Wave^0^8192^You are completely content to stay here forever.^ gazes happily into space.
 Peaceful Wave Rk. II^0^8192^You are completely content to stay here forever.^ gazes happily into space.
 Peaceful Wave Rk. III^0^8192^You are completely content to stay here forever.^ gazes happily into space.
@@ -28944,9 +28911,6 @@ Unyielding Will Discipline Rk. III^1^32768^You steel your mind and will.^ steels
 Frenzied Resolve Discipline^1^32768^You plant your feet and enter a frenzy.^ plants their feet and enters a frenzy.
 Frenzied Resolve Discipline Rk. II^1^32768^You plant your feet and enter a frenzy.^ plants their feet and enters a frenzy.
 Frenzied Resolve Discipline Rk. III^1^32768^You plant your feet and enter a frenzy.^ plants their feet and enters a frenzy.
-NA Frenzied Recourse^1^0^^
-NA Frenzied Recourse II^1^0^^
-NA Frenzied Recourse III^1^0^^
 Sundering Volley^0^32768^You are struck by a volley of axes.^ is struck by a volley of axes.
 Sundering Volley Rk. II^0^32768^You are struck by a volley of axes.^ is struck by a volley of axes.
 Sundering Volley Rk. III^0^32768^You are struck by a volley of axes.^ is struck by a volley of axes.
@@ -32214,9 +32178,6 @@ Stormwheel Blades Rk. III^0^1^A blade slams into your body.^ is struck by a whir
 Field Guardian^1^1^Your armor gleams.^'s armor gleams.
 Field Guardian Rk. II^1^1^Your armor gleams.^'s armor gleams.
 Field Guardian Rk. III^1^1^Your armor gleams.^'s armor gleams.
-NA Field Guardian's Recourse^1^0^You are aided by the field defender.^ is aided by the field defender.
-NA Field Guardian's Recourse II^1^0^You are aided by the field defender.^ is aided by the field defender.
-NA Field Guardian's Recourse III^1^0^You are aided by the field defender.^ is aided by the field defender.
 Steadfast Defense^1^1^You have determined to stand your ground at all costs.^ prepares a steadfast defense.
 Steadfast Defense Rk. II^1^1^You have determined to stand your ground at all costs.^ prepares a steadfast defense.
 Steadfast Defense Rk. III^1^1^You have determined to stand your ground at all costs.^ prepares a steadfast defense.
@@ -32660,12 +32621,6 @@ Forecasted Shots Rk. III^0^8^You are struck by a forecasted shot.^ is struck by 
 Drifting Shadow^1^8^Your mind calms.^'s mind calms.
 Drifting Shadow Rk. II^1^8^Your mind calms.^'s mind calms.
 Drifting Shadow Rk. III^1^8^Your mind calms.^'s mind calms.
-NA Grasping Spurcoat^1^0^You surround yourself in a coat of grasping spurs.^ is surrounded by a coat of grasping spurs.
-NA Grasping Spurcoat Rk. II^1^0^You surround yourself in a coat of grasping spurs.^ is surrounded by a coat of grasping spurs.
-NA Grasping Spurcoat Rk. III^1^0^You surround yourself in a coat of grasping spurs.^ is surrounded by a coat of grasping spurs.
-NA Grasping Spurs^0^0^You are hampered by grasping spurs.^ is hampered by grasping spurs.
-NA Grasping Spurs II^0^0^You are hampered by grasping spurs.^ is hampered by grasping spurs.
-NA Grasping Spurs III^0^0^You are hampered by grasping spurs.^ is hampered by grasping spurs.
 Arbor Veil^1^8^Your form shifts in and out of focus.^'s form shifts in and out of focus.
 Arbor Veil Rk. II^1^8^Your form shifts in and out of focus.^'s form shifts in and out of focus.
 Arbor Veil Rk. III^1^8^Your form shifts in and out of focus.^'s form shifts in and out of focus.
@@ -32871,7 +32826,6 @@ Gift of Falsin Rk. III^1^16^^'s body is covered in slithering runes.
 Falhotep's Covenant^1^16^Your body begins to decay.^'s body begins to decay.
 Falhotep's Covenant Rk. II^1^16^Your body begins to decay.^'s body begins to decay.
 Falhotep's Covenant Rk. III^1^16^Your body begins to decay.^'s body begins to decay.
-NA Illusion^1^0^^
 Grelleth's Carapace^1^16^The souls of your fallen enemies gather around you.^'s body is surrounded by fallen souls.
 Grelleth's Carapace Rk. II^1^16^The souls of your fallen enemies gather around you.^'s body is surrounded by fallen souls.
 Grelleth's Carapace Rk. III^1^16^The souls of your fallen enemies gather around you.^'s body is surrounded by fallen souls.
@@ -34352,8 +34306,6 @@ Impose Chance^0^0^^
 Impose Chance II^0^0^^
 Impose Chance III^0^0^^
 Impose Stun^1^0^Your mind is freed, but your body remains frozen.^ is stunned.
-NA Impose Stun II^1^0^Your mind is freed, but your body remains frozen.^ is stunned.
-NA Impose Stun III^1^0^Your mind is freed, but your body remains frozen.^ is stunned.
 Tears of Syrkl^0^8192^Your mana ignites.^'s mana ignites.
 Tears of Syrkl Rk. II^0^8192^Your mana ignites.^'s mana ignites.
 Tears of Syrkl Rk. III^0^8192^Your mana ignites.^'s mana ignites.
@@ -34453,9 +34405,6 @@ Invigorating Heal III^1^0^You are empowered by animalistic affection.^ is empowe
 Extraordinary Velocity^1^16384^^ growls savagely.
 Extraordinary Velocity Rk. II^1^16384^^ growls savagely.
 Extraordinary Velocity Rk. III^1^16384^^ growls savagely.
-NA Extraordinary Velocity^1^0^You feel much faster.^ feels much faster.
-NA Extraordinary Velocity II^1^0^You feel much faster.^ feels much faster.
-NA Extraordinary Velocity III^1^0^You feel much faster.^ feels much faster.
 Ruaabri's Fury^1^16384^You are imbued with Ruaabri's fury.^ is imbued with Ruaabri's fury.
 Ruaabri's Fury Rk. II^1^16384^You are imbued with Ruaabri's fury.^ is imbued with Ruaabri's fury.
 Ruaabri's Fury Rk. III^1^16384^You are imbued with Ruaabri's fury.^ is imbued with Ruaabri's fury.
@@ -34513,8 +34462,6 @@ Yell at the Moon Rk. II^0^16384^^
 Yell at the Moon Rk. III^0^16384^^
 Yelling at the Moon^0^16384^You are beset by denizens of the wild!^ is beset by denizens of the wild.
 Yell at the Moon Call^0^16384^You are beset by a denizen of the wild.^ is beset by a denizen of the wild.
-NA Yell at the Moon Call II^0^0^You are beset by a denizen of the wild.^ is beset by a denizen of the wild.
-NA Yell at the Moon Call III^0^0^You are beset by a denizen of the wild.^ is beset by a denizen of the wild.
 Spellbreaker's Ward^1^16384^You have been protected from harm.^ has been protected by a spellbreaker's armor.
 Spellbreaker's Ward Rk. II^1^16384^You have been protected from harm.^ has been protected by a spellbreaker's armor.
 Spellbreaker's Ward Rk. III^1^16384^You have been protected from harm.^ has been protected by a spellbreaker's armor.
@@ -40066,15 +40013,6 @@ Magmatic Reproval^0^0^A wave of magma knocks you back!^ is knocked back by a wav
 Breather^1^49501^You take a breather.^ takes a breather.
 Breather Rk. II^1^49501^You take a breather.^ takes a breather.
 Breather Rk. III^1^49501^You take a breather.^ takes a breather.
-NA Eighth Wind^1^0^You experience a seventh wind.^ gets a seventh wind.
-NA Eighth Wind Rk. II^1^0^You experience a seventh wind.^ gets a seventh wind.
-NA Eighth Wind Rk. III^1^0^You experience a seventh wind.^ gets a seventh wind.
-NA Weapon Link^1^0^You become one with your weapons.^'s weapons begin to move much easier.
-NA Weapon Link Rk. II^1^0^You become one with your weapons.^'s weapons begin to move much easier.
-NA Weapon Link Rk. III^1^0^You become one with your weapons.^'s weapons begin to move much easier.
-NA Inner Revitalization^1^0^You are rejuvenated.^ is rejuvenated.
-NA Inner Revitalization Rk. II^1^0^You are rejuvenated.^ is rejuvenated.
-NA Inner Revitalization Rk. III^1^0^You are rejuvenated.^ is rejuvenated.
 Strike Through^1^65^You evade your opponent's defenses.^ evades their opponent's defenses.
 Strike Through Rk. II^1^65^You evade your opponent's defenses.^ evades their opponent's defenses.
 Strike Through Rk. III^1^65^You evade your opponent's defenses.^ evades their opponent's defenses.
@@ -40187,9 +40125,6 @@ Divine Indemnification Rk. III^1^2^You feel the watchful eyes of the gods upon y
 Ardent Elixir^1^2^A holy elixir heals your body.^'s body is covered with a soft glow.
 Ardent Elixir Rk. II^1^2^A holy elixir heals your body.^'s body is covered with a soft glow.
 Ardent Elixir Rk. III^1^2^A holy elixir heals your body.^'s body is covered with a soft glow.
-NA Mark of Degmar^0^0^You are bound by the mark of Degmar.^ is bound by the mark of Degmar.
-NA Mark of Degmar Rk. II^0^0^You are bound by the mark of Degmar.^ is bound by the mark of Degmar.
-NA Mark of Degmar Rk. III^0^0^You are bound by the mark of Degmar.^ is bound by the mark of Degmar.
 Surety^1^2^You are filled with a powerful surety.^'s eyes gleam with surety.
 Surety Rk. II^1^2^You are filled with a powerful surety.^'s eyes gleam with surety.
 Surety Rk. III^1^2^You are filled with a powerful surety.^'s eyes gleam with surety.
@@ -40619,9 +40554,6 @@ Vizat's Horror Recourse III^1^0^Spatters of blood excite your thirst for vitae.^
 Bond of Bonemaw^0^16^A dark bond envelops your body.^'s body is enveloped in a dark bond.
 Bond of Bonemaw Rk. II^0^16^A dark bond envelops your body.^'s body is enveloped in a dark bond.
 Bond of Bonemaw Rk. III^0^16^A dark bond envelops your body.^'s body is enveloped in a dark bond.
-NA Bond of Bonemaw Recourse^1^16^^
-NA Bond of Bonemaw Recourse II^1^16^^
-NA Bond of Bonemaw Recourse III^1^16^^
 Bonemaw's Bite^0^16^A vicious shadow bites at your soul.^ twitches as a shadow passes through them.
 Bonemaw's Bite Rk. II^0^16^A vicious shadow bites at your soul.^ twitches as a shadow passes through them.
 Bonemaw's Bite Rk. III^0^16^A vicious shadow bites at your soul.^ twitches as a shadow passes through them.
@@ -40811,12 +40743,6 @@ Panavida Rk. III^1^32^Your wounds close.^'s wounds close.
 Windborne Chill^0^32^You are chilled by the light of the moon.^ is chilled by the light of the moon.
 Windborne Chill Rk. II^0^32^You are chilled by the light of the moon.^ is chilled by the light of the moon.
 Windborne Chill Rk. III^0^32^You are chilled by the light of the moon.^ is chilled by the light of the moon.
-NA Ironwood Guard^1^0^Your skin turns hard as ironwood.^'s skin turns hard as ironwood.
-NA Ironwood Guard Rk. II^1^0^Your skin turns hard as ironwood.^'s skin turns hard as ironwood.
-NA Ironwood Guard Rk. III^1^0^Your skin turns hard as ironwood.^'s skin turns hard as ironwood.
-NA Ironwood Guard Parry^0^0^^ staggers confusedly.
-NA Ironwood Guard Parry II^0^0^^ staggers confusedly.
-NA Ironwood Guard Parry III^0^0^^ staggers confusedly.
 Column of Ro^0^32^You are surrounded by blazing flames.^ is surrounded by blazing flames.
 Column of Ro Rk. II^0^32^You are surrounded by blazing flames.^ is surrounded by blazing flames.
 Column of Ro Rk. III^0^32^You are surrounded by blazing flames.^ is surrounded by blazing flames.
@@ -40969,8 +40895,6 @@ Echo of Deceit^0^64^You hear an echo.^ is confused by a noise.
 Echo of Deceit Rk. II^0^64^You hear an echo.^ is confused by a noise.
 Echo of Deceit Rk. III^0^64^You hear an echo.^ is confused by a noise.
 Echo of Deceit Trigger^1^0^You shrug.^ shrugs.
-NA Echo of Deceit Trigger II^1^0^You shrug.^ shrugs.
-NA Echo of Deceit Trigger III^1^0^You shrug.^ shrugs.
 Torrent of Fists^0^64^You are struck by a storm of fists.^ is struck by a storm of fists.
 Torrent of Fists Rk. II^0^64^You are struck by a storm of fists.^ is struck by a storm of fists.
 Torrent of Fists Rk. III^0^64^You are struck by a storm of fists.^ is struck by a storm of fists.
@@ -40983,12 +40907,6 @@ Refuse Death Effect III^1^0^^
 Eight Breaths^1^64^You close your eyes and breathe deeply.^ closes their eyes and hums in a low monotone.
 Eight Breaths Rk. II^1^64^You close your eyes and breathe deeply.^ closes their eyes and hums in a low monotone.
 Eight Breaths Rk. III^1^64^You close your eyes and breathe deeply.^ closes their eyes and hums in a low monotone.
-NA Protection of the Doomwalker^1^0^Your hands glow with healing power.^'s hands begin to glow.
-NA Protection of the Doomwalker Rk. II^1^0^Your hands glow with healing power.^'s hands begin to glow.
-NA Protection of the Doomwalker Rk. III^1^0^Your hands glow with healing power.^'s hands begin to glow.
-NA Doomwalker's Mending^1^0^Your defensive act heals you.^ is healed.
-NA Doomwalker's Mending II^1^0^Your defensive act heals you.^ is healed.
-NA Doomwalker's Mending III^1^0^Your defensive act heals you.^ is healed.
 Aria of Maetanrus^1^128^You are moved by the aria.^
 Aria of Maetanrus Rk. II^1^128^You are moved by the aria.^
 Aria of Maetanrus Rk. III^1^128^You are moved by the aria.^
@@ -42175,12 +42093,6 @@ Bubbling Rage Effect III^1^0^You enter a festering rage.^ enters a festering rag
 Bubbling Rage Strike^0^0^An axe slices into your flesh.^ is struck by an axe.
 Bubbling Rage Strike II^0^0^An axe slices into your flesh.^ is struck by an axe.
 Bubbling Rage Strike III^0^0^An axe slices into your flesh.^ is struck by an axe.
-NA Blood Gouge^0^0^You bleed profusely.^ bleeds profusely.
-NA Blood Gouge Rk. II^0^0^You bleed profusely.^ bleeds profusely.
-NA Blood Gouge Rk. III^0^0^You bleed profusely.^ bleeds profusely.
-NA Blood Gouge Recourse^1^0^You strain from the exertion.^
-NA Blood Gouge Recourse II^1^0^You strain from the exertion.^
-NA Blood Gouge Recourse III^1^0^You strain from the exertion.^
 Demolishing Axe Throw^0^32768^You are pummeled from a distance by a giant throwing axe.^ is pummeled from a distance by a giant throwing axe.
 Demolishing Axe Throw Rk. II^0^32768^You are pummeled from a distance by a giant throwing axe.^ is pummeled from a distance by a giant throwing axe.
 Demolishing Axe Throw Rk. III^0^32768^You are pummeled from a distance by a giant throwing axe.^ is pummeled from a distance by a giant throwing axe.
@@ -48270,9 +48182,6 @@ Symbol of Teralov Rk. III^1^4^A holy symbol flashes before your eyes.^ is cloake
 Righteous Condemnation^1^4^You become angry.^ becomes angry.
 Righteous Condemnation Rk. II^1^4^You become angry.^ becomes angry.
 Righteous Condemnation Rk. III^1^4^You become angry.^ becomes angry.
-NA Righteous Condemnation Effect^1^4^You become angry.^ becomes angry.
-NA Righteous Condemnation Effect II^1^4^You become angry.^ becomes angry.
-NA Righteous Condemnation Effect III^1^4^You become angry.^ becomes angry.
 Condemnation Strike^0^4^You wither under an angry strike.^ withers under an angry strike.
 Condemnation Strike II^0^4^You wither under an angry strike.^ withers under an angry strike.
 Condemnation Strike III^0^4^You wither under an angry strike.^ withers under an angry strike.
@@ -48811,8 +48720,6 @@ Pearlescent Moonbeam^0^32^You are frozen in a moonbeam.^ is frozen in a moonbeam
 Pearlescent Moonbeam Rk. II^0^32^You are frozen in a moonbeam.^ is frozen in a moonbeam.
 Pearlescent Moonbeam Rk. III^0^32^You are frozen in a moonbeam.^ is frozen in a moonbeam.
 Pearlescent Thornmaw^0^32^^
-NA Pearlescent Thornmaw Rk. II^0^0^^
-NA Pearlescent Thornmaw Rk. III^0^0^^
 Guard of the Reptile^1^32^Your skin takes on a scaly, green appearance.^'s skin takes on a scaly, green appearance.
 Guard of the Reptile Rk. II^1^32^Your skin takes on a scaly, green appearance.^'s skin takes on a scaly, green appearance.
 Guard of the Reptile Rk. III^1^32^Your skin takes on a scaly, green appearance.^'s skin takes on a scaly, green appearance.
@@ -49158,8 +49065,6 @@ Sabretooth Maw III^0^0^Savage jaws tear into your skin.^ is rent by a savage maw
 Unity of the Wulthan^1^512^^
 Unity of the Wulthan Rk. II^1^512^^
 Unity of the Wulthan Rk. III^1^512^^
-NA Mammoth's Force III^1^0^Your muscles bulge with the force of the mammoth.^'s muscles bulge with a mammoth's force.
-NA Preeminent Foresight III^1^0^You move with the grace of your ancestors.^ moves with ancestral grace.
 Wulthan Focusing^1^512^You experience an insistent focusing.^ is strengthened by insistent spirits.
 Wulthan Focusing Rk. II^1^512^You experience an insistent focusing.^ is strengthened by insistent spirits.
 Wulthan Focusing Rk. III^1^512^You experience an insistent focusing.^ is strengthened by insistent spirits.
@@ -49244,8 +49149,6 @@ Ri`zyr's Rain of Venom^0^512^Venom rains down around you.^ is caught in a rain o
 Ri`zyr's Rain of Venom Rk. II^0^512^Venom rains down around you.^ is caught in a rain of venom.
 Ri`zyr's Rain of Venom Rk. III^0^512^Venom rains down around you.^ is caught in a rain of venom.
 Rirwech's Malosinata^0^512^^
-NA Rirwech's Malosinata Rk. II^0^0^^
-NA Rirwech's Malosinata Rk. III^0^0^^
 Jinx^0^512^Malevolent magic is sent to curse your spirit.^ is cursed by malevolent magic.
 Jinx Rk. II^0^512^Malevolent magic is sent to curse your spirit.^ is cursed by malevolent magic.
 Jinx Rk. III^0^512^Malevolent magic is sent to curse your spirit.^ is cursed by malevolent magic.
@@ -49657,14 +49560,8 @@ Thricewoven Capacity Recourse^1^0^^
 Thricewoven Power VI^1^0^A shimmer of power glows around your hands.^
 Thricewoven Weakness^0^0^Negative energy shimmers across your hands.^
 Ethereal Braid^0^2048^^
-NA Ethereal Braid Rk. II^0^0^^
-NA Ethereal Braid Rk. III^0^0^^
 Ethereal Braid Chance^0^0^^
-NA Ethereal Braid Chance II^0^0^^
-NA Ethereal Braid Chance III^0^0^^
 Ethereal Braid Acquittal^1^0^You feel drained by your ethereal weave.^
-NA Ethereal Braid Acquittal II^1^0^You feel drained by your ethereal weave.^
-NA Ethereal Braid Acquittal III^1^0^You feel drained by your ethereal weave.^
 Promised Alleviation^1^20480^You are promised a spiritual mending.^ is promised a spiritual mending.
 Promised Alleviation Rk. II^1^20480^You are promised a spiritual mending.^ is promised a spiritual mending.
 Promised Alleviation Rk. III^1^20480^You are promised a spiritual mending.^ is promised a spiritual mending.
@@ -49760,8 +49657,6 @@ Iceflame Strike Azia VIII^0^0^Your skin freezes.^'s skin freezes.
 Iceflame Strike Beza VIII^0^0^Your skin freezes.^'s skin freezes.
 Iceflame Strike Caza VIII^0^0^Your skin freezes.^'s skin freezes.
 Arcronite Malosinata^0^4096^^
-NA Arcronite Malosinata Rk. II^0^0^^
-NA Arcronite Malosinata Rk. III^0^0^^
 Chaotic Munificence^1^4096^Your aggression becomes paired with empathy.^'s aggression becomes paired with empathy.
 Chaotic Munificence Rk. II^1^4096^Your aggression becomes paired with empathy.^'s aggression becomes paired with empathy.
 Chaotic Munificence Rk. III^1^4096^Your aggression becomes paired with empathy.^'s aggression becomes paired with empathy.
@@ -49782,10 +49677,6 @@ Chaotic Inferno Chance II^0^0^^
 Chaotic Inferno Chance III^0^0^^
 Chaotic Inferno Refreshment^1^0^Your mind feels refreshed.^'s mind feels refreshed.
 Chaotic Inferno Jolt^0^0^You forget some of your hatred.^ forgets some of their hatred.
-NA Mass Burning Transvergence^1^0^A mystical staff forms in your hands.^
-NA Mass Burning Transvergence Rk. II^1^0^A mystical staff forms in your hands.^
-NA Mass Burning Transvergence Rk. III^1^0^A mystical staff forms in your hands.^
-NA Burning Transvergence^1^0^You experience a transvergence.^ experiences a transvergence.
 Reckless Servant^0^4096^^ is surrounded in furious elemental energy.
 Reckless Servant Rk. II^0^4096^^ is surrounded in furious elemental energy.
 Reckless Servant Rk. III^0^4096^^ is surrounded in furious elemental energy.
@@ -50061,9 +49952,6 @@ Transfixer's Warding Effect III^0^8192^Blinding light baffles you.^ is baffled b
 Bestial Savagery^1^16384^You growl with emnity.^ growls with emnity.
 Bestial Savagery Rk. II^1^16384^You growl with emnity.^ growls with emnity.
 Bestial Savagery Rk. III^1^16384^You growl with emnity.^ growls with emnity.
-NA Bestial Savagery^1^0^You growl with emnity.^ growls with emnity.
-NA Bestial Savagery II^1^0^You growl with emnity.^ growls with emnity.
-NA Bestial Savagery III^1^0^You growl with emnity.^ growls with emnity.
 Warder's Savagery^1^16384^You growl with emnity.^ growls with emnity.
 Warder's Savagery II^1^16384^You growl with emnity.^ growls with emnity.
 Warder's Savagery III^1^16384^You growl with emnity.^ growls with emnity.
@@ -50153,8 +50041,6 @@ Frozen Toxin Ice II^0^16384^Shards of ice pierce your skin.^ is pierced by shard
 Frozen Toxin Ice III^0^16384^Shards of ice pierce your skin.^ is pierced by shards of ice.
 Spirit of Akalit^1^16384^You summon a wild spirit.^ summons a wild spirit.
 Companion's Unity^1^16384^^
-NA Companion's Unity Rk. II^1^0^^
-NA Companion's Unity Rk. III^1^0^^
 Ekron's Chill^0^16384^You are struck by an icy chill.^ is struck by an icy chill.
 Ekron's Chill Rk. II^0^16384^You are struck by an icy chill.^ is struck by an icy chill.
 Ekron's Chill Rk. III^0^16384^You are struck by an icy chill.^ is struck by an icy chill.

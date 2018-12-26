@@ -68,24 +68,21 @@ namespace EQLogParser
       theChart.AxisX[0].MaxValue = double.NaN;
     }
 
-    internal static SeriesCollection CreateLineChartSeries(List<Dictionary<string, List<long>>> chartData = null)
+    internal static SeriesCollection CreateLineChartSeries(Dictionary<string, List<long>> playerValues = null)
     {
       var seriesCollection = new SeriesCollection();
       Dictionary<string, LineSeries> seriesPerPlayer = new Dictionary<string, LineSeries>();
-      foreach (var playerValues in chartData)
+      foreach (string player in playerValues.Keys)
       {
-        foreach (string player in playerValues.Keys)
+        if (player != null && !seriesPerPlayer.ContainsKey(player))
         {
-          if (!seriesPerPlayer.ContainsKey(player))
-          {
-            seriesPerPlayer[player] = new LineSeries();
-            seriesPerPlayer[player].Title = player;
-            seriesPerPlayer[player].Values = new ChartValues<long>();
-            seriesCollection.Add(seriesPerPlayer[player]);
-          }
-
-          seriesPerPlayer[player].Values.AddRange(playerValues[player].Cast<object>());
+          seriesPerPlayer[player] = new LineSeries();
+          seriesPerPlayer[player].Title = player;
+          seriesPerPlayer[player].Values = new ChartValues<long>();
+          seriesCollection.Add(seriesPerPlayer[player]);
         }
+
+        seriesPerPlayer[player].Values.AddRange(playerValues[player].Cast<object>());
       }
 
       return seriesCollection;

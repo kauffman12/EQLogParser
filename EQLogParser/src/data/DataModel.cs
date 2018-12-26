@@ -150,7 +150,7 @@ namespace EQLogParser
 
   public class DPSChartData
   {
-    public List<Dictionary<string, List<long>>> Values { get; set; }
+    public Dictionary<string, List<long>> Values { get; set; }
     public List<string> XAxisLabels { get; set; }
   }
 

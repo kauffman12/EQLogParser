@@ -107,37 +107,37 @@ namespace EQLogParser
     public static void HandleOtherLandsOnCases(ProcessLine pline)
     {
       string player = pline.OptionalData;
-      List<string> results = DataManager.Instance.GetNonPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
-      if (results == null)
+      string result = DataManager.Instance.GetNonPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
+      if (result == null)
       {
-        results = DataManager.Instance.GetLandsOnYou(pline.ActionPart);
-        if (results != null)
+        result = DataManager.Instance.GetLandsOnYou(pline.ActionPart);
+        if (result != null)
         {
           player = "You";
         }
       }
 
-      if (results != null && results.Count == 1)
+      if (result != null)
       {
         DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
         {
           Receiver = player,
           BeginTime = pline.CurrentTime,
-          SpellAbbrv = results[0]
+          SpellAbbrv = result
         });
       }
     }
 
     public static void HandlePosessiveLandsOnOther(ProcessLine pline)
     {
-      List<string> results = DataManager.Instance.GetPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
-      if (results != null && results.Count == 1)
+      string result = DataManager.Instance.GetPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
+      if (result != null)
       {
         DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
         {
           Receiver = pline.ActionPart.Substring(0, pline.OptionalIndex - 3),
           BeginTime = pline.CurrentTime,
-          SpellAbbrv = results[0]
+          SpellAbbrv = result
         });
       }
     }
