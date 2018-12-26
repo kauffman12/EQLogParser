@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -117,10 +118,10 @@ namespace EQLogParser
 
     public DPSChartData GetDPSValues(CombinedStats combined, List<PlayerStats> stats)
     {
-      List<Dictionary<string, List<long>>> dpsChartValues = new List<Dictionary<string, List<long>>>();
       Dictionary<int, DateTime> firstTimes = new Dictionary<int, DateTime>();
       Dictionary<int, DateTime> lastTimes = new Dictionary<int, DateTime>();
       DamageAtTimeComparer comparer = new DamageAtTimeComparer();
+      int interval = combined.TimeDiff < 12 ? 1 : (int) combined.TimeDiff / 12;
 
       stats = stats.OrderBy(item => item.Name).ToList();
       // establish range of time for each fight counting all players
@@ -150,25 +151,21 @@ namespace EQLogParser
 
       List<string> labels = new List<string>();
       DictionaryAddHelper<string, long> addHelper = new DictionaryAddHelper<string, long>();
-      foreach (var fightId in firstTimes.Keys)
+      Dictionary<string, List<long>> playerValues = new Dictionary<string, List<long>>();
+
+      foreach (var fightId in firstTimes.Keys.OrderBy(key => key))
       {
         DateTime firstTime = firstTimes[fightId];
         DateTime lastTime = lastTimes[fightId];
         DateTime currentTime = firstTime;
 
-        var timeDiff = lastTime.Subtract(firstTime).TotalSeconds;
-        int interval = timeDiff < 10 ? 1 : (int) timeDiff / 10;
-        interval *= firstTimes.Count; // scale up if there's a lot of fights
-
         Dictionary<string, long> playerTotals = new Dictionary<string, long>();
         int index = DamageTimeLine.BinarySearch(new DamageAtTime() { CurrentTime = firstTime }, comparer);
-        Dictionary<string, List<long>> playerValues = new Dictionary<string, List<long>>();
-        dpsChartValues.Add(playerValues);
 
         labels.Add(Helpers.FormatDateTime(firstTime));
         while (currentTime <= lastTime)
         {
-          while (DamageTimeLine.Count > index && DamageTimeLine[index].CurrentTime <= currentTime)
+          while (DamageTimeLine.Count > index && DamageTimeLine[index].CurrentTime <= currentTime) 
           {
             Dictionary<string, long> playerDamage = DamageTimeLine[index].PlayerDamage;
             foreach(var stat in stats)
@@ -208,6 +205,8 @@ namespace EQLogParser
             playerValues[stat.Name].Add(dps);
           }
 
+          labels.Add(Helpers.FormatDateTime(currentTime));
+
           if (currentTime == lastTime)
           {
             break;
@@ -219,13 +218,36 @@ namespace EQLogParser
             {
               currentTime = lastTime;
             }
-
-            labels.Add(Helpers.FormatDateTime(currentTime));
           }
         }
       }
 
-      return new DPSChartData() { Values = dpsChartValues, XAxisLabels = labels };
+      // scale down if too many points
+      int scale = -1;
+      var firstPlayer = playerValues.Values.First();
+      if (firstPlayer.Count > 20)
+      {
+        scale = firstPlayer.Count / 20;
+      }
+
+      if (scale > 1)
+      {
+        Dictionary<string, List<long>> newPlayerValues = new Dictionary<string, List<long>>();
+        Parallel.ForEach(playerValues.Keys, (player) =>
+        {
+          var newList = playerValues[player].Where((item, i) => i % scale == 0).ToList();
+
+          lock(newPlayerValues)
+          {
+            newPlayerValues[player] = newList;
+          }
+        });
+
+        playerValues = newPlayerValues;
+        labels = labels.Where((item, i) => i % scale == 0).ToList();
+      }
+
+      return new DPSChartData() { Values = playerValues, XAxisLabels = labels };
     }
 
     private void UpdateModifiers(DamageStats stats, DamageRecord record)

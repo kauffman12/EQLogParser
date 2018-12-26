@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Caching;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +28,8 @@ namespace EQLogParser
     public event EventHandler<bool> EventsClearedActiveData;
 
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
+    private Dictionary<string, byte> AllUniqueSpellCasts = new Dictionary<string, byte>();
+    private LRUCache<string> AllUniqueSpellsLRU = new LRUCache<string>(2000, 500, false);
     private List<ReceivedSpell> AllReceivedSpells = new List<ReceivedSpell>();
     private Dictionary<string, List<string>> PosessiveLandsOnOthers = new Dictionary<string, List<string>>();
     private Dictionary<string, List<string>> NonPosessiveLandsOnOthers = new Dictionary<string, List<string>>();
@@ -158,6 +161,7 @@ namespace EQLogParser
       lock (AllSpellCasts)
       {
         AllSpellCasts.Add(cast);
+        AllUniqueSpellCasts[cast.SpellAbbrv] = 1;
       }
 
       UpdatePlayerClassFromSpell(cast);
@@ -281,24 +285,54 @@ namespace EQLogParser
       return PetToPlayerMap.ContainsKey(pet) ? PetToPlayerMap[pet] : null;
     }
 
-    public List<string> GetNonPosessiveLandsOnOther(string value)
+    public string GetNonPosessiveLandsOnOther(string value)
     {
-      List<string> result = null;
-      NonPosessiveLandsOnOthers.TryGetValue(value, out result);
+      string result = null;
+      List<string> output;
+      if (NonPosessiveLandsOnOthers.TryGetValue(value, out output))
+      {
+        result = FindByLandsOn(value, output);
+      }
       return result;
     }
 
-    public List<string> GetPosessiveLandsOnOther(string value)
+    public string GetPosessiveLandsOnOther(string value)
     {
-      List<string> result = null;
-      PosessiveLandsOnOthers.TryGetValue(value, out result);
+      string result = null;
+      List<string> output;
+      if (PosessiveLandsOnOthers.TryGetValue(value, out output))
+      {
+        result = FindByLandsOn(value, output);
+      }
       return result;
     }
 
-    public List<string> GetLandsOnYou(string value)
+    public string GetLandsOnYou(string value)
     {
-      List<string> result = null;
-      LandsOnYou.TryGetValue(value, out result);
+      string result = null;
+      List<string> output;
+      if (LandsOnYou.TryGetValue(value, out output))
+      {
+        result = FindByLandsOn(value, output);
+      }
+      return result;
+    }
+
+    private string FindByLandsOn(string value, List<string> output)
+    {
+      string result = null;
+      if (output.Count == 1)
+      {
+        result = output[0];
+      }
+      else if (output.Count > 1)
+      {
+        if (!AllUniqueSpellsLRU.TryGet(value, out result))
+        {
+          result = output.Find(name => AllUniqueSpellCasts.ContainsKey(name));
+          AllUniqueSpellsLRU.AddReplace(value, result);
+        }
+      }
       return result;
     }
 
