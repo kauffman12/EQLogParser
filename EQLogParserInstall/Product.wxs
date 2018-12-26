@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.1.0" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.1.1" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -83,6 +83,9 @@
       </Component>
       <Component Win64="yes" Id="LiveCharts.Wpf.dll" Guid="DC2B7F21-1FF6-44F8-A496-2DACBBCA7AB4">
         <File Id="LiveCharts.Wpf.dll" Name="LiveCharts.Wpf.dll" Source="$(var.EQLogParser_TargetDir)LiveCharts.Wpf.dll" />
+      </Component>
+      <Component Win64="yes" Id="Caching.dll" Guid="74348E32-A112-488B-A33D-7F7E07CFF5C8">
+        <File Id="Caching.dll" Name="Caching.dll" Source="$(var.EQLogParser_TargetDir)Caching.dll" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
