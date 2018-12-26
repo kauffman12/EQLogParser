@@ -36,7 +36,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.1.1";
+    private const string VERSION = "v1.1.2";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -438,14 +438,9 @@ namespace EQLogParser
 
     private void PlayerDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
     {
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      if (menu != null)
+      if (playerDataGrid.SelectedItems.Count > 0)
       {
-        ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
-        if (callingDataGrid.SelectedItems.Count > 0)
-        {
-          ShowSpellCasts(callingDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
-        }
+        ShowSpellCasts(playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
       }
     }
 
