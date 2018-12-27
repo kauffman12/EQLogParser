@@ -74,20 +74,21 @@ namespace EQLogParser
         {
           string[] data = line.Split('^');
           int beneficial;
-          Int32.TryParse(data[1], out beneficial);
+          Int32.TryParse(data[2], out beneficial);
           int classMask;
-          Int32.TryParse(data[2], out classMask);
+          Int32.TryParse(data[3], out classMask);
           SpellData spellData = new SpellData()
           {
-            Spell = data[0],
-            SpellAbbrv = Helpers.AbbreviateSpellName(data[0]),
+            ID = data[0],
+            Spell = data[1],
+            SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
             Beneficial = (beneficial != 0),
             ClassMask = classMask,
-            LandsOnYou = data[3],
-            LandsOnOther = data[4]
+            LandsOnYou = data[4],
+            LandsOnOther = data[5]
           };
 
-          SpellsDB[spellData.Spell] = spellData;
+          SpellsDB[spellData.ID] = spellData;
 
           if (spellData.LandsOnOther.StartsWith("'s "))
           {
@@ -109,13 +110,23 @@ namespace EQLogParser
         LOG.Error(e);
       }
 
+      Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClasses)).Cast<SpellClasses>().ToList();
       foreach(var spell in SpellsDB.Values)
       {
         // exact match meaning class-only spell
         if (classEnums.Contains((SpellClasses) spell.ClassMask))
         {
-          SpellsToClass[spell.Spell] = (SpellClasses) spell.ClassMask;
+          // these need to be unique and keep track if a conflict is found
+          if (SpellsToClass.ContainsKey(spell.Spell))
+          {
+            SpellsToClass.Remove(spell.Spell);
+            keepOut[spell.Spell] = 1;
+          }
+          else if (!keepOut.ContainsKey(spell.Spell))
+          {
+            SpellsToClass[spell.Spell] = (SpellClasses)spell.ClassMask;
+          }
         }
       }
 
@@ -144,6 +155,9 @@ namespace EQLogParser
       ProbablyNotAPlayer.Clear();
       UnverifiedPetOrPlayer.Clear();
       AllSpellCasts.Clear();
+      AllUniqueSpellCasts.Clear();
+      AllUniqueSpellsLRU.Clear();
+      AllReceivedSpells.Clear();
       EventsClearedActiveData(this, true);
     }
 
