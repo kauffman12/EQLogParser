@@ -270,7 +270,7 @@ namespace EQLogParser
             stats.TotalLuckyDamage += record.Damage;
             stats.HitMap[record.Type].LuckyCount++;
             stats.HitMap[record.Type].TotalLuckyDamage += record.Damage;
-            // workaround to keep better keep track of avg base crit damage
+            // workaround to keep better track of avg base crit damage
             stats.TotalCritDamage -= record.Damage;
             stats.HitMap[record.Type].TotalCritDamage -= record.Damage;
             break;
