@@ -110,6 +110,7 @@ namespace EQLogParser
 
   public class SpellData
   {
+    public string ID { get; set; }
     public string Spell { get; set; }
     public string SpellAbbrv { get; set; }
     public bool Beneficial { get; set; }

@@ -36,7 +36,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.1.2";
+    private const string VERSION = "v1.1.3";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
