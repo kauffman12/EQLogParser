@@ -91,7 +91,7 @@ namespace EQLogParser
         {
           CurrentStats = null;
           NonPlayersView.Clear();
-          InitDPSChart();
+          ResetDPSChart();
           playerDataGrid.ItemsSource = null;
           npcMenuItemClear.IsEnabled = npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
           dpsTitle.Content = DPS_LABEL;
@@ -158,16 +158,6 @@ namespace EQLogParser
         SharedThemeCatalogRegistrar.Register();
         DockingThemeCatalogRegistrar.Register();
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
-
-        // reverse regular tooltip
-        var theChart = chartWindow.Content as CartesianChart;
-        theChart.DataTooltip.Foreground = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
-        theChart.DataTooltip.Background = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
-        theChart.ChartLegend.Foreground = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
-        theChart.ChartLegend.Background = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
-
-        // default values
-        InitDPSChart();
       }
       catch (Exception e)
       {
@@ -239,10 +229,10 @@ namespace EQLogParser
         }
         else
         {
-          chartWindow = new DocumentWindow(dockSite, "dpsChart", "DPS Over Time", null, dpsChart);
+          chartWindow = new DocumentWindow(dockSite, "dpsChart", "DPS Over Time", null, new DPSChart());
           chartWindow.ContainerDockedSize = new Size(400, 300);
           Helpers.OpenWindow(chartWindow);
-          InitDPSChart();
+          ResetDPSChart();
           chartWindow.CanFloat = true;
           chartWindow.CanClose = true;
           chartWindow.MoveToNewHorizontalContainer();
@@ -743,25 +733,12 @@ namespace EQLogParser
       }
     }
 
-    private void DPSChart_DoubleClick(object sender, MouseButtonEventArgs e)
-    {
-      Helpers.ChartResetView(chartWindow.Content as CartesianChart);
-    }
-
-    private void InitDPSChart()
+    private void ResetDPSChart()
     {
       if (chartWindow != null && chartWindow.IsOpen)
       {
-        var theChart = chartWindow.Content as CartesianChart;
         chartWindow.Title = "DPS Over Time";
-        LineSeries series = new LineSeries();
-        series.Values = new ChartValues<long>() { 0 };
-        SeriesCollection collection = new SeriesCollection();
-        collection.Add(series);
-        theChart.AxisX[0].Labels = new List<string>() { "Jan 01 12:00:00", "15", "30" };
-        theChart.AxisY[0].Labels = new List<string>() { "0", "100000", "200000", "300000" };
-        theChart.AxisY[0].MaxValue = 300000;
-        theChart.Series = collection;
+        (chartWindow.Content as DPSChart).Reset();
       }
     }
 
@@ -769,14 +746,8 @@ namespace EQLogParser
     {
       if (chartWindow != null && chartWindow.IsOpen)
       {
-        var chartData = NpcDamageManager.GetDPSValues(CurrentStats, list);
-        var series = Helpers.CreateLineChartSeries(chartData.Values);
-        var theChart = chartWindow.Content as CartesianChart;
-        Helpers.ChartResetView(theChart);
-        theChart.AxisX[0].Labels = chartData.XAxisLabels;
-        theChart.AxisY[0].Labels = null;
-        theChart.AxisY[0].MaxValue = double.NaN;
-        theChart.Series = series;
+        var chartData = StatsBuilder.GetDPSValues(CurrentStats, list, NpcDamageManager);
+        (chartWindow.Content as DPSChart).Update(chartData);
         chartWindow.Title = title;
       }
     }
@@ -829,7 +800,7 @@ namespace EQLogParser
             dpsTitle.Content = DPS_LABEL;
             playerDPSTextBox.Text = "";
             list.Clear();
-            InitDPSChart();
+            ResetDPSChart();
           }
 
           UpdatePlayerDataGridMenuItems();

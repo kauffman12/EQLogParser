@@ -150,6 +150,9 @@
     <Compile Include="src\data\DataManager.cs" />
     <Compile Include="src\control\SpellCountBuilder.cs" />
     <Compile Include="src\control\StatsBuilder.cs" />
+    <Compile Include="src\ui\DPSChart.xaml.cs">
+      <DependentUpon>DPSChart.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\util\ActionProcessor.cs" />
     <Compile Include="src\util\Helpers.cs" />
     <Page Include="MainWindow.xaml">
@@ -167,6 +170,10 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="src\ui\DPSChart.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\control\NpcDamageManager.cs" />

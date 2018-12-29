@@ -17,6 +17,7 @@ namespace EQLogParser
     public const string DAMAGE_FORMAT = "{0} @{1}";
     private const string PLAYER_FORMAT = "{0} = ";
     private const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
+    private static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
 
     internal static string BuildTitle(CombinedStats currentStats, bool showTotals = true)
     {
@@ -60,7 +61,7 @@ namespace EQLogParser
           list.Add(playerFormat + damageFormat + " " + timeFormat);
         }
 
-        details = list.Count > 0 ? ", " + string.Join(", ", list) : ""; 
+        details = list.Count > 0 ? ", " + string.Join(", ", list) : "";
         title = BuildTitle(currentStats, showTotals);
       }
 
@@ -105,7 +106,7 @@ namespace EQLogParser
                 individualStats[key] = playerTotals;
                 if (playerTotals.ClassName != "")
                 {
-                  lock(uniqueClasses)
+                  lock (uniqueClasses)
                   {
                     uniqueClasses[playerTotals.ClassName] = 1;
                   }
@@ -191,7 +192,7 @@ namespace EQLogParser
             subStat.PercentString = subStat.Percent.ToString();
           }
 
-          lock(combined.SubStats)
+          lock (combined.SubStats)
           {
             combined.SubStats[stat.Name] = subStatsList;
           }
@@ -201,7 +202,7 @@ namespace EQLogParser
 
         Parallel.ForEach(combined.StatsList, (stat, state, index) =>
         {
-          stat.Rank = (int) index + 1;
+          stat.Rank = (int)index + 1;
           if (combined.Children.ContainsKey(stat.Name))
           {
             combined.Children[stat.Name] = combined.Children[stat.Name].OrderByDescending(item => item.TotalDamage).ToList();
@@ -260,8 +261,8 @@ namespace EQLogParser
       }
 
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
-      playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
-      playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
+      playerTotals.DPS = (long)Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
+      playerTotals.Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
       playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 1);
       playerTotals.LuckRate = Math.Round(Convert.ToDecimal(playerTotals.LuckyHits) / playerTotals.Hits * 100, 1);
       playerTotals.TwincastRate = Math.Round(Convert.ToDecimal(playerTotals.TwincastHits) / playerTotals.Hits * 100, 1);
@@ -278,9 +279,9 @@ namespace EQLogParser
       Parallel.ForEach(npcStats.HitMap.Keys, (key) =>
       {
         PlayerSubStats subStats = null;
-        lock(playerTotals)
+        lock (playerTotals)
         {
-          subStats = new PlayerSubStats() { ClassName = "", Name = "", HitType = key };
+          subStats = new PlayerSubStats() { ClassName = "", Name = "", HitType = key, NonCritFreqValues = new Dictionary<long, int>() };
           if (!playerTotals.SubStats.ContainsKey(key))
           {
             playerTotals.SubStats[key] = subStats;
@@ -301,11 +302,12 @@ namespace EQLogParser
         subStats.TwincastHits += hitMap.TwincastCount;
         subStats.Max = (subStats.Max < hitMap.Max) ? hitMap.Max : subStats.Max;
         subStats.TotalSeconds = playerTotals.TotalSeconds;
-        subStats.DPS = (long) Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
-        subStats.Avg = (long) Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
+        subStats.DPS = (long)Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
+        subStats.Avg = (long)Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
         subStats.CritRate = Math.Round(Convert.ToDecimal(subStats.CritHits) / subStats.Hits * 100, 1);
         subStats.LuckRate = Math.Round(Convert.ToDecimal(subStats.LuckyHits) / subStats.Hits * 100, 1);
         subStats.TwincastRate = Math.Round(Convert.ToDecimal(subStats.TwincastHits) / subStats.Hits * 100, 1);
+        hitMap.NonCritFreqValues.Keys.ToList().ForEach(k => LongIntAddHelper.Add(subStats.NonCritFreqValues, k, hitMap.NonCritFreqValues[k]));
 
         if ((subStats.CritHits - subStats.LuckyHits) > 0)
         {
@@ -316,6 +318,151 @@ namespace EQLogParser
           subStats.AvgLucky = (long)Math.Round(Convert.ToDecimal(subStats.TotalLuckyDamage) / subStats.LuckyHits);
         }
       });
+    }
+
+    internal static DPSChartData GetDPSValues(CombinedStats combined, List<PlayerStats> stats, NpcDamageManager damageManager)
+    {
+      // sort stats
+      stats = stats.OrderBy(item => item.Name).ToList();
+
+      var result = ComputeTimeRanges(combined, stats);
+      Dictionary<int, DateTime> firstTimes = result.Item1;
+      Dictionary<int, DateTime> lastTimes = result.Item2;
+      int interval = combined.TimeDiff < 12 ? 1 : (int)combined.TimeDiff / 12;
+
+      List<string> labels = new List<string>();
+      DictionaryAddHelper<string, long> addHelper = new DictionaryAddHelper<string, long>();
+      Dictionary<string, List<long>> playerValues = new Dictionary<string, List<long>>();
+
+      foreach (var fightId in firstTimes.Keys.OrderBy(key => key))
+      {
+        DateTime firstTime = firstTimes[fightId];
+        DateTime lastTime = lastTimes[fightId];
+        DateTime currentTime = firstTime;
+
+        int index = 0;
+        var damages = damageManager.GetDamageStartingAt(firstTime);
+
+        Dictionary<string, long> playerTotals = new Dictionary<string, long>();
+        labels.Add(Helpers.FormatDateTime(firstTime));
+        while (currentTime <= lastTime)
+        {
+          while (index < damages.Count && damages[index].CurrentTime <= currentTime)
+          {
+            Dictionary<string, long> playerDamage = damages[index].PlayerDamage;
+            foreach (var stat in stats)
+            {
+              if (combined.Children.ContainsKey(stat.Name))
+              {
+                combined.Children[stat.Name].ForEach(child =>
+                {
+                  if (playerDamage.ContainsKey(child.Name))
+                  {
+                    addHelper.Add(playerTotals, stat.Name, playerDamage[child.Name]);
+                  }
+                });
+              }
+              else if (playerDamage.ContainsKey(stat.Name))
+              {
+                addHelper.Add(playerTotals, stat.Name, playerDamage[stat.Name]);
+              }
+            }
+
+            index++;
+          }
+
+          foreach (var stat in stats)
+          {
+            if (!playerValues.ContainsKey(stat.Name))
+            {
+              playerValues[stat.Name] = new List<long>();
+            }
+
+            long dps = 0;
+            if (playerTotals.ContainsKey(stat.Name))
+            {
+              dps = (long)Math.Round(playerTotals[stat.Name] / ((currentTime - firstTime).TotalSeconds + 1));
+            }
+
+            playerValues[stat.Name].Add(dps);
+          }
+
+          labels.Add(Helpers.FormatDateTime(currentTime));
+
+          if (currentTime == lastTime)
+          {
+            break;
+          }
+          else
+          {
+            currentTime = currentTime.AddSeconds(interval);
+            if (currentTime > lastTime)
+            {
+              currentTime = lastTime;
+            }
+          }
+        }
+      }
+
+      // scale down if too many points
+      int scale = -1;
+      var firstPlayer = playerValues.Values.First();
+      if (firstPlayer.Count > 20)
+      {
+        scale = firstPlayer.Count / 20;
+      }
+
+      if (scale > 1)
+      {
+        Dictionary<string, List<long>> newPlayerValues = new Dictionary<string, List<long>>();
+        Parallel.ForEach(playerValues.Keys, (player) =>
+        {
+          var newList = playerValues[player].Where((item, i) => i % scale == 0).ToList();
+
+          lock (newPlayerValues)
+          {
+            newPlayerValues[player] = newList;
+          }
+        });
+
+        playerValues = newPlayerValues;
+        labels = labels.Where((item, i) => i % scale == 0).ToList();
+      }
+
+      return new DPSChartData() { Values = playerValues, XAxisLabels = labels };
+    }
+
+    internal static Tuple<Dictionary<int, DateTime>, Dictionary<int, DateTime>> ComputeTimeRanges(CombinedStats combined, List<PlayerStats> stats)
+    {
+      Dictionary<int, DateTime> firstTimes = new Dictionary<int, DateTime>();
+      Dictionary<int, DateTime> lastTimes = new Dictionary<int, DateTime>();
+
+      // establish range of time for each fight counting all players
+      stats.ForEach(s =>
+      {
+        foreach (var fightId in s.BeginTimes.Keys)
+        {
+          if (!firstTimes.ContainsKey(fightId))
+          {
+            firstTimes[fightId] = s.BeginTimes[fightId];
+          }
+          else if (firstTimes[fightId] > s.BeginTimes[fightId])
+          {
+            firstTimes[fightId] = s.BeginTimes[fightId];
+          }
+
+          if (!lastTimes.ContainsKey(fightId))
+          {
+            lastTimes[fightId] = s.LastTimes[fightId];
+          }
+          else if (lastTimes[fightId] < s.LastTimes[fightId])
+          {
+            lastTimes[fightId] = s.LastTimes[fightId];
+          }
+        }
+      });
+
+      return new Tuple<Dictionary<int, DateTime>, Dictionary<int, DateTime>>(firstTimes, lastTimes);
     }
 
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)
