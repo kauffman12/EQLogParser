@@ -32,6 +32,7 @@ namespace EQLogParser
     public long TotalDamage { get; set; }
     public long TotalCritDamage { get; set; }
     public long TotalLuckyDamage { get; set; }
+    public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
 
   public class DamageStats : Hit
@@ -192,6 +193,7 @@ namespace EQLogParser
     public decimal Percent { get; set; }
     public string PercentString { get; set; }
     public string ClassName { get; set; }
+    public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
 
   public class PlayerStats : PlayerSubStats
