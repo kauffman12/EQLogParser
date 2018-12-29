@@ -4,7 +4,6 @@
         xmlns:docking="http://schemas.actiprosoftware.com/winfx/xaml/docking"
         xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
-        xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
@@ -254,17 +253,7 @@
                 </docking:TabbedMdiContainer>
                 <docking:TabbedMdiContainer>
                   <docking:DocumentWindow x:Name="chartWindow" Title="DPS Over Time" Description="" ContainerDockedSize="400,300" CanFloat="True" CanClose="True">
-                    <lvc:CartesianChart x:Name="dpsChart" Zoom="Xy" Pan="Xy"  LegendLocation="Right" DisableAnimations="True" MouseDoubleClick="DPSChart_DoubleClick">
-                      <lvc:CartesianChart.AxisY>
-                        <lvc:Axis Title="DPS" MinValue="0"></lvc:Axis>
-                      </lvc:CartesianChart.AxisY>
-                      <lvc:CartesianChart.AxisX>
-                        <lvc:Axis MinValue="0"></lvc:Axis>
-                      </lvc:CartesianChart.AxisX>
-                      <lvc:CartesianChart.Series>
-                        <lvc:LineSeries Values="0"></lvc:LineSeries>
-                      </lvc:CartesianChart.Series>
-                    </lvc:CartesianChart>
+                    <local:DPSChart />
                   </docking:DocumentWindow>
                 </docking:TabbedMdiContainer>
               </docking:SplitContainer>

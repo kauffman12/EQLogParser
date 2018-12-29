@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -10,6 +9,7 @@ namespace EQLogParser
     public DateTime LastUpdateTime { get; set; }
 
     private List<DamageAtTime> DamageTimeLine;
+    private DictionaryAddHelper<long, int> AddHelper = new DictionaryAddHelper<long, int>();
     private DamageAtTime DamageAtThisTime = null;
     private const int NPC_DEATH_TIME = 25;
     private long CurrentNpcID = 0;
@@ -24,6 +24,18 @@ namespace EQLogParser
         CurrentFightID = 0;
         DamageTimeLine = new List<DamageAtTime>();
       };
+    }
+
+    public IList<DamageAtTime> GetDamageStartingAt(DateTime startTime)
+    {
+      DamageAtTimeComparer comparer = new DamageAtTimeComparer();
+      int index = DamageTimeLine.BinarySearch(new DamageAtTime() { CurrentTime = startTime }, comparer);
+      if (index < 0)
+      {
+        index = Math.Abs(index) - 1;
+      }
+
+     return DamageTimeLine.GetRange(index, DamageTimeLine.Count - index);
     }
 
     ~NpcDamageManager()
@@ -75,7 +87,7 @@ namespace EQLogParser
       DamageStats stats = npc.DamageMap[record.Attacker];
       if (!stats.HitMap.ContainsKey(record.Type))
       {
-        stats.HitMap[record.Type] = new Hit() { Count = 0, Max = 0, TotalDamage = 0 };
+        stats.HitMap[record.Type] = new Hit() { NonCritFreqValues = new Dictionary<long, int>() };
       }
 
       stats.Count++;
@@ -85,7 +97,15 @@ namespace EQLogParser
       stats.HitMap[record.Type].TotalDamage += record.Damage;
       stats.HitMap[record.Type].Max = (stats.HitMap[record.Type].Max < record.Damage) ? record.Damage : stats.HitMap[record.Type].Max;
 
+      int critCount = stats.CritCount;
       UpdateModifiers(stats, record);
+
+      // if crit count did not increase this hit was a non-crit
+      if (critCount == stats.CritCount)
+      {
+        AddHelper.Add(stats.HitMap[record.Type].NonCritFreqValues, record.Damage, 1);
+      }
+
       stats.LastTime = currentTime;
 
       if (record.AttackerPetType != "")
@@ -96,7 +116,7 @@ namespace EQLogParser
 
       if (DamageAtThisTime == null)
       {
-        DamageAtThisTime = new DamageAtTime() { CurrentTime= currentTime, PlayerDamage = new Dictionary<string, long>(), FightID = CurrentFightID };
+        DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), FightID = CurrentFightID };
         DamageTimeLine.Add(DamageAtThisTime);
       }
       else if (currentTime.Subtract(DamageAtThisTime.CurrentTime).TotalSeconds >= 1) // EQ granular to 1 second
@@ -114,140 +134,6 @@ namespace EQLogParser
       DamageAtThisTime.CurrentTime = currentTime;
 
       DataManager.Instance.UpdateIfNewNonPlayerMap(npc.CorrectMapKey, npc);
-    }
-
-    public DPSChartData GetDPSValues(CombinedStats combined, List<PlayerStats> stats)
-    {
-      Dictionary<int, DateTime> firstTimes = new Dictionary<int, DateTime>();
-      Dictionary<int, DateTime> lastTimes = new Dictionary<int, DateTime>();
-      DamageAtTimeComparer comparer = new DamageAtTimeComparer();
-      int interval = combined.TimeDiff < 12 ? 1 : (int) combined.TimeDiff / 12;
-
-      stats = stats.OrderBy(item => item.Name).ToList();
-      // establish range of time for each fight counting all players
-      stats.ForEach(s =>
-      {
-        foreach (var fightId in s.BeginTimes.Keys)
-        {
-          if (!firstTimes.ContainsKey(fightId))
-          {
-            firstTimes[fightId] = s.BeginTimes[fightId];
-          }
-          else if (firstTimes[fightId] > s.BeginTimes[fightId])
-          {
-            firstTimes[fightId] = s.BeginTimes[fightId];
-          }
-
-          if (!lastTimes.ContainsKey(fightId))
-          {
-            lastTimes[fightId] = s.LastTimes[fightId];
-          }
-          else if (lastTimes[fightId] < s.LastTimes[fightId])
-          {
-            lastTimes[fightId] = s.LastTimes[fightId];
-          }
-        }
-      });
-
-      List<string> labels = new List<string>();
-      DictionaryAddHelper<string, long> addHelper = new DictionaryAddHelper<string, long>();
-      Dictionary<string, List<long>> playerValues = new Dictionary<string, List<long>>();
-
-      foreach (var fightId in firstTimes.Keys.OrderBy(key => key))
-      {
-        DateTime firstTime = firstTimes[fightId];
-        DateTime lastTime = lastTimes[fightId];
-        DateTime currentTime = firstTime;
-
-        Dictionary<string, long> playerTotals = new Dictionary<string, long>();
-        int index = DamageTimeLine.BinarySearch(new DamageAtTime() { CurrentTime = firstTime }, comparer);
-
-        labels.Add(Helpers.FormatDateTime(firstTime));
-        while (currentTime <= lastTime)
-        {
-          while (DamageTimeLine.Count > index && DamageTimeLine[index].CurrentTime <= currentTime) 
-          {
-            Dictionary<string, long> playerDamage = DamageTimeLine[index].PlayerDamage;
-            foreach(var stat in stats)
-            {
-              if (combined.Children.ContainsKey(stat.Name))
-              {
-                combined.Children[stat.Name].ForEach(child =>
-                {
-                  if (playerDamage.ContainsKey(child.Name))
-                  {
-                    addHelper.Add(playerTotals, stat.Name, playerDamage[child.Name]);
-                  }
-                });
-              }
-              else if (playerDamage.ContainsKey(stat.Name))
-              {
-                addHelper.Add(playerTotals, stat.Name, playerDamage[stat.Name]);
-              }
-            }
-
-            index++;
-          }
-
-          foreach (var stat in stats)
-          {
-            if (!playerValues.ContainsKey(stat.Name))
-            {
-              playerValues[stat.Name] = new List<long>();
-            }
-
-            long dps = 0;
-            if (playerTotals.ContainsKey(stat.Name))
-            {
-              dps = (long) Math.Round(playerTotals[stat.Name] / ((currentTime - firstTime).TotalSeconds + 1));
-            }
-
-            playerValues[stat.Name].Add(dps);
-          }
-
-          labels.Add(Helpers.FormatDateTime(currentTime));
-
-          if (currentTime == lastTime)
-          {
-            break;
-          }
-          else
-          {
-            currentTime = currentTime.AddSeconds(interval);
-            if (currentTime > lastTime)
-            {
-              currentTime = lastTime;
-            }
-          }
-        }
-      }
-
-      // scale down if too many points
-      int scale = -1;
-      var firstPlayer = playerValues.Values.First();
-      if (firstPlayer.Count > 20)
-      {
-        scale = firstPlayer.Count / 20;
-      }
-
-      if (scale > 1)
-      {
-        Dictionary<string, List<long>> newPlayerValues = new Dictionary<string, List<long>>();
-        Parallel.ForEach(playerValues.Keys, (player) =>
-        {
-          var newList = playerValues[player].Where((item, i) => i % scale == 0).ToList();
-
-          lock(newPlayerValues)
-          {
-            newPlayerValues[player] = newList;
-          }
-        });
-
-        playerValues = newPlayerValues;
-        labels = labels.Where((item, i) => i % scale == 0).ToList();
-      }
-
-      return new DPSChartData() { Values = playerValues, XAxisLabels = labels };
     }
 
     private void UpdateModifiers(DamageStats stats, DamageRecord record)
