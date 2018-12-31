@@ -40,7 +40,7 @@ namespace EQLogParser
       lvcChart.Series = collection;
     }
 
-    public void Update(DPSChartData chartData)
+    public void Update(ChartData chartData)
     {
       var series = Helpers.CreateLineChartSeries(chartData.Values);
       Helpers.ChartResetView(lvcChart);
@@ -50,7 +50,7 @@ namespace EQLogParser
       lvcChart.Series = series;
     }
 
-    private void DPSChart_DoubleClick(object sender, MouseButtonEventArgs e)
+    private void Chart_DoubleClick(object sender, MouseButtonEventArgs e)
     {
       Helpers.ChartResetView(lvcChart);
     }

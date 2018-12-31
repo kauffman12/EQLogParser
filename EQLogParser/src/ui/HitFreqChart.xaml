@@ -1,0 +1,38 @@
+﻿<UserControl x:Class="EQLogParser.HitFreqChart"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+             xmlns:lvc1="clr-namespace:LiveCharts;assembly=LiveCharts"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="25"></RowDefinition>
+      <RowDefinition Height="300*"></RowDefinition>
+    </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <ComboBox Margin="0,4,8,0" x:Name="playerList" SelectionChanged="PlayerList_SelectionChanged" />
+      <ComboBox Margin="0,4,8,0" x:Name="critTypeList" SelectionChanged="CritTypeList_SelectionChanged" />
+      <ComboBox Margin="0,4,8,0" x:Name="hitTypeList" SelectionChanged="List_SelectionChanged" />
+      <ComboBox Margin="0,4,8,0" x:Name="minFreqList" SelectionChanged="List_SelectionChanged" />
+    </StackPanel>
+    <lvc:CartesianChart Grid.Row="1" x:Name="lvcChart" MouseDoubleClick="Chart_DoubleClick" Zoom="Xy" Pan="Xy" LegendLocation="None" DisableAnimations="True">
+      <lvc:CartesianChart.AxisY>
+        <lvc:Axis Title="Frequency" MinValue="0" BarUnit="0.5">
+          <lvc:Axis.Separator>
+            <lvc:Separator Step="2"></lvc:Separator>
+          </lvc:Axis.Separator>
+        </lvc:Axis>
+      </lvc:CartesianChart.AxisY>
+      <lvc:CartesianChart.AxisX>
+        <lvc:Axis MinValue="0" BarUnit="0.5" ShowLabels="True">
+          <lvc:Axis.Separator>
+            <lvc:Separator Step="1"></lvc:Separator>
+          </lvc:Axis.Separator>
+        </lvc:Axis>
+      </lvc:CartesianChart.AxisX>
+    </lvc:CartesianChart>
+  </Grid>
+</UserControl>

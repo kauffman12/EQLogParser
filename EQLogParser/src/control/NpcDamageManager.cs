@@ -87,7 +87,7 @@ namespace EQLogParser
       DamageStats stats = npc.DamageMap[record.Attacker];
       if (!stats.HitMap.ContainsKey(record.Type))
       {
-        stats.HitMap[record.Type] = new Hit() { NonCritFreqValues = new Dictionary<long, int>() };
+        stats.HitMap[record.Type] = new Hit() { CritFreqValues = new Dictionary<long, int>(), NonCritFreqValues = new Dictionary<long, int>() };
       }
 
       stats.Count++;
@@ -104,6 +104,10 @@ namespace EQLogParser
       if (critCount == stats.CritCount)
       {
         AddHelper.Add(stats.HitMap[record.Type].NonCritFreqValues, record.Damage, 1);
+      }
+      else
+      {
+        AddHelper.Add(stats.HitMap[record.Type].CritFreqValues, record.Damage, 1);
       }
 
       stats.LastTime = currentTime;
