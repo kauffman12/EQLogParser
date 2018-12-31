@@ -281,7 +281,7 @@ namespace EQLogParser
         PlayerSubStats subStats = null;
         lock (playerTotals)
         {
-          subStats = new PlayerSubStats() { ClassName = "", Name = "", HitType = key, NonCritFreqValues = new Dictionary<long, int>() };
+          subStats = new PlayerSubStats() { ClassName = "", Name = "", HitType = key, CritFreqValues = new Dictionary<long, int>(), NonCritFreqValues = new Dictionary<long, int>() };
           if (!playerTotals.SubStats.ContainsKey(key))
           {
             playerTotals.SubStats[key] = subStats;
@@ -307,6 +307,7 @@ namespace EQLogParser
         subStats.CritRate = Math.Round(Convert.ToDecimal(subStats.CritHits) / subStats.Hits * 100, 1);
         subStats.LuckRate = Math.Round(Convert.ToDecimal(subStats.LuckyHits) / subStats.Hits * 100, 1);
         subStats.TwincastRate = Math.Round(Convert.ToDecimal(subStats.TwincastHits) / subStats.Hits * 100, 1);
+        hitMap.CritFreqValues.Keys.ToList().ForEach(k => LongIntAddHelper.Add(subStats.CritFreqValues, k, hitMap.CritFreqValues[k]));
         hitMap.NonCritFreqValues.Keys.ToList().ForEach(k => LongIntAddHelper.Add(subStats.NonCritFreqValues, k, hitMap.NonCritFreqValues[k]));
 
         if ((subStats.CritHits - subStats.LuckyHits) > 0)
@@ -320,7 +321,50 @@ namespace EQLogParser
       });
     }
 
-    internal static DPSChartData GetDPSValues(CombinedStats combined, List<PlayerStats> stats, NpcDamageManager damageManager)
+    internal static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(CombinedStats combined, PlayerStats playerStats)
+    {
+      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
+
+      // get chart data for player and pets if available
+      List <PlayerStats> list = new List<PlayerStats>();
+      if (combined.Children.ContainsKey(playerStats.Name))
+      {
+        list.AddRange(combined.Children[playerStats.Name]);
+      }
+      else
+      {
+        list.Add(playerStats);
+      }
+
+      list.ForEach(stat =>
+      {
+        results[stat.Name] = new List<HitFreqChartData>();
+        foreach (string type in stat.SubStats.Keys)
+        {
+          List<int> critFreqs = new List<int>();
+          List<int> nonCritFreqs = new List<int>();
+          HitFreqChartData chartData = new HitFreqChartData() { HitType = type };
+
+          // add crits
+          var critDamages = stat.SubStats[type].CritFreqValues.Keys.OrderBy(key => key).ToList();
+          critDamages.ForEach(damage => critFreqs.Add(stat.SubStats[type].CritFreqValues[damage]));
+          chartData.CritValues = critFreqs;
+          chartData.CritXAxisLabels = critDamages.Select(key => key.ToString()).ToList();
+
+          // add non crits
+          var nonCritDamages = stat.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key).ToList();
+          nonCritDamages.ForEach(damage => nonCritFreqs.Add(stat.SubStats[type].NonCritFreqValues[damage]));
+          chartData.NonCritValues = nonCritFreqs;
+          chartData.NonCritXAxisLabels = nonCritDamages.Select(key => key.ToString()).ToList();
+
+          results[stat.Name].Add(chartData);
+        }
+      });
+
+      return results;
+    }
+
+    internal static ChartData GetDPSValues(CombinedStats combined, List<PlayerStats> stats, NpcDamageManager damageManager)
     {
       // sort stats
       stats = stats.OrderBy(item => item.Name).ToList();
@@ -429,7 +473,7 @@ namespace EQLogParser
         labels = labels.Where((item, i) => i % scale == 0).ToList();
       }
 
-      return new DPSChartData() { Values = playerValues, XAxisLabels = labels };
+      return new ChartData() { Values = playerValues, XAxisLabels = labels };
     }
 
     internal static Tuple<Dictionary<int, DateTime>, Dictionary<int, DateTime>> ComputeTimeRanges(CombinedStats combined, List<PlayerStats> stats)

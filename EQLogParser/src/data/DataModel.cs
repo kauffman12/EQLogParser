@@ -32,6 +32,7 @@ namespace EQLogParser
     public long TotalDamage { get; set; }
     public long TotalCritDamage { get; set; }
     public long TotalLuckyDamage { get; set; }
+    public Dictionary<long, int> CritFreqValues { get; set; }
     public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
 
@@ -150,10 +151,19 @@ namespace EQLogParser
     public Dictionary<string, byte> UniqueClasses { get; set; }
   }
 
-  public class DPSChartData
+  public class ChartData
   {
     public Dictionary<string, List<long>> Values { get; set; }
     public List<string> XAxisLabels { get; set; }
+  }
+
+  public class HitFreqChartData
+  {
+    public string HitType { get; set; }
+    public List<int> CritValues { get; set; }
+    public List<string> CritXAxisLabels { get; set; }
+    public List<int> NonCritValues { get; set; }
+    public List<string> NonCritXAxisLabels { get; set; }
   }
 
   public class DPSSnapshotEvent
@@ -193,6 +203,7 @@ namespace EQLogParser
     public decimal Percent { get; set; }
     public string PercentString { get; set; }
     public string ClassName { get; set; }
+    public Dictionary<long, int> CritFreqValues { get; set; }
     public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
 
