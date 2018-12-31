@@ -2,8 +2,6 @@
 using ActiproSoftware.Windows.Controls.DataGrid;
 using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
-using LiveCharts;
-using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -36,7 +34,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.1.3";
+    private const string VERSION = "v1.1.4";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -420,6 +418,25 @@ namespace EQLogParser
       callingDataGrid.UnselectAll();
     }
 
+    private void PlayerDataHitFreq_Click(object sender, RoutedEventArgs e)
+    {
+      if (playerDataGrid.SelectedItems.Count == 1)
+      {
+        var chart = new HitFreqChart();
+        var results = StatsBuilder.GetHitFreqValues(CurrentStats, playerDataGrid.SelectedItems.Cast<PlayerStats>().First());
+
+        var hitFreqWindow = new DocumentWindow(dockSite, "freqChart", "Hit Frequency", null, chart);
+        hitFreqWindow.ContainerDockedSize = new Size(400, 300);
+        Helpers.OpenWindow(hitFreqWindow);
+        hitFreqWindow.MoveToLast();
+
+        //ResetDPSChart();
+        chart.Update(results);
+        hitFreqWindow.CanFloat = true;
+        hitFreqWindow.CanClose = true;
+      }
+    }
+
     private void PlayerDataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
@@ -719,7 +736,7 @@ namespace EQLogParser
         }
         else
         {
-          playerDPSTextBox.Text = SHARE_DPS_LABEL;
+          playerDPSTextBox.Text = dpsTitle.Content as string;
 
           if (CurrentStats != null)
           {
@@ -817,6 +834,7 @@ namespace EQLogParser
         pdgMenuItemSelectAll.IsEnabled = playerDataGrid.SelectedItems.Count < playerDataGrid.Items.Count;
         pdgMenuItemUnselectAll.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
         pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = true;
+        pdgMenuItemShowHitFreq.IsEnabled = playerDataGrid.SelectedItems.Count == 1;
 
         foreach (var item in pdgMenuItemShowDamage.Items)
         {
@@ -846,7 +864,7 @@ namespace EQLogParser
       }
       else
       {
-        pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemSelectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = false;
+        pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemSelectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = pdgMenuItemShowHitFreq.IsEnabled = false;
       }
     }
 

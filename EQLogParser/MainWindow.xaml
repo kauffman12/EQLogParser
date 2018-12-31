@@ -110,26 +110,7 @@
                           <ContextMenu>
                             <MenuItem IsEnabled="True" x:Name="copyToEQRightClick" Header="Copy To EQ" Click="CopyToEQ_Click"></MenuItem>
                             <Separator />
-                            <MenuItem x:Name="pdgMenuItemShowDamage" IsEnabled="False" Header="Show Damage Breakdown">
-                              <MenuItem Header="Selected" IsEnabled="False" Click="PlayerDataGridShowDamage_Click"/>
-                              <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                            </MenuItem>
-                            <MenuItem x:Name="pdgMenuItemShowSpellCasts" IsEnabled="False" Header="Show Spell Counts">
+                            <MenuItem x:Name="pdgMenuItemShowSpellCasts" IsEnabled="False" Header="Cast/Spell Counts">
                               <MenuItem Header="Selected" IsEnabled="False" Click="PlayerDataGridShowSpellCasts_Click"/>
                               <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
                               <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
@@ -148,6 +129,26 @@
                               <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
                               <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="PlayerDataGridSpellCastsByClass_Click"/>
                             </MenuItem>
+                            <MenuItem x:Name="pdgMenuItemShowDamage" IsEnabled="False" Header="Damage Breakdown">
+                              <MenuItem Header="Selected" IsEnabled="False" Click="PlayerDataGridShowDamage_Click"/>
+                              <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                            </MenuItem>
+                            <MenuItem x:Name="pdgMenuItemShowHitFreq" IsEnabled="False" Header="Hit Frequency" Click="PlayerDataHitFreq_Click"/>
                             <Separator />
                             <MenuItem x:Name="pdgMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
                             <MenuItem x:Name="pdgMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
