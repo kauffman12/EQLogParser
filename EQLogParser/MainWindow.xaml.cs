@@ -34,7 +34,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.1.4";
+    private const string VERSION = "v1.1.5";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -310,11 +310,11 @@ namespace EQLogParser
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
       NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
-      if (npc != null && npc.FightID > -1)
+      if (npc != null && npc.GroupID > -1)
       {
         Parallel.ForEach(NonPlayersView, (one) =>
         {
-          if (one.FightID == npc.FightID)
+          if (one.GroupID == npc.GroupID)
           {
             Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one));
           }
@@ -495,58 +495,54 @@ namespace EQLogParser
         try
         {
           var raidStats = CurrentStats.RaidStats;
-          if (raidStats.FirstFightID < int.MaxValue && raidStats.LastFightID > int.MinValue && raidStats.BeginTimes.ContainsKey(raidStats.FirstFightID)
-            && raidStats.LastTimes.ContainsKey(raidStats.LastFightID))
+          DateTime start = raidStats.BeginTimes.First();
+          DateTime end = raidStats.LastTimes.Last();
+          SpellCounts counts = SpellCountBuilder.GetSpellCounts(playerList, start.AddSeconds(-10), end);
+
+          int colCount = 0;
+          foreach (string name in counts.SortedPlayers)
           {
-            DateTime start = raidStats.BeginTimes[CurrentStats.RaidStats.FirstFightID];
-            DateTime end = raidStats.LastTimes[CurrentStats.RaidStats.LastFightID];
-            SpellCounts counts = SpellCountBuilder.GetSpellCounts(playerList, start.AddSeconds(-10), end);
-
-            int colCount = 0;
-            foreach (string name in counts.SortedPlayers)
-            {
-              string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
-              int total = counts.TotalCountMap.ContainsKey(name) ? counts.TotalCountMap[name] : 0;
-
-              Dispatcher.InvokeAsync(() =>
-              {
-                DataGridTextColumn col = new DataGridTextColumn() { Header = name + " = " + total, Binding = new Binding(colBinding) };
-                col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
-                col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
-                dataGrid.Columns.Add(col);
-              });
-
-              Thread.Sleep(5);
-              colCount++;
-            }
+            string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
+            int total = counts.TotalCountMap.ContainsKey(name) ? counts.TotalCountMap[name] : 0;
 
             Dispatcher.InvokeAsync(() =>
             {
-              int total = counts.UniqueSpellCounts.Values.Sum();
-              DataGridTextColumn col = new DataGridTextColumn() { Header = "Total Count = " + total, Binding = new Binding("Values[" + colCount + "]") };
+              DataGridTextColumn col = new DataGridTextColumn() { Header = name + " = " + total, Binding = new Binding(colBinding) };
               col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
               col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
               dataGrid.Columns.Add(col);
             });
 
-            foreach (var spell in counts.SpellList)
+            Thread.Sleep(5);
+            colCount++;
+          }
+
+          Dispatcher.InvokeAsync(() =>
+          {
+            int total = counts.UniqueSpellCounts.Values.Sum();
+            DataGridTextColumn col = new DataGridTextColumn() { Header = "Total Count = " + total, Binding = new Binding("Values[" + colCount + "]") };
+            col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
+            col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
+            dataGrid.Columns.Add(col);
+          });
+
+          foreach (var spell in counts.SpellList)
+          {
+            SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count + 1] };
+            row.IsReceived = spell.StartsWith("Received");
+
+            int i;
+            for (i = 0; i < counts.SortedPlayers.Count; i++)
             {
-              SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count + 1] };
-              row.IsReceived = spell.StartsWith("Received");
-
-              int i;
-              for (i = 0; i < counts.SortedPlayers.Count; i++)
+              if (counts.PlayerCountMap.ContainsKey(counts.SortedPlayers[i]))
               {
-                if (counts.PlayerCountMap.ContainsKey(counts.SortedPlayers[i]))
-                {
-                  row.Values[i] = counts.PlayerCountMap[counts.SortedPlayers[i]].ContainsKey(spell) ? counts.PlayerCountMap[counts.SortedPlayers[i]][spell] : 0;
-                }
+                row.Values[i] = counts.PlayerCountMap[counts.SortedPlayers[i]].ContainsKey(spell) ? counts.PlayerCountMap[counts.SortedPlayers[i]][spell] : 0;
               }
-
-              row.Values[i] = counts.UniqueSpellCounts[spell];
-              Dispatcher.InvokeAsync(() => rows.Add(row));
-              Thread.Sleep(5);
             }
+
+            row.Values[i] = counts.UniqueSpellCounts[spell];
+            Dispatcher.InvokeAsync(() => rows.Add(row));
+            Thread.Sleep(5);
           }
 
           Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);

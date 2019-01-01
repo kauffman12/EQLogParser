@@ -51,7 +51,7 @@
               <datagrid:ThemedDataGrid x:Name="npcDataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="NonPlayerDataGrid_LoadingRow" SelectionChanged="NonPlayerDataGrid_SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
                 <DataGrid.ContextMenu>
                   <ContextMenu>
-                    <MenuItem x:Name="npcMenuItemSelectFight" IsEnabled="False" Header="Select This Fight" Click="NonPlayerDataGridSelectFight_Click"/>
+                    <MenuItem x:Name="npcMenuItemSelectFight" IsEnabled="False" Header="Select This Group" Click="NonPlayerDataGridSelectFight_Click"/>
                     <Separator />
                     <MenuItem x:Name="npcMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
                     <MenuItem x:Name="npcMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
