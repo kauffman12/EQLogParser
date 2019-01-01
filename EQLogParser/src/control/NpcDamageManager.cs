@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace EQLogParser
 {
@@ -12,8 +11,8 @@ namespace EQLogParser
     private DictionaryAddHelper<long, int> AddHelper = new DictionaryAddHelper<long, int>();
     private DamageAtTime DamageAtThisTime = null;
     private const int NPC_DEATH_TIME = 25;
-    private long CurrentNpcID = 0;
-    private int CurrentFightID = 0;
+    private int CurrentNpcID = 0;
+    private int CurrentGroupID = 0;
 
     public NpcDamageManager()
     {
@@ -21,7 +20,7 @@ namespace EQLogParser
       DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
       DataManager.Instance.EventsClearedActiveData += (sender, cleared) =>
       {
-        CurrentFightID = 0;
+        CurrentGroupID = 0;
         DamageTimeLine = new List<DamageAtTime>();
       };
     }
@@ -48,9 +47,9 @@ namespace EQLogParser
       if (processed.Record != null && LastUpdateTime != DateTime.MinValue)
       {
         TimeSpan diff = processed.ProcessLine.CurrentTime.Subtract(LastUpdateTime);
-        if (diff.TotalSeconds > 120)
+        if (diff.TotalSeconds > 60)
         {
-          CurrentFightID++;
+          CurrentGroupID++;
           DataManager.Instance.AddNonPlayerMapBreak(Helpers.FormatTimeSpan(diff));
         }
       }
@@ -120,12 +119,12 @@ namespace EQLogParser
 
       if (DamageAtThisTime == null)
       {
-        DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), FightID = CurrentFightID };
+        DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), GroupID = CurrentGroupID };
         DamageTimeLine.Add(DamageAtThisTime);
       }
       else if (currentTime.Subtract(DamageAtThisTime.CurrentTime).TotalSeconds >= 1) // EQ granular to 1 second
       {
-        DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), FightID = CurrentFightID };
+        DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), GroupID = CurrentGroupID };
         DamageTimeLine.Add(DamageAtThisTime);
       }
 
@@ -223,7 +222,7 @@ namespace EQLogParser
           LastTime = currentTime,
           DamageMap = new Dictionary<string, DamageStats>(),
           ID = CurrentNpcID++,
-          FightID = CurrentFightID,
+          GroupID = CurrentGroupID,
           CorrectMapKey = record.Defender
         };
       }

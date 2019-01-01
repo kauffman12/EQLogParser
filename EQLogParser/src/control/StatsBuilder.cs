@@ -85,7 +85,7 @@ namespace EQLogParser
       {
         string title = selected.First().Name;
 
-        foreach (NonPlayer npc in selected.OrderBy(item => item.FightID))
+        foreach (NonPlayer npc in selected.OrderBy(item => item.ID))
         {
           if (npc.BeginTimeString == NonPlayer.BREAK_TIME)
           {
@@ -129,14 +129,14 @@ namespace EQLogParser
               }
 
               aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
-              UpdateTotals(playerTotals, npcStats, npc.FightID);
-              UpdateTotals(raidTotals, npcStats, npc.FightID);
+              UpdateTotals(playerTotals, npcStats);
+              UpdateTotals(raidTotals, npcStats);
             }
           }
         }
 
         combined.RaidStats = raidTotals;
-        combined.TimeDiff = raidTotals.TimeDiffs.Values.Sum();
+        combined.TimeDiff = raidTotals.TimeDiffs.Sum();
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
         combined.TimeTitle = String.Format(TIME_FORMAT, combined.TimeDiff);
         combined.DamageTitle = String.Format(DAMAGE_FORMAT, Helpers.FormatDamage(raidTotals.TotalDamage), Helpers.FormatDamage(raidTotals.DPS));
@@ -155,6 +155,7 @@ namespace EQLogParser
             List<string> all = needAggregate[key].ToList();
             all.Add(key);
 
+            List<DamageStats> allDamageStats = new List<DamageStats>();
             foreach (string child in all)
             {
               if (aggregateNpcStats.ContainsKey(child) && individualStats.ContainsKey(child))
@@ -166,10 +167,15 @@ namespace EQLogParser
 
                 foreach (NonPlayer npc in aggregateNpcStats[child])
                 {
-                  UpdateTotals(aggregatePlayerStats, npc.DamageMap[child], npc.FightID);
+                  allDamageStats.Add(npc.DamageMap[child]);
                 }
               }
             }
+
+            allDamageStats.OrderBy(dStats => dStats.BeginTime).ToList().ForEach(dStats =>
+            {
+              UpdateTotals(aggregatePlayerStats, dStats);
+            });
 
             individualStats[aggregateName] = aggregatePlayerStats;
 
@@ -217,19 +223,8 @@ namespace EQLogParser
       return combined;
     }
 
-    internal static void UpdateTotals(PlayerStats playerTotals, DamageStats npcStats, int FightID)
+    internal static void UpdateTotals(PlayerStats playerTotals, DamageStats npcStats)
     {
-      if (!playerTotals.BeginTimes.ContainsKey(FightID))
-      {
-        playerTotals.BeginTimes[FightID] = new DateTime();
-        playerTotals.LastTimes[FightID] = new DateTime();
-
-        if (playerTotals.SubStats == null)
-        {
-          playerTotals.SubStats = new Dictionary<string, PlayerSubStats>();
-        }
-      }
-
       playerTotals.TotalDamage += npcStats.TotalDamage;
       playerTotals.TotalCritDamage += npcStats.TotalCritDamage;
       playerTotals.TotalLuckyDamage += npcStats.TotalLuckyDamage;
@@ -238,42 +233,46 @@ namespace EQLogParser
       playerTotals.LuckyHits += npcStats.LuckyCount;
       playerTotals.TwincastHits += npcStats.TwincastCount;
       playerTotals.Max = (playerTotals.Max < npcStats.Max) ? npcStats.Max : playerTotals.Max;
-      playerTotals.FirstFightID = Math.Min(playerTotals.FirstFightID, FightID);
-      playerTotals.LastFightID = Math.Max(playerTotals.LastFightID, FightID);
 
-      bool updateTime = false;
-      if (playerTotals.BeginTimes[FightID] == DateTime.MinValue || playerTotals.BeginTimes[FightID] > npcStats.BeginTime)
+      int currentIndex = playerTotals.BeginTimes.Count - 1;
+      if (currentIndex == -1)
       {
-        playerTotals.BeginTimes[FightID] = npcStats.BeginTime;
-        updateTime = true;
+        playerTotals.BeginTimes.Add(npcStats.BeginTime);
+        playerTotals.LastTimes.Add(npcStats.LastTime);
+        playerTotals.TimeDiffs.Add(0); // update afterward
+        currentIndex = 0;
+      }
+      else if (playerTotals.LastTimes[currentIndex] >= npcStats.BeginTime)
+      {
+        if (npcStats.LastTime > playerTotals.LastTimes[currentIndex])
+        {
+          playerTotals.LastTimes[currentIndex] = npcStats.LastTime;
+        }
+      }
+      else
+      {
+        playerTotals.BeginTimes.Add(npcStats.BeginTime);
+        playerTotals.LastTimes.Add(npcStats.LastTime);
+        playerTotals.TimeDiffs.Add(0); // update afterward
+        currentIndex++;
       }
 
-      if (playerTotals.LastTimes[FightID] == DateTime.MinValue || playerTotals.LastTimes[FightID] < npcStats.LastTime)
-      {
-        playerTotals.LastTimes[FightID] = npcStats.LastTime;
-        updateTime = true;
-      }
+      playerTotals.TimeDiffs[currentIndex] = playerTotals.LastTimes[currentIndex].Subtract(playerTotals.BeginTimes[currentIndex]).TotalSeconds + 1;
 
-      if (updateTime)
-      {
-        // each fight that takes 0 time in the log should count as 1 seconds
-        playerTotals.TimeDiffs[FightID] = playerTotals.LastTimes[FightID].Subtract(playerTotals.BeginTimes[FightID]).TotalSeconds + 1;
-      }
-
-      playerTotals.TotalSeconds = playerTotals.TimeDiffs.Values.Sum();
-      playerTotals.DPS = (long)Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
-      playerTotals.Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
+      playerTotals.TotalSeconds = playerTotals.TimeDiffs.Sum();
+      playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
+      playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
       playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 1);
       playerTotals.LuckRate = Math.Round(Convert.ToDecimal(playerTotals.LuckyHits) / playerTotals.Hits * 100, 1);
       playerTotals.TwincastRate = Math.Round(Convert.ToDecimal(playerTotals.TwincastHits) / playerTotals.Hits * 100, 1);
 
       if ((playerTotals.CritHits - playerTotals.LuckyHits) > 0)
       {
-        playerTotals.AvgCrit = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / (playerTotals.CritHits - playerTotals.LuckyHits));
+        playerTotals.AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / (playerTotals.CritHits - playerTotals.LuckyHits));
       }
       if (playerTotals.LuckyHits > 0)
       {
-        playerTotals.AvgLucky = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalLuckyDamage) / playerTotals.LuckyHits);
+        playerTotals.AvgLucky = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalLuckyDamage) / playerTotals.LuckyHits);
       }
 
       Parallel.ForEach(npcStats.HitMap.Keys, (key) =>
@@ -302,8 +301,8 @@ namespace EQLogParser
         subStats.TwincastHits += hitMap.TwincastCount;
         subStats.Max = (subStats.Max < hitMap.Max) ? hitMap.Max : subStats.Max;
         subStats.TotalSeconds = playerTotals.TotalSeconds;
-        subStats.DPS = (long)Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
-        subStats.Avg = (long)Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
+        subStats.DPS = (long) Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
+        subStats.Avg = (long) Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
         subStats.CritRate = Math.Round(Convert.ToDecimal(subStats.CritHits) / subStats.Hits * 100, 1);
         subStats.LuckRate = Math.Round(Convert.ToDecimal(subStats.LuckyHits) / subStats.Hits * 100, 1);
         subStats.TwincastRate = Math.Round(Convert.ToDecimal(subStats.TwincastHits) / subStats.Hits * 100, 1);
@@ -368,20 +367,16 @@ namespace EQLogParser
     {
       // sort stats
       stats = stats.OrderBy(item => item.Name).ToList();
-
-      var result = ComputeTimeRanges(combined, stats);
-      Dictionary<int, DateTime> firstTimes = result.Item1;
-      Dictionary<int, DateTime> lastTimes = result.Item2;
       int interval = combined.TimeDiff < 12 ? 1 : (int)combined.TimeDiff / 12;
 
       List<string> labels = new List<string>();
       DictionaryAddHelper<string, long> addHelper = new DictionaryAddHelper<string, long>();
       Dictionary<string, List<long>> playerValues = new Dictionary<string, List<long>>();
 
-      foreach (var fightId in firstTimes.Keys.OrderBy(key => key))
+      foreach (var timeIndex in Enumerable.Range(0, combined.RaidStats.BeginTimes.Count))
       {
-        DateTime firstTime = firstTimes[fightId];
-        DateTime lastTime = lastTimes[fightId];
+        DateTime firstTime = combined.RaidStats.BeginTimes[timeIndex];
+        DateTime lastTime = combined.RaidStats.LastTimes[timeIndex];
         DateTime currentTime = firstTime;
 
         int index = 0;
@@ -476,39 +471,6 @@ namespace EQLogParser
       return new ChartData() { Values = playerValues, XAxisLabels = labels };
     }
 
-    internal static Tuple<Dictionary<int, DateTime>, Dictionary<int, DateTime>> ComputeTimeRanges(CombinedStats combined, List<PlayerStats> stats)
-    {
-      Dictionary<int, DateTime> firstTimes = new Dictionary<int, DateTime>();
-      Dictionary<int, DateTime> lastTimes = new Dictionary<int, DateTime>();
-
-      // establish range of time for each fight counting all players
-      stats.ForEach(s =>
-      {
-        foreach (var fightId in s.BeginTimes.Keys)
-        {
-          if (!firstTimes.ContainsKey(fightId))
-          {
-            firstTimes[fightId] = s.BeginTimes[fightId];
-          }
-          else if (firstTimes[fightId] > s.BeginTimes[fightId])
-          {
-            firstTimes[fightId] = s.BeginTimes[fightId];
-          }
-
-          if (!lastTimes.ContainsKey(fightId))
-          {
-            lastTimes[fightId] = s.LastTimes[fightId];
-          }
-          else if (lastTimes[fightId] < s.LastTimes[fightId])
-          {
-            lastTimes[fightId] = s.LastTimes[fightId];
-          }
-        }
-      });
-
-      return new Tuple<Dictionary<int, DateTime>, Dictionary<int, DateTime>>(firstTimes, lastTimes);
-    }
-
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
       string className = "";
@@ -526,11 +488,10 @@ namespace EQLogParser
         HitType = "",
         PercentString = "-",
         Percent = 100, // until something says otherwise
-        BeginTimes = new Dictionary<int, DateTime>(),
-        LastTimes = new Dictionary<int, DateTime>(),
-        TimeDiffs = new Dictionary<int, double>(),
-        FirstFightID = int.MaxValue,
-        LastFightID = int.MinValue
+        BeginTimes = new List<DateTime>(),
+        LastTimes = new List<DateTime>(),
+        SubStats = new Dictionary<string, PlayerSubStats>(),
+        TimeDiffs = new List<double>()
       };
     }
 

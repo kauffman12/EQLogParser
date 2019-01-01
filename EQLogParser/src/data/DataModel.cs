@@ -70,7 +70,7 @@ namespace EQLogParser
   {
     public DateTime CurrentTime { get; set; }
     public Dictionary<string, long> PlayerDamage { get; set; }
-    public int FightID { get; set; }
+    public int GroupID { get; set; }
   }
 
   public class NonPlayer
@@ -81,9 +81,9 @@ namespace EQLogParser
     public Dictionary<string, DamageStats> DamageMap { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
-    public long ID { get; set; }
+    public int ID { get; set; }
     public string CorrectMapKey {get; set;}
-    public int FightID { get; set; }
+    public int GroupID { get; set; }
   }
 
   public class PetMapping
@@ -210,10 +210,8 @@ namespace EQLogParser
   public class PlayerStats : PlayerSubStats
   {
     public Dictionary<string, PlayerSubStats> SubStats { get; set; }
-    public Dictionary<int, DateTime> BeginTimes { get; set; }
-    public Dictionary<int, DateTime> LastTimes { get; set; }
-    public Dictionary<int, double> TimeDiffs { get; set; }
-    public int FirstFightID { get; set; }
-    public int LastFightID { get; set; }
+    public List<DateTime> BeginTimes { get; set; }
+    public List<DateTime> LastTimes { get; set; }
+    public List<double> TimeDiffs { get; set; }
   }
 }
