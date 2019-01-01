@@ -163,7 +163,7 @@ namespace EQLogParser
 
     public void AddNonPlayerMapBreak(string text)
     {
-      NonPlayer divider = new NonPlayer() { FightID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = text };
+      NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = text };
       EventsNewNonPlayer(this, divider);
     }
 
