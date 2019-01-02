@@ -160,10 +160,10 @@ namespace EQLogParser
   public class HitFreqChartData
   {
     public string HitType { get; set; }
-    public List<int> CritValues { get; set; }
-    public List<string> CritXAxisLabels { get; set; }
-    public List<int> NonCritValues { get; set; }
-    public List<string> NonCritXAxisLabels { get; set; }
+    public List<int> CritYValues { get; set; }
+    public List<long> CritXValues { get; set; }
+    public List<int> NonCritYValues { get; set; }
+    public List<long> NonCritXValues { get; set; }
   }
 
   public class DPSSnapshotEvent
