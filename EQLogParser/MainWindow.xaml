@@ -32,7 +32,7 @@
       <MenuItem Header="_View" Height="20" Width="40">
         <MenuItem x:Name="dpsChartMenuItem" Click="MenuItemWindow_Click" Header="_DPS Over Time (Chart)" Height="20" />
         <Separator />
-        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="File _Status" Height="20" />
+        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_File Status" Height="20" />
         <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
         <Separator />
         <MenuItem x:Name="playerDPSTextWindowMenuItem" Header="_Share Player DPS" Click="MenuItemWindow_Click" Height="20" />
