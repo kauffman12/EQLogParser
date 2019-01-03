@@ -24,9 +24,9 @@
         <lvc:Axis Title="Frequency" MinValue="0" />
       </lvc:CartesianChart.AxisY>
       <lvc:CartesianChart.AxisX>
-        <lvc:Axis MinValue="0" ShowLabels="True">
+        <lvc:Axis Position="LeftBottom" MinValue="0" ShowLabels="True">
           <lvc:Axis.Separator>
-            <lvc:Separator Step="1"></lvc:Separator>
+            <lvc:Separator IsEnabled="True" Step="1"></lvc:Separator>
           </lvc:Axis.Separator>
         </lvc:Axis>
       </lvc:CartesianChart.AxisX>

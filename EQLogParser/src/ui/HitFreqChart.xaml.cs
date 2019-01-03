@@ -25,6 +25,8 @@ namespace EQLogParser
     private int PageSize = 24;
     private List<int> YValues;
     private List<long> XValues;
+    private List<long> XValuesDiff;
+    private Dictionary<long, DIValue> DIMap;
 
     internal HitFreqChart()
     {
@@ -59,12 +61,14 @@ namespace EQLogParser
 
               if (player != null && type != null && critType != null && player != "" && type != "" && critType != "")
               {
+                DIMap = null;
                 var data = ChartData[player];
                 int minFreq = GetMinFreq();
                 HitFreqChartData first = data.Find(d => d.HitType == type);
 
                 YValues = new List<int>();
                 XValues = new List<long>();
+                XValuesDiff = new List<long>();
 
                 if (critType == CRIT_HITTYPE)
                 {
@@ -74,6 +78,7 @@ namespace EQLogParser
                     {
                       YValues.Add(first.CritYValues[i]);
                       XValues.Add(first.CritXValues[i]);
+                      XValuesDiff.Add(i > 0 ? Math.Abs(XValues[i] - XValues[i - 1]) : 0);
                     }
                   }
                 }
@@ -85,6 +90,7 @@ namespace EQLogParser
                     {
                       YValues.Add(first.NonCritYValues[i]);
                       XValues.Add(first.NonCritXValues[i]);
+                      XValuesDiff.Add(i > 0 ? Math.Abs(XValues[i] - XValues[i - 1]) : 0);
                     }
                   }
                 }
@@ -92,6 +98,11 @@ namespace EQLogParser
                 pageSlider.Value = 0;
                 UpdatePageSize();
                 DisplayPage();
+
+                if (type != "Direct Damage" && type != "DoT Tick")
+                {
+                  //LookForDIValues();
+                }
               }
 
               Updating = false;
@@ -106,11 +117,66 @@ namespace EQLogParser
       }
     }
 
+    private void LookForDIValues()
+    {
+      DictionaryAddHelper<long, int> addHelper = new DictionaryAddHelper<long, int>();
+      Dictionary<long, int> counts = new Dictionary<long, int>();
+      List<long> unique = XValuesDiff.ToList();
+      while (unique.Count > 0)
+      {
+        long value = unique[0];
+        unique.RemoveAt(0);
+        unique.ForEach(damage =>
+        {
+          if (Math.Abs(value - damage) <= 5 && damage > 20)
+          {
+            addHelper.Add(counts, value, 1);
+          }
+        });
+      }
+
+      int max = -1;
+      long foundKey = -1;
+      foreach (long key in counts.Keys)
+      {
+        if (counts[key] > max)
+        {
+          max = counts[key];
+          foundKey = key;
+        }
+      }
+
+      if (foundKey > -1)
+      {
+        int diCount = 0;
+        DIMap = new Dictionary<long, DIValue>();
+        for (int i=0; i<XValuesDiff.Count; i++)
+        {
+          if (Math.Abs(XValuesDiff[i] - foundKey) <= 4)
+          {
+            diCount++;
+            if (diCount == 1)
+            {
+              DIMap[XValues[i]] = new DIValue() { DI = diCount };
+            }
+            else
+            {
+              DIMap[XValues[i]] = new DIValue() { DI = diCount, Diff = XValuesDiff[i] };
+            }
+          }
+        };
+        
+        if (DIMap.Count > 5)
+        {
+        }
+      }
+    }
+
     private void UpdatePageSize()
     {
       if (YValues != null)
       {
-        PageSize = (int)Math.Round(lvcChart.ActualWidth / 49);
+        PageSize = (int) Math.Round(lvcChart.ActualWidth / 49);
         pageSlider.Minimum = 0;
         int max = YValues.Count <= PageSize ? 0 : YValues.Count - PageSize;
         // happens after resize
@@ -131,7 +197,7 @@ namespace EQLogParser
     {
       if (YValues != null)
       {
-        int page = (int) pageSlider.Value;
+        int page = (int)pageSlider.Value;
         ChartValues<int> yChartValues = new ChartValues<int>();
         List<string> xChartValues = new List<string>();
 
@@ -140,7 +206,7 @@ namespace EQLogParser
         {
           maxY = Math.Max(maxY, YValues[i]);
           yChartValues.Add(YValues[i]);
-          xChartValues.Add(XValues[i].ToString());
+          xChartValues.Add(XValues[i].ToString() + (XValuesDiff[i] == 0 ? "" : " \n+" + XValuesDiff[i].ToString()));
         }
 
         var series = new SeriesCollection();
@@ -153,13 +219,14 @@ namespace EQLogParser
         firstSeries.Foreground = new SolidColorBrush(Colors.White);
         firstSeries.MaxColumnWidth = 15;
         firstSeries.ColumnPadding = 8;
+        firstSeries.ScalesXAt = 0;
         series.Add(firstSeries);
 
-        lvcChart.DataTooltip = null;
+        //lvcChart.DataTooltip = null;
         lvcChart.AxisX[0].Separator.StrokeThickness = 0;
         lvcChart.AxisX[0].Labels = xChartValues;
         lvcChart.AxisY[0].Labels = null;
-        lvcChart.AxisY[0].Separator.Step = (maxY <= 6) ? 2 : double.NaN;
+        lvcChart.AxisY[0].Separator.Step = (maxY <= 10) ? 2 : double.NaN;
         lvcChart.Series = series;
         Helpers.ChartResetView(lvcChart);
       }
@@ -284,6 +351,12 @@ namespace EQLogParser
     {
       UpdatePageSize();
       DisplayPage();
+    }
+
+    private class DIValue
+    {
+      public int DI { get; set; }
+      public long Diff { get; set; }
     }
   }
 }
