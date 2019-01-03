@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Compression;
 using System.Threading;
 
 namespace EQLogParser
@@ -33,44 +34,73 @@ namespace EQLogParser
       {
         try
         {
-          FileStream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-          StreamReader reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
-
           string logFilePath = FileName.Substring(0, FileName.LastIndexOf("\\")) + "\\";
           string logFileName = FileName.Substring(FileName.LastIndexOf("\\") + 1);
+          bool isGzip = logFileName.EndsWith(".gz");
 
+          Stream gs;
+          Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+          StreamReader reader;
           FileSize = fs.Length;
-          if (MonitorOnly)
+         
+          if (!isGzip) // fs.Length works and we can seek properly
           {
-            fs.Seek(fs.Length, 0);
-          }
-          else if (LastMins > -1 && fs.Length > 0)
-          {
-            DateTime now = DateTime.Now;
-            long position = fs.Length / 2;
-            long lastPos = 0;
-            long value = -1;
-
-            fs.Seek(position, SeekOrigin.Begin);
-            reader.ReadLine();
-
-            while (!reader.EndOfStream && value != 0)
+            reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
+            if (!MonitorOnly && LastMins > -1 && fs.Length > 0)
             {
-              string line = reader.ReadLine();
-              bool inRange = DateUtil.HasTimeInRange(now, line, LastMins);
-              value = Math.Abs(lastPos - position) / 2;
-
-              lastPos = position;
-              position += inRange ? -value : value;
+              DateTime now = DateTime.Now;
+              long position = fs.Length / 2;
+              long lastPos = 0;
+              long value = -1;
 
               fs.Seek(position, SeekOrigin.Begin);
+              reader.ReadLine();
+
+              while (!reader.EndOfStream && value != 0)
+              {
+                string line = reader.ReadLine();
+                bool inRange = DateUtil.HasTimeInRange(now, line, LastMins);
+                value = Math.Abs(lastPos - position) / 2;
+
+                lastPos = position;
+                position += inRange ? -value : value;
+
+                fs.Seek(position, SeekOrigin.Begin);
+                reader.DiscardBufferedData();
+                reader.ReadLine(); // seek will lead to partial line
+              }
+
+              fs.Seek(lastPos, SeekOrigin.Begin);
               reader.DiscardBufferedData();
               reader.ReadLine(); // seek will lead to partial line
             }
+          }
+          else
+          {
+            gs = new GZipStream(fs, CompressionMode.Decompress);
+            reader = new StreamReader(gs, System.Text.Encoding.UTF8, true, 4096);
 
-            fs.Seek(lastPos, SeekOrigin.Begin);
-            reader.DiscardBufferedData();
-            reader.ReadLine(); // seek will lead to partial line
+            if (!MonitorOnly && LastMins > -1 && fs.Length > 0)
+            {
+              DateTime now = DateTime.Now;
+              while (!reader.EndOfStream)
+              {
+                // seek the slow way since we can't jump around a zip stream
+                string line = reader.ReadLine();
+                if (DateUtil.HasTimeInRange(now, line, LastMins))
+                {
+                  LoadingCallback(line, fs.Position);
+                  break;
+                }
+              }
+            }
+          }
+
+          if (MonitorOnly)
+          {
+            reader.ReadToEnd();
+            FileLoadComplete = true;
+            LoadingCallback("", fs.Position);
           }
 
           while (!reader.EndOfStream && Running)

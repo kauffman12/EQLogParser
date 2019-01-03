@@ -34,7 +34,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.1.6";
+    private const string VERSION = "v1.1.7";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -696,7 +696,7 @@ namespace EQLogParser
           bytesReadLabel.Foreground = GOOD_BRUSH;
         }
 
-        if (MonitorOnly || (filePercent >= 100 && castPercent >= 10 && damagePercent >= 10 && EQLogReader.FileLoadComplete))
+        if (((filePercent >= 100 && castPercent >= 10 && damagePercent >= 10) || MonitorOnly) && EQLogReader.FileLoadComplete)
         {
           UpdatingProgress = false;
           bytesReadTitle.Content = "Monitoring";
@@ -911,7 +911,7 @@ namespace EQLogParser
 
         // filter to txt files
         dialog.DefaultExt = ".txt";
-        dialog.Filter = "eqlog_player_server (.txt)|*.txt";
+        dialog.Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz";
 
         // show dialog and read result
         // if null result then dialog was probably canceled
