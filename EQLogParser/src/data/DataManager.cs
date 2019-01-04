@@ -200,6 +200,7 @@ namespace EQLogParser
       AttackerReplacement["your"] = name;
       AttackerReplacement["Your"] = name;
       AttackerReplacement["YOUR"] = name;
+      UpdateVerifiedPlayers(name);
     }
 
     public string ReplaceAttacker(string attacker, out bool replaced)
