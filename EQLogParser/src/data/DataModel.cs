@@ -14,7 +14,7 @@ namespace EQLogParser
     public string DefenderOwner { get; set; }
     public string Type { get; set; }
     public string Action { get; set; }
-    public Dictionary<string, byte> Modifiers { get; set; }
+    public string Modifiers { get; set; }
   }
 
   public class Hit
