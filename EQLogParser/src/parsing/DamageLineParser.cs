@@ -496,8 +496,7 @@ namespace EQLogParser
               AttackerPetType = attackerPetType,
               AttackerOwner = attackerOwner,
               DefenderPetType = defenderPetType,
-              DefenderOwner = defenderOwner,
-              Modifiers = new Dictionary<string, byte>()
+              DefenderOwner = defenderOwner
             };
 
             if (part[part.Length - 1] == ')')
@@ -506,10 +505,7 @@ namespace EQLogParser
               int firstParen = part.LastIndexOf('(', part.Length - 4);
               if (firstParen > -1)
               {
-                foreach (string modifier in part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1).Split(' '))
-                {
-                  record.Modifiers[modifier] = 1;
-                }
+                record.Modifiers = part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1);
               }
             }
           }
