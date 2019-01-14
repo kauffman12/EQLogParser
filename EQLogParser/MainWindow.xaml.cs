@@ -34,7 +34,7 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.1.7";
+    private const string VERSION = "v1.2.0";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -49,6 +49,8 @@ namespace EQLogParser
 
     private static ActionProcessor<string> CastProcessor = null;
     private static ActionProcessor<string> DamageProcessor = null;
+
+    private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<NonPlayer> NonPlayersView = new ObservableCollection<NonPlayer>();
@@ -72,6 +74,9 @@ namespace EQLogParser
     private static NpcDamageManager NpcDamageManager = null;
     private LogReader EQLogReader = null;
     private bool NeedScrollIntoView = false;
+
+    // binding property
+    public ObservableCollection<SortableName> VerifiedPlayersProperty { get; set; }
 
     public MainWindow()
     {
@@ -98,9 +103,18 @@ namespace EQLogParser
 
         // pet -> players
         petMappingGrid.ItemsSource = PetPlayersView;
-        DataManager.Instance.EventsNewPetMapping += (sender, mapping) => Dispatcher.InvokeAsync(() =>
+        DataManager.Instance.EventsUpdatePetMapping += (sender, mapping) => Dispatcher.InvokeAsync(() =>
         {
-          PetPlayersView.Add(mapping);
+          var existing = PetPlayersView.FirstOrDefault(item => mapping.Pet == item.Pet);
+          if (existing != null && existing.Owner != mapping.Owner)
+          {
+            existing.Owner = mapping.Owner;
+          }
+          else
+          {
+            PetPlayersView.Add(mapping);
+          }
+
           petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
           NeedStatsUpdate = true;
         });
@@ -117,9 +131,21 @@ namespace EQLogParser
         verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
         DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          VerifiedPlayersView.Add(new SortableName() { Name = name });
+          var entry = new SortableName() { Name = name };
+          int index = VerifiedPlayersView.ToList().BinarySearch(entry, TheSortableNameComparer);
+          if (index < 0)
+          {
+            VerifiedPlayersView.Insert(~index, entry);
+          }
+          else
+          {
+            VerifiedPlayersView.Insert(index, entry);
+          }
+
           verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersView.Count + ")";
         });
+
+        VerifiedPlayersProperty = VerifiedPlayersView;
 
         // List of NPCs to select from, damage is saved in the NonPlayer object
         npcDataGrid.ItemsSource = NonPlayersView;
@@ -366,18 +392,22 @@ namespace EQLogParser
     {
       Image image = (sender as Image);
       PlayerStats stats = image.DataContext as PlayerStats;
-      if (stats != null && CurrentStats.Children.ContainsKey(stats.Name) && (CurrentStats.Children[stats.Name].Count > 1 || stats.Name == DataManager.UNASSIGNED_PET_OWNER))
+      if (stats != null && CurrentStats.Children.ContainsKey(stats.Name))
       {
-        var container = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
-        if (container != null)
+        var list = CurrentStats.Children[stats.Name];
+        if (list.Count > 1 || stats.Name == DataManager.UNASSIGNED_PET_OWNER || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name)))
         {
-          if (container.DetailsVisibility != Visibility.Visible)
+          var container = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
+          if (container != null)
           {
-            image.Source = EXPAND_BITMAP;
-          }
-          else
-          {
-            image.Source = COLLAPSE_BITMAP;
+            if (container.DetailsVisibility != Visibility.Visible)
+            {
+              image.Source = EXPAND_BITMAP;
+            }
+            else
+            {
+              image.Source = COLLAPSE_BITMAP;
+            }
           }
         }
       }
@@ -453,98 +483,14 @@ namespace EQLogParser
 
     private void ShowSpellCasts(List<PlayerStats> selectedStats)
     {
-      ThemedDataGrid dataGrid = new ThemedDataGrid();
-      dataGrid.AlternatingRowBackground = null;
-      dataGrid.AutoGenerateColumns = false;
-      dataGrid.RowHeaderWidth = 0;
-      dataGrid.IsReadOnly = true;
-
-      dataGrid.Columns.Add(new DataGridTextColumn()
-      {
-        Header = "",
-        Binding = new Binding("Spell"),
-        CellStyle = Application.Current.Resources["SpellGridCellStyle"] as Style
-      });
-
-      dataGrid.Sorting += (s, e2) =>
-      {
-        if (e2.Column.Header != null && (e2.Column.Header.ToString() != ""))
-        {
-          e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Ascending;
-        }
-      };
-
-      List<string> playerList = new List<string>();
-      foreach (var stats in selectedStats)
-      {
-        string name = stats.Name;
-        if (CurrentStats.Children.ContainsKey(stats.Name) && CurrentStats.Children[stats.Name].Count > 1)
-        {
-          name = CurrentStats.Children[stats.Name].First().Name;
-        }
-
-        playerList.Add(name);
-      }
-
-      ObservableCollection<SpellCountRow> rows = new ObservableCollection<SpellCountRow>();
-      dataGrid.ItemsSource = rows;
-
+      var spellTable = new SpellCountTable();
       busyIcon.Visibility = Visibility.Visible;
+
       Task.Delay(20).ContinueWith(task =>
       {
         try
         {
-          var raidStats = CurrentStats.RaidStats;
-          DateTime start = raidStats.BeginTimes.First();
-          DateTime end = raidStats.LastTimes.Last();
-          SpellCounts counts = SpellCountBuilder.GetSpellCounts(playerList, start.AddSeconds(-10), end);
-
-          int colCount = 0;
-          foreach (string name in counts.SortedPlayers)
-          {
-            string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
-            int total = counts.TotalCountMap.ContainsKey(name) ? counts.TotalCountMap[name] : 0;
-
-            Dispatcher.InvokeAsync(() =>
-            {
-              DataGridTextColumn col = new DataGridTextColumn() { Header = name + " = " + total, Binding = new Binding(colBinding) };
-              col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
-              col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
-              dataGrid.Columns.Add(col);
-            });
-
-            Thread.Sleep(5);
-            colCount++;
-          }
-
-          Dispatcher.InvokeAsync(() =>
-          {
-            int total = counts.UniqueSpellCounts.Values.Sum();
-            DataGridTextColumn col = new DataGridTextColumn() { Header = "Total Count = " + total, Binding = new Binding("Values[" + colCount + "]") };
-            col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
-            col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
-            dataGrid.Columns.Add(col);
-          });
-
-          foreach (var spell in counts.SpellList)
-          {
-            SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new int[counts.SortedPlayers.Count + 1] };
-            row.IsReceived = spell.StartsWith("Received");
-
-            int i;
-            for (i = 0; i < counts.SortedPlayers.Count; i++)
-            {
-              if (counts.PlayerCountMap.ContainsKey(counts.SortedPlayers[i]))
-              {
-                row.Values[i] = counts.PlayerCountMap[counts.SortedPlayers[i]].ContainsKey(spell) ? counts.PlayerCountMap[counts.SortedPlayers[i]][spell] : 0;
-              }
-            }
-
-            row.Values[i] = counts.UniqueSpellCounts[spell];
-            Dispatcher.InvokeAsync(() => rows.Add(row));
-            Thread.Sleep(5);
-          }
-
+          spellTable.ShowSpells(selectedStats, CurrentStats);
           Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
         }
         catch (Exception err)
@@ -553,15 +499,7 @@ namespace EQLogParser
         }
       });
 
-      if (spellCastsWindow == null || !spellCastsWindow.IsOpen)
-      {
-        spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, dataGrid);
-      }
-      else
-      {
-        spellCastsWindow.Content = dataGrid;
-      }
-
+      spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, spellTable);
       Helpers.OpenWindow(spellCastsWindow);
       spellCastsWindow.MoveToLast();
     }
@@ -900,6 +838,21 @@ namespace EQLogParser
       }
     }
 
+    private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      var comboBox = sender as ComboBox;
+      if (comboBox != null)
+      {
+        var selected = comboBox.SelectedItem as SortableName;
+        var mapping = comboBox.DataContext as PetMapping;
+        if (mapping != null && selected != null && selected.Name != mapping.Owner)
+        {
+          DataManager.Instance.UpdatePetToPlayer(mapping.Pet, selected.Name);
+          petMappingGrid.CommitEdit();
+        }
+      }
+    }
+
     private void OpenLogFile(bool monitorOnly = false, int lastMins = -1)
     {
       try
@@ -989,6 +942,14 @@ namespace EQLogParser
       if (DamageProcessor != null)
       {
         DamageProcessor.Stop();
+      }
+    }
+
+    private class SortableNameComparer : IComparer<SortableName>
+    {
+      public int Compare(SortableName x, SortableName y)
+      {
+        return x.Name.CompareTo(y.Name);
       }
     }
   }

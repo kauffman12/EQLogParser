@@ -61,11 +61,6 @@ namespace EQLogParser
     public string OptionalData { get; set; }
   }
 
-  public class Player
-  {
-    public string Name { get; set; }
-  }
-
   public class DamageAtTime
   {
     public DateTime CurrentTime { get; set; }
@@ -133,7 +128,7 @@ namespace EQLogParser
   public class SpellCountRow
   {
     public string Spell { get; set; }
-    public int[] Values { get; set; }
+    public double[] Values { get; set; }
     public bool IsReceived { get; set; }
   }
 

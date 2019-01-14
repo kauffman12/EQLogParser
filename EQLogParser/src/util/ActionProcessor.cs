@@ -54,38 +54,34 @@ namespace EQLogParser
     {       
       while(!stopped)
       {
-        while (!stopped)
+        bool needSleep = false;
+
+        lock (QueueLock)
         {
-          bool needSleep = false;
-
-          lock (QueueLock)
+          if (Queue.Count > 0)
           {
-            if (Queue.Count > 0)
-            {
-              temp = Queue;
-              Queue = new List<T>();
-            }
-            else
-            {
-              needSleep = true;
-            }
+            temp = Queue;
+            Queue = new List<T>();
           }
-
-          if (needSleep)
+          else
           {
-            Thread.Sleep(delayTime);
+            needSleep = true;
           }
-          else if (temp != null)
-          {
-            foreach (var item in temp)
-            {
-              if (stopped)
-              {
-                break;
-              }
+        }
 
-              callback(item);
+        if (needSleep)
+        {
+          Thread.Sleep(delayTime);
+        }
+        else if (temp != null)
+        {
+          foreach (var item in temp)
+          {
+            if (stopped)
+            {
+              break;
             }
+            callback(item);
           }
         }
       }
