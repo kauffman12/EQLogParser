@@ -1,7 +1,11 @@
-﻿using LiveCharts;
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using LiveCharts;
 using LiveCharts.Wpf;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -43,6 +47,50 @@ namespace EQLogParser
       playerList.SelectedIndex = 0; // triggers event
     }
 
+    private void SaveCSV_Click(object sender, RoutedEventArgs e)
+    {
+      var records = new List<FreqTable>();
+      for (int i = 0; i < YValues.Count; i++)
+      {
+        FreqTable entry = new FreqTable();
+        entry.HitValue = XValues[i];
+        entry.Freq = YValues[i];
+        entry.Diff = XValuesDiff[i];
+        records.Add(entry);
+      }
+
+      StringWriter writer = null;
+      CsvWriter csv = null;
+
+      try
+      {
+        writer = new StringWriter();
+        csv = new CsvWriter(writer);
+        csv.Configuration.RegisterClassMap<FreqTableMap>();
+        csv.WriteRecords(records);
+
+        SaveFileDialog saveFileDialog = new SaveFileDialog();
+        string filter = "CSV file (*.csv)|*.csv";
+        saveFileDialog.Filter = filter;
+        bool? result = saveFileDialog.ShowDialog();
+        if (result == true)
+        {
+          File.WriteAllText(saveFileDialog.FileName, writer.ToString());
+        }
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+      }
+      finally
+      {
+        if (writer != null)
+        {
+          writer.Dispose();
+        }
+      }
+    }
+
     private void UserSelectionChanged()
     {
       if (!Updating)
@@ -78,7 +126,7 @@ namespace EQLogParser
                     {
                       YValues.Add(first.CritYValues[i]);
                       XValues.Add(first.CritXValues[i]);
-                      XValuesDiff.Add(i > 0 ? Math.Abs(XValues[i] - XValues[i - 1]) : 0);
+                      XValuesDiff.Add(i > 0 ? Math.Abs(first.CritXValues[i] - first.CritXValues[i - 1]) : 0);
                     }
                   }
                 }
@@ -90,7 +138,7 @@ namespace EQLogParser
                     {
                       YValues.Add(first.NonCritYValues[i]);
                       XValues.Add(first.NonCritXValues[i]);
-                      XValuesDiff.Add(i > 0 ? Math.Abs(XValues[i] - XValues[i - 1]) : 0);
+                      XValuesDiff.Add(i > 0 ? Math.Abs(first.NonCritXValues[i] - first.NonCritXValues[i - 1]) : 0);
                     }
                   }
                 }
@@ -107,7 +155,7 @@ namespace EQLogParser
 
               Updating = false;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
               Updating = false;
               LOG.Error(ex);
@@ -150,7 +198,7 @@ namespace EQLogParser
       {
         int diCount = 0;
         DIMap = new Dictionary<long, DIValue>();
-        for (int i=0; i<XValuesDiff.Count; i++)
+        for (int i = 0; i < XValuesDiff.Count; i++)
         {
           if (Math.Abs(XValuesDiff[i] - foundKey) <= 4)
           {
@@ -165,7 +213,7 @@ namespace EQLogParser
             }
           }
         };
-        
+
         if (DIMap.Count > 5)
         {
         }
@@ -176,7 +224,7 @@ namespace EQLogParser
     {
       if (YValues != null)
       {
-        PageSize = (int) Math.Round(lvcChart.ActualWidth / 49);
+        PageSize = (int)Math.Round(lvcChart.ActualWidth / 49);
         pageSlider.Minimum = 0;
         int max = YValues.Count <= PageSize ? 0 : YValues.Count - PageSize;
         // happens after resize
@@ -202,7 +250,7 @@ namespace EQLogParser
         List<string> xChartValues = new List<string>();
 
         int maxY = 1;
-        for (int i=page; i<page+PageSize && i<YValues.Count; i++)
+        for (int i = page; i < page + PageSize && i < YValues.Count; i++)
         {
           maxY = Math.Max(maxY, YValues[i]);
           yChartValues.Add(YValues[i]);
@@ -358,5 +406,23 @@ namespace EQLogParser
       public int DI { get; set; }
       public long Diff { get; set; }
     }
+
+    private class FreqTable
+    {
+      public long HitValue { get; set; }
+      public int Freq { get; set; }
+      public Nullable<long> Diff { get; set; }
+    }
+
+    private class FreqTableMap : ClassMap<FreqTable>
+    {
+      public FreqTableMap()
+      {
+        Map(m => m.HitValue).Name("Hit Value");
+        Map(m => m.Freq).Name("Frequency");
+        Map(m => m.Diff).Name("Difference");
+      }
+    }
   }
+
 }
