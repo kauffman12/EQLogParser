@@ -29,13 +29,14 @@ namespace EQLogParser
 
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
     private Dictionary<string, byte> AllUniqueSpellCasts = new Dictionary<string, byte>();
-    private LRUCache<string> AllUniqueSpellsLRU = new LRUCache<string>(2000, 500, false);
+    private LRUCache<SpellData> AllUniqueSpellsLRU = new LRUCache<SpellData>(2000, 500, false);
     private List<ReceivedSpell> AllReceivedSpells = new List<ReceivedSpell>();
-    private Dictionary<string, List<string>> PosessiveLandsOnOthers = new Dictionary<string, List<string>>();
-    private Dictionary<string, List<string>> NonPosessiveLandsOnOthers = new Dictionary<string, List<string>>();
-    private Dictionary<string, List<string>> LandsOnYou = new Dictionary<string, List<string>>();
+    private Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
+    private Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
+    private Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
     private Dictionary<SpellClasses, string> ClassNames = new Dictionary<SpellClasses, string>();
     private Dictionary<string, SpellData> SpellsDB = new Dictionary<string, SpellData>();
+    private Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
     private Dictionary<string, SpellClasses> SpellsToClass = new Dictionary<string, SpellClasses>();
 
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
@@ -67,7 +68,7 @@ namespace EQLogParser
         VerifiedPlayers["Your"] = 1;
         VerifiedPlayers["YOUR"] = 1;
 
-        DictionaryListHelper<string, string> helper = new DictionaryListHelper<string, string>();
+        DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
         lines = System.IO.File.ReadAllLines(@"data\spells.txt");
 
         foreach (string line in lines)
@@ -89,19 +90,20 @@ namespace EQLogParser
           };
 
           SpellsDB[spellData.ID] = spellData;
+          SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
 
           if (spellData.LandsOnOther.StartsWith("'s "))
           {
-            helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData.SpellAbbrv);
+            helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
           }
           else if (spellData.LandsOnOther.Length > 1)
           {
-            helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData.SpellAbbrv);
+            helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
           }
 
           if (spellData.LandsOnYou != "" && spellData.LandsOnOther != "") // just do stuff in common
           {
-            helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData.SpellAbbrv);
+            helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
           }
         }
       }
@@ -256,6 +258,16 @@ namespace EQLogParser
       }
       return list;
     }
+    
+    public SpellData GetSpellByAbbrv(string abbrv)
+    {
+      SpellData result = null;
+      if (SpellsAbbrvDB.ContainsKey(abbrv))
+      {
+        result = SpellsAbbrvDB[abbrv];
+      }
+      return result;
+    }
 
     public List<ReceivedSpell> GetAllReceivedSpells()
     {
@@ -300,10 +312,10 @@ namespace EQLogParser
       return PetToPlayerMap.ContainsKey(pet) ? PetToPlayerMap[pet] : null;
     }
 
-    public string GetNonPosessiveLandsOnOther(string value)
+    public SpellData GetNonPosessiveLandsOnOther(string value)
     {
-      string result = null;
-      List<string> output;
+      SpellData result = null;
+      List<SpellData> output;
       if (NonPosessiveLandsOnOthers.TryGetValue(value, out output))
       {
         result = FindByLandsOn(value, output);
@@ -311,10 +323,10 @@ namespace EQLogParser
       return result;
     }
 
-    public string GetPosessiveLandsOnOther(string value)
+    public SpellData GetPosessiveLandsOnOther(string value)
     {
-      string result = null;
-      List<string> output;
+      SpellData result = null;
+      List<SpellData> output;
       if (PosessiveLandsOnOthers.TryGetValue(value, out output))
       {
         result = FindByLandsOn(value, output);
@@ -322,10 +334,10 @@ namespace EQLogParser
       return result;
     }
 
-    public string GetLandsOnYou(string value)
+    public SpellData GetLandsOnYou(string value)
     {
-      string result = null;
-      List<string> output;
+      SpellData result = null;
+      List<SpellData> output;
       if (LandsOnYou.TryGetValue(value, out output))
       {
         result = FindByLandsOn(value, output);
@@ -333,9 +345,17 @@ namespace EQLogParser
       return result;
     }
 
-    private string FindByLandsOn(string value, List<string> output)
+    private SpellData FindByLandsOn(string value, List<SpellData> output)
     {
-      string result = null;
+      if (value.Contains("is strengthened by a gift of magic"))
+      {
+        if (true)
+        {
+
+        }
+      }
+
+      SpellData result = null;
       if (output.Count == 1)
       {
         result = output[0];
@@ -344,7 +364,17 @@ namespace EQLogParser
       {
         if (!AllUniqueSpellsLRU.TryGet(value, out result))
         {
-          result = output.Find(name => AllUniqueSpellCasts.ContainsKey(name));
+          result = output.Find(spellData => AllUniqueSpellCasts.ContainsKey(spellData.SpellAbbrv));
+          if (result == null)
+          {
+            // one more thing, if all the abbrviations look the same then we know the spell
+            // even if the version is wrong. grab the last one
+            var distinct = output.Select(spellData => spellData.SpellAbbrv).Distinct().ToList();
+            if (distinct.Count == 1)
+            {
+              result = output.Last();
+            }
+          }
           AllUniqueSpellsLRU.AddReplace(value, result);
         }
       }

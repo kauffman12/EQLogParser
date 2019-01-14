@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -34,7 +33,7 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.2.0";
+    private const string VERSION = "v1.2.1";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -483,22 +482,8 @@ namespace EQLogParser
 
     private void ShowSpellCasts(List<PlayerStats> selectedStats)
     {
-      var spellTable = new SpellCountTable();
-      busyIcon.Visibility = Visibility.Visible;
-
-      Task.Delay(20).ContinueWith(task =>
-      {
-        try
-        {
-          spellTable.ShowSpells(selectedStats, CurrentStats);
-          Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
-        }
-        catch (Exception err)
-        {
-          LOG.Error(err);
-        }
-      });
-
+      var spellTable = new SpellCountTable(this);
+      spellTable.ShowSpells(selectedStats, CurrentStats);
       spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, spellTable);
       Helpers.OpenWindow(spellCastsWindow);
       spellCastsWindow.MoveToLast();

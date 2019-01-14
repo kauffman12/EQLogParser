@@ -6,61 +6,60 @@ namespace EQLogParser
 {
   class SpellCountBuilder
   {
-    public static SpellCounts GetSpellCounts(List<string> playerList, DateTime beginTime, DateTime endTime)
+    public static SpellCountData GetSpellCounts(List<string> playerList, DateTime beginTime, DateTime endTime)
     {
-      Dictionary<string, int> uniqueSpells = new Dictionary<string, int>();
-      Dictionary<string, Dictionary<string, int>> playerCounts = new Dictionary<string, Dictionary<string, int>>();
-      Dictionary<string, int> totalCountMap = new Dictionary<string, int>();
+      Dictionary<string, Dictionary<string, int>> playerCastCounts = new Dictionary<string, Dictionary<string, int>>();
+      Dictionary<string, Dictionary<string, int>> playerReceivedCounts = new Dictionary<string, Dictionary<string, int>>();
+      Dictionary<string, int> maxCastCounts = new Dictionary<string, int>();
+      Dictionary<string, int> maxReceivedCounts = new Dictionary<string, int>();
+      Dictionary<string, SpellData> spellMap = new Dictionary<string, SpellData>();
 
       foreach (var cast in GetCastsDuring(beginTime, endTime).AsParallel().Where(cast => playerList.Contains(cast.Caster)))
       {
-        string theSpell = cast.SpellAbbrv;
-        string thePlayer = cast.Caster;
-        UpdateMaps(theSpell, thePlayer, uniqueSpells, playerCounts, totalCountMap);
+        var spellData = DataManager.Instance.GetSpellByAbbrv(cast.SpellAbbrv);
+        UpdateMaps(spellData, cast.Caster, playerCastCounts, maxCastCounts, spellMap);
       }
 
       foreach (var received in GetReceivedSpellsDuring(beginTime, endTime).AsParallel().Where(received => playerList.Contains(received.Receiver)))
       {
-        string theSpell = "Received " + received.SpellAbbrv;
-        string thePlayer = received.Receiver;
-        UpdateMaps(theSpell, thePlayer, uniqueSpells, playerCounts, totalCountMap);
+        UpdateMaps(received.SpellData, received.Receiver, playerReceivedCounts, maxReceivedCounts, spellMap);
       }
 
-      SpellCounts totals = new SpellCounts() { PlayerCountMap = playerCounts, TotalCountMap = totalCountMap };
-      totals.SpellList = uniqueSpells.Keys.OrderByDescending(key => uniqueSpells[key]).ToList();
-      totals.SortedPlayers = playerCounts.Keys.OrderByDescending(key => totalCountMap[key]).ToList();
-      totals.UniqueSpellCounts = uniqueSpells;
-      return totals;
+      return new SpellCountData()
+      {
+        PlayerCastCounts = playerCastCounts,
+        PlayerReceivedCounts = playerReceivedCounts,
+        MaxCastCounts = maxCastCounts,
+        MaxReceivedCounts = maxReceivedCounts,
+        UniqueSpells = spellMap
+      };
     }
 
-    private static void UpdateMaps(string theSpell, string thePlayer, Dictionary<string, int> uniqueSpells,
-      Dictionary<string, Dictionary<string, int>> playerCounts, Dictionary<string, int> totalCountMap)
+    private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, int>> playerCounts,
+      Dictionary<string, int> maxSpellCounts, Dictionary<string, SpellData> spellMap)
     {
-      if (!uniqueSpells.ContainsKey(theSpell))
-      {
-        uniqueSpells[theSpell] = 0;
-      }
-
-      uniqueSpells[theSpell]++;
-
       if (!playerCounts.ContainsKey(thePlayer))
       {
         playerCounts[thePlayer] = new Dictionary<string, int>();
       }
 
-      if (!playerCounts[thePlayer].ContainsKey(theSpell))
+      if (!playerCounts[thePlayer].ContainsKey(theSpell.ID))
       {
-        playerCounts[thePlayer][theSpell] = 0;
+        playerCounts[thePlayer][theSpell.ID] = 0;
       }
 
-      playerCounts[thePlayer][theSpell]++;
+      playerCounts[thePlayer][theSpell.ID]++;
 
-      if (!totalCountMap.ContainsKey(thePlayer))
+      if (!maxSpellCounts.ContainsKey(theSpell.ID))
       {
-        totalCountMap[thePlayer] = 0;
+        maxSpellCounts[theSpell.ID] = playerCounts[thePlayer][theSpell.ID];
+      }
+      else if (playerCounts[thePlayer][theSpell.ID] > maxSpellCounts[theSpell.ID])
+      {
+        maxSpellCounts[theSpell.ID] = playerCounts[thePlayer][theSpell.ID];
       }
 
-      totalCountMap[thePlayer]++;
+      spellMap[theSpell.ID] = theSpell;
     }
 
     private static List<SpellCast> GetCastsDuring(DateTime beginTime, DateTime endTime)
