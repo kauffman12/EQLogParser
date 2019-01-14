@@ -17,8 +17,8 @@ namespace EQLogParser
     }
 
     public static DataManager Instance = new DataManager();
-    public const string UNASSIGNED_PET_OWNER = "Unassigned Pets";
-    public event EventHandler<PetMapping> EventsNewPetMapping;
+    public const string UNASSIGNED_PET_OWNER = "Unknown Pet Owner";
+    public event EventHandler<PetMapping> EventsUpdatePetMapping;
     public event EventHandler<string> EventsNewVerifiedPet;
     public event EventHandler<string> EventsNewVerifiedPlayer;
     public event EventHandler<string> EventsRemovedNonPlayer;
@@ -105,17 +105,17 @@ namespace EQLogParser
           }
         }
       }
-      catch(Exception e)
+      catch (Exception e)
       {
         LOG.Error(e);
       }
 
       Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClasses)).Cast<SpellClasses>().ToList();
-      foreach(var spell in SpellsDB.Values)
+      foreach (var spell in SpellsDB.Values)
       {
         // exact match meaning class-only spell
-        if (classEnums.Contains((SpellClasses) spell.ClassMask))
+        if (classEnums.Contains((SpellClasses)spell.ClassMask))
         {
           // these need to be unique and keep track if a conflict is found
           if (SpellsToClass.ContainsKey(spell.Spell))
@@ -201,6 +201,7 @@ namespace EQLogParser
       AttackerReplacement["Your"] = name;
       AttackerReplacement["YOUR"] = name;
       UpdateVerifiedPlayers(name);
+      UpdateVerifiedPlayers(UNASSIGNED_PET_OWNER);
     }
 
     public string ReplaceAttacker(string attacker, out bool replaced)
@@ -225,18 +226,17 @@ namespace EQLogParser
 
     public bool CheckNameForPet(string name)
     {
-      bool isPet = false;
+      bool isPet = VerifiedPets.ContainsKey(name);
 
-      if (GameGeneratedPets.ContainsKey(name))
+      if (!isPet && GameGeneratedPets.ContainsKey(name))
       {
         UpdateVerifiedPets(name);
         isPet = true;
 
-        UpdatePetToPlayer(name, UNASSIGNED_PET_OWNER);
-      }
-      else
-      {
-        isPet = VerifiedPets.ContainsKey(name);
+        if (!PetToPlayerMap.ContainsKey(name))
+        {
+          UpdatePetToPlayer(name, UNASSIGNED_PET_OWNER);
+        }
       }
 
       return isPet;
@@ -355,7 +355,7 @@ namespace EQLogParser
     {
       bool probably = false;
 
-      if (!VerifiedPlayers.ContainsKey(name) && !VerifiedPets.ContainsKey(name) && !GameGeneratedPets.ContainsKey(name) 
+      if (!VerifiedPlayers.ContainsKey(name) && !VerifiedPets.ContainsKey(name) && !GameGeneratedPets.ContainsKey(name)
         && !UnverifiedPetOrPlayer.ContainsKey(name) && ProbablyNotAPlayer.ContainsKey(name))
       {
         probably = ProbablyNotAPlayer[name] >= 5;
@@ -428,10 +428,10 @@ namespace EQLogParser
 
     public void UpdatePetToPlayer(string pet, string player)
     {
-      if (!PetToPlayerMap.ContainsKey(pet))
+      if (!PetToPlayerMap.ContainsKey(pet) || PetToPlayerMap[pet] != player)
       {
         PetToPlayerMap[pet] = player;
-        EventsNewPetMapping(this, new PetMapping() { Pet = pet, Owner = player });
+        EventsUpdatePetMapping(this, new PetMapping() { Pet = pet, Owner = player });
       }
     }
 

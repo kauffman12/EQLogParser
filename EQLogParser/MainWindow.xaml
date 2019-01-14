@@ -280,10 +280,21 @@
           </docking:ToolWindow>
         </docking:ToolWindowContainer>
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="petMappingWindow" IsOpen="True" Title="Pet Owners" ContainerDockedSize="240,150">
-            <datagrid:ThemedDataGrid x:Name="petMappingGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
+          <docking:ToolWindow x:Name="petMappingWindow" IsOpen="True" Title="Pet Owners" ContainerAutoHideSize="300,150" ContainerDockedSize="300,150">
+            <datagrid:ThemedDataGrid x:Name="petMappingGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="False" CanUserResizeRows="False">
               <DataGrid.Columns>
-                <DataGridTextColumn Binding="{Binding Owner}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Owner" IsReadOnly="True" MinWidth="30" Width="30*"/>
+                <DataGridTemplateColumn Header="Owner" CanUserSort="True" SortMemberPath="Owner" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="False" MinWidth="30" Width="30*">
+                  <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                      <ComboBox ItemsSource="{Binding VerifiedPlayersProperty, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" SelectedValue="{Binding Owner}" SelectionChanged="PetMapping_SelectionChanged" SelectedValuePath="Name" DisplayMemberPath="Name"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellEditingTemplate>
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Owner}"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn Binding="{Binding Pet}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Pet" IsReadOnly="True" MinWidth="30" Width="30*" />
               </DataGrid.Columns>
             </datagrid:ThemedDataGrid>

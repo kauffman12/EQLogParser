@@ -168,10 +168,13 @@ namespace EQLogParser
             individualStats[aggregateName] = aggregatePlayerStats;
 
             // figure out percents
-            foreach (PlayerStats childStat in combined.Children[aggregateName])
+            if (combined.Children.ContainsKey(aggregateName))
             {
-              childStat.Percent = Math.Round(((decimal)childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
-              childStat.PercentString = childStat.Percent.ToString();
+              foreach (PlayerStats childStat in combined.Children[aggregateName])
+              {
+                childStat.Percent = Math.Round(((decimal)childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
+                childStat.PercentString = childStat.Percent.ToString();
+              }
             }
           });
         }
