@@ -13,7 +13,10 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,2,8,0" x:Name="countType" SelectionChanged="CountType_SelectionChanged" />
+      <ComboBox Margin="0,2,8,0" x:Name="countTypes" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox Margin="0,2,8,0" x:Name="minFreqList" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox Margin="0,2,8,0" x:Name="spellTypes" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox Margin="0,2,8,0" x:Name="castTypes" SelectionChanged="Options_SelectionChanged" />
     </StackPanel>
     <datagrid:ThemedDataGrid Grid.Row="1" x:Name="spellCountDataGrid" Margin="0,2,0,0"  AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" />
   </Grid>
