@@ -96,12 +96,13 @@ namespace EQLogParser
   {
     public string Spell { get; set; }
     public string Caster { get; set; }
+    public string SpellAbbrv { get; set; }
   }
 
   public class ReceivedSpell
   {
-    public string SpellAbbrv { get; set; }
     public string Receiver { get; set; }
+    public SpellData SpellData { get; set; }
     public DateTime BeginTime { get; set; }
   }
 
@@ -116,13 +117,13 @@ namespace EQLogParser
     public string LandsOnOther { get; set; }
   }
 
-  public class SpellCounts
+  public class SpellCountData
   {
-    public List<string> SpellList { get; set; }
-    public Dictionary<string, int> TotalCountMap { get; set; }
-    public Dictionary<string, Dictionary<string, int>> PlayerCountMap { get; set; }
-    public Dictionary<string, int> UniqueSpellCounts { get; set; }
-    public List<string> SortedPlayers { get; set; }
+    public Dictionary<string, Dictionary<string, int>> PlayerCastCounts { get; set; }
+    public Dictionary<string, Dictionary<string, int>> PlayerReceivedCounts { get; set; }
+    public Dictionary<string, int> MaxCastCounts { get; set; }
+    public Dictionary<string, int> MaxReceivedCounts { get; set; }
+    public Dictionary<string, SpellData> UniqueSpells { get; set; }
   }
 
   public class SpellCountRow

@@ -136,26 +136,29 @@ namespace EQLogParser
         combined.Children = new Dictionary<string, List<PlayerStats>>();
         if (needAggregate.Count > 0)
         {
-          Parallel.ForEach(needAggregate.Keys, (key) =>
+          Parallel.ForEach(needAggregate, pair =>
           {
-            string aggregateName = (key == DataManager.UNASSIGNED_PET_OWNER) ? key : key + " +Pets";
-            PlayerStats aggregatePlayerStats = CreatePlayerStats(aggregateName, key);
-            List<string> all = needAggregate[key].ToList();
-            all.Add(key);
+            string aggregateName = (pair.Key == DataManager.UNASSIGNED_PET_OWNER) ? pair.Key : pair.Key + " +Pets";
+            PlayerStats aggregatePlayerStats = CreatePlayerStats(aggregateName, pair.Key);
+            List<string> all = pair.Value.ToList();
+            all.Add(pair.Key);
 
             List<DamageStats> allDamageStats = new List<DamageStats>();
             foreach (string child in all)
             {
-              if (aggregateNpcStats.ContainsKey(child) && individualStats.ContainsKey(child))
+              lock (aggregateNpcStats)
               {
-                statsHelper.AddToList(combined.Children, aggregateName, individualStats[child]);
-
-                PlayerStats removed;
-                individualStats.TryRemove(child, out removed);
-
-                foreach (NonPlayer npc in aggregateNpcStats[child])
+                if (aggregateNpcStats.ContainsKey(child) && individualStats.ContainsKey(child))
                 {
-                  allDamageStats.Add(npc.DamageMap[child]);
+                  statsHelper.AddToList(combined.Children, aggregateName, individualStats[child]);
+
+                  PlayerStats removed;
+                  individualStats.TryRemove(child, out removed);
+
+                  foreach (NonPlayer npc in aggregateNpcStats[child])
+                  {
+                    allDamageStats.Add(npc.DamageMap[child]);
+                  }
                 }
               }
             }
@@ -168,12 +171,15 @@ namespace EQLogParser
             individualStats[aggregateName] = aggregatePlayerStats;
 
             // figure out percents
-            if (combined.Children.ContainsKey(aggregateName))
+            lock (combined.Children)
             {
-              foreach (PlayerStats childStat in combined.Children[aggregateName])
+              if (combined.Children.ContainsKey(aggregateName))
               {
-                childStat.Percent = Math.Round(((decimal)childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
-                childStat.PercentString = childStat.Percent.ToString();
+                foreach (PlayerStats childStat in combined.Children[aggregateName])
+                {
+                  childStat.Percent = Math.Round(((decimal)childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
+                  childStat.PercentString = childStat.Percent.ToString();
+                }
               }
             }
           });
@@ -196,15 +202,14 @@ namespace EQLogParser
         });
 
         combined.StatsList = individualStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
-
-        Parallel.ForEach(combined.StatsList, (stat, state, index) =>
+        for (int i=0; i<combined.StatsList.Count; i++)
         {
-          stat.Rank = (int)index + 1;
-          if (combined.Children.ContainsKey(stat.Name))
+          combined.StatsList[i].Rank = i + 1;
+          if (combined.Children.ContainsKey(combined.StatsList[i].Name))
           {
-            combined.Children[stat.Name] = combined.Children[stat.Name].OrderByDescending(item => item.TotalDamage).ToList();
+            combined.Children[combined.StatsList[i].Name] = combined.Children[combined.StatsList[i].Name].OrderByDescending(item => item.TotalDamage).ToList();
           }
-        });
+        }
       }
       catch (Exception e)
       {
