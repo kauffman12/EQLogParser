@@ -68,6 +68,7 @@ namespace EQLogParser
       DictionaryListHelper<string, NonPlayer> aggregateNpcStatsHelper = new DictionaryListHelper<string, NonPlayer>();
       DictionaryListHelper<string, PlayerStats> statsHelper = new DictionaryListHelper<string, PlayerStats>();
       Dictionary<string, byte> uniqueClasses = new Dictionary<string, byte>();
+      ConcurrentDictionary<string, byte> uniquePlayers = new ConcurrentDictionary<string, byte>();
 
       try
       {
@@ -104,6 +105,9 @@ namespace EQLogParser
               {
                 playerTotals = individualStats[key];
               }
+
+              // track player names
+              uniquePlayers[key] = 1;
 
               // see if there's a pet mapping, check this first
               string parent = DataManager.Instance.GetPlayerFromPet(key);
@@ -201,14 +205,26 @@ namespace EQLogParser
           }
         });
 
+        int lastRank = 0;
         combined.StatsList = individualStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
         for (int i=0; i<combined.StatsList.Count; i++)
         {
           combined.StatsList[i].Rank = i + 1;
+          lastRank = combined.StatsList[i].Rank;
           if (combined.Children.ContainsKey(combined.StatsList[i].Name))
           {
             combined.Children[combined.StatsList[i].Name] = combined.Children[combined.StatsList[i].Name].OrderByDescending(item => item.TotalDamage).ToList();
           }
+        }
+
+        // look for people casting during this time frame who did not do any damage and append them
+        foreach (var caster in SpellCountBuilder.GetPlayersCastingDuring(combined.RaidStats).AsParallel()
+          .Where(caster => !uniquePlayers.ContainsKey(caster) && DataManager.Instance.CheckNameForPlayer(caster)))
+        {
+          var zeroStats = CreatePlayerStats(caster);
+          zeroStats.Rank = ++lastRank;
+          combined.StatsList.Add(zeroStats);
+          combined.UniqueClasses[zeroStats.ClassName] = 1;
         }
       }
       catch (Exception e)
