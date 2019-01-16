@@ -22,7 +22,6 @@ namespace EQLogParser
     public event EventHandler<string> EventsNewVerifiedPet;
     public event EventHandler<string> EventsNewVerifiedPlayer;
     public event EventHandler<string> EventsRemovedNonPlayer;
-    public event EventHandler<string> EventsNewUnverifiedPetOrPlayer;
     public event EventHandler<NonPlayer> EventsNewNonPlayer;
     public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
     public event EventHandler<bool> EventsClearedActiveData;
@@ -45,8 +44,9 @@ namespace EQLogParser
     private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
+    private ConcurrentDictionary<string, byte> DefinitelyNotAPlayer = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, long> ProbablyNotAPlayer = new ConcurrentDictionary<string, long>();
-    private ConcurrentDictionary<string, byte> UnverifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
+    private ConcurrentDictionary<string, byte> UnVerifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
 
@@ -155,7 +155,7 @@ namespace EQLogParser
       ActiveNonPlayerMap.Clear();
       LifetimeNonPlayerMap.Clear();
       ProbablyNotAPlayer.Clear();
-      UnverifiedPetOrPlayer.Clear();
+      DefinitelyNotAPlayer.Clear();
       AllSpellCasts.Clear();
       AllUniqueSpellCasts.Clear();
       AllUniqueSpellsLRU.Clear();
@@ -219,11 +219,6 @@ namespace EQLogParser
       }
 
       return result;
-    }
-
-    public bool CheckNameForUnverifiedPetOrPlayer(string name)
-    {
-      return UnverifiedPetOrPlayer.ContainsKey(name);
     }
 
     public bool CheckNameForPet(string name)
@@ -383,10 +378,10 @@ namespace EQLogParser
 
     public bool IsProbablyNotAPlayer(string name)
     {
-      bool probably = false;
+      bool probably = DefinitelyNotAPlayer.ContainsKey(name);
 
-      if (!VerifiedPlayers.ContainsKey(name) && !VerifiedPets.ContainsKey(name) && !GameGeneratedPets.ContainsKey(name)
-        && !UnverifiedPetOrPlayer.ContainsKey(name) && ProbablyNotAPlayer.ContainsKey(name))
+      if (!probably && !VerifiedPlayers.ContainsKey(name) && !VerifiedPets.ContainsKey(name) && !GameGeneratedPets.ContainsKey(name)
+        && ProbablyNotAPlayer.ContainsKey(name))
       {
         probably = ProbablyNotAPlayer[name] >= 5;
       }
@@ -447,15 +442,6 @@ namespace EQLogParser
       }
     }
 
-    public void UpdateUnverifiedPetOrPlayer(string name, bool alreadyChecked = false)
-    {
-      if (alreadyChecked || (!CheckNameForPet(name) && !CheckNameForPlayer(name)))
-      {
-        UnverifiedPetOrPlayer[name] = 1;
-        EventsNewUnverifiedPetOrPlayer(this, name);
-      }
-    }
-
     public void UpdatePetToPlayer(string pet, string player)
     {
       if (!PetToPlayerMap.ContainsKey(pet) || PetToPlayerMap[pet] != player)
@@ -465,15 +451,40 @@ namespace EQLogParser
       }
     }
 
-    public void UpdateProbablyNotAPlayer(string name)
+    public bool UpdateProbablyNotAPlayer(string name)
     {
-      long value = 0;
-      if (ProbablyNotAPlayer.ContainsKey(name))
+      bool updated = false;
+      if (!VerifiedPlayers.ContainsKey(name) && !VerifiedPets.ContainsKey(name) && !GameGeneratedPets.ContainsKey(name) &&
+        !UnVerifiedPetOrPlayer.ContainsKey(name))
       {
-        value = ProbablyNotAPlayer[name];
-      }
+        if (!DefinitelyNotAPlayer.ContainsKey(name) && Helpers.IsPossiblePlayerName(name))
+        {
+          long value = 0;
+          if (ProbablyNotAPlayer.ContainsKey(name))
+          {
+            value = ProbablyNotAPlayer[name];
+          }
 
-      ProbablyNotAPlayer[name] = ++value;
+          ProbablyNotAPlayer[name] = ++value;
+        }
+        else
+        {
+          DefinitelyNotAPlayer[name] = 1;
+        }
+
+        updated = true;
+      }
+      return updated;
+    }
+
+    public void UpdateUnVerifiedPetOrPlayer(string name)
+    {
+      // avoid checking to remove unless needed
+      if (!IsProbablyNotAPlayer(name))
+      {
+        UnVerifiedPetOrPlayer[name] = 1;
+        CheckNolongerNPC(name);
+      }
     }
 
     public void UpdateVerifiedPets(string name)
@@ -482,7 +493,7 @@ namespace EQLogParser
       {
         VerifiedPets[name] = 1;
         EventsNewVerifiedPet(this, name);
-        CheckNonPlayerMap(name);
+        CheckNolongerNPC(name);
       }
     }
 
@@ -492,8 +503,18 @@ namespace EQLogParser
       {
         VerifiedPlayers[name] = 1;
         EventsNewVerifiedPlayer(this, name);
-        CheckNonPlayerMap(name);
+        CheckNolongerNPC(name);
       }
+    }
+
+    private void CheckNolongerNPC(string name)
+    {
+      // remove from NPC map if it exists
+      CheckNonPlayerMap(name);
+
+      // remove from ProbablyNotAPlayer if it exists
+      long value;
+      ProbablyNotAPlayer.TryRemove(name, out value);
     }
 
     private void CheckNonPlayerMap(string name)

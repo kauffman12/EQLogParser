@@ -8,7 +8,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
-    public static event EventHandler<string> EventsLineProcessed; 
+    public static event EventHandler<string> EventsLineProcessed;
 
     private const int ACTION_PART_INDEX = 27;
     private static DateUtil DateUtil = new DateUtil();
@@ -67,7 +67,7 @@ namespace EQLogParser
         }
         else
         {
-          ProcessLine pline= new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
 
           // check other things
           if (!CheckForPlayers(pline))
@@ -110,11 +110,7 @@ namespace EQLogParser
       bool foundHealer = DataManager.Instance.CheckNameForPlayer(healer);
       bool foundHealed = DataManager.Instance.CheckNameForPlayer(healed) || DataManager.Instance.CheckNameForPet(healed);
 
-      if (foundHealer && !foundHealed && Helpers.IsPossiblePlayerName(healed, healed.Length))
-      {
-        DataManager.Instance.UpdateUnverifiedPetOrPlayer(healed, true);
-      }
-      else if (!foundHealer && foundHealed && Helpers.IsPossiblePlayerName(healer, healer.Length))
+      if (!foundHealer && foundHealed && Helpers.IsPossiblePlayerName(healer, healer.Length))
       {
         DataManager.Instance.UpdateVerifiedPlayers(healer);
       }
@@ -150,17 +146,22 @@ namespace EQLogParser
     private static bool CheckForPlayers(ProcessLine pline)
     {
       bool found = false;
-      if (pline.ActionPart.Length < 35)
+      int index = -1;
+      if (pline.ActionPart.StartsWith("Targeted (Player)", StringComparison.Ordinal))
       {
-        int index = -1;
-        if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
-          && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
-        {
-          string test = pline.ActionPart.Substring(0, index);
-          DataManager.Instance.UpdateUnverifiedPetOrPlayer(test);
-          found = true;
-        }
-        else if ((index = pline.ActionPart.IndexOf(" tells the guild, ", StringComparison.Ordinal)) > -1)
+        DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
+        found = true;
+      }
+      else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
+        && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
+      {
+        string test = pline.ActionPart.Substring(0, index);
+        DataManager.Instance.UpdateUnVerifiedPetOrPlayer(test);
+        found = true;
+      }
+      else
+      {
+        if ((index = pline.ActionPart.IndexOf(" tells the guild, ", StringComparison.Ordinal)) > -1)
         {
           int firstSpace = pline.ActionPart.IndexOf(" ", StringComparison.Ordinal);
           if (firstSpace > -1 && firstSpace == index)
@@ -169,11 +170,7 @@ namespace EQLogParser
             DataManager.Instance.UpdateVerifiedPlayers(name);
           }
           found = true; // found chat, not that it had to work
-        }
-        else if (pline.ActionPart.StartsWith("Targeted (Player)", StringComparison.Ordinal))
-        {
-          DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
-          found = true;
+
         }
       }
       return found;
@@ -193,25 +190,29 @@ namespace EQLogParser
         bool isDefenderPet, isAttackerPet;
         CheckDamageRecordForPet(record, replaced, out isDefenderPet, out isAttackerPet);
 
-        bool isDefenderPlayer;
-        CheckDamageRecordForPlayer(record, replaced, out isDefenderPlayer);
+        bool isDefenderPlayer, isAttackerPlayer;
+        CheckDamageRecordForPlayer(record, replaced, out isDefenderPlayer, out isAttackerPlayer);
 
-        if (isDefenderPlayer || isDefenderPet || DataManager.Instance.CheckNameForUnverifiedPetOrPlayer(record.Defender))
+        if (isDefenderPlayer || isDefenderPet)
         {
-          if (record.Attacker != record.Defender)
+          if (record.Attacker != record.Defender && !(isAttackerPlayer || isAttackerPet))
           {
             DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker);
           }
           record = null;
         }
-        else if (CheckEye.IsMatch(record.Defender))
+        else if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest") || record.Defender.EndsWith("satchel"))
         {
           record = null;
         }
 
         if (record != null && record.Attacker != record.Defender)
         {
-          DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender);
+          // if updating this fails then it's definitely a player or pet
+          if (!DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender))
+          {
+            record = null;
+          }
         }
       }
 
@@ -251,13 +252,16 @@ namespace EQLogParser
       }
     }
 
-    private static void CheckDamageRecordForPlayer(DamageRecord record, bool replacedAttacker, out bool isDefenderPlayer)
+    private static void CheckDamageRecordForPlayer(DamageRecord record, bool replacedAttacker, out bool isDefenderPlayer, out bool isAttackerPlayer)
     {
+      isAttackerPlayer = false;
+
       if (!replacedAttacker)
       {
         if (record.AttackerOwner != "")
         {
           DataManager.Instance.UpdateVerifiedPlayers(record.AttackerOwner);
+          isAttackerPlayer = true;
         }
 
         if (record.DefenderOwner != "")

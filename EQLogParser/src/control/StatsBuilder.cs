@@ -207,7 +207,7 @@ namespace EQLogParser
 
         int lastRank = 0;
         combined.StatsList = individualStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
-        for (int i=0; i<combined.StatsList.Count; i++)
+        for (int i = 0; i < combined.StatsList.Count; i++)
         {
           combined.StatsList[i].Rank = i + 1;
           lastRank = combined.StatsList[i].Rank;
@@ -218,13 +218,16 @@ namespace EQLogParser
         }
 
         // look for people casting during this time frame who did not do any damage and append them
-        foreach (var caster in SpellCountBuilder.GetPlayersCastingDuring(combined.RaidStats).AsParallel()
-          .Where(caster => !uniquePlayers.ContainsKey(caster) && DataManager.Instance.CheckNameForPlayer(caster)))
+        List<string> casters = SpellCountBuilder.GetPlayersCastingDuring(combined.RaidStats);
+        if (casters.Count > 0)
         {
-          var zeroStats = CreatePlayerStats(caster);
-          zeroStats.Rank = ++lastRank;
-          combined.StatsList.Add(zeroStats);
-          combined.UniqueClasses[zeroStats.ClassName] = 1;
+          foreach (var caster in casters.AsParallel().Where(caster => !uniquePlayers.ContainsKey(caster) && DataManager.Instance.CheckNameForPlayer(caster)))
+          {
+            var zeroStats = CreatePlayerStats(caster);
+            zeroStats.Rank = ++lastRank;
+            combined.StatsList.Add(zeroStats);
+            combined.UniqueClasses[zeroStats.ClassName] = 1;
+          }
         }
       }
       catch (Exception e)
@@ -269,7 +272,7 @@ namespace EQLogParser
           var nonCritDamages = stat.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key).ToList();
           nonCritDamages.ForEach(damage => nonCritFreqs.Add(stat.SubStats[type].NonCritFreqValues[damage]));
           chartData.NonCritYValues = nonCritFreqs;
-          chartData.NonCritXValues= nonCritDamages;
+          chartData.NonCritXValues = nonCritDamages;
 
           results[stat.Name].Add(chartData);
         }
@@ -280,107 +283,117 @@ namespace EQLogParser
 
     internal static ChartData GetDPSValues(CombinedStats combined, List<PlayerStats> stats, NpcDamageManager damageManager)
     {
-      // sort stats
-      stats = stats.OrderBy(item => item.Name).ToList();
-      int interval = combined.TimeDiff < 12 ? 1 : (int)combined.TimeDiff / 12;
-
       List<string> labels = new List<string>();
       DictionaryAddHelper<string, long> addHelper = new DictionaryAddHelper<string, long>();
       Dictionary<string, List<long>> playerValues = new Dictionary<string, List<long>>();
 
-      foreach (var timeIndex in Enumerable.Range(0, combined.RaidStats.BeginTimes.Count))
+      if (stats.Count > 0)
       {
-        DateTime firstTime = combined.RaidStats.BeginTimes[timeIndex];
-        DateTime lastTime = combined.RaidStats.LastTimes[timeIndex];
-        DateTime currentTime = firstTime;
-
-        int index = 0;
-        var damages = damageManager.GetDamageStartingAt(firstTime);
-
-        Dictionary<string, long> playerTotals = new Dictionary<string, long>();
-        labels.Add(Helpers.FormatDateTime(firstTime));
-        while (currentTime <= lastTime)
+        try
         {
-          while (index < damages.Count && damages[index].CurrentTime <= currentTime)
+          // sort stats
+          stats = stats.OrderBy(item => item.Name).ToList();
+          int interval = combined.TimeDiff < 12 ? 1 : (int)combined.TimeDiff / 12;
+
+          foreach (var timeIndex in Enumerable.Range(0, combined.RaidStats.BeginTimes.Count))
           {
-            Dictionary<string, long> playerDamage = damages[index].PlayerDamage;
-            foreach (var stat in stats)
+            DateTime firstTime = combined.RaidStats.BeginTimes[timeIndex];
+            DateTime lastTime = combined.RaidStats.LastTimes[timeIndex];
+            DateTime currentTime = firstTime;
+
+            int index = 0;
+            var damages = damageManager.GetDamageStartingAt(firstTime);
+
+            Dictionary<string, long> playerTotals = new Dictionary<string, long>();
+            labels.Add(Helpers.FormatDateTime(firstTime));
+            while (currentTime <= lastTime)
             {
-              if (combined.Children.ContainsKey(stat.Name))
+              while (index < damages.Count && damages[index].CurrentTime <= currentTime)
               {
-                combined.Children[stat.Name].ForEach(child =>
+                Dictionary<string, long> playerDamage = damages[index].PlayerDamage;
+                foreach (var stat in stats)
                 {
-                  if (playerDamage.ContainsKey(child.Name))
+                  if (combined.Children.ContainsKey(stat.Name))
                   {
-                    addHelper.Add(playerTotals, stat.Name, playerDamage[child.Name]);
+                    combined.Children[stat.Name].ForEach(child =>
+                    {
+                      if (playerDamage.ContainsKey(child.Name))
+                      {
+                        addHelper.Add(playerTotals, stat.Name, playerDamage[child.Name]);
+                      }
+                    });
                   }
-                });
+                  else if (playerDamage.ContainsKey(stat.Name))
+                  {
+                    addHelper.Add(playerTotals, stat.Name, playerDamage[stat.Name]);
+                  }
+                }
+
+                index++;
               }
-              else if (playerDamage.ContainsKey(stat.Name))
+
+              foreach (var stat in stats)
               {
-                addHelper.Add(playerTotals, stat.Name, playerDamage[stat.Name]);
+                if (!playerValues.ContainsKey(stat.Name))
+                {
+                  playerValues[stat.Name] = new List<long>();
+                }
+
+                long dps = 0;
+                if (playerTotals.ContainsKey(stat.Name))
+                {
+                  dps = (long)Math.Round(playerTotals[stat.Name] / ((currentTime - firstTime).TotalSeconds + 1));
+                }
+
+                playerValues[stat.Name].Add(dps);
+              }
+
+              labels.Add(Helpers.FormatDateTime(currentTime));
+
+              if (currentTime == lastTime)
+              {
+                break;
+              }
+              else
+              {
+                currentTime = currentTime.AddSeconds(interval);
+                if (currentTime > lastTime)
+                {
+                  currentTime = lastTime;
+                }
               }
             }
-
-            index++;
           }
 
-          foreach (var stat in stats)
+          // scale down if too many points
+          int scale = -1;
+          var firstPlayer = playerValues.Values.First();
+          if (firstPlayer.Count > 20)
           {
-            if (!playerValues.ContainsKey(stat.Name))
-            {
-              playerValues[stat.Name] = new List<long>();
-            }
-
-            long dps = 0;
-            if (playerTotals.ContainsKey(stat.Name))
-            {
-              dps = (long)Math.Round(playerTotals[stat.Name] / ((currentTime - firstTime).TotalSeconds + 1));
-            }
-
-            playerValues[stat.Name].Add(dps);
+            scale = firstPlayer.Count / 20;
           }
 
-          labels.Add(Helpers.FormatDateTime(currentTime));
-
-          if (currentTime == lastTime)
+          if (scale > 1)
           {
-            break;
-          }
-          else
-          {
-            currentTime = currentTime.AddSeconds(interval);
-            if (currentTime > lastTime)
+            Dictionary<string, List<long>> newPlayerValues = new Dictionary<string, List<long>>();
+            Parallel.ForEach(playerValues.Keys, (player) =>
             {
-              currentTime = lastTime;
-            }
+              var newList = playerValues[player].Where((item, i) => i % scale == 0).ToList();
+
+              lock (newPlayerValues)
+              {
+                newPlayerValues[player] = newList;
+              }
+            });
+
+            playerValues = newPlayerValues;
+            labels = labels.Where((item, i) => i % scale == 0).ToList();
           }
         }
-      }
-
-      // scale down if too many points
-      int scale = -1;
-      var firstPlayer = playerValues.Values.First();
-      if (firstPlayer.Count > 20)
-      {
-        scale = firstPlayer.Count / 20;
-      }
-
-      if (scale > 1)
-      {
-        Dictionary<string, List<long>> newPlayerValues = new Dictionary<string, List<long>>();
-        Parallel.ForEach(playerValues.Keys, (player) =>
+        catch (Exception ex)
         {
-          var newList = playerValues[player].Where((item, i) => i % scale == 0).ToList();
-
-          lock (newPlayerValues)
-          {
-            newPlayerValues[player] = newList;
-          }
-        });
-
-        playerValues = newPlayerValues;
-        labels = labels.Where((item, i) => i % scale == 0).ToList();
+          LOG.Error(ex);
+        }
       }
 
       return new ChartData() { Values = playerValues, XAxisLabels = labels };

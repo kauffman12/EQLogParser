@@ -42,10 +42,19 @@ namespace EQLogParser
 
     public static List<string> GetPlayersCastingDuring(PlayerStats raidStats)
     {
-      DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
-      DateTime endTime = raidStats.LastTimes.Last();
-      List<SpellCast> casts = GetCastsDuring(beginTime, endTime);
-      return casts.Select(cast => cast.Caster).Distinct().ToList();
+      List<string> results = null;
+      if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
+      {
+        DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
+        DateTime endTime = raidStats.LastTimes.Last();
+        List<SpellCast> casts = GetCastsDuring(beginTime, endTime);
+        results = casts.Select(cast => cast.Caster).Distinct().ToList();
+      }
+      else
+      {
+        results = new List<string>();
+      }
+      return results;
     }
 
     private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, int>> playerCounts,
