@@ -6,13 +6,18 @@ namespace EQLogParser
 {
   class SpellCountBuilder
   {
-    public static SpellCountData GetSpellCounts(List<string> playerList, DateTime beginTime, DateTime endTime)
+    private const int SPELL_TIME_OFFSET = 10; // seconds back
+
+    public static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
       Dictionary<string, Dictionary<string, int>> playerCastCounts = new Dictionary<string, Dictionary<string, int>>();
       Dictionary<string, Dictionary<string, int>> playerReceivedCounts = new Dictionary<string, Dictionary<string, int>>();
       Dictionary<string, int> maxCastCounts = new Dictionary<string, int>();
       Dictionary<string, int> maxReceivedCounts = new Dictionary<string, int>();
       Dictionary<string, SpellData> spellMap = new Dictionary<string, SpellData>();
+
+      DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
+      DateTime endTime = raidStats.LastTimes.Last();
 
       foreach (var cast in GetCastsDuring(beginTime, endTime).AsParallel().Where(cast => playerList.Contains(cast.Caster)))
       {
@@ -33,6 +38,14 @@ namespace EQLogParser
         MaxReceivedCounts = maxReceivedCounts,
         UniqueSpells = spellMap
       };
+    }
+
+    public static List<string> GetPlayersCastingDuring(PlayerStats raidStats)
+    {
+      DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
+      DateTime endTime = raidStats.LastTimes.Last();
+      List<SpellCast> casts = GetCastsDuring(beginTime, endTime);
+      return casts.Select(cast => cast.Caster).Distinct().ToList();
     }
 
     private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, int>> playerCounts,
