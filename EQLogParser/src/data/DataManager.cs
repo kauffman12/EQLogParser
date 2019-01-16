@@ -342,14 +342,6 @@ namespace EQLogParser
 
     private SpellData FindByLandsOn(string value, List<SpellData> output)
     {
-      if (value.Contains("is strengthened by a gift of magic"))
-      {
-        if (true)
-        {
-
-        }
-      }
-
       SpellData result = null;
       if (output.Count == 1)
       {
