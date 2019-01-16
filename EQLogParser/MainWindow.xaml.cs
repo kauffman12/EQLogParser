@@ -151,7 +151,6 @@ namespace EQLogParser
         DataManager.Instance.EventsUpdatedNonPlayer += (sender, npc) => NeedStatsUpdate = (CurrentStats != null && CurrentStats.NpcIDs.Contains(npc.ID));
         DataManager.Instance.EventsRemovedNonPlayer += (sender, name) => RemoveNonPlayer(name);
         DataManager.Instance.EventsNewNonPlayer += (sender, npc) => AddNonPlayer(npc);
-        DataManager.Instance.EventsNewUnverifiedPetOrPlayer += (sender, name) => RemoveNonPlayer(name);
 
         // fix player DPS table sorting
         playerDataGrid.Sorting += (s, e) =>
@@ -717,7 +716,7 @@ namespace EQLogParser
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
 
                   var list = CurrentStats.StatsList.Take(5).ToList();
-                  UpdateDPSChart("Top " + list.Count + " DPS Over Time", CurrentStats.StatsList.Take(5).ToList());
+                  UpdateDPSChart("Top " + list.Count + " DPS Over Time", list);
                   NeedStatsUpdate = false;
                   UpdatingStats = false;
                   UpdatePlayerDataGridMenuItems();
