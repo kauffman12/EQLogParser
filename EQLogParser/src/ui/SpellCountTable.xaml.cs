@@ -72,10 +72,7 @@ namespace EQLogParser
           PlayerList.Add(name);
         }
 
-        var raidStats = currentStats.RaidStats;
-        DateTime start = raidStats.BeginTimes.First();
-        DateTime end = raidStats.LastTimes.Last();
-        TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, start.AddSeconds(-10), end);
+        TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, currentStats.RaidStats);
         Display();
       }
     }
