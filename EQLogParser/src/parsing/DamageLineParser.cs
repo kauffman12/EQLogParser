@@ -57,7 +57,7 @@ namespace EQLogParser
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
           HandleHealed(pline);
         }
-        else if (line.Length < 102 && (index = line.IndexOf(" has been slain by", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
+        else if (line.Length < 102 && (index = line.IndexOf(" slain ", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
         {
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
@@ -86,8 +86,17 @@ namespace EQLogParser
 
     private static void HandleSlain(ProcessLine pline)
     {
-      string test = pline.ActionPart.Substring(0, pline.OptionalIndex);
-      if (!DataManager.Instance.CheckNameForPlayer(test) && !DataManager.Instance.CheckNameForPet(test))
+      string test = null;
+      if (pline.ActionPart.Length > 16 && pline.ActionPart.StartsWith("You have slain ") && pline.ActionPart[pline.ActionPart.Length-1] == '!')
+      {
+        test = pline.ActionPart.Substring(15, pline.ActionPart.Length - 15 - 1);
+      }
+      else if (pline.OptionalIndex > 9)
+      {
+        test = pline.ActionPart.Substring(0, pline.OptionalIndex - 9);
+      }
+
+      if (test != null && test.Length > 0 && !DataManager.Instance.CheckNameForPlayer(test) && !DataManager.Instance.CheckNameForPet(test))
       {
         if (!DataManager.Instance.RemoveActiveNonPlayer(test) && Char.IsUpper(test[0]))
         {
@@ -290,6 +299,7 @@ namespace EQLogParser
         int afterAction = -1;
         long damage = 0;
         string action = "";
+        string spell = "";
 
         // find first space and see if we have a name in the first  second
         int firstSpace = part.IndexOf(" ", StringComparison.Ordinal);
@@ -457,6 +467,12 @@ namespace EQLogParser
                   {
                     if (part.Substring(afterDmg + 13, 4) == "your")
                     {
+                      int periodIndex = part.LastIndexOf('.');
+                      if (periodIndex > -1)
+                      {
+                        spell = part.Substring(afterDmg + 18, periodIndex - afterDmg - 18);
+                      }
+
                       attacker = "your";
                       action = "DoT";
                       found = true;
@@ -477,6 +493,7 @@ namespace EQLogParser
                             // damage parsed above
                             attacker = player;
                             action = "DoT";
+                            spell = part.Substring(afterDmg + 13, byIndex - afterDmg - 14);
                             found = true;
                           }
                         }
@@ -495,12 +512,12 @@ namespace EQLogParser
               Attacker = attacker,
               Defender = defender,
               Type = Char.ToUpper(type[0]) + type.Substring(1),
-              Action = action,
               Damage = damage,
               AttackerPetType = attackerPetType,
               AttackerOwner = attackerOwner,
               DefenderPetType = defenderPetType,
-              DefenderOwner = defenderOwner
+              DefenderOwner = defenderOwner,
+              Spell = spell
             };
 
             if (part[part.Length - 1] == ')')
