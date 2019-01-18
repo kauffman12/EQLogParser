@@ -33,7 +33,7 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.2.2";
+    private const string VERSION = "v1.2.3";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -189,6 +189,11 @@ namespace EQLogParser
       {
         ThemeManager.EndUpdate();
       }
+    }
+
+    public void Busy(bool state)
+    {
+      busyIcon.Visibility = state ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void Window_Closed(object sender, System.EventArgs e)
@@ -446,7 +451,7 @@ namespace EQLogParser
       callingDataGrid.UnselectAll();
     }
 
-    private void PlayerDataHitFreq_Click(object sender, RoutedEventArgs e)
+    private void PlayerDataGridHitFreq_Click(object sender, RoutedEventArgs e)
     {
       if (playerDataGrid.SelectedItems.Count == 1)
       {

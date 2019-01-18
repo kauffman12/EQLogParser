@@ -85,7 +85,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(() =>
         {
           castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
-          TheMainWindow.busyIcon.Visibility = Visibility.Visible;
+          TheMainWindow.Busy(true);
         });
 
         Task.Delay(20).ContinueWith(task =>
@@ -207,7 +207,7 @@ namespace EQLogParser
             Dispatcher.InvokeAsync(() =>
             {
               castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
-              TheMainWindow.busyIcon.Visibility = Visibility.Hidden;
+              TheMainWindow.Busy(false);
             });
             running = false;
           }

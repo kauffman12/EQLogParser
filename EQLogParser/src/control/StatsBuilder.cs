@@ -480,49 +480,60 @@ namespace EQLogParser
         playerTotals.AvgLucky = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalLuckyDamage) / playerTotals.LuckyHits);
       }
 
-      Parallel.ForEach(npcStats.HitMap.Keys, (key) =>
+      Parallel.ForEach(npcStats.HitMap, keyvalue => UpdateHitMap(playerTotals, keyvalue));
+      Parallel.ForEach(npcStats.SpellMap, keyvalue => UpdateHitMap(playerTotals, keyvalue));
+    }
+
+    private static void UpdateHitMap(PlayerStats playerTotals, KeyValuePair<string, Hit> keyvalue)
+    {
+      PlayerSubStats subStats = null;
+      lock (playerTotals)
       {
-        PlayerSubStats subStats = null;
-        lock (playerTotals)
+        if (!playerTotals.SubStats.ContainsKey(keyvalue.Key))
         {
-          subStats = new PlayerSubStats() { ClassName = "", Name = "", HitType = key, CritFreqValues = new Dictionary<long, int>(), NonCritFreqValues = new Dictionary<long, int>() };
-          if (!playerTotals.SubStats.ContainsKey(key))
+          subStats = new PlayerSubStats()
           {
-            playerTotals.SubStats[key] = subStats;
-          }
-          else
-          {
-            subStats = playerTotals.SubStats[key];
-          }
-        }
+            ClassName = "",
+            Name = "",
+            HitType = keyvalue.Key,
+            CritFreqValues = new Dictionary<long, int>(),
+            NonCritFreqValues = new Dictionary<long, int>()
+          };
 
-        Hit hitMap = npcStats.HitMap[key];
-        subStats.TotalDamage += hitMap.TotalDamage;
-        subStats.TotalCritDamage += hitMap.TotalCritDamage;
-        subStats.TotalLuckyDamage += hitMap.TotalLuckyDamage;
-        subStats.Hits += hitMap.Count;
-        subStats.CritHits += hitMap.CritCount;
-        subStats.LuckyHits += hitMap.LuckyCount;
-        subStats.TwincastHits += hitMap.TwincastCount;
-        subStats.Max = (subStats.Max < hitMap.Max) ? hitMap.Max : subStats.Max;
-        subStats.TotalSeconds = playerTotals.TotalSeconds;
-        subStats.DPS = (long)Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
-        subStats.Avg = (long)Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
-        subStats.CritRate = Math.Round(Convert.ToDecimal(subStats.CritHits) / subStats.Hits * 100, 1);
-        subStats.LuckRate = Math.Round(Convert.ToDecimal(subStats.LuckyHits) / subStats.Hits * 100, 1);
-        subStats.TwincastRate = Math.Round(Convert.ToDecimal(subStats.TwincastHits) / subStats.Hits * 100, 1);
-        hitMap.CritFreqValues.Keys.ToList().ForEach(k => LongIntAddHelper.Add(subStats.CritFreqValues, k, hitMap.CritFreqValues[k]));
-        hitMap.NonCritFreqValues.Keys.ToList().ForEach(k => LongIntAddHelper.Add(subStats.NonCritFreqValues, k, hitMap.NonCritFreqValues[k]));
+          playerTotals.SubStats[keyvalue.Key] = subStats;
+        }
+        else
+        {
+          subStats = playerTotals.SubStats[keyvalue.Key];
+        }
+      }
 
-        if ((subStats.CritHits - subStats.LuckyHits) > 0)
-        {
-          subStats.AvgCrit = (long)Math.Round(Convert.ToDecimal(subStats.TotalCritDamage) / (subStats.CritHits - subStats.LuckyHits));
-        }
-        if (subStats.LuckyHits > 0)
-        {
-          subStats.AvgLucky = (long)Math.Round(Convert.ToDecimal(subStats.TotalLuckyDamage) / subStats.LuckyHits);
-        }
-      });
+      Hit hitMap = keyvalue.Value;
+      subStats.TotalDamage += hitMap.TotalDamage;
+      subStats.TotalCritDamage += hitMap.TotalCritDamage;
+      subStats.TotalLuckyDamage += hitMap.TotalLuckyDamage;
+      subStats.Hits += hitMap.Count;
+      subStats.CritHits += hitMap.CritCount;
+      subStats.LuckyHits += hitMap.LuckyCount;
+      subStats.TwincastHits += hitMap.TwincastCount;
+      subStats.Max = (subStats.Max < hitMap.Max) ? hitMap.Max : subStats.Max;
+      subStats.TotalSeconds = playerTotals.TotalSeconds;
+      subStats.DPS = (long)Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
+      subStats.Avg = (long)Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
+      subStats.CritRate = Math.Round(Convert.ToDecimal(subStats.CritHits) / subStats.Hits * 100, 1);
+      subStats.LuckRate = Math.Round(Convert.ToDecimal(subStats.LuckyHits) / subStats.Hits * 100, 1);
+      subStats.TwincastRate = Math.Round(Convert.ToDecimal(subStats.TwincastHits) / subStats.Hits * 100, 1);
+      hitMap.CritFreqValues.Keys.ToList().ForEach(k => LongIntAddHelper.Add(subStats.CritFreqValues, k, hitMap.CritFreqValues[k]));
+      hitMap.NonCritFreqValues.Keys.ToList().ForEach(k => LongIntAddHelper.Add(subStats.NonCritFreqValues, k, hitMap.NonCritFreqValues[k]));
+
+      if ((subStats.CritHits - subStats.LuckyHits) > 0)
+      {
+        subStats.AvgCrit = (long)Math.Round(Convert.ToDecimal(subStats.TotalCritDamage) / (subStats.CritHits - subStats.LuckyHits));
+      }
+      if (subStats.LuckyHits > 0)
+      {
+        subStats.AvgLucky = (long)Math.Round(Convert.ToDecimal(subStats.TotalLuckyDamage) / subStats.LuckyHits);
+      }
     }
 
     private static PlayerStats CreatePlayerStats(string name, string origName = null)
