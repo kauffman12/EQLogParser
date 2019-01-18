@@ -13,8 +13,8 @@ namespace EQLogParser
     public string DefenderPetType { get; set; }
     public string DefenderOwner { get; set; }
     public string Type { get; set; }
-    public string Action { get; set; }
     public string Modifiers { get; set; }
+    public string Spell { get; set; }
   }
 
   public class Hit
@@ -39,6 +39,7 @@ namespace EQLogParser
   public class DamageStats : Hit
   {
     public Dictionary<string, Hit> HitMap { get; set; }
+    public Dictionary<string, Hit> SpellMap { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
     public string Owner { get; set; }
