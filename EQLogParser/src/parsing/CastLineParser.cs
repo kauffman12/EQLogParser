@@ -107,10 +107,13 @@ namespace EQLogParser
     public static void HandleOtherLandsOnCases(ProcessLine pline)
     {
       string player = pline.OptionalData;
-      SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
+      List<SpellData> output;
+      string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
+      SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(matchOn, out output);
       if (result == null)
       {
-        result = DataManager.Instance.GetLandsOnYou(pline.ActionPart);
+        matchOn = pline.ActionPart;
+        result = DataManager.Instance.GetLandsOnYou(matchOn, out output);
         if (result != null)
         {
           player = "You";
@@ -130,7 +133,9 @@ namespace EQLogParser
 
     public static void HandlePosessiveLandsOnOther(ProcessLine pline)
     {
-      SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(pline.ActionPart.Substring(pline.OptionalIndex));
+      List<SpellData> output;
+      string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
+      SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(matchOn, out output);
       if (result != null)
       {
         DataManager.Instance.AddReceivedSpell(new ReceivedSpell()

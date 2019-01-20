@@ -70,7 +70,7 @@ namespace EQLogParser
     // tab counts
     private static DocumentWindow spellCastsWindow = null;
 
-    private static NpcDamageManager NpcDamageManager = null;
+    private static NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private LogReader EQLogReader = null;
     private bool NeedScrollIntoView = false;
 
@@ -163,7 +163,6 @@ namespace EQLogParser
 
         DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
-        NpcDamageManager = new NpcDamageManager();
 
         DispatcherTimer dispatcherTimer = new DispatcherTimer();
         dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
@@ -886,6 +885,7 @@ namespace EQLogParser
 
           DataManager.Instance.SetPlayerName(name);
           DataManager.Instance.Clear();
+          NpcDamageManager.LastUpdateTime = DateTime.MinValue;
           progressWindow.IsOpen = UpdatingProgress = true;
           EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, monitorOnly, lastMins);
           EQLogReader.Start();
