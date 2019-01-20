@@ -307,10 +307,9 @@ namespace EQLogParser
       return PetToPlayerMap.ContainsKey(pet) ? PetToPlayerMap[pet] : null;
     }
 
-    public SpellData GetNonPosessiveLandsOnOther(string value)
+    public SpellData GetNonPosessiveLandsOnOther(string value, out List<SpellData> output)
     {
       SpellData result = null;
-      List<SpellData> output;
       if (NonPosessiveLandsOnOthers.TryGetValue(value, out output))
       {
         result = FindByLandsOn(value, output);
@@ -318,10 +317,9 @@ namespace EQLogParser
       return result;
     }
 
-    public SpellData GetPosessiveLandsOnOther(string value)
+    public SpellData GetPosessiveLandsOnOther(string value, out List<SpellData> output)
     {
       SpellData result = null;
-      List<SpellData> output;
       if (PosessiveLandsOnOthers.TryGetValue(value, out output))
       {
         result = FindByLandsOn(value, output);
@@ -329,10 +327,9 @@ namespace EQLogParser
       return result;
     }
 
-    public SpellData GetLandsOnYou(string value)
+    public SpellData GetLandsOnYou(string value, out List<SpellData> output)
     {
       SpellData result = null;
-      List<SpellData> output;
       if (LandsOnYou.TryGetValue(value, out output))
       {
         result = FindByLandsOn(value, output);

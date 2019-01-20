@@ -333,15 +333,12 @@ namespace EQLogParser
         string player = playerList.SelectedItem as string;
         var data = ChartData[player];
 
-        bool useNonCrit = true;
+        bool canUseCrit = false;
         List<string> playerCritTypes = new List<string>();
         if (data.Any(d => d.CritYValues.Count > 0))
         {
           playerCritTypes.Add(CRIT_HITTYPE);
-          if (selectedCritType != null && selectedCritType == CRIT_HITTYPE)
-          {
-            useNonCrit = false;
-          }
+          canUseCrit = true;
         }
 
         if (data.Any(d => d.NonCritYValues.Count > 0))
@@ -350,8 +347,8 @@ namespace EQLogParser
         }
 
         critTypeList.ItemsSource = playerCritTypes;
-        critTypeList.SelectedItem = useNonCrit ? NON_CRIT_HITTYPE : CRIT_HITTYPE;
-        UpdateSelectedHitTypes(useNonCrit);
+        critTypeList.SelectedIndex = playerCritTypes.Count == 1 ? 0 : canUseCrit ? 1 : 0;
+        UpdateSelectedHitTypes(critTypeList.SelectedItem as string == NON_CRIT_HITTYPE);
         UserSelectionChanged();
       }
       catch (Exception ex)
