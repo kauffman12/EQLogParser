@@ -22,7 +22,8 @@ namespace EQLogParser
       { "smash", 1 }, { "sting", 1 }, { "strike", 1 }, { "bashes", 1 }, { "bites", 1 }, { "backstabs", 1 },
       { "claws", 1 }, { "crushes", 1 }, { "gores", 1 }, { "hits", 1 }, { "kicks", 1 }, { "mauls", 1 },
       { "punches", 1 }, { "pierces", 1 }, { "rends", 1 }, { "shoots", 1 }, { "slashes", 1 }, { "slams", 1 },
-      { "slices", 1 }, { "smashes", 1 }, { "stings", 1 }, { "strikes", 1 }
+      { "slices", 1 }, { "smashes", 1 }, { "stings", 1 }, { "strikes", 1 }, { "learn", 1 }, { "learns", 1 },
+      { "sweep", 1 }, { "sweeps", 1 }
     };
 
     private static Dictionary<string, string> HitAdditionalMap = new Dictionary<string, string>()
