@@ -181,7 +181,7 @@ namespace EQLogParser
               {
                 foreach (PlayerStats childStat in combined.Children[aggregateName])
                 {
-                  childStat.Percent = Math.Round(((decimal)childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
+                  childStat.Percent = Math.Round(((decimal) childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
                   childStat.PercentString = childStat.Percent.ToString();
                 }
               }
@@ -189,19 +189,12 @@ namespace EQLogParser
           });
         }
 
-        combined.SubStats = new Dictionary<string, List<PlayerSubStats>>();
         Parallel.ForEach(allStatValues, (stat) =>
         {
-          List<PlayerSubStats> subStatsList = stat.SubStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
-          foreach (var subStat in subStatsList)
+          foreach (var subStat in stat.SubStats.Values.OrderByDescending(item => item.TotalDamage))
           {
-            subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal)subStat.TotalDamage / stat.TotalDamage) * 100, 2);
+            subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal) subStat.TotalDamage / stat.TotalDamage) * 100, 2);
             subStat.PercentString = subStat.Percent.ToString();
-          }
-
-          lock (combined.SubStats)
-          {
-            combined.SubStats[stat.Name] = subStatsList;
           }
         });
 
@@ -293,7 +286,7 @@ namespace EQLogParser
         {
           // sort stats
           stats = stats.OrderBy(item => item.Name).ToList();
-          int interval = combined.TimeDiff < 12 ? 1 : (int)combined.TimeDiff / 12;
+          int interval = combined.TimeDiff < 12 ? 1 : (int) combined.TimeDiff / 12;
 
           foreach (var timeIndex in Enumerable.Range(0, combined.RaidStats.BeginTimes.Count))
           {
@@ -342,7 +335,7 @@ namespace EQLogParser
                 long dps = 0;
                 if (playerTotals.ContainsKey(stat.Name))
                 {
-                  dps = (long)Math.Round(playerTotals[stat.Name] / ((currentTime - firstTime).TotalSeconds + 1));
+                  dps = (long) Math.Round(playerTotals[stat.Name] / ((currentTime - firstTime).TotalSeconds + 1));
                 }
 
                 playerValues[stat.Name].Add(dps);
@@ -401,7 +394,7 @@ namespace EQLogParser
 
     internal static List<PlayerStats> GetSelectedPlayerStatsByClass(string classString, ItemCollection items)
     {
-      DataManager.SpellClasses type = (DataManager.SpellClasses)Enum.Parse(typeof(DataManager.SpellClasses), classString);
+      DataManager.SpellClasses type = (DataManager.SpellClasses) Enum.Parse(typeof(DataManager.SpellClasses), classString);
       string className = DataManager.Instance.GetClassName(type);
 
       List<PlayerStats> selectedStats = new List<PlayerStats>();
@@ -465,26 +458,29 @@ namespace EQLogParser
       playerTotals.TimeDiffs[currentIndex] = playerTotals.LastTimes[currentIndex].Subtract(playerTotals.BeginTimes[currentIndex]).TotalSeconds + 1;
 
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Sum();
-      playerTotals.DPS = (long)Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
-      playerTotals.Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
+      playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds);
+      playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits);
       playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 1);
       playerTotals.LuckRate = Math.Round(Convert.ToDecimal(playerTotals.LuckyHits) / playerTotals.Hits * 100, 1);
       playerTotals.TwincastRate = Math.Round(Convert.ToDecimal(playerTotals.TwincastHits) / playerTotals.Hits * 100, 1);
 
       if ((playerTotals.CritHits - playerTotals.LuckyHits) > 0)
       {
-        playerTotals.AvgCrit = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / (playerTotals.CritHits - playerTotals.LuckyHits));
+        playerTotals.AvgCrit = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalCritDamage) / (playerTotals.CritHits - playerTotals.LuckyHits));
       }
       if (playerTotals.LuckyHits > 0)
       {
-        playerTotals.AvgLucky = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalLuckyDamage) / playerTotals.LuckyHits);
+        playerTotals.AvgLucky = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalLuckyDamage) / playerTotals.LuckyHits);
       }
 
       Parallel.ForEach(npcStats.HitMap, keyvalue => UpdateHitMap(playerTotals, keyvalue));
-      Parallel.ForEach(npcStats.SpellMap, keyvalue => UpdateHitMap(playerTotals, keyvalue));
+      Parallel.ForEach(npcStats.SpellMap, keyvalue =>
+      {
+        UpdateHitMap(playerTotals, keyvalue, "DoT");
+      });
     }
 
-    private static void UpdateHitMap(PlayerStats playerTotals, KeyValuePair<string, Hit> keyvalue)
+    private static void UpdateHitMap(PlayerStats playerTotals, KeyValuePair<string, Hit> keyvalue, string type = null)
     {
       PlayerSubStats subStats = null;
       lock (playerTotals)
@@ -494,8 +490,8 @@ namespace EQLogParser
           subStats = new PlayerSubStats()
           {
             ClassName = "",
-            Name = "",
-            HitType = keyvalue.Key,
+            Name = keyvalue.Key,
+            Type = type,
             CritFreqValues = new Dictionary<long, int>(),
             NonCritFreqValues = new Dictionary<long, int>()
           };
@@ -518,8 +514,8 @@ namespace EQLogParser
       subStats.TwincastHits += hitMap.TwincastCount;
       subStats.Max = (subStats.Max < hitMap.Max) ? hitMap.Max : subStats.Max;
       subStats.TotalSeconds = playerTotals.TotalSeconds;
-      subStats.DPS = (long)Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
-      subStats.Avg = (long)Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
+      subStats.DPS = (long) Math.Round(subStats.TotalDamage / subStats.TotalSeconds);
+      subStats.Avg = (long) Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits);
       subStats.CritRate = Math.Round(Convert.ToDecimal(subStats.CritHits) / subStats.Hits * 100, 1);
       subStats.LuckRate = Math.Round(Convert.ToDecimal(subStats.LuckyHits) / subStats.Hits * 100, 1);
       subStats.TwincastRate = Math.Round(Convert.ToDecimal(subStats.TwincastHits) / subStats.Hits * 100, 1);
@@ -528,11 +524,11 @@ namespace EQLogParser
 
       if ((subStats.CritHits - subStats.LuckyHits) > 0)
       {
-        subStats.AvgCrit = (long)Math.Round(Convert.ToDecimal(subStats.TotalCritDamage) / (subStats.CritHits - subStats.LuckyHits));
+        subStats.AvgCrit = (long) Math.Round(Convert.ToDecimal(subStats.TotalCritDamage) / (subStats.CritHits - subStats.LuckyHits));
       }
       if (subStats.LuckyHits > 0)
       {
-        subStats.AvgLucky = (long)Math.Round(Convert.ToDecimal(subStats.TotalLuckyDamage) / subStats.LuckyHits);
+        subStats.AvgLucky = (long) Math.Round(Convert.ToDecimal(subStats.TotalLuckyDamage) / subStats.LuckyHits);
       }
     }
 
@@ -550,7 +546,6 @@ namespace EQLogParser
       {
         Name = name,
         ClassName = className,
-        HitType = "",
         PercentString = "-",
         Percent = 100, // until something says otherwise
         BeginTimes = new List<DateTime>(),

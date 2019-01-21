@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -66,9 +67,6 @@ namespace EQLogParser
     private static bool UpdatingProgress = false;
     private static DateTime StartLoadTime; // millis
     private static bool MonitorOnly;
-
-    // tab counts
-    private static DocumentWindow spellCastsWindow = null;
 
     private static NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private LogReader EQLogReader = null;
@@ -487,7 +485,7 @@ namespace EQLogParser
     {
       var spellTable = new SpellCountTable(this);
       spellTable.ShowSpells(selectedStats, CurrentStats);
-      spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, spellTable);
+      var spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, spellTable);
       Helpers.OpenWindow(spellCastsWindow);
       spellCastsWindow.MoveToLast();
     }
@@ -506,38 +504,11 @@ namespace EQLogParser
       }
     }
 
-    private void ShowDamage(List<PlayerStats> selected)
+    private void ShowDamage(List<PlayerStats> selectedStats)
     {
-      ObservableCollection<PlayerStats> list = new ObservableCollection<PlayerStats>();
-      playerDamageDataGrid.ItemsSource = list; busyIcon.Visibility = Visibility.Visible;
-
-      Task.Delay(20).ContinueWith(task =>
-      {
-        foreach (var playerStat in selected)
-        {
-          if (CurrentStats.Children.ContainsKey(playerStat.Name))
-          {
-            foreach (var childStat in CurrentStats.Children[playerStat.Name])
-            {
-              Dispatcher.InvokeAsync(() => list.Add(childStat));
-            }
-          }
-          else
-          {
-            Dispatcher.InvokeAsync(() => list.Add(playerStat));
-          }
-
-          Thread.Sleep(120);
-        }
-
-        Dispatcher.InvokeAsync(() => busyIcon.Visibility = Visibility.Hidden);
-      });
-
-      if (!damageWindow.IsOpen)
-      {
-        damageWindow = new DocumentWindow(dockSite, "damageWindow", "Damage Breakdown", null, playerDamageParent);
-      }
-
+      var damageTable = new DamageTable(this);
+      damageTable.ShowDamage(selectedStats, CurrentStats);
+      var damageWindow = new DocumentWindow(dockSite, "damageWindow", "Damage Breakdown", null, damageTable);
       Helpers.OpenWindow(damageWindow);
       damageWindow.MoveToLast();
     }
@@ -565,24 +536,6 @@ namespace EQLogParser
         if (childrenDataGrid.ItemsSource != CurrentStats.Children[stats.Name])
         {
           childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
-        }
-      }
-    }
-
-    private void PlayerDamageGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      e.Row.IsHitTestVisible = false;
-    }
-
-    private void PlayerSubGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
-    {
-      PlayerStats stats = e.Row.Item as PlayerStats;
-      var subStatsDataGrid = e.DetailsElement as DataGrid;
-      if (stats != null && subStatsDataGrid != null && CurrentStats != null && CurrentStats.SubStats.ContainsKey(stats.Name))
-      {
-        if (subStatsDataGrid.ItemsSource != CurrentStats.SubStats[stats.Name])
-        {
-          subStatsDataGrid.ItemsSource = CurrentStats.SubStats[stats.Name];
         }
       }
     }
