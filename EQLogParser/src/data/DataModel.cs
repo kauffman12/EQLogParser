@@ -142,7 +142,6 @@ namespace EQLogParser
     public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
     public Dictionary<string, List<PlayerStats>> Children { get; set; }
-    public Dictionary<string, List<PlayerSubStats>> SubStats { get; set; }
     public PlayerStats RaidStats { get; set; }
     public SortedSet<long> NpcIDs { get; set; }
     public Dictionary<string, byte> UniqueClasses { get; set; }
@@ -180,13 +179,13 @@ namespace EQLogParser
   {
     public int Rank { get; set; }
     public string Name { get; set; }
+    public string Type { get; set; }
     public long TotalDamage { get; set; }
     public long TotalCritDamage { get; set; }
     public long TotalLuckyDamage { get; set; }
     public double TotalSeconds { get; set; }
     public long DPS { get; set; }
     public int Hits { get; set; }
-    public string HitType { get; set; }
     public long Max { get; set; }
     public long Avg { get; set; }
     public long AvgCrit { get; set; }
