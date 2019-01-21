@@ -180,13 +180,16 @@ namespace EQLogParser
       var column = e.Column as DataGridTextColumn;
       if (column != null)
       {
+        // prevent the built-in sort from sorting
+        e.Handled = true;
+
         var binding = column.Binding as Binding;
-        if (binding != null && binding.Path != null)
+        if (binding != null && binding.Path != null && binding.Path.Path != "PercentString") // dont sort on percent total, its not useful
         {
           CurrentSortKey = binding.Path.Path;
           CurrentColumn = column;
 
-          if (e.Column.Header.ToString() != "Name" && column.SortDirection == null)
+          if (column.Header.ToString() != "Name" && column.SortDirection == null)
           {
             CurrentSortDirection = ListSortDirection.Descending;
           }
@@ -195,8 +198,6 @@ namespace EQLogParser
             CurrentSortDirection = (column.SortDirection != ListSortDirection.Ascending) ? ListSortDirection.Ascending : ListSortDirection.Descending;
           }
 
-          // prevent the built-in sort from sorting
-          e.Handled = true;
           Display();
         }
       }
