@@ -25,14 +25,16 @@ namespace EQLogParser
     private ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     private DataGridTextColumn CurrentColumn = null;
     private bool CurrentGroupSpellsSetting = true;
+    private bool CurrentShowPets = true;
     private Dictionary<string, List<PlayerSubStats>> WithGroupedSpells = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> WithoutGroupedSpells = new Dictionary<string, List<PlayerSubStats>>();
     private static bool running = false;
 
-    public DamageTable(MainWindow mainWindow)
+    public DamageTable(MainWindow mainWindow, StatsSummary summary)
     {
       InitializeComponent();
       TheMainWindow = mainWindow;
+      title.Content = summary.ShortTitle;
     }
 
     public void ShowDamage(List<PlayerStats> selectedStats, CombinedStats currentStats)
@@ -85,7 +87,8 @@ namespace EQLogParser
 
             if (PlayerStats != null)
             {
-              foreach (var playerStat in SortSubStats(PlayerStats))
+              var filtered = CurrentShowPets ? PlayerStats : PlayerStats.Where(playerStats => DataManager.Instance.CheckNameForPlayer(playerStats.Name));
+              foreach (var playerStat in SortSubStats(filtered.ToList()))
               {
                 Dispatcher.InvokeAsync(() =>
                 {
@@ -119,7 +122,7 @@ namespace EQLogParser
     private List<PlayerSubStats> BuildWithGroupedSpells(PlayerStats playerStats, List<PlayerSubStats> all)
     {
       List<PlayerSubStats> list = new List<PlayerSubStats>();
-      PlayerSubStats dots = new PlayerSubStats() { Name = "DoT Tick" };
+      PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT_TYPE };
 
       all.ForEach(sub =>
       {
@@ -215,12 +218,13 @@ namespace EQLogParser
       }
     }
 
-    private void GroupSpellsCheckChange(object sender, RoutedEventArgs e)
+    private void OptionsChange(object sender, RoutedEventArgs e)
     {
       // check if call is during initialization
       if (PlayerStats != null)
       {
-        CurrentGroupSpellsSetting = groupSpellDamage.IsChecked ?? false;
+        CurrentGroupSpellsSetting = groupSpellDamage.IsChecked.Value;
+        CurrentShowPets = showPets.IsChecked.Value;
         Display();
       }
     }

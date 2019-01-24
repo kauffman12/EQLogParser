@@ -38,22 +38,27 @@ namespace EQLogParser
 
       string title = "";
       string details = "";
+      string shortTitle = "";
 
-      if (selected != null && currentStats != null)
+      if (currentStats != null)
       {
-        foreach (PlayerStats stats in selected.OrderByDescending(item => item.TotalDamage))
+        if (selected != null)
         {
-          string playerFormat = rankPlayers ? String.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : String.Format(PLAYER_FORMAT, stats.Name);
-          string damageFormat = String.Format(DAMAGE_FORMAT, Helpers.FormatDamage(stats.TotalDamage), Helpers.FormatDamage(stats.DPS));
-          string timeFormat = String.Format(TIME_FORMAT, stats.TotalSeconds);
-          list.Add(playerFormat + damageFormat + " " + timeFormat);
+          foreach (PlayerStats stats in selected.OrderByDescending(item => item.TotalDamage))
+          {
+            string playerFormat = rankPlayers ? String.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : String.Format(PLAYER_FORMAT, stats.Name);
+            string damageFormat = String.Format(DAMAGE_FORMAT, Helpers.FormatDamage(stats.TotalDamage), Helpers.FormatDamage(stats.DPS));
+            string timeFormat = String.Format(TIME_FORMAT, stats.TotalSeconds);
+            list.Add(playerFormat + damageFormat + " " + timeFormat);
+          }
         }
 
         details = list.Count > 0 ? ", " + string.Join(", ", list) : "";
         title = BuildTitle(currentStats, showTotals);
+        shortTitle = BuildTitle(currentStats, false);
       }
 
-      return new StatsSummary() { Title = title, RankedPlayers = details };
+      return new StatsSummary() { Title = title, RankedPlayers = details, ShortTitle = shortTitle };
     }
 
     internal static CombinedStats BuildTotalStats(List<NonPlayer> selected)

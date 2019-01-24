@@ -48,22 +48,37 @@
         <docking:SplitContainer Orientation="Vertical">
           <docking:ToolWindowContainer>
             <docking:ToolWindow x:Name="npcWindow" Title="NPCs" ContainerAutoHideSize="320, 400" ContainerDockedSize="320,400">
-              <datagrid:ThemedDataGrid x:Name="npcDataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="NonPlayerDataGrid_LoadingRow" SelectionChanged="NonPlayerDataGrid_SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
-                <DataGrid.ContextMenu>
-                  <ContextMenu>
-                    <MenuItem x:Name="npcMenuItemSelectFight" IsEnabled="False" Header="Select This Group" Click="NonPlayerDataGridSelectFight_Click"/>
-                    <Separator />
-                    <MenuItem x:Name="npcMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
-                    <MenuItem x:Name="npcMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
-                    <Separator />
-                    <MenuItem x:Name="npcMenuItemClear" IsEnabled="False" Header="Clear" Click="DataGridClear_Click"/>
-                  </ContextMenu>
-                </DataGrid.ContextMenu>
-                <DataGrid.Columns>
-                  <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="96" Width="96" MaxWidth="96"/>
-                  <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90*" />
-                </DataGrid.Columns>
-              </datagrid:ThemedDataGrid>
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="30" />
+                  <RowDefinition Height="500*" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                  <TextBox x:Name="npcSearchBox" Margin="8,0,0,0" Background="#202020" Foreground="#EEEEEE" Height="20" Width="180" GotFocus="NPCSearchBox_GotFocus" LostFocus="NPCSearchBox_LostFocus" TextChanged="NPCSearchBox_TextChanged" PreviewKeyDown="NPCSearchBox_KeyDown"/>
+                </StackPanel>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+                  <CheckBox x:Name="npcShowBreaks" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="NonPlayerDataGridShowBreak_Change" Unchecked="NonPlayerDataGridShowBreak_Change">Show Inactivty</CheckBox>
+                </StackPanel>
+                <datagrid:ThemedDataGrid x:Name="npcDataGrid" Grid.Row="1" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="NonPlayerDataGrid_LoadingRow" SelectionChanged="NonPlayerDataGrid_SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
+                  <DataGrid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem x:Name="npcMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="NonPlayerDataGridSetPet_Click"/>
+                      <MenuItem x:Name="npcMenuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="NonPlayerDataGridSetPlayer_Click"/>
+                      <Separator />
+                      <MenuItem x:Name="npcMenuItemSelectFight" IsEnabled="False" Header="Select This Group" Click="NonPlayerDataGridSelectFight_Click"/>
+                      <Separator />
+                      <MenuItem x:Name="npcMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
+                      <MenuItem x:Name="npcMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
+                      <Separator />
+                      <MenuItem x:Name="npcMenuItemClear" IsEnabled="False" Header="Clear" Click="DataGridClear_Click"/>
+                    </ContextMenu>
+                  </DataGrid.ContextMenu>
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="96" Width="96" MaxWidth="96"/>
+                    <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90*" />
+                  </DataGrid.Columns>
+                </datagrid:ThemedDataGrid>
+              </Grid>
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>
@@ -101,9 +116,7 @@
                         <RowDefinition Height="300*" />
                       </Grid.RowDefinitions>
                       <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
-                        <Border BorderBrush="#FF3F3F46" BorderThickness="1,1,2,1" Height="30" Padding="0" Margin="0">
-                          <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
-                        </Border>
+                        <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
                       </StackPanel>
                       <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" HorizontalScrollBarVisibility="Disabled" Grid.Row="1" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
                         <DataGrid.ContextMenu>
@@ -176,8 +189,7 @@
                           <DataGridTextColumn Binding="{Binding AvgLucky}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
                           <DataGridTextColumn Binding="{Binding CritRate}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
                           <DataGridTextColumn Binding="{Binding LuckRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                          <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% TC" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
-                          <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="False"  CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
+                          <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="False"  CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
                           <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="120*" />
                         </DataGrid.Columns>
                         <DataGrid.RowDetailsTemplate>
