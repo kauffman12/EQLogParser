@@ -91,7 +91,7 @@ namespace EQLogParser
       // store spells and melee hits separately
       Dictionary<string, Hit> aHitMap;
       string aType;
-      if (record.Type == "DoT Tick")
+      if (record.Type == Labels.DOT_TYPE)
       {
         aHitMap = stats.SpellMap;
         aType = record.Spell;
@@ -500,12 +500,12 @@ namespace EQLogParser
     {
       NonPlayer npc = DataManager.Instance.GetNonPlayer(record.Defender);
 
-      if (npc == null && Char.IsUpper(record.Defender[0]) && record.Type == "DoT Tick")
+      if (npc == null && Char.IsUpper(record.Defender[0]) && record.Type == Labels.DOT_TYPE)
       {
         // DoTs will show upper case when they shouldn't because they start a sentence
         npc = DataManager.Instance.GetNonPlayer(Char.ToLower(record.Defender[0]) + record.Defender.Substring(1));
       }
-      else if (npc == null && Char.IsLower(record.Defender[0]) && record.Type == "Direct Damage")
+      else if (npc == null && Char.IsLower(record.Defender[0]) && record.Type == Labels.DD_TYPE)
       {
         // DDs deal with having to work around DoTs
         npc = DataManager.Instance.GetNonPlayer(Char.ToUpper(record.Defender[0]) + record.Defender.Substring(1));

@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
+  public static class Labels
+  {
+    public const string DD_TYPE = "Direct Damage";
+    public const string DOT_TYPE = "DoT Tick";
+  }
+
   public class DamageRecord
   {
     public long Damage { get; set; }
@@ -172,6 +178,7 @@ namespace EQLogParser
   public class StatsSummary
   {
     public string Title { get; set; }
+    public string ShortTitle { get; set; }
     public string RankedPlayers { get; set; }
   }
 

@@ -32,11 +32,12 @@ namespace EQLogParser
     private MainWindow TheMainWindow;
     private static bool running = false;
 
-    public SpellCountTable(MainWindow mainWindow)
+    public SpellCountTable(MainWindow mainWindow, StatsSummary summary)
     {
       InitializeComponent();
-
       TheMainWindow = mainWindow;
+      title.Content = summary.ShortTitle;
+
       spellCountDataGrid.Sorting += (s, e2) =>
       {
         if (e2.Column.Header != null && (e2.Column.Header.ToString() != ""))

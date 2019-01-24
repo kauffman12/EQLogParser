@@ -3,17 +3,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:EQLogParser"
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="25"></RowDefinition>
+      <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+    </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="groupSpellDamage" IsChecked="True" Margin="0,2,8,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="GroupSpellsCheckChange" Unchecked="GroupSpellsCheckChange">Group DoT Damage</CheckBox>
+      <CheckBox x:Name="showPets" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Show Pets</CheckBox>
+      <CheckBox x:Name="groupSpellDamage" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Group DoT Damage</CheckBox>
     </StackPanel>
       <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="False" Sorting="Custom_Sorting" LoadingRow="Loading_Row">
       <DataGrid.Columns>
@@ -29,7 +32,7 @@
         <DataGridTextColumn Binding="{Binding CritRate}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
         <DataGridTextColumn Binding="{Binding LuckRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
         <DataGridTextColumn Binding="{Binding TwincastRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% TC" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50*"/>
-        <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+        <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
       </DataGrid.Columns>
     </datagrid:ThemedDataGrid>
     </Grid>

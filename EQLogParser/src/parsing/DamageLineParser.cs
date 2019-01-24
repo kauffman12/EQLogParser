@@ -71,7 +71,7 @@ namespace EQLogParser
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
 
           // check other things
-          if (!CheckForPlayers(pline))
+          if (!CheckForPlayersOrNPCs(pline))
           {
             CheckForPetLeader(pline);
           }
@@ -153,14 +153,22 @@ namespace EQLogParser
       return found;
     }
 
-    private static bool CheckForPlayers(ProcessLine pline)
+    private static bool CheckForPlayersOrNPCs(ProcessLine pline)
     {
       bool found = false;
       int index = -1;
-      if (pline.ActionPart.StartsWith("Targeted (Player)", StringComparison.Ordinal))
+      if (pline.ActionPart.StartsWith("Targeted (", StringComparison.Ordinal))
       {
-        DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
-        found = true;
+        if (pline.ActionPart.Length > 20 && pline.ActionPart[10] == 'P' && pline.ActionPart[11] == 'l') // Player
+        {
+          DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
+          found = true;
+        }
+        //else if (pline.ActionPart.Length > 17 && pline.ActionPart[10] == 'N' && pline.ActionPart[11] == 'P') // NPC + Pet..
+        //{
+        //  DataManager.Instance.UpdateDefinitelyNotAPlayer(pline.ActionPart.Substring(16));
+        //  found = true;
+        //}
       }
       else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
         && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
@@ -218,8 +226,14 @@ namespace EQLogParser
 
         if (record != null && record.Attacker != record.Defender)
         {
+          if (DataManager.Instance.IsProbablyNotAPlayer(record.Attacker))
+          {
+            DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Defender);
+            record = null;
+          }
+
           // if updating this fails then it's definitely a player or pet
-          if (!DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender))
+          if (record != null && !DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender))
           {
             record = null;
           }
@@ -347,7 +361,7 @@ namespace EQLogParser
                       if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
                       {
                         action = "DoT";
-                        type = "DoT Tick";
+                        type = Labels.DOT_TYPE;
                         afterAction = sizeSoFar + "has taken".Length + 1;
                         defenderPetType = petType;
                         defenderOwner = owner;
@@ -387,7 +401,7 @@ namespace EQLogParser
                 if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
                 {
                   action = "DoT";
-                  type = "DoT Tick";
+                  type = Labels.DOT_TYPE;
                   afterAction = sizeSoFar + "has taken".Length + 1;
                   defender = player;
                 }
@@ -403,7 +417,7 @@ namespace EQLogParser
             {
               action = "DoT";
               defender = part.Substring(0, hasTakenIndex - 1);
-              type = "DoT Tick";
+              type = Labels.DOT_TYPE;
               afterAction = hasTakenIndex + 10;
             }
           }
@@ -445,7 +459,7 @@ namespace EQLogParser
                         found = true;
                         if (part.Substring(points + 8, 6) == "of non")
                         {
-                          type = "Direct Damage";
+                          type = Labels.DD_TYPE;
                         }
                       }
                     }
