@@ -146,11 +146,6 @@ namespace EQLogParser
                 pageSlider.Value = 0;
                 UpdatePageSize();
                 DisplayPage();
-
-                if (type != "Direct Damage" && type != "DoT Tick")
-                {
-                  //LookForDIValues();
-                }
               }
 
               Updating = false;

@@ -22,7 +22,10 @@ namespace EQLogParser
       foreach (var cast in GetCastsDuring(beginTime, endTime).AsParallel().Where(cast => playerList.Contains(cast.Caster)))
       {
         var spellData = DataManager.Instance.GetSpellByAbbrv(cast.SpellAbbrv);
-        UpdateMaps(spellData, cast.Caster, playerCastCounts, maxCastCounts, spellMap);
+        if (spellData != null)
+        {
+          UpdateMaps(spellData, cast.Caster, playerCastCounts, maxCastCounts, spellMap);
+        }
       }
 
       foreach (var received in GetReceivedSpellsDuring(beginTime, endTime).AsParallel().Where(received => playerList.Contains(received.Receiver)))

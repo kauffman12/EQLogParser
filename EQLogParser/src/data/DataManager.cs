@@ -26,6 +26,10 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
     public event EventHandler<bool> EventsClearedActiveData;
 
+    private static string CONFIG_DIR;
+    private static string PETMAP_FILE;
+    private bool PetMappingUpdated = false;
+
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
     private Dictionary<string, byte> AllUniqueSpellCasts = new Dictionary<string, byte>();
     private LRUCache<SpellData> AllUniqueSpellsLRU = new LRUCache<SpellData>(2000, 500, false);
@@ -54,10 +58,6 @@ namespace EQLogParser
     {
       try
       {
-        // Populated generated pets
-        string[] lines = System.IO.File.ReadAllLines(@"data\petnames.txt");
-        lines.ToList().ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
-
         VerifiedPlayers["himself"] = 1;
         VerifiedPlayers["herself"] = 1;
         VerifiedPlayers["itself"] = 1;
@@ -68,44 +68,61 @@ namespace EQLogParser
         VerifiedPlayers["Your"] = 1;
         VerifiedPlayers["YOUR"] = 1;
 
-        DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
-        lines = System.IO.File.ReadAllLines(@"data\spells.txt");
-
-        foreach (string line in lines)
+        // Populated generated pets
+        if (System.IO.File.Exists(@"data\petnames.txt"))
         {
-          string[] data = line.Split('^');
-          int beneficial;
-          Int32.TryParse(data[2], out beneficial);
-          int classMask;
-          Int32.TryParse(data[3], out classMask);
-          SpellData spellData = new SpellData()
-          {
-            ID = data[0],
-            Spell = data[1],
-            SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
-            Beneficial = (beneficial != 0),
-            ClassMask = classMask,
-            LandsOnYou = data[4],
-            LandsOnOther = data[5]
-          };
+          string[] lines = System.IO.File.ReadAllLines(@"data\petnames.txt");
+          lines.ToList().ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
+        }
 
-          SpellsDB[spellData.ID] = spellData;
-          SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+        if (System.IO.File.Exists(@"data\spells.txt"))
+        {
+          DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
+          string[] lines = System.IO.File.ReadAllLines(@"data\spells.txt");
 
-          if (spellData.LandsOnOther.StartsWith("'s "))
+          foreach (string line in lines)
           {
-            helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
-          }
-          else if (spellData.LandsOnOther.Length > 1)
-          {
-            helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
-          }
+            string[] data = line.Split('^');
+            int beneficial;
+            Int32.TryParse(data[2], out beneficial);
+            int classMask;
+            Int32.TryParse(data[3], out classMask);
+            SpellData spellData = new SpellData()
+            {
+              ID = data[0],
+              Spell = data[1],
+              SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
+              Beneficial = (beneficial != 0),
+              ClassMask = classMask,
+              LandsOnYou = data[4],
+              LandsOnOther = data[5]
+            };
 
-          if (spellData.LandsOnYou != "" && spellData.LandsOnOther != "") // just do stuff in common
-          {
-            helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
+            SpellsDB[spellData.ID] = spellData;
+            SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+
+            if (spellData.LandsOnOther.StartsWith("'s "))
+            {
+              helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
+            }
+            else if (spellData.LandsOnOther.Length > 1)
+            {
+              helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
+            }
+
+            if (spellData.LandsOnYou != "" && spellData.LandsOnOther != "") // just do stuff in common
+            {
+              helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
+            }
           }
         }
+
+        // needs to be during class initialization for some reason
+        CONFIG_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\config");
+        PETMAP_FILE = CONFIG_DIR + @"\petmapping.txt";
+
+        // create config dir if it doesn't exist
+        System.IO.Directory.CreateDirectory(CONFIG_DIR);
       }
       catch (Exception e)
       {
@@ -155,12 +172,73 @@ namespace EQLogParser
       ActiveNonPlayerMap.Clear();
       LifetimeNonPlayerMap.Clear();
       ProbablyNotAPlayer.Clear();
-      DefinitelyNotAPlayer.Clear();
+      UnVerifiedPetOrPlayer.Clear();
       AllSpellCasts.Clear();
       AllUniqueSpellCasts.Clear();
       AllUniqueSpellsLRU.Clear();
       AllReceivedSpells.Clear();
       EventsClearedActiveData(this, true);
+    }
+
+    public void LoadState()
+    {
+      lock(this)
+      {
+        try
+        {
+          UpdateVerifiedPlayers(UNASSIGNED_PET_OWNER);
+
+          if (System.IO.File.Exists(PETMAP_FILE))
+          {
+            string[] lines = System.IO.File.ReadAllLines(PETMAP_FILE);
+            foreach (string line in lines)
+            {
+              string[] parts = line.Split('=');
+              if (parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
+              {
+                UpdatePetToPlayer(parts[0], parts[1]);
+                UpdateVerifiedPlayers(parts[1]);
+                UpdateVerifiedPets(parts[0]);
+              }
+            }
+          }
+        }
+        catch (Exception ex)
+        {
+          LOG.Error(ex);
+        }
+      }
+
+      // dont count initial load
+      PetMappingUpdated = false;
+    }
+
+    public void SaveState()
+    {
+      lock(this)
+      {
+        try
+        {
+          if (PetMappingUpdated)
+          {
+            List<string> lines = new List<string>();
+            foreach (var keypair in PetToPlayerMap)
+            {
+              if (keypair.Value != UNASSIGNED_PET_OWNER)
+              {
+                lines.Add(keypair.Key + "=" + keypair.Value);
+              }
+            }
+
+            System.IO.File.WriteAllLines(PETMAP_FILE, lines);
+            PetMappingUpdated = false;
+          }
+        }
+        catch(Exception ex)
+        {
+          LOG.Error(ex);
+        }
+      }
     }
 
     public void AddNonPlayerMapBreak(string text)
@@ -203,7 +281,6 @@ namespace EQLogParser
       AttackerReplacement["Your"] = name;
       AttackerReplacement["YOUR"] = name;
       UpdateVerifiedPlayers(name);
-      UpdateVerifiedPlayers(UNASSIGNED_PET_OWNER);
     }
 
     public string ReplaceAttacker(string attacker, out bool replaced)
@@ -437,7 +514,13 @@ namespace EQLogParser
       {
         PetToPlayerMap[pet] = player;
         EventsUpdatePetMapping(this, new PetMapping() { Pet = pet, Owner = player });
+        PetMappingUpdated = true;
       }
+    }
+
+    public void UpdateDefinitelyNotAPlayer(string name)
+    {
+      DefinitelyNotAPlayer[name] = 1;
     }
 
     public bool UpdateProbablyNotAPlayer(string name)
@@ -504,6 +587,9 @@ namespace EQLogParser
       // remove from ProbablyNotAPlayer if it exists
       long value;
       ProbablyNotAPlayer.TryRemove(name, out value);
+
+      byte bvalue;
+      UnVerifiedPetOrPlayer.TryRemove(name, out bvalue);
     }
 
     private void CheckNonPlayerMap(string name)

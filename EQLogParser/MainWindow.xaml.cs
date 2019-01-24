@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -33,13 +34,14 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.2.4";
+    private const string VERSION = "v1.2.6";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
+    private const string NPC_SEARCH_TEXT = "NPC Search";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
     private const int MIN_LINE_LENGTH = 33;
-    private const int DISPATCHER_DELAY = 150; // millis
+    private const int DISPATCHER_DELAY = 200; // millis
     private static long CastLineCount = 0;
     private static long DamageLineCount = 0;
     private static long CastLinesProcessed = 0;
@@ -54,12 +56,19 @@ namespace EQLogParser
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<NonPlayer> NonPlayersView = new ObservableCollection<NonPlayer>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
+    private CollectionViewSource NonPlayersViewSource;
+
+    // NPC Search
+    private static int CurrentNpcSearchIndex = 0;
+    private static DataGridRow CurrentSearchRow = null;
 
     // stats
     private static bool NeedStatsUpdate = false;
     private static bool UpdatingStats = false;
     private static bool NeedDPSTextUpdate = false;
+    private static bool NeedDPSSelectedUpdate = false;
     private static CombinedStats CurrentStats = null;
+    private static StatsSummary CurrentSummary = null;
     private DispatcherTimer NonPlayerSelectionTimer;
 
     // progress window
@@ -85,6 +94,10 @@ namespace EQLogParser
         Title = APP_NAME + " " + VERSION;
         dpsTitle.Content = DPS_LABEL;
 
+        // npc search box
+        npcSearchBox.FontStyle = FontStyles.Italic;
+        npcSearchBox.Text = NPC_SEARCH_TEXT;
+
         // Clear/Reset
         DataManager.Instance.EventsClearedActiveData += (sender, cleared) =>
         {
@@ -93,9 +106,13 @@ namespace EQLogParser
           ResetDPSChart();
           playerDataGrid.ItemsSource = null;
           npcMenuItemClear.IsEnabled = npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
+          npcMenuItemSetPet.IsEnabled = npcMenuItemSetPlayer.IsEnabled = false;
           dpsTitle.Content = DPS_LABEL;
-          NeedStatsUpdate = NeedDPSTextUpdate = true;
+          NeedStatsUpdate = NeedDPSTextUpdate = NeedDPSSelectedUpdate = true;
         };
+
+        NonPlayersViewSource = new CollectionViewSource() { Source = NonPlayersView };
+        npcDataGrid.ItemsSource = NonPlayersViewSource.View;
 
         // pet -> players
         petMappingGrid.ItemsSource = PetPlayersView;
@@ -119,7 +136,7 @@ namespace EQLogParser
         verifiedPetsGrid.ItemsSource = VerifiedPetsView;
         DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          VerifiedPetsView.Add(new SortableName() { Name = name });
+          insertNameIntoSortedList(name, VerifiedPetsView);
           verifiedPetsWindow.Title = "Pets (" + VerifiedPetsView.Count + ")";
         });
 
@@ -127,24 +144,12 @@ namespace EQLogParser
         verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
         DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          var entry = new SortableName() { Name = name };
-          int index = VerifiedPlayersView.ToList().BinarySearch(entry, TheSortableNameComparer);
-          if (index < 0)
-          {
-            VerifiedPlayersView.Insert(~index, entry);
-          }
-          else
-          {
-            VerifiedPlayersView.Insert(index, entry);
-          }
-
+          insertNameIntoSortedList(name, VerifiedPlayersView);
           verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersView.Count + ")";
         });
 
         VerifiedPlayersProperty = VerifiedPlayersView;
 
-        // List of NPCs to select from, damage is saved in the NonPlayer object
-        npcDataGrid.ItemsSource = NonPlayersView;
         DataManager.Instance.EventsUpdatedNonPlayer += (sender, npc) => NeedStatsUpdate = (CurrentStats != null && CurrentStats.NpcIDs.Contains(npc.ID));
         DataManager.Instance.EventsRemovedNonPlayer += (sender, name) => RemoveNonPlayer(name);
         DataManager.Instance.EventsNewNonPlayer += (sender, npc) => AddNonPlayer(npc);
@@ -176,6 +181,9 @@ namespace EQLogParser
         SharedThemeCatalogRegistrar.Register();
         DockingThemeCatalogRegistrar.Register();
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
+
+        // after everything else is done
+        DataManager.Instance.LoadState();
       }
       catch (Exception e)
       {
@@ -195,6 +203,7 @@ namespace EQLogParser
     private void Window_Closed(object sender, System.EventArgs e)
     {
       StopProcessing();
+      DataManager.Instance.SaveState();
       Application.Current.Shutdown();
     }
 
@@ -211,8 +220,22 @@ namespace EQLogParser
 
       if (NeedScrollIntoView)
       {
-        npcDataGrid.ScrollIntoView(npcDataGrid.Items.CurrentItem);
+        npcDataGrid.ScrollIntoView(NonPlayersView.Last());
         NeedScrollIntoView = false;
+      }
+    }
+
+    private void insertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
+    {
+      var entry = new SortableName() { Name = name };
+      int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
+      if (index < 0)
+      {
+        collection.Insert(~index, entry);
+      }
+      else
+      {
+        collection.Insert(index, entry);
       }
     }
 
@@ -287,7 +310,6 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         NonPlayersView.Add(npc);
-        npcDataGrid.Items.MoveCurrentToLast();
         if (!npcDataGrid.IsMouseOver)
         {
           NeedScrollIntoView = true;
@@ -328,6 +350,9 @@ namespace EQLogParser
       npcMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
       npcMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
       npcMenuItemClear.IsEnabled = callingDataGrid.Items.Count > 0;
+
+      var selected = callingDataGrid.SelectedItem as NonPlayer;
+      npcMenuItemSetPet.IsEnabled = npcMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1;
     }
 
     private void NonPlayerDataGridSelectFight_Click(object sender, RoutedEventArgs e)
@@ -344,6 +369,44 @@ namespace EQLogParser
             Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one));
           }
         });
+      }
+    }
+
+    private void NonPlayerDataGridShowBreak_Change(object sender, RoutedEventArgs e)
+    {
+      if (NonPlayersView != null && NonPlayersViewSource != null)
+      {
+        if (npcShowBreaks.IsChecked.Value)
+        {
+          NonPlayersViewSource.View.Filter = null;
+        }
+        else
+        {
+          NonPlayersViewSource.View.Filter = new Predicate<object>(item => ((NonPlayer) item).GroupID > -1);
+        }
+      }
+    }
+
+    private void NonPlayerDataGridSetPet_Click(object sender, RoutedEventArgs e)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
+      if (npc != null && npc.GroupID > -1)
+      {
+        DataManager.Instance.UpdateVerifiedPets(npc.Name);
+        DataManager.Instance.UpdatePetToPlayer(npc.Name, DataManager.UNASSIGNED_PET_OWNER);
+      }
+    }
+
+    private void NonPlayerDataGridSetPlayer_Click(object sender, RoutedEventArgs e)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
+      if (npc != null && npc.GroupID > -1)
+      {
+        DataManager.Instance.UpdateVerifiedPlayers(npc.Name);
       }
     }
 
@@ -383,8 +446,8 @@ namespace EQLogParser
     // Player DPS Data Grid
     private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      NeedDPSTextUpdate = true;
       UpdatePlayerDataGridMenuItems();
+      NeedDPSTextUpdate = NeedDPSSelectedUpdate = true;
     }
 
     private void PlayerDataGridExpander_Loaded(object sender, RoutedEventArgs e)
@@ -482,7 +545,7 @@ namespace EQLogParser
 
     private void ShowSpellCasts(List<PlayerStats> selectedStats)
     {
-      var spellTable = new SpellCountTable(this);
+      var spellTable = new SpellCountTable(this, CurrentSummary);
       spellTable.ShowSpells(selectedStats, CurrentStats);
       var spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, spellTable);
       Helpers.OpenWindow(spellCastsWindow);
@@ -505,7 +568,7 @@ namespace EQLogParser
 
     private void ShowDamage(List<PlayerStats> selectedStats)
     {
-      var damageTable = new DamageTable(this);
+      var damageTable = new DamageTable(this, CurrentSummary);
       damageTable.ShowDamage(selectedStats, CurrentStats);
       var damageWindow = new DocumentWindow(dockSite, "damageWindow", "Damage Breakdown", null, damageTable);
       Helpers.OpenWindow(damageWindow);
@@ -542,7 +605,7 @@ namespace EQLogParser
     // Player DPS Text/Send to EQ Window
     private void CopyToEQ_Click(object sender, RoutedEventArgs e)
     {
-      Clipboard.SetText(playerDPSTextBox.Text);
+      Clipboard.SetDataObject(playerDPSTextBox.Text);
     }
 
     private void PlayerDPSText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
@@ -581,6 +644,9 @@ namespace EQLogParser
           busyIcon.Visibility = Visibility.Hidden;
           processedCastsLabel.Content = "-";
           processedDamageLabel.Content = "-";
+          npcDataGrid.Items.MoveCurrentToLast();
+
+          DataManager.Instance.SaveState();
           LOG.Info("Finished Loading Log File");
         }
       }
@@ -599,23 +665,31 @@ namespace EQLogParser
         DataGrid grid = playerDataGrid;
         Label label = dpsTitle;
 
-        var selected = grid.SelectedItems;
-        if (selected != null && CurrentStats != null && selected.Count > 0)
+        if (CurrentStats != null)
         {
-          List<PlayerStats> list = selected.Cast<PlayerStats>().ToList();
-          StatsSummary summary = StatsBuilder.BuildSummary(CurrentStats, list, playerDPSTextDoTotals.IsChecked ?? false, playerDPSTextDoRank.IsChecked ?? false);
-          playerDPSTextBox.Text = summary.Title + summary.RankedPlayers;
-          playerDPSTextBox.SelectAll();
-          UpdateDPSChart("Selected Players DPS Over Time", list);
-        }
-        else
-        {
-          playerDPSTextBox.Text = dpsTitle.Content as string;
-
-          if (CurrentStats != null)
+          List<PlayerStats> list = null;
+          if (grid.SelectedItems != null && grid.SelectedItems.Count > 0)
           {
-            var list = CurrentStats.StatsList.Take(5).ToList();
-            UpdateDPSChart("Top " + list.Count + " DPS Over Time", CurrentStats.StatsList.Take(5).ToList());
+            list = grid.SelectedItems.Cast<PlayerStats>().ToList();
+          }
+
+          CurrentSummary = StatsBuilder.BuildSummary(CurrentStats, list, playerDPSTextDoTotals.IsChecked.Value, playerDPSTextDoRank.IsChecked.Value);
+          playerDPSTextBox.Text = CurrentSummary.Title + CurrentSummary.RankedPlayers;
+          playerDPSTextBox.SelectAll();
+
+          if (NeedDPSSelectedUpdate)
+          {
+            if (list != null && list.Count > 0)
+            {
+              UpdateDPSChart("Selected Players DPS Over Time", list);
+            }
+            else
+            {
+              list = CurrentStats.StatsList.Take(5).ToList();
+              UpdateDPSChart("Top " + list.Count + " DPS Over Time", list);
+            }
+
+            NeedDPSSelectedUpdate = false;
           }
         }
 
@@ -891,6 +965,94 @@ namespace EQLogParser
       public int Compare(SortableName x, SortableName y)
       {
         return x.Name.CompareTo(y.Name);
+      }
+    }
+
+    private void NPCSearchBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+      if (npcSearchBox.Text == NPC_SEARCH_TEXT)
+      {
+        npcSearchBox.Text = "";
+        npcSearchBox.FontStyle = FontStyles.Normal;
+      }
+    }
+
+    private void NPCSearchBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+      if (npcSearchBox.Text == "")
+      {
+        npcSearchBox.Text = NPC_SEARCH_TEXT;
+        npcSearchBox.FontStyle = FontStyles.Italic;
+      }
+    }
+
+    private void NPCSearchBox_KeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Escape)
+      {
+        npcSearchBox.Text = NPC_SEARCH_TEXT;
+        npcSearchBox.FontStyle = FontStyles.Italic;
+        if (CurrentSearchRow != null)
+        {
+          CurrentSearchRow.Background = null;
+        }
+        npcDataGrid.Focus();
+      }
+      else if (e.Key == Key.Enter)
+      {
+        SearchForNPC();
+      }
+    }
+
+    private void NPCSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+      SearchForNPC();
+    }
+
+    private void SearchForNPC()
+    {
+      if (CurrentSearchRow != null)
+      {
+        CurrentSearchRow.Background = null;
+      }
+
+      if (npcSearchBox.Text.Length > 2 && npcDataGrid.Items.Count > 0)
+      {
+        if (CurrentNpcSearchIndex >= npcDataGrid.Items.Count)
+        {
+          CurrentNpcSearchIndex = 0;
+        }
+
+        int lastIndex = CurrentNpcSearchIndex == 0 ? -1 : CurrentNpcSearchIndex - 1;
+        for (int i = CurrentNpcSearchIndex; i < npcDataGrid.Items.Count; i++)
+        {
+          NonPlayer npc = npcDataGrid.Items[i] as NonPlayer;
+          if (npc != null && npc.Name != null && npc.Name.IndexOf(npcSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
+          {
+            npcDataGrid.ScrollIntoView(npcDataGrid.Items[i]);
+            npcDataGrid.GetRow(i).Background = new SolidColorBrush(Colors.DarkGreen);
+            CurrentSearchRow = npcDataGrid.GetRow(i);
+            CurrentNpcSearchIndex = i + 1;
+            return;
+          }
+        }
+
+        // search from the beginning if needed
+        if (lastIndex > -1)
+        {
+          for (int i = 0; i < CurrentNpcSearchIndex; i++)
+          {
+            NonPlayer npc = npcDataGrid.Items[i] as NonPlayer;
+            if (npc != null && npc.Name != null && npc.Name.IndexOf(npcSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
+            {
+              npcDataGrid.ScrollIntoView(npcDataGrid.Items[i]);
+              npcDataGrid.GetRow(i).Background = new SolidColorBrush(Colors.DarkGreen);
+              CurrentSearchRow = npcDataGrid.GetRow(i);
+              CurrentNpcSearchIndex = i + 1;
+              return;
+            }
+          }
+        }
       }
     }
   }
