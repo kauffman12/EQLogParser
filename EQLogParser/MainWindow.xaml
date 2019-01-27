@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
-        Title="" Height="750" Width="1350" Closed="Window_Closed">
+        Title="" Closed="Window_Closed">
   <Window.Resources>
   </Window.Resources>
   <Grid>
@@ -118,7 +118,7 @@
                       <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
                         <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
                       </StackPanel>
-                      <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" HorizontalScrollBarVisibility="Disabled" Grid.Row="1" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
+                      <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" HorizontalScrollBarVisibility="Disabled" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
                         <DataGrid.ContextMenu>
                           <ContextMenu>
                             <MenuItem IsEnabled="True" x:Name="copyToEQRightClick" Header="Copy To EQ" Click="CopyToEQ_Click"></MenuItem>
@@ -178,39 +178,38 @@
                               </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                           </DataGridTemplateColumn>
-                          <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124"/>
-                          <DataGridTextColumn Binding="{Binding TotalDamage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
-                          <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
-                          <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                          <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
-                          <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
-                          <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                          <DataGridTextColumn Binding="{Binding AvgCrit}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                          <DataGridTextColumn Binding="{Binding AvgLucky}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
-                          <DataGridTextColumn Binding="{Binding CritRate}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                          <DataGridTextColumn Binding="{Binding LuckRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                          <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="False"  CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                          <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="120*" />
+                          <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="150" Width="150*"/>
+                          <DataGridTextColumn Binding="{Binding TotalDamage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85*"/>
+                          <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="55" Width="55*" CanUserReorder="False"/>
+                          <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
+                          <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50*"/>
+                          <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
+                          <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+                          <DataGridTextColumn Binding="{Binding AvgCrit}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+                          <DataGridTextColumn Binding="{Binding AvgLucky}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66*"/>
+                          <DataGridTextColumn Binding="{Binding CritRate}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
+                          <DataGridTextColumn Binding="{Binding LuckRate}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+                          <DataGridTextColumn Binding="{Binding PercentString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="False"  CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+                          <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90*" />
                         </DataGrid.Columns>
                         <DataGrid.RowDetailsTemplate>
                           <DataTemplate>
                             <datagrid:ThemedDataGrid x:Name="playerChildrenDataGrid"  IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="PlayerChildrenDataGrid_PrevMouseWheel" HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" EnableRowVirtualization="False" GridLinesVisibility="Vertical">
                               <DataGrid.Columns>
-                                <DataGridTextColumn ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False" MinWidth="47" Width="47" />
-                                <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="124" Width="124"/>
-                                <DataGridTextColumn Binding="{Binding TotalDamage}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="85" Width="85"/>
-                                <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" MinWidth="55" Width="55" CanUserReorder="False"/>
-                                <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                                <DataGridTextColumn Binding="{Binding Hits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/>
-                                <DataGridTextColumn Binding="{Binding Max}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70"/>
-                                <DataGridTextColumn Binding="{Binding Avg}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                                <DataGridTextColumn Binding="{Binding AvgCrit}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                                <DataGridTextColumn Binding="{Binding AvgLucky}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="66" Width="66"/>
-                                <DataGridTextColumn Binding="{Binding CritRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55"/>
-                                <DataGridTextColumn Binding="{Binding LuckRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                                <!-- <DataGridTextColumn Binding="{Binding TwincastRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50"/> -->
-                                <DataGridTextColumn Binding="{Binding PercentString}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60"/>
-                                <DataGridTextColumn Binding="{Binding ClassName}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="120*" />
+                                <DataGridTextColumn ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding TotalDamage}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding Hits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding Max}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding Avg}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding AvgCrit}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding AvgLucky}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding CritRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding LuckRate}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding PercentString}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding ClassName}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
                               </DataGrid.Columns>
                             </datagrid:ThemedDataGrid>
                           </DataTemplate>
