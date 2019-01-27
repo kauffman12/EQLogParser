@@ -30,6 +30,7 @@ namespace EQLogParser
     public static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     public static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     public static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
+    public static SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
     public static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
@@ -57,6 +58,9 @@ namespace EQLogParser
     private ObservableCollection<NonPlayer> NonPlayersView = new ObservableCollection<NonPlayer>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
     private CollectionViewSource NonPlayersViewSource;
+
+    // workaround for adjusting column withs of player datagrid
+    private List<DataGrid> PlayerChildGrids = new List<DataGrid>();
 
     // NPC Search
     private static int CurrentNpcSearchIndex = 0;
@@ -105,6 +109,7 @@ namespace EQLogParser
           NonPlayersView.Clear();
           ResetDPSChart();
           playerDataGrid.ItemsSource = null;
+          PlayerChildGrids.Clear();
           npcMenuItemClear.IsEnabled = npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
           npcMenuItemSetPet.IsEnabled = npcMenuItemSetPlayer.IsEnabled = false;
           dpsTitle.Content = DPS_LABEL;
@@ -163,6 +168,12 @@ namespace EQLogParser
           }
         };
 
+        PropertyDescriptor pd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
+        foreach (var column in playerDataGrid.Columns)
+        {
+          pd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
+        }
+
         DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
 
@@ -192,6 +203,15 @@ namespace EQLogParser
       finally
       {
         ThemeManager.EndUpdate();
+      }
+    }
+
+    private void ColumnWidthPropertyChanged(object sender, EventArgs e)
+    {
+      var column = sender as DataGridColumn;
+      foreach (var grid in PlayerChildGrids)
+      {
+        grid.Columns[column.DisplayIndex].Width = column.ActualWidth;
       }
     }
 
@@ -598,6 +618,13 @@ namespace EQLogParser
         if (childrenDataGrid.ItemsSource != CurrentStats.Children[stats.Name])
         {
           childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
+          PlayerChildGrids.Add(childrenDataGrid);
+
+          // fix column widths
+          foreach (var column in playerDataGrid.Columns)
+          {
+            childrenDataGrid.Columns[column.DisplayIndex].Width = column.ActualWidth;
+          }
         }
       }
     }
@@ -728,6 +755,7 @@ namespace EQLogParser
         {
           dpsTitle.Content = "Calculating DPS...";
           playerDataGrid.ItemsSource = null;
+          PlayerChildGrids.Clear();
 
           var realItems = selected.Cast<NonPlayer>().Where(item => !item.Name.Contains("Inactivity >")).ToList();
           if (realItems.Count > 0)
@@ -1030,7 +1058,7 @@ namespace EQLogParser
           if (npc != null && npc.Name != null && npc.Name.IndexOf(npcSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
           {
             npcDataGrid.ScrollIntoView(npcDataGrid.Items[i]);
-            npcDataGrid.GetRow(i).Background = new SolidColorBrush(Colors.DarkGreen);
+            npcDataGrid.GetRow(i).Background = SEARCH_BRUSH;
             CurrentSearchRow = npcDataGrid.GetRow(i);
             CurrentNpcSearchIndex = i + 1;
             return;
@@ -1046,7 +1074,7 @@ namespace EQLogParser
             if (npc != null && npc.Name != null && npc.Name.IndexOf(npcSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
             {
               npcDataGrid.ScrollIntoView(npcDataGrid.Items[i]);
-              npcDataGrid.GetRow(i).Background = new SolidColorBrush(Colors.DarkGreen);
+              npcDataGrid.GetRow(i).Background = SEARCH_BRUSH;
               CurrentSearchRow = npcDataGrid.GetRow(i);
               CurrentNpcSearchIndex = i + 1;
               return;
