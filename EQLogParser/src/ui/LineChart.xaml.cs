@@ -12,9 +12,9 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DPSChart.xaml
   /// </summary>
-  public partial class DPSChart : UserControl
+  public partial class LineChart : UserControl
   {
-    public DPSChart()
+    public LineChart()
     {
       InitializeComponent();
 

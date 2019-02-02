@@ -149,7 +149,6 @@ namespace EQLogParser
     public List<PlayerStats> StatsList { get; set; }
     public Dictionary<string, List<PlayerStats>> Children { get; set; }
     public PlayerStats RaidStats { get; set; }
-    public SortedSet<long> NpcIDs { get; set; }
     public Dictionary<string, byte> UniqueClasses { get; set; }
   }
 

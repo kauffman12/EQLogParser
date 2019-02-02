@@ -265,7 +265,7 @@ namespace EQLogParser
         firstSeries.ScalesXAt = 0;
         series.Add(firstSeries);
 
-        //lvcChart.DataTooltip = null;
+        lvcChart.DataTooltip = null;
         lvcChart.AxisX[0].Separator.StrokeThickness = 0;
         lvcChart.AxisX[0].Labels = xChartValues;
         lvcChart.AxisY[0].Labels = null;

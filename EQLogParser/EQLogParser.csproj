@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>EQLogParser</RootNamespace>
     <AssemblyName>EQLogParser</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
@@ -85,6 +85,7 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup />
   <ItemGroup>
     <Reference Include="ActiproSoftware.DataGrid.Contrib.Wpf, Version=18.1.673.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -126,8 +127,8 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Numerics" />
-    <Reference Include="System.ValueTuple, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.4.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net461\System.ValueTuple.dll</HintPath>
     </Reference>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -154,11 +155,14 @@
     <Compile Include="src\ui\DamageTable.xaml.cs">
       <DependentUpon>DamageTable.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\DPSChart.xaml.cs">
-      <DependentUpon>DPSChart.xaml</DependentUpon>
+    <Compile Include="src\ui\LineChart.xaml.cs">
+      <DependentUpon>LineChart.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\HitFreqChart.xaml.cs">
       <DependentUpon>HitFreqChart.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\ui\NpcTable.xaml.cs">
+      <DependentUpon>NpcTable.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\SpellCountTable.xaml.cs">
       <DependentUpon>SpellCountTable.xaml</DependentUpon>
@@ -184,11 +188,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\DPSChart.xaml">
+    <Page Include="src\ui\LineChart.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\HitFreqChart.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\NpcTable.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
