@@ -23,7 +23,6 @@ namespace EQLogParser
     public event EventHandler<string> EventsNewVerifiedPlayer;
     public event EventHandler<string> EventsRemovedNonPlayer;
     public event EventHandler<NonPlayer> EventsNewNonPlayer;
-    public event EventHandler<NonPlayer> EventsUpdatedNonPlayer;
     public event EventHandler<bool> EventsClearedActiveData;
 
     private static string CONFIG_DIR;
@@ -472,10 +471,6 @@ namespace EQLogParser
       {
         ActiveNonPlayerMap[name] = npc;
         EventsNewNonPlayer(this, npc);
-      }
-      else
-      {
-        EventsUpdatedNonPlayer(this, npc);
       }
     }
 
