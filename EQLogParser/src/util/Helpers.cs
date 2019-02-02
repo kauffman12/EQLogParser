@@ -1,7 +1,6 @@
 ﻿using LiveCharts;
 using LiveCharts.Wpf;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -88,6 +87,20 @@ namespace EQLogParser
       return seriesCollection;
     }
 
+    internal static void DataGridSelectAll(object sender)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
+      callingDataGrid.SelectAll();
+    }
+
+    internal static void DataGridUnselectAll(object sender)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
+      callingDataGrid.UnselectAll();
+    }
+
     internal static long ParseLong(string str)
     {
       long y = 0;
@@ -154,11 +167,11 @@ namespace EQLogParser
       }
       else if (total < 1000000)
       {
-        result = Math.Round((decimal)total / 1000, 1) + "K";
+        result = Math.Round((decimal)total / 1000, 2) + "K";
       }
       else
       {
-        result = Math.Round((decimal)total / 1000 / 1000, 1) + "M";
+        result = Math.Round((decimal)total / 1000 / 1000, 2) + "M";
       }
 
       return result;
