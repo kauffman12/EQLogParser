@@ -44,7 +44,6 @@ namespace EQLogParser
     private static ActionProcessor<string> CastProcessor = null;
     private static ActionProcessor<string> DamageProcessor = null;
 
-    private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
@@ -111,7 +110,7 @@ namespace EQLogParser
         verifiedPetsGrid.ItemsSource = VerifiedPetsView;
         DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          insertNameIntoSortedList(name, VerifiedPetsView);
+          Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
           verifiedPetsWindow.Title = "Pets (" + VerifiedPetsView.Count + ")";
         });
 
@@ -119,7 +118,7 @@ namespace EQLogParser
         verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
         DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          insertNameIntoSortedList(name, VerifiedPlayersView);
+          Helpers.InsertNameIntoSortedList(name, VerifiedPlayersView);
           verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersView.Count + ")";
         });
 
@@ -190,20 +189,6 @@ namespace EQLogParser
     private void PlayerDPSTextWindow_Loaded(object sender, RoutedEventArgs e)
     {
       playerDPSTextWindow.State = DockingWindowState.AutoHide;
-    }
-
-    private void insertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
-    {
-      var entry = new SortableName() { Name = name };
-      int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
-      if (index < 0)
-      {
-        collection.Insert(~index, entry);
-      }
-      else
-      {
-        collection.Insert(index, entry);
-      }
     }
 
     // Main Menu
@@ -783,20 +768,9 @@ namespace EQLogParser
 
     private void StopProcessing()
     {
-      if (EQLogReader != null)
-      {
-        EQLogReader.Stop();
-      }
-
-      if (CastProcessor != null)
-      {
-        CastProcessor.Stop();
-      }
-
-      if (DamageProcessor != null)
-      {
-        DamageProcessor.Stop();
-      }
+      EQLogReader?.Stop();
+      CastProcessor?.Stop();
+      DamageProcessor?.Stop();
     }
   }
 }
