@@ -37,6 +37,7 @@ namespace EQLogParser
     private CollectionViewSource NonPlayersViewSource;
 
     private DispatcherTimer SelectionTimer;
+    private DispatcherTimer SearchTextTimer;
     private DispatcherTimer UpdateTimer;
 
     public NpcTable()
@@ -57,9 +58,16 @@ namespace EQLogParser
       SelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, 400);
       SelectionTimer.Tick += (sender, e) =>
       {
-        //NeedStatsUpdate = true;
         SelectionTimer.Stop();
         EventsSelectionChange(this, npcDataGrid.SelectedItems);
+      };
+
+      SearchTextTimer = new DispatcherTimer();
+      SearchTextTimer.Interval = new TimeSpan(0, 0, 0, 0, 400);
+      SearchTextTimer.Tick += (sender, e) =>
+      {
+        SearchTextTimer.Stop();
+        HandleSearchTextChanged();
       };
 
       UpdateTimer = new DispatcherTimer();
@@ -224,6 +232,14 @@ namespace EQLogParser
       }
     }
 
+    private void HandleSearchTextChanged()
+    {
+      if (npcSearchBox.Text.Length > 0)
+      {
+        SearchForNPC();
+      }
+    }
+
     private void NPCSearchBox_GotFocus(object sender, RoutedEventArgs e)
     {
       if (npcSearchBox.Text == NPC_SEARCH_TEXT)
@@ -327,6 +343,16 @@ namespace EQLogParser
             CurrentNpcSearchIndex = (direction == 1) ? CurrentNpcSearchIndex = 0 : CurrentNpcSearchIndex = npcDataGrid.Items.Count - 1;
           }
         }
+      }
+    }
+
+    private void NPCSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+      SearchTextTimer?.Stop();
+
+      if (e.Changes.FirstOrDefault(change => change.AddedLength > 0) != null)
+      {
+        SearchTextTimer?.Start();
       }
     }
   }
