@@ -12,7 +12,7 @@
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="npcSearchBox" Margin="8,0,0,0" Background="#202020" Foreground="#EEEEEE" Height="20" Width="160" GotFocus="NPCSearchBox_GotFocus" LostFocus="NPCSearchBox_LostFocus" PreviewKeyDown="NPCSearchBox_KeyDown"/>
+      <TextBox x:Name="npcSearchBox" Margin="8,0,0,0" Background="#202020" Foreground="#EEEEEE" Height="20" Width="160" GotFocus="NPCSearchBox_GotFocus" LostFocus="NPCSearchBox_LostFocus" PreviewKeyDown="NPCSearchBox_KeyDown" TextChanged="NPCSearchBox_TextChanged"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="npcShowBreaks" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowBreak_Change" Unchecked="ShowBreak_Change">Show Inactivty</CheckBox>
