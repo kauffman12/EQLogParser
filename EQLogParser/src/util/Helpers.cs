@@ -2,6 +2,7 @@
 using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -12,6 +13,8 @@ namespace EQLogParser
 {
   class Helpers
   {
+    private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
+
     internal static string AbbreviateSpellName(string spell)
     {
       string result = spell;
@@ -99,6 +102,20 @@ namespace EQLogParser
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
       callingDataGrid.UnselectAll();
+    }
+
+    internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
+    {
+      var entry = new SortableName() { Name = name };
+      int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
+      if (index < 0)
+      {
+        collection.Insert(~index, entry);
+      }
+      else
+      {
+        collection.Insert(index, entry);
+      }
     }
 
     internal static long ParseLong(string str)
