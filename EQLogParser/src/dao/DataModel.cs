@@ -3,6 +3,14 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
+  public class SortableNameComparer : IComparer<SortableName>
+  {
+    public int Compare(SortableName x, SortableName y)
+    {
+      return x.Name.CompareTo(y.Name);
+    }
+  }
+
   public static class Labels
   {
     public const string DD_TYPE = "Direct Damage";
