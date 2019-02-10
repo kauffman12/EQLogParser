@@ -293,14 +293,20 @@ namespace EQLogParser
   {
     internal void Add(Dictionary<T1, T2> dict, T1 key, T2 value)
     {
-      if (!dict.ContainsKey(key))
+      lock(dict)
       {
-        dict[key] = default(T2);
+        if (!dict.ContainsKey(key))
+        {
+          dict[key] = default(T2);
+        }
       }
 
-      dynamic temp = dict[key];
-      temp += value;
-      dict[key] = temp;
+      lock(key)
+      {
+        dynamic temp = dict[key];
+        temp += value;
+        dict[key] = temp;
+      }
     }
   }
 

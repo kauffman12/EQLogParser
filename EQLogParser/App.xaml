@@ -84,6 +84,12 @@
     <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Based on Critical, Crippling Blow, and Deadly Strike" />
     </Style>
+    <Style x:Key="TotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Percent of Total Damage done" />
+    </Style>
+    <Style x:Key="PlayerTotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Percent of the Player's Total Damage" />
+    </Style>
     <Style x:Key="StandardStyle" TargetType="{x:Type local:MainWindow}">
       <Setter Property="WindowChrome.WindowChrome">
         <Setter.Value>

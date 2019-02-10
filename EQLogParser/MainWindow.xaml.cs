@@ -29,7 +29,7 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.2.7";
+    private const string VERSION = "v1.2.8";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string DPS_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -127,7 +127,7 @@ namespace EQLogParser
         // fix player DPS table sorting
         playerDataGrid.Sorting += (s, e) =>
         {
-          if (e.Column.Header != null && (e.Column.Header.ToString() != "Name" && e.Column.Header.ToString() != "Additional Details"))
+          if (e.Column.Header != null && e.Column.Header.ToString() != "Name")
           {
             e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
           }

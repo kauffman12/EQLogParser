@@ -29,6 +29,8 @@ namespace EQLogParser
     private static string PETMAP_FILE;
     private bool PetMappingUpdated = false;
 
+    private List<PlayerDeath> PlayerDeaths = new List<PlayerDeath>();
+
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
     private Dictionary<string, byte> AllUniqueSpellCasts = new Dictionary<string, byte>();
     private LRUCache<SpellData> AllUniqueSpellsLRU = new LRUCache<SpellData>(2000, 500, false);
@@ -176,6 +178,7 @@ namespace EQLogParser
       AllUniqueSpellCasts.Clear();
       AllUniqueSpellsLRU.Clear();
       AllReceivedSpells.Clear();
+      PlayerDeaths.Clear();
       EventsClearedActiveData(this, true);
     }
 
@@ -244,6 +247,11 @@ namespace EQLogParser
     {
       NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = text };
       EventsNewNonPlayer(this, divider);
+    }
+
+    public void AddPlayerDeath(string player, string npc, DateTime dateTime)
+    {
+      PlayerDeaths.Add(new PlayerDeath() { Player = player, Npc = npc, BeginTime = dateTime });
     }
 
     public void AddSpellCast(SpellCast cast)
@@ -320,16 +328,21 @@ namespace EQLogParser
       return VerifiedPlayers.ContainsKey(name);
     }
 
-    public List<SpellCast> GetSpellCasts()
+    public List<SpellCast> GetCastsDuring(DateTime beginTime, DateTime endTime)
     {
-      List<SpellCast> list;
-      lock (AllSpellCasts)
-      {
-        list = AllSpellCasts.ToList();
-      }
-      return list;
+      return SearchActions(AllSpellCasts.Cast<PlayerAction>().ToList(), beginTime, endTime).Cast<SpellCast>().ToList();
     }
-    
+
+    public List<ReceivedSpell> GetReceivedSpellsDuring(DateTime beginTime, DateTime endTime)
+    {
+      return SearchActions(AllReceivedSpells.Cast<PlayerAction>().ToList(), beginTime, endTime).Cast<ReceivedSpell>().ToList();
+    }
+
+    public List<PlayerDeath> GetPlayerDeathsDuring(DateTime beginTime, DateTime endTime)
+    {
+      return SearchActions(PlayerDeaths.Cast<PlayerAction>().ToList(), beginTime, endTime).Cast<PlayerDeath>().ToList();
+    }
+
     public SpellData GetSpellByAbbrv(string abbrv)
     {
       SpellData result = null;
@@ -338,16 +351,6 @@ namespace EQLogParser
         result = SpellsAbbrvDB[abbrv];
       }
       return result;
-    }
-
-    public List<ReceivedSpell> GetAllReceivedSpells()
-    {
-      List<ReceivedSpell> list;
-      lock (AllReceivedSpells)
-      {
-        list = AllReceivedSpells.ToList();
-      }
-      return list;
     }
 
     public NonPlayer GetNonPlayer(string name)
@@ -600,11 +603,40 @@ namespace EQLogParser
       }
     }
 
+    private List<PlayerAction> SearchActions(List<PlayerAction> allActions, DateTime beginTime, DateTime endTime)
+    {
+      PlayerAction startAction = new PlayerAction() { BeginTime = beginTime };
+      PlayerAction endAction = new PlayerAction() { BeginTime = endTime.AddSeconds(1) };
+      PlayerActionComparer comparer = new PlayerActionComparer();
+
+      int startIndex = allActions.BinarySearch(startAction, comparer);
+      if (startIndex < 0)
+      {
+        startIndex = Math.Abs(startIndex) - 1;
+      }
+
+      int endIndex = allActions.BinarySearch(endAction, comparer);
+      if (endIndex < 0)
+      {
+        endIndex = Math.Abs(endIndex) - 1;
+      }
+
+      return allActions.GetRange(startIndex, endIndex - startIndex);
+    }
+
     private class SpellClassCounter
     {
       public int CurrentMax { get; set; }
       public SpellClasses CurrentClass { get; set; }
       public ConcurrentDictionary<SpellClasses, int> ClassCounts { get; set; }
+    }
+
+    private class PlayerActionComparer : IComparer<PlayerAction>
+    {
+      public int Compare(PlayerAction x, PlayerAction y)
+      {
+        return x.BeginTime.CompareTo(y.BeginTime);
+      }
     }
   }
 }
