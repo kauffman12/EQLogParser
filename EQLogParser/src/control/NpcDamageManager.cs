@@ -498,18 +498,7 @@ namespace EQLogParser
 
     private NonPlayer Get(DamageRecord record, DateTime currentTime, String origTimeString)
     {
-      NonPlayer npc = DataManager.Instance.GetNonPlayer(record.Defender);
-
-      if (npc == null && Char.IsUpper(record.Defender[0]) && record.Type == Labels.DOT_TYPE)
-      {
-        // DoTs will show upper case when they shouldn't because they start a sentence
-        npc = DataManager.Instance.GetNonPlayer(Char.ToLower(record.Defender[0]) + record.Defender.Substring(1));
-      }
-      else if (npc == null && Char.IsLower(record.Defender[0]) && record.Type == Labels.DD_TYPE)
-      {
-        // DDs deal with having to work around DoTs
-        npc = DataManager.Instance.GetNonPlayer(Char.ToUpper(record.Defender[0]) + record.Defender.Substring(1));
-      }
+      NonPlayer npc = Find(record.Defender, record.Type);
 
       if (npc == null)
       {
@@ -524,6 +513,24 @@ namespace EQLogParser
           GroupID = CurrentGroupID,
           CorrectMapKey = record.Defender
         };
+      }
+
+      return npc;
+    }
+
+    public NonPlayer Find(string defender, string type)
+    {
+      NonPlayer npc = DataManager.Instance.GetNonPlayer(defender);
+
+      if (npc == null && char.IsUpper(defender[0]) && (type == Labels.DOT_TYPE || type == Labels.DS_TYPE))
+      {
+        // DoTs or DS will show upper case when they shouldn't because they start a sentence
+        npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0]) + defender.Substring(1));
+      }
+      else if (npc == null && char.IsLower(defender[0]) && type == Labels.DD_TYPE)
+      {
+        // DDs deal with having to work around DoTs
+        npc = DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0]) + defender.Substring(1));
       }
 
       return npc;
