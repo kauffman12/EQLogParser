@@ -11,9 +11,10 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private const int DEATH_TIME_OFFSET = 10; // seconds forward
     private const string RAID_PLAYER = "Totals";
-    public const string TIME_FORMAT = "in {0}s";
-    public const string DAMAGE_FORMAT = "{0} @{1}";
+    private const string TIME_FORMAT = "in {0}s";
+    private const string DAMAGE_FORMAT = "{0} @{1}";
     private const string PLAYER_FORMAT = "{0} = ";
     private const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
     private static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
@@ -134,9 +135,12 @@ namespace EQLogParser
         combined.RaidStats = raidTotals;
         combined.TimeDiff = raidTotals.TimeDiffs.Sum();
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
-        combined.TimeTitle = String.Format(TIME_FORMAT, combined.TimeDiff);
-        combined.DamageTitle = String.Format(DAMAGE_FORMAT, Helpers.FormatDamage(raidTotals.TotalDamage), Helpers.FormatDamage(raidTotals.DPS));
+        combined.TimeTitle = string.Format(TIME_FORMAT, combined.TimeDiff);
+        combined.DamageTitle = string.Format(DAMAGE_FORMAT, Helpers.FormatDamage(raidTotals.TotalDamage), Helpers.FormatDamage(raidTotals.DPS));
         combined.UniqueClasses = uniqueClasses;
+
+        // get death counts
+        Dictionary<string, int> deathCounts = GetPlayerDeaths(raidTotals);
 
         // save them all before child code removes
         var allStatValues = individualStats.Values.ToList();
@@ -151,6 +155,7 @@ namespace EQLogParser
             List<string> all = pair.Value.ToList();
             all.Add(pair.Key);
 
+            int deaths = 0;
             List<DamageStats> allDamageStats = new List<DamageStats>();
             foreach (string child in all)
             {
@@ -158,6 +163,12 @@ namespace EQLogParser
               {
                 if (aggregateNpcStats.ContainsKey(child) && individualStats.ContainsKey(child))
                 {
+                  // only for children of aggregates, all original stats updated below
+                  if (deathCounts.ContainsKey(individualStats[child].Name))
+                  {
+                    deaths += deathCounts[individualStats[child].Name];
+                  }
+
                   statsHelper.AddToList(combined.Children, aggregateName, individualStats[child]);
 
                   PlayerStats removed;
@@ -170,6 +181,9 @@ namespace EQLogParser
                 }
               }
             }
+
+            // update total death count
+            aggregatePlayerStats.Deaths = deaths;
 
             allDamageStats.OrderBy(dStats => dStats.BeginTime).ToList().ForEach(dStats =>
             {
@@ -187,6 +201,8 @@ namespace EQLogParser
                 {
                   childStat.Percent = Math.Round(((decimal) childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
                   childStat.PercentString = childStat.Percent.ToString();
+                  childStat.PercentOfRaid = Math.Round((decimal) childStat.TotalDamage / combined.RaidStats.TotalDamage * 100, 2);
+                  childStat.PercentOfRaidString = childStat.PercentOfRaid.ToString();
                 }
               }
             }
@@ -200,6 +216,12 @@ namespace EQLogParser
             subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal) subStat.TotalDamage / stat.TotalDamage) * 100, 2);
             subStat.PercentString = subStat.Percent.ToString();
           }
+
+          // update death count
+          if (deathCounts.ContainsKey(stat.Name))
+          {
+            stat.Deaths = deathCounts[stat.Name];
+          }
         });
 
         int lastRank = 0;
@@ -212,6 +234,10 @@ namespace EQLogParser
           {
             combined.Children[combined.StatsList[i].Name] = combined.Children[combined.StatsList[i].Name].OrderByDescending(item => item.TotalDamage).ToList();
           }
+
+          // total percents
+          combined.StatsList[i].PercentOfRaid = Math.Round((decimal) combined.StatsList[i].TotalDamage / combined.RaidStats.TotalDamage * 100, 2);
+          combined.StatsList[i].PercentOfRaidString = combined.StatsList[i].PercentOfRaid.ToString();
         }
 
         // look for people casting during this time frame who did not do any damage and append them
@@ -414,6 +440,25 @@ namespace EQLogParser
       return selectedStats;
     }
 
+    private static Dictionary<string, int> GetPlayerDeaths(PlayerStats raidStats)
+    {
+      DictionaryAddHelper<string, int> AddStringHelper = new DictionaryAddHelper<string, int>();
+      Dictionary<string, int> deathCounts = new Dictionary<string, int>();
+
+      if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
+      {
+        DateTime beginTime = raidStats.BeginTimes.First();
+        DateTime endTime = raidStats.LastTimes.Last().AddSeconds(DEATH_TIME_OFFSET); ;
+
+        Parallel.ForEach(DataManager.Instance.GetPlayerDeathsDuring(beginTime, endTime), death =>
+        {
+          AddStringHelper.Add(deathCounts, death.Player, 1);
+        });
+      }
+
+      return deathCounts;
+    }
+
     private static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
     {
       string result;
@@ -550,7 +595,8 @@ namespace EQLogParser
       {
         Name = name,
         ClassName = className,
-        PercentString = "-",
+        OrigName = origName,
+        PercentString = "100",
         Percent = 100, // until something says otherwise
         BeginTimes = new List<DateTime>(),
         LastTimes = new List<DateTime>(),

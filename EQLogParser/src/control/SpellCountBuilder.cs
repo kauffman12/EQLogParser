@@ -19,7 +19,7 @@ namespace EQLogParser
       DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
       DateTime endTime = raidStats.LastTimes.Last();
 
-      foreach (var cast in GetCastsDuring(beginTime, endTime).AsParallel().Where(cast => playerList.Contains(cast.Caster)))
+      foreach (var cast in DataManager.Instance.GetCastsDuring(beginTime, endTime).AsParallel().Where(cast => playerList.Contains(cast.Caster)))
       {
         var spellData = DataManager.Instance.GetSpellByAbbrv(cast.SpellAbbrv);
         if (spellData != null)
@@ -28,7 +28,7 @@ namespace EQLogParser
         }
       }
 
-      foreach (var received in GetReceivedSpellsDuring(beginTime, endTime).AsParallel().Where(received => playerList.Contains(received.Receiver)))
+      foreach (var received in DataManager.Instance.GetReceivedSpellsDuring(beginTime, endTime).AsParallel().Where(received => playerList.Contains(received.Receiver)))
       {
         UpdateMaps(received.SpellData, received.Receiver, playerReceivedCounts, maxReceivedCounts, spellMap);
       }
@@ -50,7 +50,7 @@ namespace EQLogParser
       {
         DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
         DateTime endTime = raidStats.LastTimes.Last();
-        List<SpellCast> casts = GetCastsDuring(beginTime, endTime);
+        List<SpellCast> casts = DataManager.Instance.GetCastsDuring(beginTime, endTime);
         results = casts.Select(cast => cast.Caster).Distinct().ToList();
       }
       else
@@ -85,58 +85,6 @@ namespace EQLogParser
       }
 
       spellMap[theSpell.ID] = theSpell;
-    }
-
-    private static List<SpellCast> GetCastsDuring(DateTime beginTime, DateTime endTime)
-    {
-      List<SpellCast> allCasts = DataManager.Instance.GetSpellCasts();
-      SpellCast startCast = new SpellCast() { BeginTime = beginTime };
-      SpellCast endCast = new SpellCast() { BeginTime = endTime.AddSeconds(1) };
-      CastComparer comparer = new CastComparer();
-
-      int startIndex = allCasts.BinarySearch(startCast, comparer);
-      if (startIndex < 0)
-      {
-        startIndex = Math.Abs(startIndex) - 1;
-      }
-
-      int endIndex = allCasts.BinarySearch(endCast, comparer);
-      if (endIndex < 0)
-      {
-        endIndex = Math.Abs(endIndex) - 1;
-      }
-
-      return allCasts.GetRange(startIndex, endIndex - startIndex);
-    }
-
-    private static List<ReceivedSpell> GetReceivedSpellsDuring(DateTime beginTime, DateTime endTime)
-    {
-      List<ReceivedSpell> allReceivedSpells = DataManager.Instance.GetAllReceivedSpells();
-      ReceivedSpell startReceived = new ReceivedSpell() { BeginTime = beginTime };
-      ReceivedSpell endReceived = new ReceivedSpell() { BeginTime = endTime.AddSeconds(1) };
-      CastComparer comparer = new CastComparer();
-
-      int startIndex = allReceivedSpells.BinarySearch(startReceived, comparer);
-      if (startIndex < 0)
-      {
-        startIndex = Math.Abs(startIndex) - 1;
-      }
-
-      int endIndex = allReceivedSpells.BinarySearch(endReceived, comparer);
-      if (endIndex < 0)
-      {
-        endIndex = Math.Abs(endIndex) - 1;
-      }
-
-      return allReceivedSpells.GetRange(startIndex, endIndex - startIndex);
-    }
-
-    private class CastComparer : IComparer<ReceivedSpell>
-    {
-      public int Compare(ReceivedSpell x, ReceivedSpell y)
-      {
-        return x.BeginTime.CompareTo(y.BeginTime);
-      }
     }
   }
 }

@@ -15,6 +15,7 @@ namespace EQLogParser
   {
     public const string DD_TYPE = "Direct Damage";
     public const string DOT_TYPE = "DoT Tick";
+    public const string DS_TYPE = "Damage Shield";
   }
 
   public class DamageRecord
@@ -107,18 +108,28 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
+  public class PlayerAction
+  {
+    public DateTime BeginTime { get; set; }
+  }
+
+  public class PlayerDeath : PlayerAction
+  {
+    public string Player { get; set; }
+    public string Npc { get; set; }
+  }
+
+  public class ReceivedSpell : PlayerAction
+  {
+    public string Receiver { get; set; }
+    public SpellData SpellData { get; set; }
+  }
+
   public class SpellCast : ReceivedSpell
   {
     public string Spell { get; set; }
     public string Caster { get; set; }
     public string SpellAbbrv { get; set; }
-  }
-
-  public class ReceivedSpell
-  {
-    public string Receiver { get; set; }
-    public SpellData SpellData { get; set; }
-    public DateTime BeginTime { get; set; }
   }
 
   public class SpellData
@@ -212,6 +223,9 @@ namespace EQLogParser
     public decimal TwincastRate { get; set; }
     public decimal Percent { get; set; }
     public string PercentString { get; set; }
+    public decimal PercentOfRaid { get; set; }
+    public string PercentOfRaidString { get; set; }
+    public int Deaths { get; set; }
     public string ClassName { get; set; }
     public Dictionary<long, int> CritFreqValues { get; set; }
     public Dictionary<long, int> NonCritFreqValues { get; set; }
@@ -220,6 +234,7 @@ namespace EQLogParser
   public class PlayerStats : PlayerSubStats
   {
     public Dictionary<string, PlayerSubStats> SubStats { get; set; }
+    public string OrigName { get; set; }
     public List<DateTime> BeginTimes { get; set; }
     public List<DateTime> LastTimes { get; set; }
     public List<double> TimeDiffs { get; set; }

@@ -97,11 +97,20 @@ namespace EQLogParser
         test = pline.ActionPart.Substring(0, pline.OptionalIndex - 9);
       }
 
-      if (test != null && test.Length > 0 && !DataManager.Instance.CheckNameForPlayer(test) && !DataManager.Instance.CheckNameForPet(test))
+      // Gotcharms has been slain by an animated mephit!
+      if (test != null && test.Length > 0)
       {
-        if (!DataManager.Instance.RemoveActiveNonPlayer(test) && Char.IsUpper(test[0]))
+        if (DataManager.Instance.CheckNameForPlayer(test) || DataManager.Instance.CheckNameForPet(test))
         {
-          DataManager.Instance.RemoveActiveNonPlayer(Char.ToLower(test[0]) + test.Substring(1));
+          int byIndex = pline.ActionPart.IndexOf(" by ");
+          if (byIndex > -1)
+          {
+            DataManager.Instance.AddPlayerDeath(test, pline.ActionPart.Substring(byIndex + 4), pline.CurrentTime);
+          }
+        }
+        else if (!DataManager.Instance.RemoveActiveNonPlayer(test) && char.IsUpper(test[0]))
+        {
+          DataManager.Instance.RemoveActiveNonPlayer(char.ToLower(test[0]) + test.Substring(1));
         }
       }
     }
@@ -409,20 +418,83 @@ namespace EQLogParser
             }
           }
 
+          // === TODO == 
+          // Your body and mind are wracked by elemental madness!  You have taken 5800 points of damage.
+          //
+
           if (action == "")
           {
-            // only check if it's an NPC if it's a DoT and they're the defender
+            // check if it's an NPC if it's a DoT and they're the defender
+            // ALSO true for Damage Shields and BANE
             int hasTakenIndex = part.IndexOf("has taken ", firstSpace + 1, StringComparison.Ordinal);
             if (hasTakenIndex > -1)
             {
-              action = "DoT";
-              defender = part.Substring(0, hasTakenIndex - 1);
-              type = Labels.DOT_TYPE;
-              afterAction = hasTakenIndex + 10;
+              // [Fri Feb 08 19:58:38 2019] Ladenfir has taken 81527 damage from Magnificent Presence by Unfettered Emerald Excellence.
+              // [Fri Feb 08 21:00:14 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Abazzagorath's Shackles of Tunare II spell.
+              int extraIndex = part.IndexOf("an extra", hasTakenIndex + 10, StringComparison.Ordinal);
+              if (extraIndex == -1)
+              {
+                action = "DoT";
+                defender = part.Substring(0, hasTakenIndex - 1);
+                type = Labels.DOT_TYPE;
+                afterAction = hasTakenIndex + 10;
+              }
+            }
+            else // Maybe it's a Damage Shield
+            {
+              // [Sat Feb 09 21:12:43 2019] A lava protector is[are] pierced by Incogitable's thorns for 124 points of non-melee damage.
+              // [Sat Feb 09 21:32:22 2019] A molten spirit is[are] pierced by YOUR thorns for 182 points of non-melee damage.
+              int byIndex = part.IndexOf(" by ");
+              if (byIndex > -1)
+              {
+                int isIndex = part.IndexOf(" is ", 0, byIndex, StringComparison.Ordinal);
+                if (isIndex > -1 || (isIndex = part.IndexOf(" are ", 0, byIndex, StringComparison.Ordinal)) > -1)
+                {
+                  defender = part.Substring(0, isIndex);
+                  action = "DS";
+                  type = Labels.DS_TYPE;
+                  afterAction = byIndex + 4;
+
+                  // The following DD/DoT code doesn't really help parse damage shields so continue here... need to clean this up eventually
+                  if (part.Length > afterAction + 25)
+                  {
+                    // check for YOUR
+                    int afterAttacker = -1;
+                    if (part[afterAction] == 'Y' && part[afterAction + 1] == 'O' && part[afterAction + 2] == 'U' && part[afterAction + 3] == 'R' && part[afterAction + 4] == ' ')
+                    {
+                      attacker = "YOUR";
+                      afterAttacker = afterAction + 5;
+                    }
+                    else
+                    {
+                      int test = part.IndexOf("'s", afterAction, 25, StringComparison.Ordinal);
+                      if (test > -1)
+                      {
+                        attacker = part.Substring(afterAction, test - afterAction);
+                        afterAttacker = test + 3;
+                      }
+                    }
+
+                    if (attacker != "" && afterAttacker > -1)
+                    {
+                      int forIndex = part.IndexOf(" for ", afterAttacker, StringComparison.Ordinal);
+                      if (forIndex > -1)
+                      {
+                        int pointIndex = part.IndexOf(" point", forIndex + 3, StringComparison.Ordinal);
+                        if (pointIndex > -1)
+                        {
+                          damage = Helpers.ParseLong(part.Substring(forIndex + 5, pointIndex - forIndex - 5));
+                          found = true;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
 
-          if (type != "" && action != "" && part.Length > afterAction)
+          if (!found && type != "" && action != "" && part.Length > afterAction)
           {
             if (action == "DD")
             {
@@ -453,11 +525,12 @@ namespace EQLogParser
                     damage = Helpers.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
                     if (damage != long.MaxValue)
                     {
-                      int points;
-                      if ((points = part.IndexOf(" points ", afterDmg, StringComparison.Ordinal)) > -1)
+                      // can be point or points
+                      int point;
+                      if ((point = part.IndexOf(" point", afterDmg, StringComparison.Ordinal)) > -1)
                       {
                         found = true;
-                        if (part.Substring(points + 8, 6) == "of non")
+                        if (part.IndexOf("of non", point + 6, 10, StringComparison.Ordinal) > -1)
                         {
                           type = Labels.DD_TYPE;
                         }
@@ -469,7 +542,7 @@ namespace EQLogParser
             }
             else if (action == "DoT")
             {
-              //     @"^(.+) has taken (\d+) damage from (.+) by (\w+)\."
+              // @"^(.+) has taken (\d+) damage from (.+) by (\w+)\."
               // Kizant`s pet has taken
               int dmgStart = afterAction;
               int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
