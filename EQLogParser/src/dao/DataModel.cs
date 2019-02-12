@@ -16,6 +16,7 @@ namespace EQLogParser
     public const string DD_TYPE = "Direct Damage";
     public const string DOT_TYPE = "DoT Tick";
     public const string DS_TYPE = "Damage Shield";
+    public const string BANE_TYPE = "Bane Damage";
   }
 
   public class DamageRecord
