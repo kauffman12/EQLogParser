@@ -431,13 +431,20 @@ namespace EQLogParser
             {
               // [Fri Feb 08 19:58:38 2019] Ladenfir has taken 81527 damage from Magnificent Presence by Unfettered Emerald Excellence.
               // [Fri Feb 08 21:00:14 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Abazzagorath's Shackles of Tunare II spell.
-              int extraIndex = part.IndexOf("an extra", hasTakenIndex + 10, StringComparison.Ordinal);
+              int extraIndex = part.IndexOf("an extra ", hasTakenIndex + 10, StringComparison.Ordinal);
               if (extraIndex == -1)
               {
                 action = "DoT";
                 defender = part.Substring(0, hasTakenIndex - 1);
                 type = Labels.DOT_TYPE;
                 afterAction = hasTakenIndex + 10;
+              }
+              else
+              {
+                action = "Bane";
+                defender = part.Substring(0, hasTakenIndex - 1);
+                type = Labels.BANE_TYPE;
+                afterAction = extraIndex + 9;
               }
             }
             else // Maybe it's a Damage Shield
@@ -484,7 +491,7 @@ namespace EQLogParser
                         if (pointIndex > -1)
                         {
                           damage = Helpers.ParseLong(part.Substring(forIndex + 5, pointIndex - forIndex - 5));
-                          found = true;
+                          found = damage != long.MaxValue;
                         }
                       }
                     }
@@ -540,7 +547,7 @@ namespace EQLogParser
                 }
               }
             }
-            else if (action == "DoT")
+            else if (action == "DoT" || action == "Bane")
             {
               // @"^(.+) has taken (\d+) damage from (.+) by (\w+)\."
               // Kizant`s pet has taken
@@ -551,9 +558,10 @@ namespace EQLogParser
                 damage = Helpers.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
                 if (damage != long.MaxValue)
                 {
-                  if (part.Length > afterDmg + 12 && part.Substring(afterDmg, 12) == " damage from")
+                  int fromIndex = part.IndexOf(" from ", afterDmg, StringComparison.Ordinal);
+                  if (fromIndex > -1)
                   {
-                    if (part.Substring(afterDmg + 13, 4) == "your")
+                    if (part.Substring(fromIndex + 6, 4) == "your")
                     {
                       int periodIndex = part.LastIndexOf('.');
                       if (periodIndex > -1)
@@ -565,11 +573,11 @@ namespace EQLogParser
                       action = "DoT";
                       found = true;
                     }
-                    else
+                    else if (action == "DoT")
                     {
                       // Horizon of Destiny has taken 30812 damage from Strangulate Rk. III by Kimb.
                       // Warm Heart Flickers has taken 55896 damage from your Strangulate Rk. III.
-                      int byIndex = part.IndexOf("by ", afterDmg + 12, StringComparison.Ordinal);
+                      int byIndex = part.IndexOf("by ", fromIndex, StringComparison.Ordinal);
                       if (byIndex > -1)
                       {
                         int endIndex = part.IndexOf(".", byIndex + 3, StringComparison.Ordinal);
@@ -580,10 +588,23 @@ namespace EQLogParser
                           {
                             // damage parsed above
                             attacker = player;
-                            action = "DoT";
                             spell = part.Substring(afterDmg + 13, byIndex - afterDmg - 14);
                             found = true;
                           }
+                        }
+                      }
+                    }
+                    else if (action == "Bane")
+                    {
+                      int endIndex = part.IndexOf("'s", fromIndex, StringComparison.Ordinal);
+                      if (endIndex > -1)
+                      {
+                        string player = part.Substring(fromIndex + 6, endIndex - fromIndex - 6);
+                        if (Helpers.IsPossiblePlayerName(player, player.Length))
+                        {
+                          // damage parsed above
+                          attacker = player;
+                          found = true;
                         }
                       }
                     }

@@ -186,9 +186,13 @@ namespace EQLogParser
       {
         result = Math.Round((decimal)total / 1000, 2) + "K";
       }
-      else
+      else if (total < 1000000000)
       {
         result = Math.Round((decimal)total / 1000 / 1000, 2) + "M";
+      }
+      else
+      {
+        result = Math.Round((decimal) total / 1000 / 1000 / 1000, 2) + "B";
       }
 
       return result;
