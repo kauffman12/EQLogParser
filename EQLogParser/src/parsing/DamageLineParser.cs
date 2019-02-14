@@ -325,14 +325,15 @@ namespace EQLogParser
         string action = "";
         string spell = "";
 
-        // find first space and see if we have a name in the first  second
+        // find first space and see if we have a name at the beginning
         int firstSpace = part.IndexOf(" ", StringComparison.Ordinal);
         if (firstSpace > 0)
         {
           // check if name has a possessive
-          if (firstSpace >= 2 && part.Substring(firstSpace - 2, 2) == "`s")
+          if (firstSpace >= 2 && part[firstSpace - 2] == '`' && part[firstSpace - 1] == 's')
           {
-            if (Helpers.IsPossiblePlayerName(part, firstSpace - 2))
+            string testName = part.Substring(0, firstSpace - 2);
+            if (DataManager.Instance.CheckNameForPlayer(testName) || Helpers.IsPossiblePlayerName(testName))
             {
               int len;
               if (Helpers.IsPetOrMount(part, firstSpace + 1, out len))
@@ -537,7 +538,7 @@ namespace EQLogParser
                       if ((point = part.IndexOf(" point", afterDmg, StringComparison.Ordinal)) > -1)
                       {
                         found = true;
-                        if (part.IndexOf("of non", point + 6, 10, StringComparison.Ordinal) > -1)
+                        if (part.IndexOf("of damage.", point + 7, StringComparison.Ordinal) == -1)
                         {
                           type = Labels.DD_TYPE;
                         }
