@@ -16,7 +16,8 @@ namespace EQLogParser
     public const string DD_TYPE = "Direct Damage";
     public const string DOT_TYPE = "DoT Tick";
     public const string DS_TYPE = "Damage Shield";
-    public const string BANE_TYPE = "Bane Damage";
+    public const string BANE_TYPE = "Bane";
+    public const string PROC_TYPE = "Proc";
   }
 
   public class DamageRecord
@@ -55,7 +56,9 @@ namespace EQLogParser
   public class DamageStats : Hit
   {
     public Dictionary<string, Hit> HitMap { get; set; }
-    public Dictionary<string, Hit> SpellMap { get; set; }
+    public Dictionary<string, Hit> SpellDoTMap { get; set; }
+    public Dictionary<string, Hit> SpellDDMap { get; set; }
+    public Dictionary<string, Hit> SpellProcMap { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
     public string Owner { get; set; }
@@ -66,6 +69,13 @@ namespace EQLogParser
   {
     public ProcessLine ProcessLine { get; set; }
     public DamageRecord Record { get; set; }
+  }
+
+  public class ResistProcessedEvent
+  {
+    public ProcessLine ProcessLine { get; set; }
+    public string Defender { get; set; }
+    public string Spell { get; set; }
   }
 
   public class ProcessLine
@@ -91,6 +101,7 @@ namespace EQLogParser
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public Dictionary<string, DamageStats> DamageMap { get; set; }
+    public Dictionary<string, Dictionary<string, int>> ResistMap { get; set; }
     public DateTime BeginTime { get; set; }
     public DateTime LastTime { get; set; }
     public int ID { get; set; }
@@ -212,6 +223,7 @@ namespace EQLogParser
     public double TotalSeconds { get; set; }
     public long DPS { get; set; }
     public int Hits { get; set; }
+    public int Resists { get; set; }
     public long Max { get; set; }
     public long Avg { get; set; }
     public long AvgCrit { get; set; }
@@ -222,10 +234,9 @@ namespace EQLogParser
     public decimal CritRate { get; set; }
     public decimal LuckRate { get; set; }
     public decimal TwincastRate { get; set; }
+    public decimal ResistRate { get; set; }
     public decimal Percent { get; set; }
-    public string PercentString { get; set; }
     public decimal PercentOfRaid { get; set; }
-    public string PercentOfRaidString { get; set; }
     public int Deaths { get; set; }
     public string ClassName { get; set; }
     public Dictionary<long, int> CritFreqValues { get; set; }

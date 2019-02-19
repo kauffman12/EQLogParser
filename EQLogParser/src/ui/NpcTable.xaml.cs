@@ -18,9 +18,10 @@ namespace EQLogParser
   /// Interaction logic for NpcTable.xaml
   /// </summary>
   public partial class NpcTable : UserControl
-  {
-    // events
-    public event EventHandler<IList> EventsSelectionChange;
+    {
+        // events
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1009:DeclareEventHandlersCorrectly")]
+        public event EventHandler<IList> EventsSelectionChange;
 
     // brushes
     public static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));

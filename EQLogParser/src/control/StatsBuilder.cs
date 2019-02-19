@@ -18,6 +18,7 @@ namespace EQLogParser
     private const string PLAYER_FORMAT = "{0} = ";
     private const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
     private static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
+    private static DictionaryAddHelper<string, int> StringIntAddHelper = new DictionaryAddHelper<string, int>();
 
     internal static string BuildTitle(CombinedStats currentStats, bool showTotals = true)
     {
@@ -75,6 +76,7 @@ namespace EQLogParser
       DictionaryListHelper<string, PlayerStats> statsHelper = new DictionaryListHelper<string, PlayerStats>();
       Dictionary<string, byte> uniqueClasses = new Dictionary<string, byte>();
       ConcurrentDictionary<string, byte> uniquePlayers = new ConcurrentDictionary<string, byte>();
+      Dictionary<string, int> ResistMap = new Dictionary<string, int>();
 
       try
       {
@@ -128,6 +130,15 @@ namespace EQLogParser
               aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
               UpdateTotals(playerTotals, npcStats);
               UpdateTotals(raidTotals, npcStats);
+
+              // only the current player will see resist messages
+              if (DataManager.Instance.PlayerName == key && npc.ResistMap.ContainsKey(key))
+              {
+                Parallel.ForEach(npc.ResistMap[key], keyvalue =>
+                {
+                  StringIntAddHelper.Add(ResistMap, keyvalue.Key, keyvalue.Value);
+                });
+              }
             }
           }
         }
@@ -200,9 +211,7 @@ namespace EQLogParser
                 foreach (PlayerStats childStat in combined.Children[aggregateName])
                 {
                   childStat.Percent = Math.Round(((decimal) childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
-                  childStat.PercentString = childStat.Percent.ToString();
                   childStat.PercentOfRaid = Math.Round((decimal) childStat.TotalDamage / combined.RaidStats.TotalDamage * 100, 2);
-                  childStat.PercentOfRaidString = childStat.PercentOfRaid.ToString();
                 }
               }
             }
@@ -214,7 +223,12 @@ namespace EQLogParser
           foreach (var subStat in stat.SubStats.Values.OrderByDescending(item => item.TotalDamage))
           {
             subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal) subStat.TotalDamage / stat.TotalDamage) * 100, 2);
-            subStat.PercentString = subStat.Percent.ToString();
+
+            if (stat.Name == DataManager.Instance.PlayerName && ResistMap.ContainsKey(subStat.Name))
+            {
+              subStat.Resists = ResistMap[subStat.Name];
+              subStat.ResistRate = Math.Round(Convert.ToDecimal(subStat.Resists) / (subStat.Hits + subStat.Resists) * 100, 2);
+            }
           }
 
           // update death count
@@ -237,7 +251,6 @@ namespace EQLogParser
 
           // total percents
           combined.StatsList[i].PercentOfRaid = Math.Round((decimal) combined.StatsList[i].TotalDamage / combined.RaidStats.TotalDamage * 100, 2);
-          combined.StatsList[i].PercentOfRaidString = combined.StatsList[i].PercentOfRaid.ToString();
         }
 
         // look for people casting during this time frame who did not do any damage and append them
@@ -442,7 +455,6 @@ namespace EQLogParser
 
     private static Dictionary<string, int> GetPlayerDeaths(PlayerStats raidStats)
     {
-      DictionaryAddHelper<string, int> AddStringHelper = new DictionaryAddHelper<string, int>();
       Dictionary<string, int> deathCounts = new Dictionary<string, int>();
 
       if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
@@ -452,7 +464,7 @@ namespace EQLogParser
 
         Parallel.ForEach(DataManager.Instance.GetPlayerDeathsDuring(beginTime, endTime), death =>
         {
-          AddStringHelper.Add(deathCounts, death.Player, 1);
+          StringIntAddHelper.Add(deathCounts, death.Player, 1);
         });
       }
 
@@ -523,9 +535,17 @@ namespace EQLogParser
       }
 
       Parallel.ForEach(npcStats.HitMap, keyvalue => UpdateHitMap(playerTotals, keyvalue));
-      Parallel.ForEach(npcStats.SpellMap, keyvalue =>
+      Parallel.ForEach(npcStats.SpellDoTMap, keyvalue =>
       {
         UpdateHitMap(playerTotals, keyvalue, "DoT");
+      });
+      Parallel.ForEach(npcStats.SpellDDMap, keyvalue =>
+      {
+        UpdateHitMap(playerTotals, keyvalue, "DD");
+      });
+      Parallel.ForEach(npcStats.SpellProcMap, keyvalue =>
+      {
+        UpdateHitMap(playerTotals, keyvalue, "Proc");
       });
     }
 
@@ -596,7 +616,6 @@ namespace EQLogParser
         Name = name,
         ClassName = className,
         OrigName = origName,
-        PercentString = "100",
         Percent = 100, // until something says otherwise
         BeginTimes = new List<DateTime>(),
         LastTimes = new List<DateTime>(),
