@@ -10,7 +10,8 @@ namespace EQLogParser
     public DateTime LastUpdateTime { get; set; }
 
     private List<DamageAtTime> DamageTimeLine;
-    private DictionaryAddHelper<long, int> AddHelper = new DictionaryAddHelper<long, int>();
+    private DictionaryAddHelper<long, int> LongAddHelper = new DictionaryAddHelper<long, int>();
+    private DictionaryAddHelper<string, int> StringAddHelper = new DictionaryAddHelper<string, int>();
     private DamageAtTime DamageAtThisTime = null;
     private const int NPC_DEATH_TIME = 25;
     private int CurrentNpcID = 0;
@@ -20,6 +21,7 @@ namespace EQLogParser
     {
       DamageTimeLine = new List<DamageAtTime>();
       DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
+      DamageLineParser.EventsResistProcessed += HandleResistProcessed;
       DataManager.Instance.EventsClearedActiveData += (sender, cleared) =>
       {
         CurrentGroupID = 0;
@@ -42,6 +44,7 @@ namespace EQLogParser
     ~NpcDamageManager()
     {
       DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
+      DamageLineParser.EventsResistProcessed -= HandleResistProcessed;
     }
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
@@ -57,6 +60,32 @@ namespace EQLogParser
       }
 
       AddOrUpdateNpc(processed.Record, processed.ProcessLine.CurrentTime, processed.ProcessLine.TimeString.Substring(4, 15));
+    }
+
+    private void HandleResistProcessed(object sender, ResistProcessedEvent processed)
+    {
+      if (processed.ProcessLine != null && processed.Defender != null && processed.Spell != null)
+      {
+        // use DoT type since it begins a sentence
+        var nonPlayer = Find(processed.Defender, Labels.DOT_TYPE);
+        if (nonPlayer == null)
+        {
+          nonPlayer = Create(processed.Defender, processed.ProcessLine.CurrentTime, processed.ProcessLine.TimeString);
+        }
+
+        Dictionary<string, int> resists;
+        if (nonPlayer.ResistMap.ContainsKey(DataManager.Instance.PlayerName))
+        {
+          resists = nonPlayer.ResistMap[DataManager.Instance.PlayerName];
+        }
+        else
+        {
+          resists = new Dictionary<string, int>();
+          nonPlayer.ResistMap[DataManager.Instance.PlayerName] = resists;
+        }
+
+        StringAddHelper.Add(resists, processed.Spell, 1);
+      }
     }
 
     private void AddOrUpdateNpc(DamageRecord record, DateTime currentTime, String origTimeString)
@@ -78,7 +107,9 @@ namespace EQLogParser
           Owner = "",
           IsPet = false,
           HitMap = new Dictionary<string, Hit>(),
-          SpellMap = new Dictionary<string, Hit>()
+          SpellDoTMap = new Dictionary<string, Hit>(),
+          SpellDDMap = new Dictionary<string, Hit>(),
+          SpellProcMap = new Dictionary<string, Hit>()
         });
       }
 
@@ -91,9 +122,19 @@ namespace EQLogParser
       // store spells and melee hits separately
       Dictionary<string, Hit> aHitMap;
       string aType;
-      if (record.Type == Labels.DOT_TYPE)
+      if (record.Spell != "")
       {
-        aHitMap = stats.SpellMap;
+        string spellName = Helpers.AbbreviateSpellName(record.Spell);
+        SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
+        if (data != null && data.ClassMask == 0)
+        {
+          aHitMap = stats.SpellProcMap;
+        }
+        else
+        {
+          aHitMap = record.Type == Labels.DD_TYPE ? stats.SpellDDMap : stats.SpellDoTMap;
+        }
+
         aType = record.Spell;
       }
       else
@@ -120,11 +161,11 @@ namespace EQLogParser
       // if crit count did not increase this hit was a non-crit
       if (critCount == stats.CritCount)
       {
-        AddHelper.Add(aHitMap[aType].NonCritFreqValues, record.Damage, 1);
+        LongAddHelper.Add(aHitMap[aType].NonCritFreqValues, record.Damage, 1);
       }
       else
       {
-        AddHelper.Add(aHitMap[aType].CritFreqValues, record.Damage, 1);
+        LongAddHelper.Add(aHitMap[aType].CritFreqValues, record.Damage, 1);
       }
 
       stats.LastTime = currentTime;
@@ -496,23 +537,13 @@ namespace EQLogParser
       }
     }
 
-    private NonPlayer Get(DamageRecord record, DateTime currentTime, String origTimeString)
+    private NonPlayer Get(DamageRecord record, DateTime currentTime, string origTimeString)
     {
       NonPlayer npc = Find(record.Defender, record.Type);
 
       if (npc == null)
       {
-        npc = new NonPlayer()
-        {
-          Name = record.Defender,
-          BeginTimeString = origTimeString,
-          BeginTime = currentTime,
-          LastTime = currentTime,
-          DamageMap = new Dictionary<string, DamageStats>(),
-          ID = CurrentNpcID++,
-          GroupID = CurrentGroupID,
-          CorrectMapKey = record.Defender
-        };
+        npc = Create(record.Defender, currentTime, origTimeString);
       }
 
       return npc;
@@ -534,6 +565,22 @@ namespace EQLogParser
       }
 
       return npc;
+    }
+
+    private NonPlayer Create(string defender, DateTime currentTime, string origTimeString)
+    {
+      return new NonPlayer()
+      {
+        Name = defender,
+        BeginTimeString = origTimeString,
+        BeginTime = currentTime,
+        LastTime = currentTime,
+        DamageMap = new Dictionary<string, DamageStats>(),
+        ResistMap = new Dictionary<string, Dictionary<string, int>>(),
+        ID = CurrentNpcID++,
+        GroupID = CurrentGroupID,
+        CorrectMapKey = defender
+      };
     }
 
     private class DamageAtTimeComparer : IComparer<DamageAtTime>
