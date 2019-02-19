@@ -25,12 +25,13 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsNewNonPlayer;
     public event EventHandler<bool> EventsClearedActiveData;
 
+    public string PlayerName { get; set; }
+
     private static string CONFIG_DIR;
     private static string PETMAP_FILE;
     private bool PetMappingUpdated = false;
 
     private List<PlayerDeath> PlayerDeaths = new List<PlayerDeath>();
-
     private List<SpellCast> AllSpellCasts = new List<SpellCast>();
     private Dictionary<string, byte> AllUniqueSpellCasts = new Dictionary<string, byte>();
     private LRUCache<SpellData> AllUniqueSpellsLRU = new LRUCache<SpellData>(2000, 500, false);
@@ -85,9 +86,9 @@ namespace EQLogParser
           {
             string[] data = line.Split('^');
             int beneficial;
-            Int32.TryParse(data[2], out beneficial);
+            int.TryParse(data[2], out beneficial);
             int classMask;
-            Int32.TryParse(data[3], out classMask);
+            int.TryParse(data[3], out classMask);
             SpellData spellData = new SpellData()
             {
               ID = data[0],
@@ -288,6 +289,7 @@ namespace EQLogParser
       AttackerReplacement["Your"] = name;
       AttackerReplacement["YOUR"] = name;
       UpdateVerifiedPlayers(name);
+      PlayerName = name;
     }
 
     public string ReplaceAttacker(string attacker, out bool replaced)

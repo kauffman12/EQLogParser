@@ -8,6 +8,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
+    public static event EventHandler<ResistProcessedEvent> EventsResistProcessed;
     public static event EventHandler<string> EventsLineProcessed;
 
     private const int ACTION_PART_INDEX = 27;
@@ -66,6 +67,14 @@ namespace EQLogParser
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
           HandleSlain(pline);
         }
+        else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
+        {
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+          pline.OptionalIndex = index - ACTION_PART_INDEX;
+          pline.TimeString = pline.Line.Substring(1, 24);
+          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
+          HandleResist(pline);
+        }
         else
         {
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
@@ -113,6 +122,16 @@ namespace EQLogParser
           DataManager.Instance.RemoveActiveNonPlayer(char.ToLower(test[0]) + test.Substring(1));
         }
       }
+    }
+
+    private static void HandleResist(ProcessLine pline)
+    {
+      // [Mon Feb 11 20:00:28 2019] An inferno flare resisted your Frostreave Strike III!
+      string defender = pline.ActionPart.Substring(0, pline.OptionalIndex);
+      string spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1);
+
+      ResistProcessedEvent e = new ResistProcessedEvent() { ProcessLine = pline, Defender = defender, Spell = spell };
+      EventsResistProcessed(defender, e);
     }
 
     private static void HandleHealed(ProcessLine pline)
@@ -332,39 +351,29 @@ namespace EQLogParser
           // check if name has a possessive
           if (firstSpace >= 2 && part[firstSpace - 2] == '`' && part[firstSpace - 1] == 's')
           {
-            string testName = part.Substring(0, firstSpace - 2);
-            if (DataManager.Instance.CheckNameForPlayer(testName) || Helpers.IsPossiblePlayerName(testName))
+            string owner = part.Substring(0, firstSpace - 2);
+            if (DataManager.Instance.CheckNameForPlayer(owner) || Helpers.IsPossiblePlayerName(owner))
             {
               int len;
               if (Helpers.IsPetOrMount(part, firstSpace + 1, out len))
               {
                 string petType = part.Substring(firstSpace + 1, len);
-                string owner = part.Substring(0, firstSpace - 2);
 
                 int sizeSoFar = firstSpace + 1 + len + 1;
                 if (part.Length > sizeSoFar)
                 {
-                  string player = part.Substring(0, sizeSoFar - 1);
                   int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
                   if (secondSpace > -1)
                   {
                     string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
-                    if (HitMap.ContainsKey(testAction))
-                    {
-                      if (HitAdditionalMap.ContainsKey(testAction))
-                      {
-                        type = HitAdditionalMap[testAction];
-                      }
-                      else
-                      {
-                        type = testAction;
-                      }
 
+                    if ((type = checkType(testAction)) != "")
+                    {
                       action = "DD";
                       afterAction = sizeSoFar + type.Length + 1;
                       attackerPetType = petType;
                       attackerOwner = owner;
-                      attacker = player;
+                      attacker = part.Substring(0, sizeSoFar - 1);
                     }
                     else
                     {
@@ -375,7 +384,7 @@ namespace EQLogParser
                         afterAction = sizeSoFar + "has taken".Length + 1;
                         defenderPetType = petType;
                         defenderOwner = owner;
-                        defender = player;
+                        defender = part.Substring(0, sizeSoFar - 1);
                       }
                     }
                   }
@@ -383,37 +392,32 @@ namespace EQLogParser
               }
             }
           }
-          else if (Helpers.IsPossiblePlayerName(part, firstSpace))
+          else
           {
-            int sizeSoFar = firstSpace + 1;
-            int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
-            if (secondSpace > -1)
+            string player = part.Substring(0, firstSpace);
+            if (DataManager.Instance.CheckNameForPlayer(player) || Helpers.IsPossiblePlayerName(part, firstSpace))
             {
-              string player = part.Substring(0, firstSpace);
-              string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
-              if (HitMap.ContainsKey(testAction))
+              int sizeSoFar = firstSpace + 1;
+              int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
+              if (secondSpace > -1)
               {
-                if (HitAdditionalMap.ContainsKey(testAction))
+                string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
+
+                if ((type = checkType(testAction)) != "")
                 {
-                  type = HitAdditionalMap[testAction];
+                  action = "DD";
+                  afterAction = sizeSoFar + type.Length + 1;
+                  attacker = player;
                 }
                 else
                 {
-                  type = testAction;
-                }
-
-                action = "DD";
-                afterAction = sizeSoFar + type.Length + 1;
-                attacker = player;
-              }
-              else
-              {
-                if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
-                {
-                  action = "DoT";
-                  type = Labels.DOT_TYPE;
-                  afterAction = sizeSoFar + "has taken".Length + 1;
-                  defender = player;
+                  if (testAction == "has" && part.IndexOf(" taken ", sizeSoFar + 3, 7, StringComparison.Ordinal) > -1)
+                  {
+                    action = "DoT";
+                    type = Labels.DOT_TYPE;
+                    afterAction = sizeSoFar + "has taken".Length + 1;
+                    defender = player;
+                  }
                 }
               }
             }
@@ -541,6 +545,16 @@ namespace EQLogParser
                         if (part.IndexOf("of damage.", point + 7, StringComparison.Ordinal) == -1)
                         {
                           type = Labels.DD_TYPE;
+
+                          int byIndex = part.IndexOf(" by ", point + 18, StringComparison.Ordinal);
+                          if (byIndex > -1)
+                          {
+                            int endIndex = part.LastIndexOf(".", StringComparison.Ordinal);
+                            if (endIndex > -1 && endIndex > byIndex)
+                            {
+                              spell = part.Substring(byIndex + 4, endIndex - byIndex - 4);
+                            }
+                          }
                         }
                       }
                     }
@@ -562,16 +576,20 @@ namespace EQLogParser
                   int fromIndex = part.IndexOf(" from ", afterDmg, StringComparison.Ordinal);
                   if (fromIndex > -1)
                   {
-                    if (part.Substring(fromIndex + 6, 4) == "your")
+                    if (part.IndexOf(" your ", fromIndex + 5, 6, StringComparison.Ordinal) > 1)
                     {
                       int periodIndex = part.LastIndexOf('.');
                       if (periodIndex > -1)
                       {
-                        spell = part.Substring(afterDmg + 18, periodIndex - afterDmg - 18);
+                        // if this is needed for Bane then remember to account for the word " spell" appearing at the end
+                        // but don't set spell for now or it will be counted as a DoT and we dont use it anyway
+                        if (action == "DoT")
+                        {
+                          spell = part.Substring(fromIndex + 11, periodIndex - fromIndex - 11);
+                        }
                       }
 
                       attacker = "your";
-                      action = "DoT";
                       found = true;
                     }
                     else if (action == "DoT")
@@ -648,6 +666,24 @@ namespace EQLogParser
       }
 
       return record;
+    }
+
+    private static string checkType(string testAction)
+    {
+      string type = "";
+      if (HitMap.ContainsKey(testAction))
+      {
+        if (HitAdditionalMap.ContainsKey(testAction))
+        {
+          type = HitAdditionalMap[testAction];
+        }
+        else
+        {
+          type = testAction;
+        }
+      }
+
+      return type;
     }
   }
 }
