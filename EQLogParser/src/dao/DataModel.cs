@@ -16,7 +16,7 @@ namespace EQLogParser
     public const string DD_TYPE = "Direct Damage";
     public const string DOT_TYPE = "DoT Tick";
     public const string DS_TYPE = "Damage Shield";
-    public const string BANE_TYPE = "Bane";
+    public const string BANE_TYPE = "Bane Damage";
     public const string PROC_TYPE = "Proc";
   }
 
@@ -37,6 +37,7 @@ namespace EQLogParser
   public class Hit
   {
     public long Max { get; set; }
+    public int BaneCount { get; set; }
     public int Count { get; set; }
     public int CritCount { get; set; }
     public int DoubleBowShotCount { get; set; }
@@ -222,6 +223,7 @@ namespace EQLogParser
     public long TotalLuckyDamage { get; set; }
     public double TotalSeconds { get; set; }
     public long DPS { get; set; }
+    public int BaneHits { get; set; }
     public int Hits { get; set; }
     public int Resists { get; set; }
     public long Max { get; set; }

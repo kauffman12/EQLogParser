@@ -210,24 +210,49 @@ namespace EQLogParser
               {
                 foreach (PlayerStats childStat in combined.Children[aggregateName])
                 {
-                  childStat.Percent = Math.Round(((decimal) childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
-                  childStat.PercentOfRaid = Math.Round((decimal) childStat.TotalDamage / combined.RaidStats.TotalDamage * 100, 2);
+                  if (aggregatePlayerStats.TotalDamage > 0)
+                  {
+                    childStat.Percent = Math.Round(((decimal)childStat.TotalDamage / aggregatePlayerStats.TotalDamage) * 100, 2);
+                  }
+
+                  if (combined.RaidStats.TotalDamage > 0)
+                  {
+                    childStat.PercentOfRaid = Math.Round((decimal)childStat.TotalDamage / combined.RaidStats.TotalDamage * 100, 2);
+                  }
                 }
               }
             }
           });
         }
 
+        PlayerStats myStats = null;
         Parallel.ForEach(allStatValues, (stat) =>
         {
           foreach (var subStat in stat.SubStats.Values.OrderByDescending(item => item.TotalDamage))
           {
-            subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal) subStat.TotalDamage / stat.TotalDamage) * 100, 2);
-
-            if (stat.Name == DataManager.Instance.PlayerName && ResistMap.ContainsKey(subStat.Name))
+            if (stat.TotalDamage > 0)
             {
-              subStat.Resists = ResistMap[subStat.Name];
-              subStat.ResistRate = Math.Round(Convert.ToDecimal(subStat.Resists) / (subStat.Hits + subStat.Resists) * 100, 2);
+              subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal)subStat.TotalDamage / stat.TotalDamage) * 100, 2);
+            }
+
+            if (stat.Name == DataManager.Instance.PlayerName)
+            {
+              myStats = stat;
+
+              if (ResistMap.ContainsKey(subStat.Name))
+              {
+                lock (ResistMap)
+                {
+                  subStat.Resists = ResistMap[subStat.Name];
+                  ResistMap.Remove(subStat.Name);
+                }
+
+                int hits = (subStat.Hits + subStat.Resists);
+                if (hits > 0)
+                {
+                  subStat.ResistRate = Math.Round(Convert.ToDecimal(subStat.Resists) / hits * 100, 2);
+                }
+              }
             }
           }
 
@@ -237,6 +262,29 @@ namespace EQLogParser
             stat.Deaths = deathCounts[stat.Name];
           }
         });
+
+        // left over spells that were resisted but never showed up in the damage map
+        //if (ResistMap.Count > 0 && myStats != null)
+        //{
+        //  foreach (var keyvalue in ResistMap)
+        //  {
+        //    var resisted = new PlayerSubStats()
+        //    {
+        //      ClassName = "",
+        //      Name = keyvalue.Key,
+        //      Type = "Resisted Spells",
+        //      CritFreqValues = new Dictionary<long, int>(),
+        //      NonCritFreqValues = new Dictionary<long, int>(),
+        //      ResistRate = 100,
+        //      Resists = keyvalue.Value
+        //    };
+
+        //    if (!myStats.SubStats.ContainsKey(resisted.Name))
+        //    {
+        //      myStats.SubStats.Add(resisted.Name, resisted);
+        //    }
+        //  }
+        //}
 
         int lastRank = 0;
         combined.StatsList = individualStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
@@ -487,6 +535,7 @@ namespace EQLogParser
       playerTotals.TotalDamage += npcStats.TotalDamage;
       playerTotals.TotalCritDamage += npcStats.TotalCritDamage;
       playerTotals.TotalLuckyDamage += npcStats.TotalLuckyDamage;
+      playerTotals.BaneHits += npcStats.BaneCount;
       playerTotals.Hits += npcStats.Count;
       playerTotals.CritHits += npcStats.CritCount;
       playerTotals.LuckyHits += npcStats.LuckyCount;
@@ -520,10 +569,13 @@ namespace EQLogParser
 
       playerTotals.TotalSeconds = playerTotals.TimeDiffs.Sum();
       playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds, 2);
-      playerTotals.Avg = (long) Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits, 2);
-      playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 2);
-      playerTotals.LuckRate = Math.Round(Convert.ToDecimal(playerTotals.LuckyHits) / playerTotals.Hits * 100, 2);
-      playerTotals.TwincastRate = Math.Round(Convert.ToDecimal(playerTotals.TwincastHits) / playerTotals.Hits * 100, 2);
+
+      if (playerTotals.Hits > 0)
+      {
+        playerTotals.Avg = (long)Math.Round(Convert.ToDecimal(playerTotals.TotalDamage) / playerTotals.Hits, 2);
+        playerTotals.CritRate = Math.Round(Convert.ToDecimal(playerTotals.CritHits) / playerTotals.Hits * 100, 2);
+        playerTotals.LuckRate = Math.Round(Convert.ToDecimal(playerTotals.LuckyHits) / playerTotals.Hits * 100, 2);
+      }
 
       if ((playerTotals.CritHits - playerTotals.LuckyHits) > 0)
       {
@@ -577,6 +629,7 @@ namespace EQLogParser
       subStats.TotalDamage += hitMap.TotalDamage;
       subStats.TotalCritDamage += hitMap.TotalCritDamage;
       subStats.TotalLuckyDamage += hitMap.TotalLuckyDamage;
+      subStats.BaneHits += hitMap.BaneCount;
       subStats.Hits += hitMap.Count;
       subStats.CritHits += hitMap.CritCount;
       subStats.LuckyHits += hitMap.LuckyCount;
