@@ -350,7 +350,7 @@ namespace EQLogParser
 
     internal static bool GetTripleClickSelectAll(DependencyObject element)
     {
-      return (bool)element.GetValue(TripleClickSelectAllProperty);
+      return (bool) element.GetValue(TripleClickSelectAllProperty);
     }
   }
 }

@@ -148,9 +148,18 @@ namespace EQLogParser
         aHitMap[aType] = new Hit() { CritFreqValues = new Dictionary<long, int>(), NonCritFreqValues = new Dictionary<long, int>() };
       }
 
-      stats.Count++;
-      stats.TotalDamage += record.Damage;
-      stats.Max = (stats.Max < record.Damage) ? record.Damage : stats.Max;
+      // record Bane separately in totals
+      if (record.Type == Labels.BANE_TYPE)
+      {
+        stats.BaneCount++;
+      }
+      else
+      {
+        stats.Count++;
+        stats.TotalDamage += record.Damage;
+        stats.Max = (stats.Max < record.Damage) ? record.Damage : stats.Max;
+      }
+
       aHitMap[aType].Count++;
       aHitMap[aType].TotalDamage += record.Damage;
       aHitMap[aType].Max = (aHitMap[aType].Max < record.Damage) ? record.Damage : aHitMap[aType].Max;
@@ -204,6 +213,12 @@ namespace EQLogParser
       {
         switch (record.Modifiers)
         {
+          case "Assassinate":
+            stats.CritCount++;
+            aHitMap[aType].CritCount++;
+            stats.TotalCritDamage += record.Damage;
+            aHitMap[aType].TotalCritDamage += record.Damage;
+            break;
           case "Crippling Blow":
             stats.CritCount++;
             aHitMap[aType].CritCount++;

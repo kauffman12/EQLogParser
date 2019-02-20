@@ -151,22 +151,22 @@ namespace EQLogParser
         }
       }
 
-      ClassNames[SpellClasses.WAR] = "Warrior";
-      ClassNames[SpellClasses.CLR] = "Cleric";
-      ClassNames[SpellClasses.PAL] = "Paladin";
-      ClassNames[SpellClasses.RNG] = "Ranger";
-      ClassNames[SpellClasses.SHD] = "Shadow Knight";
-      ClassNames[SpellClasses.DRU] = "Druid";
-      ClassNames[SpellClasses.MNK] = "Monk";
-      ClassNames[SpellClasses.BRD] = "Bard";
-      ClassNames[SpellClasses.ROG] = "Rogue";
-      ClassNames[SpellClasses.SHM] = "Shaman";
-      ClassNames[SpellClasses.NEC] = "Necromancer";
-      ClassNames[SpellClasses.WIZ] = "Wizard";
-      ClassNames[SpellClasses.MAG] = "Magician";
-      ClassNames[SpellClasses.ENC] = "Enchanter";
-      ClassNames[SpellClasses.BST] = "Beastlord";
-      ClassNames[SpellClasses.BER] = "Berserker";
+      ClassNames[SpellClasses.WAR] = "WAR";
+      ClassNames[SpellClasses.CLR] = "CLR";
+      ClassNames[SpellClasses.PAL] = "PAL";
+      ClassNames[SpellClasses.RNG] = "RNG";
+      ClassNames[SpellClasses.SHD] = "SHD";
+      ClassNames[SpellClasses.DRU] = "DRU";
+      ClassNames[SpellClasses.MNK] = "MNK";
+      ClassNames[SpellClasses.BRD] = "BRD";
+      ClassNames[SpellClasses.ROG] = "ROG";
+      ClassNames[SpellClasses.SHM] = "SHM";
+      ClassNames[SpellClasses.NEC] = "NEC";
+      ClassNames[SpellClasses.WIZ] = "WIZ";
+      ClassNames[SpellClasses.MAG] = "MAG";
+      ClassNames[SpellClasses.ENC] = "ENC";
+      ClassNames[SpellClasses.BST] = "BST";
+      ClassNames[SpellClasses.BER] = "BER";
     }
 
     public void Clear()
