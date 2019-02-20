@@ -5,11 +5,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -414,6 +416,12 @@ namespace EQLogParser
           childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
           PlayerChildGrids.Add(childrenDataGrid);
 
+          // show bane column if needed
+          if (playerDataGrid.Columns[4].Visibility == Visibility.Visible)
+          {
+            childrenDataGrid.Columns[4].Visibility = Visibility.Visible;
+          }
+
           // fix column widths
           foreach (var column in playerDataGrid.Columns)
           {
@@ -566,6 +574,7 @@ namespace EQLogParser
               new Task(() =>
               {
                 CurrentStats = StatsBuilder.BuildTotalStats(realItems);
+
                 Dispatcher.InvokeAsync((() =>
                 {
                   dpsTitle.Content = StatsBuilder.BuildTitle(CurrentStats);
@@ -618,7 +627,7 @@ namespace EQLogParser
           }
           else
           {
-            menuItem.IsEnabled = CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string);
+            menuItem.IsEnabled = CurrentStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
           }
         }
 
@@ -631,7 +640,7 @@ namespace EQLogParser
           }
           else
           {
-            menuItem.IsEnabled = CurrentStats.UniqueClasses.ContainsKey(menuItem.Header as string);
+            menuItem.IsEnabled = CurrentStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
           }
         }
       }
@@ -641,6 +650,17 @@ namespace EQLogParser
       }
     }
 
+    private void ShowColumn(int index, bool show)
+    {
+      if (playerDataGrid.Columns[index].Visibility == Visibility.Hidden && show || playerDataGrid.Columns[index].Visibility == Visibility.Visible && !show)
+      {
+        playerDataGrid.Columns[index].Visibility = show ? Visibility.Visible : Visibility.Hidden;
+        foreach (var grid in PlayerChildGrids)
+        {
+          grid.Columns[index].Visibility = show ? Visibility.Visible : Visibility.Hidden;
+        }
+      }
+    }
 
     private void PlayerDPSTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -771,6 +791,32 @@ namespace EQLogParser
       EQLogReader?.Stop();
       CastProcessor?.Stop();
       DamageProcessor?.Stop();
+    }
+  }
+
+  public class ZeroConverter : IValueConverter
+  {
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+      if (value.GetType() == typeof(decimal))
+      {
+        return (decimal)value > 0 ? value.ToString() : "-";
+      }
+      return string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+      if (value is string)
+      {
+        decimal decValue;
+        if (!decimal.TryParse((string)value, out decValue))
+        {
+          decValue = 0;
+        }
+        return decValue;
+      }
+      return 0;
     }
   }
 }
