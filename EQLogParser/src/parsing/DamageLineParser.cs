@@ -637,9 +637,9 @@ namespace EQLogParser
           {
             record = new DamageRecord()
             {
-              Attacker = attacker,
-              Defender = defender,
-              Type = Char.ToUpper(type[0]) + type.Substring(1),
+              Attacker = FixName(attacker),
+              Defender = FixName(defender),
+              Type = char.ToUpper(type[0]) + type.Substring(1),
               Damage = damage,
               AttackerPetType = attackerPetType,
               AttackerOwner = attackerOwner,
@@ -666,6 +666,25 @@ namespace EQLogParser
       }
 
       return record;
+    }
+
+    private static string FixName(string name)
+    {
+      string result;
+      if (name.Length >= 2 && name[0] == 'A' && name[1] == ' ')
+      {
+        result = "a " + name.Substring(2);
+      }
+      else if (name.Length >= 3 && name[0] == 'A' && name[1] == 'n' && name[2] == ' ')
+      {
+        result = "an " + name.Substring(3);
+      }
+      else
+      {
+        result = name;
+      }
+
+      return result;
     }
 
     private static string checkType(string testAction)
