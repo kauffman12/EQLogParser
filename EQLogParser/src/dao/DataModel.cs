@@ -50,6 +50,8 @@ namespace EQLogParser
     public long TotalDamage { get; set; }
     public long TotalCritDamage { get; set; }
     public long TotalLuckyDamage { get; set; }
+    public DateTime BeginTime { get; set; }
+    public DateTime LastTime { get; set; }
     public Dictionary<long, int> CritFreqValues { get; set; }
     public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
@@ -60,8 +62,6 @@ namespace EQLogParser
     public Dictionary<string, Hit> SpellDoTMap { get; set; }
     public Dictionary<string, Hit> SpellDDMap { get; set; }
     public Dictionary<string, Hit> SpellProcMap { get; set; }
-    public DateTime BeginTime { get; set; }
-    public DateTime LastTime { get; set; }
     public string Owner { get; set; }
     public bool IsPet { get; set; }
   }
@@ -154,6 +154,7 @@ namespace EQLogParser
     public int ClassMask { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
+    public byte Proc { get; set; }
   }
 
   public class SpellCountData
@@ -177,7 +178,6 @@ namespace EQLogParser
     public string TargetTitle { get; set; }
     public string TimeTitle { get; set; }
     public string DamageTitle { get; set; }
-    public double TimeDiff { get; set; }
     public List<PlayerStats> StatsList { get; set; }
     public Dictionary<string, List<PlayerStats>> Children { get; set; }
     public PlayerStats RaidStats { get; set; }
@@ -223,6 +223,7 @@ namespace EQLogParser
     public long TotalLuckyDamage { get; set; }
     public double TotalSeconds { get; set; }
     public long DPS { get; set; }
+    public long SDPS { get; set; }
     public int BaneHits { get; set; }
     public int Hits { get; set; }
     public int Resists { get; set; }
@@ -241,6 +242,9 @@ namespace EQLogParser
     public decimal PercentOfRaid { get; set; }
     public int Deaths { get; set; }
     public string ClassName { get; set; }
+    public List<DateTime> BeginTimes { get; set; }
+    public List<DateTime> LastTimes { get; set; }
+    public List<double> TimeDiffs { get; set; }
     public Dictionary<long, int> CritFreqValues { get; set; }
     public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
@@ -249,8 +253,5 @@ namespace EQLogParser
   {
     public Dictionary<string, PlayerSubStats> SubStats { get; set; }
     public string OrigName { get; set; }
-    public List<DateTime> BeginTimes { get; set; }
-    public List<DateTime> LastTimes { get; set; }
-    public List<double> TimeDiffs { get; set; }
   }
 }

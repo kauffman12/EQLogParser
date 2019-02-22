@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
-        Width="1500"
+        Width="1400"
         Title="" Closed="Window_Closed">
   <Window.Resources>
   </Window.Resources>
@@ -156,6 +156,7 @@
                           <DataGridTextColumn Binding="{Binding PercentOfRaid, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource TotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
                           <DataGridTextColumn Binding="{Binding TotalDamage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="75" Width="75*"/>
                           <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="60" Width="60*" CanUserReorder="False"/>
+                          <DataGridTextColumn Binding="{Binding SDPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SDPS" IsReadOnly="True" MinWidth="60" Width="60*" CanUserReorder="False"/>
                           <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
                           <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
                           <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
@@ -177,6 +178,7 @@
                                 <DataGridTextColumn Binding="{Binding PercentOfRaid, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding TotalDamage}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding SDPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SDPS" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding Hits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding Max}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
