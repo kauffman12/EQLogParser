@@ -97,7 +97,8 @@ namespace EQLogParser
               Beneficial = (beneficial != 0),
               ClassMask = classMask,
               LandsOnYou = data[4],
-              LandsOnOther = data[5]
+              LandsOnOther = data[5],
+              Proc = byte.Parse(data[6])
             };
 
             SpellsDB[spellData.ID] = spellData;

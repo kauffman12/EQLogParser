@@ -184,6 +184,7 @@ namespace EQLogParser
         if (stats.Hits > 0)
         {
           stats.DPS = (long) Math.Round(stats.TotalDamage / stats.TotalSeconds, 2);
+          stats.SDPS = (long) Math.Round(stats.TotalDamage / CurrentStats.RaidStats.TotalSeconds, 2);
           stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.TotalDamage) / stats.Hits, 2);
 
           if (stats.CritHits > 0)
