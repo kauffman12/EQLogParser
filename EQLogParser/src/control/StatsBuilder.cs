@@ -143,10 +143,12 @@ namespace EQLogParser
           }
         }
 
+        raidTotals.TotalSeconds = raidTotals.TimeDiffs.Sum();
+        raidTotals.DPS = (long)Math.Round(raidTotals.TotalDamage / raidTotals.TotalSeconds, 2);
+
         combined.RaidStats = raidTotals;
-        combined.TimeDiff = raidTotals.TimeDiffs.Sum();
         combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
-        combined.TimeTitle = string.Format(TIME_FORMAT, combined.TimeDiff);
+        combined.TimeTitle = string.Format(TIME_FORMAT, combined.RaidStats.TotalSeconds);
         combined.DamageTitle = string.Format(DAMAGE_FORMAT, Helpers.FormatDamage(raidTotals.TotalDamage), Helpers.FormatDamage(raidTotals.DPS));
         combined.UniqueClasses = uniqueClasses;
 
@@ -201,6 +203,10 @@ namespace EQLogParser
               UpdateTotals(aggregatePlayerStats, dStats);
             });
 
+            aggregatePlayerStats.TotalSeconds = aggregatePlayerStats.TimeDiffs.Sum();
+            aggregatePlayerStats.DPS = (long) Math.Round(aggregatePlayerStats.TotalDamage / aggregatePlayerStats.TotalSeconds, 2);
+            aggregatePlayerStats.SDPS = (long) Math.Round(aggregatePlayerStats.TotalDamage / combined.RaidStats.TotalSeconds, 2);
+
             individualStats[aggregateName] = aggregatePlayerStats;
 
             // figure out percents
@@ -228,8 +234,16 @@ namespace EQLogParser
         PlayerStats myStats = null;
         Parallel.ForEach(allStatValues, (stat) =>
         {
+          stat.TotalSeconds = stat.TimeDiffs.Sum();
+          stat.DPS = (long) Math.Round(stat.TotalDamage / stat.TotalSeconds, 2);
+          stat.SDPS = (long) Math.Round(stat.TotalDamage / combined.RaidStats.TotalSeconds, 2);
+
           foreach (var subStat in stat.SubStats.Values.OrderByDescending(item => item.TotalDamage))
           {
+            subStat.TotalSeconds = subStat.TimeDiffs.Sum();
+            subStat.DPS = (long) Math.Round(subStat.TotalDamage / subStat.TotalSeconds, 2);
+            subStat.SDPS = (long) Math.Round(subStat.TotalDamage / combined.RaidStats.TotalSeconds, 2);
+
             if (stat.TotalDamage > 0)
             {
               subStat.Percent = Math.Round(stat.Percent / 100 * ((decimal)subStat.TotalDamage / stat.TotalDamage) * 100, 2);
@@ -377,7 +391,7 @@ namespace EQLogParser
         {
           // sort stats
           stats = stats.OrderBy(item => item.Name).ToList();
-          int interval = combined.TimeDiff < 12 ? 1 : (int) combined.TimeDiff / 12;
+          int interval = combined.RaidStats.TotalSeconds < 12 ? 1 : (int)combined.RaidStats.TotalSeconds / 12;
 
           foreach (var timeIndex in Enumerable.Range(0, combined.RaidStats.BeginTimes.Count))
           {
@@ -542,33 +556,7 @@ namespace EQLogParser
       playerTotals.TwincastHits += npcStats.TwincastCount;
       playerTotals.Max = (playerTotals.Max < npcStats.Max) ? npcStats.Max : playerTotals.Max;
 
-      int currentIndex = playerTotals.BeginTimes.Count - 1;
-      if (currentIndex == -1)
-      {
-        playerTotals.BeginTimes.Add(npcStats.BeginTime);
-        playerTotals.LastTimes.Add(npcStats.LastTime);
-        playerTotals.TimeDiffs.Add(0); // update afterward
-        currentIndex = 0;
-      }
-      else if (playerTotals.LastTimes[currentIndex] >= npcStats.BeginTime)
-      {
-        if (npcStats.LastTime > playerTotals.LastTimes[currentIndex])
-        {
-          playerTotals.LastTimes[currentIndex] = npcStats.LastTime;
-        }
-      }
-      else
-      {
-        playerTotals.BeginTimes.Add(npcStats.BeginTime);
-        playerTotals.LastTimes.Add(npcStats.LastTime);
-        playerTotals.TimeDiffs.Add(0); // update afterward
-        currentIndex++;
-      }
-
-      playerTotals.TimeDiffs[currentIndex] = playerTotals.LastTimes[currentIndex].Subtract(playerTotals.BeginTimes[currentIndex]).TotalSeconds + 1;
-
-      playerTotals.TotalSeconds = playerTotals.TimeDiffs.Sum();
-      playerTotals.DPS = (long) Math.Round(playerTotals.TotalDamage / playerTotals.TotalSeconds, 2);
+      UpdateTimeDiffs(playerTotals, npcStats);
 
       if (playerTotals.Hits > 0)
       {
@@ -601,6 +589,34 @@ namespace EQLogParser
       });
     }
 
+    private static void UpdateTimeDiffs(PlayerSubStats subStats, Hit npcStats)
+    {
+      int currentIndex = subStats.BeginTimes.Count - 1;
+      if (currentIndex == -1)
+      {
+        subStats.BeginTimes.Add(npcStats.BeginTime);
+        subStats.LastTimes.Add(npcStats.LastTime);
+        subStats.TimeDiffs.Add(0); // update afterward
+        currentIndex = 0;
+      }
+      else if (subStats.LastTimes[currentIndex] >= npcStats.BeginTime)
+      {
+        if (npcStats.LastTime > subStats.LastTimes[currentIndex])
+        {
+          subStats.LastTimes[currentIndex] = npcStats.LastTime;
+        }
+      }
+      else
+      {
+        subStats.BeginTimes.Add(npcStats.BeginTime);
+        subStats.LastTimes.Add(npcStats.LastTime);
+        subStats.TimeDiffs.Add(0); // update afterward
+        currentIndex++;
+      }
+
+      subStats.TimeDiffs[currentIndex] = subStats.LastTimes[currentIndex].Subtract(subStats.BeginTimes[currentIndex]).TotalSeconds + 1;
+    }
+
     private static void UpdateHitMap(PlayerStats playerTotals, KeyValuePair<string, Hit> keyvalue, string type = null)
     {
       PlayerSubStats subStats = null;
@@ -614,7 +630,10 @@ namespace EQLogParser
             Name = keyvalue.Key,
             Type = type,
             CritFreqValues = new Dictionary<long, int>(),
-            NonCritFreqValues = new Dictionary<long, int>()
+            NonCritFreqValues = new Dictionary<long, int>(),
+            BeginTimes = new List<DateTime>(),
+            LastTimes = new List<DateTime>(),
+            TimeDiffs = new List<double>()
           };
 
           playerTotals.SubStats[keyvalue.Key] = subStats;
@@ -635,8 +654,11 @@ namespace EQLogParser
       subStats.LuckyHits += hitMap.LuckyCount;
       subStats.TwincastHits += hitMap.TwincastCount;
       subStats.Max = (subStats.Max < hitMap.Max) ? hitMap.Max : subStats.Max;
-      subStats.TotalSeconds = playerTotals.TotalSeconds;
-      subStats.DPS = (long) Math.Round(subStats.TotalDamage / subStats.TotalSeconds, 2);
+
+      UpdateTimeDiffs(subStats, hitMap);
+      //var diff = (hitMap.LastTime - hitMap.BeginTime).TotalSeconds;
+      //subStats.TotalSeconds += diff == 0 ? 1 : diff;
+
       subStats.Avg = (long) Math.Round(Convert.ToDecimal(subStats.TotalDamage) / subStats.Hits, 2);
       subStats.CritRate = Math.Round(Convert.ToDecimal(subStats.CritHits) / subStats.Hits * 100, 2);
       subStats.LuckRate = Math.Round(Convert.ToDecimal(subStats.LuckyHits) / subStats.Hits * 100, 2);

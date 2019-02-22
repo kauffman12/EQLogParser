@@ -126,7 +126,7 @@ namespace EQLogParser
       {
         string spellName = Helpers.AbbreviateSpellName(record.Spell);
         SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
-        if (data != null && data.ClassMask == 0)
+        if (data != null && data.Proc == 1)
         {
           aHitMap = stats.SpellProcMap;
         }
@@ -145,7 +145,11 @@ namespace EQLogParser
 
       if (!aHitMap.ContainsKey(aType))
       {
-        aHitMap[aType] = new Hit() { CritFreqValues = new Dictionary<long, int>(), NonCritFreqValues = new Dictionary<long, int>() };
+        aHitMap[aType] = new Hit() { BeginTime = currentTime, LastTime = currentTime, CritFreqValues = new Dictionary<long, int>(), NonCritFreqValues = new Dictionary<long, int>() };
+      }
+      else
+      {
+        aHitMap[aType].LastTime = currentTime;
       }
 
       // record Bane separately in totals
@@ -305,6 +309,7 @@ namespace EQLogParser
             aHitMap[aType].FlurryCount++;
             break;
           case "Flurry Crippling Blow":
+          case "Crippling Blow Flurry":
             stats.CritCount++;
             aHitMap[aType].CritCount++;
             stats.TotalCritDamage += record.Damage;
@@ -313,6 +318,7 @@ namespace EQLogParser
             aHitMap[aType].FlurryCount++;
             break;
           case "Flurry Critical":
+          case "Critical Flurry":
             stats.CritCount++;
             aHitMap[aType].CritCount++;
             stats.TotalCritDamage += record.Damage;
@@ -359,6 +365,7 @@ namespace EQLogParser
             aHitMap[aType].FlurryCount++;
             break;
           case "Flurry Lucky Critical":
+          case "Lucky Critical Flurry":
             stats.CritCount++;
             aHitMap[aType].CritCount++;
             stats.LuckyCount++;
@@ -532,6 +539,58 @@ namespace EQLogParser
           case "Rampage":
             stats.RampageCount++;
             aHitMap[aType].RampageCount++;
+            break;
+          case "Riposte":
+            break;
+          case "Riposte Critical":
+            stats.CritCount++;
+            aHitMap[aType].CritCount++;
+            break;
+          case "Riposte Crippling Blow":
+            stats.CritCount++;
+            aHitMap[aType].CritCount++;
+            stats.TotalCritDamage += record.Damage;
+            aHitMap[aType].TotalCritDamage += record.Damage;
+            break;
+          case "Riposte Lucky Critical":
+            stats.CritCount++;
+            aHitMap[aType].CritCount++;
+            stats.LuckyCount++;
+            aHitMap[aType].LuckyCount++;
+            stats.TotalLuckyDamage += record.Damage;
+            aHitMap[aType].TotalLuckyDamage += record.Damage;
+            break;
+          case "Riposte Strikethrough":
+            break;
+          case "Riposte Strikethrough Critical":
+            stats.CritCount++;
+            aHitMap[aType].CritCount++;
+            break;
+          case "Riposte Strikethrough Lucky Critical":
+            stats.CritCount++;
+            aHitMap[aType].CritCount++;
+            stats.LuckyCount++;
+            aHitMap[aType].LuckyCount++;
+            stats.TotalLuckyDamage += record.Damage;
+            aHitMap[aType].TotalLuckyDamage += record.Damage;
+            break;
+          case "Strikethrough":
+            break;
+          case "Strikethrough Critical":
+            stats.CritCount++;
+            aHitMap[aType].CritCount++;
+            break;
+          case "Strikethrough Flurry":
+            stats.FlurryCount++;
+            aHitMap[aType].FlurryCount++;
+            break;
+          case "Strikethrough Lucky Critical":
+            stats.CritCount++;
+            aHitMap[aType].CritCount++;
+            stats.LuckyCount++;
+            aHitMap[aType].LuckyCount++;
+            stats.TotalLuckyDamage += record.Damage;
+            aHitMap[aType].TotalLuckyDamage += record.Damage;
             break;
           case "Slay Undead":
             stats.SlayUndeadCount++;
