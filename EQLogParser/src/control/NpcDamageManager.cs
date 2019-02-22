@@ -625,17 +625,17 @@ namespace EQLogParser
 
     public NonPlayer Find(string defender, string type)
     {
-      NonPlayer npc = DataManager.Instance.GetNonPlayer(defender);
+      NonPlayer npc = null;
 
-      if (npc == null && char.IsUpper(defender[0]) && (type == Labels.DOT_TYPE || type == Labels.DS_TYPE))
+      if (type == Labels.DOT_TYPE || type == Labels.DS_TYPE)
       {
-        // DoTs or DS will show upper case when they shouldn't because they start a sentence
-        npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0]) + defender.Substring(1));
+        // DoTs or DS will show upper case when they shouldn't because they start a sentence so try lower case first
+        npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0]) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
       }
-      else if (npc == null && char.IsLower(defender[0]) && type == Labels.DD_TYPE)
+      else
       {
-        // DDs deal with having to work around DoTs
-        npc = DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0]) + defender.Substring(1));
+        // DDs are correct but still need to deal with names saved by a DoT so try upper case second
+        npc = DataManager.Instance.GetNonPlayer(defender) ?? DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0]) + defender.Substring(1));
       }
 
       return npc;
