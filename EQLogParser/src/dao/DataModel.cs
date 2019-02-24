@@ -18,6 +18,7 @@ namespace EQLogParser
     public const string DS_TYPE = "Damage Shield";
     public const string BANE_TYPE = "Bane Damage";
     public const string PROC_TYPE = "Proc";
+    public const string RESIST_TYPE = "Resisted Spells";
   }
 
   public class DamageRecord
@@ -154,7 +155,8 @@ namespace EQLogParser
     public int ClassMask { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
-    public byte Proc { get; set; }
+    public bool Damaging { get; set; }
+    public bool IsProc { get; set; }
   }
 
   public class SpellCountData

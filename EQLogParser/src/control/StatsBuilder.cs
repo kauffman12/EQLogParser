@@ -278,27 +278,32 @@ namespace EQLogParser
         });
 
         // left over spells that were resisted but never showed up in the damage map
-        //if (ResistMap.Count > 0 && myStats != null)
-        //{
-        //  foreach (var keyvalue in ResistMap)
-        //  {
-        //    var resisted = new PlayerSubStats()
-        //    {
-        //      ClassName = "",
-        //      Name = keyvalue.Key,
-        //      Type = "Resisted Spells",
-        //      CritFreqValues = new Dictionary<long, int>(),
-        //      NonCritFreqValues = new Dictionary<long, int>(),
-        //      ResistRate = 100,
-        //      Resists = keyvalue.Value
-        //    };
+        if (ResistMap.Count > 0 && myStats != null)
+        {
+          foreach (var keyvalue in ResistMap)
+          {
+            string spellName = Helpers.AbbreviateSpellName(keyvalue.Key);
+            var spellData = DataManager.Instance.GetSpellByAbbrv(spellName);
+            if (spellData != null && spellData.Damaging)
+            {
+              var resisted = new PlayerSubStats()
+              {
+                ClassName = "",
+                Name = keyvalue.Key,
+                Type = "Resisted",
+                CritFreqValues = new Dictionary<long, int>(),
+                NonCritFreqValues = new Dictionary<long, int>(),
+                ResistRate = 100,
+                Resists = keyvalue.Value
+              };
 
-        //    if (!myStats.SubStats.ContainsKey(resisted.Name))
-        //    {
-        //      myStats.SubStats.Add(resisted.Name, resisted);
-        //    }
-        //  }
-        //}
+              if (!myStats.SubStats.ContainsKey(resisted.Name))
+              {
+                myStats.SubStats.Add(resisted.Name, resisted);
+              }
+            }
+          }
+        }
 
         int lastRank = 0;
         combined.StatsList = individualStats.Values.OrderByDescending(item => item.TotalDamage).ToList();
