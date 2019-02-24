@@ -126,7 +126,7 @@ namespace EQLogParser
       {
         string spellName = Helpers.AbbreviateSpellName(record.Spell);
         SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
-        if (data != null && data.Proc == 1)
+        if (data != null && data.IsProc)
         {
           aHitMap = stats.SpellProcMap;
         }
