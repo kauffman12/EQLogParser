@@ -50,15 +50,6 @@ namespace EQLogParser
             EventsDamageProcessed(record, e);
           }
         }
-        else if (line.Length >= 51 && (index = line.IndexOf(" healed ", ACTION_PART_INDEX, 24, StringComparison.Ordinal)) > -1 && char.IsUpper(line[index + 8]))
-        {
-          // WARNING -- this is only a subset of all heal lines
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-          pline.OptionalIndex = index - ACTION_PART_INDEX;
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-          HandleHealed(pline);
-        }
         else if (line.Length < 102 && (index = line.IndexOf(" slain ", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
         {
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
@@ -134,26 +125,6 @@ namespace EQLogParser
       EventsResistProcessed(defender, e);
     }
 
-    private static void HandleHealed(ProcessLine pline)
-    {
-      string healed = null;
-      string healer = pline.ActionPart.Substring(0, pline.OptionalIndex);
-
-      int forword = pline.ActionPart.IndexOf(" for ", pline.OptionalIndex + 8, StringComparison.Ordinal);
-      if (forword > -1)
-      {
-        healed = pline.ActionPart.Substring(pline.OptionalIndex + 8, forword - pline.OptionalIndex - 8);
-      }
-
-      bool foundHealer = DataManager.Instance.CheckNameForPlayer(healer);
-      bool foundHealed = DataManager.Instance.CheckNameForPlayer(healed) || DataManager.Instance.CheckNameForPet(healed);
-
-      if (!foundHealer && foundHealed && Helpers.IsPossiblePlayerName(healer, healer.Length))
-      {
-        DataManager.Instance.UpdateVerifiedPlayers(healer);
-      }
-    }
-
     private static bool CheckForPetLeader(ProcessLine pline)
     {
       bool found = false;
@@ -215,8 +186,8 @@ namespace EQLogParser
             string name = pline.ActionPart.Substring(0, index);
             DataManager.Instance.UpdateVerifiedPlayers(name);
           }
-          found = true; // found chat, not that it had to work
 
+          found = true; // found chat, not that it had to work
         }
       }
       return found;
@@ -231,7 +202,7 @@ namespace EQLogParser
       {
         // Needed to replace 'You' and 'you', etc
         bool replaced;
-        record.Attacker = DataManager.Instance.ReplaceAttacker(record.Attacker, out replaced);
+        record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, out replaced);
 
         bool isDefenderPet, isAttackerPet;
         CheckDamageRecordForPet(record, replaced, out isDefenderPet, out isAttackerPet);
@@ -640,7 +611,7 @@ namespace EQLogParser
               Attacker = FixName(attacker),
               Defender = FixName(defender),
               Type = char.ToUpper(type[0]) + type.Substring(1),
-              Damage = damage,
+              Total = damage,
               AttackerPetType = attackerPetType,
               AttackerOwner = attackerOwner,
               DefenderPetType = defenderPetType,
