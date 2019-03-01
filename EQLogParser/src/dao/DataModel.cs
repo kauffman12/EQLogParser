@@ -21,38 +21,48 @@ namespace EQLogParser
     public const string RESIST_TYPE = "Resisted Spells";
   }
 
-  public class DamageRecord
+  public class TimedAction
   {
-    public long Damage { get; set; }
+    public DateTime BeginTime { get; set; }
+    public DateTime LastTime { get; set; }
+  }
+
+  public class HitRecord : TimedAction
+  {
+    public long Total { get; set; }
+    public string Type { get; set; }
+    public string Modifiers { get; set; }
+    public string Spell { get; set; }
+  }
+
+  public class HealRecord : HitRecord
+  {
+    public long OverHeal { get; set; }
+    public string Healer { get; set; }
+    public string Healed { get; set; }
+  }
+
+  public class DamageRecord : HitRecord
+  {
     public string Attacker { get; set; }
     public string AttackerPetType { get; set; }
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
     public string DefenderPetType { get; set; }
     public string DefenderOwner { get; set; }
-    public string Type { get; set; }
-    public string Modifiers { get; set; }
-    public string Spell { get; set; }
   }
 
-  public class Hit
+  public class Hit : TimedAction
   {
     public long Max { get; set; }
-    public int BaneCount { get; set; }
-    public int Count { get; set; }
-    public int CritCount { get; set; }
-    public int DoubleBowShotCount { get; set; }
-    public int FlurryCount { get; set; }
-    public int LuckyCount { get; set; }
-    public int TwincastCount { get; set; }
-    public int RampageCount { get; set; }
-    public int SlayUndeadCount { get; set; }
-    public int WildRampageCount { get; set; }
-    public long TotalDamage { get; set; }
-    public long TotalCritDamage { get; set; }
-    public long TotalLuckyDamage { get; set; }
-    public DateTime BeginTime { get; set; }
-    public DateTime LastTime { get; set; }
+    public int BaneHits{ get; set; }
+    public int Hits { get; set; }
+    public int CritHits { get; set; }
+    public int LuckyHits { get; set; }
+    public int TwincastHits { get; set; }
+    public long Total { get; set; }
+    public long TotalCrit { get; set; }
+    public long TotalLucky { get; set; }
     public Dictionary<long, int> CritFreqValues { get; set; }
     public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
@@ -67,15 +77,23 @@ namespace EQLogParser
     public bool IsPet { get; set; }
   }
 
-  public class DamageProcessedEvent
+  public class ProcessedEvent
   {
     public ProcessLine ProcessLine { get; set; }
+  }
+
+  public class DamageProcessedEvent : ProcessedEvent
+  {
     public DamageRecord Record { get; set; }
   }
 
-  public class ResistProcessedEvent
+  public class HealProcessedEvent : ProcessedEvent
   {
-    public ProcessLine ProcessLine { get; set; }
+    public HealRecord Record { get; set; }
+  }
+
+  public class ResistProcessedEvent : ProcessedEvent
+  {
     public string Defender { get; set; }
     public string Spell { get; set; }
   }
@@ -97,15 +115,13 @@ namespace EQLogParser
     public int GroupID { get; set; }
   }
 
-  public class NonPlayer
+  public class NonPlayer : TimedAction
   {
     public const string BREAK_TIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public Dictionary<string, DamageStats> DamageMap { get; set; }
     public Dictionary<string, Dictionary<string, int>> ResistMap { get; set; }
-    public DateTime BeginTime { get; set; }
-    public DateTime LastTime { get; set; }
     public int ID { get; set; }
     public string CorrectMapKey {get; set;}
     public int GroupID { get; set; }
@@ -122,18 +138,13 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
-  public class PlayerAction
-  {
-    public DateTime BeginTime { get; set; }
-  }
-
-  public class PlayerDeath : PlayerAction
+  public class PlayerDeath : TimedAction
   {
     public string Player { get; set; }
     public string Npc { get; set; }
   }
 
-  public class ReceivedSpell : PlayerAction
+  public class ReceivedSpell : TimedAction
   {
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
@@ -179,11 +190,20 @@ namespace EQLogParser
   {
     public string TargetTitle { get; set; }
     public string TimeTitle { get; set; }
-    public string DamageTitle { get; set; }
+    public string TotalTitle { get; set; }
     public List<PlayerStats> StatsList { get; set; }
-    public Dictionary<string, List<PlayerStats>> Children { get; set; }
     public PlayerStats RaidStats { get; set; }
+  }
+
+  public class CombinedDamageStats : CombinedStats
+  {
+    public Dictionary<string, List<PlayerStats>> Children { get; set; }
     public Dictionary<string, byte> UniqueClasses { get; set; }
+  }
+
+  public class CombinedHealStats : CombinedStats
+  {
+
   }
 
   public class ChartData
@@ -215,28 +235,21 @@ namespace EQLogParser
     public string RankedPlayers { get; set; }
   }
 
-  public class PlayerSubStats
+  public class PlayerSubStats : Hit
   {
     public int Rank { get; set; }
     public string Name { get; set; }
     public string Type { get; set; }
-    public long TotalDamage { get; set; }
-    public long TotalCritDamage { get; set; }
-    public long TotalLuckyDamage { get; set; }
     public double TotalSeconds { get; set; }
     public long DPS { get; set; }
     public long SDPS { get; set; }
-    public int BaneHits { get; set; }
-    public int Hits { get; set; }
+    public long Extra { get; set; }
     public int Resists { get; set; }
-    public long Max { get; set; }
     public long Avg { get; set; }
     public long AvgCrit { get; set; }
     public long AvgLucky { get; set; }
-    public int CritHits { get; set; }
-    public int LuckyHits { get; set; }
-    public int TwincastHits { get; set; }
     public decimal CritRate { get; set; }
+    public decimal ExtraRate { get; set; }
     public decimal LuckRate { get; set; }
     public decimal TwincastRate { get; set; }
     public decimal ResistRate { get; set; }
@@ -247,8 +260,6 @@ namespace EQLogParser
     public List<DateTime> BeginTimes { get; set; }
     public List<DateTime> LastTimes { get; set; }
     public List<double> TimeDiffs { get; set; }
-    public Dictionary<long, int> CritFreqValues { get; set; }
-    public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
 
   public class PlayerStats : PlayerSubStats

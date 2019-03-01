@@ -155,30 +155,30 @@ namespace EQLogParser
       // record Bane separately in totals
       if (record.Type == Labels.BANE_TYPE)
       {
-        stats.BaneCount++;
+        stats.BaneHits++;
       }
       else
       {
-        stats.Count++;
-        stats.TotalDamage += record.Damage;
-        stats.Max = (stats.Max < record.Damage) ? record.Damage : stats.Max;
+        stats.Hits++;
+        stats.Total += record.Total;
+        stats.Max = (stats.Max < record.Total) ? record.Total : stats.Max;
       }
 
-      aHitMap[aType].Count++;
-      aHitMap[aType].TotalDamage += record.Damage;
-      aHitMap[aType].Max = (aHitMap[aType].Max < record.Damage) ? record.Damage : aHitMap[aType].Max;
+      aHitMap[aType].Hits++;
+      aHitMap[aType].Total += record.Total;
+      aHitMap[aType].Max = (aHitMap[aType].Max < record.Total) ? record.Total : aHitMap[aType].Max;
 
-      int critCount = stats.CritCount;
-      UpdateModifiers(stats, aHitMap, aType, record);
+      int critCount = stats.CritHits;
+      LineModifiersParser.Parse(record, stats, aHitMap[aType]);
 
       // if crit count did not increase this hit was a non-crit
-      if (critCount == stats.CritCount)
+      if (critCount == stats.CritHits)
       {
-        LongAddHelper.Add(aHitMap[aType].NonCritFreqValues, record.Damage, 1);
+        LongAddHelper.Add(aHitMap[aType].NonCritFreqValues, record.Total, 1);
       }
       else
       {
-        LongAddHelper.Add(aHitMap[aType].CritFreqValues, record.Damage, 1);
+        LongAddHelper.Add(aHitMap[aType].CritFreqValues, record.Total, 1);
       }
 
       stats.LastTime = currentTime;
@@ -189,426 +189,29 @@ namespace EQLogParser
         stats.Owner = record.AttackerOwner;
       }
 
-      if (DamageAtThisTime == null)
+      if (record.Type != Labels.BANE_TYPE)
       {
-        DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), GroupID = CurrentGroupID };
-        DamageTimeLine.Add(DamageAtThisTime);
-      }
-      else if (currentTime.Subtract(DamageAtThisTime.CurrentTime).TotalSeconds >= 1) // EQ granular to 1 second
-      {
-        DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), GroupID = CurrentGroupID };
-        DamageTimeLine.Add(DamageAtThisTime);
-      }
+        if (DamageAtThisTime == null)
+        {
+          DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), GroupID = CurrentGroupID };
+          DamageTimeLine.Add(DamageAtThisTime);
+        }
+        else if (currentTime.Subtract(DamageAtThisTime.CurrentTime).TotalSeconds >= 1) // EQ granular to 1 second
+        {
+          DamageAtThisTime = new DamageAtTime() { CurrentTime = currentTime, PlayerDamage = new Dictionary<string, long>(), GroupID = CurrentGroupID };
+          DamageTimeLine.Add(DamageAtThisTime);
+        }
 
-      if (!DamageAtThisTime.PlayerDamage.ContainsKey(record.Attacker))
-      {
-        DamageAtThisTime.PlayerDamage[record.Attacker] = 0;
-      }
+        if (!DamageAtThisTime.PlayerDamage.ContainsKey(record.Attacker))
+        {
+          DamageAtThisTime.PlayerDamage[record.Attacker] = 0;
+        }
 
-      DamageAtThisTime.PlayerDamage[record.Attacker] += record.Damage;
-      DamageAtThisTime.CurrentTime = currentTime;
+        DamageAtThisTime.PlayerDamage[record.Attacker] += record.Total;
+        DamageAtThisTime.CurrentTime = currentTime;
+      }
 
       DataManager.Instance.UpdateIfNewNonPlayerMap(npc.CorrectMapKey, npc);
-    }
-
-    private void UpdateModifiers(DamageStats stats, Dictionary<string, Hit> aHitMap, string aType, DamageRecord record)
-    {
-      if (record.Modifiers != null && record.Modifiers != "")
-      {
-        switch (record.Modifiers)
-        {
-          case "Assassinate":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            break;
-          case "Crippling Blow":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            break;
-          case "Critical":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            break;
-          case "Critical Assassinate":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            break;
-          case "Critical Double Bow Shot":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.DoubleBowShotCount++;
-            aHitMap[aType].DoubleBowShotCount++;
-            break;
-          case "Critical Headshot":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            break;
-          case "Critical Rampage":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.RampageCount++;
-            aHitMap[aType].RampageCount++;
-            break;
-          case "Critical Twincast":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.TwincastCount++;
-            aHitMap[aType].TwincastCount++;
-            break;
-          case "Critical Wild Rampage":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.WildRampageCount++;
-            aHitMap[aType].WildRampageCount++;
-            break;
-          case "Deadly Strike":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            break;
-          case "Double Bow Shot":
-            stats.DoubleBowShotCount++;
-            aHitMap[aType].DoubleBowShotCount++;
-            break;
-          case "Crippling Blow Double Bow Shot":
-          case "Double Bow Shot Crippling Blow": // check if still used in future
-            stats.CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].CritCount++;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.DoubleBowShotCount++;
-            aHitMap[aType].DoubleBowShotCount++;
-            break;
-          case "Finishing Blow":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            break;
-          case "Flurry":
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Flurry Crippling Blow":
-          case "Crippling Blow Flurry":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Flurry Critical":
-          case "Critical Flurry":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Flurry Critical Rampage":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            stats.RampageCount++;
-            aHitMap[aType].RampageCount++;
-            break;
-          case "Flurry Critical Wild Rampage":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            stats.WildRampageCount++;
-            aHitMap[aType].WildRampageCount++;
-            break;
-          case "Flurry Finishing Blow":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Flurry Lucky Crippling Blow":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Flurry Lucky Critical":
-          case "Lucky Critical Flurry":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Flurry Lucky Critical Rampage":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            stats.RampageCount++;
-            aHitMap[aType].RampageCount++;
-            break;
-          case "Flurry Lucky Critical Wild Rampage":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            stats.WildRampageCount++;
-            aHitMap[aType].WildRampageCount++;
-            break;
-          case "Flurry Lucky Finishing Blow":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Flurry Rampage":
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            stats.RampageCount++;
-            aHitMap[aType].RampageCount++;
-            break;
-          case "Flurry Slay Undead":
-            stats.SlayUndeadCount++;
-            aHitMap[aType].SlayUndeadCount++;
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Flurry Wild Rampage":
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            stats.WildRampageCount++;
-            aHitMap[aType].WildRampageCount++;
-            break;
-          case "Headshot":
-            break;
-          case "Lucky Assassinate":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Lucky Crippling Blow":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Lucky Crippling Blow Double Bow Shot":
-          case "Lucky Double Bow Shot Crippling Blow": // check if still used in future
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.DoubleBowShotCount++;
-            aHitMap[aType].DoubleBowShotCount++;
-            break;
-          case "Lucky Critical":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Lucky Critical Assassinate":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Lucky Critical Double Bow Shot":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.DoubleBowShotCount++;
-            aHitMap[aType].DoubleBowShotCount++;
-            break;
-          case "Lucky Critical Headshot":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Lucky Critical Rampage":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.RampageCount++;
-            aHitMap[aType].RampageCount++;
-            break;
-          case "Lucky Critical Twincast":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.TwincastCount++;
-            aHitMap[aType].TwincastCount++;
-            break;
-          case "Lucky Critical Wild Rampage":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            stats.WildRampageCount++;
-            aHitMap[aType].WildRampageCount++;
-            break;
-          case "Lucky Deadly Strike":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Lucky Finishing Blow":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Rampage":
-            stats.RampageCount++;
-            aHitMap[aType].RampageCount++;
-            break;
-          case "Riposte":
-            break;
-          case "Riposte Critical":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            break;
-          case "Riposte Crippling Blow":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.TotalCritDamage += record.Damage;
-            aHitMap[aType].TotalCritDamage += record.Damage;
-            break;
-          case "Riposte Lucky Critical":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Riposte Strikethrough":
-            break;
-          case "Riposte Strikethrough Critical":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            break;
-          case "Riposte Strikethrough Lucky Critical":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Strikethrough":
-            break;
-          case "Strikethrough Critical":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            break;
-          case "Strikethrough Flurry":
-            stats.FlurryCount++;
-            aHitMap[aType].FlurryCount++;
-            break;
-          case "Strikethrough Lucky Critical":
-            stats.CritCount++;
-            aHitMap[aType].CritCount++;
-            stats.LuckyCount++;
-            aHitMap[aType].LuckyCount++;
-            stats.TotalLuckyDamage += record.Damage;
-            aHitMap[aType].TotalLuckyDamage += record.Damage;
-            break;
-          case "Slay Undead":
-            stats.SlayUndeadCount++;
-            aHitMap[aType].SlayUndeadCount++;
-            break;
-          case "Twincast":
-            stats.TwincastCount++;
-            aHitMap[aType].TwincastCount++;
-            break;
-          case "Wild Rampage":
-            stats.WildRampageCount++;
-            aHitMap[aType].WildRampageCount++;
-            break;
-          default:
-            LOG.Debug("Uknown Modifiers: " + record.Modifiers);
-            break;
-        }
-      }
     }
 
     private NonPlayer Get(DamageRecord record, DateTime currentTime, string origTimeString)

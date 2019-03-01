@@ -84,6 +84,9 @@
     <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Based on Critical, Crippling Blow, and Deadly Strike" />
     </Style>
+    <Style x:Key="OverHealColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Percent of Healing in excess of what was used" />
+    </Style>    
     <Style x:Key="TotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Percent of Total Damage done" />
     </Style>

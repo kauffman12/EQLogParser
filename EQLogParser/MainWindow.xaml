@@ -63,15 +63,7 @@
                   <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Load Time:</Label>
                   <Label x:Name="processedTimeLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">0 sec</Label>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Visibility="Hidden">
-                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Spell Rate:</Label>
-                  <Label x:Name="processedCastsLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">-</Label>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Visibility="Hidden">
-                  <Label Width="85" HorizontalContentAlignment="left" Margin="4,0,0,0">DMG Rate:</Label>
-                  <Label x:Name="processedDamageLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">-</Label>
-                </StackPanel>
-                </WrapPanel>
+              </WrapPanel>
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
         </docking:SplitContainer>
@@ -154,7 +146,7 @@
                           </DataGridTemplateColumn>
                           <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="145" Width="145*"/>
                           <DataGridTextColumn Binding="{Binding PercentOfRaid, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource TotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
-                          <DataGridTextColumn Binding="{Binding TotalDamage}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="75" Width="75*"/>
+                          <DataGridTextColumn Binding="{Binding Total}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="False" MinWidth="75" Width="75*"/>
                           <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" MinWidth="60" Width="60*" CanUserReorder="False"/>
                           <DataGridTextColumn Binding="{Binding SDPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SDPS" IsReadOnly="True" MinWidth="60" Width="60*" CanUserReorder="False"/>
                           <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
@@ -171,12 +163,12 @@
                         </DataGrid.Columns>
                         <DataGrid.RowDetailsTemplate>
                           <DataTemplate>
-                            <datagrid:ThemedDataGrid x:Name="playerChildrenDataGrid"  IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="PlayerChildrenDataGrid_PrevMouseWheel" HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" EnableRowVirtualization="False" GridLinesVisibility="Vertical">
+                            <datagrid:ThemedDataGrid x:Name="playerChildrenDataGrid" IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="PlayerChildrenDataGrid_PrevMouseWheel" HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" EnableRowVirtualization="False" GridLinesVisibility="Vertical" AreRowDetailsFrozen="False" FrozenColumnCount="0">
                               <DataGrid.Columns>
                                 <DataGridTextColumn ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding PercentOfRaid, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False"/>
-                                <DataGridTextColumn Binding="{Binding TotalDamage}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding Total}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding DPS}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding SDPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SDPS" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding TotalSeconds}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
@@ -197,6 +189,50 @@
                       </datagrid:ThemedDataGrid>
                     </Grid>
                   </docking:DocumentWindow>
+                  <docking:DocumentWindow x:Name="healWindow" Title="Player HPS" Description="" ContainerDockedSize="600,450" CanClose="False">
+                    <Grid>
+                      <Grid.Resources>
+                        <local:ZeroConverter x:Key="ZeroConverter" />
+                      </Grid.Resources>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="30" />
+                        <RowDefinition Height="300*" />
+                      </Grid.RowDefinitions>
+                      <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
+                        <Label x:Name="healTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+                      </StackPanel>
+                      <datagrid:ThemedDataGrid x:Name="healDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" EnableRowVirtualization="True">
+                        <DataGrid.Columns>
+                          <DataGridTemplateColumn MinWidth="48" Width="48">
+                            <DataGridTemplateColumn.CellTemplate>
+                              <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                  <Image Margin="0,0,2,0" Width="15"></Image>
+                                  <TextBlock Width="20" TextAlignment="Right" Text="{Binding Rank}"></TextBlock>
+                                </StackPanel>
+                              </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                          </DataGridTemplateColumn>
+                          <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="145" Width="145*"/>
+                          <DataGridTextColumn Binding="{Binding PercentOfRaid, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource TotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
+                          <DataGridTextColumn Binding="{Binding Total}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Healing" IsReadOnly="True" CanUserReorder="False" MinWidth="75" Width="75*"/>
+                          <DataGridTextColumn Binding="{Binding Extra}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Over Healed" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90*"/>
+                          <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="HPS" IsReadOnly="True" MinWidth="60" Width="60*" CanUserReorder="False"/>
+                          <DataGridTextColumn Binding="{Binding SDPS}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SHPS" IsReadOnly="True" MinWidth="60" Width="60*" CanUserReorder="False"/>
+                          <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
+                          <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Heals" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+                          <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Heal" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
+                          <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Heal" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
+                          <DataGridTextColumn Binding="{Binding AvgCrit}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="64" Width="64*"/>
+                          <DataGridTextColumn Binding="{Binding AvgLucky}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="74" Width="74*"/>
+                          <DataGridTextColumn Binding="{Binding ExtraRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource OverHealColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Over" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+                          <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+                          <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
+                          <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*" />
+                        </DataGrid.Columns>
+                      </datagrid:ThemedDataGrid>
+                    </Grid>
+                  </docking:DocumentWindow>                  
                 </docking:TabbedMdiContainer>
                 <docking:TabbedMdiContainer>
                   <docking:DocumentWindow x:Name="chartWindow" Title="DPS Over Time" Description="" ContainerDockedSize="600,220" CanFloat="True" CanClose="True">
