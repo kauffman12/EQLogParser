@@ -19,8 +19,10 @@ namespace EQLogParser
       DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
       DateTime endTime = raidStats.LastTimes.Last();
 
-      foreach (var cast in DataManager.Instance.GetCastsDuring(beginTime, endTime).AsParallel().Where(cast => playerList.Contains(cast.Caster)))
+      var castsDuring = DataManager.Instance.GetCastsDuring(beginTime, endTime);
+      foreach (var timedAction in castsDuring.Where(cast => playerList.Contains((cast as SpellCast).Caster)))
       {
+        SpellCast cast = timedAction as SpellCast;
         var spellData = DataManager.Instance.GetSpellByAbbrv(cast.SpellAbbrv);
         if (spellData != null)
         {
@@ -28,8 +30,10 @@ namespace EQLogParser
         }
       }
 
-      foreach (var received in DataManager.Instance.GetReceivedSpellsDuring(beginTime, endTime).AsParallel().Where(received => playerList.Contains(received.Receiver)))
+      var receivedDuring = DataManager.Instance.GetReceivedSpellsDuring(beginTime, endTime);
+      foreach (var timedAction in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell).Receiver)))
       {
+        ReceivedSpell received = timedAction as ReceivedSpell;
         UpdateMaps(received.SpellData, received.Receiver, playerReceivedCounts, maxReceivedCounts, spellMap);
       }
 
@@ -50,7 +54,7 @@ namespace EQLogParser
       {
         DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
         DateTime endTime = raidStats.LastTimes.Last();
-        List<SpellCast> casts = DataManager.Instance.GetCastsDuring(beginTime, endTime);
+        List<SpellCast> casts = DataManager.Instance.GetCastsDuring(beginTime, endTime).Cast<SpellCast>().ToList();
         results = casts.Select(cast => cast.Caster).Distinct().ToList();
       }
       else

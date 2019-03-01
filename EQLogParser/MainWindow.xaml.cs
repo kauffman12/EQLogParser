@@ -31,20 +31,23 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.2.11";
+    private const string VERSION = "v1.3.0";
     private const string VERIFIED_PETS = "Verified Pets";
-    private const string DPS_LABEL = " No NPCs Selected";
+    private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
     private const int MIN_LINE_LENGTH = 33;
     private static long CastLineCount = 0;
     private static long DamageLineCount = 0;
+    private static long HealLineCount = 0;
     private static long CastLinesProcessed = 0;
     private static long DamageLinesProcessed = 0;
+    private static long HealLinesProcessed = 0;
     private static long FilePosition = 0;
 
     private static ActionProcessor<string> CastProcessor = null;
     private static ActionProcessor<string> DamageProcessor = null;
+    private static ActionProcessor<string> HealProcessor = null;
 
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
@@ -55,7 +58,7 @@ namespace EQLogParser
 
     // stats
     private static bool UpdatingStats = false;
-    private static CombinedStats CurrentStats = null;
+    private static CombinedDamageStats CurrentDamageStats = null;
     private static StatsSummary CurrentSummary = null;
 
     // progress window
@@ -77,16 +80,18 @@ namespace EQLogParser
 
         // update titles
         Title = APP_NAME + " " + VERSION;
-        dpsTitle.Content = DPS_LABEL;
+        dpsTitle.Content = PLAYER_TABLE_LABEL;
+        healTitle.Content = PLAYER_TABLE_LABEL;
 
         // Clear/Reset
         DataManager.Instance.EventsClearedActiveData += (sender, cleared) =>
         {
-          CurrentStats = null;
+          CurrentDamageStats = null;
           ResetDPSChart();
           playerDataGrid.ItemsSource = null;
           PlayerChildGrids.Clear();
-          dpsTitle.Content = DPS_LABEL;
+          dpsTitle.Content = PLAYER_TABLE_LABEL;
+          healTitle.Content = PLAYER_TABLE_LABEL;
           UpdateDPSText(true);
         };
 
@@ -141,8 +146,12 @@ namespace EQLogParser
           pd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
         }
 
-        DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
+        DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
+        HealLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
+
+        // dont need complex manager just yet
+        HealLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record);
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -274,9 +283,9 @@ namespace EQLogParser
     {
       Image image = (sender as Image);
       PlayerStats stats = image.DataContext as PlayerStats;
-      if (stats != null && CurrentStats.Children.ContainsKey(stats.Name))
+      if (stats != null && CurrentDamageStats.Children.ContainsKey(stats.Name))
       {
-        var list = CurrentStats.Children[stats.Name];
+        var list = CurrentDamageStats.Children[stats.Name];
         if (list.Count > 1 || stats.Name == DataManager.UNASSIGNED_PET_OWNER || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name)))
         {
           var container = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
@@ -331,7 +340,7 @@ namespace EQLogParser
       if (playerDataGrid.SelectedItems.Count == 1)
       {
         var chart = new HitFreqChart();
-        var results = StatsBuilder.GetHitFreqValues(CurrentStats, playerDataGrid.SelectedItems.Cast<PlayerStats>().First());
+        var results = DamageStatsBuilder.GetHitFreqValues(CurrentDamageStats, playerDataGrid.SelectedItems.Cast<PlayerStats>().First());
 
         var hitFreqWindow = new DocumentWindow(dockSite, "freqChart", "Hit Frequency", null, chart);
         hitFreqWindow.ContainerDockedSize = new Size(400, 300);
@@ -348,7 +357,7 @@ namespace EQLogParser
     private void PlayerDataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCasts(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
+      ShowSpellCasts(DamageStatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
     }
 
     private void PlayerDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
@@ -362,7 +371,7 @@ namespace EQLogParser
     private void ShowSpellCasts(List<PlayerStats> selectedStats)
     {
       var spellTable = new SpellCountTable(this, CurrentSummary);
-      spellTable.ShowSpells(selectedStats, CurrentStats);
+      spellTable.ShowSpells(selectedStats, CurrentDamageStats);
       var spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, spellTable);
       Helpers.OpenWindow(spellCastsWindow);
       spellCastsWindow.MoveToLast();
@@ -371,7 +380,7 @@ namespace EQLogParser
     private void PlayerDataGridShowDamagByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowDamage(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
+      ShowDamage(DamageStatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
     }
 
     private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
@@ -385,7 +394,7 @@ namespace EQLogParser
     private void ShowDamage(List<PlayerStats> selectedStats)
     {
       var damageTable = new DamageTable(this, CurrentSummary);
-      damageTable.ShowDamage(selectedStats, CurrentStats);
+      damageTable.ShowDamage(selectedStats, CurrentDamageStats);
       var damageWindow = new DocumentWindow(dockSite, "damageWindow", "Damage Breakdown", null, damageTable);
       Helpers.OpenWindow(damageWindow);
       damageWindow.MoveToLast();
@@ -409,11 +418,11 @@ namespace EQLogParser
     {
       PlayerStats stats = e.Row.Item as PlayerStats;
       var childrenDataGrid = e.DetailsElement as DataGrid;
-      if (stats != null && childrenDataGrid != null && CurrentStats != null && CurrentStats.Children.ContainsKey(stats.Name))
+      if (stats != null && childrenDataGrid != null && CurrentDamageStats != null && CurrentDamageStats.Children.ContainsKey(stats.Name))
       {
-        if (childrenDataGrid.ItemsSource != CurrentStats.Children[stats.Name])
+        if (childrenDataGrid.ItemsSource != CurrentDamageStats.Children[stats.Name])
         {
-          childrenDataGrid.ItemsSource = CurrentStats.Children[stats.Name];
+          childrenDataGrid.ItemsSource = CurrentDamageStats.Children[stats.Name];
           PlayerChildGrids.Add(childrenDataGrid);
 
           // show bane column if needed
@@ -455,11 +464,10 @@ namespace EQLogParser
           bytesReadTitle.Content = "Reading:";
           processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double) FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          double castPercent = CastLineCount > 0 ? Math.Round((double) CastLinesProcessed / CastLineCount * 10, 1) : 0;
-          double damagePercent = DamageLineCount > 0 ? Math.Round((double) DamageLinesProcessed / DamageLineCount * 10, 1) : 0;
+          double castPercent = CastLineCount > 0 ? Math.Round((double) CastLinesProcessed / CastLineCount * 100, 1) : 0;
+          double damagePercent = DamageLineCount > 0 ? Math.Round((double) DamageLinesProcessed / DamageLineCount * 100, 1) : 0;
+          double healPercent = HealLineCount > 0 ? Math.Round((double) HealLinesProcessed / HealLineCount * 100, 1) : 0;
           bytesReadLabel.Content = filePercent + "%";
-          processedCastsLabel.Content = castPercent;
-          processedDamageLabel.Content = damagePercent;
 
           if ((filePercent >= 100 || MonitorOnly) && EQLogReader.FileLoadComplete)
           {
@@ -468,12 +476,10 @@ namespace EQLogParser
             bytesReadLabel.Foreground = GOOD_BRUSH;
           }
 
-          if (((filePercent >= 100 && castPercent >= 10 && damagePercent >= 10) || MonitorOnly) && EQLogReader.FileLoadComplete)
+          if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100) || MonitorOnly) && EQLogReader.FileLoadComplete)
           {
             bytesReadTitle.Content = "Monitoring";
             Busy(false);
-            processedCastsLabel.Content = "-";
-            processedDamageLabel.Content = "-";
 
             if (npcWindow.IsOpen)
             {
@@ -502,7 +508,7 @@ namespace EQLogParser
         DataGrid grid = playerDataGrid;
         Label label = dpsTitle;
 
-        if (CurrentStats != null)
+        if (CurrentDamageStats != null)
         {
           List<PlayerStats> list = null;
           if (grid.SelectedItems != null && grid.SelectedItems.Count > 0)
@@ -510,7 +516,7 @@ namespace EQLogParser
             list = grid.SelectedItems.Cast<PlayerStats>().ToList();
           }
 
-          CurrentSummary = StatsBuilder.BuildSummary(CurrentStats, list, playerDPSTextDoTotals.IsChecked.Value, playerDPSTextDoRank.IsChecked.Value);
+          CurrentSummary = DamageStatsBuilder.BuildSummary(CurrentDamageStats, list, playerDPSTextDoTotals.IsChecked.Value, playerDPSTextDoRank.IsChecked.Value);
           playerDPSTextBox.Text = CurrentSummary.Title + CurrentSummary.RankedPlayers;
           playerDPSTextBox.SelectAll();
 
@@ -522,7 +528,7 @@ namespace EQLogParser
             }
             else
             {
-              list = CurrentStats.StatsList.Take(5).ToList();
+              list = CurrentDamageStats.StatsList.Take(5).ToList();
               UpdateDPSChart("Top " + list.Count + " DPS Over Time", list);
             }
           }
@@ -544,7 +550,7 @@ namespace EQLogParser
     {
       if (chartWindow != null && chartWindow.IsOpen)
       {
-        var chartData = StatsBuilder.GetDPSValues(CurrentStats, list, NpcDamageManager);
+        var chartData = DamageStatsBuilder.GetDPSValues(CurrentDamageStats, list, NpcDamageManager);
         (chartWindow.Content as LineChart).Update(chartData);
         chartWindow.Title = title;
       }
@@ -563,7 +569,9 @@ namespace EQLogParser
           if (selected.Count > 0)
           {
             dpsTitle.Content = "Calculating DPS...";
+            healTitle.Content = "Calculating HPS...";
             playerDataGrid.ItemsSource = null;
+            healDataGrid.ItemsSource = null;
             PlayerChildGrids.Clear();
 
             var realItems = selected.Cast<NonPlayer>().Where(item => !item.Name.Contains("Inactivity >")).ToList();
@@ -571,21 +579,50 @@ namespace EQLogParser
             {
               taskStarted = true;
               Busy(true);
+
+              bool damageStatsComplete = false;
+              bool healStatsComplete = false;
+
+              realItems = realItems.OrderBy(item => item.ID).ToList();
+              string title = realItems.First().Name;
+
               new Task(() =>
               {
-                CurrentStats = StatsBuilder.BuildTotalStats(realItems);
+                CurrentDamageStats = DamageStatsBuilder.BuildTotalStats(title, realItems);
 
                 Dispatcher.InvokeAsync((() =>
                 {
-                  dpsTitle.Content = StatsBuilder.BuildTitle(CurrentStats);
+                  dpsTitle.Content = DamageStatsBuilder.BuildTitle(CurrentDamageStats);
                   playerDPSTextBox.Text = dpsTitle.Content.ToString();
-                  playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
+                  playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
 
-                  var list = CurrentStats.StatsList.Take(5).ToList();
+                  var list = CurrentDamageStats.StatsList.Take(5).ToList();
                   UpdateDPSChart("Top " + list.Count + " DPS Over Time", list);
                   UpdatingStats = false;
                   UpdatePlayerDataGridMenuItems();
-                  Busy(false);
+                  damageStatsComplete = true;
+
+                  if (healStatsComplete)
+                  {
+                    Busy(false);
+                  }
+                }));
+              }).Start();
+
+              new Task(() =>
+              {
+                CombinedHealStats healStats = HealStatsBuilder.BuildTotalStats(title, realItems);
+
+                Dispatcher.InvokeAsync((() =>
+                {
+                  healTitle.Content = HealStatsBuilder.BuildTitle(healStats);
+                  healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(healStats.StatsList);
+
+                  healStatsComplete = true;
+                  if (damageStatsComplete)
+                  {
+                    Busy(false);
+                  }
                 }));
               }).Start();
             }
@@ -594,13 +631,19 @@ namespace EQLogParser
 
         if (!taskStarted)
         {
-          if (playerDataGrid.ItemsSource is ObservableCollection<PlayerStats> list)
+          if (playerDataGrid.ItemsSource is ObservableCollection<PlayerStats> damageList)
           {
-            CurrentStats = null;
-            dpsTitle.Content = DPS_LABEL;
+            CurrentDamageStats = null;
+            dpsTitle.Content = PLAYER_TABLE_LABEL;
             playerDPSTextBox.Text = "";
-            list.Clear();
+            damageList.Clear();
             ResetDPSChart();
+          }
+
+          if (healDataGrid.ItemsSource is ObservableCollection<PlayerStats> healList)
+          {
+            healTitle.Content = PLAYER_TABLE_LABEL;
+            healList.Clear();
           }
 
           UpdatePlayerDataGridMenuItems();
@@ -611,7 +654,7 @@ namespace EQLogParser
 
     private void UpdatePlayerDataGridMenuItems()
     {
-      if (CurrentStats != null && CurrentStats.StatsList.Count > 0)
+      if (CurrentDamageStats != null && CurrentDamageStats.StatsList.Count > 0)
       {
         pdgMenuItemSelectAll.IsEnabled = playerDataGrid.SelectedItems.Count < playerDataGrid.Items.Count;
         pdgMenuItemUnselectAll.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
@@ -627,7 +670,7 @@ namespace EQLogParser
           }
           else
           {
-            menuItem.IsEnabled = CurrentStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
+            menuItem.IsEnabled = CurrentDamageStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
           }
         }
 
@@ -640,7 +683,7 @@ namespace EQLogParser
           }
           else
           {
-            menuItem.IsEnabled = CurrentStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
+            menuItem.IsEnabled = CurrentDamageStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
           }
         }
       }
@@ -731,13 +774,12 @@ namespace EQLogParser
           StopProcessing();
           CastProcessor = new ActionProcessor<string>("CastProcessor", CastLineParser.Process);
           DamageProcessor = new ActionProcessor<string>("DamageProcessor", DamageLineParser.Process);
+          HealProcessor = new ActionProcessor<string>("HealProcessor", HealLineParser.Process);
 
           bytesReadLabel.Foreground = BRIGHT_TEXT_BRUSH;
-          processedCastsLabel.Foreground = BRIGHT_TEXT_BRUSH;
-          processedDamageLabel.Foreground = BRIGHT_TEXT_BRUSH;
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
           StartLoadTime = DateTime.Now;
-          CastLineCount = DamageLineCount = CastLinesProcessed = DamageLinesProcessed = FilePosition = 0;
+          CastLineCount = DamageLineCount = HealLineCount = CastLinesProcessed = DamageLinesProcessed = HealLinesProcessed = FilePosition = 0;
 
           string name = "Uknown";
           if (dialog.FileName.Length > 0)
@@ -778,9 +820,12 @@ namespace EQLogParser
 
         DamageLineCount++;
         DamageProcessor.Add(line);
+
+        HealLineCount++;
+        HealProcessor.Add(line);
       }
 
-      if (DamageProcessor.Size() > 100000 || CastProcessor.Size() > 100000)
+      if (DamageProcessor.Size() > 100000 || CastProcessor.Size() > 100000 || HealProcessor.Size() > 100000)
       {
         Thread.Sleep(20);
       }
@@ -791,6 +836,7 @@ namespace EQLogParser
       EQLogReader?.Stop();
       CastProcessor?.Stop();
       DamageProcessor?.Stop();
+      HealProcessor?.Stop();
     }
   }
 

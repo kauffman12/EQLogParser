@@ -19,8 +19,8 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private MainWindow TheMainWindow;
     private List<PlayerSubStats> PlayerStats;
-    private CombinedStats CurrentStats;
-    private string CurrentSortKey = "TotalDamage";
+    private CombinedDamageStats CurrentStats;
+    private string CurrentSortKey = "Total";
     private ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     private DataGridTextColumn CurrentColumn = null;
     private bool CurrentGroupDDSetting = true;
@@ -46,7 +46,7 @@ namespace EQLogParser
       title.Content = summary.ShortTitle;
     }
 
-    public void ShowDamage(List<PlayerStats> selectedStats, CombinedStats currentStats)
+    public void ShowDamage(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
     {
       if (selectedStats != null && currentStats != null)
       {
@@ -173,9 +173,9 @@ namespace EQLogParser
 
         if (stats != null)
         {
-          stats.TotalDamage += sub.TotalDamage;
-          stats.TotalCritDamage += sub.TotalCritDamage;
-          stats.TotalLuckyDamage += sub.TotalLuckyDamage;
+          stats.Total += sub.Total;
+          stats.TotalCrit += sub.TotalCrit;
+          stats.TotalLucky += sub.TotalLucky;
           stats.Hits += sub.Hits;
           stats.Resists += sub.Resists;
           stats.CritHits += sub.CritHits;
@@ -190,24 +190,24 @@ namespace EQLogParser
       {
         if (stats.Hits > 0)
         {
-          stats.DPS = (long) Math.Round(stats.TotalDamage / stats.TotalSeconds, 2);
-          stats.SDPS = (long) Math.Round(stats.TotalDamage / CurrentStats.RaidStats.TotalSeconds, 2);
-          stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.TotalDamage) / stats.Hits, 2);
+          stats.DPS = (long) Math.Round(stats.Total / stats.TotalSeconds, 2);
+          stats.SDPS = (long) Math.Round(stats.Total / CurrentStats.RaidStats.TotalSeconds, 2);
+          stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
 
           if (stats.CritHits > 0)
           {
-            stats.AvgCrit = (long) Math.Round(Convert.ToDecimal(stats.TotalCritDamage) / stats.CritHits, 2);
+            stats.AvgCrit = (long) Math.Round(Convert.ToDecimal(stats.TotalCrit) / stats.CritHits, 2);
           }
 
           if (stats.LuckyHits > 0)
           {
-            stats.AvgLucky = (long) Math.Round(Convert.ToDecimal(stats.TotalLuckyDamage) / stats.LuckyHits, 2);
+            stats.AvgLucky = (long) Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
           }
 
           stats.CritRate = Math.Round(Convert.ToDecimal(stats.CritHits) / stats.Hits * 100, 2);
           stats.LuckRate = Math.Round(Convert.ToDecimal(stats.LuckyHits) / stats.Hits * 100, 2);
           stats.TwincastRate = Math.Round(Convert.ToDecimal(stats.TwincastHits) / stats.Hits * 100, 2);
-          stats.Percent = Math.Round(playerStats.Percent / 100 * ((decimal) stats.TotalDamage / playerStats.TotalDamage) * 100, 2);
+          stats.Percent = Math.Round(playerStats.Percent / 100 * ((decimal) stats.Total / playerStats.Total) * 100, 2);
           stats.ResistRate = Math.Round(Convert.ToDecimal(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
         }
       }
@@ -258,7 +258,7 @@ namespace EQLogParser
       if (GroupedDD.ContainsKey(name))
       {
         PlayerSubStats dds = GroupedDD[name];
-        if (dds.TotalDamage > 0)
+        if (dds.Total > 0)
         {
           if (CurrentGroupDDSetting)
           {
@@ -274,7 +274,7 @@ namespace EQLogParser
       if (GroupedDoT.ContainsKey(name))
       {
         PlayerSubStats dots = GroupedDoT[name];
-        if (dots.TotalDamage > 0)
+        if (dots.Total > 0)
         {
           if (CurrentGroupDoTSetting)
           {
@@ -290,7 +290,7 @@ namespace EQLogParser
       if (GroupedProcs.ContainsKey(name))
       {
         PlayerSubStats procs = GroupedProcs[name];
-        if (procs.TotalDamage > 0)
+        if (procs.Total > 0)
         {
           if (CurrentGroupProcsSetting)
           {

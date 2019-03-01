@@ -57,7 +57,7 @@ namespace EQLogParser
       spellTypes.SelectedIndex = 0;
     }
 
-    public void ShowSpells(List<PlayerStats> selectedStats, CombinedStats currentStats)
+    public void ShowSpells(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
     {
       if (selectedStats != null && currentStats != null)
       {

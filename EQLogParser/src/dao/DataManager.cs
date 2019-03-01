@@ -31,11 +31,13 @@ namespace EQLogParser
     private static string PETMAP_FILE;
     private bool PetMappingUpdated = false;
 
-    private List<PlayerDeath> PlayerDeaths = new List<PlayerDeath>();
-    private List<SpellCast> AllSpellCasts = new List<SpellCast>();
+    private List<TimedAction> AllHealRecords = new List<TimedAction>();
+    private List<TimedAction> AllSpellCasts = new List<TimedAction>();
+    private List<TimedAction> AllReceivedSpells = new List<TimedAction>();
+    private List<TimedAction> PlayerDeaths = new List<TimedAction>();
+
     private Dictionary<string, byte> AllUniqueSpellCasts = new Dictionary<string, byte>();
     private LRUCache<SpellData> AllUniqueSpellsLRU = new LRUCache<SpellData>(2000, 500, false);
-    private List<ReceivedSpell> AllReceivedSpells = new List<ReceivedSpell>();
     private Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
@@ -45,7 +47,7 @@ namespace EQLogParser
     private Dictionary<string, SpellClasses> SpellsToClass = new Dictionary<string, SpellClasses>();
 
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
-    private ConcurrentDictionary<string, string> AttackerReplacement = new ConcurrentDictionary<string, string>();
+    private ConcurrentDictionary<string, string> PlayerReplacement = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
@@ -181,6 +183,7 @@ namespace EQLogParser
       AllUniqueSpellCasts.Clear();
       AllUniqueSpellsLRU.Clear();
       AllReceivedSpells.Clear();
+      AllHealRecords.Clear();
       PlayerDeaths.Clear();
       EventsClearedActiveData(this, true);
     }
@@ -257,10 +260,27 @@ namespace EQLogParser
       PlayerDeaths.Add(new PlayerDeath() { Player = player, Npc = npc, BeginTime = dateTime });
     }
 
+    public void AddHealRecord(HealRecord record)
+    {
+      bool replaced;
+      record.Healer = ReplacePlayer(record.Healer, out replaced);
+      record.Healed = ReplacePlayer(record.Healed, out replaced);
+      AllHealRecords.Add(record);
+
+      // can use heals to determine additional players
+      bool foundHealer = CheckNameForPlayer(record.Healer);
+      bool foundHealed = CheckNameForPlayer(record.Healed) || CheckNameForPet(record.Healed);
+
+      if (!foundHealer && foundHealed && Helpers.IsPossiblePlayerName(record.Healer, record.Healer.Length))
+      {
+        UpdateVerifiedPlayers(record.Healer);
+      }
+    }
+
     public void AddSpellCast(SpellCast cast)
     {
       bool replaced;
-      cast.Caster = ReplaceAttacker(cast.Caster, out replaced);
+      cast.Caster = ReplacePlayer(cast.Caster, out replaced);
 
       lock (AllSpellCasts)
       {
@@ -274,7 +294,7 @@ namespace EQLogParser
     public void AddReceivedSpell(ReceivedSpell received)
     {
       bool replaced;
-      received.Receiver = ReplaceAttacker(received.Receiver, out replaced);
+      received.Receiver = ReplacePlayer(received.Receiver, out replaced);
 
       lock (AllReceivedSpells)
       {
@@ -284,23 +304,29 @@ namespace EQLogParser
 
     public void SetPlayerName(string name)
     {
-      AttackerReplacement["you"] = name;
-      AttackerReplacement["You"] = name;
-      AttackerReplacement["YOU"] = name;
-      AttackerReplacement["your"] = name;
-      AttackerReplacement["Your"] = name;
-      AttackerReplacement["YOUR"] = name;
+      PlayerReplacement["you"] = name;
+      PlayerReplacement["You"] = name;
+      PlayerReplacement["YOU"] = name;
+      PlayerReplacement["your"] = name;
+      PlayerReplacement["Your"] = name;
+      PlayerReplacement["YOUR"] = name;
+      PlayerReplacement["himself"] = name;
+      PlayerReplacement["herself"] = name;
+      PlayerReplacement["itself"] = name;
+      PlayerReplacement["Himself"] = name;
+      PlayerReplacement["Herself"] = name;
+      PlayerReplacement["Itself"] = name;
       UpdateVerifiedPlayers(name);
       PlayerName = name;
     }
 
-    public string ReplaceAttacker(string attacker, out bool replaced)
+    public string ReplacePlayer(string name, out bool replaced)
     {
       replaced = false;
-      string result = attacker;
+      string result = name;
 
       string found;
-      if (AttackerReplacement.TryGetValue(attacker, out found))
+      if (PlayerReplacement.TryGetValue(name, out found))
       {
         replaced = true;
         result = found;
@@ -332,19 +358,24 @@ namespace EQLogParser
       return VerifiedPlayers.ContainsKey(name);
     }
 
-    public List<SpellCast> GetCastsDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetCastsDuring(DateTime beginTime, DateTime endTime)
     {
-      return SearchActions(AllSpellCasts.Cast<PlayerAction>().ToList(), beginTime, endTime).Cast<SpellCast>().ToList();
+      return SearchActions(AllSpellCasts, beginTime, endTime);
     }
 
-    public List<ReceivedSpell> GetReceivedSpellsDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetHealsDuring(DateTime beginTime, DateTime endTime)
     {
-      return SearchActions(AllReceivedSpells.Cast<PlayerAction>().ToList(), beginTime, endTime).Cast<ReceivedSpell>().ToList();
+      return SearchActions(AllHealRecords, beginTime, endTime);
     }
 
-    public List<PlayerDeath> GetPlayerDeathsDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetReceivedSpellsDuring(DateTime beginTime, DateTime endTime)
     {
-      return SearchActions(PlayerDeaths.Cast<PlayerAction>().ToList(), beginTime, endTime).Cast<PlayerDeath>().ToList();
+      return SearchActions(AllReceivedSpells, beginTime, endTime);
+    }
+
+    public List<TimedAction> GetPlayerDeathsDuring(DateTime beginTime, DateTime endTime)
+    {
+      return SearchActions(PlayerDeaths, beginTime, endTime);
     }
 
     public SpellData GetSpellByAbbrv(string abbrv)
@@ -563,9 +594,8 @@ namespace EQLogParser
 
     public void UpdateVerifiedPets(string name)
     {
-      if (!VerifiedPets.ContainsKey(name))
+      if (VerifiedPets.TryAdd(name, 1))
       {
-        VerifiedPets[name] = 1;
         EventsNewVerifiedPet(this, name);
         CheckNolongerNPC(name);
       }
@@ -573,9 +603,8 @@ namespace EQLogParser
 
     public void UpdateVerifiedPlayers(string name)
     {
-      if (!VerifiedPlayers.ContainsKey(name))
+      if (VerifiedPlayers.TryAdd(name, 1))
       {
-        VerifiedPlayers[name] = 1;
         EventsNewVerifiedPlayer(this, name);
         CheckNolongerNPC(name);
       }
@@ -607,11 +636,11 @@ namespace EQLogParser
       }
     }
 
-    private List<PlayerAction> SearchActions(List<PlayerAction> allActions, DateTime beginTime, DateTime endTime)
+    private List<TimedAction> SearchActions(List<TimedAction> allActions, DateTime beginTime, DateTime endTime)
     {
-      PlayerAction startAction = new PlayerAction() { BeginTime = beginTime };
-      PlayerAction endAction = new PlayerAction() { BeginTime = endTime.AddSeconds(1) };
-      PlayerActionComparer comparer = new PlayerActionComparer();
+      TimedAction startAction = new TimedAction() { BeginTime = beginTime };
+      TimedAction endAction = new TimedAction() { BeginTime = endTime.AddSeconds(1) };
+      TimedActionComparer comparer = new TimedActionComparer();
 
       int startIndex = allActions.BinarySearch(startAction, comparer);
       if (startIndex < 0)
@@ -635,9 +664,9 @@ namespace EQLogParser
       public ConcurrentDictionary<SpellClasses, int> ClassCounts { get; set; }
     }
 
-    private class PlayerActionComparer : IComparer<PlayerAction>
+    private class TimedActionComparer : IComparer<TimedAction>
     {
-      public int Compare(PlayerAction x, PlayerAction y)
+      public int Compare(TimedAction x, TimedAction y)
       {
         return x.BeginTime.CompareTo(y.BeginTime);
       }

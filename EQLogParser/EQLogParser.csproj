@@ -156,10 +156,14 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Settings.cs" />
+    <Compile Include="src\control\HealStatsBuilder.cs" />
+    <Compile Include="src\control\StatsBuilder.cs" />
     <Compile Include="src\parsing\CastLineParser.cs" />
     <Compile Include="src\dao\DataManager.cs" />
     <Compile Include="src\control\SpellCountBuilder.cs" />
-    <Compile Include="src\control\StatsBuilder.cs" />
+    <Compile Include="src\control\DamageStatsBuilder.cs" />
+    <Compile Include="src\parsing\HealLineParser.cs" />
+    <Compile Include="src\parsing\LineModifiersParser.cs" />
     <Compile Include="src\ui\DamageTable.xaml.cs">
       <DependentUpon>DamageTable.xaml</DependentUpon>
     </Compile>
