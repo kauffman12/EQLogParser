@@ -12,6 +12,26 @@ namespace EQLogParser
     protected const string PLAYER_FORMAT = "{0} = ";
     protected const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
 
+    protected static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key)
+    {
+      PlayerStats stats = null;
+
+      lock (individualStats)
+      {
+        if (!individualStats.ContainsKey(key))
+        {
+          stats = CreatePlayerStats(key);
+          individualStats[key] = stats;
+        }
+        else
+        {
+          stats = individualStats[key];
+        }
+      }
+
+      return stats;
+    }
+
     protected static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
       string className = "";
@@ -31,6 +51,41 @@ namespace EQLogParser
         BeginTimes = new List<DateTime>(),
         LastTimes = new List<DateTime>(),
         SubStats = new Dictionary<string, PlayerSubStats>(),
+        TimeDiffs = new List<double>()
+      };
+    }
+
+    protected static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string key)
+    {
+      PlayerSubStats stats = null;
+
+      lock (individualStats)
+      {
+        if (!individualStats.ContainsKey(key))
+        {
+          stats = CreatePlayerStats(key);
+          individualStats[key] = stats;
+        }
+        else
+        {
+          stats = individualStats[key];
+        }
+      }
+
+      return stats;
+    }
+
+    protected static PlayerSubStats CreatePlayerSubStats(string name, string type)
+    {
+      return new PlayerSubStats()
+      {
+        ClassName = "",
+        Name = name,
+        Type = type,
+        CritFreqValues = new Dictionary<long, int>(),
+        NonCritFreqValues = new Dictionary<long, int>(),
+        BeginTimes = new List<DateTime>(),
+        LastTimes = new List<DateTime>(),
         TimeDiffs = new List<double>()
       };
     }

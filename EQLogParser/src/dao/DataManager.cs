@@ -603,6 +603,14 @@ namespace EQLogParser
 
     public void UpdateVerifiedPlayers(string name)
     {
+      if (name.Contains("Disapp"))
+      {
+        if (true)
+        {
+
+        }
+      }
+
       if (VerifiedPlayers.TryAdd(name, 1))
       {
         EventsNewVerifiedPlayer(this, name);
