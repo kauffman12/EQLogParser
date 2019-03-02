@@ -16,10 +16,18 @@ namespace EQLogParser
       Dictionary<string, int> maxReceivedCounts = new Dictionary<string, int>();
       Dictionary<string, SpellData> spellMap = new Dictionary<string, SpellData>();
 
-      DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
-      DateTime endTime = raidStats.LastTimes.Last();
+      var offsets = GetOffsetTimes(raidStats);
+      var begins = offsets.Item1;
+      var lasts = offsets.Item2;
 
-      var castsDuring = DataManager.Instance.GetCastsDuring(beginTime, endTime);
+      List<TimedAction> castsDuring = new List<TimedAction>();
+      List<TimedAction> receivedDuring = new List<TimedAction>();
+      for (int i = 0; i < begins.Count; i++)
+      {
+        castsDuring.AddRange(DataManager.Instance.GetCastsDuring(begins[i], lasts[i]));
+        receivedDuring.AddRange(DataManager.Instance.GetReceivedSpellsDuring(begins[i], lasts[i]));
+      }
+
       foreach (var timedAction in castsDuring.Where(cast => playerList.Contains((cast as SpellCast).Caster)))
       {
         SpellCast cast = timedAction as SpellCast;
@@ -30,7 +38,6 @@ namespace EQLogParser
         }
       }
 
-      var receivedDuring = DataManager.Instance.GetReceivedSpellsDuring(beginTime, endTime);
       foreach (var timedAction in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell).Receiver)))
       {
         ReceivedSpell received = timedAction as ReceivedSpell;
@@ -50,18 +57,53 @@ namespace EQLogParser
     public static List<string> GetPlayersCastingDuring(PlayerStats raidStats)
     {
       List<string> results = null;
-      if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
+      if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0 && raidStats.BeginTimes.Count == raidStats.LastTimes.Count)
       {
-        DateTime beginTime = raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET);
-        DateTime endTime = raidStats.LastTimes.Last();
-        List<SpellCast> casts = DataManager.Instance.GetCastsDuring(beginTime, endTime).Cast<SpellCast>().ToList();
-        results = casts.Select(cast => cast.Caster).Distinct().ToList();
+        var offsets = GetOffsetTimes(raidStats);
+        var begins = offsets.Item1;
+        var lasts = offsets.Item2;
+
+        List<TimedAction> timedActions = new List<TimedAction>();
+        for (int i = 0; i < begins.Count; i++)
+        {
+          timedActions.AddRange(DataManager.Instance.GetCastsDuring(begins[i], lasts[i]));
+        }
+
+        results = timedActions.Select(action => (action as SpellCast).Caster).Distinct().ToList();
       }
       else
       {
         results = new List<string>();
       }
       return results;
+    }
+
+    private static Tuple<List<DateTime>, List<DateTime>> GetOffsetTimes(PlayerStats raidStats)
+    {
+      List<DateTime> begins = new List<DateTime>();
+      List<DateTime> lasts = new List<DateTime>();
+      begins.Add(raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET));
+      lasts.Add(raidStats.LastTimes.First());
+
+      for (int i = 1; i < raidStats.BeginTimes.Count; i++)
+      {
+        int current = begins.Count - 1;
+        if (lasts[current] >= raidStats.BeginTimes[i])
+        {
+          var offsetLastTime = raidStats.LastTimes[i];
+          if (offsetLastTime > lasts[current])
+          {
+            lasts[current] = offsetLastTime;
+          }
+        }
+        else
+        {
+          begins.Add(raidStats.BeginTimes[i].AddSeconds(-SPELL_TIME_OFFSET));
+          lasts.Add(raidStats.LastTimes[i]);
+        }
+      }
+
+      return new Tuple<List<DateTime>, List<DateTime>>(begins, lasts);
     }
 
     private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, int>> playerCounts,

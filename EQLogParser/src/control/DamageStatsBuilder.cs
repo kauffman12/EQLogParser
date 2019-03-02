@@ -587,18 +587,7 @@ namespace EQLogParser
       {
         if (!playerTotals.SubStats.ContainsKey(keyvalue.Key))
         {
-          subStats = new PlayerSubStats()
-          {
-            ClassName = "",
-            Name = keyvalue.Key,
-            Type = type,
-            CritFreqValues = new Dictionary<long, int>(),
-            NonCritFreqValues = new Dictionary<long, int>(),
-            BeginTimes = new List<DateTime>(),
-            LastTimes = new List<DateTime>(),
-            TimeDiffs = new List<double>()
-          };
-
+          subStats = CreatePlayerSubStats(keyvalue.Key, type);
           playerTotals.SubStats[keyvalue.Key] = subStats;
         }
         else
