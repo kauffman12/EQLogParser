@@ -10,7 +10,8 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private const int HEAL_OFFSET = 3; // additional # of seconds to count hilling after last damage is seen
+    private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
+    private const string UNKNOWN_SPELL = "Unknown Spell";
 
     internal static string BuildTitle(CombinedHealStats currentStats, bool showTotals = true)
     {
@@ -45,7 +46,7 @@ namespace EQLogParser
           for (int i = 0; i < raidTotals.BeginTimes.Count; i++)
           {
             // keep track of time range as well as the players that have been updated
-            ConcurrentDictionary<string, PlayerStats> healerStats = new ConcurrentDictionary<string, PlayerStats>();
+            ConcurrentDictionary<string, PlayerSubStats> healerStats = new ConcurrentDictionary<string, PlayerSubStats>();
             var diff = (raidTotals.LastTimes[i] - raidTotals.BeginTimes[i]).TotalSeconds;
             if (diff == 0)
             {
@@ -58,35 +59,18 @@ namespace EQLogParser
               Parallel.ForEach(records, timedAction =>
               {
                 HealRecord record = timedAction as HealRecord;
-                PlayerStats stats = null;
-
-                lock (individualStats)
-                {
-                  if (!individualStats.ContainsKey(record.Healer))
-                  {
-                    stats = CreatePlayerStats(record.Healer);
-                    individualStats[record.Healer] = stats;
-                  }
-                  else
-                  {
-                    stats = individualStats[record.Healer];
-                  }
-                }
+                PlayerStats stats = CreatePlayerStats(individualStats, record.Healer);
 
                 lock (stats)
                 {
                   raidTotals.Total += record.Total;
-                  stats.Total += record.Total;
-                  stats.Hits += 1;
-                  stats.Max = (stats.Max < record.Total) ? record.Total : stats.Max;
-
-                  if (record.Total > 0 && record.OverHeal > 0)
-                  {
-                    stats.Extra += (record.OverHeal - record.Total);
-                  }
-
-                  LineModifiersParser.Parse(record, stats);
+                  UpdateStats(stats, record);
                   healerStats.TryAdd(record.Healer, stats);
+                  LineModifiersParser.Parse(record, stats);
+
+                  PlayerSubStats subStats = CreatePlayerSubStats(stats.SubStats, record.Spell ?? UNKNOWN_SPELL);
+                  UpdateStats(subStats, record);
+                  healerStats.TryAdd(record.Spell ?? UNKNOWN_SPELL, subStats);
                 }
               });
 
@@ -100,39 +84,7 @@ namespace EQLogParser
           combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
           combined.TotalTitle = string.Format(TOTAL_FORMAT, Helpers.FormatDamage(raidTotals.Total), Helpers.FormatDamage(raidTotals.DPS));
 
-          Parallel.ForEach(combined.StatsList, stats =>
-          {
-            stats.DPS = (long) Math.Round(stats.Total / stats.TotalSeconds, 2);
-            stats.SDPS = (long) Math.Round(stats.Total / raidTotals.TotalSeconds, 2);
-
-            if (stats.Hits > 0)
-            {
-              stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
-              stats.CritRate = Math.Round(Convert.ToDecimal(stats.CritHits) / stats.Hits * 100, 2);
-              stats.LuckRate = Math.Round(Convert.ToDecimal(stats.LuckyHits) / stats.Hits * 100, 2);
-            }
-
-            if (stats.Total > 0)
-            {
-              stats.ExtraRate = Math.Round(Convert.ToDecimal(stats.Extra) / stats.Total * 100, 2);
-            }
-
-            if ((stats.CritHits - stats.LuckyHits) > 0)
-            {
-              stats.AvgCrit = (long) Math.Round(Convert.ToDecimal(stats.TotalCrit) / (stats.CritHits - stats.LuckyHits), 2);
-            }
-
-            if (stats.LuckyHits > 0)
-            {
-              stats.AvgLucky = (long) Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
-            }
-
-            // total percents
-            if (raidTotals.Total > 0)
-            {
-              stats.PercentOfRaid = Math.Round((decimal) stats.Total / raidTotals.Total * 100, 2);
-            }
-          });
+          Parallel.ForEach(combined.StatsList, stats => UpdateCalculations(stats, raidTotals));
 
           for (int i=0; i<combined.StatsList.Count; i++)
           {
@@ -146,6 +98,73 @@ namespace EQLogParser
       }
 
       return combined;
+    }
+
+    private static void UpdateStats(PlayerSubStats stats, HealRecord record)
+    {
+      stats.Total += record.Total;
+      stats.Hits += 1;
+      stats.Max = (stats.Max < record.Total) ? record.Total : stats.Max;
+
+      if (record.Total > 0 && record.OverHeal > 0)
+      {
+        stats.Extra += (record.OverHeal - record.Total);
+      }
+    }
+
+    private static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, PlayerStats parentStats = null)
+    {
+      if (stats.Hits > 0)
+      {
+        stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
+        stats.CritRate = Math.Round(Convert.ToDecimal(stats.CritHits) / stats.Hits * 100, 2);
+        stats.LuckRate = Math.Round(Convert.ToDecimal(stats.LuckyHits) / stats.Hits * 100, 2);
+      }
+
+      if (stats.Total > 0)
+      {
+        stats.ExtraRate = Math.Round(Convert.ToDecimal(stats.Extra) / stats.Total * 100, 2);
+      }
+
+      if ((stats.CritHits - stats.LuckyHits) > 0)
+      {
+        stats.AvgCrit = (long) Math.Round(Convert.ToDecimal(stats.TotalCrit) / (stats.CritHits - stats.LuckyHits), 2);
+      }
+
+      if (stats.LuckyHits > 0)
+      {
+        stats.AvgLucky = (long) Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
+      }
+
+      // total percents
+      if (raidTotals.Total > 0)
+      {
+        stats.PercentOfRaid = Math.Round((decimal) stats.Total / raidTotals.Total * 100, 2);
+      }
+
+      stats.DPS = (long) Math.Round(stats.Total / stats.TotalSeconds, 2);
+
+      if (parentStats == null)
+      {
+        stats.SDPS = (long) Math.Round(stats.Total / raidTotals.TotalSeconds, 2);
+      }
+      else
+      {
+        if (parentStats.Total > 0)
+        {
+          stats.Percent = Math.Round((decimal) stats.Total / parentStats.Total * 100, 2);
+        }
+
+        stats.SDPS = (long) Math.Round(stats.Total / parentStats.TotalSeconds, 2);
+      }
+
+      // handle sub stats
+      var playerStats = stats as PlayerStats;
+
+      if (playerStats != null)
+      {
+        Parallel.ForEach(playerStats.SubStats.Values, subStats => UpdateCalculations(subStats, raidTotals, playerStats));
+      }
     }
   }
 }

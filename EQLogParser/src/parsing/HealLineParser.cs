@@ -62,7 +62,7 @@ namespace EQLogParser
       bool done = false;
       string healer = "";
       string healed = "";
-      string spell = "";
+      string spell = null;
       string type = "Heal";
       long heal= 0;
       long overHeal = 0;
@@ -177,13 +177,6 @@ namespace EQLogParser
 
         if (healed != "")
         {
-          int possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
-          if (possessive > -1 && healed[possessive + 3] != 'M') // dont count mounts
-          {
-            DataManager.Instance.UpdateVerifiedPlayers(healed.Substring(0, possessive));
-            DataManager.Instance.UpdateVerifiedPets(healed);
-          }
-
           if (healer != "" && heal != 0)
           {
             record = new HealRecord()
