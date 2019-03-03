@@ -51,11 +51,12 @@ namespace EQLogParser
         BeginTimes = new List<DateTime>(),
         LastTimes = new List<DateTime>(),
         SubStats = new Dictionary<string, PlayerSubStats>(),
+        SubStats2 = new Dictionary<string, PlayerSubStats>(),
         TimeDiffs = new List<double>()
       };
     }
 
-    protected static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string key)
+    protected static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string key, string type)
     {
       PlayerSubStats stats = null;
 
@@ -63,7 +64,7 @@ namespace EQLogParser
       {
         if (!individualStats.ContainsKey(key))
         {
-          stats = CreatePlayerStats(key);
+          stats = CreatePlayerSubStats(key, type);
           individualStats[key] = stats;
         }
         else

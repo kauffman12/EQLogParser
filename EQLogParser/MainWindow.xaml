@@ -110,22 +110,22 @@
                             </MenuItem>
                             <MenuItem x:Name="pdgMenuItemShowDamage" IsEnabled="False" Header="Damage Breakdown">
                               <MenuItem Header="Selected" IsEnabled="False" Click="PlayerDataGridShowDamage_Click"/>
-                              <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
-                              <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="PlayerDataGridShowDamagByClass_Click"/>
+                              <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
+                              <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="PlayerDataGridShowDamageByClass_Click"/>
                             </MenuItem>
                             <MenuItem x:Name="pdgMenuItemShowHitFreq" IsEnabled="False" Header="Hit Frequency" Click="PlayerDataGridHitFreq_Click"/>
                             <Separator />
@@ -201,7 +201,33 @@
                       <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
                         <Label x:Name="healTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
                       </StackPanel>
-                      <datagrid:ThemedDataGrid x:Name="healDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed" EnableRowVirtualization="True">
+                      <datagrid:ThemedDataGrid x:Name="healDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" SelectionChanged="HealDataGrid_SelectionChanged" EnableRowVirtualization="True">
+                        <DataGrid.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem x:Name="hdgMenuItemShowBreakdown" IsEnabled="False" Header="Healing Breakdown">
+                              <MenuItem Header="Selected" IsEnabled="False" Click="HealDataGridShowBreakdown_Click"/>
+                              <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                              <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem x:Name="hdgMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
+                            <MenuItem x:Name="hdgMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
+                          </ContextMenu>
+                        </DataGrid.ContextMenu>
                         <DataGrid.Columns>
                           <DataGridTemplateColumn MinWidth="48" Width="48">
                             <DataGridTemplateColumn.CellTemplate>

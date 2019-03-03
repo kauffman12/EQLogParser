@@ -1,4 +1,5 @@
-﻿using LiveCharts;
+﻿using ActiproSoftware.Windows.Controls.Docking;
+using LiveCharts;
 using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
@@ -133,7 +134,7 @@ namespace EQLogParser
       return y;
     }
 
-    internal static void OpenWindow(ActiproSoftware.Windows.Controls.Docking.DockingWindow window)
+    internal static void OpenWindow(DockingWindow window)
     {
       if (!window.IsOpen)
       {
@@ -148,6 +149,20 @@ namespace EQLogParser
       {
         window.Activate();
       }
+    }
+
+    internal static DocumentWindow OpenNewTab(DockSite dockSite, string id, string title, object content, double width = 0, double height = 0)
+    {
+      var window = new DocumentWindow(dockSite, id, title, null, content);
+
+      if (width != 0 && height != 0)
+      {
+        window.ContainerDockedSize = new Size(width, height);
+      }
+
+      OpenWindow(window);
+      window.MoveToLast();
+      return window;
     }
 
     internal static string FormatDateTime(DateTime dateTime)

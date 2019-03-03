@@ -31,7 +31,7 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.3.1";
+    private const string VERSION = "v1.3.2";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -59,6 +59,7 @@ namespace EQLogParser
     // stats
     private static bool UpdatingStats = false;
     private static CombinedDamageStats CurrentDamageStats = null;
+    private static CombinedHealStats CurrentHealStats = null;
     private static StatsSummary CurrentSummary = null;
 
     // progress window
@@ -272,6 +273,13 @@ namespace EQLogParser
       e.Row.Header = (e.Row.GetIndex() + 1).ToString();
     }
 
+    // Player HPS Data Grid
+    private void HealDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      UpdateHealDataGridMenuItems();
+      //UpdateDPSText(true);
+    }
+
     // Player DPS Data Grid
     private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -342,10 +350,7 @@ namespace EQLogParser
         var chart = new HitFreqChart();
         var results = DamageStatsBuilder.GetHitFreqValues(CurrentDamageStats, playerDataGrid.SelectedItems.Cast<PlayerStats>().First());
 
-        var hitFreqWindow = new DocumentWindow(dockSite, "freqChart", "Hit Frequency", null, chart);
-        hitFreqWindow.ContainerDockedSize = new Size(400, 300);
-        Helpers.OpenWindow(hitFreqWindow);
-        hitFreqWindow.MoveToLast();
+        var hitFreqWindow = Helpers.OpenNewTab(dockSite, "freqChart", "Hit Frequency", chart, 400, 300);
 
         //ResetDPSChart();
         chart.Update(results);
@@ -370,14 +375,33 @@ namespace EQLogParser
 
     private void ShowSpellCasts(List<PlayerStats> selectedStats)
     {
-      var spellTable = new SpellCountTable(this, CurrentSummary);
+      var spellTable = new SpellCountTable(this, CurrentSummary.ShortTitle);
       spellTable.ShowSpells(selectedStats, CurrentDamageStats);
-      var spellCastsWindow = new DocumentWindow(dockSite, "spellCastsWindow", "Spell Counts", null, spellTable);
-      Helpers.OpenWindow(spellCastsWindow);
-      spellCastsWindow.MoveToLast();
+      Helpers.OpenNewTab(dockSite, "spellCastsWindow", "Spell Counts", spellTable);
     }
 
-    private void PlayerDataGridShowDamagByClass_Click(object sender, RoutedEventArgs e)
+    private void HealDataGridShowBreakdownByClass_Click(object sender, RoutedEventArgs e)
+    {
+      MenuItem menuItem = (sender as MenuItem);
+      ShowHealing(DamageStatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, healDataGrid.Items));
+    }
+
+    private void HealDataGridShowBreakdown_Click(object sender, RoutedEventArgs e)
+    {
+      if (healDataGrid.SelectedItems.Count > 0)
+      {
+        ShowHealing(healDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
+      }
+    }
+
+    private void ShowHealing(List<PlayerStats> selectedStats)
+    {
+      var healTable = new HealTable(this, healTitle.Content.ToString());
+      healTable.Show(selectedStats, CurrentHealStats);
+      Helpers.OpenNewTab(dockSite, "healWindow", "Healing Breakdown", healTable);
+    }
+
+    private void PlayerDataGridShowDamageByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
       ShowDamage(DamageStatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
@@ -393,11 +417,9 @@ namespace EQLogParser
 
     private void ShowDamage(List<PlayerStats> selectedStats)
     {
-      var damageTable = new DamageTable(this, CurrentSummary);
+      var damageTable = new DamageTable(this, CurrentSummary.ShortTitle);
       damageTable.ShowDamage(selectedStats, CurrentDamageStats);
-      var damageWindow = new DocumentWindow(dockSite, "damageWindow", "Damage Breakdown", null, damageTable);
-      Helpers.OpenWindow(damageWindow);
-      damageWindow.MoveToLast();
+      Helpers.OpenNewTab(dockSite, "damageWindow", "Damage Breakdown", damageTable);
     }
 
     // Player DPS Child Grid
@@ -565,8 +587,8 @@ namespace EQLogParser
 
         if (npcWindow.IsOpen)
         {
-          var selected = (npcWindow.Content as NpcTable).GetSelectedItems();
-          if (selected.Count > 0)
+          var realItems = (npcWindow.Content as NpcTable).GetSelectedItems();
+          if (realItems.Count > 0)
           {
             dpsTitle.Content = "Calculating DPS...";
             healTitle.Content = "Calculating HPS...";
@@ -574,7 +596,6 @@ namespace EQLogParser
             healDataGrid.ItemsSource = null;
             PlayerChildGrids.Clear();
 
-            var realItems = selected.Cast<NonPlayer>().Where(item => !item.Name.Contains("Inactivity >")).ToList();
             if (realItems.Count > 0)
             {
               taskStarted = true;
@@ -611,12 +632,13 @@ namespace EQLogParser
 
               new Task(() =>
               {
-                CombinedHealStats healStats = HealStatsBuilder.BuildTotalStats(title, realItems);
+                CurrentHealStats = HealStatsBuilder.BuildTotalStats(title, realItems);
 
                 Dispatcher.InvokeAsync((() =>
                 {
-                  healTitle.Content = HealStatsBuilder.BuildTitle(healStats);
-                  healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(healStats.StatsList);
+                  healTitle.Content = HealStatsBuilder.BuildTitle(CurrentHealStats);
+                  healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
+                  UpdateHealDataGridMenuItems();
 
                   healStatsComplete = true;
                   if (damageStatsComplete)
@@ -642,11 +664,13 @@ namespace EQLogParser
 
           if (healDataGrid.ItemsSource is ObservableCollection<PlayerStats> healList)
           {
+            CurrentHealStats = null;
             healTitle.Content = PLAYER_TABLE_LABEL;
             healList.Clear();
           }
 
           UpdatePlayerDataGridMenuItems();
+          UpdateHealDataGridMenuItems();
           UpdatingStats = false;
         }
       }
@@ -690,6 +714,33 @@ namespace EQLogParser
       else
       {
         pdgMenuItemUnselectAll.IsEnabled = pdgMenuItemSelectAll.IsEnabled = pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = pdgMenuItemShowHitFreq.IsEnabled = false;
+      }
+    }
+
+    private void UpdateHealDataGridMenuItems()
+    {
+      if (CurrentHealStats != null && CurrentHealStats.StatsList.Count > 0)
+      {
+        hdgMenuItemSelectAll.IsEnabled = healDataGrid.SelectedItems.Count < healDataGrid.Items.Count;
+        hdgMenuItemUnselectAll.IsEnabled = healDataGrid.SelectedItems.Count > 0;
+        hdgMenuItemShowBreakdown.IsEnabled = true;
+
+        foreach (var item in hdgMenuItemShowBreakdown.Items)
+        {
+          MenuItem menuItem = item as MenuItem;
+          if (menuItem.Header as string == "Selected")
+          {
+            menuItem.IsEnabled = healDataGrid.SelectedItems.Count > 0;
+          }
+          else
+          {
+            menuItem.IsEnabled = CurrentHealStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
+          }
+        }
+      }
+      else
+      {
+        hdgMenuItemUnselectAll.IsEnabled = hdgMenuItemSelectAll.IsEnabled = hdgMenuItemShowBreakdown.IsEnabled = false;
       }
     }
 

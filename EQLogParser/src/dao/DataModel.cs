@@ -203,7 +203,7 @@ namespace EQLogParser
 
   public class CombinedHealStats : CombinedStats
   {
-
+    public Dictionary<string, byte> UniqueClasses { get; set; }
   }
 
   public class ChartData
@@ -265,6 +265,7 @@ namespace EQLogParser
   public class PlayerStats : PlayerSubStats
   {
     public Dictionary<string, PlayerSubStats> SubStats { get; set; }
+    public Dictionary<string, PlayerSubStats> SubStats2 { get; set; }
     public string OrigName { get; set; }
   }
 }
