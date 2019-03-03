@@ -12,6 +12,7 @@ namespace EQLogParser
 
     private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
     private const string UNKNOWN_SPELL = "Unknown Spell";
+    private const string UNKNOWN_PLAYER = "Unknown Player";
 
     internal static string BuildTitle(CombinedHealStats currentStats, bool showTotals = true)
     {
@@ -30,7 +31,7 @@ namespace EQLogParser
 
     internal static CombinedHealStats BuildTotalStats(string title, List<NonPlayer> selected)
     {
-      CombinedHealStats combined = new CombinedHealStats();
+      CombinedHealStats combined = new CombinedHealStats() { UniqueClasses = new Dictionary<string, byte>() };
 
       try
       {
@@ -59,18 +60,29 @@ namespace EQLogParser
               Parallel.ForEach(records, timedAction =>
               {
                 HealRecord record = timedAction as HealRecord;
-                PlayerStats stats = CreatePlayerStats(individualStats, record.Healer);
-
-                lock (stats)
+                if (DataManager.Instance.CheckNameForPlayer(record.Healed) || DataManager.Instance.CheckNameForPet(record.Healed))
                 {
-                  raidTotals.Total += record.Total;
-                  UpdateStats(stats, record);
-                  healerStats.TryAdd(record.Healer, stats);
-                  LineModifiersParser.Parse(record, stats);
+                  PlayerStats stats = CreatePlayerStats(individualStats, record.Healer);
 
-                  PlayerSubStats subStats = CreatePlayerSubStats(stats.SubStats, record.Spell ?? UNKNOWN_SPELL);
-                  UpdateStats(subStats, record);
-                  healerStats.TryAdd(record.Spell ?? UNKNOWN_SPELL, subStats);
+                  lock (stats)
+                  {
+                    raidTotals.Total += record.Total;
+                    UpdateStats(stats, record);
+                    healerStats.TryAdd(record.Healer, stats);
+                    LineModifiersParser.Parse(record, stats);
+
+                    var spellStatName = record.Spell ?? UNKNOWN_SPELL;
+                    PlayerSubStats spellStats = CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
+                    UpdateStats(spellStats, record);
+                    healerStats.TryAdd(stats.Name + "=" + spellStatName, spellStats);
+                    LineModifiersParser.Parse(record, spellStats);
+
+                    var healedStatName = record.Healed;
+                    PlayerSubStats healedStats = CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
+                    UpdateStats(healedStats, record);
+                    healerStats.TryAdd(stats.Name + "=" + healedStatName, healedStats);
+                    LineModifiersParser.Parse(record, healedStats);
+                  }
                 }
               });
 
@@ -89,6 +101,7 @@ namespace EQLogParser
           for (int i=0; i<combined.StatsList.Count; i++)
           {
             combined.StatsList[i].Rank = i + 1;
+            combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
           }
         }
       }
@@ -164,6 +177,7 @@ namespace EQLogParser
       if (playerStats != null)
       {
         Parallel.ForEach(playerStats.SubStats.Values, subStats => UpdateCalculations(subStats, raidTotals, playerStats));
+        Parallel.ForEach(playerStats.SubStats2.Values, subStats => UpdateCalculations(subStats, raidTotals, playerStats));
       }
     }
   }

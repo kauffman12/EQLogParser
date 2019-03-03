@@ -177,6 +177,15 @@ namespace EQLogParser
 
         if (healed != "")
         {
+          int possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
+          if (possessive > -1)
+          {
+            if (DataManager.Instance.CheckNameForPlayer(healed.Substring(0, possessive)))
+            {
+              DataManager.Instance.UpdateVerifiedPets(healed);
+            }
+          }
+
           if (healer != "" && heal != 0)
           {
             record = new HealRecord()
