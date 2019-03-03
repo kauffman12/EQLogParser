@@ -164,8 +164,12 @@
     <Compile Include="src\control\DamageStatsBuilder.cs" />
     <Compile Include="src\parsing\HealLineParser.cs" />
     <Compile Include="src\parsing\LineModifiersParser.cs" />
+    <Compile Include="src\ui\BreakdownTable.cs" />
     <Compile Include="src\ui\DamageTable.xaml.cs">
       <DependentUpon>DamageTable.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\ui\HealTable.xaml.cs">
+      <DependentUpon>HealTable.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\LineChart.xaml.cs">
       <DependentUpon>LineChart.xaml</DependentUpon>
@@ -197,6 +201,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="src\ui\DamageTable.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\HealTable.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

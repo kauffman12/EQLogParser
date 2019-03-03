@@ -1,28 +1,22 @@
-﻿using ActiproSoftware.Windows.Themes;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for DamageBreakdownTable.xaml
   /// </summary>
-  public partial class DamageTable : UserControl
+  public partial class DamageTable : BreakdownTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private MainWindow TheMainWindow;
     private List<PlayerSubStats> PlayerStats;
     private CombinedDamageStats CurrentStats;
-    private string CurrentSortKey = "Total";
-    private ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
-    private DataGridTextColumn CurrentColumn = null;
     private bool CurrentGroupDDSetting = true;
     private bool CurrentGroupDoTSetting = true;
     private bool CurrentGroupProcsSetting = true;
@@ -39,11 +33,11 @@ namespace EQLogParser
     private Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
     private static bool running = false;
 
-    public DamageTable(MainWindow mainWindow, StatsSummary summary)
+    public DamageTable(MainWindow mainWindow, string title)
     {
       InitializeComponent();
       TheMainWindow = mainWindow;
-      title.Content = summary.ShortTitle;
+      titleLabel.Content = title;
     }
 
     public void ShowDamage(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
@@ -55,7 +49,7 @@ namespace EQLogParser
       }
     }
 
-    public void Display(List<PlayerStats> selectedStats = null)
+    private new void Display(List<PlayerStats> selectedStats = null)
     {
       if (running == false)
       {
@@ -320,65 +314,6 @@ namespace EQLogParser
       }
 
       return list;
-    }
-
-    private List<PlayerSubStats> SortSubStats(List<PlayerSubStats> subStats)
-    {
-      OrderedParallelQuery<PlayerSubStats> query;
-      if (CurrentSortDirection == ListSortDirection.Ascending)
-      {
-        query = subStats.AsParallel().OrderBy(subStat => GetSortValue(subStat));
-      }
-      else
-      {
-        query = subStats.AsParallel().OrderByDescending(subStat => GetSortValue(subStat));
-      }
-      return query.ToList();
-    }
-
-    private object GetSortValue(PlayerSubStats sub)
-    {
-      return sub.GetType().GetProperty(CurrentSortKey).GetValue(sub, null);
-    }
-
-    private void Custom_Sorting(object sender, DataGridSortingEventArgs e)
-    {
-      var column = e.Column as DataGridTextColumn;
-      if (column != null)
-      {
-        // prevent the built-in sort from sorting
-        e.Handled = true;
-
-        var binding = column.Binding as Binding;
-        if (binding != null && binding.Path != null && binding.Path.Path != "PercentString") // dont sort on percent total, its not useful
-        {
-          CurrentSortKey = binding.Path.Path;
-          CurrentColumn = column;
-
-          if (column.Header.ToString() != "Name" && column.SortDirection == null)
-          {
-            CurrentSortDirection = ListSortDirection.Descending;
-          }
-          else
-          {
-            CurrentSortDirection = (column.SortDirection != ListSortDirection.Ascending) ? ListSortDirection.Ascending : ListSortDirection.Descending;
-          }
-
-          Display();
-        }
-      }
-    }
-
-    private void Loading_Row(object sender, DataGridRowEventArgs e)
-    {
-      if (e.Row.DataContext is PlayerStats)
-      {
-        e.Row.Style = Application.Current.FindResource(DataGridResourceKeys.DataGridRowStyleKey) as Style;
-      }
-      else
-      {
-        e.Row.Style = Application.Current.Resources["DetailsDataGridRowSyle"] as Style;
-      }
     }
 
     private void OptionsChange(object sender, RoutedEventArgs e)

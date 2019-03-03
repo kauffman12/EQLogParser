@@ -2,6 +2,7 @@
 using ActiproSoftware.Windows.Controls.Docking;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -85,9 +86,9 @@ namespace EQLogParser
       DataManager.Instance.EventsNewNonPlayer += (sender, npc) => AddNonPlayer(npc);
     }
 
-    public IList GetSelectedItems()
+    public List<NonPlayer> GetSelectedItems()
     {
-      return npcDataGrid.SelectedItems;
+      return npcDataGrid.SelectedItems.Cast<NonPlayer>().Where(item => !item.Name.Contains("Inactivity >")).ToList();
     }
 
     public void SelectLastRow()
