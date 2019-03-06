@@ -16,7 +16,12 @@ namespace EQLogParser
       try
       {
         int index;
-        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
+        if (line.Length >= 51 && (index = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1 && 
+          (line.IndexOf("say", index + 1, 3, StringComparison.Ordinal) > -1 || line.IndexOf("tell", 4, index + 1, StringComparison.Ordinal) > -1))
+        {
+          // ignore tells
+        }
+        else if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
         {
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
@@ -177,6 +182,7 @@ namespace EQLogParser
 
         if (healed != "")
         {
+          // check for pets
           int possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
           if (possessive > -1)
           {
@@ -184,6 +190,10 @@ namespace EQLogParser
             {
               DataManager.Instance.UpdateVerifiedPets(healed);
             }
+
+            // dont count swarm pets
+            healer = "";
+            heal = 0;
           }
 
           if (healer != "" && heal != 0)

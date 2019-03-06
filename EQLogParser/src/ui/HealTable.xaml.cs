@@ -17,7 +17,6 @@ namespace EQLogParser
     private CombinedHealStats CurrentStats;
     private static bool running = false;
     private bool CurrentShowSpellsChoice = true;
-    private bool CurrentShowPets = false;
     List<PlayerStats> PlayerStats = null;
 
     private List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
@@ -67,8 +66,7 @@ namespace EQLogParser
                 }
                 else
                 {
-                  var filtered = playerStat.SubStats2.Values.Where(stat => CurrentShowPets || !DataManager.Instance.CheckNameForPet(stat.Name));
-                  SortSubStats(filtered.ToList()).ForEach(subStat => list.Add(subStat));
+                  SortSubStats(playerStat.SubStats2.Values.ToList()).ForEach(subStat => list.Add(subStat));
                 }
               }
             }
@@ -98,16 +96,6 @@ namespace EQLogParser
       if (PlayerStats != null)
       {
         CurrentShowSpellsChoice = choicesList.SelectedIndex == 0;
-        showPets.IsEnabled = choicesList.SelectedIndex != 0;
-        Display();
-      }
-    }
-
-    private void OptionsChange(object sender, System.Windows.RoutedEventArgs e)
-    {
-      if (PlayerStats != null)
-      {
-        CurrentShowPets = showPets.IsChecked.Value;
         Display();
       }
     }
