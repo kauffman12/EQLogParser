@@ -31,7 +31,7 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.3.3";
+    private const string VERSION = "v1.3.4";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -166,6 +166,9 @@ namespace EQLogParser
 
         var npcTable = npcWindow.Content as NpcTable;
         npcTable.EventsSelectionChange += (sender, data) => UpdateStats();
+
+        //DamageStatsBuilder.EventsUpdateDataPoint += (chartWindow.Content as LineChart).HandleDataPointEvent;
+        HealStatsBuilder.EventsUpdateDataPoint += (healChartWindow.Content as LineChart).HandleDataPointEvent;
       }
       catch (Exception e)
       {
@@ -617,8 +620,8 @@ namespace EQLogParser
                   playerDPSTextBox.Text = dpsTitle.Content.ToString();
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
 
-                  var list = CurrentDamageStats.StatsList.Take(5).ToList();
-                  UpdateDPSChart("Top " + list.Count + " DPS Over Time", list);
+                  //var list = CurrentDamageStats.StatsList.Take(5).ToList();
+                  //UpdateDPSChart("Top " + list.Count + " DPS Over Time", list);
                   UpdatingStats = false;
                   UpdatePlayerDataGridMenuItems();
                   damageStatsComplete = true;
@@ -659,7 +662,7 @@ namespace EQLogParser
             dpsTitle.Content = PLAYER_TABLE_LABEL;
             playerDPSTextBox.Text = "";
             damageList.Clear();
-            ResetDPSChart();
+            //ResetDPSChart();
           }
 
           if (healDataGrid.ItemsSource is ObservableCollection<PlayerStats> healList)

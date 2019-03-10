@@ -261,7 +261,10 @@
                   </docking:DocumentWindow>                  
                 </docking:TabbedMdiContainer>
                 <docking:TabbedMdiContainer>
-                  <docking:DocumentWindow x:Name="chartWindow" Title="DPS Over Time" Description="" ContainerDockedSize="600,220" CanFloat="True" CanClose="True">
+                  <docking:DocumentWindow x:Name="chartWindow" Title="Damage Chart" Description="" ContainerDockedSize="600,220" CanFloat="True" CanClose="True">
+                    <local:LineChart />
+                  </docking:DocumentWindow>
+                  <docking:DocumentWindow x:Name="healChartWindow" Title="Healing Chart" Description="" ContainerDockedSize="600,220" CanFloat="True" CanClose="True">
                     <local:LineChart />
                   </docking:DocumentWindow>
                 </docking:TabbedMdiContainer>

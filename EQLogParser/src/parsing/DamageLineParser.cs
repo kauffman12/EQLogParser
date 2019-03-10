@@ -224,6 +224,7 @@ namespace EQLogParser
           {
             DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker);
           }
+
           record = null;
         }
         else if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest") || record.Defender.EndsWith("satchel"))
