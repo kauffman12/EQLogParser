@@ -603,14 +603,6 @@ namespace EQLogParser
 
     public void UpdateVerifiedPlayers(string name)
     {
-      if (name.Contains("Disapp"))
-      {
-        if (true)
-        {
-
-        }
-      }
-
       if (VerifiedPlayers.TryAdd(name, 1))
       {
         EventsNewVerifiedPlayer(this, name);
@@ -670,14 +662,6 @@ namespace EQLogParser
       public int CurrentMax { get; set; }
       public SpellClasses CurrentClass { get; set; }
       public ConcurrentDictionary<SpellClasses, int> ClassCounts { get; set; }
-    }
-
-    private class TimedActionComparer : IComparer<TimedAction>
-    {
-      public int Compare(TimedAction x, TimedAction y)
-      {
-        return x.BeginTime.CompareTo(y.BeginTime);
-      }
     }
   }
 }

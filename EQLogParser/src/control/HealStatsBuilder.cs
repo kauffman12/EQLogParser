@@ -10,6 +10,8 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    public static event EventHandler<DataPointEvent> EventsUpdateDataPoint;
+
     private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
     private const string UNKNOWN_SPELL = "Unknown Spell";
     private const string UNKNOWN_PLAYER = "Unknown Player";
@@ -44,6 +46,10 @@ namespace EQLogParser
         {
           Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
+          // send reset
+          DataPointEvent de = new DataPointEvent() { EventType = "RESET" };
+          EventsUpdateDataPoint?.Invoke(raidTotals, de);
+
           for (int i = 0; i < raidTotals.BeginTimes.Count; i++)
           {
             // keep track of time range as well as the players that have been updated
@@ -57,7 +63,7 @@ namespace EQLogParser
             var records = DataManager.Instance.GetHealsDuring(raidTotals.BeginTimes[i], raidTotals.LastTimes[i]);
             if (records.Count > 0)
             {
-              Parallel.ForEach(records, timedAction =>
+              records.ForEach(timedAction =>
               {
                 HealRecord record = timedAction as HealRecord;
                 if (DataManager.Instance.CheckNameForPlayer(record.Healed) || DataManager.Instance.CheckNameForPet(record.Healed))
@@ -67,6 +73,12 @@ namespace EQLogParser
                   lock (stats)
                   {
                     raidTotals.Total += record.Total;
+
+                    // send new data point
+                    DataPoint data = new DataPoint() { Total = record.Total, Name = record.Healer, CurrentTime = record.BeginTime };
+                    de = new DataPointEvent() { Data = data, EventType = "UPDATE" };
+                    EventsUpdateDataPoint?.Invoke(raidTotals, de);
+
                     UpdateStats(stats, record);
                     healerStats.TryAdd(record.Healer, stats);
                     LineModifiersParser.Parse(record, stats);
@@ -95,6 +107,10 @@ namespace EQLogParser
           combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
           combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
           combined.TotalTitle = string.Format(TOTAL_FORMAT, Helpers.FormatDamage(raidTotals.Total), Helpers.FormatDamage(raidTotals.DPS));
+
+          // send completion event
+          de = new DataPointEvent() { EventType = "DONE" };
+          EventsUpdateDataPoint?.Invoke(raidTotals, de);
 
           Parallel.ForEach(combined.StatsList, stats => UpdateCalculations(stats, raidTotals));
 

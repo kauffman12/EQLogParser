@@ -8,13 +8,13 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <lvc:CartesianChart x:Name="lvcChart" Zoom="Xy" Pan="Xy" LegendLocation="Right" DisableAnimations="True" MouseDoubleClick="Chart_DoubleClick">
     <lvc:CartesianChart.AxisY>
-      <lvc:Axis Title="DPS" MinValue="0"></lvc:Axis>
+      <lvc:Axis Title="Data Per Second" MinValue="0"></lvc:Axis>
     </lvc:CartesianChart.AxisY>
     <lvc:CartesianChart.AxisX>
-      <lvc:Axis MinValue="0"></lvc:Axis>
+      <lvc:Axis></lvc:Axis>
     </lvc:CartesianChart.AxisX>
     <lvc:CartesianChart.Series>
-      <lvc:LineSeries Values="0"></lvc:LineSeries>
+      <lvc:LineSeries></lvc:LineSeries>
     </lvc:CartesianChart.Series>
   </lvc:CartesianChart>
 </UserControl>

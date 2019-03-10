@@ -206,7 +206,8 @@ namespace EQLogParser
               Healed = healed,
               Spell = spell,
               Type = type,
-              BeginTime = pline.CurrentTime
+              BeginTime = pline.CurrentTime,
+              TimeString = pline.TimeString
             };
 
             if (part[part.Length - 1] == ')')

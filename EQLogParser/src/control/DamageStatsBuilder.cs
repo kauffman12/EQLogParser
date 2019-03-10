@@ -89,7 +89,7 @@ namespace EQLogParser
               PlayerStats playerTotals;
               DamageStats npcStats = npc.DamageMap[key];
 
-              if (!individualStats.ContainsKey(key))
+              if (!individualStats.TryGetValue(key, out playerTotals))
               {
                 playerTotals = CreatePlayerStats(key);
                 individualStats[key] = playerTotals;
@@ -101,23 +101,24 @@ namespace EQLogParser
                   }
                 }
               }
-              else
-              {
-                playerTotals = individualStats[key];
-              }
 
               // track player names
               uniquePlayers[key] = 1;
 
               // see if there's a pet mapping, check this first
-              string parent = DataManager.Instance.GetPlayerFromPet(key);
-              if (parent != null)
+              string name = DataManager.Instance.GetPlayerFromPet(key);
+              if (name != null)
               {
-                needAggregateHelper.AddToList(needAggregate, parent, key);
+                needAggregateHelper.AddToList(needAggregate, name, key);
               }
               else if (npcStats.Owner != "" && npcStats.IsPet)
               {
-                needAggregateHelper.AddToList(needAggregate, npcStats.Owner, key);
+                name = npcStats.Owner;
+                needAggregateHelper.AddToList(needAggregate, name, key);
+              }
+              else
+              {
+                name = key;
               }
 
               aggregateNpcStatsHelper.AddToList(aggregateNpcStats, key, npc);
