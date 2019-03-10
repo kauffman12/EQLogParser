@@ -3,6 +3,22 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
+  public class DataPointComparer : IComparer<DataPoint>
+  {
+    public int Compare(DataPoint x, DataPoint y)
+    {
+      return x.CurrentTime.CompareTo(y.CurrentTime);
+    }
+  }
+
+  public class TimedActionComparer : IComparer<TimedAction>
+  {
+    public int Compare(TimedAction x, TimedAction y)
+    {
+      return x.BeginTime.CompareTo(y.BeginTime);
+    }
+  }
+
   public class SortableNameComparer : IComparer<SortableName>
   {
     public int Compare(SortableName x, SortableName y)
@@ -19,6 +35,43 @@ namespace EQLogParser
     public const string BANE_TYPE = "Bane Damage";
     public const string PROC_TYPE = "Proc";
     public const string RESIST_TYPE = "Resisted Spells";
+  }
+
+  public class DataPointEvent
+  {
+    public DataPoint Data { get; set; }
+    public string EventType { get; set; }
+  }
+
+  public class ProcessedEvent
+  {
+    public ProcessLine ProcessLine { get; set; }
+  }
+
+  public class DamageProcessedEvent : ProcessedEvent
+  {
+    public DamageRecord Record { get; set; }
+  }
+
+  public class HealProcessedEvent : ProcessedEvent
+  {
+    public HealRecord Record { get; set; }
+  }
+
+  public class ResistProcessedEvent : ProcessedEvent
+  {
+    public string Defender { get; set; }
+    public string Spell { get; set; }
+  }
+
+  public class ProcessLine
+  {
+    public string Line { get; set; }
+    public DateTime CurrentTime { get; set; }
+    public string TimeString { get; set; }
+    public string ActionPart { get; set; }
+    public int OptionalIndex { get; set; }
+    public string OptionalData { get; set; }
   }
 
   public class TimedAction
@@ -40,6 +93,7 @@ namespace EQLogParser
     public long OverHeal { get; set; }
     public string Healer { get; set; }
     public string Healed { get; set; }
+    public string TimeString { get; set; }
   }
 
   public class DamageRecord : HitRecord
@@ -75,37 +129,6 @@ namespace EQLogParser
     public Dictionary<string, Hit> SpellProcMap { get; set; }
     public string Owner { get; set; }
     public bool IsPet { get; set; }
-  }
-
-  public class ProcessedEvent
-  {
-    public ProcessLine ProcessLine { get; set; }
-  }
-
-  public class DamageProcessedEvent : ProcessedEvent
-  {
-    public DamageRecord Record { get; set; }
-  }
-
-  public class HealProcessedEvent : ProcessedEvent
-  {
-    public HealRecord Record { get; set; }
-  }
-
-  public class ResistProcessedEvent : ProcessedEvent
-  {
-    public string Defender { get; set; }
-    public string Spell { get; set; }
-  }
-
-  public class ProcessLine
-  {
-    public string Line { get; set; }
-    public DateTime CurrentTime { get; set; }
-    public string TimeString { get; set; }
-    public string ActionPart { get; set; }
-    public int OptionalIndex { get; set; }
-    public string OptionalData { get; set; }
   }
 
   public class DamageAtTime
@@ -204,6 +227,16 @@ namespace EQLogParser
   public class CombinedHealStats : CombinedStats
   {
     public Dictionary<string, byte> UniqueClasses { get; set; }
+  }
+
+  public class DataPoint
+  {
+    public string Name { get; set; }
+    public long Total { get; set; }
+    public long Rolling { get; set; }
+    public long VPS { get; set; }
+    public DateTime BeginTime { get; set; }
+    public DateTime CurrentTime { get; set; }
   }
 
   public class ChartData
