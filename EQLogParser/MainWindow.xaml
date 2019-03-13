@@ -31,7 +31,8 @@
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
       </MenuItem>
       <MenuItem Header="_View" Height="20" Width="40">
-        <MenuItem x:Name="dpsChartMenuItem" Click="MenuItemWindow_Click" Header="_DPS Over Time (Chart)" Height="20" />
+        <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindow_Click" Header="_Damage Chart" Height="20" />
+        <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindow_Click" Header="_Healing Chart" Height="20" />
         <Separator />
         <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_File Status" Height="20" />
         <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
@@ -72,7 +73,7 @@
               <docking:TabbedMdiHost>
               <docking:SplitContainer Orientation="Vertical">
                 <docking:TabbedMdiContainer>
-                  <docking:DocumentWindow x:Name="dpsWindow" Title="Player DPS" Description="" ContainerDockedSize="600,450" CanClose="False">
+                  <docking:DocumentWindow x:Name="dpsWindow" Title="DPS Summary" Description="" CanClose="False" ContainerMinSize="600,50">
                     <Grid>
                       <Grid.Resources>
                         <local:ZeroConverter x:Key="ZeroConverter" />
@@ -189,7 +190,7 @@
                       </datagrid:ThemedDataGrid>
                     </Grid>
                   </docking:DocumentWindow>
-                  <docking:DocumentWindow x:Name="healWindow" Title="Player HPS" Description="" ContainerDockedSize="600,450" CanClose="False">
+                  <docking:DocumentWindow x:Name="healWindow" Title="HPS Summary" Description="" CanClose="False">
                     <Grid>
                       <Grid.Resources>
                         <local:ZeroConverter x:Key="ZeroConverter" />
@@ -258,14 +259,6 @@
                         </DataGrid.Columns>
                       </datagrid:ThemedDataGrid>
                     </Grid>
-                  </docking:DocumentWindow>                  
-                </docking:TabbedMdiContainer>
-                <docking:TabbedMdiContainer>
-                  <docking:DocumentWindow x:Name="chartWindow" Title="Damage Chart" Description="" ContainerDockedSize="600,220" CanFloat="True" CanClose="True">
-                    <local:LineChart />
-                  </docking:DocumentWindow>
-                  <docking:DocumentWindow x:Name="healChartWindow" Title="Healing Chart" Description="" ContainerDockedSize="600,220" CanFloat="True" CanClose="True">
-                    <local:LineChart />
                   </docking:DocumentWindow>
                 </docking:TabbedMdiContainer>
               </docking:SplitContainer>

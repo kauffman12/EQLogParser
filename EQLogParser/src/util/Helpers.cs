@@ -71,24 +71,41 @@ namespace EQLogParser
       theChart.AxisX[0].MaxValue = double.NaN;
     }
 
-    internal static SeriesCollection CreateLineChartSeries(Dictionary<string, List<long>> playerValues = null)
+    internal static DocumentWindow OpenChart(DockSite dockSite, DocumentWindow chartWindow, DockHost host, List<string> choices, string title)
     {
-      var seriesCollection = new SeriesCollection();
-      Dictionary<string, LineSeries> seriesPerPlayer = new Dictionary<string, LineSeries>();
-      foreach (string player in playerValues.Keys)
+      DocumentWindow newChartWindow = chartWindow;
+
+      if (chartWindow != null && chartWindow.IsOpen)
       {
-        if (player != null && !seriesPerPlayer.ContainsKey(player))
+        // just focus
+        OpenWindow(chartWindow);
+      }
+      else
+      {
+        var lineChart = new LineChart(choices);
+        newChartWindow = new DocumentWindow(dockSite, title, title, null, lineChart);
+
+        OpenWindow(newChartWindow);
+        newChartWindow.CanFloat = true;
+        newChartWindow.CanClose = true;
+
+        if (host != null)
         {
-          seriesPerPlayer[player] = new LineSeries();
-          seriesPerPlayer[player].Title = player;
-          seriesPerPlayer[player].Values = new ChartValues<long>();
-          seriesCollection.Add(seriesPerPlayer[player]);
+          newChartWindow.MoveToMdi(host);
+          if (newChartWindow.CanMoveToNextContainer)
+          {
+            newChartWindow.MoveToNextContainer();
+          }
+        }
+        else
+        {
+          newChartWindow.MoveToNewHorizontalContainer();
         }
 
-        seriesPerPlayer[player].Values.AddRange(playerValues[player].Cast<object>());
+        //newChartWindow.ContainerDockedSize = new Size(800, 50);
       }
 
-      return seriesCollection;
+      return newChartWindow;
     }
 
     internal static void DataGridSelectAll(object sender)

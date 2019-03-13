@@ -51,10 +51,10 @@ namespace EQLogParser
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
 
-          DamageRecord record = ParseDamage(pline.ActionPart);
+          DamageRecord record = ParseDamage(pline);
           if (record != null)
           {
-            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, ProcessLine = pline };
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = pline.TimeString };
             EventsDamageProcessed(record, e);
           }
         }
@@ -129,7 +129,8 @@ namespace EQLogParser
       string defender = pline.ActionPart.Substring(0, pline.OptionalIndex);
       string spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1);
 
-      ResistProcessedEvent e = new ResistProcessedEvent() { ProcessLine = pline, Defender = defender, Spell = spell };
+      ResistRecord record = new ResistRecord() { Spell = spell, BeginTime = pline.CurrentTime };
+      ResistProcessedEvent e = new ResistProcessedEvent() { Record = record };
       EventsResistProcessed(defender, e);
     }
 
@@ -201,11 +202,11 @@ namespace EQLogParser
       return found;
     }
 
-    private static DamageRecord ParseDamage(string part)
+    private static DamageRecord ParseDamage(ProcessLine pline)
     {
       DamageRecord record = null;
 
-      record = ParseAllDamage(part);
+      record = ParseAllDamage(pline);
       if (record != null)
       {
         // Needed to replace 'You' and 'you', etc
@@ -305,9 +306,10 @@ namespace EQLogParser
       isDefenderPlayer = (record.DefenderPetType == "" && DataManager.Instance.CheckNameForPlayer(record.Defender));
     }
 
-    private static DamageRecord ParseAllDamage(string part)
+    private static DamageRecord ParseAllDamage(ProcessLine pline)
     {
       DamageRecord record = null;
+      string part = pline.ActionPart;
 
       try
       {
@@ -360,7 +362,7 @@ namespace EQLogParser
                       if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
                       {
                         action = "DoT";
-                        type = Labels.DOT_TYPE;
+                        type = Labels.DOT_NAME;
                         afterAction = sizeSoFar + "has taken".Length + 1;
                         defenderPetType = petType;
                         defenderOwner = owner;
@@ -394,7 +396,7 @@ namespace EQLogParser
                   if (testAction == "has" && part.IndexOf(" taken ", sizeSoFar + 3, 7, StringComparison.Ordinal) > -1)
                   {
                     action = "DoT";
-                    type = Labels.DOT_TYPE;
+                    type = Labels.DOT_NAME;
                     afterAction = sizeSoFar + "has taken".Length + 1;
                     defender = player;
                   }
@@ -421,14 +423,14 @@ namespace EQLogParser
               {
                 action = "DoT";
                 defender = part.Substring(0, hasTakenIndex - 1);
-                type = Labels.DOT_TYPE;
+                type = Labels.DOT_NAME;
                 afterAction = hasTakenIndex + 10;
               }
               else
               {
                 action = "Bane";
                 defender = part.Substring(0, hasTakenIndex - 1);
-                type = Labels.BANE_TYPE;
+                type = Labels.BANE_NAME;
                 afterAction = extraIndex + 9;
               }
             }
@@ -444,7 +446,7 @@ namespace EQLogParser
                 {
                   defender = part.Substring(0, isIndex);
                   action = "DS";
-                  type = Labels.DS_TYPE;
+                  type = Labels.DS_NAME;
                   afterAction = byIndex + 4;
 
                   // The following DD/DoT code doesn't really help parse damage shields so continue here... need to clean this up eventually
@@ -524,7 +526,7 @@ namespace EQLogParser
                         found = true;
                         if (part.IndexOf("of damage.", point + 7, StringComparison.Ordinal) == -1)
                         {
-                          type = Labels.DD_TYPE;
+                          type = Labels.DD_NAME;
 
                           int byIndex = part.IndexOf(" by ", point + 18, StringComparison.Ordinal);
                           if (byIndex > -1)
@@ -625,8 +627,11 @@ namespace EQLogParser
               AttackerOwner = attackerOwner,
               DefenderPetType = defenderPetType,
               DefenderOwner = defenderOwner,
-              Spell = spell
+              BeginTime = pline.CurrentTime
             };
+
+            // set sub type if spell is available
+            record.SubType = spell == "" ? record.Type : spell;
 
             if (part[part.Length - 1] == ')')
             {

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,82 +38,68 @@ namespace EQLogParser
       {
         PlayerStats raidTotals = CreatePlayerStats(RAID_PLAYER);
         selected.ForEach(npc => UpdateTimeDiffs(raidTotals, npc, HEAL_OFFSET));
-        raidTotals.TotalSeconds = raidTotals.TimeDiffs.AsParallel().Sum();
+        raidTotals.TotalSeconds = raidTotals.TimeDiffs.Sum();
         combined.RaidStats = raidTotals;
 
-       if (raidTotals.BeginTimes.Count > 0 && raidTotals.BeginTimes.Count == raidTotals.LastTimes.Count)
+        if (raidTotals.BeginTimes.Count > 0 && raidTotals.BeginTimes.Count == raidTotals.LastTimes.Count)
         {
           Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
-          // send reset
-          DataPointEvent de = new DataPointEvent() { EventType = "RESET" };
-          EventsUpdateDataPoint?.Invoke(raidTotals, de);
-
+          List<List<TimedAction>> healGroups = new List<List<TimedAction>>();
           for (int i = 0; i < raidTotals.BeginTimes.Count; i++)
           {
-            // keep track of time range as well as the players that have been updated
-            ConcurrentDictionary<string, PlayerSubStats> healerStats = new ConcurrentDictionary<string, PlayerSubStats>();
-            var diff = (raidTotals.LastTimes[i] - raidTotals.BeginTimes[i]).TotalSeconds;
-            if (diff == 0)
-            {
-              diff = 1;
-            }
-
-            var records = DataManager.Instance.GetHealsDuring(raidTotals.BeginTimes[i], raidTotals.LastTimes[i]);
-            if (records.Count > 0)
-            {
-              records.ForEach(timedAction =>
-              {
-                HealRecord record = timedAction as HealRecord;
-                if (DataManager.Instance.CheckNameForPlayer(record.Healed) || DataManager.Instance.CheckNameForPet(record.Healed))
-                {
-                  PlayerStats stats = CreatePlayerStats(individualStats, record.Healer);
-
-                  lock (stats)
-                  {
-                    raidTotals.Total += record.Total;
-
-                    // send new data point
-                    DataPoint data = new DataPoint() { Total = record.Total, Name = record.Healer, CurrentTime = record.BeginTime };
-                    de = new DataPointEvent() { Data = data, EventType = "UPDATE" };
-                    EventsUpdateDataPoint?.Invoke(raidTotals, de);
-
-                    UpdateStats(stats, record);
-                    healerStats.TryAdd(record.Healer, stats);
-                    LineModifiersParser.Parse(record, stats);
-
-                    var spellStatName = record.Spell ?? UNKNOWN_SPELL;
-                    PlayerSubStats spellStats = CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
-                    UpdateStats(spellStats, record);
-                    healerStats.TryAdd(stats.Name + "=" + spellStatName, spellStats);
-                    LineModifiersParser.Parse(record, spellStats);
-
-                    var healedStatName = record.Healed;
-                    PlayerSubStats healedStats = CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
-                    UpdateStats(healedStats, record);
-                    healerStats.TryAdd(stats.Name + "=" + healedStatName, healedStats);
-                    LineModifiersParser.Parse(record, healedStats);
-                  }
-                }
-              });
-
-              Parallel.ForEach(healerStats.Values.ToList(), healerStat => healerStat.TotalSeconds += diff);
-            }
+            healGroups.Add(DataManager.Instance.GetHealsDuring(raidTotals.BeginTimes[i], raidTotals.LastTimes[i]));
           }
 
+          // send update
+          DataPointEvent de = new DataPointEvent() { EventType = "UPDATE" };
+          EventsUpdateDataPoint?.Invoke(healGroups, de);
+
+          healGroups.ForEach(records =>
+          {
+            // keep track of time range as well as the players that have been updated
+            Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
+
+            records.ForEach(timedAction =>
+            {
+              HealRecord record = timedAction as HealRecord;
+              if (!DataManager.Instance.IsProbablyNotAPlayer(record.Healed))
+              {
+                raidTotals.Total += record.Total;
+                PlayerStats stats = CreatePlayerStats(individualStats, record.Healer);
+
+                UpdateStats(stats, record);
+                allStats[record.Healer] = stats;
+
+                var spellStatName = record.SubType ?? UNKNOWN_SPELL;
+                PlayerSubStats spellStats = CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
+                UpdateStats(spellStats, record);
+                allStats[stats.Name + "=" + spellStatName] = spellStats;
+
+                var healedStatName = record.Healed;
+                stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
+                PlayerSubStats healedStats = CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
+                UpdateStats(healedStats, record);
+                allStats[stats.Name + "=" + healedStatName] = healedStats;
+              }
+            });
+
+            Parallel.ForEach(allStats.Values, stats =>
+            {
+              stats.TotalSeconds += stats.LastTime.Subtract(stats.BeginTime).TotalSeconds + 1;
+              stats.BeginTime = DateTime.MinValue;
+            });
+          });
+
+          Parallel.ForEach(individualStats.Values, stats => UpdateCalculations(stats, raidTotals));
+
           raidTotals.DPS = (long) Math.Round(raidTotals.Total / raidTotals.TotalSeconds, 2);
-          combined.StatsList = individualStats.Values.OrderByDescending(item => item.Total).ToList();
+          combined.StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
           combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
           combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
           combined.TotalTitle = string.Format(TOTAL_FORMAT, Helpers.FormatDamage(raidTotals.Total), Helpers.FormatDamage(raidTotals.DPS));
 
-          // send completion event
-          de = new DataPointEvent() { EventType = "DONE" };
-          EventsUpdateDataPoint?.Invoke(raidTotals, de);
-
-          Parallel.ForEach(combined.StatsList, stats => UpdateCalculations(stats, raidTotals));
-
-          for (int i=0; i<combined.StatsList.Count; i++)
+          for (int i = 0; i < combined.StatsList.Count; i++)
           {
             combined.StatsList[i].Rank = i + 1;
             combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
@@ -127,74 +112,6 @@ namespace EQLogParser
       }
 
       return combined;
-    }
-
-    private static void UpdateStats(PlayerSubStats stats, HealRecord record)
-    {
-      stats.Total += record.Total;
-      stats.Hits += 1;
-      stats.Max = (stats.Max < record.Total) ? record.Total : stats.Max;
-
-      if (record.Total > 0 && record.OverHeal > 0)
-      {
-        stats.Extra += (record.OverHeal - record.Total);
-      }
-    }
-
-    private static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, PlayerStats parentStats = null)
-    {
-      if (stats.Hits > 0)
-      {
-        stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
-        stats.CritRate = Math.Round(Convert.ToDecimal(stats.CritHits) / stats.Hits * 100, 2);
-        stats.LuckRate = Math.Round(Convert.ToDecimal(stats.LuckyHits) / stats.Hits * 100, 2);
-      }
-
-      if (stats.Total > 0)
-      {
-        stats.ExtraRate = Math.Round(Convert.ToDecimal(stats.Extra) / stats.Total * 100, 2);
-      }
-
-      if ((stats.CritHits - stats.LuckyHits) > 0)
-      {
-        stats.AvgCrit = (long) Math.Round(Convert.ToDecimal(stats.TotalCrit) / (stats.CritHits - stats.LuckyHits), 2);
-      }
-
-      if (stats.LuckyHits > 0)
-      {
-        stats.AvgLucky = (long) Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
-      }
-
-      // total percents
-      if (raidTotals.Total > 0)
-      {
-        stats.PercentOfRaid = Math.Round((decimal) stats.Total / raidTotals.Total * 100, 2);
-      }
-
-      stats.DPS = (long) Math.Round(stats.Total / stats.TotalSeconds, 2);
-
-      if (parentStats == null)
-      {
-        stats.SDPS = (long) Math.Round(stats.Total / raidTotals.TotalSeconds, 2);
-      }
-      else
-      {
-        if (parentStats.Total > 0)
-        {
-          stats.Percent = Math.Round((decimal) stats.Total / parentStats.Total * 100, 2);
-        }
-
-        stats.SDPS = (long) Math.Round(stats.Total / parentStats.TotalSeconds, 2);
-      }
-
-      // handle sub stats
-      var playerStats = stats as PlayerStats;
-
-      if (playerStats != null)
-      {
-        Parallel.ForEach(playerStats.SubStats.Values, subStats => UpdateCalculations(subStats, raidTotals, playerStats));
-        Parallel.ForEach(playerStats.SubStats2.Values, subStats => UpdateCalculations(subStats, raidTotals, playerStats));
-      }
     }
   }
 }
