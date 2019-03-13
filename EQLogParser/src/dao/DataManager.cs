@@ -31,9 +31,11 @@ namespace EQLogParser
     private static string PETMAP_FILE;
     private bool PetMappingUpdated = false;
 
+    private List<TimedAction> AllDamageRecords = new List<TimedAction>();
     private List<TimedAction> AllHealRecords = new List<TimedAction>();
     private List<TimedAction> AllSpellCasts = new List<TimedAction>();
     private List<TimedAction> AllReceivedSpells = new List<TimedAction>();
+    private List<TimedAction> AllResists = new List<TimedAction>();
     private List<TimedAction> PlayerDeaths = new List<TimedAction>();
 
     private Dictionary<string, byte> AllUniqueSpellCasts = new Dictionary<string, byte>();
@@ -183,6 +185,7 @@ namespace EQLogParser
       AllUniqueSpellCasts.Clear();
       AllUniqueSpellsLRU.Clear();
       AllReceivedSpells.Clear();
+      AllDamageRecords.Clear();
       AllHealRecords.Clear();
       PlayerDeaths.Clear();
       EventsClearedActiveData(this, true);
@@ -258,6 +261,18 @@ namespace EQLogParser
     public void AddPlayerDeath(string player, string npc, DateTime dateTime)
     {
       PlayerDeaths.Add(new PlayerDeath() { Player = player, Npc = npc, BeginTime = dateTime });
+    }
+
+    public void AddDamageRecord(DamageRecord record)
+    {
+      // ReplacePlayer is done in the line parser already
+      AllDamageRecords.Add(record);
+    }
+
+    public void AddResistRecord(ResistRecord record)
+    {
+      // Resists are only seen by current player
+      AllResists.Add(record);
     }
 
     public void AddHealRecord(HealRecord record)
@@ -363,9 +378,19 @@ namespace EQLogParser
       return SearchActions(AllSpellCasts, beginTime, endTime);
     }
 
+    public List<TimedAction> GetDamageDuring(DateTime beginTime, DateTime endTime)
+    {
+      return SearchActions(AllDamageRecords, beginTime, endTime);
+    }
+
     public List<TimedAction> GetHealsDuring(DateTime beginTime, DateTime endTime)
     {
       return SearchActions(AllHealRecords, beginTime, endTime);
+    }
+
+    public List<TimedAction> GetResistsDuring(DateTime beginTime, DateTime endTime)
+    {
+      return SearchActions(AllResists, beginTime, endTime);
     }
 
     public List<TimedAction> GetReceivedSpellsDuring(DateTime beginTime, DateTime endTime)
@@ -418,7 +443,9 @@ namespace EQLogParser
 
     public string GetPlayerFromPet(string pet)
     {
-      return PetToPlayerMap.ContainsKey(pet) ? PetToPlayerMap[pet] : null;
+      string player = null;
+      PetToPlayerMap.TryGetValue(pet, out player);
+      return player;
     }
 
     public SpellData GetNonPosessiveLandsOnOther(string value, out List<SpellData> output)

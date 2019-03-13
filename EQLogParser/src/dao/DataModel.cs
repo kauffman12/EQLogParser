@@ -29,39 +29,35 @@ namespace EQLogParser
 
   public static class Labels
   {
-    public const string DD_TYPE = "Direct Damage";
-    public const string DOT_TYPE = "DoT Tick";
-    public const string DS_TYPE = "Damage Shield";
-    public const string BANE_TYPE = "Bane Damage";
-    public const string PROC_TYPE = "Proc";
-    public const string RESIST_TYPE = "Resisted Spells";
+    public const string DD_NAME = "Direct Damage";
+    public const string DOT_NAME = "DoT Tick";
+    public const string DS_NAME = "Damage Shield";
+    public const string BANE_NAME = "Bane Damage";
+    public const string PROC_NAME = "Proc";
+    public const string RESIST_NAME = "Resisted Spells";
   }
 
   public class DataPointEvent
   {
     public DataPoint Data { get; set; }
     public string EventType { get; set; }
+    public Dictionary<string, byte> NpcNames { get; set; }
   }
 
-  public class ProcessedEvent
-  {
-    public ProcessLine ProcessLine { get; set; }
-  }
-
-  public class DamageProcessedEvent : ProcessedEvent
+  public class DamageProcessedEvent
   {
     public DamageRecord Record { get; set; }
+    public string TimeString { get; set; }
   }
 
-  public class HealProcessedEvent : ProcessedEvent
+  public class HealProcessedEvent
   {
     public HealRecord Record { get; set; }
   }
 
-  public class ResistProcessedEvent : ProcessedEvent
+  public class ResistProcessedEvent
   {
-    public string Defender { get; set; }
-    public string Spell { get; set; }
+    public ResistRecord Record { get; set; }
   }
 
   public class ProcessLine
@@ -80,20 +76,24 @@ namespace EQLogParser
     public DateTime LastTime { get; set; }
   }
 
+  public class ResistRecord : TimedAction
+  {
+    public string Spell { get; set; }
+  }
+
   public class HitRecord : TimedAction
   {
     public long Total { get; set; }
+    public long OverTotal { get; set; }
     public string Type { get; set; }
+    public string SubType { get; set; }
     public string Modifiers { get; set; }
-    public string Spell { get; set; }
   }
 
   public class HealRecord : HitRecord
   {
-    public long OverHeal { get; set; }
     public string Healer { get; set; }
     public string Healed { get; set; }
-    public string TimeString { get; set; }
   }
 
   public class DamageRecord : HitRecord
@@ -121,16 +121,6 @@ namespace EQLogParser
     public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
 
-  public class DamageStats : Hit
-  {
-    public Dictionary<string, Hit> HitMap { get; set; }
-    public Dictionary<string, Hit> SpellDoTMap { get; set; }
-    public Dictionary<string, Hit> SpellDDMap { get; set; }
-    public Dictionary<string, Hit> SpellProcMap { get; set; }
-    public string Owner { get; set; }
-    public bool IsPet { get; set; }
-  }
-
   public class DamageAtTime
   {
     public DateTime CurrentTime { get; set; }
@@ -143,8 +133,6 @@ namespace EQLogParser
     public const string BREAK_TIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
-    public Dictionary<string, DamageStats> DamageMap { get; set; }
-    public Dictionary<string, Dictionary<string, int>> ResistMap { get; set; }
     public int ID { get; set; }
     public string CorrectMapKey {get; set;}
     public int GroupID { get; set; }
