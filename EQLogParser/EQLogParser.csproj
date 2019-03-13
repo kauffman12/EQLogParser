@@ -158,6 +158,7 @@
     <Compile Include="Settings.cs" />
     <Compile Include="src\control\HealStatsBuilder.cs" />
     <Compile Include="src\control\StatsBuilder.cs" />
+    <Compile Include="src\dao\RecordGroupIterator.cs" />
     <Compile Include="src\parsing\CastLineParser.cs" />
     <Compile Include="src\dao\DataManager.cs" />
     <Compile Include="src\control\SpellCountBuilder.cs" />

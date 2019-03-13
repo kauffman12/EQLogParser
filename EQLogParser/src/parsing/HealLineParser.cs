@@ -31,7 +31,7 @@ namespace EQLogParser
           HealRecord record = HandleHealed(pline);
           if (record != null)
           {
-            HealProcessedEvent e = new HealProcessedEvent() { Record = record, ProcessLine = pline };
+            HealProcessedEvent e = new HealProcessedEvent() { Record = record };
             EventsHealProcessed(record, e);
           }
         }
@@ -201,13 +201,12 @@ namespace EQLogParser
             record = new HealRecord()
             {
               Total = heal,
-              OverHeal = overHeal,
+              OverTotal = overHeal,
               Healer = healer,
               Healed = healed,
-              Spell = spell,
               Type = type,
-              BeginTime = pline.CurrentTime,
-              TimeString = pline.TimeString
+              SubType = spell,
+              BeginTime = pline.CurrentTime
             };
 
             if (part[part.Length - 1] == ')')

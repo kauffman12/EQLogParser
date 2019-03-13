@@ -31,6 +31,7 @@ namespace EQLogParser
     private Dictionary<string, List<PlayerSubStats>> UnGroupedProcs = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> UnGroupedResisted = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
+    private Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
     private static bool running = false;
 
     public DamageTable(MainWindow mainWindow, string title)
@@ -90,6 +91,9 @@ namespace EQLogParser
                   BuildGroups(playerStat, playerStat.SubStats.Values.ToList());
                 }
               }
+
+              // no longer needed
+              SpellTypeCache.Clear();
             }
 
             if (PlayerStats != null)
@@ -126,13 +130,31 @@ namespace EQLogParser
       }
     }
 
+    private string CheckSpellType(string name, string type)
+    {
+      string result = type;
+
+      if (type == Labels.DD_NAME || type == Labels.DOT_NAME)
+      {
+        if (!SpellTypeCache.TryGetValue(name, out result))
+        {
+          string spellName = Helpers.AbbreviateSpellName(name);
+          SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
+          result = (data != null && data.IsProc) ? Labels.PROC_NAME : type;
+          SpellTypeCache[name] = result;
+        }
+      }
+
+      return result;
+    }
+
     private void BuildGroups(PlayerStats playerStats, List<PlayerSubStats> all)
     {
       List<PlayerSubStats> list = new List<PlayerSubStats>();
-      PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT_TYPE };
-      PlayerSubStats dds = new PlayerSubStats() { Name = Labels.DD_TYPE };
-      PlayerSubStats procs = new PlayerSubStats() { Name = Labels.PROC_TYPE };
-      PlayerSubStats resisted = new PlayerSubStats() { Name = Labels.RESIST_TYPE, Type = "Resisted", ResistRate = 100 };
+      PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT_NAME };
+      PlayerSubStats dds = new PlayerSubStats() { Name = Labels.DD_NAME };
+      PlayerSubStats procs = new PlayerSubStats() { Name = Labels.PROC_NAME };
+      PlayerSubStats resisted = new PlayerSubStats() { Name = Labels.RESIST_NAME, Type = "Resisted", ResistRate = 100 };
       List<PlayerSubStats> allDots = new List<PlayerSubStats>();
       List<PlayerSubStats> allDds = new List<PlayerSubStats>();
       List<PlayerSubStats> allProcs = new List<PlayerSubStats>();
@@ -142,21 +164,21 @@ namespace EQLogParser
       {
         PlayerSubStats stats = null;
 
-        switch(sub.Type)
+        switch(CheckSpellType(sub.Name, sub.Type))
         {
-          case "DoT":
+          case Labels.DOT_NAME:
             stats = dots;
             allDots.Add(sub);
             break;
-          case "DD":
+          case Labels.DD_NAME:
             stats = dds;
             allDds.Add(sub);
             break;
-          case "Proc":
+          case Labels.PROC_NAME:
             stats = procs;
             allProcs.Add(sub);
             break;
-          case "Resisted":
+          case Labels.RESIST_NAME:
             stats = resisted;
             allResisted.Add(sub);
             break;
