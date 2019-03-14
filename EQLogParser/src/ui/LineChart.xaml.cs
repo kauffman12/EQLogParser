@@ -295,7 +295,7 @@ namespace EQLogParser
       if (ChartValues != null)
       {
         CurrentConfig = choicesList.SelectedIndex == 0 ? CONFIG_VPS : CONFIG_TOTAL;
-        Plot(ChartValues, DateTime.Now);
+        Plot(ChartValues, DateTime.Now, LastSelected);
       }
     }
   }
