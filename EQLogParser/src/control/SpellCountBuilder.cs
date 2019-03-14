@@ -10,10 +10,10 @@ namespace EQLogParser
 
     internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
-      Dictionary<string, Dictionary<string, int>> playerCastCounts = new Dictionary<string, Dictionary<string, int>>();
-      Dictionary<string, Dictionary<string, int>> playerReceivedCounts = new Dictionary<string, Dictionary<string, int>>();
-      Dictionary<string, int> maxCastCounts = new Dictionary<string, int>();
-      Dictionary<string, int> maxReceivedCounts = new Dictionary<string, int>();
+      Dictionary<string, Dictionary<string, uint>> playerCastCounts = new Dictionary<string, Dictionary<string, uint>>();
+      Dictionary<string, Dictionary<string, uint>> playerReceivedCounts = new Dictionary<string, Dictionary<string, uint>>();
+      Dictionary<string, uint> maxCastCounts = new Dictionary<string, uint>();
+      Dictionary<string, uint> maxReceivedCounts = new Dictionary<string, uint>();
       Dictionary<string, SpellData> spellMap = new Dictionary<string, SpellData>();
 
       var offsets = GetOffsetTimes(raidStats);
@@ -106,12 +106,12 @@ namespace EQLogParser
       return new Tuple<List<double>, List<double>>(begins, lasts);
     }
 
-    private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, int>> playerCounts,
-      Dictionary<string, int> maxSpellCounts, Dictionary<string, SpellData> spellMap)
+    private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, uint>> playerCounts,
+      Dictionary<string, uint> maxSpellCounts, Dictionary<string, SpellData> spellMap)
     {
       if (!playerCounts.ContainsKey(thePlayer))
       {
-        playerCounts[thePlayer] = new Dictionary<string, int>();
+        playerCounts[thePlayer] = new Dictionary<string, uint>();
       }
 
       if (!playerCounts[thePlayer].ContainsKey(theSpell.ID))

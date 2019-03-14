@@ -16,7 +16,7 @@ namespace EQLogParser
     protected const string PLAYER_FORMAT = "{0} = ";
     protected const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
 
-    protected static DictionaryAddHelper<string, int> StringIntAddHelper = new DictionaryAddHelper<string, int>();
+    protected static DictionaryAddHelper<string, uint> StringIntAddHelper = new DictionaryAddHelper<string, uint>();
     private const int DEATH_TIME_OFFSET = 10; // seconds forward
 
     internal static string BuildTitle(CombinedStats currentStats, bool showTotals = true)
@@ -113,8 +113,8 @@ namespace EQLogParser
         ClassName = "",
         Name = string.Intern(name),
         Type = string.Intern(type),
-        CritFreqValues = new Dictionary<long, int>(),
-        NonCritFreqValues = new Dictionary<long, int>(),
+        CritFreqValues = new Dictionary<long, uint>(),
+        NonCritFreqValues = new Dictionary<long, uint>(),
         BeginTime = double.NaN,
         BeginTimes = new List<double>(),
         LastTimes = new List<double>(),
@@ -180,7 +180,7 @@ namespace EQLogParser
           stats.Extra += (record.OverTotal - record.Total);
         }
 
-        int crits = stats.CritHits;
+        uint crits = stats.CritHits;
         LineModifiersParser.Parse(record, stats);
       }
 
@@ -188,21 +188,21 @@ namespace EQLogParser
       stats.LastTime = record.BeginTime;
     }
 
-    protected static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, Dictionary<string, int> resistCounts = null, PlayerStats superStats = null)
+    protected static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, Dictionary<string, uint> resistCounts = null, PlayerStats superStats = null)
     {
       if (stats.Hits > 0)
       {
         stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
-        stats.CritRate = Math.Round(Convert.ToDecimal(stats.CritHits) / stats.Hits * 100, 2);
-        stats.LuckRate = Math.Round(Convert.ToDecimal(stats.LuckyHits) / stats.Hits * 100, 2);
+        stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
+        stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
 
         var tcMult = stats.Type == Labels.HOT_NAME || stats.Type == Labels.DOT_NAME ? 1 : 2;
-        stats.TwincastRate = Math.Round(Convert.ToDecimal(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
+        stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
       }
 
       if (stats.Total > 0)
       {
-        stats.ExtraRate = Math.Round(Convert.ToDecimal(stats.Extra) / stats.Total * 100, 2);
+        stats.ExtraRate = Math.Round(Convert.ToDouble(stats.Extra) / stats.Total * 100, 2);
       }
 
       if ((stats.CritHits - stats.LuckyHits) > 0)
@@ -218,7 +218,7 @@ namespace EQLogParser
       // total percents
       if (raidTotals.Total > 0)
       {
-        stats.PercentOfRaid = Math.Round((decimal) stats.Total / raidTotals.Total * 100, 2);
+        stats.PercentOfRaid = Math.Round(Convert.ToDouble(stats.Total) / raidTotals.Total * 100, 2);
       }
 
       stats.DPS = (long) Math.Round(stats.Total / stats.TotalSeconds, 2);
@@ -231,18 +231,18 @@ namespace EQLogParser
       {
         if (superStats.Total > 0)
         {
-          stats.Percent = Math.Round((decimal) stats.Total / superStats.Total * 100, 2);
+          stats.Percent = Math.Round(Convert.ToDouble(stats.Total) / superStats.Total * 100, 2);
         }
 
         stats.SDPS = (long) Math.Round(stats.Total / superStats.TotalSeconds, 2);
 
         if (resistCounts != null && superStats.Name == DataManager.Instance.PlayerName)
         {
-          int value;
+          uint value;
           if (resistCounts.TryGetValue(stats.Name, out value))
           {
             stats.Resists = value;
-            stats.ResistRate = stats.LuckRate = Math.Round(Convert.ToDecimal(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
+            stats.ResistRate = stats.LuckRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
           }
         }
       }
@@ -262,9 +262,9 @@ namespace EQLogParser
       }
     }
 
-    protected static ConcurrentDictionary<string, int> GetPlayerDeaths(PlayerStats raidStats)
+    protected static ConcurrentDictionary<string, uint> GetPlayerDeaths(PlayerStats raidStats)
     {
-      Dictionary<string, int> deathCounts = new Dictionary<string, int>();
+      Dictionary<string, uint> deathCounts = new Dictionary<string, uint>();
 
       if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
       {
@@ -278,7 +278,7 @@ namespace EQLogParser
         });
       }
 
-      return new ConcurrentDictionary<string, int>(deathCounts);
+      return new ConcurrentDictionary<string, uint>(deathCounts);
     }
   }
 }

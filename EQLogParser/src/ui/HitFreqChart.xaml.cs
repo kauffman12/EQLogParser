@@ -27,7 +27,7 @@ namespace EQLogParser
     private List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
     private static bool Updating = false;
     private int PageSize = 24;
-    private List<int> YValues;
+    private List<uint> YValues;
     private List<long> XValues;
     private List<long> XValuesDiff;
     private Dictionary<long, DIValue> DIMap;
@@ -114,7 +114,7 @@ namespace EQLogParser
                 int minFreq = GetMinFreq();
                 HitFreqChartData first = data.Find(d => d.HitType == type);
 
-                YValues = new List<int>();
+                YValues = new List<uint>();
                 XValues = new List<long>();
                 XValuesDiff = new List<long>();
 
@@ -241,10 +241,10 @@ namespace EQLogParser
       if (YValues != null)
       {
         int page = (int)pageSlider.Value;
-        ChartValues<int> yChartValues = new ChartValues<int>();
+        ChartValues<uint> yChartValues = new ChartValues<uint>();
         List<string> xChartValues = new List<string>();
 
-        int maxY = 1;
+        uint maxY = 1;
         for (int i = page; i < page + PageSize && i < YValues.Count; i++)
         {
           maxY = Math.Max(maxY, YValues[i]);
@@ -402,7 +402,7 @@ namespace EQLogParser
     private class FreqTable
     {
       public long HitValue { get; set; }
-      public int Freq { get; set; }
+      public uint Freq { get; set; }
       public Nullable<long> Diff { get; set; }
     }
 
