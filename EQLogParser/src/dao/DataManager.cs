@@ -98,7 +98,7 @@ namespace EQLogParser
               ID = string.Intern(data[0]),
               Spell = string.Intern(data[1]),
               SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
-              Beneficial = (beneficial != 0),
+              Beneficial = beneficial != 0,
               ClassMask = classMask,
               LandsOnYou = string.Intern(data[4]),
               LandsOnOther = string.Intern(data[5]),
@@ -152,27 +152,27 @@ namespace EQLogParser
           }
           else if (!keepOut.ContainsKey(spell.Spell))
           {
-            SpellsToClass[spell.Spell] = (SpellClasses)spell.ClassMask;
+            SpellsToClass[spell.Spell] = (SpellClasses) spell.ClassMask;
           }
         }
       }
 
-      ClassNames[SpellClasses.WAR] = "Warrior";
-      ClassNames[SpellClasses.CLR] = "Cleric";
-      ClassNames[SpellClasses.PAL] = "Paladin";
-      ClassNames[SpellClasses.RNG] = "Ranger";
-      ClassNames[SpellClasses.SHD] = "Shadow Knight";
-      ClassNames[SpellClasses.DRU] = "Druid";
-      ClassNames[SpellClasses.MNK] = "Monk";
-      ClassNames[SpellClasses.BRD] = "Bard";
-      ClassNames[SpellClasses.ROG] = "Rogue";
-      ClassNames[SpellClasses.SHM] = "Shaman";
-      ClassNames[SpellClasses.NEC] = "Necromancer";
-      ClassNames[SpellClasses.WIZ] = "Wizard";
-      ClassNames[SpellClasses.MAG] = "Magician";
-      ClassNames[SpellClasses.ENC] = "Enchanter";
-      ClassNames[SpellClasses.BST] = "Beastlord";
-      ClassNames[SpellClasses.BER] = "Berserker";
+      ClassNames[SpellClasses.WAR] = string.Intern("Warrior");
+      ClassNames[SpellClasses.CLR] = string.Intern("Cleric");
+      ClassNames[SpellClasses.PAL] = string.Intern("Paladin");
+      ClassNames[SpellClasses.RNG] = string.Intern("Ranger");
+      ClassNames[SpellClasses.SHD] = string.Intern("Shadow Knight");
+      ClassNames[SpellClasses.DRU] = string.Intern("Druid");
+      ClassNames[SpellClasses.MNK] = string.Intern("Monk");
+      ClassNames[SpellClasses.BRD] = string.Intern("Bard");
+      ClassNames[SpellClasses.ROG] = string.Intern("Rogue");
+      ClassNames[SpellClasses.SHM] = string.Intern("Shaman");
+      ClassNames[SpellClasses.NEC] = string.Intern("Necromancer");
+      ClassNames[SpellClasses.WIZ] = string.Intern("Wizard");
+      ClassNames[SpellClasses.MAG] = string.Intern("Magician");
+      ClassNames[SpellClasses.ENC] = string.Intern("Enchanter");
+      ClassNames[SpellClasses.BST] = string.Intern("Beastlord");
+      ClassNames[SpellClasses.BER] = string.Intern("Berserker");
     }
 
     public void Clear()
@@ -258,7 +258,7 @@ namespace EQLogParser
       EventsNewNonPlayer(this, divider);
     }
 
-    public void AddPlayerDeath(string player, string npc, DateTime dateTime)
+    public void AddPlayerDeath(string player, string npc, double dateTime)
     {
       PlayerDeaths.Add(new PlayerDeath() { Player = string.Intern(player), Npc = string.Intern(npc), BeginTime = dateTime });
     }
@@ -373,32 +373,32 @@ namespace EQLogParser
       return VerifiedPlayers.ContainsKey(name);
     }
 
-    public List<TimedAction> GetCastsDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetCastsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllSpellCasts, beginTime, endTime);
     }
 
-    public List<TimedAction> GetDamageDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetDamageDuring(double beginTime, double endTime)
     {
       return SearchActions(AllDamageRecords, beginTime, endTime);
     }
 
-    public List<TimedAction> GetHealsDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetHealsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllHealRecords, beginTime, endTime);
     }
 
-    public List<TimedAction> GetResistsDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetResistsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllResists, beginTime, endTime);
     }
 
-    public List<TimedAction> GetReceivedSpellsDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetReceivedSpellsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllReceivedSpells, beginTime, endTime);
     }
 
-    public List<TimedAction> GetPlayerDeathsDuring(DateTime beginTime, DateTime endTime)
+    public List<TimedAction> GetPlayerDeathsDuring(double beginTime, double endTime)
     {
       return SearchActions(PlayerDeaths, beginTime, endTime);
     }
@@ -663,10 +663,10 @@ namespace EQLogParser
       }
     }
 
-    private List<TimedAction> SearchActions(List<TimedAction> allActions, DateTime beginTime, DateTime endTime)
+    private List<TimedAction> SearchActions(List<TimedAction> allActions, double beginTime, double endTime)
     {
-      TimedAction startAction = new TimedAction() { BeginTime = beginTime.AddSeconds(-1) };
-      TimedAction endAction = new TimedAction() { BeginTime = endTime.AddSeconds(1) };
+      TimedAction startAction = new TimedAction() { BeginTime = beginTime - 1 };
+      TimedAction endAction = new TimedAction() { BeginTime = endTime + 1 };
       TimedActionComparer comparer = new TimedActionComparer();
 
       int startIndex = allActions.BinarySearch(startAction, comparer);

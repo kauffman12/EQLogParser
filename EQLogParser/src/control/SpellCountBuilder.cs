@@ -78,11 +78,11 @@ namespace EQLogParser
       return results;
     }
 
-    private static Tuple<List<DateTime>, List<DateTime>> GetOffsetTimes(PlayerStats raidStats)
+    private static Tuple<List<double>, List<double>> GetOffsetTimes(PlayerStats raidStats)
     {
-      List<DateTime> begins = new List<DateTime>();
-      List<DateTime> lasts = new List<DateTime>();
-      begins.Add(raidStats.BeginTimes.First().AddSeconds(-SPELL_TIME_OFFSET));
+      List<double> begins = new List<double>();
+      List<double> lasts = new List<double>();
+      begins.Add(raidStats.BeginTimes.First() - SPELL_TIME_OFFSET);
       lasts.Add(raidStats.LastTimes.First());
 
       for (int i = 1; i < raidStats.BeginTimes.Count; i++)
@@ -98,12 +98,12 @@ namespace EQLogParser
         }
         else
         {
-          begins.Add(raidStats.BeginTimes[i].AddSeconds(-SPELL_TIME_OFFSET));
+          begins.Add(raidStats.BeginTimes[i] - SPELL_TIME_OFFSET);
           lasts.Add(raidStats.LastTimes[i]);
         }
       }
 
-      return new Tuple<List<DateTime>, List<DateTime>>(begins, lasts);
+      return new Tuple<List<double>, List<double>>(begins, lasts);
     }
 
     private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, int>> playerCounts,

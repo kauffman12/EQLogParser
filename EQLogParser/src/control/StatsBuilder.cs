@@ -79,9 +79,9 @@ namespace EQLogParser
         OrigName = string.Intern(origName),
         Percent = 100, // until something says otherwise
         SubStats = new Dictionary<string, PlayerSubStats>(),
-        BeginTime = DateTime.MinValue,
-        BeginTimes = new List<DateTime>(),
-        LastTimes = new List<DateTime>(),
+        BeginTime = double.NaN,
+        BeginTimes = new List<double>(),
+        LastTimes = new List<double>(),
         TimeDiffs = new List<double>()
       };
     }
@@ -115,9 +115,9 @@ namespace EQLogParser
         Type = string.Intern(type),
         CritFreqValues = new Dictionary<long, int>(),
         NonCritFreqValues = new Dictionary<long, int>(),
-        BeginTime = DateTime.MinValue,
-        BeginTimes = new List<DateTime>(),
-        LastTimes = new List<DateTime>(),
+        BeginTime = double.NaN,
+        BeginTimes = new List<double>(),
+        LastTimes = new List<double>(),
         TimeDiffs = new List<double>()
       };
     }
@@ -133,19 +133,19 @@ namespace EQLogParser
       return result;
     }
 
-    protected static void UpdateTimeDiffs(PlayerSubStats subStats, TimedAction action, double offset = 0)
+    protected static void UpdateTimeDiffs(PlayerSubStats subStats, FullTimedAction action, double offset = 0)
     {
       int currentIndex = subStats.BeginTimes.Count - 1;
       if (currentIndex == -1)
       {
         subStats.BeginTimes.Add(action.BeginTime);
-        subStats.LastTimes.Add(action.LastTime.AddSeconds(offset));
+        subStats.LastTimes.Add(action.LastTime + offset);
         subStats.TimeDiffs.Add(0); // update afterward
         currentIndex = 0;
       }
       else if (subStats.LastTimes[currentIndex] >= action.BeginTime)
       {
-        var offsetLastTime = action.LastTime.AddSeconds(offset);
+        var offsetLastTime = action.LastTime + offset;
         if (offsetLastTime > subStats.LastTimes[currentIndex])
         {
           subStats.LastTimes[currentIndex] = offsetLastTime;
@@ -154,12 +154,12 @@ namespace EQLogParser
       else
       {
         subStats.BeginTimes.Add(action.BeginTime);
-        subStats.LastTimes.Add(action.LastTime.AddSeconds(offset));
+        subStats.LastTimes.Add(action.LastTime + offset);
         subStats.TimeDiffs.Add(0); // update afterward
         currentIndex++;
       }
 
-      subStats.TimeDiffs[currentIndex] = subStats.LastTimes[currentIndex].Subtract(subStats.BeginTimes[currentIndex]).TotalSeconds + 1;
+      subStats.TimeDiffs[currentIndex] = subStats.LastTimes[currentIndex] - subStats.BeginTimes[currentIndex] + 1;
     }
 
     protected static void UpdateStats(PlayerSubStats stats, HitRecord record)
@@ -184,11 +184,7 @@ namespace EQLogParser
         LineModifiersParser.Parse(record, stats);
       }
 
-      if (stats.BeginTime == DateTime.MinValue)
-      {
-        stats.BeginTime = record.BeginTime;
-      }
-
+      stats.BeginTime = double.IsNaN(stats.BeginTime) ? record.BeginTime : stats.BeginTime;
       stats.LastTime = record.BeginTime;
     }
 
@@ -272,8 +268,8 @@ namespace EQLogParser
 
       if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
       {
-        DateTime beginTime = raidStats.BeginTimes.First();
-        DateTime endTime = raidStats.LastTimes.Last().AddSeconds(DEATH_TIME_OFFSET); ;
+        double beginTime = raidStats.BeginTimes.First();
+        double endTime = raidStats.LastTimes.Last() + DEATH_TIME_OFFSET;
 
         Parallel.ForEach(DataManager.Instance.GetPlayerDeathsDuring(beginTime, endTime), timedAction =>
         {

@@ -259,7 +259,7 @@ namespace EQLogParser
 
       if (!replacedAttacker)
       {
-        if (record.AttackerPetType != "")
+        if (record.IsAttackerPet)
         {
           DataManager.Instance.UpdateVerifiedPets(record.Attacker);
           isAttackerPet = true;
@@ -267,14 +267,11 @@ namespace EQLogParser
         else
         {
           isAttackerPet = DataManager.Instance.CheckNameForPet(record.Attacker);
-          if (isAttackerPet)
-          {
-            record.AttackerPetType = "pet";
-          }
+          record.IsAttackerPet = isAttackerPet;
         }
       }
 
-      if (record.DefenderPetType != "")
+      if (record.IsDefenderPet)
       {
         DataManager.Instance.UpdateVerifiedPets(record.Defender);
         isDefenderPet = true;
@@ -303,7 +300,7 @@ namespace EQLogParser
         }
       }
 
-      isDefenderPlayer = (record.DefenderPetType == "" && DataManager.Instance.CheckNameForPlayer(record.Defender));
+      isDefenderPlayer = !record.IsDefenderPet && DataManager.Instance.CheckNameForPlayer(record.Defender);
     }
 
     private static DamageRecord ParseAllDamage(ProcessLine pline)
@@ -317,9 +314,9 @@ namespace EQLogParser
         string type = "";
         string attacker = "";
         string attackerOwner = "";
-        string attackerPetType = "";
+        bool isAttackerPet = false;
         string defender = "";
-        string defenderPetType = "";
+        bool isDefenderPet = false;
         string defenderOwner = "";
         int afterAction = -1;
         long damage = 0;
@@ -339,7 +336,8 @@ namespace EQLogParser
               int len;
               if (Helpers.IsPetOrMount(part, firstSpace + 1, out len))
               {
-                string petType = part.Substring(firstSpace + 1, len);
+                bool hasPet = true;
+                //string petType = part.Substring(firstSpace + 1, len);
 
                 int sizeSoFar = firstSpace + 1 + len + 1;
                 if (part.Length > sizeSoFar)
@@ -353,7 +351,7 @@ namespace EQLogParser
                     {
                       action = "DD";
                       afterAction = sizeSoFar + type.Length + 1;
-                      attackerPetType = petType;
+                      isAttackerPet = hasPet;
                       attackerOwner = owner;
                       attacker = part.Substring(0, sizeSoFar - 1);
                     }
@@ -364,7 +362,7 @@ namespace EQLogParser
                         action = "DoT";
                         type = Labels.DOT_NAME;
                         afterAction = sizeSoFar + "has taken".Length + 1;
-                        defenderPetType = petType;
+                        isDefenderPet = hasPet;
                         defenderOwner = owner;
                         defender = part.Substring(0, sizeSoFar - 1);
                       }
@@ -505,7 +503,8 @@ namespace EQLogParser
                     if (Helpers.IsPossiblePlayerName(defender, posessiveIndex))
                     {
                       defenderOwner = defender.Substring(0, posessiveIndex);
-                      defenderPetType = defender.Substring(posessiveIndex + 3, len);
+                      //defenderPetType = defender.Substring(posessiveIndex + 3, len);
+                      isDefenderPet = true;
                     }
                   }
                 }
@@ -623,15 +622,15 @@ namespace EQLogParser
               Defender = string.Intern(FixName(defender)),
               Type = string.Intern(char.ToUpper(type[0]) + type.Substring(1)),
               Total = damage,
-              AttackerPetType = string.Intern(attackerPetType),
+              IsAttackerPet = isAttackerPet,
               AttackerOwner = string.Intern(attackerOwner),
-              DefenderPetType = string.Intern(defenderPetType),
+              IsDefenderPet = isDefenderPet,
               DefenderOwner = string.Intern(defenderOwner),
               BeginTime = pline.CurrentTime
             };
 
             // set sub type if spell is available
-            record.SubType = spell == "" ? record.Type : spell;
+            record.SubType = spell == "" ? record.Type : string.Intern(spell);
 
             if (part[part.Length - 1] == ')')
             {

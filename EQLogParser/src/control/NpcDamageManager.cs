@@ -7,7 +7,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal DateTime LastUpdateTime { get; set; }
+    internal double LastUpdateTime { get; set; }
 
     private const int NPC_DEATH_TIME = 25;
     private int CurrentNpcID = 0;
@@ -44,25 +44,25 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
-      if (processed.Record != null && LastUpdateTime != DateTime.MinValue)
+      if (processed.Record != null && !double.IsNaN(LastUpdateTime))
       {
-        TimeSpan diff = processed.Record.BeginTime.Subtract(LastUpdateTime);
-        if (diff.TotalSeconds > 60)
+        var seconds = processed.Record.BeginTime - LastUpdateTime;
+        if (seconds > 60)
         {
           CurrentGroupID++;
-          DataManager.Instance.AddNonPlayerMapBreak(Helpers.FormatTimeSpan(diff));
+          DataManager.Instance.AddNonPlayerMapBreak(Helpers.FormatTime(seconds));
         }
       }
 
       AddOrUpdateNpc(processed.Record, processed.Record.BeginTime, processed.TimeString.Substring(4, 15));
     }
 
-    private void AddOrUpdateNpc(DamageRecord record, DateTime currentTime, string origTimeString)
+    private void AddOrUpdateNpc(DamageRecord record, double currentTime, string origTimeString)
     {
       NonPlayer npc = Get(record, currentTime, origTimeString);
 
       // assume npc has been killed and create new entry
-      if (currentTime.Subtract(npc.LastTime).TotalSeconds > NPC_DEATH_TIME)
+      if (currentTime - npc.LastTime > NPC_DEATH_TIME)
       {
         DataManager.Instance.RemoveActiveNonPlayer(npc.CorrectMapKey);
         npc = Get(record, currentTime, origTimeString);
@@ -73,7 +73,7 @@ namespace EQLogParser
       DataManager.Instance.UpdateIfNewNonPlayerMap(npc.CorrectMapKey, npc);
     }
 
-    private NonPlayer Get(DamageRecord record, DateTime currentTime, string origTimeString)
+    private NonPlayer Get(DamageRecord record, double currentTime, string origTimeString)
     {
       NonPlayer npc = Find(record.Defender, record.Type);
 
@@ -85,7 +85,7 @@ namespace EQLogParser
       return npc;
     }
 
-    private NonPlayer Create(string defender, DateTime currentTime, string origTimeString)
+    private NonPlayer Create(string defender, double currentTime, string origTimeString)
     {
       return new NonPlayer()
       {

@@ -98,7 +98,7 @@ namespace EQLogParser
               DamageRecord record = timedAction as DamageRecord;
               // see if there's a pet mapping, check this first
               string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-              if (pname != null || (record.AttackerPetType != "" && (pname = record.AttackerOwner) != ""))
+              if (pname != null || (record.IsAttackerPet && (pname = record.AttackerOwner) != ""))
               {
                 playerHasPet[pname] = 1;
                 petToPlayer[record.Attacker] = pname;
@@ -158,8 +158,8 @@ namespace EQLogParser
 
             Parallel.ForEach(allStats.Values, stats =>
             {
-              stats.TotalSeconds += stats.LastTime.Subtract(stats.BeginTime).TotalSeconds + 1;
-              stats.BeginTime = DateTime.MinValue;
+              stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
+              stats.BeginTime = double.NaN;
             });
           });
 
