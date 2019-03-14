@@ -48,7 +48,7 @@ namespace EQLogParser
             reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
             if (!MonitorOnly && LastMins > -1 && fs.Length > 0)
             {
-              DateTime now = DateTime.Now;
+              double now = DateTime.Now.Ticks / TimeSpan.FromSeconds(1).Ticks;
               long position = fs.Length / 2;
               long lastPos = 0;
               long value = -1;
@@ -82,7 +82,7 @@ namespace EQLogParser
 
             if (!MonitorOnly && LastMins > -1 && fs.Length > 0)
             {
-              DateTime now = DateTime.Now;
+              double now = DateTime.Now.Ticks / TimeSpan.FromSeconds(1).Ticks;
               while (!reader.EndOfStream)
               {
                 // seek the slow way since we can't jump around a zip stream
