@@ -57,7 +57,7 @@ namespace EQLogParser
         running = true;
         Dispatcher.InvokeAsync(() => TheMainWindow.Busy(true));
 
-        Task.Delay(20).ContinueWith(task =>
+        Task.Delay(5).ContinueWith(task =>
         {
           try
           {
@@ -151,10 +151,10 @@ namespace EQLogParser
     private void BuildGroups(PlayerStats playerStats, List<PlayerSubStats> all)
     {
       List<PlayerSubStats> list = new List<PlayerSubStats>();
-      PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT_NAME };
-      PlayerSubStats dds = new PlayerSubStats() { Name = Labels.DD_NAME };
-      PlayerSubStats procs = new PlayerSubStats() { Name = Labels.PROC_NAME };
-      PlayerSubStats resisted = new PlayerSubStats() { Name = Labels.RESIST_NAME, Type = "Resisted", ResistRate = 100 };
+      PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT_NAME, Type = Labels.DOT_NAME };
+      PlayerSubStats dds = new PlayerSubStats() { Name = Labels.DD_NAME, Type = Labels.DD_NAME };
+      PlayerSubStats procs = new PlayerSubStats() { Name = Labels.PROC_NAME, Type = Labels.PROC_NAME };
+      PlayerSubStats resisted = new PlayerSubStats() { Name = Labels.RESIST_NAME, Type = Labels.RESIST_NAME, ResistRate = 100 };
       List<PlayerSubStats> allDots = new List<PlayerSubStats>();
       List<PlayerSubStats> allDds = new List<PlayerSubStats>();
       List<PlayerSubStats> allProcs = new List<PlayerSubStats>();
@@ -222,7 +222,9 @@ namespace EQLogParser
 
           stats.CritRate = Math.Round(Convert.ToDecimal(stats.CritHits) / stats.Hits * 100, 2);
           stats.LuckRate = Math.Round(Convert.ToDecimal(stats.LuckyHits) / stats.Hits * 100, 2);
-          stats.TwincastRate = Math.Round(Convert.ToDecimal(stats.TwincastHits) / stats.Hits * 100, 2);
+
+          var tcMult = stats.Type == Labels.DOT_NAME ? 1 : 2;
+          stats.TwincastRate = Math.Round(Convert.ToDecimal(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
           stats.Percent = Math.Round(playerStats.Percent / 100 * ((decimal) stats.Total / playerStats.Total) * 100, 2);
           stats.ResistRate = Math.Round(Convert.ToDecimal(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
         }

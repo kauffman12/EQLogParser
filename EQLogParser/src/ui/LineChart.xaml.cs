@@ -3,7 +3,6 @@ using LiveCharts;
 using LiveCharts.Configurations;
 using LiveCharts.Wpf;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -32,11 +31,8 @@ namespace EQLogParser
         .X(dateModel => dateModel.CurrentTime.Ticks / TimeSpan.FromSeconds(1).Ticks)
         .Y(dateModel => dateModel.Total);
 
-    private DateTime LastTime;
-    private DateTime FirstTime;
-    private Dictionary<string, DataPoint> PlayerData;
-    private Dictionary<string, ChartValues<DataPoint>> ChartValues;
-    private Dictionary<string, DataPoint> NeedAccounting;
+    private DateTime ChartModifiedTime;
+    Dictionary<string, ChartValues<DataPoint>> ChartValues = null;
     private CartesianMapper<DataPoint> CurrentConfig;
     private List<PlayerStats> LastSelected = null;
 
@@ -44,9 +40,13 @@ namespace EQLogParser
     {
       InitializeComponent();
 
+      lvcChart.Hoverable = false;
+      lvcChart.DisableAnimations = true;
+      lvcChart.DataTooltip = null;
+
       // reverse regular tooltip
-      lvcChart.DataTooltip.Foreground = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
-      lvcChart.DataTooltip.Background = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
+      //lvcChart.DataTooltip.Foreground = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
+      //lvcChart.DataTooltip.Background = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
       lvcChart.ChartLegend.Foreground = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
       lvcChart.ChartLegend.Background = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
 
@@ -56,57 +56,72 @@ namespace EQLogParser
       Reset();
     }
 
-    public void Reset()
+    public void Clear()
     {
-      Helpers.ChartResetView(lvcChart);
-      lvcChart.AxisX[0].LabelFormatter = GetLabelFormat;
-      lvcChart.Series = new SeriesCollection();
+      ChartValues = null;
+      Reset();
     }
 
-    public void AddDataPoints(RecordGroupIterator recordIterator)
+    public void AddDataPoints(RecordGroupIterator recordIterator, List<PlayerStats> selected = null)
     {
+      DateTime newTaskTime = DateTime.Now;
+
       Task.Run(() =>
       {
-        InitDataPoints();
+        DateTime lastTime = DateTime.MinValue;
+        DateTime firstTime = DateTime.MinValue;
+        Dictionary<string, DataPoint> playerData = new Dictionary<string, DataPoint>();
+        Dictionary<string, DataPoint> needAccounting = new Dictionary<string, DataPoint>();
+        Dictionary<string, ChartValues<DataPoint>> theValues = new Dictionary<string, ChartValues<DataPoint>>();
 
         foreach (var dataPoint in recordIterator)
         {
-          double diff = LastTime == DateTime.MinValue ? 1 : dataPoint.CurrentTime.Subtract(LastTime).TotalSeconds;
-          LastTime = dataPoint.CurrentTime;
+          double diff = lastTime == DateTime.MinValue ? 1 : dataPoint.CurrentTime.Subtract(lastTime).TotalSeconds;
 
           DataPoint aggregate;
-          if (!PlayerData.TryGetValue(dataPoint.Name, out aggregate))
+          if (!playerData.TryGetValue(dataPoint.Name, out aggregate))
           {
             aggregate = new DataPoint() { Name = dataPoint.Name };
-            PlayerData[dataPoint.Name] = aggregate;
+            playerData[dataPoint.Name] = aggregate;
           }
 
-          if (FirstTime == DateTime.MinValue || diff > 30)
+          if (firstTime == DateTime.MinValue || diff > 30)
           {
-            FirstTime = dataPoint.CurrentTime;
-            foreach (var value in PlayerData.Values)
+            firstTime = dataPoint.CurrentTime;
+
+            if (diff >= 30)
             {
-              value.Rolling = 0;
+              UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
+              foreach (var value in playerData.Values)
+              {
+                value.Rolling = 0;
+                value.CurrentTime = lastTime.AddSeconds(6);
+                Insert(value, theValues);
+                value.CurrentTime = firstTime.AddSeconds(-6);
+                Insert(value, theValues);
+              }
             }
           }
 
           aggregate.Total += dataPoint.Total;
           aggregate.Rolling += dataPoint.Total;
-          aggregate.BeginTime = FirstTime;
+          aggregate.BeginTime = firstTime;
           aggregate.CurrentTime = dataPoint.CurrentTime;
+          lastTime = dataPoint.CurrentTime;
 
           if (diff >= 1)
           {
-            Insert(aggregate, ChartValues);
-            UpdateRemaining(ChartValues, NeedAccounting, FirstTime, LastTime, aggregate.Name);
+            Insert(aggregate, theValues);
+            UpdateRemaining(theValues, needAccounting, firstTime, lastTime, aggregate.Name);
           }
           else
           {
-            NeedAccounting[aggregate.Name] = aggregate;
+            needAccounting[aggregate.Name] = aggregate;
           }
         }
 
-        Plot();
+        UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
+        Plot(theValues, newTaskTime, selected);
       });
     }
 
@@ -114,52 +129,85 @@ namespace EQLogParser
     {
       string dateTimeString;
       DateTime dt = value > 0 ? new DateTime((long) (value * TimeSpan.FromSeconds(1).Ticks)) : new DateTime();
-      dateTimeString = dt.ToString("T");
+      dateTimeString = dt.ToString("HH:mm:ss");
       return dateTimeString;
     }
 
-    private void InitDataPoints()
+    public void Plot(List<PlayerStats> selected)
     {
-      LastTime = DateTime.MinValue;
-      FirstTime = DateTime.MinValue;
-      PlayerData = new Dictionary<string, DataPoint>();
-      ChartValues = new Dictionary<string, ChartValues<DataPoint>>();
-      NeedAccounting = new Dictionary<string, DataPoint>();
+      if (ChartValues != null && selected != null && selected.Count > 0)
+      {
+        Plot(ChartValues, DateTime.Now, selected);
+      }
+      else
+      {
+        Reset();
+      }
     }
 
-    public void Plot(List<PlayerStats> selected = null)
+    public void Plot(Dictionary<string, ChartValues<DataPoint>> theValues, DateTime requestTime, List<PlayerStats> selected = null)
     {
-      UpdateRemaining(ChartValues, NeedAccounting, FirstTime, LastTime);
       LastSelected = selected;
 
       string label;
       List<ChartValues<DataPoint>> sortedValues;
       if (selected == null || selected.Count == 0)
       {
-        sortedValues = ChartValues.Values.OrderByDescending(values => values.Last().Total).Take(5).ToList();
-        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : "";
+        sortedValues = theValues.Values.OrderByDescending(values => values.Last().Total).Take(5).ToList();
+        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : "No Data";
       }
       else
       {
         List<string> names = selected.Select(stats => stats.OrigName).Take(10).ToList();
-        sortedValues = ChartValues.Values.Where(values => names.Contains(values.First().Name)).ToList();
-        label = sortedValues.Count > 0 ? "Selected Players" : "";
+        sortedValues = theValues.Values.Where(values => names.Contains(values.First().Name)).ToList();
+        label = sortedValues.Count > 0 ? "Selected Player(s)" : "No Data";
       }
 
       Dispatcher.InvokeAsync(() =>
       {
-        Reset();
-
-        titleLabel.Content = label;
-        SeriesCollection collection = new SeriesCollection(CurrentConfig);
-        foreach (var value in sortedValues)
+        if (ChartModifiedTime < requestTime)
         {
-          var series = new LineSeries() { Title = value.First().Name, Values = value, PointGeometry = null };
-          collection.Add(series);
-        }
+          ChartValues = theValues;
+          ChartModifiedTime = requestTime;
+          Reset();
 
-        lvcChart.Series = collection;
+          titleLabel.Content = label;
+          SeriesCollection collection = new SeriesCollection(CurrentConfig);
+          bool fixStillNeeded = true;
+
+          foreach (var value in sortedValues)
+          {
+            var series = new LineSeries() { Title = value.First().Name, Values = value };
+
+            if (value.Count > 1)
+            {
+              series.PointGeometry = null;
+            }
+            else if (value.Count == 1 && fixStillNeeded) // handles if everything is 1 point
+            {
+              var seconds = (value[0].CurrentTime - DateTime.MinValue).TotalSeconds;
+              lvcChart.AxisX[0].MinValue = seconds - 3.0;
+              lvcChart.AxisX[0].MaxValue = seconds + 3.0;
+            }
+            else
+            {
+              fixStillNeeded = false;
+            }
+
+            collection.Add(series);
+          }
+
+          lvcChart.Series = collection;
+        }
       });
+    }
+
+    private void Reset()
+    {
+      Helpers.ChartResetView(lvcChart);
+      lvcChart.AxisX[0].LabelFormatter = GetLabelFormat;
+      lvcChart.Series = null;
+      titleLabel.Content = "No Data";
     }
 
     private void UpdateRemaining(Dictionary<string, ChartValues<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting, 
@@ -218,10 +266,10 @@ namespace EQLogParser
 
     private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (PlayerData != null)
+      if (ChartValues != null)
       {
         CurrentConfig = choicesList.SelectedIndex == 0 ? CONFIG_VPS : CONFIG_TOTAL;
-        Plot(LastSelected);
+        Plot(ChartValues, DateTime.Now);
       }
     }
   }

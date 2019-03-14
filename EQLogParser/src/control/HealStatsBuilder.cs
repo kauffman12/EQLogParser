@@ -9,25 +9,39 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public static event EventHandler<DataPointEvent> EventsUpdateDataPoint;
+    internal static event EventHandler<DataPointEvent> EventsUpdateDataPoint;
+    internal static List<List<TimedAction>> HealGroups = new List<List<TimedAction>>();
 
     private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
     private const string UNKNOWN_SPELL = "Unknown Spell";
     private const string UNKNOWN_PLAYER = "Unknown Player";
 
-    internal static string BuildTitle(CombinedHealStats currentStats, bool showTotals = true)
+    internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
     {
-      string result;
-      if (showTotals)
+      List<string> list = new List<string>();
+
+      string title = "";
+      string details = "";
+      string shortTitle = "";
+
+      if (currentStats != null)
       {
-        result = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, currentStats.TotalTitle);
-      }
-      else
-      {
-        result = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle);
+        if (selected != null)
+        {
+          foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+          {
+            string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
+            string damageFormat = string.Format(TOTAL_ONLY_FORMAT, Helpers.FormatDamage(stats.Total));
+            list.Add(playerFormat + damageFormat + " ");
+          }
+        }
+
+        details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
+        title = BuildTitle(currentStats, showTotals);
+        shortTitle = BuildTitle(currentStats, false);
       }
 
-      return result;
+      return new StatsSummary() { Title = title, RankedPlayers = details, ShortTitle = shortTitle };
     }
 
     internal static CombinedHealStats BuildTotalStats(string title, List<NonPlayer> selected)
@@ -36,6 +50,8 @@ namespace EQLogParser
 
       try
       {
+        HealGroups.Clear();
+
         PlayerStats raidTotals = CreatePlayerStats(RAID_PLAYER);
         selected.ForEach(npc => UpdateTimeDiffs(raidTotals, npc, HEAL_OFFSET));
         raidTotals.TotalSeconds = raidTotals.TimeDiffs.Sum();
@@ -45,17 +61,17 @@ namespace EQLogParser
         {
           Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
-          List<List<TimedAction>> healGroups = new List<List<TimedAction>>();
+          
           for (int i = 0; i < raidTotals.BeginTimes.Count; i++)
           {
-            healGroups.Add(DataManager.Instance.GetHealsDuring(raidTotals.BeginTimes[i], raidTotals.LastTimes[i]));
+            HealGroups.Add(DataManager.Instance.GetHealsDuring(raidTotals.BeginTimes[i], raidTotals.LastTimes[i]));
           }
 
           // send update
           DataPointEvent de = new DataPointEvent() { EventType = "UPDATE" };
-          EventsUpdateDataPoint?.Invoke(healGroups, de);
+          EventsUpdateDataPoint?.Invoke(HealGroups, de);
 
-          healGroups.ForEach(records =>
+          HealGroups.ForEach(records =>
           {
             // keep track of time range as well as the players that have been updated
             Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
@@ -97,7 +113,7 @@ namespace EQLogParser
           combined.StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
           combined.TargetTitle = (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + title;
           combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
-          combined.TotalTitle = string.Format(TOTAL_FORMAT, Helpers.FormatDamage(raidTotals.Total), Helpers.FormatDamage(raidTotals.DPS));
+          combined.TotalTitle = string.Format(TOTAL_FORMAT, Helpers.FormatDamage(raidTotals.Total), " Heals ", Helpers.FormatDamage(raidTotals.DPS));
 
           for (int i = 0; i < combined.StatsList.Count; i++)
           {

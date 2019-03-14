@@ -68,6 +68,7 @@ namespace EQLogParser
 
   public abstract class RecordGroupIterator : IEnumerable<DataPoint>
   {
+    private static TimedAction StopRecord = new TimedAction();
     private List<List<TimedAction>> RecordGroups;
     private int CurrentGroup;
     private int CurrentRecord;
@@ -83,7 +84,7 @@ namespace EQLogParser
     {
       TimedAction record;
 
-      while ((record = GetRecord()) != null)
+      while ((record = GetRecord()) != StopRecord)
       {
         if (IsValid(record))
         {
@@ -111,7 +112,7 @@ namespace EQLogParser
 
     private TimedAction GetRecord()
     {
-      TimedAction record = null;
+      TimedAction record = StopRecord;
 
       var list = RecordGroups[CurrentGroup];
       if (list.Count <= CurrentRecord)
@@ -125,6 +126,10 @@ namespace EQLogParser
           if (list.Count > CurrentRecord)
           {
             record = list[CurrentRecord];
+          }
+          else
+          {
+            record = null;
           }
         }
       }

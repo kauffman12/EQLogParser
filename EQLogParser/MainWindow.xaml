@@ -37,7 +37,7 @@
         <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_File Status" Height="20" />
         <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
         <Separator />
-        <MenuItem x:Name="playerDPSTextWindowMenuItem" Header="_Share Player DPS" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Share Player DPS" Click="MenuItemWindow_Click" Height="20" />
         <Separator />
         <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Players" Height="20" />
         <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="P_ets" Height="20" />
@@ -73,7 +73,7 @@
               <docking:TabbedMdiHost>
               <docking:SplitContainer Orientation="Vertical">
                 <docking:TabbedMdiContainer>
-                  <docking:DocumentWindow x:Name="dpsWindow" Title="DPS Summary" Description="" CanClose="False" ContainerMinSize="600,50">
+                  <docking:DocumentWindow x:Name="damageWindow" Title="Damage Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False" ContainerMinSize="600,50" IsVisibleChanged="Window_VisibleChanged">
                     <Grid>
                       <Grid.Resources>
                         <local:ZeroConverter x:Key="ZeroConverter" />
@@ -190,7 +190,7 @@
                       </datagrid:ThemedDataGrid>
                     </Grid>
                   </docking:DocumentWindow>
-                  <docking:DocumentWindow x:Name="healWindow" Title="HPS Summary" Description="" CanClose="False">
+                  <docking:DocumentWindow x:Name="healWindow" Title="Healing Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False" IsVisibleChanged="Window_VisibleChanged">
                     <Grid>
                       <Grid.Resources>
                         <local:ZeroConverter x:Key="ZeroConverter" />
@@ -307,7 +307,7 @@
       </docking:DockSite.AutoHideRightContainers>
       <docking:DockSite.AutoHideBottomContainers>
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="playerDPSTextWindow" IsOpen="True" Title="Share Player DPS" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
+          <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" Title="Share Player Parses" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
             <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="100" />
@@ -318,9 +318,9 @@
                   <RowDefinition Height="47*" />
                   <RowDefinition Height="50" />
                 </Grid.RowDefinitions>
-                <TextBlock x:Name="sharePlayerDPSLabel" Grid.Row="0" TextWrapping="Wrap" FontSize="14" Margin="10,2,0,0" Foreground="#c2c2c0" >No Players Selected</TextBlock>
+                <TextBlock x:Name="sharePlayerParseLabel" Grid.Row="0" TextWrapping="Wrap" FontSize="14" Margin="10,2,0,0" Foreground="#c2c2c0" >No Players Selected</TextBlock>
                 <StackPanel Grid.Row="1" Orientation="Vertical">
-                  <TextBlock x:Name="sharePlayerDPSWarningLabel" TextWrapping="Wrap" FontSize="10" Margin="12,0,0,4" Foreground="LightGreen" FontStyle="Italic" Height="12" Visibility="Hidden">0 / 509</TextBlock>
+                  <TextBlock x:Name="sharePlayerParseWarningLabel" TextWrapping="Wrap" FontSize="10" Margin="12,0,0,4" Foreground="LightGreen" FontStyle="Italic" Height="12" Visibility="Hidden">0 / 509</TextBlock>
                   <Button x:Name="copyToEQButton" Width="80" Height="24" Margin="10,4,10,0" Content="Copy to EQ" IsEnabled="False" Foreground="#FF5A5A5A" BorderBrush="{x:Null}" Click="CopyToEQ_Click"/>
                 </StackPanel>
               </Grid>
@@ -330,10 +330,10 @@
                   <RowDefinition Height="50*" />
                 </Grid.RowDefinitions>
                 <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
-                  <CheckBox x:Name="playerDPSTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalContentAlignment="Top" Checked="PlayerDPSTextCheckChange" Unchecked="PlayerDPSTextCheckChange">Total Damage</CheckBox>
-                  <CheckBox x:Name="playerDPSTextDoRank" IsChecked="True" Margin="0,2,15,0" VerticalContentAlignment="Top" Checked="PlayerDPSTextCheckChange" Unchecked="PlayerDPSTextCheckChange">Rank Players</CheckBox>
+                  <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalContentAlignment="Top" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Total Damage</CheckBox>
+                  <CheckBox x:Name="playerParseTextDoRank" IsChecked="True" Margin="0,2,15,0" VerticalContentAlignment="Top" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Rank Players</CheckBox>
                 </StackPanel>
-                <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerDPSTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="#c2c2c0" BorderThickness="0" FontSize="14" MouseEnter="PlayerDPSText_MouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerDPSTextBox_TextChanged"/>
+                <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerParseTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="#c2c2c0" BorderThickness="0" FontSize="14" MouseEnter="PlayerParseText_MouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerParseTextBox_TextChanged"/>
               </Grid>
             </Grid>
           </docking:ToolWindow>

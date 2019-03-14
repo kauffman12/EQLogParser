@@ -60,7 +60,9 @@ namespace EQLogParser
     private static bool UpdatingStats = false;
     private static CombinedDamageStats CurrentDamageStats = null;
     private static CombinedHealStats CurrentHealStats = null;
-    private static StatsSummary CurrentSummary = null;
+    private static StatsSummary CurrentDamageSummary = null;
+    private static StatsSummary CurrentHealSummary = null;
+    private static StatsSummary SelectedSummary = null;
 
     private DocumentWindow DamageChartWindow;
     private DocumentWindow HealingChartWindow;
@@ -93,9 +95,11 @@ namespace EQLogParser
           CurrentDamageStats = null;
           playerDataGrid.ItemsSource = null;
           PlayerChildGrids.Clear();
+          healDataGrid.ItemsSource = null;
           dpsTitle.Content = PLAYER_TABLE_LABEL;
           healTitle.Content = PLAYER_TABLE_LABEL;
-          UpdateDPSText(true);
+          (DamageChartWindow?.Content as LineChart)?.Clear();
+          (HealingChartWindow?.Content as LineChart)?.Clear();
         };
 
         // pet -> players
@@ -172,7 +176,8 @@ namespace EQLogParser
 
         DamageStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
         {
-          if (LoadChart(sender as List<List<TimedAction>>, DamageChartWindow, new DamageGroupIterator(sender as List<List<TimedAction>>, e.NpcNames)))
+          var groups = sender as List<List<TimedAction>>;
+          if (LoadChart(groups, DamageChartWindow, new DamageGroupIterator(groups, e.NpcNames)))
           {
             // cleanup memory if its closed
             DamageChartWindow = null;
@@ -181,7 +186,8 @@ namespace EQLogParser
 
         HealStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
         {
-          if (LoadChart(sender as List<List<TimedAction>>, HealingChartWindow, new HealGroupIterator(sender as List<List<TimedAction>>)))
+          var groups = sender as List<List<TimedAction>>;
+          if (LoadChart(groups, HealingChartWindow, new HealGroupIterator(groups)))
           {
             // cleanup memory if its closed
             HealingChartWindow = null;
@@ -201,7 +207,7 @@ namespace EQLogParser
       }
     }
 
-    private bool LoadChart(List<List<TimedAction>> recordGroups, DocumentWindow chartWindow, RecordGroupIterator rgIterator)
+    private bool LoadChart(List<List<TimedAction>> recordGroups, DocumentWindow chartWindow, RecordGroupIterator rgIterator, List<PlayerStats> selected = null)
     {
       bool windowClosed = false;
 
@@ -209,7 +215,7 @@ namespace EQLogParser
       {
         if (chartWindow != null && recordGroups != null && chartWindow.IsOpen)
         {
-          (chartWindow.Content as LineChart).AddDataPoints(rgIterator);
+          (chartWindow.Content as LineChart).AddDataPoints(rgIterator, selected);
         }
         else
         {
@@ -241,9 +247,9 @@ namespace EQLogParser
       Application.Current.Shutdown();
     }
 
-    private void PlayerDPSTextWindow_Loaded(object sender, RoutedEventArgs e)
+    private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e)
     {
-      playerDPSTextWindow.State = DockingWindowState.AutoHide;
+      playerParseTextWindow.State = DockingWindowState.AutoHide;
     }
 
     // Main Menu
@@ -269,9 +275,9 @@ namespace EQLogParser
       {
         Helpers.OpenWindow(verifiedPetsWindow);
       }
-      else if (e.Source == playerDPSTextWindowMenuItem)
+      else if (e.Source == playerParseTextWindowMenuItem)
       {
-        Helpers.OpenWindow(playerDPSTextWindow);
+        Helpers.OpenWindow(playerParseTextWindow);
       }
       else if (e.Source == damageChartMenuItem)
       {
@@ -287,12 +293,24 @@ namespace EQLogParser
     {
       var host = HealingChartWindow?.DockHost;
       DamageChartWindow = Helpers.OpenChart(dockSite, DamageChartWindow, host, LineChart.DAMAGE_CHOICES, "Damage Chart");
+
+      if (CurrentDamageStats != null)
+      {
+        List<PlayerStats> damageList = playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+        LoadChart(DamageStatsBuilder.DamageGroups, DamageChartWindow, new DamageGroupIterator(DamageStatsBuilder.DamageGroups, DamageStatsBuilder.NpcNames), damageList);
+      }
     }
 
     private void OpenHealingChart()
     {
       var host = DamageChartWindow?.DockHost;
       HealingChartWindow = Helpers.OpenChart(dockSite, HealingChartWindow, host, LineChart.HEALING_CHOICES, "Healing Chart");
+
+      if (CurrentHealStats != null)
+      {
+        List<PlayerStats> healList = healDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+        LoadChart(HealStatsBuilder.HealGroups, HealingChartWindow, new HealGroupIterator(HealStatsBuilder.HealGroups), healList);
+      }
     }
 
     // Main Menu Op File
@@ -322,14 +340,22 @@ namespace EQLogParser
     private void HealDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       UpdateHealDataGridMenuItems();
-      UpdateDPSText(true);
+      UpdateHealParseText();
+
+      List<PlayerStats> healList = healDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+      var lineChart = HealingChartWindow?.Content as LineChart;
+      lineChart?.Plot(healList);
     }
 
     // Player DPS Data Grid
     private void PlayerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       UpdatePlayerDataGridMenuItems();
-      UpdateDPSText(true);
+      UpdateDamageParseText();
+
+      List<PlayerStats> damageList = playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+      var lineChart = DamageChartWindow?.Content as LineChart;
+      lineChart?.Plot(damageList);
     }
 
     private void PlayerDataGridExpander_Loaded(object sender, RoutedEventArgs e)
@@ -419,7 +445,7 @@ namespace EQLogParser
 
     private void ShowSpellCasts(List<PlayerStats> selectedStats)
     {
-      var spellTable = new SpellCountTable(this, CurrentSummary.ShortTitle);
+      var spellTable = new SpellCountTable(this, CurrentDamageSummary.ShortTitle);
       spellTable.ShowSpells(selectedStats, CurrentDamageStats);
       Helpers.OpenNewTab(dockSite, "spellCastsWindow", "Spell Counts", spellTable);
     }
@@ -461,7 +487,7 @@ namespace EQLogParser
 
     private void ShowDamage(List<PlayerStats> selectedStats)
     {
-      var damageTable = new DamageTable(this, CurrentSummary.ShortTitle);
+      var damageTable = new DamageTable(this, CurrentDamageSummary.ShortTitle);
       damageTable.ShowDamage(selectedStats, CurrentDamageStats);
       Helpers.OpenNewTab(dockSite, "damageWindow", "Damage Breakdown", damageTable);
     }
@@ -509,14 +535,14 @@ namespace EQLogParser
     // Player DPS Text/Send to EQ Window
     private void CopyToEQ_Click(object sender, RoutedEventArgs e)
     {
-      Clipboard.SetDataObject(playerDPSTextBox.Text);
+      Clipboard.SetDataObject(playerParseTextBox.Text);
     }
 
-    private void PlayerDPSText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    private void PlayerParseText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
-      if (!playerDPSTextBox.IsFocused)
+      if (!playerParseTextBox.IsFocused)
       {
-        playerDPSTextBox.Focus();
+        playerParseTextBox.Focus();
       }
     }
 
@@ -563,42 +589,38 @@ namespace EQLogParser
       });
     }
 
-    private void PlayerDPSTextCheckChange(object sender, RoutedEventArgs e)
+    private void PlayerParseTextCheckChange(object sender, RoutedEventArgs e)
     {
-      UpdateDPSText();
+      if (SelectedSummary == CurrentDamageSummary)
+      {
+        UpdateDamageParseText();
+      }
+      else if (SelectedSummary == CurrentHealSummary)
+      {
+        UpdateHealParseText();
+      }
     }
 
-    private void UpdateDPSText(bool updateChart = false)
+    private void UpdateDamageParseText()
     {
-      Busy(true);
-      Label label = dpsTitle;
-
       if (CurrentDamageStats != null)
       {
         List<PlayerStats> list = playerDataGrid?.SelectedItems.Count > 0 ? playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList() : null;
-        CurrentSummary = DamageStatsBuilder.BuildSummary(CurrentDamageStats, list, playerDPSTextDoTotals.IsChecked.Value, playerDPSTextDoRank.IsChecked.Value);
-        playerDPSTextBox.Text = CurrentSummary.Title + CurrentSummary.RankedPlayers;
-        playerDPSTextBox.SelectAll();
-
-        if (updateChart)
-        {
-          var lineChart = DamageChartWindow?.Content as LineChart;
-          lineChart?.Plot(list);
-        }
+        SelectedSummary = CurrentDamageSummary = DamageStatsBuilder.BuildSummary(CurrentDamageStats, list, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
+        playerParseTextBox.Text = CurrentDamageSummary.Title + CurrentDamageSummary.RankedPlayers;
+        playerParseTextBox.SelectAll();
       }
+    }
 
+    private void UpdateHealParseText()
+    {
       if (CurrentHealStats != null)
       {
         List<PlayerStats> list = healDataGrid?.SelectedItems.Count > 0 ? healDataGrid.SelectedItems.Cast<PlayerStats>().ToList() : null;
-
-        if (updateChart)
-        {
-          var lineChart = HealingChartWindow?.Content as LineChart;
-          lineChart?.Plot(list);
-        }
+        SelectedSummary = CurrentHealSummary = HealStatsBuilder.BuildSummary(CurrentHealStats, list, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
+        playerParseTextBox.Text = CurrentHealSummary.Title + CurrentHealSummary.RankedPlayers;
+        playerParseTextBox.SelectAll();
       }
-
-      Busy(false);
     }
 
     private void UpdateStats()
@@ -636,10 +658,15 @@ namespace EQLogParser
 
                 Dispatcher.InvokeAsync((() =>
                 {
-                  dpsTitle.Content = DamageStatsBuilder.BuildTitle(CurrentDamageStats);
+                  dpsTitle.Content = StatsBuilder.BuildTitle(CurrentDamageStats);
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
                   UpdatePlayerDataGridMenuItems();
                   damageStatsComplete = true;
+
+                  if (damageWindow.IsVisible)
+                  {
+                    UpdateDamageParseText();
+                  }
 
                   if (healStatsComplete)
                   {
@@ -655,10 +682,15 @@ namespace EQLogParser
 
                 Dispatcher.InvokeAsync((() =>
                 {
-                  healTitle.Content = HealStatsBuilder.BuildTitle(CurrentHealStats);
+                  healTitle.Content = StatsBuilder.BuildTitle(CurrentHealStats);
                   healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
                   UpdateHealDataGridMenuItems();
                   healStatsComplete = true;
+
+                  if (healWindow.IsVisible)
+                  {
+                    UpdateHealParseText();
+                  }
 
                   if (damageStatsComplete)
                   {
@@ -687,7 +719,10 @@ namespace EQLogParser
             healList.Clear();
           }
 
-          playerDPSTextBox.Text = "";
+          (DamageChartWindow?.Content as LineChart)?.Clear();
+          (HealingChartWindow?.Content as LineChart)?.Clear();
+
+          playerParseTextBox.Text = "";
           UpdatePlayerDataGridMenuItems();
           UpdateHealDataGridMenuItems();
           UpdatingStats = false;
@@ -775,38 +810,38 @@ namespace EQLogParser
       }
     }
 
-    private void PlayerDPSTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void PlayerParseTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-      if (playerDPSTextBox.Text == "" || playerDPSTextBox.Text == SHARE_DPS_LABEL)
+      if (playerParseTextBox.Text == "" || playerParseTextBox.Text == SHARE_DPS_LABEL)
       {
         copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
-        sharePlayerDPSLabel.Text = SHARE_DPS_LABEL;
-        sharePlayerDPSLabel.Foreground = BRIGHT_TEXT_BRUSH;
-        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + "/" + 509;
-        sharePlayerDPSWarningLabel.Visibility = Visibility.Hidden;
+        sharePlayerParseLabel.Text = SHARE_DPS_LABEL;
+        sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
+        sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + "/" + 509;
+        sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
       }
-      else if (playerDPSTextBox.Text.Length > 509)
+      else if (playerParseTextBox.Text.Length > 509)
       {
         copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
-        sharePlayerDPSLabel.Text = SHARE_DPS_TOO_BIG_LABEL;
-        sharePlayerDPSLabel.Foreground = WARNING_BRUSH;
-        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + "/" + 509;
-        sharePlayerDPSWarningLabel.Foreground = WARNING_BRUSH;
-        sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
+        sharePlayerParseLabel.Text = SHARE_DPS_TOO_BIG_LABEL;
+        sharePlayerParseLabel.Foreground = WARNING_BRUSH;
+        sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + "/" + 509;
+        sharePlayerParseWarningLabel.Foreground = WARNING_BRUSH;
+        sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
-      else if (playerDPSTextBox.Text.Length > 0 && playerDPSTextBox.Text != SHARE_DPS_LABEL)
+      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != SHARE_DPS_LABEL)
       {
         copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = true;
         copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
-        var count = playerDataGrid.SelectedItems.Count;
+        var count = SelectedSummary == CurrentDamageSummary ? playerDataGrid.SelectedItems.Count : healDataGrid.SelectedItems.Count;
         string players = count == 1 ? "Player" : "Players";
-        sharePlayerDPSLabel.Text = String.Format("{0} {1} Selected", count, players);
-        sharePlayerDPSLabel.Foreground = BRIGHT_TEXT_BRUSH;
-        sharePlayerDPSWarningLabel.Text = playerDPSTextBox.Text.Length + " / " + 509;
-        sharePlayerDPSWarningLabel.Foreground = GOOD_BRUSH;
-        sharePlayerDPSWarningLabel.Visibility = Visibility.Visible;
+        sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
+        sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
+        sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + " / " + 509;
+        sharePlayerParseWarningLabel.Foreground = GOOD_BRUSH;
+        sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
     }
 
@@ -907,6 +942,18 @@ namespace EQLogParser
       CastProcessor?.Stop();
       DamageProcessor?.Stop();
       HealProcessor?.Stop();
+    }
+
+    private void Window_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+      if (sender == damageWindow && damageWindow.IsVisible)
+      {
+        UpdateDamageParseText();
+      }
+      else if (sender == healWindow && healWindow.IsVisible)
+      {
+        UpdateHealParseText();
+      }
     }
   }
 

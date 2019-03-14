@@ -7,7 +7,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public DateTime LastUpdateTime { get; set; }
+    internal DateTime LastUpdateTime { get; set; }
 
     private const int NPC_DEATH_TIME = 25;
     private int CurrentNpcID = 0;
@@ -22,6 +22,24 @@ namespace EQLogParser
     ~NpcDamageManager()
     {
       DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
+    }
+
+    internal NonPlayer Find(string defender, string type)
+    {
+      NonPlayer npc = null;
+
+      if (type == Labels.DOT_NAME || type == Labels.DS_NAME)
+      {
+        // DoTs or DS will show upper case when they shouldn't because they start a sentence so try lower case first
+        npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0]) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
+      }
+      else
+      {
+        // DDs are correct but still need to deal with names saved by a DoT so try upper case second
+        npc = DataManager.Instance.GetNonPlayer(defender) ?? DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0]) + defender.Substring(1));
+      }
+
+      return npc;
     }
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
@@ -62,24 +80,6 @@ namespace EQLogParser
       if (npc == null)
       {
         npc = Create(record.Defender, currentTime, origTimeString);
-      }
-
-      return npc;
-    }
-
-    public NonPlayer Find(string defender, string type)
-    {
-      NonPlayer npc = null;
-
-      if (type == Labels.DOT_NAME || type == Labels.DS_NAME)
-      {
-        // DoTs or DS will show upper case when they shouldn't because they start a sentence so try lower case first
-        npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0]) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
-      }
-      else
-      {
-        // DDs are correct but still need to deal with names saved by a DoT so try upper case second
-        npc = DataManager.Instance.GetNonPlayer(defender) ?? DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0]) + defender.Substring(1));
       }
 
       return npc;

@@ -35,6 +35,8 @@ namespace EQLogParser
     public const string BANE_NAME = "Bane Damage";
     public const string PROC_NAME = "Proc";
     public const string RESIST_NAME = "Resisted Spells";
+    public const string HOT_NAME = "HoT Tick";
+    public const string HEAL_NAME = "Heal";
   }
 
   public class DataPointEvent
