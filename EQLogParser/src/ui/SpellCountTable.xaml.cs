@@ -78,6 +78,21 @@ namespace EQLogParser
       }
     }
 
+    public void ShowSpells(List<PlayerStats> selectedStats, CombinedHealStats currentStats)
+    {
+      if (selectedStats != null && currentStats != null)
+      {
+        PlayerList = new List<string>();
+        foreach (var stats in selectedStats)
+        {
+          PlayerList.Add(stats.Name);
+        }
+
+        TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, currentStats.RaidStats);
+        Display();
+      }
+    }
+
     private void Display()
     {
       if (running == false)

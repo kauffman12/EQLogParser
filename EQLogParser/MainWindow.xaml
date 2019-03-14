@@ -88,7 +88,7 @@
                       <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
                         <DataGrid.ContextMenu>
                           <ContextMenu>
-                            <MenuItem IsEnabled="True" x:Name="copyToEQRightClick" Header="Copy To EQ" Click="CopyToEQ_Click"></MenuItem>
+                            <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy To EQ" Click="CopyToEQ_Click"></MenuItem>
                             <Separator />
                             <MenuItem x:Name="pdgMenuItemShowSpellCasts" IsEnabled="False" Header="Compare Spell Counts">
                               <MenuItem Header="Selected" IsEnabled="False" Click="PlayerDataGridShowSpellCasts_Click"/>
@@ -160,7 +160,7 @@
                           <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
                           <DataGridTextColumn Binding="{Binding BaneHits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
                           <DataGridTextColumn Binding="{Binding Deaths}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Slain" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
-                          <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*" />
+                          <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90*" />
                         </DataGrid.Columns>
                         <DataGrid.RowDetailsTemplate>
                           <DataTemplate>
@@ -182,7 +182,7 @@
                                 <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding BaneHits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="False"/>
                                 <DataGridTextColumn Binding="{Binding Deaths}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Slain" IsReadOnly="True" CanUserReorder="False"/>
-                                <DataGridTextColumn Binding="{Binding ClassName}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
+                                <DataGridTextColumn Binding="{Binding ClassName}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
                               </DataGrid.Columns>
                             </datagrid:ThemedDataGrid>
                           </DataTemplate>
@@ -205,6 +205,27 @@
                       <datagrid:ThemedDataGrid x:Name="healDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" SelectionChanged="HealDataGrid_SelectionChanged" EnableRowVirtualization="True">
                         <DataGrid.ContextMenu>
                           <ContextMenu>
+                            <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Copy To EQ" Click="CopyToEQ_Click"></MenuItem>
+                            <Separator />
+                            <MenuItem x:Name="hdgMenuItemShowSpellCasts" IsEnabled="False" Header="Compare Spell Counts">
+                              <MenuItem Header="Selected" IsEnabled="False" Click="HealDataGridShowSpellCasts_Click"/>
+                              <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                              <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
+                            </MenuItem>                            
                             <MenuItem x:Name="hdgMenuItemShowBreakdown" IsEnabled="False" Header="Healing Breakdown">
                               <MenuItem Header="Selected" IsEnabled="False" Click="HealDataGridShowBreakdown_Click"/>
                               <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
@@ -255,7 +276,7 @@
                           <DataGridTextColumn Binding="{Binding ExtraRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource OverHealColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Over" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
                           <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
                           <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
-                          <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*" />
+                          <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90*" />
                         </DataGrid.Columns>
                       </datagrid:ThemedDataGrid>
                     </Grid>

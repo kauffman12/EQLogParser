@@ -182,16 +182,38 @@ namespace EQLogParser
             if (value.Count > 1)
             {
               series.PointGeometry = null;
+              fixStillNeeded = false;
             }
             else if (value.Count == 1 && fixStillNeeded) // handles if everything is 1 point
             {
               var seconds = (value[0].CurrentTime - DateTime.MinValue).TotalSeconds;
-              lvcChart.AxisX[0].MinValue = seconds - 3.0;
-              lvcChart.AxisX[0].MaxValue = seconds + 3.0;
+              if (!double.IsNaN(lvcChart.AxisX[0].MinValue))
+              {
+                lvcChart.AxisX[0].MinValue = Math.Min(lvcChart.AxisX[0].MinValue, seconds - 3.0);
+              }
+              else
+              {
+                lvcChart.AxisX[0].MinValue = seconds - 3.0;
+              }
+
+              if (!double.IsNaN(lvcChart.AxisX[0].MaxValue))
+              {
+                lvcChart.AxisX[0].MaxValue = Math.Max(lvcChart.AxisX[0].MaxValue, seconds + 3.0);
+              }
+              else
+              {
+                lvcChart.AxisX[0].MaxValue = seconds + 3.0;
+              }
             }
             else
             {
               fixStillNeeded = false;
+            }
+
+            if (!fixStillNeeded)
+            {
+              lvcChart.AxisX[0].MinValue = double.NaN;
+              lvcChart.AxisX[0].MaxValue = double.NaN;
             }
 
             collection.Add(series);

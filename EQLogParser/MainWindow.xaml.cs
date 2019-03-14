@@ -432,28 +432,50 @@ namespace EQLogParser
     private void PlayerDataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCasts(DamageStatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
+      ShowSpellCasts(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items), CurrentDamageSummary);
     }
 
     private void PlayerDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
     {
       if (playerDataGrid.SelectedItems.Count > 0)
       {
-        ShowSpellCasts(playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
+        ShowSpellCasts(playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentDamageSummary);
       }
     }
 
-    private void ShowSpellCasts(List<PlayerStats> selectedStats)
+    private void HealDataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
     {
-      var spellTable = new SpellCountTable(this, CurrentDamageSummary.ShortTitle);
-      spellTable.ShowSpells(selectedStats, CurrentDamageStats);
+      MenuItem menuItem = (sender as MenuItem);
+      ShowSpellCasts(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, healDataGrid.Items), CurrentHealSummary);
+    }
+
+    private void HealDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
+    {
+      if (healDataGrid.SelectedItems.Count > 0)
+      {
+        ShowSpellCasts(healDataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentHealSummary);
+      }
+    }
+
+    private void ShowSpellCasts(List<PlayerStats> selectedStats, StatsSummary summary)
+    {
+      var spellTable = new SpellCountTable(this, summary.ShortTitle);
+      if (summary == CurrentDamageSummary)
+      {
+        spellTable.ShowSpells(selectedStats, CurrentDamageStats);
+      }
+      else if (summary == CurrentHealSummary)
+      {
+        spellTable.ShowSpells(selectedStats, CurrentHealStats);
+      }
+
       Helpers.OpenNewTab(dockSite, "spellCastsWindow", "Spell Counts", spellTable);
     }
 
     private void HealDataGridShowBreakdownByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowHealing(DamageStatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, healDataGrid.Items));
+      ShowHealing(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, healDataGrid.Items));
     }
 
     private void HealDataGridShowBreakdown_Click(object sender, RoutedEventArgs e)
@@ -474,7 +496,7 @@ namespace EQLogParser
     private void PlayerDataGridShowDamageByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowDamage(DamageStatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
+      ShowDamage(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, playerDataGrid.Items));
     }
 
     private void PlayerDataGridShowDamage_Click(object sender, RoutedEventArgs e)
@@ -738,32 +760,8 @@ namespace EQLogParser
         pdgMenuItemUnselectAll.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
         pdgMenuItemShowDamage.IsEnabled = pdgMenuItemShowSpellCasts.IsEnabled = true;
         pdgMenuItemShowHitFreq.IsEnabled = playerDataGrid.SelectedItems.Count == 1;
-
-        foreach (var item in pdgMenuItemShowDamage.Items)
-        {
-          MenuItem menuItem = item as MenuItem;
-          if (menuItem.Header as string == "Selected")
-          {
-            menuItem.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
-          }
-          else
-          {
-            menuItem.IsEnabled = CurrentDamageStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
-          }
-        }
-
-        foreach (var item in pdgMenuItemShowSpellCasts.Items)
-        {
-          MenuItem menuItem = item as MenuItem;
-          if (menuItem.Header as string == "Selected")
-          {
-            menuItem.IsEnabled = playerDataGrid.SelectedItems.Count > 0;
-          }
-          else
-          {
-            menuItem.IsEnabled = CurrentDamageStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
-          }
-        }
+        UpdateClassMenuItems(pdgMenuItemShowDamage, playerDataGrid, CurrentDamageStats.UniqueClasses);
+        UpdateClassMenuItems(pdgMenuItemShowSpellCasts, playerDataGrid, CurrentDamageStats.UniqueClasses);
       }
       else
       {
@@ -777,24 +775,29 @@ namespace EQLogParser
       {
         hdgMenuItemSelectAll.IsEnabled = healDataGrid.SelectedItems.Count < healDataGrid.Items.Count;
         hdgMenuItemUnselectAll.IsEnabled = healDataGrid.SelectedItems.Count > 0;
-        hdgMenuItemShowBreakdown.IsEnabled = true;
-
-        foreach (var item in hdgMenuItemShowBreakdown.Items)
-        {
-          MenuItem menuItem = item as MenuItem;
-          if (menuItem.Header as string == "Selected")
-          {
-            menuItem.IsEnabled = healDataGrid.SelectedItems.Count > 0;
-          }
-          else
-          {
-            menuItem.IsEnabled = CurrentHealStats.UniqueClasses.ContainsKey(menuItem.Tag as string);
-          }
-        }
+        hdgMenuItemShowBreakdown.IsEnabled = hdgMenuItemShowSpellCasts.IsEnabled = true;
+        UpdateClassMenuItems(hdgMenuItemShowBreakdown, healDataGrid, CurrentHealStats.UniqueClasses);
+        UpdateClassMenuItems(hdgMenuItemShowSpellCasts, healDataGrid, CurrentHealStats.UniqueClasses);
       }
       else
       {
-        hdgMenuItemUnselectAll.IsEnabled = hdgMenuItemSelectAll.IsEnabled = hdgMenuItemShowBreakdown.IsEnabled = false;
+        hdgMenuItemUnselectAll.IsEnabled = hdgMenuItemSelectAll.IsEnabled = hdgMenuItemShowBreakdown.IsEnabled = hdgMenuItemShowSpellCasts.IsEnabled = false;
+      }
+    }
+
+    private void UpdateClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
+    {
+      foreach (var item in menu.Items)
+      {
+        MenuItem menuItem = item as MenuItem;
+        if (menuItem.Header as string == "Selected")
+        {
+          menuItem.IsEnabled = dataGrid.SelectedItems.Count > 0;
+        }
+        else
+        {
+          menuItem.IsEnabled = uniqueClasses.ContainsKey(menuItem.Header as string);
+        }
       }
     }
 
@@ -814,7 +817,7 @@ namespace EQLogParser
     {
       if (playerParseTextBox.Text == "" || playerParseTextBox.Text == SHARE_DPS_LABEL)
       {
-        copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = false;
+        copyToEQButton.IsEnabled = copyDamageParseToEQClick.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = SHARE_DPS_LABEL;
         sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
@@ -823,7 +826,7 @@ namespace EQLogParser
       }
       else if (playerParseTextBox.Text.Length > 509)
       {
-        copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = false;
+        copyToEQButton.IsEnabled = copyDamageParseToEQClick.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = SHARE_DPS_TOO_BIG_LABEL;
         sharePlayerParseLabel.Foreground = WARNING_BRUSH;
@@ -833,7 +836,7 @@ namespace EQLogParser
       }
       else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != SHARE_DPS_LABEL)
       {
-        copyToEQButton.IsEnabled = copyToEQRightClick.IsEnabled = true;
+        copyToEQButton.IsEnabled = copyDamageParseToEQClick.IsEnabled = copyHealParseToEQClick.IsEnabled = true;
         copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
         var count = SelectedSummary == CurrentDamageSummary ? playerDataGrid.SelectedItems.Count : healDataGrid.SelectedItems.Count;
         string players = count == 1 ? "Player" : "Players";
