@@ -619,14 +619,14 @@ namespace EQLogParser
           {
             record = new DamageRecord()
             {
-              Attacker = FixName(attacker),
-              Defender = FixName(defender),
-              Type = char.ToUpper(type[0]) + type.Substring(1),
+              Attacker = string.Intern(FixName(attacker)),
+              Defender = string.Intern(FixName(defender)),
+              Type = string.Intern(char.ToUpper(type[0]) + type.Substring(1)),
               Total = damage,
-              AttackerPetType = attackerPetType,
-              AttackerOwner = attackerOwner,
-              DefenderPetType = defenderPetType,
-              DefenderOwner = defenderOwner,
+              AttackerPetType = string.Intern(attackerPetType),
+              AttackerOwner = string.Intern(attackerOwner),
+              DefenderPetType = string.Intern(defenderPetType),
+              DefenderOwner = string.Intern(defenderOwner),
               BeginTime = pline.CurrentTime
             };
 
@@ -639,7 +639,7 @@ namespace EQLogParser
               int firstParen = part.LastIndexOf('(', part.Length - 4);
               if (firstParen > -1)
               {
-                record.Modifiers = part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1);
+                record.Modifiers = string.Intern(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
               }
             }
           }
