@@ -124,7 +124,7 @@ namespace EQLogParser
       {
         DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
         {
-          Receiver = player,
+          Receiver = string.Intern(player),
           BeginTime = pline.CurrentTime,
           SpellData = result
         });
@@ -140,7 +140,7 @@ namespace EQLogParser
       {
         DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
         {
-          Receiver = pline.ActionPart.Substring(0, pline.OptionalIndex - 3),
+          Receiver = string.Intern(pline.ActionPart.Substring(0, pline.OptionalIndex - 3)),
           BeginTime = pline.CurrentTime,
           SpellData = result
         });
@@ -163,7 +163,12 @@ namespace EQLogParser
             int index = pline.ActionPart.IndexOf("<", pline.OptionalIndex + bracketIndex);
             if (index > -1 && (finalBracket = pline.ActionPart.IndexOf(">", pline.OptionalIndex + bracketIndex, StringComparison.Ordinal)) > -1)
             {
-              cast = new SpellCast() { Caster = caster, Spell = pline.ActionPart.Substring(index + 1, finalBracket - index - 1), BeginTime = pline.CurrentTime };
+              cast = new SpellCast()
+              {
+                Caster = string.Intern(caster),
+                Spell = string.Intern(pline.ActionPart.Substring(index + 1, finalBracket - index - 1)),
+                BeginTime = pline.CurrentTime
+              };
             }
           }
           break;
@@ -173,8 +178,8 @@ namespace EQLogParser
           {
             cast = new SpellCast()
             {
-              Caster = caster,
-              Spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1),
+              Caster = string.Intern(caster),
+              Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1)),
               BeginTime = pline.CurrentTime
             };
           }

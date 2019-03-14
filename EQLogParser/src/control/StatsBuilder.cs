@@ -74,9 +74,9 @@ namespace EQLogParser
 
       return new PlayerStats()
       {
-        Name = name,
-        ClassName = className,
-        OrigName = origName,
+        Name = string.Intern(name),
+        ClassName = string.Intern(className),
+        OrigName = string.Intern(origName),
         Percent = 100, // until something says otherwise
         SubStats = new Dictionary<string, PlayerSubStats>(),
         BeginTime = DateTime.MinValue,
@@ -111,8 +111,8 @@ namespace EQLogParser
       return new PlayerSubStats()
       {
         ClassName = "",
-        Name = name,
-        Type = type,
+        Name = string.Intern(name),
+        Type = string.Intern(type),
         CritFreqValues = new Dictionary<long, int>(),
         NonCritFreqValues = new Dictionary<long, int>(),
         BeginTime = DateTime.MinValue,

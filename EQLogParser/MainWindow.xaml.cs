@@ -933,9 +933,9 @@ namespace EQLogParser
         HealProcessor.Add(line);
       }
 
-      if (DamageProcessor.Size() > 100000 || CastProcessor.Size() > 100000 || HealProcessor.Size() > 100000)
+      if (DamageProcessor.Size() > 50000 || CastProcessor.Size() > 50000 || HealProcessor.Size() > 50000)
       {
-        Thread.Sleep(20);
+        Thread.Sleep(10);
       }
     }
 

@@ -202,12 +202,16 @@ namespace EQLogParser
             {
               Total = heal,
               OverTotal = overHeal,
-              Healer = healer,
-              Healed = healed,
-              Type = type,
-              SubType = spell,
+              Healer = string.Intern(healer),
+              Healed = string.Intern(healed),
+              Type = string.Intern(type),
               BeginTime = pline.CurrentTime
             };
+
+            if (spell != null)
+            {
+              record.SubType = string.Intern(spell);
+            }
 
             if (part[part.Length - 1] == ')')
             {
@@ -215,7 +219,7 @@ namespace EQLogParser
               int firstParen = part.LastIndexOf('(', part.Length - 4);
               if (firstParen > -1)
               {
-                record.Modifiers = part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1);
+                record.Modifiers = string.Intern(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
               }
             }
           }

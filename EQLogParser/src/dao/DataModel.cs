@@ -229,12 +229,6 @@ namespace EQLogParser
     public DateTime CurrentTime { get; set; }
   }
 
-  public class ChartData
-  {
-    public Dictionary<string, List<long>> Values { get; set; }
-    public List<string> XAxisLabels { get; set; }
-  }
-
   public class HitFreqChartData
   {
     public string HitType { get; set; }
@@ -242,13 +236,6 @@ namespace EQLogParser
     public List<long> CritXValues { get; set; }
     public List<int> NonCritYValues { get; set; }
     public List<long> NonCritXValues { get; set; }
-  }
-
-  public class DPSSnapshotEvent
-  {
-    public long DPS { get; set; }
-    public string Name { get; set; }
-    public DateTime CurrentTime { get; set; }
   }
 
   public class StatsSummary

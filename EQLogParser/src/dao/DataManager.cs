@@ -95,13 +95,13 @@ namespace EQLogParser
             int.TryParse(data[3], out classMask);
             SpellData spellData = new SpellData()
             {
-              ID = data[0],
-              Spell = data[1],
+              ID = string.Intern(data[0]),
+              Spell = string.Intern(data[1]),
               SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
               Beneficial = (beneficial != 0),
               ClassMask = classMask,
-              LandsOnYou = data[4],
-              LandsOnOther = data[5],
+              LandsOnYou = string.Intern(data[4]),
+              LandsOnOther = string.Intern(data[5]),
               Damaging = byte.Parse(data[6]) == 1,
               IsProc = byte.Parse(data[7]) == 1
             };
@@ -254,13 +254,13 @@ namespace EQLogParser
 
     public void AddNonPlayerMapBreak(string text)
     {
-      NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = text };
+      NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = string.Intern(text) };
       EventsNewNonPlayer(this, divider);
     }
 
     public void AddPlayerDeath(string player, string npc, DateTime dateTime)
     {
-      PlayerDeaths.Add(new PlayerDeath() { Player = player, Npc = npc, BeginTime = dateTime });
+      PlayerDeaths.Add(new PlayerDeath() { Player = string.Intern(player), Npc = string.Intern(npc), BeginTime = dateTime });
     }
 
     public void AddDamageRecord(DamageRecord record)
@@ -347,7 +347,7 @@ namespace EQLogParser
         result = found;
       }
 
-      return result;
+      return string.Intern(result);
     }
 
     public bool CheckNameForPet(string name)
