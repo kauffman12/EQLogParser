@@ -8,7 +8,7 @@ namespace EQLogParser
   {
     private const int SPELL_TIME_OFFSET = 10; // seconds back
 
-    public static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
+    internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
       Dictionary<string, Dictionary<string, int>> playerCastCounts = new Dictionary<string, Dictionary<string, int>>();
       Dictionary<string, Dictionary<string, int>> playerReceivedCounts = new Dictionary<string, Dictionary<string, int>>();
@@ -54,7 +54,7 @@ namespace EQLogParser
       };
     }
 
-    public static List<string> GetPlayersCastingDuring(PlayerStats raidStats)
+    internal static List<string> GetPlayersCastingDuring(PlayerStats raidStats)
     {
       List<string> results = null;
       if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0 && raidStats.BeginTimes.Count == raidStats.LastTimes.Count)

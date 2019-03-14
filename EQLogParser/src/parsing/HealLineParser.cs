@@ -68,7 +68,7 @@ namespace EQLogParser
       string healer = "";
       string healed = "";
       string spell = null;
-      string type = "Heal";
+      string type = Labels.HEAL_NAME;
       long heal= 0;
       long overHeal = 0;
 
@@ -89,7 +89,7 @@ namespace EQLogParser
 
           if (part.Length > optional + 17 && part.IndexOf("over time", optional + 8, 9, StringComparison.Ordinal) > -1)
           {
-            type = "HoT";
+            type = Labels.HOT_NAME;
           }
         }
         else if (previous - 5 >= 0 && test.IndexOf("have been", previous - 4, StringComparison.Ordinal) > -1)
@@ -98,7 +98,7 @@ namespace EQLogParser
 
           if (part.Length > optional + 17 && part.IndexOf("over time", optional + 8, 9, StringComparison.Ordinal) > -1)
           {
-            type = "HoT";
+            type = Labels.HOT_NAME;
           }
         }
       }
@@ -119,7 +119,7 @@ namespace EQLogParser
           {
             if (forIndex - 9 >= 0 && part.IndexOf("over time", forIndex - 9, StringComparison.Ordinal) > -1)
             {
-              type = "HoT";
+              type = Labels.HOT_NAME;
               healed = part.Substring(afterHealed, forIndex - afterHealed - 10);
             }
             else
@@ -132,11 +132,11 @@ namespace EQLogParser
         }
         else
         {
-          if (type == "Heal")
+          if (type == Labels.HEAL_NAME)
           {
             amountIndex = optional + 12;
           }
-          else if (type == "HoT")
+          else if (type == Labels.HOT_NAME)
           {
             amountIndex = optional + 22;
           }

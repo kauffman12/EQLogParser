@@ -665,7 +665,7 @@ namespace EQLogParser
 
     private List<TimedAction> SearchActions(List<TimedAction> allActions, DateTime beginTime, DateTime endTime)
     {
-      TimedAction startAction = new TimedAction() { BeginTime = beginTime };
+      TimedAction startAction = new TimedAction() { BeginTime = beginTime.AddSeconds(-1) };
       TimedAction endAction = new TimedAction() { BeginTime = endTime.AddSeconds(1) };
       TimedActionComparer comparer = new TimedActionComparer();
 
@@ -675,13 +675,20 @@ namespace EQLogParser
         startIndex = Math.Abs(startIndex) - 1;
       }
 
+      if (allActions.Count > startIndex && allActions[startIndex].BeginTime == startAction.BeginTime)
+      {
+        var result = allActions.FindIndex(startIndex, action => action.BeginTime > startAction.BeginTime);
+        startIndex = (result > -1) ? result : startIndex;
+      }
+
       int endIndex = allActions.BinarySearch(endAction, comparer);
       if (endIndex < 0)
       {
         endIndex = Math.Abs(endIndex) - 1;
       }
 
-      return allActions.GetRange(startIndex, endIndex - startIndex);
+      int last = endIndex - startIndex;
+      return last > 0 ? allActions.GetRange(startIndex, last) : new List<TimedAction>();
     }
 
     private class SpellClassCounter

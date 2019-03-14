@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 
@@ -12,12 +11,18 @@ namespace EQLogParser
   {
     protected const string RAID_PLAYER = "Totals";
     protected const string TIME_FORMAT = "in {0}s";
-    protected const string TOTAL_FORMAT = "{0} @{1}";
+    protected const string TOTAL_FORMAT = "{0}{1}@{2}";
+    protected const string TOTAL_ONLY_FORMAT = "{0}";
     protected const string PLAYER_FORMAT = "{0} = ";
     protected const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
 
     protected static DictionaryAddHelper<string, int> StringIntAddHelper = new DictionaryAddHelper<string, int>();
     private const int DEATH_TIME_OFFSET = 10; // seconds forward
+
+    internal static string BuildTitle(CombinedStats currentStats, bool showTotals = true)
+    {
+      return FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+    }
 
     internal static List<PlayerStats> GetSelectedPlayerStatsByClass(string classString, ItemCollection items)
     {
@@ -194,6 +199,9 @@ namespace EQLogParser
         stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
         stats.CritRate = Math.Round(Convert.ToDecimal(stats.CritHits) / stats.Hits * 100, 2);
         stats.LuckRate = Math.Round(Convert.ToDecimal(stats.LuckyHits) / stats.Hits * 100, 2);
+
+        var tcMult = stats.Type == Labels.HOT_NAME || stats.Type == Labels.DOT_NAME ? 1 : 2;
+        stats.TwincastRate = Math.Round(Convert.ToDecimal(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
       }
 
       if (stats.Total > 0)
