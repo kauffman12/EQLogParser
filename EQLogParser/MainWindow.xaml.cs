@@ -177,7 +177,7 @@ namespace EQLogParser
         DamageStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
         {
           var groups = sender as List<List<TimedAction>>;
-          if (LoadChart(groups, DamageChartWindow, new DamageGroupIterator(groups, e.NpcNames)))
+          if (LoadChart(groups, DamageChartWindow, new DamageGroupIterator(groups, e.NpcNames, e.ShowBane)))
           {
             // cleanup memory if its closed
             DamageChartWindow = null;
@@ -297,7 +297,7 @@ namespace EQLogParser
       if (CurrentDamageStats != null)
       {
         List<PlayerStats> damageList = playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-        LoadChart(DamageStatsBuilder.DamageGroups, DamageChartWindow, new DamageGroupIterator(DamageStatsBuilder.DamageGroups, DamageStatsBuilder.NpcNames), damageList);
+        LoadChart(DamageStatsBuilder.DamageGroups, DamageChartWindow, new DamageGroupIterator(DamageStatsBuilder.DamageGroups, DamageStatsBuilder.NpcNames, includeBane.IsChecked.Value), damageList);
       }
     }
 
@@ -645,6 +645,34 @@ namespace EQLogParser
       }
     }
 
+    private void RebuildDamageStats(bool showBane)
+    {
+      if (CurrentDamageStats != null && DamageStatsBuilder.DamageGroups.Count > 0)
+      {
+        Busy(true);
+
+        new Task(() =>
+        {
+          CurrentDamageStats = DamageStatsBuilder.ComputeDamageStats(CurrentDamageStats.RaidStats, showBane);
+
+          Dispatcher.InvokeAsync((() =>
+          {
+            dpsTitle.Content = StatsBuilder.BuildTitle(CurrentDamageStats);
+            playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
+            UpdatePlayerDataGridMenuItems();
+
+            if (damageWindow.IsVisible)
+            {
+              UpdateDamageParseText();
+            }
+
+            Busy(false);
+            UpdatingStats = false;
+          }));
+        }).Start();
+      }
+    }
+
     private void UpdateStats()
     {
       if (!UpdatingStats)
@@ -673,13 +701,15 @@ namespace EQLogParser
 
               realItems = realItems.OrderBy(item => item.ID).ToList();
               string title = realItems.First().Name;
+              bool showBane = includeBane.IsChecked.Value;
 
               new Task(() =>
               {
-                CurrentDamageStats = DamageStatsBuilder.BuildTotalStats(title, realItems);
+                CurrentDamageStats = DamageStatsBuilder.BuildTotalStats(title, realItems, showBane);
 
                 Dispatcher.InvokeAsync((() =>
                 {
+                  includeBane.IsEnabled = DamageStatsBuilder.IsBaneAvailable;
                   dpsTitle.Content = StatsBuilder.BuildTitle(CurrentDamageStats);
                   playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
                   UpdatePlayerDataGridMenuItems();
@@ -957,6 +987,11 @@ namespace EQLogParser
       {
         UpdateHealParseText();
       }
+    }
+
+    private void IncludeBaneChanged(object sender, RoutedEventArgs e)
+    {
+      RebuildDamageStats(includeBane.IsChecked.Value);
     }
   }
 

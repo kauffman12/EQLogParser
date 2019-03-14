@@ -135,9 +135,14 @@ namespace EQLogParser
 
     public void Plot(List<PlayerStats> selected)
     {
-      if (ChartValues != null && selected != null && selected.Count > 0)
+      if (ChartValues != null)
       {
-        Plot(ChartValues, DateTime.Now, selected);
+        // handling case where chart can be updated twice
+        // when toggling bane and selection is lost
+        if (!(selected.Count == 0 && LastSelected == null))
+        {
+          Plot(ChartValues, DateTime.Now, selected);
+        }
       }
       else
       {

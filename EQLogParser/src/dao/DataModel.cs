@@ -43,6 +43,7 @@ namespace EQLogParser
   {
     public DataPoint Data { get; set; }
     public string EventType { get; set; }
+    public bool ShowBane { get; set; }
     public Dictionary<string, byte> NpcNames { get; set; }
   }
 
@@ -121,8 +122,8 @@ namespace EQLogParser
     public long Total { get; set; }
     public long TotalCrit { get; set; }
     public long TotalLucky { get; set; }
-    public Dictionary<long, uint> CritFreqValues { get; set; }
-    public Dictionary<long, uint> NonCritFreqValues { get; set; }
+    public Dictionary<long, int> CritFreqValues { get; set; }
+    public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
 
   public class NonPlayer : FullTimedAction
@@ -227,9 +228,9 @@ namespace EQLogParser
   public class HitFreqChartData
   {
     public string HitType { get; set; }
-    public List<uint> CritYValues { get; set; }
+    public List<int> CritYValues { get; set; }
     public List<long> CritXValues { get; set; }
-    public List<uint> NonCritYValues { get; set; }
+    public List<int> NonCritYValues { get; set; }
     public List<long> NonCritXValues { get; set; }
   }
 
