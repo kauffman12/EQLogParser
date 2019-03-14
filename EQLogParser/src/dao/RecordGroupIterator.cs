@@ -6,16 +6,18 @@ namespace EQLogParser
   public class DamageGroupIterator : RecordGroupIterator
   {
     private Dictionary<string, byte> NpcNames;
+    private bool ShowBane;
 
-    public DamageGroupIterator(List<List<TimedAction>> recordGroups, Dictionary<string, byte> npcNames) : base(recordGroups)
+    public DamageGroupIterator(List<List<TimedAction>> recordGroups, Dictionary<string, byte> npcNames, bool showBane) : base(recordGroups)
     {
       NpcNames = npcNames;
+      ShowBane = showBane;
     }
 
     override protected bool IsValid(TimedAction timedAction)
     {
       DamageRecord record = timedAction as DamageRecord;
-      return record != null && record.Type != Labels.BANE_NAME && NpcNames.ContainsKey(record.Defender) && !DataManager.Instance.IsProbablyNotAPlayer(record.Attacker);
+      return record != null && (ShowBane || record.Type != Labels.BANE_NAME && NpcNames.ContainsKey(record.Defender)) && !DataManager.Instance.IsProbablyNotAPlayer(record.Attacker);
     }
 
     override protected DataPoint Create(TimedAction timedAction)

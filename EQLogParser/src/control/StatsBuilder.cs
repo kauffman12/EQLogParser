@@ -113,8 +113,8 @@ namespace EQLogParser
         ClassName = "",
         Name = string.Intern(name),
         Type = string.Intern(type),
-        CritFreqValues = new Dictionary<long, uint>(),
-        NonCritFreqValues = new Dictionary<long, uint>(),
+        CritFreqValues = new Dictionary<long, int>(),
+        NonCritFreqValues = new Dictionary<long, int>(),
         BeginTime = double.NaN,
         BeginTimes = new List<double>(),
         LastTimes = new List<double>(),
@@ -162,14 +162,15 @@ namespace EQLogParser
       subStats.TimeDiffs[currentIndex] = subStats.LastTimes[currentIndex] - subStats.BeginTimes[currentIndex] + 1;
     }
 
-    protected static void UpdateStats(PlayerSubStats stats, HitRecord record)
+    protected static void UpdateStats(PlayerSubStats stats, HitRecord record, bool showBane = false)
     {
       // record Bane separately in totals
       if (record.Type == Labels.BANE_NAME)
       {
         stats.BaneHits++;
       }
-      else
+
+      if (showBane || record.Type != Labels.BANE_NAME)
       {
         stats.Total += record.Total;
         stats.Hits += 1;

@@ -85,6 +85,9 @@
                       <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
                         <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
                       </StackPanel>
+                      <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <CheckBox x:Name="includeBane" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="IncludeBaneChanged" Unchecked="IncludeBaneChanged">Include Bane Damage</CheckBox>
+                      </StackPanel>
                       <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
                         <DataGrid.ContextMenu>
                           <ContextMenu>

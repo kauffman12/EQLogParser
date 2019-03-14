@@ -34,7 +34,6 @@ namespace EQLogParser
 
     public static void Process(string line)
     {
-
       try
       {
         int index;
