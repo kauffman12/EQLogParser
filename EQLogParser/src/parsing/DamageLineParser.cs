@@ -259,7 +259,7 @@ namespace EQLogParser
 
       if (!replacedAttacker)
       {
-        if (record.IsAttackerPet)
+        if (record.AttackerOwner != "")
         {
           DataManager.Instance.UpdateVerifiedPets(record.Attacker);
           isAttackerPet = true;
@@ -267,11 +267,15 @@ namespace EQLogParser
         else
         {
           isAttackerPet = DataManager.Instance.CheckNameForPet(record.Attacker);
-          record.IsAttackerPet = isAttackerPet;
+
+          if (isAttackerPet)
+          {
+            record.AttackerOwner = DataManager.UNASSIGNED_PET_OWNER;
+          }
         }
       }
 
-      if (record.IsDefenderPet)
+      if (record.DefenderOwner != "")
       {
         DataManager.Instance.UpdateVerifiedPets(record.Defender);
         isDefenderPet = true;
@@ -300,7 +304,7 @@ namespace EQLogParser
         }
       }
 
-      isDefenderPlayer = !record.IsDefenderPet && DataManager.Instance.CheckNameForPlayer(record.Defender);
+      isDefenderPlayer = record.DefenderOwner == "" && DataManager.Instance.CheckNameForPlayer(record.Defender);
     }
 
     private static DamageRecord ParseAllDamage(ProcessLine pline)
@@ -314,12 +318,10 @@ namespace EQLogParser
         string type = "";
         string attacker = "";
         string attackerOwner = "";
-        bool isAttackerPet = false;
         string defender = "";
-        bool isDefenderPet = false;
         string defenderOwner = "";
         int afterAction = -1;
-        long damage = 0;
+        uint damage = 0;
         string action = "";
         string spell = "";
 
@@ -336,7 +338,6 @@ namespace EQLogParser
               int len;
               if (Helpers.IsPetOrMount(part, firstSpace + 1, out len))
               {
-                bool hasPet = true;
                 //string petType = part.Substring(firstSpace + 1, len);
 
                 int sizeSoFar = firstSpace + 1 + len + 1;
@@ -351,7 +352,6 @@ namespace EQLogParser
                     {
                       action = "DD";
                       afterAction = sizeSoFar + type.Length + 1;
-                      isAttackerPet = hasPet;
                       attackerOwner = owner;
                       attacker = part.Substring(0, sizeSoFar - 1);
                     }
@@ -362,7 +362,6 @@ namespace EQLogParser
                         action = "DoT";
                         type = Labels.DOT_NAME;
                         afterAction = sizeSoFar + "has taken".Length + 1;
-                        isDefenderPet = hasPet;
                         defenderOwner = owner;
                         defender = part.Substring(0, sizeSoFar - 1);
                       }
@@ -475,8 +474,8 @@ namespace EQLogParser
                         int pointIndex = part.IndexOf(" point", forIndex + 3, StringComparison.Ordinal);
                         if (pointIndex > -1)
                         {
-                          damage = Helpers.ParseLong(part.Substring(forIndex + 5, pointIndex - forIndex - 5));
-                          found = damage != long.MaxValue;
+                          damage = Helpers.ParseUInt(part.Substring(forIndex + 5, pointIndex - forIndex - 5));
+                          found = damage != uint.MaxValue;
                         }
                       }
                     }
@@ -504,7 +503,6 @@ namespace EQLogParser
                     {
                       defenderOwner = defender.Substring(0, posessiveIndex);
                       //defenderPetType = defender.Substring(posessiveIndex + 3, len);
-                      isDefenderPet = true;
                     }
                   }
                 }
@@ -515,8 +513,8 @@ namespace EQLogParser
                   int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
                   if (afterDmg > -1)
                   {
-                    damage = Helpers.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
-                    if (damage != long.MaxValue)
+                    damage = Helpers.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
+                    if (damage != uint.MaxValue)
                     {
                       // can be point or points
                       int point;
@@ -551,8 +549,8 @@ namespace EQLogParser
               int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
               if (afterDmg > -1)
               {
-                damage = Helpers.ParseLong(part.Substring(dmgStart, afterDmg - dmgStart));
-                if (damage != long.MaxValue)
+                damage = Helpers.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
+                if (damage != uint.MaxValue)
                 {
                   int fromIndex = part.IndexOf(" from ", afterDmg, StringComparison.Ordinal);
                   if (fromIndex > -1)
@@ -622,9 +620,7 @@ namespace EQLogParser
               Defender = string.Intern(FixName(defender)),
               Type = string.Intern(char.ToUpper(type[0]) + type.Substring(1)),
               Total = damage,
-              IsAttackerPet = isAttackerPet,
               AttackerOwner = string.Intern(attackerOwner),
-              IsDefenderPet = isDefenderPet,
               DefenderOwner = string.Intern(defenderOwner),
               BeginTime = pline.CurrentTime
             };

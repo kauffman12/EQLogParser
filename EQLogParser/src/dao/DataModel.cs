@@ -89,8 +89,8 @@ namespace EQLogParser
 
   public class HitRecord : TimedAction
   {
-    public long Total { get; set; }
-    public long OverTotal { get; set; }
+    public uint Total { get; set; }
+    public uint OverTotal { get; set; }
     public string Type { get; set; }
     public string SubType { get; set; }
     public string Modifiers { get; set; }
@@ -105,26 +105,24 @@ namespace EQLogParser
   public class DamageRecord : HitRecord
   {
     public string Attacker { get; set; }
-    public bool IsAttackerPet { get; set; }
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
-    public bool IsDefenderPet { get; set; }
     public string DefenderOwner { get; set; }
   }
 
   public class Hit : FullTimedAction
   {
-    public long Max { get; set; }
-    public int BaneHits{ get; set; }
-    public int Hits { get; set; }
-    public int CritHits { get; set; }
-    public int LuckyHits { get; set; }
-    public int TwincastHits { get; set; }
+    public uint Max { get; set; }
+    public uint BaneHits{ get; set; }
+    public uint Hits { get; set; }
+    public uint CritHits { get; set; }
+    public uint LuckyHits { get; set; }
+    public uint TwincastHits { get; set; }
     public long Total { get; set; }
     public long TotalCrit { get; set; }
     public long TotalLucky { get; set; }
-    public Dictionary<long, int> CritFreqValues { get; set; }
-    public Dictionary<long, int> NonCritFreqValues { get; set; }
+    public Dictionary<long, uint> CritFreqValues { get; set; }
+    public Dictionary<long, uint> NonCritFreqValues { get; set; }
   }
 
   public class NonPlayer : FullTimedAction
@@ -182,10 +180,10 @@ namespace EQLogParser
 
   public class SpellCountData
   {
-    public Dictionary<string, Dictionary<string, int>> PlayerCastCounts { get; set; }
-    public Dictionary<string, Dictionary<string, int>> PlayerReceivedCounts { get; set; }
-    public Dictionary<string, int> MaxCastCounts { get; set; }
-    public Dictionary<string, int> MaxReceivedCounts { get; set; }
+    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; set; }
+    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; set; }
+    public Dictionary<string, uint> MaxCastCounts { get; set; }
+    public Dictionary<string, uint> MaxReceivedCounts { get; set; }
     public Dictionary<string, SpellData> UniqueSpells { get; set; }
   }
 
@@ -229,9 +227,9 @@ namespace EQLogParser
   public class HitFreqChartData
   {
     public string HitType { get; set; }
-    public List<int> CritYValues { get; set; }
+    public List<uint> CritYValues { get; set; }
     public List<long> CritXValues { get; set; }
-    public List<int> NonCritYValues { get; set; }
+    public List<uint> NonCritYValues { get; set; }
     public List<long> NonCritXValues { get; set; }
   }
 
@@ -244,25 +242,25 @@ namespace EQLogParser
 
   public class PlayerSubStats : Hit
   {
-    public int Rank { get; set; }
+    public ushort Rank { get; set; }
     public string Name { get; set; }
     public string Type { get; set; }
     public double TotalSeconds { get; set; }
     public long DPS { get; set; }
     public long SDPS { get; set; }
     public long Extra { get; set; }
-    public int Resists { get; set; }
+    public uint Resists { get; set; }
     public long Avg { get; set; }
     public long AvgCrit { get; set; }
     public long AvgLucky { get; set; }
-    public decimal CritRate { get; set; }
-    public decimal ExtraRate { get; set; }
-    public decimal LuckRate { get; set; }
-    public decimal TwincastRate { get; set; }
-    public decimal ResistRate { get; set; }
-    public decimal Percent { get; set; }
-    public decimal PercentOfRaid { get; set; }
-    public int Deaths { get; set; }
+    public double CritRate { get; set; }
+    public double ExtraRate { get; set; }
+    public double LuckRate { get; set; }
+    public double TwincastRate { get; set; }
+    public double ResistRate { get; set; }
+    public double Percent { get; set; }
+    public double PercentOfRaid { get; set; }
+    public uint Deaths { get; set; }
     public string ClassName { get; set; }
     public List<double> BeginTimes { get; set; }
     public List<double> LastTimes { get; set; }

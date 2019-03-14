@@ -20,7 +20,7 @@ namespace EQLogParser
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
     private ObservableCollection<SpellCountRow> SpellRowsView = new ObservableCollection<SpellCountRow>();
-    private DictionaryAddHelper<string, int> AddHelper = new DictionaryAddHelper<string, int>();
+    private DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
     private List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
     private List<string> CountTypes = new List<string>() { "Spells By Count", "Spells By Percent" };
     private List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
@@ -120,14 +120,14 @@ namespace EQLogParser
                 });
               });
 
-              Dictionary<string, Dictionary<string, int>> filteredPlayerMap = new Dictionary<string, Dictionary<string, int>>();
-              Dictionary<string, int> totalCountMap = new Dictionary<string, int>();
-              Dictionary<string, int> uniqueSpellsMap = new Dictionary<string, int>();
+              Dictionary<string, Dictionary<string, uint>> filteredPlayerMap = new Dictionary<string, Dictionary<string, uint>>();
+              Dictionary<string, uint> totalCountMap = new Dictionary<string, uint>();
+              Dictionary<string, uint> uniqueSpellsMap = new Dictionary<string, uint>();
 
-              int totalCasts = 0;
+              uint totalCasts = 0;
               PlayerList.ForEach(player =>
               {
-                filteredPlayerMap[player] = new Dictionary<string, int>();
+                filteredPlayerMap[player] = new Dictionary<string, uint>();
 
                 if ((CurrentCastType == 0 || CurrentCastType == 1) && TheSpellCounts.PlayerCastCounts.ContainsKey(player))
                 {
@@ -231,10 +231,10 @@ namespace EQLogParser
       }
     }
 
-    private int UpdateMaps(string id, string player, int playerCount, Dictionary<string, int> maxCounts, Dictionary<string, int> totalCountMap,
-      Dictionary<string, int> uniqueSpellsMap, Dictionary<string, Dictionary<string, int>> filteredPlayerMap, bool received, int totalCasts)
+    private uint UpdateMaps(string id, string player, uint playerCount, Dictionary<string, uint> maxCounts, Dictionary<string, uint> totalCountMap,
+      Dictionary<string, uint> uniqueSpellsMap, Dictionary<string, Dictionary<string, uint>> filteredPlayerMap, bool received, uint totalCasts)
     {
-      int updatedCount = totalCasts;
+      uint updatedCount = totalCasts;
       var spellData = TheSpellCounts.UniqueSpells[id];
 
       if (CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.Beneficial) || (CurrentSpellType == 2 && !spellData.Beneficial))

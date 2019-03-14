@@ -117,7 +117,7 @@ namespace EQLogParser
 
           for (int i = 0; i < combined.StatsList.Count; i++)
           {
-            combined.StatsList[i].Rank = i + 1;
+            combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
             combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
           }
         }

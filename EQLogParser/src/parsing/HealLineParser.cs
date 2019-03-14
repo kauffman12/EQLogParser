@@ -69,8 +69,8 @@ namespace EQLogParser
       string healed = "";
       string spell = null;
       string type = Labels.HEAL_NAME;
-      long heal= 0;
-      long overHeal = 0;
+      uint heal= 0;
+      uint overHeal = 0;
 
       int previous = test.Length >= 2 ? test.LastIndexOf(" ", test.Length - 2, StringComparison.Ordinal) : -1;
       if (previous > -1)
@@ -147,8 +147,8 @@ namespace EQLogParser
           int amountEnd = part.IndexOf(" ", amountIndex, StringComparison.Ordinal);
           if (amountEnd > -1)
           {
-            long value = Helpers.ParseLong(part.Substring(amountIndex, amountEnd - amountIndex));
-            if (value != long.MaxValue)
+            uint value = Helpers.ParseUInt(part.Substring(amountIndex, amountEnd - amountIndex));
+            if (value != uint.MaxValue)
             {
               heal = value;
             }
@@ -159,8 +159,8 @@ namespace EQLogParser
               overEnd = part.IndexOf(")", amountEnd + 2, StringComparison.Ordinal);
               if (overEnd > -1)
               {
-                long value2 = Helpers.ParseLong(part.Substring(amountEnd + 2, overEnd - amountEnd - 2));
-                if (value2 != long.MaxValue)
+                uint value2 = Helpers.ParseUInt(part.Substring(amountEnd + 2, overEnd - amountEnd - 2));
+                if (value2 != uint.MaxValue)
                 {
                   overHeal = value2;
                 }

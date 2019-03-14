@@ -31,7 +31,7 @@ namespace EQLogParser
     public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.3.5";
+    private const string VERSION = "v1.3.6";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -964,9 +964,9 @@ namespace EQLogParser
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      if (value.GetType() == typeof(decimal))
+      if (value.GetType() == typeof(double))
       {
-        return (decimal) value > 0 ? value.ToString() : "-";
+        return (double) value > 0 ? value.ToString() : "-";
       }
       return string.Empty;
     }
@@ -975,8 +975,8 @@ namespace EQLogParser
     {
       if (value is string)
       {
-        decimal decValue;
-        if (!decimal.TryParse((string) value, out decValue))
+        double decValue;
+        if (!double.TryParse((string) value, out decValue))
         {
           decValue = 0;
         }
