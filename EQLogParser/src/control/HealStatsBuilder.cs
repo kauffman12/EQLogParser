@@ -102,8 +102,8 @@ namespace EQLogParser
 
             Parallel.ForEach(allStats.Values, stats =>
             {
-              stats.TotalSeconds += stats.LastTime.Subtract(stats.BeginTime).TotalSeconds + 1;
-              stats.BeginTime = DateTime.MinValue;
+              stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
+              stats.BeginTime = double.NaN;
             });
           });
 

@@ -182,14 +182,11 @@ namespace EQLogParser
       return window;
     }
 
-    internal static string FormatDateTime(DateTime dateTime)
+    internal static string FormatTime(double seconds)
     {
-      return dateTime.ToString("MMM dd HH:mm:ss");
-    }
-
-    internal static string FormatTimeSpan(TimeSpan diff)
-    {
+      TimeSpan diff = TimeSpan.FromSeconds(seconds);
       string result = "Inactivity > ";
+
       if (diff.Days >= 1)
       {
         result += diff.Days + " days";
@@ -271,23 +268,25 @@ namespace EQLogParser
   internal class DateUtil
   {
     // counting this thing is really slow
-    private String LastDateTimeString = "";
-    private DateTime LastDateTime;
+    private string LastDateTimeString = "";
+    private double LastDateTime;
 
-    internal bool HasTimeInRange(DateTime now, string line, int lastMins)
+    internal bool HasTimeInRange(double now, string line, int lastMins)
     {
       bool found = false;
       if (line.Length > 24)
       {
-        DateTime dateTime = ParseDate(line.Substring(1, 24));
-        TimeSpan diff = now.Subtract(dateTime);
+        double dateTime = ParseDate(line.Substring(1, 24));
+        TimeSpan diff = TimeSpan.FromSeconds(now - dateTime);
         found = (diff.TotalMinutes < lastMins);
       }
       return found;
     }
 
-    internal DateTime ParseDate(string timeString)
+    internal double ParseDate(string timeString)
     {
+      double result = double.NaN;
+
       if (LastDateTimeString == timeString)
       {
         return LastDateTime;
@@ -300,9 +299,17 @@ namespace EQLogParser
         DateTime.TryParseExact(timeString, "ddd MMM  d HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
       }
 
-      LastDateTime = dateTime;
+      if (dateTime == DateTime.MinValue)
+      {
+        LastDateTime = double.NaN;
+      }
+      else
+      {
+        result = LastDateTime = dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
+      }
+
       LastDateTimeString = timeString;
-      return dateTime;
+      return result;
     }
   }
 

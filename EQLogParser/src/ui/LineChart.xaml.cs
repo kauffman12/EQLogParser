@@ -25,11 +25,11 @@ namespace EQLogParser
     public static List<string> HEALING_CHOICES = new List<string>() { "HPS Over Time", "Total Healing" };
 
     private static CartesianMapper<DataPoint> CONFIG_VPS = Mappers.Xy<DataPoint>()
-        .X(dateModel => dateModel.CurrentTime.Ticks / TimeSpan.FromSeconds(1).Ticks)
-        .Y(dateModel => dateModel.VPS);
+     .X(dateModel => dateModel.CurrentTime)
+     .Y(dateModel => dateModel.VPS);
     private static CartesianMapper<DataPoint> CONFIG_TOTAL = Mappers.Xy<DataPoint>()
-        .X(dateModel => dateModel.CurrentTime.Ticks / TimeSpan.FromSeconds(1).Ticks)
-        .Y(dateModel => dateModel.Total);
+     .X(dateModel => dateModel.CurrentTime)
+     .Y(dateModel => dateModel.Total);
 
     private DateTime ChartModifiedTime;
     Dictionary<string, ChartValues<DataPoint>> ChartValues = null;
@@ -68,15 +68,15 @@ namespace EQLogParser
 
       Task.Run(() =>
       {
-        DateTime lastTime = DateTime.MinValue;
-        DateTime firstTime = DateTime.MinValue;
+        double lastTime = double.NaN;
+        double firstTime = double.NaN;
         Dictionary<string, DataPoint> playerData = new Dictionary<string, DataPoint>();
         Dictionary<string, DataPoint> needAccounting = new Dictionary<string, DataPoint>();
         Dictionary<string, ChartValues<DataPoint>> theValues = new Dictionary<string, ChartValues<DataPoint>>();
 
         foreach (var dataPoint in recordIterator)
         {
-          double diff = lastTime == DateTime.MinValue ? 1 : dataPoint.CurrentTime.Subtract(lastTime).TotalSeconds;
+          double diff = double.IsNaN(lastTime) ? 1 : dataPoint.CurrentTime - lastTime;
 
           DataPoint aggregate;
           if (!playerData.TryGetValue(dataPoint.Name, out aggregate))
@@ -85,7 +85,7 @@ namespace EQLogParser
             playerData[dataPoint.Name] = aggregate;
           }
 
-          if (firstTime == DateTime.MinValue || diff > 30)
+          if (double.IsNaN(firstTime) || diff > 30)
           {
             firstTime = dataPoint.CurrentTime;
 
@@ -95,9 +95,9 @@ namespace EQLogParser
               foreach (var value in playerData.Values)
               {
                 value.Rolling = 0;
-                value.CurrentTime = lastTime.AddSeconds(6);
+                value.CurrentTime = lastTime + 6;
                 Insert(value, theValues);
-                value.CurrentTime = firstTime.AddSeconds(-6);
+                value.CurrentTime = firstTime - 6;
                 Insert(value, theValues);
               }
             }
@@ -186,23 +186,22 @@ namespace EQLogParser
             }
             else if (value.Count == 1 && fixStillNeeded) // handles if everything is 1 point
             {
-              var seconds = (value[0].CurrentTime - DateTime.MinValue).TotalSeconds;
               if (!double.IsNaN(lvcChart.AxisX[0].MinValue))
               {
-                lvcChart.AxisX[0].MinValue = Math.Min(lvcChart.AxisX[0].MinValue, seconds - 3.0);
+                lvcChart.AxisX[0].MinValue = Math.Min(lvcChart.AxisX[0].MinValue, value[0].CurrentTime - 3.0);
               }
               else
               {
-                lvcChart.AxisX[0].MinValue = seconds - 3.0;
+                lvcChart.AxisX[0].MinValue = value[0].CurrentTime - 3.0;
               }
 
               if (!double.IsNaN(lvcChart.AxisX[0].MaxValue))
               {
-                lvcChart.AxisX[0].MaxValue = Math.Max(lvcChart.AxisX[0].MaxValue, seconds + 3.0);
+                lvcChart.AxisX[0].MaxValue = Math.Max(lvcChart.AxisX[0].MaxValue, value[0].CurrentTime + 3.0);
               }
               else
               {
-                lvcChart.AxisX[0].MaxValue = seconds + 3.0;
+                lvcChart.AxisX[0].MaxValue = value[0].CurrentTime + 3.0;
               }
             }
             else
@@ -233,7 +232,7 @@ namespace EQLogParser
     }
 
     private void UpdateRemaining(Dictionary<string, ChartValues<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting, 
-      DateTime firstTime, DateTime currentTime, string ignore = null)
+      double firstTime, double currentTime, string ignore = null)
     {
       foreach (var remaining in needAccounting.Values)
       {
@@ -260,7 +259,7 @@ namespace EQLogParser
       newEntry.CurrentTime = aggregate.CurrentTime;
       newEntry.Total = aggregate.Total;
 
-      double totalSeconds = (aggregate.CurrentTime - aggregate.BeginTime).TotalSeconds + 1;
+      double totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
       newEntry.VPS = (long) Math.Round(aggregate.Rolling / totalSeconds, 2);
 
       ChartValues<DataPoint> playerValues;

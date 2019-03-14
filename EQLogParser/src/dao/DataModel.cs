@@ -65,7 +65,7 @@ namespace EQLogParser
   public class ProcessLine
   {
     public string Line { get; set; }
-    public DateTime CurrentTime { get; set; }
+    public double CurrentTime { get; set; }
     public string TimeString { get; set; }
     public string ActionPart { get; set; }
     public int OptionalIndex { get; set; }
@@ -74,8 +74,12 @@ namespace EQLogParser
 
   public class TimedAction
   {
-    public DateTime BeginTime { get; set; }
-    public DateTime LastTime { get; set; }
+    public double BeginTime { get; set; }
+  }
+
+  public class FullTimedAction : TimedAction
+  {
+    public double LastTime { get; set; }
   }
 
   public class ResistRecord : TimedAction
@@ -101,14 +105,14 @@ namespace EQLogParser
   public class DamageRecord : HitRecord
   {
     public string Attacker { get; set; }
-    public string AttackerPetType { get; set; }
+    public bool IsAttackerPet { get; set; }
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
-    public string DefenderPetType { get; set; }
+    public bool IsDefenderPet { get; set; }
     public string DefenderOwner { get; set; }
   }
 
-  public class Hit : TimedAction
+  public class Hit : FullTimedAction
   {
     public long Max { get; set; }
     public int BaneHits{ get; set; }
@@ -123,14 +127,7 @@ namespace EQLogParser
     public Dictionary<long, int> NonCritFreqValues { get; set; }
   }
 
-  public class DamageAtTime
-  {
-    public DateTime CurrentTime { get; set; }
-    public Dictionary<string, long> PlayerDamage { get; set; }
-    public int GroupID { get; set; }
-  }
-
-  public class NonPlayer : TimedAction
+  public class NonPlayer : FullTimedAction
   {
     public const string BREAK_TIME = "Break Time";
     public string BeginTimeString { get; set; }
@@ -225,8 +222,8 @@ namespace EQLogParser
     public long Total { get; set; }
     public long Rolling { get; set; }
     public long VPS { get; set; }
-    public DateTime BeginTime { get; set; }
-    public DateTime CurrentTime { get; set; }
+    public double BeginTime { get; set; }
+    public double CurrentTime { get; set; }
   }
 
   public class HitFreqChartData
@@ -267,8 +264,8 @@ namespace EQLogParser
     public decimal PercentOfRaid { get; set; }
     public int Deaths { get; set; }
     public string ClassName { get; set; }
-    public List<DateTime> BeginTimes { get; set; }
-    public List<DateTime> LastTimes { get; set; }
+    public List<double> BeginTimes { get; set; }
+    public List<double> LastTimes { get; set; }
     public List<double> TimeDiffs { get; set; }
   }
 
