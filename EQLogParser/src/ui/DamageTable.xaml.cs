@@ -220,13 +220,13 @@ namespace EQLogParser
             stats.AvgLucky = (long) Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
           }
 
-          stats.CritRate = Math.Round(Convert.ToDecimal(stats.CritHits) / stats.Hits * 100, 2);
-          stats.LuckRate = Math.Round(Convert.ToDecimal(stats.LuckyHits) / stats.Hits * 100, 2);
+          stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
+          stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
 
           var tcMult = stats.Type == Labels.DOT_NAME ? 1 : 2;
-          stats.TwincastRate = Math.Round(Convert.ToDecimal(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
-          stats.Percent = Math.Round(playerStats.Percent / 100 * ((decimal) stats.Total / playerStats.Total) * 100, 2);
-          stats.ResistRate = Math.Round(Convert.ToDecimal(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
+          stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
+          stats.Percent = Math.Round(playerStats.Percent / 100 * (Convert.ToDouble(stats.Total) / playerStats.Total) * 100, 2);
+          stats.ResistRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
         }
       }
 

@@ -27,7 +27,7 @@ namespace EQLogParser
       {
         string attacker = record.Attacker;
         string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-        if (pname != null || (record.IsAttackerPet && (pname = record.AttackerOwner) != ""))
+        if (pname != null || (record.AttackerOwner != "" && (pname = record.AttackerOwner) != ""))
         {
           attacker = pname;
         }

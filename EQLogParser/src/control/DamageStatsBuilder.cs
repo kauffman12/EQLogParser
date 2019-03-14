@@ -14,7 +14,7 @@ namespace EQLogParser
     internal static List<List<TimedAction>> DamageGroups = new List<List<TimedAction>>();
     internal static Dictionary<string, byte> NpcNames = new Dictionary<string, byte>();
 
-    private static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
+    private static DictionaryAddHelper<long, uint> LongIntAddHelper = new DictionaryAddHelper<long, uint>();
 
     internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
     {
@@ -77,7 +77,7 @@ namespace EQLogParser
           ConcurrentDictionary<string, byte> playerHasPet = new ConcurrentDictionary<string, byte>();
           ConcurrentDictionary<string, string> petToPlayer = new ConcurrentDictionary<string, string>();
           Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
-          Dictionary<string, int> resistCounts = new Dictionary<string, int>();
+          Dictionary<string, uint> resistCounts = new Dictionary<string, uint>();
 
           List<TimedAction> resists = new List<TimedAction>();
           for (int i = 0; i < raidTotals.BeginTimes.Count; i++)
@@ -98,7 +98,7 @@ namespace EQLogParser
               DamageRecord record = timedAction as DamageRecord;
               // see if there's a pet mapping, check this first
               string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-              if (pname != null || (record.IsAttackerPet && (pname = record.AttackerOwner) != ""))
+              if (pname != null || (record.AttackerOwner != "" && (pname = record.AttackerOwner) != ""))
               {
                 playerHasPet[pname] = 1;
                 petToPlayer[record.Attacker] = pname;
@@ -173,14 +173,14 @@ namespace EQLogParser
           });
 
           // get death counts
-          ConcurrentDictionary<string, int> deathCounts = GetPlayerDeaths(raidTotals);
+          ConcurrentDictionary<string, uint> deathCounts = GetPlayerDeaths(raidTotals);
 
           Parallel.ForEach(individualStats.Values, stats =>
           {
             PlayerStats topLevel;
             if (topLevelStats.TryGetValue(stats.Name, out topLevel))
             {
-              int totalDeaths = 0;
+              uint totalDeaths = 0;
               Dictionary<string, PlayerStats> children;
               if (childrenStats.TryGetValue(stats.Name, out children))
               {
@@ -190,10 +190,10 @@ namespace EQLogParser
 
                   if (stats.Total > 0)
                   {
-                    child.Percent = Math.Round((decimal) child.Total / stats.Total * 100, 2);
+                    child.Percent = Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                   }
 
-                  int count;
+                  uint count;
                   if (deathCounts.TryGetValue(child.Name, out count))
                   {
                     child.Deaths = count;
@@ -209,7 +209,7 @@ namespace EQLogParser
             {
               UpdateCalculations(stats, raidTotals, resistCounts);
 
-              int count;
+              uint count;
               if (deathCounts.TryGetValue(stats.Name, out count))
               {
                 stats.Deaths = count;
@@ -224,7 +224,7 @@ namespace EQLogParser
 
           for (int i = 0; i < combined.StatsList.Count; i++)
           {
-            combined.StatsList[i].Rank = i + 1;
+            combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
             combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
 
             Dictionary<string, PlayerStats> children;
@@ -269,8 +269,8 @@ namespace EQLogParser
         results[stat.Name] = new List<HitFreqChartData>();
         foreach (string type in stat.SubStats.Keys)
         {
-          List<int> critFreqs = new List<int>();
-          List<int> nonCritFreqs = new List<int>();
+          List<uint> critFreqs = new List<uint>();
+          List<uint> nonCritFreqs = new List<uint>();
           HitFreqChartData chartData = new HitFreqChartData() { HitType = type };
 
           // add crits
@@ -293,12 +293,12 @@ namespace EQLogParser
 
     private static void UpdateSubStats(PlayerSubStats subStats, DamageRecord record)
     {
-      int critHits = subStats.CritHits;
+      uint critHits = subStats.CritHits;
       UpdateStats(subStats, record);
 
       if (record.Type != Labels.BANE_NAME)
       {
-        Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
+        Dictionary<long, uint> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
         LongIntAddHelper.Add(values, record.Total, 1);
       }
     }
