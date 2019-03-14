@@ -89,13 +89,13 @@ namespace EQLogParser
     {
       return new NonPlayer()
       {
-        Name = defender,
-        BeginTimeString = origTimeString,
+        Name = string.Intern(defender),
+        BeginTimeString = string.Intern(origTimeString),
         BeginTime = currentTime,
         LastTime = currentTime,
         ID = CurrentNpcID++,
         GroupID = CurrentGroupID,
-        CorrectMapKey = defender
+        CorrectMapKey = string.Intern(defender)
       };
     }
   }

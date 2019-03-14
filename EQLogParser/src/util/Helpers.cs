@@ -60,7 +60,7 @@ namespace EQLogParser
         }
       }
 
-      return result;
+      return string.Intern(result);
     }
 
     internal static void ChartResetView(CartesianChart theChart)
@@ -124,7 +124,7 @@ namespace EQLogParser
 
     internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
     {
-      var entry = new SortableName() { Name = name };
+      var entry = new SortableName() { Name = string.Intern(name) };
       int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
       if (index < 0)
       {
