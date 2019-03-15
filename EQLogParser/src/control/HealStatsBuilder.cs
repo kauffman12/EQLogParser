@@ -93,7 +93,11 @@ namespace EQLogParser
                 allStats[stats.Name + "=" + spellStatName] = spellStats;
 
                 var healedStatName = record.Healed;
-                stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
+                if (stats.SubStats2 == null)
+                {
+                  stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
+                }
+
                 PlayerSubStats healedStats = CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
                 UpdateStats(healedStats, record);
                 allStats[stats.Name + "=" + healedStatName] = healedStats;
