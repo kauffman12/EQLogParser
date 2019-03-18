@@ -174,19 +174,32 @@ namespace EQLogParser
       {
         stats.Total += record.Total;
         stats.Hits += 1;
-        stats.Max = (stats.Max < record.Total) ? record.Total : stats.Max;
+        stats.Max = Math.Max(stats.Max, record.Total);
 
         if (record.Total > 0 && record.OverTotal > 0)
         {
           stats.Extra += (record.OverTotal - record.Total);
         }
 
-        uint crits = stats.CritHits;
         LineModifiersParser.Parse(record, stats);
       }
 
       stats.BeginTime = double.IsNaN(stats.BeginTime) ? record.BeginTime : stats.BeginTime;
       stats.LastTime = record.BeginTime;
+    }
+
+    protected static void MergeStats(PlayerSubStats to, PlayerSubStats from)
+    {
+      to.BaneHits += from.BaneHits;
+      to.Total += from.Total;
+      to.Hits += from.Hits;
+      to.Max = Math.Max(to.Max, from.Max);
+      to.Extra += from.Extra;
+      to.CritHits += from.CritHits;
+      to.LuckyHits += from.LuckyHits;
+      to.TwincastHits += from.TwincastHits;
+      to.BeginTime = double.IsNaN(to.BeginTime) ? from.BeginTime : Math.Min(to.BeginTime, from.BeginTime);
+      to.LastTime = double.IsNaN(to.LastTime) ? from.LastTime : Math.Max(to.LastTime, from.LastTime);
     }
 
     protected static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, Dictionary<string, uint> resistCounts = null, PlayerStats superStats = null)
