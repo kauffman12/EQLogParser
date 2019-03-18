@@ -74,6 +74,13 @@ namespace EQLogParser
               reader.DiscardBufferedData();
               reader.ReadLine(); // seek will lead to partial line
             }
+
+            if (MonitorOnly)
+            {
+              fs.Seek(0, SeekOrigin.End);
+              FileLoadComplete = true;
+              LoadingCallback("", fs.Position);
+            }
           }
           else
           {
@@ -94,13 +101,18 @@ namespace EQLogParser
                 }
               }
             }
-          }
 
-          if (MonitorOnly)
-          {
-            reader.ReadToEnd();
-            FileLoadComplete = true;
-            LoadingCallback("", fs.Position);
+            if (MonitorOnly)
+            {
+              char[] block = new char[16384];
+              while (!reader.EndOfStream)
+              {
+                reader.ReadBlock(block, 0, block.Length);
+              }
+
+              FileLoadComplete = true;
+              LoadingCallback("", fs.Position);
+            }
           }
 
           while (!reader.EndOfStream && Running)

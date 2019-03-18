@@ -97,7 +97,7 @@ namespace EQLogParser
               DamageRecord record = timedAction as DamageRecord;
               // see if there's a pet mapping, check this first
               string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-              if (pname != null || (record.AttackerOwner != "" && (pname = record.AttackerOwner) != ""))
+              if (pname != null || (pname = record.AttackerOwner) != "")
               {
                 PlayerHasPet[pname] = 1;
                 PetToPlayer[record.Attacker] = pname;
@@ -276,6 +276,128 @@ namespace EQLogParser
       }
 
       return combined;
+    }
+
+    internal static OverlayDamageStats ComputerOverlayDamageStats(DamageRecord record, bool showBane, OverlayDamageStats overlayStats = null)
+    {
+      PlayerStats raidStats;
+      if (overlayStats == null)
+      {
+        overlayStats = new OverlayDamageStats();
+        overlayStats.TopLevelStats = new Dictionary<string, PlayerStats>();
+        overlayStats.AggregateStats = new Dictionary<string, PlayerStats>();
+        overlayStats.IndividualStats = new Dictionary<string, PlayerStats>();
+        overlayStats.UniqueNpcs = new Dictionary<string, byte>();
+        overlayStats.RaidStats = raidStats = new PlayerStats();
+        raidStats.BeginTime = record.BeginTime;
+      }
+      else
+      {
+        raidStats = overlayStats.RaidStats;
+      }
+
+      if (record.BeginTime - raidStats.LastTime > NpcDamageManager.NPC_DEATH_TIME)
+      {
+        raidStats.Total = 0;
+        raidStats.BeginTime = record.BeginTime;
+        overlayStats.UniqueNpcs.Clear();
+        overlayStats.TopLevelStats.Clear();
+        overlayStats.AggregateStats.Clear();
+        overlayStats.IndividualStats.Clear();
+      }
+
+      raidStats.LastTime = record.BeginTime;
+      raidStats.TotalSeconds = raidStats.LastTime - raidStats.BeginTime + 1;
+
+      if (!DataManager.Instance.IsProbablyNotAPlayer(record.Attacker))
+      {
+        overlayStats.UniqueNpcs[record.Defender] = 1;
+
+        if (showBane || record.Type != Labels.BANE_NAME)
+        {
+          raidStats.Total += record.Total;
+        }      
+
+        // see if there's a pet mapping, check this first
+        string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
+        if (pname != null || (pname = record.AttackerOwner) != "")
+        {
+          PlayerHasPet[pname] = 1;
+          PetToPlayer[record.Attacker] = pname;
+        }
+
+        string player = null;
+        bool isPet = PetToPlayer.TryGetValue(record.Attacker, out player);
+        bool needAggregate = isPet || (!isPet && PlayerHasPet.ContainsKey(record.Attacker) && overlayStats.TopLevelStats.ContainsKey(record.Attacker + " +Pets"));
+
+        if (!needAggregate || player == DataManager.UNASSIGNED_PET_OWNER)
+        {
+          // not a pet
+          PlayerStats stats;  stats = CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
+          UpdateStats(stats, record, showBane);
+          overlayStats.TopLevelStats[record.Attacker] = stats;
+          stats.TotalSeconds = stats.LastTime - stats.BeginTime + 1;
+        }
+        else
+        {
+          string origName = player != null ? player : record.Attacker;
+          string aggregateName = origName + " +Pets";
+
+          PlayerStats aggregatePlayerStats;
+          aggregatePlayerStats = CreatePlayerStats(overlayStats.IndividualStats, aggregateName, origName);
+          overlayStats.TopLevelStats[aggregateName] = aggregatePlayerStats;
+
+          if (overlayStats.TopLevelStats.ContainsKey(origName))
+          {
+            var origPlayer = overlayStats.TopLevelStats[origName];
+            MergeStats(aggregatePlayerStats, origPlayer);
+            overlayStats.TopLevelStats.Remove(origName);
+            overlayStats.IndividualStats.Remove(origName);
+          }
+
+          if (record.Attacker != origName && overlayStats.TopLevelStats.ContainsKey(record.Attacker))
+          {
+            var origPet = overlayStats.TopLevelStats[record.Attacker];
+            MergeStats(aggregatePlayerStats, origPet);
+            overlayStats.TopLevelStats.Remove(record.Attacker);
+            overlayStats.IndividualStats.Remove(record.Attacker);
+          }
+
+          UpdateStats(aggregatePlayerStats, record, showBane);
+          aggregatePlayerStats.TotalSeconds = aggregatePlayerStats.LastTime - aggregatePlayerStats.BeginTime + 1;
+        }
+
+        raidStats.DPS = (long) Math.Round(raidStats.Total / raidStats.TotalSeconds, 2);
+        overlayStats.StatsList = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
+
+        var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
+        int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.PlayerName));
+
+        int renumber;
+        if (found > -1 && found > 4)
+        {
+          overlayStats.StatsList = list.Take(4).ToList();
+          overlayStats.StatsList.Add(list[found]);
+          list[found].Rank = Convert.ToUInt16(found + 1);
+          renumber = overlayStats.StatsList.Count - 1;
+        }
+        else
+        {
+          overlayStats.StatsList = list.Take(5).ToList();
+          renumber = overlayStats.StatsList.Count;
+        }
+
+        for (int i = 0; i < renumber; i++)
+        {
+          overlayStats.StatsList[i].Rank = Convert.ToUInt16(i + 1);
+        }
+        
+        // only calculat the top few
+        Parallel.ForEach(overlayStats.StatsList, top => UpdateCalculations(top, raidStats));
+        overlayStats.TargetTitle = (overlayStats.UniqueNpcs.Count > 1 ? "Combined (" + overlayStats.UniqueNpcs.Count + "): " : "") + record.Defender;
+      }
+
+      return overlayStats;
     }
 
     internal static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(CombinedDamageStats combined, PlayerStats selected)

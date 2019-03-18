@@ -9,7 +9,7 @@ namespace EQLogParser
 
     internal double LastUpdateTime { get; set; }
 
-    private const int NPC_DEATH_TIME = 25;
+    public const int NPC_DEATH_TIME = 25;
     private int CurrentNpcID = 0;
     private int CurrentGroupID = 0;
 

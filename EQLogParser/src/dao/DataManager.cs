@@ -29,7 +29,9 @@ namespace EQLogParser
 
     private static string CONFIG_DIR;
     private static string PETMAP_FILE;
+    private static string SETTINGS_FILE;
     private bool PetMappingUpdated = false;
+    private bool SettingsUpdated = false;
 
     private List<TimedAction> AllDamageRecords = new List<TimedAction>();
     private List<TimedAction> AllHealRecords = new List<TimedAction>();
@@ -48,6 +50,7 @@ namespace EQLogParser
     private Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
     private Dictionary<string, SpellClasses> SpellsToClass = new Dictionary<string, SpellClasses>();
 
+    private ConcurrentDictionary<string, string> ApplicationSettings = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
     private ConcurrentDictionary<string, string> PlayerReplacement = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
@@ -62,25 +65,78 @@ namespace EQLogParser
 
     private DataManager()
     {
+      // static data first
+      VerifiedPlayers["himself"] = 1;
+      VerifiedPlayers["herself"] = 1;
+      VerifiedPlayers["itself"] = 1;
+      VerifiedPlayers["you"] = 1;
+      VerifiedPlayers["YOU"] = 1;
+      VerifiedPlayers["You"] = 1;
+      VerifiedPlayers["your"] = 1;
+      VerifiedPlayers["Your"] = 1;
+      VerifiedPlayers["YOUR"] = 1;
+      ClassNames[SpellClasses.WAR] = string.Intern("Warrior");
+      ClassNames[SpellClasses.CLR] = string.Intern("Cleric");
+      ClassNames[SpellClasses.PAL] = string.Intern("Paladin");
+      ClassNames[SpellClasses.RNG] = string.Intern("Ranger");
+      ClassNames[SpellClasses.SHD] = string.Intern("Shadow Knight");
+      ClassNames[SpellClasses.DRU] = string.Intern("Druid");
+      ClassNames[SpellClasses.MNK] = string.Intern("Monk");
+      ClassNames[SpellClasses.BRD] = string.Intern("Bard");
+      ClassNames[SpellClasses.ROG] = string.Intern("Rogue");
+      ClassNames[SpellClasses.SHM] = string.Intern("Shaman");
+      ClassNames[SpellClasses.NEC] = string.Intern("Necromancer");
+      ClassNames[SpellClasses.WIZ] = string.Intern("Wizard");
+      ClassNames[SpellClasses.MAG] = string.Intern("Magician");
+      ClassNames[SpellClasses.ENC] = string.Intern("Enchanter");
+      ClassNames[SpellClasses.BST] = string.Intern("Beastlord");
+      ClassNames[SpellClasses.BER] = string.Intern("Berserker");
+
+      // General Settings
       try
       {
-        VerifiedPlayers["himself"] = 1;
-        VerifiedPlayers["herself"] = 1;
-        VerifiedPlayers["itself"] = 1;
-        VerifiedPlayers["you"] = 1;
-        VerifiedPlayers["YOU"] = 1;
-        VerifiedPlayers["You"] = 1;
-        VerifiedPlayers["your"] = 1;
-        VerifiedPlayers["Your"] = 1;
-        VerifiedPlayers["YOUR"] = 1;
+        // needs to be during class initialization for some reason
+        CONFIG_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\config");
+        PETMAP_FILE = CONFIG_DIR + @"\petmapping.txt";
+        SETTINGS_FILE = CONFIG_DIR + @"\settings.txt";
 
-        // Populated generated pets
+        // create config dir if it doesn't exist
+        System.IO.Directory.CreateDirectory(CONFIG_DIR);
+
+        if (System.IO.File.Exists(SETTINGS_FILE))
+        {
+          string[] lines = System.IO.File.ReadAllLines(SETTINGS_FILE);
+          foreach (string line in lines)
+          {
+            string[] parts = line.Split('=');
+            if (parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
+            {
+              ApplicationSettings[parts[0]] = parts[1];
+            }
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+      }
+
+      // Populated generated pets
+      try
+      {
         if (System.IO.File.Exists(@"data\petnames.txt"))
         {
           string[] lines = System.IO.File.ReadAllLines(@"data\petnames.txt");
           lines.ToList().ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
         }
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+      }
 
+      try
+      {
         if (System.IO.File.Exists(@"data\spells.txt"))
         {
           DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
@@ -124,17 +180,10 @@ namespace EQLogParser
             }
           }
         }
-
-        // needs to be during class initialization for some reason
-        CONFIG_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\config");
-        PETMAP_FILE = CONFIG_DIR + @"\petmapping.txt";
-
-        // create config dir if it doesn't exist
-        System.IO.Directory.CreateDirectory(CONFIG_DIR);
       }
-      catch (Exception e)
+      catch (Exception ex)
       {
-        LOG.Error(e);
+        LOG.Error(ex);
       }
 
       Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
@@ -156,23 +205,6 @@ namespace EQLogParser
           }
         }
       }
-
-      ClassNames[SpellClasses.WAR] = string.Intern("Warrior");
-      ClassNames[SpellClasses.CLR] = string.Intern("Cleric");
-      ClassNames[SpellClasses.PAL] = string.Intern("Paladin");
-      ClassNames[SpellClasses.RNG] = string.Intern("Ranger");
-      ClassNames[SpellClasses.SHD] = string.Intern("Shadow Knight");
-      ClassNames[SpellClasses.DRU] = string.Intern("Druid");
-      ClassNames[SpellClasses.MNK] = string.Intern("Monk");
-      ClassNames[SpellClasses.BRD] = string.Intern("Bard");
-      ClassNames[SpellClasses.ROG] = string.Intern("Rogue");
-      ClassNames[SpellClasses.SHM] = string.Intern("Shaman");
-      ClassNames[SpellClasses.NEC] = string.Intern("Necromancer");
-      ClassNames[SpellClasses.WIZ] = string.Intern("Wizard");
-      ClassNames[SpellClasses.MAG] = string.Intern("Magician");
-      ClassNames[SpellClasses.ENC] = string.Intern("Enchanter");
-      ClassNames[SpellClasses.BST] = string.Intern("Beastlord");
-      ClassNames[SpellClasses.BER] = string.Intern("Berserker");
     }
 
     public void Clear()
@@ -195,6 +227,7 @@ namespace EQLogParser
     {
       lock(this)
       {
+        // Pet settings
         try
         {
           UpdateVerifiedPlayers(UNASSIGNED_PET_OWNER);
@@ -218,36 +251,56 @@ namespace EQLogParser
         {
           LOG.Error(ex);
         }
-      }
 
-      // dont count initial load
-      PetMappingUpdated = false;
+        // dont count initial load
+        PetMappingUpdated = false;
+      }
     }
 
     public void SaveState()
     {
       lock(this)
       {
-        try
-        {
-          if (PetMappingUpdated)
-          {
-            List<string> lines = new List<string>();
-            foreach (var keypair in PetToPlayerMap)
-            {
-              if (keypair.Value != UNASSIGNED_PET_OWNER)
-              {
-                lines.Add(keypair.Key + "=" + keypair.Value);
-              }
-            }
+        SaveConfiguration(PETMAP_FILE, PetMappingUpdated, PetToPlayerMap);
+        PetMappingUpdated = false;
 
-            System.IO.File.WriteAllLines(PETMAP_FILE, lines);
-            PetMappingUpdated = false;
+        SaveConfiguration(SETTINGS_FILE, SettingsUpdated, ApplicationSettings);
+        SettingsUpdated = false;
+      }
+    }
+
+    public string GetApplicationSetting(string key)
+    {
+      string setting;
+      ApplicationSettings.TryGetValue(key, out setting);
+      return setting;
+    }
+
+    public void SetApplicationSetting(string key, string value)
+    {
+      if (value == null)
+      {
+        string setting;
+        if (ApplicationSettings.TryRemove(key, out setting))
+        {
+          SettingsUpdated = true;
+        }
+      }
+      else
+      {
+        string existing;
+        if (ApplicationSettings.TryGetValue(key, out existing))
+        {
+          if (existing != value)
+          {
+            ApplicationSettings[key] = value;
+            SettingsUpdated = true;
           }
         }
-        catch(Exception ex)
+        else
         {
-          LOG.Error(ex);
+          ApplicationSettings[key] = value;
+          SettingsUpdated = true;
         }
       }
     }
@@ -634,6 +687,33 @@ namespace EQLogParser
       {
         EventsNewVerifiedPlayer(this, name);
         CheckNolongerNPC(name);
+      }
+    }
+
+    private void SaveConfiguration(string fileName, bool updated, ConcurrentDictionary<string, string> dict)
+    {
+      lock (this)
+      {
+        try
+        {
+          if (updated)
+          {
+            List<string> lines = new List<string>();
+            foreach (var keypair in dict)
+            {
+              if (keypair.Value != UNASSIGNED_PET_OWNER)
+              {
+                lines.Add(keypair.Key + "=" + keypair.Value);
+              }
+            }
+
+            System.IO.File.WriteAllLines(fileName, lines);
+          }
+        }
+        catch (Exception ex)
+        {
+          LOG.Error(ex);
+        }
       }
     }
 
