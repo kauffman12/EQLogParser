@@ -189,6 +189,7 @@
     </Compile>
     <Compile Include="src\util\ActionProcessor.cs" />
     <Compile Include="src\util\Helpers.cs" />
+    <Compile Include="src\util\NativeMethods.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

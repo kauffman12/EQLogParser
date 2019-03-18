@@ -1,5 +1,4 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
-using LiveCharts;
 using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
