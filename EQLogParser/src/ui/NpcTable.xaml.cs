@@ -19,10 +19,10 @@ namespace EQLogParser
   /// Interaction logic for NpcTable.xaml
   /// </summary>
   public partial class NpcTable : UserControl
-    {
-        // events
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1009:DeclareEventHandlersCorrectly")]
-        public event EventHandler<IList> EventsSelectionChange;
+  {
+   // events
+   [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1009:DeclareEventHandlersCorrectly")]
+   public event EventHandler<IList> EventsSelectionChange;
 
     // brushes
     public static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
@@ -79,6 +79,11 @@ namespace EQLogParser
         npcDataGrid.ScrollIntoView(NonPlayersView.Last());
         UpdateTimer.Stop();
       };
+
+      // read show breaks setting
+      bool bValue;
+      string showBreaks = DataManager.Instance.GetApplicationSetting("NpcShowInactivityBreaks");
+      npcShowBreaks.IsChecked = showBreaks == null || (bool.TryParse(showBreaks, out bValue) && bValue);
 
       // Clear/Reset
       DataManager.Instance.EventsClearedActiveData += (sender, cleared) => NonPlayersView.Clear();
@@ -231,6 +236,8 @@ namespace EQLogParser
         {
           NonPlayersViewSource.View.Filter = new Predicate<object>(item => ((NonPlayer) item).GroupID > -1);
         }
+
+        DataManager.Instance.SetApplicationSetting("NpcShowInactivityBreaks", npcShowBreaks.IsChecked.Value.ToString());
       }
     }
 

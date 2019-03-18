@@ -5,13 +5,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -23,15 +21,15 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
-    public static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
-    public static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
-    public static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
-    public static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
-    public static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
+    private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
+    private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
+    private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
+    private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
+    private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.3.8";
+    private const string VERSION = "v1.3.10";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -77,12 +75,15 @@ namespace EQLogParser
     // binding property
     public ObservableCollection<SortableName> VerifiedPlayersProperty { get; set; }
 
+    // Overlay
+    private OverlayWindow Overlay;
+    private bool Ready = false;
+
     public MainWindow()
     {
       try
       {
         InitializeComponent();
-        LOG.Info("Initialized Components");
 
         // update titles
         Title = APP_NAME + " " + VERSION;
@@ -168,9 +169,6 @@ namespace EQLogParser
         DockingThemeCatalogRegistrar.Register();
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
 
-        // after everything else is done
-        DataManager.Instance.LoadState();
-
         var npcTable = npcWindow.Content as NpcTable;
         npcTable.EventsSelectionChange += (sender, data) => UpdateStats();
 
@@ -194,8 +192,27 @@ namespace EQLogParser
           }
         };
 
+        // read bane setting
+        bool bValue;
+        string bane = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
+        includeBane.IsChecked = bane != null && bool.TryParse(bane, out bValue) && bValue;
+
         OpenHealingChart();
         OpenDamageChart();
+
+        // application data state last
+        DataManager.Instance.LoadState();
+
+        bool isEnabled;
+        string value = DataManager.Instance.GetApplicationSetting("IsDamageOverlayEnabled");
+        overlayOption.IsChecked = bool.TryParse(value, out isEnabled) && isEnabled;
+        if (overlayOption.IsChecked.Value)
+        {
+          OpenOverlay();
+        }
+
+        Ready = true;
+        LOG.Info("Initialized Components");
       }
       catch (Exception e)
       {
@@ -205,6 +222,48 @@ namespace EQLogParser
       {
         ThemeManager.EndUpdate();
       }
+    }
+
+    internal void Busy(bool state)
+    {
+      busyIcon.Visibility = state ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    internal StatsSummary BuildDamageSummary(CombinedStats combined, List<PlayerStats> selected)
+    {
+      var summary = DamageStatsBuilder.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
+      playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
+      playerParseTextBox.SelectAll();
+      return summary;
+    }
+
+    internal void OpenOverlay(bool configure = false, bool saveFirst = false)
+    {
+      if (saveFirst)
+      {
+        DataManager.Instance.SaveState();
+      }
+
+      Dispatcher.InvokeAsync(() =>
+      {
+        Overlay?.Close();
+        Overlay = new OverlayWindow(this, configure);
+        Overlay.Show();
+      });
+    }
+
+    internal void ResetOverlay()
+    {
+      Overlay?.Close();
+      if (overlayOption.IsChecked.Value)
+      {
+        OpenOverlay();
+      }
+    }
+
+    internal void CopyToEQ_Click(object sender, RoutedEventArgs e)
+    {
+      Clipboard.SetDataObject(playerParseTextBox.Text);
     }
 
     private bool LoadChart(List<List<TimedAction>> recordGroups, DocumentWindow chartWindow, RecordGroupIterator rgIterator, List<PlayerStats> selected = null)
@@ -233,11 +292,6 @@ namespace EQLogParser
       {
         grid.Columns[column.DisplayIndex].Width = column.ActualWidth;
       }
-    }
-
-    public void Busy(bool state)
-    {
-      busyIcon.Visibility = state ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void Window_Closed(object sender, System.EventArgs e)
@@ -554,12 +608,6 @@ namespace EQLogParser
       }
     }
 
-    // Player DPS Text/Send to EQ Window
-    private void CopyToEQ_Click(object sender, RoutedEventArgs e)
-    {
-      Clipboard.SetDataObject(playerParseTextBox.Text);
-    }
-
     private void PlayerParseText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
       if (!playerParseTextBox.IsFocused)
@@ -628,9 +676,7 @@ namespace EQLogParser
       if (CurrentDamageStats != null)
       {
         List<PlayerStats> list = playerDataGrid?.SelectedItems.Count > 0 ? playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList() : null;
-        SelectedSummary = CurrentDamageSummary = DamageStatsBuilder.BuildSummary(CurrentDamageStats, list, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
-        playerParseTextBox.Text = CurrentDamageSummary.Title + CurrentDamageSummary.RankedPlayers;
-        playerParseTextBox.SelectAll();
+        SelectedSummary = CurrentDamageSummary = BuildDamageSummary(CurrentDamageStats, list);
       }
     }
 
@@ -991,33 +1037,28 @@ namespace EQLogParser
 
     private void IncludeBaneChanged(object sender, RoutedEventArgs e)
     {
-      RebuildDamageStats(includeBane.IsChecked.Value);
-    }
-  }
-
-  public class ZeroConverter : IValueConverter
-  {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-      if (value.GetType() == typeof(double))
+      if (Ready)
       {
-        return (double) value > 0 ? value.ToString() : "-";
+        RebuildDamageStats(includeBane.IsChecked.Value);
+        DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", includeBane.IsChecked.Value.ToString());
       }
-      return string.Empty;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    private void OverlayOptionChanged(object sender, RoutedEventArgs e)
     {
-      if (value is string)
+      if (Ready)
       {
-        double decValue;
-        if (!double.TryParse((string) value, out decValue))
+        if (overlayOption.IsChecked.Value)
         {
-          decValue = 0;
+          OpenOverlay(true, false);
         }
-        return decValue;
+        else
+        {
+          Overlay?.Close();
+        }
+
+        DataManager.Instance.SetApplicationSetting("IsDamageOverlayEnabled", overlayOption.IsChecked.Value.ToString());
       }
-      return 0;
     }
   }
 }

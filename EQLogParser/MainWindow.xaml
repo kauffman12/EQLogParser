@@ -8,15 +8,19 @@
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
         Width="1400"
-        Title="" Closed="Window_Closed">
+        Title="" Closed="Window_Closed" TextOptions.TextFormattingMode="Display">
   <Window.Resources>
   </Window.Resources>
   <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="259*"/>
+      <ColumnDefinition Width="1125*"/>
+    </Grid.ColumnDefinitions>
     <Grid.RowDefinitions>
       <RowDefinition Height="20" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
-    <Menu Grid.Row="0" Margin="0" Height="20" VerticalAlignment="Top">
+    <Menu Grid.Row="0" Margin="0" Height="20" VerticalAlignment="Top" Grid.ColumnSpan="2">
       <MenuItem Header="_File" Height="20" Width="35">
         <MenuItem Header="Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFile_Click" />
         <MenuItem Header="Open and Monitor _Log File" Height="20">
@@ -44,8 +48,8 @@
         <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20" />
       </MenuItem>
     </Menu>
-    <fa:ImageAwesome Grid.Row="0" x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,4,15,0"/>
-    <docking:DockSite Grid.Row="1" x:Name="dockSite">
+    <fa:ImageAwesome Grid.Row="0" x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,5,15,1" Grid.Column="1"/>
+    <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2">
       <docking:SplitContainer Orientation="Horizontal">
         <docking:SplitContainer Orientation="Vertical">
           <docking:ToolWindowContainer>
@@ -70,7 +74,7 @@
         </docking:SplitContainer>
         <docking:SplitContainer Orientation="Vertical">
           <docking:Workspace>
-              <docking:TabbedMdiHost>
+            <docking:TabbedMdiHost>
               <docking:SplitContainer Orientation="Vertical">
                 <docking:TabbedMdiContainer>
                   <docking:DocumentWindow x:Name="damageWindow" Title="Damage Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False" ContainerMinSize="600,50" IsVisibleChanged="Window_VisibleChanged">
@@ -86,6 +90,7 @@
                         <Label x:Name="dpsTitle" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
                       </StackPanel>
                       <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <CheckBox x:Name="overlayOption" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OverlayOptionChanged" Unchecked="OverlayOptionChanged">Enable Overlay</CheckBox>
                         <CheckBox x:Name="includeBane" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="IncludeBaneChanged" Unchecked="IncludeBaneChanged">Include Bane Damage</CheckBox>
                       </StackPanel>
                       <datagrid:ThemedDataGrid x:Name="playerDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PlayerDataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"  RowDetailsVisibilityChanged="PlayerChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
@@ -228,7 +233,7 @@
                               <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
                               <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
                               <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="HealDataGridSpellCastsByClass_Click"/>
-                            </MenuItem>                            
+                            </MenuItem>
                             <MenuItem x:Name="hdgMenuItemShowBreakdown" IsEnabled="False" Header="Healing Breakdown">
                               <MenuItem Header="Selected" IsEnabled="False" Click="HealDataGridShowBreakdown_Click"/>
                               <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="HealDataGridShowBreakdownByClass_Click"/>
@@ -362,7 +367,7 @@
             </Grid>
           </docking:ToolWindow>
         </docking:ToolWindowContainer>
-      </docking:DockSite.AutoHideBottomContainers>      
+      </docking:DockSite.AutoHideBottomContainers>
     </docking:DockSite>
   </Grid>
 </Window>

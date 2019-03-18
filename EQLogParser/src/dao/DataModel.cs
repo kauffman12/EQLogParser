@@ -1,8 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Windows.Data;
 
 namespace EQLogParser
 {
+  public class ZeroConverter : IValueConverter
+  {
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+      if (value.GetType() == typeof(double))
+      {
+        return System.Convert.ToDouble(value) > 0 ? value.ToString() : "-";
+      }
+      return string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+      if (value is string)
+      {
+        double decValue;
+        if (!double.TryParse((string) value, out decValue))
+        {
+          decValue = 0;
+        }
+        return decValue;
+      }
+      return 0;
+    }
+  }
+
   public class DataPointComparer : IComparer<DataPoint>
   {
     public int Compare(DataPoint x, DataPoint y)
@@ -213,6 +241,14 @@ namespace EQLogParser
   public class CombinedHealStats : CombinedStats
   {
     public Dictionary<string, byte> UniqueClasses { get; set; }
+  }
+
+  public class OverlayDamageStats : CombinedStats
+  {
+    public Dictionary<string, PlayerStats> TopLevelStats { get; set; }
+    public Dictionary<string, PlayerStats> AggregateStats { get; set; }
+    public Dictionary<string, PlayerStats> IndividualStats { get; set; }
+    public Dictionary<string, byte> UniqueNpcs { get; set; }
   }
 
   public class DataPoint
