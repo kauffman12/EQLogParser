@@ -7,9 +7,8 @@
         Height="198" Width="500"
         MinWidth="375"
         Topmost="True"
-        ShowInTaskbar="False"
         Title="Configure Overlay Window"
-        Style="{StaticResource OverlayStyle}" Closing="Window_Closing" TextOptions.TextFormattingMode="Display">
+        Style="{StaticResource OverlayStyle}" Closing="Window_Closing" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False" Loaded="Window_Loaded">
   <Window.Background>
     <SolidColorBrush x:Name="windowBrush" Opacity="0.0" Color="Black" />
   </Window.Background>
