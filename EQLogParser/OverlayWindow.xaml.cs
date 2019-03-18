@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
@@ -144,7 +146,7 @@ namespace EQLogParser
       TitleBlock.Text = "Example NPC Name That is Kinda Long";
       TitleDamageBlock.Text = "[3s @250K] 250M";
 
-      for (int i=0; i<MAX_ROWS-1; i++)
+      for (int i = 0; i < MAX_ROWS - 1; i++)
       {
         NameBlockList[i].Text = i + ". Example Player Name";
         DamageBlockList[i].Text = "[3s @50K] 50M";
@@ -219,7 +221,7 @@ namespace EQLogParser
             windowBrush.Opacity = OPACITY;
           }
 
-          for (int i=0; i<MAX_ROWS; i++)
+          for (int i = 0; i < MAX_ROWS; i++)
           {
             SetRowVisible(i < goodRowCount, i);
           }
@@ -344,7 +346,7 @@ namespace EQLogParser
       overlayCanvas.Children.Add(TitleDamageBlock);
       RowCount++;
 
-      for (int i=0; i<MAX_ROWS; i++)
+      for (int i = 0; i < MAX_ROWS; i++)
       {
         var rectangle = CreateRectangle(configure, ColorList[i]);
         RectangleList.Add(rectangle);
@@ -421,7 +423,7 @@ namespace EQLogParser
       SettingsButton.FontSize = size;
       CopyButton.FontSize = size;
 
-      for (int i=0; i<MAX_ROWS; i++)
+      for (int i = 0; i < MAX_ROWS; i++)
       {
         NameBlockList[i].FontSize = size;
         DamageBlockList[i].FontSize = size;
@@ -477,6 +479,16 @@ namespace EQLogParser
         DamageLineParser.EventsDamageProcessed -= DamageLineParser_EventsDamageProcessed;
         UpdateTimer.Stop();
       }
+    }
+
+    void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+      WindowInteropHelper wndHelper = new WindowInteropHelper(this);
+
+      int exStyle = (int) NativeMethods.GetWindowLongPtr(wndHelper.Handle, (int) NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+
+      exStyle |= (int) NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
+      NativeMethods.SetWindowLong(wndHelper.Handle, (int) NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr) exStyle);
     }
   }
 }
