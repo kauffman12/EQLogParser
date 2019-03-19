@@ -29,7 +29,7 @@ namespace EQLogParser
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.3.11";
+    private const string VERSION = "v1.3.13";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -623,6 +623,8 @@ namespace EQLogParser
         if (EQLogReader != null)
         {
           Busy(true);
+          Overlay?.Close();
+
           bytesReadTitle.Content = "Reading:";
           processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double) FilePosition / EQLogReader.FileSize * 100), 100) : 100;
@@ -649,6 +651,12 @@ namespace EQLogParser
             }
 
             DataManager.Instance.SaveState();
+
+            if (overlayOption.IsChecked.Value)
+            {
+              OpenOverlay();
+            }
+
             LOG.Info("Finished Loading Log File");
           }
           else

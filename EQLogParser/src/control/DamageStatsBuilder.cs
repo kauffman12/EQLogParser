@@ -368,17 +368,17 @@ namespace EQLogParser
         }
 
         raidStats.DPS = (long) Math.Round(raidStats.Total / raidStats.TotalSeconds, 2);
-        overlayStats.StatsList = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
 
         var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
         int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.PlayerName));
 
         int renumber;
-        if (found > -1 && found > 4)
+        if (found > 4)
         {
+          var you = list[found];
+          you.Rank = Convert.ToUInt16(found + 1);
           overlayStats.StatsList = list.Take(4).ToList();
-          overlayStats.StatsList.Add(list[found]);
-          list[found].Rank = Convert.ToUInt16(found + 1);
+          overlayStats.StatsList.Add(you);
           renumber = overlayStats.StatsList.Count - 1;
         }
         else
