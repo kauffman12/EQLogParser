@@ -21,7 +21,7 @@ namespace EQLogParser
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
     private const double OPACITY = 0.45;
-    private const double DATA_OPACITY = 0.9;
+    private const double DATA_OPACITY = 0.85;
 
     private OverlayDamageStats Stats = null;
     private DispatcherTimer UpdateTimer;
@@ -31,6 +31,7 @@ namespace EQLogParser
     private bool Active = false;
 
     private Button CopyButton;
+    private Button RefreshButton;
     private Button SettingsButton;
     private StackPanel TitlePanel;
     private TextBlock TitleBlock;
@@ -43,13 +44,13 @@ namespace EQLogParser
     private List<Color> TitleColorList = new List<Color>() { Color.FromRgb(50, 50, 50), Color.FromRgb(30, 30, 30), Color.FromRgb(10, 10, 10) };
     private List<List<Color>> ColorList = new List<List<Color>>()
     {
-      new List<Color>() { Color.FromRgb(67, 91, 133), Color.FromRgb(50, 76, 121), Color.FromRgb(33, 60, 108) },
-      new List<Color>() { Color.FromRgb(60, 134, 80), Color.FromRgb(54, 129, 27), Color.FromRgb(71, 111, 96) },
-      new List<Color>() { Color.FromRgb(137, 141, 41), Color.FromRgb(130, 129, 42), Color.FromRgb(114, 114, 60) },
-      new List<Color>() { Color.FromRgb(149, 94, 31), Color.FromRgb(128, 86, 25), Color.FromRgb(117, 87, 50) },
-      new List<Color>() { Color.FromRgb(146, 77, 51), Color.FromRgb(137, 69, 47), Color.FromRgb(118, 51, 50) }
+      new List<Color>() { Color.FromRgb(60, 134, 80), Color.FromRgb(54, 129, 27), Color.FromRgb(39, 69, 27) },
+      new List<Color>() { Color.FromRgb(43, 111, 102), Color.FromRgb(38, 101, 78), Color.FromRgb(33, 62, 54) },
+      new List<Color>() { Color.FromRgb(67, 91, 133), Color.FromRgb(50, 76, 121), Color.FromRgb(36, 49, 70) },
+      new List<Color>() { Color.FromRgb(137, 141, 41), Color.FromRgb(130, 129, 42), Color.FromRgb(85, 86, 11) },
+      new List<Color>() { Color.FromRgb(149, 94, 31), Color.FromRgb(128, 86, 25), Color.FromRgb(78, 53, 21) }
     };
-
+ 
     private MainWindow TheMainWindow;
 
     public OverlayWindow(MainWindow mainWindow, bool configure = false)
@@ -164,7 +165,7 @@ namespace EQLogParser
 
     private void UpdateTimer_Tick(object sender, EventArgs e)
     {
-      if (Active && Stats.RaidStats.LastTime > LastUpdate)
+      if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
       {
         var list = Stats.StatsList.Take(MAX_ROWS).ToList();
         if (list.Count > 0)
@@ -228,7 +229,7 @@ namespace EQLogParser
         }
       }
 
-      if ((DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > NpcDamageManager.NPC_DEATH_TIME)
+      if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > NpcDamageManager.NPC_DEATH_TIME)
       {
         windowBrush.Opacity = 0.0;
         SetVisible(false);
@@ -319,26 +320,34 @@ namespace EQLogParser
 
       SettingsButton = CreateButton();
       SettingsButton.ToolTip = new ToolTip() { Content = "Change Settings" };
-      SettingsButton.Margin = new Thickness(8, 0, 0, 0);
+      SettingsButton.Margin = new Thickness(8, 1, 0, 0);
       SettingsButton.Content = "\xE713";
-      SettingsButton.Click += (object sender, RoutedEventArgs e) => TheMainWindow.OpenOverlay(true, false);
       SettingsButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
+      SettingsButton.Click += (object sender, RoutedEventArgs e) => TheMainWindow.OpenOverlay(true, false);
 
       CopyButton = CreateButton();
       CopyButton.ToolTip = new ToolTip() { Content = "Copy To EQ" };
-      CopyButton.Margin = new Thickness(4, 0, 0, 0);
+      CopyButton.Margin = new Thickness(4, 1, 0, 0);
       CopyButton.Content = "\xE8C8";
+      CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
       CopyButton.Click += (object sender, RoutedEventArgs e) =>
       {
         TheMainWindow.BuildDamageSummary(Stats, Stats.StatsList);
         TheMainWindow.CopyToEQ_Click(sender, e);
       };
-      CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
+
+      RefreshButton = CreateButton();
+      RefreshButton.ToolTip = new ToolTip() { Content = "Cancel Current Parse" };
+      RefreshButton.Margin = new Thickness(4, 1, 0, 0);
+      RefreshButton.Content = "\xE8BB";
+      RefreshButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
+      RefreshButton.Click += (object sender, RoutedEventArgs e) => Stats = null;
 
       TitleBlock = CreateTextBlock();
       TitlePanel.Children.Add(TitleBlock);
       TitlePanel.Children.Add(SettingsButton);
       TitlePanel.Children.Add(CopyButton);
+      TitlePanel.Children.Add(RefreshButton);
       overlayCanvas.Children.Add(TitlePanel);
 
       TitleDamageBlock = CreateTextBlock();
@@ -382,7 +391,7 @@ namespace EQLogParser
       var rectangle = new Rectangle();
       rectangle.Fill = CreateBrush(colors);
       rectangle.SetValue(Panel.ZIndexProperty, 1);
-      rectangle.Effect = new BlurEffect() { Radius = 2 };
+      rectangle.Effect = new BlurEffect() { Radius = 5, RenderingBias = 0 };
       rectangle.Opacity = configure ? 1.0 : DATA_OPACITY;
       return rectangle;
     }
@@ -393,7 +402,7 @@ namespace EQLogParser
       textBlock.Foreground = TEXT_BRUSH;
       textBlock.SetValue(Panel.ZIndexProperty, 3);
       textBlock.UseLayoutRounding = true;
-      textBlock.Effect = new DropShadowEffect() { ShadowDepth = 2, BlurRadius = 1, Opacity = 0.5 };
+      textBlock.Effect = new DropShadowEffect() { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
       textBlock.FontFamily = new FontFamily("Lucidia Console");
       return textBlock;
     }
@@ -420,8 +429,9 @@ namespace EQLogParser
 
       TitleBlock.FontSize = size;
       TitleDamageBlock.FontSize = size;
-      SettingsButton.FontSize = size;
-      CopyButton.FontSize = size;
+      SettingsButton.FontSize = size - 1;
+      CopyButton.FontSize = size - 1;
+      RefreshButton.FontSize = size - 2;
 
       for (int i = 0; i < MAX_ROWS; i++)
       {
