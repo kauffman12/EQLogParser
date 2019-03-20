@@ -27,7 +27,7 @@
       <CheckBox x:Name="groupProcs" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Procs</CheckBox>
       <CheckBox x:Name="groupResisted" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Resisted Spells</CheckBox>
     </StackPanel>
-      <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="False" Sorting="Custom_Sorting" LoadingRow="Loading_Row">
+      <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="Custom_Sorting" LoadingRow="Loading_Row">
       <DataGrid.Columns>
         <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="150" Width="150*"/>
         <DataGridTextColumn Binding="{Binding Percent, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource PlayerTotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>

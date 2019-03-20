@@ -462,13 +462,9 @@ namespace EQLogParser
     public SpellData GetSpellByAbbrv(string abbrv)
     {
       SpellData result = null;
-      if (SpellsAbbrvDB.ContainsKey(abbrv))
+      if (abbrv != "" && abbrv != Labels.UNKNOWN_SPELL && SpellsAbbrvDB.ContainsKey(abbrv))
       {
         result = SpellsAbbrvDB[abbrv];
-      }
-      else
-      {
-        LOG.Debug("Missing spell? " + abbrv);
       }
       return result;
     }
@@ -476,13 +472,9 @@ namespace EQLogParser
     public SpellData GetSpellByName(string name)
     {
       SpellData result = null;
-      if (SpellsNameDB.ContainsKey(name))
+      if (name != "" && name != Labels.UNKNOWN_SPELL && SpellsNameDB.ContainsKey(name))
       {
         result = SpellsNameDB[name];
-      }
-      else
-      {
-        LOG.Debug("Missing spell? " + name);
       }
       return result;
     }
