@@ -38,7 +38,7 @@ namespace EQLogParser
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {
             string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(TOTAL_FORMAT, Helpers.FormatDamage(stats.Total), "", Helpers.FormatDamage(stats.DPS));
+            string damageFormat = string.Format(TOTAL_FORMAT, FormatTotals(stats.Total), "", FormatTotals(stats.DPS));
             string timeFormat = string.Format(TIME_FORMAT, stats.TotalSeconds);
             list.Add(playerFormat + damageFormat + " " + timeFormat);
           }
@@ -166,7 +166,7 @@ namespace EQLogParser
                 else
                 {
                   string origName = (player != null) ? player : record.Attacker;
-                  string aggregateName = (player == DataManager.UNASSIGNED_PET_OWNER) ? origName : origName + " +Pets";
+                  string aggregateName = (player == Labels.UNASSIGNED_PET_OWNER) ? origName : origName + " +Pets";
 
                   PlayerStats aggregatePlayerStats = CreatePlayerStats(individualStats, aggregateName, origName);
                   UpdateStats(aggregatePlayerStats, record);
@@ -258,7 +258,7 @@ namespace EQLogParser
         combined.StatsList = topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
         combined.TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title;
         combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
-        combined.TotalTitle = string.Format(TOTAL_FORMAT, Helpers.FormatDamage(raidTotals.Total), " Damage ", Helpers.FormatDamage(raidTotals.DPS));
+        combined.TotalTitle = string.Format(TOTAL_FORMAT, FormatTotals(raidTotals.Total), " Damage ", FormatTotals(raidTotals.DPS));
 
         for (int i = 0; i < combined.StatsList.Count; i++)
         {
@@ -328,7 +328,7 @@ namespace EQLogParser
         bool isPet = PetToPlayer.TryGetValue(record.Attacker, out player);
         bool needAggregate = isPet || (!isPet && PlayerHasPet.ContainsKey(record.Attacker) && overlayStats.TopLevelStats.ContainsKey(record.Attacker + " +Pets"));
 
-        if (!needAggregate || player == DataManager.UNASSIGNED_PET_OWNER)
+        if (!needAggregate || player == Labels.UNASSIGNED_PET_OWNER)
         {
           // not a pet
           PlayerStats stats;  stats = CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);

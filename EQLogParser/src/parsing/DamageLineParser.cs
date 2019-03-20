@@ -264,7 +264,7 @@ namespace EQLogParser
 
           if (isAttackerPet)
           {
-            record.AttackerOwner = DataManager.UNASSIGNED_PET_OWNER;
+            record.AttackerOwner = Labels.UNASSIGNED_PET_OWNER;
           }
         }
       }
@@ -330,7 +330,7 @@ namespace EQLogParser
             if (DataManager.Instance.CheckNameForPlayer(owner) || Helpers.IsPossiblePlayerName(owner))
             {
               int len;
-              if (Helpers.IsPetOrMount(part, firstSpace + 1, out len))
+              if (IsPetOrMount(part, firstSpace + 1, out len))
               {
                 //string petType = part.Substring(firstSpace + 1, len);
 
@@ -342,7 +342,7 @@ namespace EQLogParser
                   {
                     string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
 
-                    if ((type = checkType(testAction)) != "")
+                    if ((type = CheckType(testAction)) != "")
                     {
                       action = "DD";
                       afterAction = sizeSoFar + type.Length + 1;
@@ -376,7 +376,7 @@ namespace EQLogParser
               {
                 string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
 
-                if ((type = checkType(testAction)) != "")
+                if ((type = CheckType(testAction)) != "")
                 {
                   action = "DD";
                   afterAction = sizeSoFar + type.Length + 1;
@@ -491,7 +491,7 @@ namespace EQLogParser
                 if (posessiveIndex > -1)
                 {
                   int len;
-                  if (Helpers.IsPetOrMount(defender, posessiveIndex + 3, out len))
+                  if (IsPetOrMount(defender, posessiveIndex + 3, out len))
                   {
                     if (Helpers.IsPossiblePlayerName(defender, posessiveIndex))
                     {
@@ -661,7 +661,24 @@ namespace EQLogParser
       return result;
     }
 
-    private static string checkType(string testAction)
+    private static bool IsPetOrMount(string part, int start, out int len)
+    {
+      bool found = false;
+      len = -1;
+
+      int end = 2;
+      if (part.Length >= (start + ++end) && part.Substring(start, 3) == "pet" ||
+        part.Length >= (start + ++end) && part.Substring(start, 4) == "ward" && !(part.Length > (start + 5) && part[start + 5] != 'e') ||
+        part.Length >= (start + ++end) && part.Substring(start, 5) == "Mount" ||
+        part.Length >= (start + ++end) && part.Substring(start, 6) == "warder")
+      {
+        found = true;
+        len = end;
+      }
+      return found;
+    }
+
+    private static string CheckType(string testAction)
     {
       string type = "";
       if (HitMap.ContainsKey(testAction))

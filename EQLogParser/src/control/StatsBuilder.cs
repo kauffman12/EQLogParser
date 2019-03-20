@@ -26,7 +26,7 @@ namespace EQLogParser
 
     internal static List<PlayerStats> GetSelectedPlayerStatsByClass(string classString, ItemCollection items)
     {
-      DataManager.SpellClasses type = (DataManager.SpellClasses) Enum.Parse(typeof(DataManager.SpellClasses), classString);
+      SpellClasses type = (SpellClasses) Enum.Parse(typeof(SpellClasses), classString);
       string className = DataManager.Instance.GetClassName(type);
 
       List<PlayerStats> selectedStats = new List<PlayerStats>();
@@ -40,6 +40,30 @@ namespace EQLogParser
       }
 
       return selectedStats;
+    }
+
+    internal static string FormatTotals(long total)
+    {
+      string result;
+
+      if (total < 1000)
+      {
+        result = total.ToString();
+      }
+      else if (total < 1000000)
+      {
+        result = Math.Round((decimal) total / 1000, 2) + "K";
+      }
+      else if (total < 1000000000)
+      {
+        result = Math.Round((decimal) total / 1000 / 1000, 2) + "M";
+      }
+      else
+      {
+        result = Math.Round((decimal) total / 1000 / 1000 / 1000, 2) + "B";
+      }
+
+      return result;
     }
 
     protected static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)

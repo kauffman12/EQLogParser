@@ -35,7 +35,7 @@ namespace EQLogParser
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {
             string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(TOTAL_ONLY_FORMAT, Helpers.FormatDamage(stats.Total));
+            string damageFormat = string.Format(TOTAL_ONLY_FORMAT, FormatTotals(stats.Total));
             list.Add(playerFormat + damageFormat + " ");
           }
         }
@@ -152,7 +152,7 @@ namespace EQLogParser
         combined.StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
         combined.TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title;
         combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
-        combined.TotalTitle = string.Format(TOTAL_FORMAT, Helpers.FormatDamage(raidTotals.Total), " Heals ", Helpers.FormatDamage(raidTotals.DPS));
+        combined.TotalTitle = string.Format(TOTAL_FORMAT, FormatTotals(raidTotals.Total), " Heals ", FormatTotals(raidTotals.DPS));
 
         for (int i = 0; i < combined.StatsList.Count; i++)
         {
@@ -179,8 +179,8 @@ namespace EQLogParser
         SpellData spellData = null;
         if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
         {
-          if (spellData.Target == (byte) DataManager.SpellTarget.TARGET_AE || spellData.Target == (byte) DataManager.SpellTarget.NEARBY_PLAYERS_AE ||
-            spellData.Target == (byte) DataManager.SpellTarget.TARGET_RING_AE)
+          if (spellData.Target == (byte) SpellTarget.TARGET_AE || spellData.Target == (byte) SpellTarget.NEARBY_PLAYERS_AE ||
+            spellData.Target == (byte) SpellTarget.TARGET_RING_AE)
           {
             IsAEHealingAvailable = true;
             valid = showAE;
