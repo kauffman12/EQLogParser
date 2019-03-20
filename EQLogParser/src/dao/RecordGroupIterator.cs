@@ -5,19 +5,17 @@ namespace EQLogParser
 {
   public class DamageGroupIterator : RecordGroupIterator
   {
-    private Dictionary<string, byte> NpcNames;
     private bool ShowBane;
 
-    public DamageGroupIterator(List<List<TimedAction>> recordGroups, Dictionary<string, byte> npcNames, bool showBane) : base(recordGroups)
+    public DamageGroupIterator(List<List<TimedAction>> recordGroups, bool showBane) : base(recordGroups)
     {
-      NpcNames = npcNames;
       ShowBane = showBane;
     }
 
     override protected bool IsValid(TimedAction timedAction)
     {
       DamageRecord record = timedAction as DamageRecord;
-      return record != null && (ShowBane || record.Type != Labels.BANE_NAME && NpcNames.ContainsKey(record.Defender)) && !DataManager.Instance.IsProbablyNotAPlayer(record.Attacker);
+      return DamageStatsBuilder.IsValidDamage(record) && (ShowBane || record.Type != Labels.BANE_NAME);
     }
 
     override protected DataPoint Create(TimedAction timedAction)
@@ -43,15 +41,16 @@ namespace EQLogParser
 
   public class HealGroupIterator : RecordGroupIterator
   {
-    public HealGroupIterator(List<List<TimedAction>> recordGroups) : base(recordGroups)
+    private bool ShowAE;
+    public HealGroupIterator(List<List<TimedAction>> recordGroups, bool showAE) : base(recordGroups)
     {
-      // do nothing else
+      ShowAE = showAE;
     }
 
     override protected bool IsValid(TimedAction timedAction)
     {
       HealRecord record = timedAction as HealRecord;
-      return record != null && !DataManager.Instance.IsProbablyNotAPlayer(record.Healed);
+      return HealStatsBuilder.IsValidHeal(record, ShowAE);
     }
 
     override protected DataPoint Create(TimedAction timedAction)
@@ -116,28 +115,31 @@ namespace EQLogParser
     {
       TimedAction record = StopRecord;
 
-      var list = RecordGroups[CurrentGroup];
-      if (list.Count <= CurrentRecord)
+      if (RecordGroups.Count > CurrentGroup)
       {
-        CurrentGroup++;
-        CurrentRecord = 0;
-
-        if (RecordGroups.Count > CurrentGroup)
+        var list = RecordGroups[CurrentGroup];
+        if (list.Count <= CurrentRecord)
         {
-          list = RecordGroups[CurrentGroup];
-          if (list.Count > CurrentRecord)
+          CurrentGroup++;
+          CurrentRecord = 0;
+
+          if (RecordGroups.Count > CurrentGroup)
           {
-            record = list[CurrentRecord];
-          }
-          else
-          {
-            record = null;
+            list = RecordGroups[CurrentGroup];
+            if (list.Count > CurrentRecord)
+            {
+              record = list[CurrentRecord];
+            }
+            else
+            {
+              record = null;
+            }
           }
         }
-      }
-      else
-      {
-        record = list[CurrentRecord++];
+        else
+        {
+          record = list[CurrentRecord++];
+        }
       }
 
       return record;

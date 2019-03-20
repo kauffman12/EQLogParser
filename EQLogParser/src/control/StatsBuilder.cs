@@ -162,27 +162,23 @@ namespace EQLogParser
       subStats.TimeDiffs[currentIndex] = subStats.LastTimes[currentIndex] - subStats.BeginTimes[currentIndex] + 1;
     }
 
-    protected static void UpdateStats(PlayerSubStats stats, HitRecord record, bool showBane = false)
+    protected static void UpdateStats(PlayerSubStats stats, HitRecord record)
     {
-      // record Bane separately in totals
       if (record.Type == Labels.BANE_NAME)
       {
         stats.BaneHits++;
       }
 
-      if (showBane || record.Type != Labels.BANE_NAME)
+      stats.Total += record.Total;
+      stats.Hits += 1;
+      stats.Max = Math.Max(stats.Max, record.Total);
+
+      if (record.Total > 0 && record.OverTotal > 0)
       {
-        stats.Total += record.Total;
-        stats.Hits += 1;
-        stats.Max = Math.Max(stats.Max, record.Total);
-
-        if (record.Total > 0 && record.OverTotal > 0)
-        {
-          stats.Extra += (record.OverTotal - record.Total);
-        }
-
-        LineModifiersParser.Parse(record, stats);
+        stats.Extra += (record.OverTotal - record.Total);
       }
+
+      LineModifiersParser.Parse(record, stats);
 
       stats.BeginTime = double.IsNaN(stats.BeginTime) ? record.BeginTime : stats.BeginTime;
       stats.LastTime = record.BeginTime;

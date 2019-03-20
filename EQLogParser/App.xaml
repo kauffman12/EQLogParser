@@ -82,16 +82,31 @@
       <Setter Property="local:TextBoxBehavior.TripleClickSelectAll" Value="True" />
     </Style>
     <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Based on Critical, Crippling Blow, and Deadly Strike" />
+      <Setter Property="ToolTip" Value="Based on Assassinate, Crippling Blow, Critical, Deadly Strike, Finishing Blow, and Headshot" />
     </Style>
     <Style x:Key="OverHealColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Healing in excess of what was used" />
+      <Setter Property="ToolTip" Value="Amount of Healing in Excess of what was Needed" />
+    </Style>
+    <Style x:Key="OverHealPercentColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Percent of Healing in Excess of what was Needed" />
     </Style>    
     <Style x:Key="TotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Total Damage done" />
+      <Setter Property="ToolTip" Value="Percent of Total (raid total)" />
     </Style>
     <Style x:Key="PlayerTotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of the Player's Total Damage" />
+      <Setter Property="ToolTip" Value="Percent of Player's Total" />
+    </Style>
+    <Style x:Key="DPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Damage Per Second based on Player Time" />
+    </Style>
+    <Style x:Key="HPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Healing Per Second based on Player Time" />
+    </Style>
+    <Style x:Key="SDPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Scaled Damage Per Second based on Total Time (raid time)" />
+    </Style>
+    <Style x:Key="SHPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Scaled Healing Per Second based on Total Time (raid time)" />
     </Style>
     <Style x:Key="StandardStyle" TargetType="{x:Type Window}">
       <Setter Property="WindowChrome.WindowChrome">

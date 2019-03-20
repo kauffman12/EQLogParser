@@ -1,6 +1,8 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
+using Caching;
 using LiveCharts.Wpf;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -14,49 +16,56 @@ namespace EQLogParser
   class Helpers
   {
     private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
+    internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
 
     internal static string AbbreviateSpellName(string spell)
     {
-      string result = spell;
-
-      int index = -1;
-      if ((index = spell.IndexOf(" Rk. ", StringComparison.Ordinal)) > -1)
+      string result;
+      if (!SpellAbbrvCache.TryGetValue(spell, out result))
       {
-        result = spell.Substring(0, index);
-      }
-      else if ((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
-      {
-        bool isARank = true;
-        for (int i = index + 1; i < spell.Length && isARank; i++)
-        {
-          switch (spell[i])
-          {
-            case 'I':
-            case 'V':
-            case 'X':
-            case 'L':
-            case 'C':
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-              break;
-            default:
-              isARank = false;
-              break;
-          }
-        }
+        result = spell;
 
-        if (isARank)
+        int index = -1;
+        if ((index = spell.IndexOf(" Rk. ", StringComparison.Ordinal)) > -1)
         {
           result = spell.Substring(0, index);
         }
+        else if ((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
+        {
+          bool isARank = true;
+          for (int i = index + 1; i < spell.Length && isARank; i++)
+          {
+            switch (spell[i])
+            {
+              case 'I':
+              case 'V':
+              case 'X':
+              case 'L':
+              case 'C':
+              case '0':
+              case '1':
+              case '2':
+              case '3':
+              case '4':
+              case '5':
+              case '6':
+              case '7':
+              case '8':
+              case '9':
+                break;
+              default:
+                isARank = false;
+                break;
+            }
+          }
+
+          if (isARank)
+          {
+            result = spell.Substring(0, index);
+          }
+        }
+
+        SpellAbbrvCache[spell] = result;
       }
 
       return string.Intern(result);

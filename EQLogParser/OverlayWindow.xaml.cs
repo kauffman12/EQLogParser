@@ -156,7 +156,7 @@ namespace EQLogParser
 
     private void DamageLineParser_EventsDamageProcessed(object sender, DamageProcessedEvent e)
     {
-      Stats = DamageStatsBuilder.ComputerOverlayDamageStats(e.Record, false, Stats);
+      Stats = DamageStatsBuilder.ComputeOverlayDamageStats(e.Record, false, Stats);
       if (!UpdateTimer.IsEnabled)
       {
         UpdateTimer.Start();
