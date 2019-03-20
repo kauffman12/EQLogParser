@@ -31,6 +31,7 @@ namespace EQLogParser
         if (line.Length > 44 && (index = line.IndexOf(" begin", ACTION_PART_INDEX + 3, StringComparison.Ordinal)) > -1)
         {
           SpellCast cast = null;
+          ProcessLine pline = null;
           int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX);
           if (firstSpace > -1 && firstSpace == index)
           {
@@ -39,7 +40,7 @@ namespace EQLogParser
               var test = line.Substring(index + 7, 4);
               if (test == "cast" || test == "sing")
               {
-                ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
                 pline.OptionalIndex = index - ACTION_PART_INDEX;
                 pline.OptionalData = "you" + test;
                 pline.TimeString = pline.Line.Substring(1, 24);
@@ -52,7 +53,7 @@ namespace EQLogParser
               var test = line.Substring(index + 11, 4);
               if (test == "cast" || test == "sing")
               {
-                ProcessLine  pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
                 pline.OptionalIndex = index - ACTION_PART_INDEX;
                 pline.OptionalData = test;
                 pline.TimeString = pline.Line.Substring(1, 24);
@@ -63,7 +64,7 @@ namespace EQLogParser
 
             if (cast != null)
             {
-              DataManager.Instance.AddSpellCast(cast);
+              DataManager.Instance.AddSpellCast(cast, pline.CurrentTime);
             }
           }
         }
@@ -122,12 +123,8 @@ namespace EQLogParser
 
       if (result != null)
       {
-        DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
-        {
-          Receiver = string.Intern(player),
-          BeginTime = pline.CurrentTime,
-          SpellData = result
-        });
+        var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), SpellData = result };
+        DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
       }
     }
 
@@ -138,12 +135,8 @@ namespace EQLogParser
       SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(matchOn, out output);
       if (result != null)
       {
-        DataManager.Instance.AddReceivedSpell(new ReceivedSpell()
-        {
-          Receiver = string.Intern(pline.ActionPart.Substring(0, pline.OptionalIndex - 3)),
-          BeginTime = pline.CurrentTime,
-          SpellData = result
-        });
+        var newSpell = new ReceivedSpell() { Receiver = string.Intern(pline.ActionPart.Substring(0, pline.OptionalIndex - 3)), SpellData = result };
+        DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
       }
     }
 
@@ -166,8 +159,7 @@ namespace EQLogParser
               cast = new SpellCast()
               {
                 Caster = string.Intern(caster),
-                Spell = string.Intern(pline.ActionPart.Substring(index + 1, finalBracket - index - 1)),
-                BeginTime = pline.CurrentTime
+                Spell = string.Intern(pline.ActionPart.Substring(index + 1, finalBracket - index - 1))
               };
             }
           }
@@ -179,8 +171,7 @@ namespace EQLogParser
             cast = new SpellCast()
             {
               Caster = string.Intern(caster),
-              Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1)),
-              BeginTime = pline.CurrentTime
+              Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1))
             };
           }
           break;

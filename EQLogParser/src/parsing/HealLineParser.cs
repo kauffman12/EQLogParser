@@ -26,7 +26,7 @@ namespace EQLogParser
           HealRecord record = HandleHealed(pline);
           if (record != null)
           {
-            HealProcessedEvent e = new HealProcessedEvent() { Record = record };
+            HealProcessedEvent e = new HealProcessedEvent() { Record = record, BeginTime = pline.CurrentTime };
             EventsHealProcessed(record, e);
           }
         }
@@ -200,7 +200,6 @@ namespace EQLogParser
               Healer = string.Intern(healer),
               Healed = string.Intern(healed),
               Type = string.Intern(type),
-              BeginTime = pline.CurrentTime,
               ModifiersMask = -1
             };
 

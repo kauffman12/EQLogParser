@@ -10,7 +10,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static event EventHandler<DataPointEvent> EventsUpdateDataPoint;
-    internal static List<List<TimedAction>> HealGroups = new List<List<TimedAction>>();
+    internal static List<List<ActionBlock>> HealGroups = new List<List<ActionBlock>>();
     internal static bool IsAEHealingAvailable = false;
 
     private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
@@ -100,38 +100,41 @@ namespace EQLogParser
         DataPointEvent de = new DataPointEvent() { EventType = "UPDATE", ShowAE = showAE };
         EventsUpdateDataPoint?.Invoke(HealGroups, de);
 
-        HealGroups.ForEach(records =>
+        HealGroups.ForEach(group =>
         {
           // keep track of time range as well as the players that have been updated
           Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
 
-          records.ForEach(timedAction =>
+          group.ForEach(block =>
           {
-            HealRecord record = timedAction as HealRecord;
-
-            if (IsValidHeal(record, showAE))
+            block.Actions.ForEach(action =>
             {
-              raidTotals.Total += record.Total;
-              PlayerStats stats = CreatePlayerStats(individualStats, record.Healer);
+              HealRecord record = action as HealRecord;
 
-              UpdateStats(stats, record);
-              allStats[record.Healer] = stats;
-
-              var spellStatName = record.SubType ?? Labels.UNKNOWN_SPELL;
-              PlayerSubStats spellStats = CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
-              UpdateStats(spellStats, record);
-              allStats[stats.Name + "=" + spellStatName] = spellStats;
-
-              var healedStatName = record.Healed;
-              if (stats.SubStats2 == null)
+              if (IsValidHeal(record, showAE))
               {
-                stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
-              }
+                raidTotals.Total += record.Total;
+                PlayerStats stats = CreatePlayerStats(individualStats, record.Healer);
 
-              PlayerSubStats healedStats = CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
-              UpdateStats(healedStats, record);
-              allStats[stats.Name + "=" + healedStatName] = healedStats;
-            }
+                UpdateStats(stats, record, block.BeginTime);
+                allStats[record.Healer] = stats;
+
+                var spellStatName = record.SubType ?? Labels.UNKNOWN_SPELL;
+                PlayerSubStats spellStats = CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
+                UpdateStats(spellStats, record, block.BeginTime);
+                allStats[stats.Name + "=" + spellStatName] = spellStats;
+
+                var healedStatName = record.Healed;
+                if (stats.SubStats2 == null)
+                {
+                  stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
+                }
+
+                PlayerSubStats healedStats = CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
+                UpdateStats(healedStats, record, block.BeginTime);
+                allStats[stats.Name + "=" + healedStatName] = healedStats;
+              }
+            });
           });
 
           Parallel.ForEach(allStats.Values, stats =>

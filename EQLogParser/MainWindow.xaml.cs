@@ -157,9 +157,9 @@ namespace EQLogParser
         DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
         HealLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
 
-        HealLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record);
-        DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record);
-        DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record);
+        HealLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record, data.BeginTime);
+        DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.BeginTime);
+        DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record, data.BeginTime);
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -173,8 +173,8 @@ namespace EQLogParser
 
         DamageStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
         {
-          var groups = sender as List<List<TimedAction>>;
-          if (LoadChart(groups, DamageChartWindow, new DamageGroupIterator(groups, e.ShowBane)))
+          var groups = sender as List<List<ActionBlock>>;
+          if (LoadChart(DamageChartWindow, new DamageGroupIterator(groups, e.ShowBane)))
           {
             // cleanup memory if its closed
             DamageChartWindow = null;
@@ -183,8 +183,8 @@ namespace EQLogParser
 
         HealStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
         {
-          var groups = sender as List<List<TimedAction>>;
-          if (LoadChart(groups, HealingChartWindow, new HealGroupIterator(groups, e.ShowAE)))
+          var groups = sender as List<List<ActionBlock>>;
+          if (LoadChart(HealingChartWindow, new HealGroupIterator(groups, e.ShowAE)))
           {
             // cleanup memory if its closed
             HealingChartWindow = null;
@@ -268,13 +268,13 @@ namespace EQLogParser
       Clipboard.SetDataObject(playerParseTextBox.Text);
     }
 
-    private bool LoadChart(List<List<TimedAction>> recordGroups, DocumentWindow chartWindow, RecordGroupIterator rgIterator, List<PlayerStats> selected = null)
+    private bool LoadChart(DocumentWindow chartWindow, RecordGroupIterator rgIterator, List<PlayerStats> selected = null)
     {
       bool windowClosed = false;
 
       Dispatcher.InvokeAsync(() =>
       {
-        if (chartWindow != null && recordGroups != null && chartWindow.IsOpen)
+        if (chartWindow != null && chartWindow.IsOpen)
         {
           (chartWindow.Content as LineChart).AddDataPoints(rgIterator, selected);
         }
@@ -353,7 +353,7 @@ namespace EQLogParser
       if (CurrentDamageStats != null)
       {
         List<PlayerStats> damageList = playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-        LoadChart(DamageStatsBuilder.DamageGroups, DamageChartWindow, new DamageGroupIterator(DamageStatsBuilder.DamageGroups, includeBane.IsChecked.Value), damageList);
+        LoadChart(DamageChartWindow, new DamageGroupIterator(DamageStatsBuilder.DamageGroups, includeBane.IsChecked.Value), damageList);
       }
     }
 
@@ -365,7 +365,7 @@ namespace EQLogParser
       if (CurrentHealStats != null)
       {
         List<PlayerStats> healList = healDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-        LoadChart(HealStatsBuilder.HealGroups, HealingChartWindow, new HealGroupIterator(HealStatsBuilder.HealGroups, includeAEHealing.IsChecked.Value), healList);
+        LoadChart(HealingChartWindow, new HealGroupIterator(HealStatsBuilder.HealGroups, includeAEHealing.IsChecked.Value), healList);
       }
     }
 

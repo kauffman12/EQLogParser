@@ -186,7 +186,7 @@ namespace EQLogParser
       subStats.TimeDiffs[currentIndex] = subStats.LastTimes[currentIndex] - subStats.BeginTimes[currentIndex] + 1;
     }
 
-    protected static void UpdateStats(PlayerSubStats stats, HitRecord record)
+    protected static void UpdateStats(PlayerSubStats stats, HitRecord record, double beginTime)
     {
       if (record.Type == Labels.BANE_NAME)
       {
@@ -204,8 +204,8 @@ namespace EQLogParser
 
       LineModifiersParser.Parse(record, stats);
 
-      stats.BeginTime = double.IsNaN(stats.BeginTime) ? record.BeginTime : stats.BeginTime;
-      stats.LastTime = record.BeginTime;
+      stats.BeginTime = double.IsNaN(stats.BeginTime) ? beginTime : stats.BeginTime;
+      stats.LastTime = beginTime;
     }
 
     protected static void MergeStats(PlayerSubStats to, PlayerSubStats from)
@@ -305,10 +305,13 @@ namespace EQLogParser
         double beginTime = raidStats.BeginTimes.First();
         double endTime = raidStats.LastTimes.Last() + DEATH_TIME_OFFSET;
 
-        Parallel.ForEach(DataManager.Instance.GetPlayerDeathsDuring(beginTime, endTime), timedAction =>
+        Parallel.ForEach(DataManager.Instance.GetPlayerDeathsDuring(beginTime, endTime), block =>
         {
-          PlayerDeath death = timedAction as PlayerDeath;
-          StringIntAddHelper.Add(deathCounts, death.Player, 1);
+          block.Actions.ForEach(action =>
+          {
+            PlayerDeath death = action as PlayerDeath;
+            StringIntAddHelper.Add(deathCounts, death.Player, 1);
+          });
         });
       }
 
