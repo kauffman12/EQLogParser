@@ -50,7 +50,7 @@ namespace EQLogParser
         if (seconds > 60)
         {
           CurrentGroupID++;
-          DataManager.Instance.AddNonPlayerMapBreak(Helpers.FormatTime(seconds));
+          DataManager.Instance.AddNonPlayerMapBreak(FormatTime(seconds));
         }
       }
 
@@ -97,6 +97,27 @@ namespace EQLogParser
         GroupID = CurrentGroupID,
         CorrectMapKey = string.Intern(defender)
       };
+    }
+
+    private string FormatTime(double seconds)
+    {
+      TimeSpan diff = TimeSpan.FromSeconds(seconds);
+      string result = "Inactivity > ";
+
+      if (diff.Days >= 1)
+      {
+        result += diff.Days + " days";
+      }
+      else if (diff.Hours >= 1)
+      {
+        result += diff.Hours + " hours";
+      }
+      else
+      {
+        result += diff.Minutes + " minutes";
+      }
+
+      return result;
     }
   }
 }

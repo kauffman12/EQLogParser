@@ -29,7 +29,7 @@ namespace EQLogParser
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.3.15";
+    private const string VERSION = "v1.3.16";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -422,7 +422,7 @@ namespace EQLogParser
       if (stats != null && CurrentDamageStats.Children.ContainsKey(stats.Name))
       {
         var list = CurrentDamageStats.Children[stats.Name];
-        if (list.Count > 1 || stats.Name == DataManager.UNASSIGNED_PET_OWNER || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name)))
+        if (list.Count > 1 || stats.Name == Labels.UNASSIGNED_PET_OWNER || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name)))
         {
           var container = playerDataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
           if (container != null)

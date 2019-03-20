@@ -171,7 +171,8 @@ namespace EQLogParser
         if (list.Count > 0)
         {
           TitleBlock.Text = Stats.TargetTitle;
-          TitleDamageBlock.Text = Helpers.FormatDamage(Stats.RaidStats.Total) + " [" + Stats.RaidStats.TotalSeconds + "s @" + Helpers.FormatDamage(Stats.RaidStats.DPS) + "]";
+          TitleDamageBlock.Text = StatsBuilder.FormatTotals(Stats.RaidStats.Total) + " [" + Stats.RaidStats.TotalSeconds + "s @" + 
+            StatsBuilder.FormatTotals(Stats.RaidStats.DPS) + "]";
 
           long total = 0;
           int goodRowCount = 0;
@@ -191,7 +192,7 @@ namespace EQLogParser
               }
 
               NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
-              var damage = Helpers.FormatDamage(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + Helpers.FormatDamage(list[i].DPS) + "]";
+              var damage = StatsBuilder.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsBuilder.FormatTotals(list[i].DPS) + "]";
               DamageBlockList[i].Text = damage;
               goodRowCount++;
             }
