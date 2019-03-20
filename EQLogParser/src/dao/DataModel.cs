@@ -29,28 +29,43 @@ namespace EQLogParser
     public const string UNKNOWN_PLAYER = "Unknown Player";
   }
 
+  public class Action
+  {
+
+  }
+
+  public class TimedAction : Action
+  {
+    public double BeginTime { get; set; }
+  }
+
+  public class FullTimedAction : TimedAction
+  {
+    public double LastTime { get; set; }
+  }
+
+  public class DamageProcessedEvent : TimedAction
+  {
+    public DamageRecord Record { get; set; }
+    public string TimeString { get; set; }
+  }
+
+  public class HealProcessedEvent : TimedAction
+  {
+    public HealRecord Record { get; set; }
+  }
+
+  public class ResistProcessedEvent : TimedAction
+  {
+    public ResistRecord Record { get; set; }
+  }
+
   public class DataPointEvent
   {
     public DataPoint Data { get; set; }
     public string EventType { get; set; }
     public bool ShowBane { get; set; }
     public bool ShowAE { get; set; }
-  }
-
-  public class DamageProcessedEvent
-  {
-    public DamageRecord Record { get; set; }
-    public string TimeString { get; set; }
-  }
-
-  public class HealProcessedEvent
-  {
-    public HealRecord Record { get; set; }
-  }
-
-  public class ResistProcessedEvent
-  {
-    public ResistRecord Record { get; set; }
   }
 
   public class ProcessLine
@@ -63,22 +78,12 @@ namespace EQLogParser
     public string OptionalData { get; set; }
   }
 
-  public class TimedAction
-  {
-    public double BeginTime { get; set; }
-  }
-
-  public class FullTimedAction : TimedAction
-  {
-    public double LastTime { get; set; }
-  }
-
-  public class ResistRecord : TimedAction
+  public class ResistRecord : Action
   {
     public string Spell { get; set; }
   }
 
-  public class HitRecord : TimedAction
+  public class HitRecord : Action
   {
     public uint Total { get; set; }
     public uint OverTotal { get; set; }
@@ -99,6 +104,11 @@ namespace EQLogParser
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
     public string DefenderOwner { get; set; }
+  }
+
+  public class ActionBlock : TimedAction
+  {
+    public List<Action> Actions { get; set; }
   }
 
   public class Hit : FullTimedAction
@@ -137,13 +147,13 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
-  public class PlayerDeath : TimedAction
+  public class PlayerDeath : Action
   {
     public string Player { get; set; }
     public string Npc { get; set; }
   }
 
-  public class ReceivedSpell : TimedAction
+  public class ReceivedSpell : Action
   {
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }

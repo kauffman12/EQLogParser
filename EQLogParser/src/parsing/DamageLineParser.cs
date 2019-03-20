@@ -46,7 +46,7 @@ namespace EQLogParser
           DamageRecord record = ParseDamage(pline);
           if (record != null)
           {
-            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = pline.TimeString };
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = pline.TimeString, BeginTime = pline.CurrentTime };
             EventsDamageProcessed(record, e);
           }
         }
@@ -111,8 +111,8 @@ namespace EQLogParser
       string defender = pline.ActionPart.Substring(0, pline.OptionalIndex);
       string spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1);
 
-      ResistRecord record = new ResistRecord() { Spell = spell, BeginTime = pline.CurrentTime };
-      ResistProcessedEvent e = new ResistProcessedEvent() { Record = record };
+      ResistRecord record = new ResistRecord() { Spell = spell };
+      ResistProcessedEvent e = new ResistProcessedEvent() { Record = record, BeginTime = pline.CurrentTime };
       EventsResistProcessed(defender, e);
     }
 
@@ -536,7 +536,6 @@ namespace EQLogParser
               Total = damage,
               AttackerOwner = string.Intern(attackerOwner),
               DefenderOwner = string.Intern(defenderOwner),
-              BeginTime = pline.CurrentTime,
               ModifiersMask = -1
             };
 

@@ -46,7 +46,7 @@ namespace EQLogParser
     {
       if (processed.Record != null && !double.IsNaN(LastUpdateTime))
       {
-        var seconds = processed.Record.BeginTime - LastUpdateTime;
+        var seconds = processed.BeginTime - LastUpdateTime;
         if (seconds > 60)
         {
           CurrentGroupID++;
@@ -54,7 +54,7 @@ namespace EQLogParser
         }
       }
 
-      AddOrUpdateNpc(processed.Record, processed.Record.BeginTime, processed.TimeString.Substring(4, 15));
+      AddOrUpdateNpc(processed.Record, processed.BeginTime, processed.TimeString.Substring(4, 15));
     }
 
     private void AddOrUpdateNpc(DamageRecord record, double currentTime, string origTimeString)

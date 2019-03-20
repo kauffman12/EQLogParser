@@ -26,14 +26,13 @@ namespace EQLogParser
     private bool PetMappingUpdated = false;
     private bool SettingsUpdated = false;
 
-    private List<TimedAction> AllDamageRecords = new List<TimedAction>();
-    private List<TimedAction> AllHealRecords = new List<TimedAction>();
-    private List<TimedAction> AllSpellCasts = new List<TimedAction>();
-    private List<TimedAction> AllReceivedSpells = new List<TimedAction>();
-    private List<TimedAction> AllResists = new List<TimedAction>();
-    private List<TimedAction> PlayerDeaths = new List<TimedAction>();
+    private List<ActionBlock> AllDamageBlocks = new List<ActionBlock>();
+    private List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
+    private List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
+    private List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
+    private List<ActionBlock> AllResists = new List<ActionBlock>();
+    private List<ActionBlock> PlayerDeaths = new List<ActionBlock>();
 
-    private Dictionary<string, byte> AllUniqueSpellCasts = new Dictionary<string, byte>();
     private LRUCache<SpellData> AllUniqueSpellsLRU = new LRUCache<SpellData>(2000, 500, false);
     private Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
@@ -46,6 +45,7 @@ namespace EQLogParser
 
     private ConcurrentDictionary<string, string> ApplicationSettings = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
+    private ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> PlayerReplacement = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
@@ -211,12 +211,12 @@ namespace EQLogParser
       LifetimeNonPlayerMap.Clear();
       ProbablyNotAPlayer.Clear();
       UnVerifiedPetOrPlayer.Clear();
-      AllSpellCasts.Clear();
+      AllSpellCastBlocks.Clear();
       AllUniqueSpellCasts.Clear();
       AllUniqueSpellsLRU.Clear();
-      AllReceivedSpells.Clear();
-      AllDamageRecords.Clear();
-      AllHealRecords.Clear();
+      AllReceivedSpellBlocks.Clear();
+      AllDamageBlocks.Clear();
+      AllHealBlocks.Clear();
       PlayerDeaths.Clear();
       EventsClearedActiveData(this, true);
     }
@@ -309,29 +309,31 @@ namespace EQLogParser
       EventsNewNonPlayer(this, divider);
     }
 
-    public void AddPlayerDeath(string player, string npc, double dateTime)
+    public void AddPlayerDeath(string player, string npc, double beginTime)
     {
-      PlayerDeaths.Add(new PlayerDeath() { Player = string.Intern(player), Npc = string.Intern(npc), BeginTime = dateTime });
+      var newDeath = new PlayerDeath() { Player = string.Intern(player), Npc = string.Intern(npc) };
+      AddAction(PlayerDeaths, newDeath, beginTime);
     }
 
-    public void AddDamageRecord(DamageRecord record)
+    public void AddDamageRecord(DamageRecord record, double beginTime)
     {
       // ReplacePlayer is done in the line parser already
-      AllDamageRecords.Add(record);
+      AddAction(AllDamageBlocks, record, beginTime);
     }
 
-    public void AddResistRecord(ResistRecord record)
+    public void AddResistRecord(ResistRecord record, double beginTime)
     {
       // Resists are only seen by current player
-      AllResists.Add(record);
+      AddAction(AllResists, record, beginTime);
     }
 
-    public void AddHealRecord(HealRecord record)
+    public void AddHealRecord(HealRecord record, double beginTime)
     {
       bool replaced;
       record.Healer = ReplacePlayer(record.Healer, out replaced);
       record.Healed = ReplacePlayer(record.Healed, out replaced);
-      AllHealRecords.Add(record);
+
+      AddAction(AllHealBlocks, record, beginTime);
 
       // can use heals to determine additional players
       bool foundHealer = CheckNameForPlayer(record.Healer);
@@ -343,34 +345,26 @@ namespace EQLogParser
       }
     }
 
-    public void AddSpellCast(SpellCast cast)
+    public void AddSpellCast(SpellCast cast, double beginTime)
     {
       bool replaced;
       cast.Caster = ReplacePlayer(cast.Caster, out replaced);
+      AddAction(AllSpellCastBlocks, cast, beginTime);
 
-      lock (AllSpellCasts)
+      string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
+      if (abbrv != null)
       {
-        AllSpellCasts.Add(cast);
-
-        string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
-        if (abbrv != null)
-        {
-          AllUniqueSpellCasts[abbrv] = 1;
-        }
+        AllUniqueSpellCasts[abbrv] = 1;
       }
 
       UpdatePlayerClassFromSpell(cast);
     }
 
-    public void AddReceivedSpell(ReceivedSpell received)
+    public void AddReceivedSpell(ReceivedSpell received, double beginTime)
     {
       bool replaced;
       received.Receiver = ReplacePlayer(received.Receiver, out replaced);
-
-      lock (AllReceivedSpells)
-      {
-        AllReceivedSpells.Add(received);
-      }
+      AddAction(AllReceivedSpellBlocks, received, beginTime);
     }
 
     public void SetPlayerName(string name)
@@ -429,32 +423,32 @@ namespace EQLogParser
       return VerifiedPlayers.ContainsKey(name);
     }
 
-    public List<TimedAction> GetCastsDuring(double beginTime, double endTime)
+    public List<ActionBlock> GetCastsDuring(double beginTime, double endTime)
     {
-      return SearchActions(AllSpellCasts, beginTime, endTime);
+      return SearchActions(AllSpellCastBlocks, beginTime, endTime);
     }
 
-    public List<TimedAction> GetDamageDuring(double beginTime, double endTime)
+    public List<ActionBlock> GetDamageDuring(double beginTime, double endTime)
     {
-      return SearchActions(AllDamageRecords, beginTime, endTime);
+      return SearchActions(AllDamageBlocks, beginTime, endTime);
     }
 
-    public List<TimedAction> GetHealsDuring(double beginTime, double endTime)
+    public List<ActionBlock> GetHealsDuring(double beginTime, double endTime)
     {
-      return SearchActions(AllHealRecords, beginTime, endTime);
+      return SearchActions(AllHealBlocks, beginTime, endTime);
     }
 
-    public List<TimedAction> GetResistsDuring(double beginTime, double endTime)
+    public List<ActionBlock> GetResistsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllResists, beginTime, endTime);
     }
 
-    public List<TimedAction> GetReceivedSpellsDuring(double beginTime, double endTime)
+    public List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime)
     {
-      return SearchActions(AllReceivedSpells, beginTime, endTime);
+      return SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     }
 
-    public List<TimedAction> GetPlayerDeathsDuring(double beginTime, double endTime)
+    public List<ActionBlock> GetPlayerDeathsDuring(double beginTime, double endTime)
     {
       return SearchActions(PlayerDeaths, beginTime, endTime);
     }
@@ -756,32 +750,41 @@ namespace EQLogParser
       }
     }
 
-    private List<TimedAction> SearchActions(List<TimedAction> allActions, double beginTime, double endTime)
+    private List<ActionBlock> SearchActions(List<ActionBlock> allActions, double beginTime, double endTime)
     {
-      TimedAction startAction = new TimedAction() { BeginTime = beginTime - 1 };
-      TimedAction endAction = new TimedAction() { BeginTime = endTime + 1 };
+      ActionBlock startBlock = new ActionBlock() { BeginTime = beginTime - 1 };
+      ActionBlock endBlock = new ActionBlock() { BeginTime = endTime + 1 };
       TimedActionComparer comparer = new TimedActionComparer();
 
-      int startIndex = allActions.BinarySearch(startAction, comparer);
+      int startIndex = allActions.BinarySearch(startBlock, comparer);
       if (startIndex < 0)
       {
         startIndex = Math.Abs(startIndex) - 1;
       }
 
-      if (allActions.Count > startIndex && allActions[startIndex].BeginTime == startAction.BeginTime)
-      {
-        var result = allActions.FindIndex(startIndex, action => action.BeginTime > startAction.BeginTime);
-        startIndex = (result > -1) ? result : startIndex;
-      }
-
-      int endIndex = allActions.BinarySearch(endAction, comparer);
+      int endIndex = allActions.BinarySearch(endBlock, comparer);
       if (endIndex < 0)
       {
         endIndex = Math.Abs(endIndex) - 1;
       }
 
       int last = endIndex - startIndex;
-      return last > 0 ? allActions.GetRange(startIndex, last) : new List<TimedAction>();
+      return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionBlock>();
+    }
+
+    private void AddAction(List<ActionBlock> blockList, Action action, double beginTime)
+    {
+      var last = blockList.LastOrDefault() as ActionBlock;
+      if (last != null && last.BeginTime == beginTime)
+      {
+        last.Actions.Add(action);
+      }
+      else
+      {
+        var newSegment = new ActionBlock() { Actions = new List<Action>(), BeginTime = beginTime };
+        newSegment.Actions.Add(action);
+        blockList.Add(newSegment);
+      }
     }
 
     private class SpellClassCounter

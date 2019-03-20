@@ -20,17 +20,19 @@ namespace EQLogParser
       var begins = offsets.Item1;
       var lasts = offsets.Item2;
 
-      List<TimedAction> castsDuring = new List<TimedAction>();
-      List<TimedAction> receivedDuring = new List<TimedAction>();
+      List<Action> castsDuring = new List<Action>();
+      List<Action> receivedDuring = new List<Action>();
       for (int i = 0; i < begins.Count; i++)
       {
-        castsDuring.AddRange(DataManager.Instance.GetCastsDuring(begins[i], lasts[i]));
-        receivedDuring.AddRange(DataManager.Instance.GetReceivedSpellsDuring(begins[i], lasts[i]));
+        var blocks = DataManager.Instance.GetCastsDuring(begins[i], lasts[i]);
+        blocks.ForEach(block => castsDuring.AddRange(block.Actions));
+        blocks = DataManager.Instance.GetReceivedSpellsDuring(begins[i], lasts[i]);
+        blocks.ForEach(block => receivedDuring.AddRange(block.Actions));
       }
 
-      foreach (var timedAction in castsDuring.Where(cast => playerList.Contains((cast as SpellCast).Caster)))
+      foreach (var action in castsDuring.AsParallel().Where(cast => playerList.Contains((cast as SpellCast).Caster)))
       {
-        SpellCast cast = timedAction as SpellCast;
+        SpellCast cast = action as SpellCast;
         var spellData = DataManager.Instance.GetSpellByAbbrv(Helpers.AbbreviateSpellName(cast.Spell));
         if (spellData != null)
         {
@@ -38,9 +40,9 @@ namespace EQLogParser
         }
       }
 
-      foreach (var timedAction in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell).Receiver)))
+      foreach (var action in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell).Receiver)))
       {
-        ReceivedSpell received = timedAction as ReceivedSpell;
+        ReceivedSpell received = action as ReceivedSpell;
         UpdateMaps(received.SpellData, received.Receiver, playerReceivedCounts, maxReceivedCounts, spellMap);
       }
 
@@ -63,13 +65,14 @@ namespace EQLogParser
         var begins = offsets.Item1;
         var lasts = offsets.Item2;
 
-        List<TimedAction> timedActions = new List<TimedAction>();
+        List<Action> actions = new List<Action>();
         for (int i = 0; i < begins.Count; i++)
         {
-          timedActions.AddRange(DataManager.Instance.GetCastsDuring(begins[i], lasts[i]));
+          var blocks = DataManager.Instance.GetCastsDuring(begins[i], lasts[i]);
+          blocks.ForEach(block => actions.AddRange(block.Actions));
         }
 
-        results = timedActions.Select(action => (action as SpellCast).Caster).Distinct().ToList();
+        results = actions.Select(action => (action as SpellCast).Caster).Distinct().ToList();
       }
       else
       {
