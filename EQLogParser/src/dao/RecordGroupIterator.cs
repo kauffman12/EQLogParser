@@ -7,21 +7,21 @@ namespace EQLogParser
   {
     private bool ShowBane;
 
-    public DamageGroupIterator(List<List<TimedAction>> recordGroups, bool showBane) : base(recordGroups)
+    public DamageGroupIterator(List<List<ActionBlock>> recordGroups, bool showBane) : base(recordGroups)
     {
       ShowBane = showBane;
     }
 
-    override protected bool IsValid(TimedAction timedAction)
+    override protected bool IsValid(RecordWrapper wrapper)
     {
-      DamageRecord record = timedAction as DamageRecord;
+      DamageRecord record = wrapper.Record as DamageRecord;
       return DamageStatsBuilder.IsValidDamage(record) && (ShowBane || record.Type != Labels.BANE_NAME);
     }
 
-    override protected DataPoint Create(TimedAction timedAction)
+    override protected DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
-      DamageRecord record = timedAction as DamageRecord;
+      DamageRecord record = wrapper.Record as DamageRecord;
 
       if (record != null)
       {
@@ -32,7 +32,7 @@ namespace EQLogParser
           attacker = pname;
         }
 
-        dataPoint = new DataPoint() { Total = record.Total, Name = attacker, CurrentTime = record.BeginTime };
+        dataPoint = new DataPoint() { Total = record.Total, Name = attacker, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;
@@ -42,25 +42,25 @@ namespace EQLogParser
   public class HealGroupIterator : RecordGroupIterator
   {
     private bool ShowAE;
-    public HealGroupIterator(List<List<TimedAction>> recordGroups, bool showAE) : base(recordGroups)
+    public HealGroupIterator(List<List<ActionBlock>> recordGroups, bool showAE) : base(recordGroups)
     {
       ShowAE = showAE;
     }
 
-    override protected bool IsValid(TimedAction timedAction)
+    override protected bool IsValid(RecordWrapper wrapper)
     {
-      HealRecord record = timedAction as HealRecord;
+      HealRecord record = wrapper.Record as HealRecord;
       return HealStatsBuilder.IsValidHeal(record, ShowAE);
     }
 
-    override protected DataPoint Create(TimedAction timedAction)
+    override protected DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
-      HealRecord record = timedAction as HealRecord;
+      HealRecord record = wrapper.Record as HealRecord;
 
       if (record != null)
       {
-        dataPoint = new DataPoint() { Total = record.Total, Name = record.Healer, CurrentTime = record.BeginTime };
+        dataPoint = new DataPoint() { Total = record.Total, Name = record.Healer, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;
@@ -69,25 +69,27 @@ namespace EQLogParser
 
   public abstract class RecordGroupIterator : IEnumerable<DataPoint>
   {
-    private static TimedAction StopRecord = new TimedAction();
-    private List<List<TimedAction>> RecordGroups;
+    private static RecordWrapper StopWrapper = new RecordWrapper();
+    private List<List<ActionBlock>> RecordGroups;
     private int CurrentGroup;
+    private int CurrentBlock;
     private int CurrentRecord;
 
-    public RecordGroupIterator(List<List<TimedAction>> recordGroups)
+    public RecordGroupIterator(List<List<ActionBlock>> recordGroups)
     {
       RecordGroups = recordGroups;
       CurrentGroup = 0;
+      CurrentBlock = 0;
       CurrentRecord = 0;
     }
 
     public IEnumerator<DataPoint> GetEnumerator()
     {
-      TimedAction record;
+      RecordWrapper record;
 
-      while ((record = GetRecord()) != StopRecord)
+      while ((record = GetRecord()) != StopWrapper)
       {
-        if (IsValid(record))
+        if (record != null && IsValid(record))
         {
           yield return Create(record);
         }
@@ -96,12 +98,12 @@ namespace EQLogParser
       yield break;
     }
 
-    protected virtual bool IsValid(TimedAction timedAction)
+    protected virtual bool IsValid(RecordWrapper wrapper)
     {
       return false;
     }
 
-    protected virtual DataPoint Create(TimedAction timedAction)
+    protected virtual DataPoint Create(RecordWrapper wrapper)
     {
       return null;
     }
@@ -111,38 +113,45 @@ namespace EQLogParser
       return GetEnumerator();
     }
 
-    private TimedAction GetRecord()
+    private RecordWrapper GetRecord()
     {
-      TimedAction record = StopRecord;
+      RecordWrapper wrapper = StopWrapper;
 
       if (RecordGroups.Count > CurrentGroup)
       {
-        var list = RecordGroups[CurrentGroup];
-        if (list.Count <= CurrentRecord)
-        {
-          CurrentGroup++;
-          CurrentRecord = 0;
+        var blocks = RecordGroups[CurrentGroup];
 
-          if (RecordGroups.Count > CurrentGroup)
+        if (blocks.Count > CurrentBlock)
+        {
+          var block = blocks[CurrentBlock];
+
+          if (block.Actions.Count > CurrentRecord)
           {
-            list = RecordGroups[CurrentGroup];
-            if (list.Count > CurrentRecord)
-            {
-              record = list[CurrentRecord];
-            }
-            else
-            {
-              record = null;
-            }
+            wrapper = new RecordWrapper() { Record = block.Actions[CurrentRecord], BeginTime = block.BeginTime };
+            CurrentRecord++;
+          }
+          else
+          {
+            CurrentRecord = 0;
+            CurrentBlock++;
+            wrapper = null;
           }
         }
         else
         {
-          record = list[CurrentRecord++];
+          CurrentBlock = 0;
+          CurrentRecord = 0;
+          CurrentGroup++;
+          wrapper = null;
         }
       }
 
-      return record;
+      return wrapper;
+    }
+
+    protected class RecordWrapper : TimedAction
+    {
+      public Action Record { get; set; }
     }
   }
 }
