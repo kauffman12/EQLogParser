@@ -25,6 +25,8 @@ namespace EQLogParser
     public const string HOT_NAME = "HoT Tick";
     public const string HEAL_NAME = "Heal";
     public const string UNASSIGNED_PET_OWNER = "Unknown Pet Owner";
+    public const string UNKNOWN_SPELL = "Unknown Spell";
+    public const string UNKNOWN_PLAYER = "Unknown Player";
   }
 
   public class DataPointEvent
@@ -82,7 +84,7 @@ namespace EQLogParser
     public uint OverTotal { get; set; }
     public string Type { get; set; }
     public string SubType { get; set; }
-    public string Modifiers { get; set; }
+    public int ModifiersMask { get; set; }
   }
 
   public class HealRecord : HitRecord
