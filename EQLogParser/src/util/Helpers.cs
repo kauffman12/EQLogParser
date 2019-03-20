@@ -1,5 +1,4 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
-using Caching;
 using LiveCharts.Wpf;
 using System;
 using System.Collections.Concurrent;
@@ -9,10 +8,37 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace EQLogParser
 {
+  public class ZeroConverter : IValueConverter
+  {
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+      if (value.GetType() == typeof(double))
+      {
+        return System.Convert.ToDouble(value) > 0 ? value.ToString() : "-";
+      }
+      return string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+      if (value is string)
+      {
+        double decValue;
+        if (!double.TryParse((string) value, out decValue))
+        {
+          decValue = 0;
+        }
+        return decValue;
+      }
+      return 0;
+    }
+  }
+
   class Helpers
   {
     private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
@@ -190,68 +216,6 @@ namespace EQLogParser
       return window;
     }
 
-    internal static string FormatTime(double seconds)
-    {
-      TimeSpan diff = TimeSpan.FromSeconds(seconds);
-      string result = "Inactivity > ";
-
-      if (diff.Days >= 1)
-      {
-        result += diff.Days + " days";
-      }
-      else if (diff.Hours >= 1)
-      {
-        result += diff.Hours + " hours";
-      }
-      else
-      {
-        result += diff.Minutes + " minutes";
-      }
-
-      return result;
-    }
-
-    internal static string FormatDamage(long total)
-    {
-      string result;
-
-      if (total < 1000)
-      {
-        result = total.ToString();
-      }
-      else if (total < 1000000)
-      {
-        result = Math.Round((decimal)total / 1000, 2) + "K";
-      }
-      else if (total < 1000000000)
-      {
-        result = Math.Round((decimal)total / 1000 / 1000, 2) + "M";
-      }
-      else
-      {
-        result = Math.Round((decimal) total / 1000 / 1000 / 1000, 2) + "B";
-      }
-
-      return result;
-    }
-
-    internal static bool IsPetOrMount(string part, int start, out int len)
-    {
-      bool found = false;
-      len = -1;
-
-      int end = 2;
-      if (part.Length >= (start + ++end) && part.Substring(start, 3) == "pet" ||
-        part.Length >= (start + ++end) && part.Substring(start, 4) == "ward" && !(part.Length > (start + 5) && part[start + 5] != 'e') ||
-        part.Length >= (start + ++end) && part.Substring(start, 5) == "Mount" ||
-        part.Length >= (start + ++end) && part.Substring(start, 6) == "warder")
-      {
-        found = true;
-        len = end;
-      }
-      return found;
-    }
-
     internal static bool IsPossiblePlayerName(string part, int stop = -1)
     {
       if (stop == -1)
@@ -270,6 +234,14 @@ namespace EQLogParser
       }
 
       return found;
+    }
+
+    private class SortableNameComparer : IComparer<SortableName>
+    {
+      public int Compare(SortableName x, SortableName y)
+      {
+        return x.Name.CompareTo(y.Name);
+      }
     }
   }
 

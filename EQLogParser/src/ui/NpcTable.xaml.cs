@@ -153,7 +153,7 @@ namespace EQLogParser
       if (npc != null && npc.GroupID > -1)
       {
         DataManager.Instance.UpdateVerifiedPets(npc.Name);
-        DataManager.Instance.UpdatePetToPlayer(npc.Name, DataManager.UNASSIGNED_PET_OWNER);
+        DataManager.Instance.UpdatePetToPlayer(npc.Name, Labels.UNASSIGNED_PET_OWNER);
       }
     }
 

@@ -10,20 +10,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public enum SpellClasses
-    {
-      WAR = 1, CLR = 2, PAL = 4, RNG = 8, SHD = 16, DRU = 32, MNK = 64, BRD = 128, ROG = 256,
-      SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768
-    }
-
-    public enum SpellTarget
-    {
-      LOS = 1, CASTER_AE = 2, CASTER_GROUP = 3, CASTER_PB = 4, SINGLE = 5, SELF = 6, TARGET_AE = 8,
-      NEARBY_PLAYERS_AE = 40, DIRECTION_AE = 42, TARGET_RING_AE = 45
-    }
-
     public static DataManager Instance = new DataManager();
-    public const string UNASSIGNED_PET_OWNER = "Unknown Pet Owner";
     public event EventHandler<PetMapping> EventsUpdatePetMapping;
     public event EventHandler<string> EventsNewVerifiedPet;
     public event EventHandler<string> EventsNewVerifiedPlayer;
@@ -241,7 +228,7 @@ namespace EQLogParser
         // Pet settings
         try
         {
-          UpdateVerifiedPlayers(UNASSIGNED_PET_OWNER);
+          UpdateVerifiedPlayers(Labels.UNASSIGNED_PET_OWNER);
 
           if (System.IO.File.Exists(PETMAP_FILE))
           {
@@ -430,7 +417,7 @@ namespace EQLogParser
 
         if (!PetToPlayerMap.ContainsKey(name))
         {
-          UpdatePetToPlayer(name, UNASSIGNED_PET_OWNER);
+          UpdatePetToPlayer(name, Labels.UNASSIGNED_PET_OWNER);
         }
       }
 
@@ -735,7 +722,7 @@ namespace EQLogParser
             List<string> lines = new List<string>();
             foreach (var keypair in dict)
             {
-              if (keypair.Value != UNASSIGNED_PET_OWNER)
+              if (keypair.Value != Labels.UNASSIGNED_PET_OWNER)
               {
                 lines.Add(keypair.Key + "=" + keypair.Value);
               }
@@ -810,6 +797,14 @@ namespace EQLogParser
       public int CurrentMax { get; set; }
       public SpellClasses CurrentClass { get; set; }
       public ConcurrentDictionary<SpellClasses, int> ClassCounts { get; set; }
+    }
+
+    private class TimedActionComparer : IComparer<TimedAction>
+    {
+      public int Compare(TimedAction x, TimedAction y)
+      {
+        return x.BeginTime.CompareTo(y.BeginTime);
+      }
     }
   }
 }

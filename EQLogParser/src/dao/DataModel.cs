@@ -1,58 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Windows.Data;
+﻿using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  public class ZeroConverter : IValueConverter
+  public enum SpellClasses
   {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-      if (value.GetType() == typeof(double))
-      {
-        return System.Convert.ToDouble(value) > 0 ? value.ToString() : "-";
-      }
-      return string.Empty;
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-      if (value is string)
-      {
-        double decValue;
-        if (!double.TryParse((string) value, out decValue))
-        {
-          decValue = 0;
-        }
-        return decValue;
-      }
-      return 0;
-    }
+    WAR = 1, CLR = 2, PAL = 4, RNG = 8, SHD = 16, DRU = 32, MNK = 64, BRD = 128, ROG = 256,
+    SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768
   }
 
-  public class DataPointComparer : IComparer<DataPoint>
+  public enum SpellTarget
   {
-    public int Compare(DataPoint x, DataPoint y)
-    {
-      return x.CurrentTime.CompareTo(y.CurrentTime);
-    }
-  }
-
-  public class TimedActionComparer : IComparer<TimedAction>
-  {
-    public int Compare(TimedAction x, TimedAction y)
-    {
-      return x.BeginTime.CompareTo(y.BeginTime);
-    }
-  }
-
-  public class SortableNameComparer : IComparer<SortableName>
-  {
-    public int Compare(SortableName x, SortableName y)
-    {
-      return x.Name.CompareTo(y.Name);
-    }
+    LOS = 1, CASTER_AE = 2, CASTER_GROUP = 3, CASTER_PB = 4, SINGLE = 5, SELF = 6, TARGET_AE = 8,
+    NEARBY_PLAYERS_AE = 40, DIRECTION_AE = 42, TARGET_RING_AE = 45
   }
 
   public static class Labels
@@ -65,6 +24,7 @@ namespace EQLogParser
     public const string RESIST_NAME = "Resisted Spells";
     public const string HOT_NAME = "HoT Tick";
     public const string HEAL_NAME = "Heal";
+    public const string UNASSIGNED_PET_OWNER = "Unknown Pet Owner";
   }
 
   public class DataPointEvent
