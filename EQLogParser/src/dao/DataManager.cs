@@ -16,6 +16,12 @@ namespace EQLogParser
       SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768
     }
 
+    public enum SpellTarget
+    {
+      LOS = 1, CASTER_AE = 2, CASTER_GROUP = 3, CASTER_PB = 4, SINGLE = 5, SELF = 6, TARGET_AE = 8,
+      NEARBY_PLAYERS_AE = 40, DIRECTION_AE = 42, TARGET_RING_AE = 45
+    }
+
     public static DataManager Instance = new DataManager();
     public const string UNASSIGNED_PET_OWNER = "Unknown Pet Owner";
     public event EventHandler<PetMapping> EventsUpdatePetMapping;
@@ -47,6 +53,7 @@ namespace EQLogParser
     private Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
     private Dictionary<SpellClasses, string> ClassNames = new Dictionary<SpellClasses, string>();
     private Dictionary<string, SpellData> SpellsDB = new Dictionary<string, SpellData>();
+    private Dictionary<string, SpellData> SpellsNameDB = new Dictionary<string, SpellData>();
     private Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
     private Dictionary<string, SpellClasses> SpellsToClass = new Dictionary<string, SpellClasses>();
 
@@ -147,22 +154,26 @@ namespace EQLogParser
             string[] data = line.Split('^');
             int beneficial;
             int.TryParse(data[2], out beneficial);
-            int classMask;
-            int.TryParse(data[3], out classMask);
+            byte target;
+            byte.TryParse(data[3], out target);
+            short classMask;
+            short.TryParse(data[4], out classMask);
             SpellData spellData = new SpellData()
             {
               ID = string.Intern(data[0]),
               Spell = string.Intern(data[1]),
               SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
               Beneficial = beneficial != 0,
+              Target = target,
               ClassMask = classMask,
-              LandsOnYou = string.Intern(data[4]),
-              LandsOnOther = string.Intern(data[5]),
-              Damaging = byte.Parse(data[6]) == 1,
-              IsProc = byte.Parse(data[7]) == 1
+              LandsOnYou = string.Intern(data[5]),
+              LandsOnOther = string.Intern(data[6]),
+              Damaging = byte.Parse(data[7]) == 1,
+              IsProc = byte.Parse(data[8]) == 1
             };
 
             SpellsDB[spellData.ID] = spellData;
+            SpellsNameDB[spellData.Spell] = spellData;
             SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
 
             if (spellData.LandsOnOther.StartsWith("'s "))
@@ -353,7 +364,12 @@ namespace EQLogParser
       lock (AllSpellCasts)
       {
         AllSpellCasts.Add(cast);
-        AllUniqueSpellCasts[cast.SpellAbbrv] = 1;
+
+        string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
+        if (abbrv != null)
+        {
+          AllUniqueSpellCasts[abbrv] = 1;
+        }
       }
 
       UpdatePlayerClassFromSpell(cast);
@@ -462,6 +478,24 @@ namespace EQLogParser
       if (SpellsAbbrvDB.ContainsKey(abbrv))
       {
         result = SpellsAbbrvDB[abbrv];
+      }
+      else
+      {
+        LOG.Debug("Missing spell? " + abbrv);
+      }
+      return result;
+    }
+
+    public SpellData GetSpellByName(string name)
+    {
+      SpellData result = null;
+      if (SpellsNameDB.ContainsKey(name))
+      {
+        result = SpellsNameDB[name];
+      }
+      else
+      {
+        LOG.Debug("Missing spell? " + name);
       }
       return result;
     }

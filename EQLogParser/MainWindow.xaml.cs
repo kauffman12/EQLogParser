@@ -29,7 +29,7 @@ namespace EQLogParser
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.3.14";
+    private const string VERSION = "v1.3.15";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -175,7 +175,7 @@ namespace EQLogParser
         DamageStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
         {
           var groups = sender as List<List<TimedAction>>;
-          if (LoadChart(groups, DamageChartWindow, new DamageGroupIterator(groups, e.NpcNames, e.ShowBane)))
+          if (LoadChart(groups, DamageChartWindow, new DamageGroupIterator(groups, e.ShowBane)))
           {
             // cleanup memory if its closed
             DamageChartWindow = null;
@@ -185,31 +185,34 @@ namespace EQLogParser
         HealStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
         {
           var groups = sender as List<List<TimedAction>>;
-          if (LoadChart(groups, HealingChartWindow, new HealGroupIterator(groups)))
+          if (LoadChart(groups, HealingChartWindow, new HealGroupIterator(groups, e.ShowAE)))
           {
             // cleanup memory if its closed
             HealingChartWindow = null;
           }
         };
 
-        // read bane setting
+        // read bane and healing setting
         bool bValue;
-        string bane = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
-        includeBane.IsChecked = bane != null && bool.TryParse(bane, out bValue) && bValue;
+        string value = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
+        includeBane.IsChecked = value != null && bool.TryParse(value, out bValue) && bValue;
+
+        // AE healing
+        value = DataManager.Instance.GetApplicationSetting("IncludeAEHealing");
+        includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bValue) && bValue;
+
+        value = DataManager.Instance.GetApplicationSetting("IsDamageOverlayEnabled");
+        overlayOption.IsChecked = bool.TryParse(value, out bValue) && bValue;
+        if (overlayOption.IsChecked.Value)
+        {
+          OpenOverlay();
+        }
 
         OpenHealingChart();
         OpenDamageChart();
 
         // application data state last
         DataManager.Instance.LoadState();
-
-        bool isEnabled;
-        string value = DataManager.Instance.GetApplicationSetting("IsDamageOverlayEnabled");
-        overlayOption.IsChecked = bool.TryParse(value, out isEnabled) && isEnabled;
-        if (overlayOption.IsChecked.Value)
-        {
-          OpenOverlay();
-        }
 
         Ready = true;
         LOG.Info("Initialized Components");
@@ -351,7 +354,7 @@ namespace EQLogParser
       if (CurrentDamageStats != null)
       {
         List<PlayerStats> damageList = playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-        LoadChart(DamageStatsBuilder.DamageGroups, DamageChartWindow, new DamageGroupIterator(DamageStatsBuilder.DamageGroups, DamageStatsBuilder.NpcNames, includeBane.IsChecked.Value), damageList);
+        LoadChart(DamageStatsBuilder.DamageGroups, DamageChartWindow, new DamageGroupIterator(DamageStatsBuilder.DamageGroups, includeBane.IsChecked.Value), damageList);
       }
     }
 
@@ -363,7 +366,7 @@ namespace EQLogParser
       if (CurrentHealStats != null)
       {
         List<PlayerStats> healList = healDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-        LoadChart(HealStatsBuilder.HealGroups, HealingChartWindow, new HealGroupIterator(HealStatsBuilder.HealGroups), healList);
+        LoadChart(HealStatsBuilder.HealGroups, HealingChartWindow, new HealGroupIterator(HealStatsBuilder.HealGroups, includeAEHealing.IsChecked.Value), healList);
       }
     }
 
@@ -657,6 +660,7 @@ namespace EQLogParser
               OpenOverlay();
             }
 
+            Helpers.SpellAbbrvCache.Clear(); // only really needed during big parse
             LOG.Info("Finished Loading Log File");
           }
           else
@@ -727,6 +731,34 @@ namespace EQLogParser
       }
     }
 
+    private void RebuildHealingStats(bool showAEHealing)
+    {
+      if (CurrentHealStats != null && HealStatsBuilder.HealGroups.Count > 0)
+      {
+        Busy(true);
+
+        new Task(() =>
+        {
+          CurrentHealStats = HealStatsBuilder.ComputeHealStats(CurrentHealStats.RaidStats, showAEHealing);
+
+          Dispatcher.InvokeAsync((() =>
+          {
+            healTitle.Content = StatsBuilder.BuildTitle(CurrentHealStats);
+            healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
+            UpdateHealDataGridMenuItems();
+
+            if (healWindow.IsVisible)
+            {
+              UpdateHealParseText();
+            }
+
+            Busy(false);
+            UpdatingStats = false;
+          }));
+        }).Start();
+      }
+    }
+
     private void UpdateStats()
     {
       if (!UpdatingStats)
@@ -763,9 +795,18 @@ namespace EQLogParser
 
                 Dispatcher.InvokeAsync((() =>
                 {
-                  includeBane.IsEnabled = DamageStatsBuilder.IsBaneAvailable;
-                  dpsTitle.Content = StatsBuilder.BuildTitle(CurrentDamageStats);
-                  playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
+                  if (CurrentDamageStats == null)
+                  {
+                    dpsTitle.Content = PLAYER_TABLE_LABEL;
+                    playerDataGrid.ItemsSource = null;
+                  }
+                  else
+                  {
+                    includeBane.IsEnabled = DamageStatsBuilder.IsBaneAvailable;
+                    dpsTitle.Content = StatsBuilder.BuildTitle(CurrentDamageStats);
+                    playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
+                  }
+
                   UpdatePlayerDataGridMenuItems();
                   damageStatsComplete = true;
 
@@ -782,14 +823,26 @@ namespace EQLogParser
                 }));
               }).Start();
 
+              bool showAEHealing = includeAEHealing.IsChecked.Value;
+
               new Task(() =>
               {
-                CurrentHealStats = HealStatsBuilder.BuildTotalStats(title, realItems);
+                CurrentHealStats = HealStatsBuilder.BuildTotalStats(title, realItems, showAEHealing);
 
                 Dispatcher.InvokeAsync((() =>
                 {
-                  healTitle.Content = StatsBuilder.BuildTitle(CurrentHealStats);
-                  healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
+                  if (CurrentHealStats == null)
+                  {
+                    healTitle.Content = PLAYER_TABLE_LABEL;
+                    healDataGrid.ItemsSource = null;
+                  }
+                  else
+                  {
+                    includeAEHealing.IsEnabled = HealStatsBuilder.IsAEHealingAvailable;
+                    healTitle.Content = StatsBuilder.BuildTitle(CurrentHealStats);
+                    healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
+                  }
+
                   UpdateHealDataGridMenuItems();
                   healStatsComplete = true;
 
@@ -1049,6 +1102,15 @@ namespace EQLogParser
       {
         RebuildDamageStats(includeBane.IsChecked.Value);
         DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", includeBane.IsChecked.Value.ToString());
+      }
+    }
+
+    private void IncludeAEHealingChanged(object sender, RoutedEventArgs e)
+    {
+      if (Ready)
+      {
+        RebuildHealingStats(includeAEHealing.IsChecked.Value);
+        DataManager.Instance.SetApplicationSetting("IncludeAEHealing", includeAEHealing.IsChecked.Value.ToString());
       }
     }
 
