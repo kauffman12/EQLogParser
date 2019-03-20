@@ -1,4 +1,5 @@
 ﻿
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace EQLogParser
@@ -19,50 +20,27 @@ namespace EQLogParser
       { "Assassinate", 1 }, { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1 }, { "Headshot", 1 }
     };
 
-    public static void Parse(HitRecord record, Hit playerStats, Hit theHit = null)
+    private static int TWINCAST = 1;
+    private static int CRIT = 2;
+    private static int LUCKY = 4;
+
+    private static ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
+
+    internal static void Parse(HitRecord record, Hit playerStats, Hit theHit = null)
     {
-      if (record.Modifiers != null && record.Modifiers != "")
+      if (record.ModifiersMask > -1)
       {
-        bool lucky = false;
-        bool critical = false;
-
-        string temp = "";
-        foreach (string modifier in record.Modifiers.Split(' '))
+        if ((record.ModifiersMask & TWINCAST) != 0)
         {
-          temp += modifier;
-          if (ALL_MODIFIERS.ContainsKey(temp))
+          playerStats.TwincastHits++;
+
+          if (theHit != null)
           {
-            if (!critical && CRIT_MODIFIERS.ContainsKey(temp))
-            {
-              critical = true;
-            }
-
-            if (!lucky && "Lucky" == temp)
-            {
-              lucky = true;
-            }
-
-            switch (temp)
-            {
-              case "Twincast":
-                playerStats.TwincastHits++;
-
-                if (theHit != null)
-                {
-                  theHit.TwincastHits++;
-                }
-                break;
-            }
-
-            temp = ""; // reset
-          }
-          else
-          {
-            temp += " ";
+            theHit.TwincastHits++;
           }
         }
 
-        if (critical)
+        if ((record.ModifiersMask & CRIT) != 0)
         {
           playerStats.CritHits++;
 
@@ -71,7 +49,7 @@ namespace EQLogParser
             theHit.CritHits++;
           }
 
-          if (!lucky)
+          if ((record.ModifiersMask & LUCKY) == 0)
           {
             playerStats.TotalCrit += record.Total;
 
@@ -82,7 +60,7 @@ namespace EQLogParser
           }
         }
 
-        if (lucky)
+        if ((record.ModifiersMask & LUCKY) != 0)
         {
           playerStats.LuckyHits++;
           playerStats.TotalLucky += record.Total;
@@ -93,12 +71,69 @@ namespace EQLogParser
             theHit.TotalLucky += record.Total;
           }
         }
+      }
+    }
 
-        if (temp != "")
+    internal static int Parse(string modifiers)
+    {
+      int result = -1;
+
+      if (modifiers != null && modifiers != "")
+      {
+        if (!MaskCache.TryGetValue(modifiers, out result))
         {
-          LOG.Debug("Unknown Modifiers: " + record.Modifiers);
+          result = BuildVector(modifiers);
+          MaskCache[modifiers] = result;
         }
       }
+
+      return result;
+    }
+
+    private static int BuildVector(string modifiers)
+    {
+      int result = 0;
+
+      bool lucky = false;
+      bool critical = false;
+
+      string temp = "";
+      foreach (string modifier in modifiers.Split(' '))
+      {
+        temp += modifier;
+        if (ALL_MODIFIERS.ContainsKey(temp))
+        {
+          if (!critical && CRIT_MODIFIERS.ContainsKey(temp))
+          {
+            result = result | CRIT;
+          }
+
+          if (!lucky && "Lucky" == temp)
+          {
+            result = result | LUCKY;
+          }
+
+          switch (temp)
+          {
+            case "Twincast":
+              result = result | TWINCAST;
+              break;
+          }
+
+          temp = ""; // reset
+        }
+        else
+        {
+          temp += " ";
+        }
+      }
+
+      if (temp != "")
+      {
+        LOG.Debug("Unknown Modifiers: " + modifiers);
+      }
+
+      return result;
     }
   }
 }

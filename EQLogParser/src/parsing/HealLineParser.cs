@@ -16,12 +16,7 @@ namespace EQLogParser
       try
       {
         int index;
-        if (line.Length >= 51 && (index = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1 && 
-          (line.IndexOf("say", index + 1, 3, StringComparison.Ordinal) > -1 || line.IndexOf("tell", 4, index + 1, StringComparison.Ordinal) > -1))
-        {
-          // ignore tells
-        }
-        else if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
+        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
         {
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
@@ -205,7 +200,8 @@ namespace EQLogParser
               Healer = string.Intern(healer),
               Healed = string.Intern(healed),
               Type = string.Intern(type),
-              BeginTime = pline.CurrentTime
+              BeginTime = pline.CurrentTime,
+              ModifiersMask = -1
             };
 
             if (spell != null)
@@ -219,7 +215,7 @@ namespace EQLogParser
               int firstParen = part.LastIndexOf('(', part.Length - 4);
               if (firstParen > -1)
               {
-                record.Modifiers = string.Intern(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
+                record.ModifiersMask = LineModifiersParser.Parse(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
               }
             }
           }

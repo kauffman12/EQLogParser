@@ -34,7 +34,6 @@ namespace EQLogParser
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
-    private const int MIN_LINE_LENGTH = 33;
     private static long CastLineCount = 0;
     private static long DamageLineCount = 0;
     private static long HealLineCount = 0;
@@ -1058,7 +1057,7 @@ namespace EQLogParser
     {
       Interlocked.Exchange(ref FilePosition, position);
 
-      if (line.Length > MIN_LINE_LENGTH)
+      if (PreProcessor.NeedProcessing(line))
       {
         CastLineCount++;
         CastProcessor.Add(line);
@@ -1068,11 +1067,11 @@ namespace EQLogParser
 
         HealLineCount++;
         HealProcessor.Add(line);
-      }
 
-      if (DamageProcessor.Size() > 25000 || HealProcessor.Size() > 25000 || CastProcessor.Size() > 25000)
-      {
-        Thread.Sleep(10);
+        if (DamageProcessor.Size() > 50000 || HealProcessor.Size() > 50000 || CastProcessor.Size() > 50000)
+        {
+          Thread.Sleep(15);
+        }
       }
     }
 

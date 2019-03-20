@@ -168,6 +168,7 @@
     <Compile Include="src\control\DamageStatsBuilder.cs" />
     <Compile Include="src\parsing\HealLineParser.cs" />
     <Compile Include="src\parsing\LineModifiersParser.cs" />
+    <Compile Include="src\parsing\PreProcessor.cs" />
     <Compile Include="src\ui\BreakdownTable.cs" />
     <Compile Include="src\ui\DamageTable.xaml.cs">
       <DependentUpon>DamageTable.xaml</DependentUpon>

@@ -14,8 +14,6 @@ namespace EQLogParser
     internal static bool IsAEHealingAvailable = false;
 
     private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
-    private const string UNKNOWN_SPELL = "Unknown Spell";
-    private const string UNKNOWN_PLAYER = "Unknown Player";
 
     private static List<NonPlayer> Selected;
     private static string Title;
@@ -119,7 +117,7 @@ namespace EQLogParser
               UpdateStats(stats, record);
               allStats[record.Healer] = stats;
 
-              var spellStatName = record.SubType ?? UNKNOWN_SPELL;
+              var spellStatName = record.SubType ?? Labels.UNKNOWN_SPELL;
               PlayerSubStats spellStats = CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
               UpdateStats(spellStats, record);
               allStats[stats.Name + "=" + spellStatName] = spellStats;
