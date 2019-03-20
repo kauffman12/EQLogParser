@@ -186,11 +186,6 @@ namespace EQLogParser
           break;
       }
 
-      if (cast != null)
-      {
-        cast.SpellAbbrv = Helpers.AbbreviateSpellName(cast.Spell);
-      }
-
       return cast;
     }
   }

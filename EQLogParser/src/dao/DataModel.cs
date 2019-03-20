@@ -72,7 +72,7 @@ namespace EQLogParser
     public DataPoint Data { get; set; }
     public string EventType { get; set; }
     public bool ShowBane { get; set; }
-    public Dictionary<string, byte> NpcNames { get; set; }
+    public bool ShowAE { get; set; }
   }
 
   public class DamageProcessedEvent
@@ -191,7 +191,6 @@ namespace EQLogParser
   {
     public string Spell { get; set; }
     public string Caster { get; set; }
-    public string SpellAbbrv { get; set; }
   }
 
   public class SpellData
@@ -200,7 +199,8 @@ namespace EQLogParser
     public string Spell { get; set; }
     public string SpellAbbrv { get; set; }
     public bool Beneficial { get; set; }
-    public int ClassMask { get; set; }
+    public byte Target { get; set; }
+    public short ClassMask { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
     public bool Damaging { get; set; }
