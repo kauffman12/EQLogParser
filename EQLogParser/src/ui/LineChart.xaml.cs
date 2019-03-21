@@ -168,6 +168,8 @@ namespace EQLogParser
         label = sortedValues.Count > 0 ? "Selected Player(s)" : "No Data";
       }
 
+      sortedValues = Smoothing(sortedValues);
+
       Dispatcher.InvokeAsync(() =>
       {
         if (ChartModifiedTime < requestTime)
@@ -226,6 +228,61 @@ namespace EQLogParser
           lvcChart.Series = collection;
         }
       });
+    }
+
+    private List<ChartValues<DataPoint>> Smoothing(List<ChartValues<DataPoint>> data)
+    {
+      List<ChartValues<DataPoint>> smoothed = new List<ChartValues<DataPoint>>();
+
+      data.ForEach(points =>
+      {
+        if (points.Count > 750)
+        {
+          int tries = 1;
+          int rate = 0;
+          var current = points;
+          ChartValues<DataPoint> updatedValues;
+
+          do
+          {
+            updatedValues = new ChartValues<DataPoint>();
+            rate += (6 * tries);
+
+            for (int i = 0; i < current.Count - 2; i++)
+            {
+              var one = current[i];
+              var two = current[i + 1];
+              var three = current[i + 2];
+
+              if (two.CurrentTime - one.CurrentTime <= rate && three.CurrentTime - one.CurrentTime <= rate)
+              {
+                one.CurrentTime = Math.Truncate((one.CurrentTime + two.CurrentTime + three.CurrentTime) / 3);
+                one.Total = (one.Total + two.Total + three.Total) / 3;
+                one.VPS = (one.VPS + two.VPS + three.VPS) / 3;
+                updatedValues.Add(one);
+                i += 2;
+              }
+              else
+              {
+                updatedValues.Add(one);
+                updatedValues.Add(two);
+                i += 1;
+              }
+            }
+
+            current = updatedValues;
+          }
+          while (++tries < 12 && updatedValues.Count > 750);
+
+          smoothed.Add(updatedValues);
+        }
+        else
+        {
+          smoothed.Add(points);
+        }
+      });
+
+      return smoothed;
     }
 
     private void Reset()
