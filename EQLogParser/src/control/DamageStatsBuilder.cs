@@ -339,7 +339,7 @@ namespace EQLogParser
         if (!needAggregate || player == Labels.UNASSIGNED_PET_OWNER)
         {
           // not a pet
-          PlayerStats stats;  stats = CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
+          PlayerStats stats = CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
           UpdateStats(stats, record, beginTime);
           overlayStats.TopLevelStats[record.Attacker] = stats;
           stats.TotalSeconds = stats.LastTime - stats.BeginTime + 1;
@@ -397,8 +397,8 @@ namespace EQLogParser
         {
           overlayStats.StatsList[i].Rank = Convert.ToUInt16(i + 1);
         }
-        
-        // only calculat the top few
+
+        // only calculate the top few
         Parallel.ForEach(overlayStats.StatsList, top => UpdateCalculations(top, raidStats));
         overlayStats.TargetTitle = (overlayStats.UniqueNpcs.Count > 1 ? "Combined (" + overlayStats.UniqueNpcs.Count + "): " : "") + record.Defender;
       }

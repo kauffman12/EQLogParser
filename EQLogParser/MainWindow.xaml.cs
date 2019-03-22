@@ -29,7 +29,7 @@ namespace EQLogParser
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     private const string APP_NAME = "EQLogParser";
-    private const string VERSION = "v1.3.16";
+    private const string VERSION = "v1.3.17";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";

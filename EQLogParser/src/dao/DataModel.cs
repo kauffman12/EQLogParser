@@ -172,7 +172,7 @@ namespace EQLogParser
     public string SpellAbbrv { get; set; }
     public bool Beneficial { get; set; }
     public byte Target { get; set; }
-    public short ClassMask { get; set; }
+    public ushort ClassMask { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
     public bool Damaging { get; set; }
@@ -225,10 +225,15 @@ namespace EQLogParser
 
   public class DataPoint
   {
+    public long Avg { get; set; }
     public string Name { get; set; }
+    public int ModifiersMask { get; set; }
     public long Total { get; set; }
-    public long Rolling { get; set; }
+    public long RollingTotal { get; set; }
+    public uint RollingHits { get; set; }
+    public uint RollingCritHits { get; set; }
     public long VPS { get; set; }
+    public double CritRate { get; set; }
     public double BeginTime { get; set; }
     public double CurrentTime { get; set; }
   }

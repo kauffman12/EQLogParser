@@ -32,7 +32,7 @@ namespace EQLogParser
           attacker = pname;
         }
 
-        dataPoint = new DataPoint() { Total = record.Total, Name = attacker, CurrentTime = wrapper.BeginTime };
+        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = attacker, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;
@@ -60,7 +60,7 @@ namespace EQLogParser
 
       if (record != null)
       {
-        dataPoint = new DataPoint() { Total = record.Total, Name = record.Healer, CurrentTime = wrapper.BeginTime };
+        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = record.Healer, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;
