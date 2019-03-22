@@ -11,7 +11,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for HealTable.xaml
   /// </summary>
-  public partial class HealTable : BreakdownTable
+  public partial class HealBreakdown : BreakdownTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private CombinedHealStats CurrentStats;
@@ -21,7 +21,7 @@ namespace EQLogParser
 
     private List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
 
-    public HealTable(MainWindow mainWindow, string title)
+    public HealBreakdown(MainWindow mainWindow, string title)
     {
       InitializeComponent();
       TheMainWindow = mainWindow;

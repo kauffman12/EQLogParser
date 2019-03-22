@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -12,7 +11,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageBreakdownTable.xaml
   /// </summary>
-  public partial class DamageTable : BreakdownTable
+  public partial class DamageBreakdown : BreakdownTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private List<PlayerSubStats> PlayerStats;
@@ -34,7 +33,7 @@ namespace EQLogParser
     private Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
     private static bool running = false;
 
-    public DamageTable(MainWindow mainWindow, string title)
+    public DamageBreakdown(MainWindow mainWindow, string title)
     {
       InitializeComponent();
       TheMainWindow = mainWindow;
