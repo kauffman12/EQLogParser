@@ -161,6 +161,7 @@
     <Compile Include="Settings.cs" />
     <Compile Include="src\control\HealStatsBuilder.cs" />
     <Compile Include="src\control\StatsBuilder.cs" />
+    <Compile Include="src\control\SummaryTable.cs" />
     <Compile Include="src\dao\RecordGroupIterator.cs" />
     <Compile Include="src\parsing\CastLineParser.cs" />
     <Compile Include="src\dao\DataManager.cs" />
@@ -169,12 +170,15 @@
     <Compile Include="src\parsing\HealLineParser.cs" />
     <Compile Include="src\parsing\LineModifiersParser.cs" />
     <Compile Include="src\parsing\PreProcessor.cs" />
-    <Compile Include="src\ui\BreakdownTable.cs" />
-    <Compile Include="src\ui\DamageTable.xaml.cs">
-      <DependentUpon>DamageTable.xaml</DependentUpon>
+    <Compile Include="src\control\BreakdownTable.cs" />
+    <Compile Include="src\ui\DamageSummary.xaml.cs">
+      <DependentUpon>DamageSummary.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\HealTable.xaml.cs">
-      <DependentUpon>HealTable.xaml</DependentUpon>
+    <Compile Include="src\ui\DamageBreakdown.xaml.cs">
+      <DependentUpon>DamageBreakdown.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\ui\HealBreakdown.xaml.cs">
+      <DependentUpon>HealBreakdown.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\LineChart.xaml.cs">
       <DependentUpon>LineChart.xaml</DependentUpon>
@@ -210,11 +214,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\DamageTable.xaml">
+    <Page Include="src\ui\DamageSummary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\HealTable.xaml">
+    <Page Include="src\ui\DamageBreakdown.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\HealBreakdown.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

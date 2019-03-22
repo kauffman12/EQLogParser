@@ -18,6 +18,7 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsNewNonPlayer;
     public event EventHandler<bool> EventsClearedActiveData;
 
+    public bool Ready = false;
     public string PlayerName { get; set; }
 
     private static string CONFIG_DIR;
@@ -203,6 +204,8 @@ namespace EQLogParser
           }
         }
       }
+
+      Ready = true;
     }
 
     public void Clear()

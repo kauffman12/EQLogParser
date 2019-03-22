@@ -50,7 +50,7 @@ namespace EQLogParser
       new List<Color>() { Color.FromRgb(137, 141, 41), Color.FromRgb(130, 129, 42), Color.FromRgb(85, 86, 11) },
       new List<Color>() { Color.FromRgb(149, 94, 31), Color.FromRgb(128, 86, 25), Color.FromRgb(78, 53, 21) }
     };
- 
+
     private MainWindow TheMainWindow;
 
     public OverlayWindow(MainWindow mainWindow, bool configure = false)
