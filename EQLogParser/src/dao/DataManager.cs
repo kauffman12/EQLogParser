@@ -42,12 +42,12 @@ namespace EQLogParser
     private Dictionary<string, SpellData> SpellsNameDB = new Dictionary<string, SpellData>();
     private Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
     private Dictionary<string, SpellClasses> SpellsToClass = new Dictionary<string, SpellClasses>();
+    private Dictionary<string, byte> GameGeneratedPets = new Dictionary<string, byte>();
+    private Dictionary<string, string> PlayerReplacement = new Dictionary<string, string>();
 
     private ConcurrentDictionary<string, string> ApplicationSettings = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
     private ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
-    private ConcurrentDictionary<string, string> PlayerReplacement = new ConcurrentDictionary<string, string>();
-    private ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
@@ -115,7 +115,7 @@ namespace EQLogParser
         LOG.Error(ex);
       }
 
-      // Populated generated pets
+      // Populate generated pets
       try
       {
         if (System.IO.File.Exists(@"data\petnames.txt"))
@@ -143,8 +143,8 @@ namespace EQLogParser
             int.TryParse(data[2], out beneficial);
             byte target;
             byte.TryParse(data[3], out target);
-            short classMask;
-            short.TryParse(data[4], out classMask);
+            ushort classMask;
+            ushort.TryParse(data[4], out classMask);
             SpellData spellData = new SpellData()
             {
               ID = string.Intern(data[0]),
@@ -636,11 +636,6 @@ namespace EQLogParser
         EventsUpdatePetMapping(this, new PetMapping() { Pet = pet, Owner = player });
         PetMappingUpdated = true;
       }
-    }
-
-    public void UpdateDefinitelyNotAPlayer(string name)
-    {
-      DefinitelyNotAPlayer[name] = 1;
     }
 
     public bool UpdateProbablyNotAPlayer(string name)
