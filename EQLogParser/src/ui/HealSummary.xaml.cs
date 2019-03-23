@@ -41,6 +41,8 @@ namespace EQLogParser
 
         string name = npcList?.First().Name;
         bool showAE = includeAEHealing.IsChecked.Value;
+        dataGrid.ItemsSource = null;
+
         UpdateStatsTask = new Task(() =>
         {
           try
@@ -59,7 +61,6 @@ namespace EQLogParser
               if (CurrentHealStats == null)
               {
                 title.Content = NODATA_TABLE_LABEL;
-                dataGrid.ItemsSource = null;
               }
               else
               {

@@ -313,4 +313,15 @@ namespace EQLogParser
       return new ConcurrentDictionary<string, uint>(deathCounts);
     }
   }
+
+  internal class Parse
+  {
+    internal string Name { get; set; }
+    internal CombinedDamageStats Combined { get; set; }
+    internal List<PlayerStats> Selected { get; set; }
+    internal virtual StatsSummary Create(bool showTotals, bool rankPlayers)
+    {
+      return null;
+    }
+  }
 }
