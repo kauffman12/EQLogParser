@@ -19,11 +19,6 @@ namespace EQLogParser
     protected static DictionaryAddHelper<string, uint> StringIntAddHelper = new DictionaryAddHelper<string, uint>();
     private const int DEATH_TIME_OFFSET = 10; // seconds forward
 
-    internal static string BuildTitle(CombinedStats currentStats, bool showTotals = true)
-    {
-      return FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
-    }
-
     internal static List<PlayerStats> GetSelectedPlayerStatsByClass(string classString, ItemCollection items)
     {
       SpellClasses type = (SpellClasses) Enum.Parse(typeof(SpellClasses), classString);

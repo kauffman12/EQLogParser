@@ -29,7 +29,6 @@ namespace EQLogParser
 
       string title = "";
       string details = "";
-      string shortTitle = "";
 
       if (currentStats != null)
       {
@@ -45,11 +44,10 @@ namespace EQLogParser
         }
 
         details = list.Count > 0 ? ", " + string.Join(", ", list) : "";
-        title = BuildTitle(currentStats, showTotals);
-        shortTitle = BuildTitle(currentStats, false);
+        title = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
-      return new StatsSummary() { Title = title, RankedPlayers = details, ShortTitle = shortTitle };
+      return new StatsSummary() { Title = title, RankedPlayers = details };
     }
 
     internal static CombinedDamageStats BuildTotalStats(string title, List<NonPlayer> selected, bool showBane)
@@ -110,7 +108,7 @@ namespace EQLogParser
         else
         {
           // send update
-          DataPointEvent de = new DataPointEvent() { EventType = "UPDATE", ShowBane = showBane };
+          DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
           EventsUpdateDataPoint?.Invoke(DamageGroups, de);
         }
       }
@@ -136,9 +134,7 @@ namespace EQLogParser
 
       try
       {
-        // send update
-        DataPointEvent de = new DataPointEvent() { EventType = "UPDATE", ShowBane = showBane };
-        EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+        FireUpdateEvent(showBane);
 
         DamageGroups.ForEach(group =>
         {
@@ -267,6 +263,8 @@ namespace EQLogParser
         combined.TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title;
         combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
         combined.TotalTitle = string.Format(TOTAL_FORMAT, FormatTotals(raidTotals.Total), " Damage ", FormatTotals(raidTotals.DPS));
+        combined.FullTitle = FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
+        combined.ShortTitle = FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
         for (int i = 0; i < combined.StatsList.Count; i++)
         {
@@ -446,6 +444,20 @@ namespace EQLogParser
       });
 
       return results;
+    }
+
+    internal static void FireSelectionEvent(List<PlayerStats> selected)
+    {
+      // send update
+      DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
+      EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+    }
+
+    internal static void FireUpdateEvent(bool showBane, List<PlayerStats> selected = null)
+    {
+      // send update
+      DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupIterator(DamageGroups, showBane) };
+      EventsUpdateDataPoint?.Invoke(DamageGroups, de);
     }
 
     internal static bool IsValidDamage(DamageRecord record)

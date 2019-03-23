@@ -40,7 +40,7 @@ namespace EQLogParser
       titleLabel.Content = title;
     }
 
-    public void ShowDamage(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
+    public void Show(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
     {
       if (selectedStats != null && currentStats != null)
       {

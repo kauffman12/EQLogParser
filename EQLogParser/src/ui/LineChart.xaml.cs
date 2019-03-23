@@ -67,13 +67,29 @@ namespace EQLogParser
       Reset();
     }
 
-    public void Clear()
+    internal void Clear()
     {
       ChartValues = null;
       Reset();
     }
 
-    public void AddDataPoints(RecordGroupIterator recordIterator, List<PlayerStats> selected = null)
+    internal void HandleUpdateEvent(object sender, DataPointEvent e)
+    {
+      switch(e.Action)
+      {
+        case "CLEAR":
+          Clear();
+          break;
+        case "UPDATE":
+          AddDataPoints(e.Iterator, e.Selected);
+          break;
+        case "SELECT":
+          Plot(e.Selected);
+          break;
+      }
+    }
+
+    private void AddDataPoints(RecordGroupIterator recordIterator, List<PlayerStats> selected = null)
     {
       DateTime newTaskTime = DateTime.Now;
 
@@ -140,32 +156,7 @@ namespace EQLogParser
       });
     }
 
-    private string GetLabelFormat(double value)
-    {
-      string dateTimeString;
-      DateTime dt = value > 0 ? new DateTime((long) (value * TimeSpan.FromSeconds(1).Ticks)) : new DateTime();
-      dateTimeString = dt.ToString("HH:mm:ss");
-      return dateTimeString;
-    }
-
-    public void Plot(List<PlayerStats> selected)
-    {
-      if (ChartValues != null)
-      {
-        // handling case where chart can be updated twice
-        // when toggling bane and selection is lost
-        if (!(selected.Count == 0 && LastSelected == null))
-        {
-          Plot(ChartValues, DateTime.Now, selected);
-        }
-      }
-      else
-      {
-        Reset();
-      }
-    }
-
-    public void Plot(Dictionary<string, ChartValues<DataPoint>> theValues, DateTime requestTime, List<PlayerStats> selected = null)
+    private void Plot(Dictionary<string, ChartValues<DataPoint>> theValues, DateTime requestTime, List<PlayerStats> selected = null)
     {
       LastSelected = selected;
 
@@ -174,13 +165,13 @@ namespace EQLogParser
       if (selected == null || selected.Count == 0)
       {
         sortedValues = theValues.Values.OrderByDescending(values => values.Last().Total).Take(5).ToList();
-        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : "No Data";
+        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : Labels.NO_DATA;
       }
       else
       {
         List<string> names = selected.Select(stats => stats.OrigName).Take(10).ToList();
         sortedValues = theValues.Values.Where(values => names.Contains(values.First().Name)).ToList();
-        label = sortedValues.Count > 0 ? "Selected Player(s)" : "No Data";
+        label = sortedValues.Count > 0 ? "Selected Player(s)" : Labels.NO_DATA;
       }
 
       sortedValues = Smoothing(sortedValues);
@@ -243,6 +234,31 @@ namespace EQLogParser
           lvcChart.Series = collection;
         }
       });
+    }
+
+    private void Plot(List<PlayerStats> selected)
+    {
+      if (ChartValues != null)
+      {
+        // handling case where chart can be updated twice
+        // when toggling bane and selection is lost
+        if (!(selected.Count == 0 && LastSelected == null))
+        {
+          Plot(ChartValues, DateTime.Now, selected);
+        }
+      }
+      else
+      {
+        Reset();
+      }
+    }
+
+    private string GetLabelFormat(double value)
+    {
+      string dateTimeString;
+      DateTime dt = value > 0 ? new DateTime((long) (value * TimeSpan.FromSeconds(1).Ticks)) : new DateTime();
+      dateTimeString = dt.ToString("HH:mm:ss");
+      return dateTimeString;
     }
 
     private void UpdateRemaining(Dictionary<string, ChartValues<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
@@ -361,10 +377,13 @@ namespace EQLogParser
 
     private void Reset()
     {
-      Helpers.ChartResetView(lvcChart);
-      lvcChart.AxisX[0].LabelFormatter = GetLabelFormat;
-      lvcChart.Series = null;
-      titleLabel.Content = "No Data";
+      if (lvcChart.Series != null)
+      {
+        Helpers.ChartResetView(lvcChart);
+        lvcChart.AxisX[0].LabelFormatter = GetLabelFormat;
+        lvcChart.Series = null;
+        titleLabel.Content = Labels.NO_DATA;
+      }
     }
 
     private void Chart_DoubleClick(object sender, MouseButtonEventArgs e)

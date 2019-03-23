@@ -105,6 +105,20 @@ namespace EQLogParser
       theChart.AxisX[0].MaxValue = double.NaN;
     }
 
+    internal static void DataGridSelectAll(object sender)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
+      callingDataGrid.SelectAll();
+    }
+
+    internal static void DataGridUnselectAll(object sender)
+    {
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
+      callingDataGrid.UnselectAll();
+    }
+
     internal static DocumentWindow OpenChart(DockSite dockSite, DocumentWindow chartWindow, DockHost host, List<string> choices, string title)
     {
       DocumentWindow newChartWindow = chartWindow;
@@ -135,25 +149,9 @@ namespace EQLogParser
         {
           newChartWindow.MoveToNewHorizontalContainer();
         }
-
-        //newChartWindow.ContainerDockedSize = new Size(800, 50);
       }
 
       return newChartWindow;
-    }
-
-    internal static void DataGridSelectAll(object sender)
-    {
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      callingDataGrid.SelectAll();
-    }
-
-    internal static void DataGridUnselectAll(object sender)
-    {
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      callingDataGrid.UnselectAll();
     }
 
     internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)

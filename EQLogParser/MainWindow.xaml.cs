@@ -3,16 +3,12 @@ using ActiproSoftware.Windows.Themes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -48,12 +44,6 @@ namespace EQLogParser
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
 
-    // stats
-    private static bool UpdatingStats = false;
-    private static CombinedHealStats CurrentHealStats = null;
-    private static StatsSummary CurrentHealSummary = null;
-    private static StatsSummary SelectedSummary = null;
-
     private DocumentWindow DamageChartWindow;
     private DocumentWindow HealingChartWindow;
 
@@ -69,9 +59,9 @@ namespace EQLogParser
 
     private OverlayWindow Overlay;
     private DamageSummary DamageSummaryTable;
+    private HealSummary HealSummaryTable;
 
     private int BusyCount = 0;
-    private bool Ready = false;
 
     public MainWindow()
     {
@@ -81,34 +71,13 @@ namespace EQLogParser
 
         // update titles
         Title = APP_NAME + " " + VERSION;
-        healTitle.Content = PLAYER_TABLE_LABEL;
 
         // Clear/Reset
-        DataManager.Instance.EventsClearedActiveData += (sender, cleared) =>
-        {
-          healDataGrid.ItemsSource = null;
-          healTitle.Content = PLAYER_TABLE_LABEL;
-          (DamageChartWindow?.Content as LineChart)?.Clear();
-          (HealingChartWindow?.Content as LineChart)?.Clear();
-        };
+        DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
 
         // pet -> players
         petMappingGrid.ItemsSource = PetPlayersView;
-        DataManager.Instance.EventsUpdatePetMapping += (sender, mapping) => Dispatcher.InvokeAsync(() =>
-        {
-          var existing = PetPlayersView.FirstOrDefault(item => mapping.Pet == item.Pet);
-          if (existing != null && existing.Owner != mapping.Owner)
-          {
-            existing.Owner = mapping.Owner;
-          }
-          else
-          {
-            PetPlayersView.Add(mapping);
-          }
-
-          petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
-          ComputerStats();
-        });
+        DataManager.Instance.EventsUpdatePetMapping += Instance_EventsUpdatePetMapping;
 
         // verified pets table
         verifiedPetsGrid.ItemsSource = VerifiedPetsView;
@@ -136,6 +105,16 @@ namespace EQLogParser
         DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.BeginTime);
         DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record, data.BeginTime);
 
+        (npcWindow.Content as NpcTable).EventsSelectionChange += (sender, data) => ComputeStats();
+
+        DamageSummaryTable = damageWindow.Content as DamageSummary;
+        DamageSummaryTable.EventsSelectionChange += (sender, data) => UpdateDamageParseText();
+        HealSummaryTable = healWindow.Content as HealSummary;
+        HealSummaryTable.EventsSelectionChange += (sender, data) => UpdateDamageParseText();
+
+        DamageStatsBuilder.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
+        HealStatsBuilder.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
+
         // Setup themes
         ThemeManager.BeginUpdate();
         ThemeManager.AreNativeThemesEnabled = true;
@@ -143,56 +122,11 @@ namespace EQLogParser
         DockingThemeCatalogRegistrar.Register();
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
 
-        var npcTable = npcWindow.Content as NpcTable;
-        npcTable.EventsSelectionChange += (sender, data) => ComputerStats();
-
-        DamageSummaryTable = damageWindow?.Content as DamageSummary;
-
-        DamageSummaryTable.EventsSelectionChange += (sender, data) =>
-        {
-          UpdateDamageParseText();
-          PlotDamage(data as List<PlayerStats>);
-        };
-
-        DamageSummaryTable.EventsUpdateStats += (sender, data) =>
-        {
-          if (damageWindow.IsVisible)
-          {
-            UpdateDamageParseText();
-          }
-        };
-
-        DamageStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
-        {
-          var groups = sender as List<List<ActionBlock>>;
-          if (LoadChart(DamageChartWindow, new DamageGroupIterator(groups, e.ShowBane)))
-          {
-            // cleanup memory if its closed
-            DamageChartWindow = null;
-          }
-        };
-
-        HealStatsBuilder.EventsUpdateDataPoint += (object sender, DataPointEvent e) =>
-        {
-          var groups = sender as List<List<ActionBlock>>;
-          if (LoadChart(HealingChartWindow, new HealGroupIterator(groups, e.ShowAE)))
-          {
-            // cleanup memory if its closed
-            HealingChartWindow = null;
-          }
-        };
-
-        // AE healing
-        bool bValue;
-        string value = DataManager.Instance.GetApplicationSetting("IncludeAEHealing");
-        includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bValue) && bValue;
-
         OpenHealingChart();
         OpenDamageChart();
 
         // application data state last
         DataManager.Instance.LoadState();
-        Ready = true;
         LOG.Info("Initialized Components");
       }
       catch (Exception e)
@@ -205,11 +139,42 @@ namespace EQLogParser
       }
     }
 
+    private void Instance_EventsUpdatePetMapping(object sender, PetMapping mapping)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        var existing = PetPlayersView.FirstOrDefault(item => mapping.Pet == item.Pet);
+        if (existing != null && existing.Owner != mapping.Owner)
+        {
+          existing.Owner = mapping.Owner;
+        }
+        else
+        {
+          PetPlayersView.Add(mapping);
+        }
+
+        petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
+
+        if ((npcWindow?.Content as NpcTable)?.GetSelectedItems()?.Count > 0)
+        {
+          ComputeStats();
+        }
+      });
+    }
+
+    private void Instance_EventsClearedActiveData(object sender, bool e)
+    {
+      (damageWindow?.Content as DamageSummary)?.Clear();
+      (healWindow?.Content as HealSummary)?.Clear();
+      (DamageChartWindow?.Content as LineChart)?.Clear();
+      (HealingChartWindow?.Content as LineChart)?.Clear();
+    }
+
     internal void Busy(bool state)
     {
       BusyCount += state ? 1 : -1;
       BusyCount = BusyCount < 0 ? 0 : BusyCount;
-      busyIcon.Visibility = BusyCount > 0 ? Visibility.Hidden : Visibility.Visible;
+      busyIcon.Visibility = BusyCount == 0 ? Visibility.Hidden : Visibility.Visible;
     }
 
     internal StatsSummary BuildDamageSummary(CombinedStats combined, List<PlayerStats> selected)
@@ -220,7 +185,7 @@ namespace EQLogParser
       return summary;
     }
 
-    internal void CopyToEQ_Click(object sender, RoutedEventArgs e)
+    internal void CopyToEQ_Click(object sender = null, RoutedEventArgs e = null)
     {
       Clipboard.SetDataObject(playerParseTextBox.Text);
     }
@@ -243,7 +208,7 @@ namespace EQLogParser
     internal void ResetOverlay()
     {
       Overlay?.Close();
-      if (DamageSummaryTable != null && DamageSummaryTable.IsOverlayEnabled())
+      if (DamageSummaryTable?.IsOverlayEnabled() == true)
       {
         OpenOverlay();
       }
@@ -254,34 +219,30 @@ namespace EQLogParser
       Overlay?.Close();
     }
 
-    internal void UnplotDamage()
+    private void HandleChartUpdateEvent(DocumentWindow window, object sender, DataPointEvent e)
     {
-      (DamageChartWindow?.Content as LineChart)?.Clear();
-    }
-
-    internal void PlotDamage(List<PlayerStats> list)
-    {
-      var lineChart = DamageChartWindow?.Content as LineChart;
-      lineChart?.Plot(list);
-    }
-
-    private bool LoadChart(DocumentWindow chartWindow, RecordGroupIterator rgIterator, List<PlayerStats> selected = null)
-    {
-      bool windowClosed = false;
-
       Dispatcher.InvokeAsync(() =>
       {
-        if (chartWindow != null && chartWindow.IsOpen)
+        if (window?.IsOpen == true)
         {
-          (chartWindow.Content as LineChart).AddDataPoints(rgIterator, selected);
-        }
-        else
-        {
-          windowClosed = true;
+          (window.Content as LineChart).HandleUpdateEvent(sender, e);
         }
       });
+    }
 
-      return windowClosed;
+    private void ComputeStats()
+    {
+      var npcList = (npcWindow?.Content as NpcTable)?.GetSelectedItems();
+      var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID).ToList();
+
+      DamageSummaryTable?.UpdateStats(filtered);
+      HealSummaryTable?.UpdateStats(filtered);
+
+      if (filtered?.Count == 0)
+      {
+        (DamageChartWindow?.Content as LineChart)?.Clear();
+        (HealingChartWindow?.Content as LineChart)?.Clear();
+      }
     }
 
     private void Window_Closed(object sender, System.EventArgs e)
@@ -337,24 +298,14 @@ namespace EQLogParser
     {
       var host = HealingChartWindow?.DockHost;
       DamageChartWindow = Helpers.OpenChart(dockSite, DamageChartWindow, host, LineChart.DAMAGE_CHOICES, "Damage Chart");
-
-      if (DamageSummaryTable != null)
-      {
-        List<PlayerStats> damageList = DamageSummaryTable.GetSelectedStats();
-        LoadChart(DamageChartWindow, new DamageGroupIterator(DamageStatsBuilder.DamageGroups, DamageSummaryTable.IsBaneEnabled()), damageList);
-      }
+      DamageStatsBuilder.FireUpdateEvent(DamageSummaryTable.IsBaneEnabled(), DamageSummaryTable.GetSelectedStats());
     }
 
     private void OpenHealingChart()
     {
       var host = DamageChartWindow?.DockHost;
       HealingChartWindow = Helpers.OpenChart(dockSite, HealingChartWindow, host, LineChart.HEALING_CHOICES, "Healing Chart");
-
-      if (CurrentHealStats != null)
-      {
-        List<PlayerStats> healList = healDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-        LoadChart(HealingChartWindow, new HealGroupIterator(HealStatsBuilder.HealGroups, includeAEHealing.IsChecked.Value), healList);
-      }
+      HealStatsBuilder.FireUpdateEvent(true, DamageSummaryTable.GetSelectedStats());
     }
 
     // Main Menu Op File
@@ -375,80 +326,14 @@ namespace EQLogParser
       OpenLogFile(false, lastMins);
     }
 
-    private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      e.Row.Header = (e.Row.GetIndex() + 1).ToString();
-    }
-
-    // Player HPS Data Grid
-    private void HealDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      UpdateHealDataGridMenuItems();
-      UpdateHealParseText();
-
-      List<PlayerStats> healList = healDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-      var lineChart = HealingChartWindow?.Content as LineChart;
-      lineChart?.Plot(healList);
-    }
-
-    private void DataGridSelectAll_Click(object sender, RoutedEventArgs e)
-    {
-      Helpers.DataGridSelectAll(sender);
-    }
-
-    private void DataGridUnselectAll_Click(object sender, RoutedEventArgs e)
-    {
-      Helpers.DataGridUnselectAll(sender);
-    }
-
-    private void HealDataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
-    {
-      MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCasts(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, healDataGrid.Items));
-    }
-
-    private void HealDataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
-    {
-      if (healDataGrid.SelectedItems.Count > 0)
-      {
-        ShowSpellCasts(healDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
-      }
-    }
-
-    internal void ShowSpellCasts(List<PlayerStats> selectedStats)
-    {
-      var spellTable = new SpellCountTable(this, CurrentHealSummary.ShortTitle);
-      spellTable.ShowSpells(selectedStats, CurrentHealStats);
-      Helpers.OpenNewTab(dockSite, "spellCastsWindow", "Spell Counts", spellTable);
-    }
-
-    private void HealDataGridShowBreakdownByClass_Click(object sender, RoutedEventArgs e)
-    {
-      MenuItem menuItem = (sender as MenuItem);
-      ShowHealing(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, healDataGrid.Items));
-    }
-
-    private void HealDataGridShowBreakdown_Click(object sender, RoutedEventArgs e)
-    {
-      if (healDataGrid.SelectedItems.Count > 0)
-      {
-        ShowHealing(healDataGrid.SelectedItems.Cast<PlayerStats>().ToList());
-      }
-    }
-
-    private void ShowHealing(List<PlayerStats> selectedStats)
-    {
-      var healTable = new HealBreakdown(this, healTitle.Content.ToString());
-      healTable.Show(selectedStats, CurrentHealStats);
-      Helpers.OpenNewTab(dockSite, "healWindow", "Healing Breakdown", healTable);
-    }
-
     private void PlayerParseText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
+      LOG.Error("bbbb");
       if (!playerParseTextBox.IsFocused)
       {
         playerParseTextBox.Focus();
       }
+      LOG.Error("bbbb2");
     }
 
     private void UpdateLoadingProgress()
@@ -478,7 +363,6 @@ namespace EQLogParser
           if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100) || MonitorOnly) && EQLogReader.FileLoadComplete)
           {
             bytesReadTitle.Content = "Monitoring";
-            Busy(false);
 
             if (npcWindow.IsOpen)
             {
@@ -499,6 +383,8 @@ namespace EQLogParser
           {
             Task.Delay(300).ContinueWith(task => UpdateLoadingProgress());
           }
+
+          Busy(false);
         }
       });
     }
@@ -510,10 +396,10 @@ namespace EQLogParser
       //  UpdateDamageParseText();
       //}
 
-      if (SelectedSummary == CurrentHealSummary)
-      {
-        UpdateHealParseText();
-      }
+      //if (SelectedSummary == CurrentHealSummary)
+      //{
+      //  UpdateHealParseText();
+      //}
     }
 
     private void UpdateDamageParseText()
@@ -529,6 +415,7 @@ namespace EQLogParser
 
     private void UpdateHealParseText()
     {
+      /*
       if (CurrentHealStats != null)
       {
         List<PlayerStats> list = healDataGrid?.SelectedItems.Count > 0 ? healDataGrid.SelectedItems.Cast<PlayerStats>().ToList() : null;
@@ -536,174 +423,7 @@ namespace EQLogParser
         playerParseTextBox.Text = CurrentHealSummary.Title + CurrentHealSummary.RankedPlayers;
         playerParseTextBox.SelectAll();
       }
-    }
-
-    /*
-    private void RebuildDamageStats(bool showBane)
-    {
-      if (CurrentDamageStats != null && DamageStatsBuilder.DamageGroups.Count > 0)
-      {
-        Busy(true);
-
-        new Task(() =>
-        {
-          CurrentDamageStats = DamageStatsBuilder.ComputeDamageStats(CurrentDamageStats.RaidStats, showBane);
-
-          Dispatcher.InvokeAsync((() =>
-          {
-            dpsTitle.Content = StatsBuilder.BuildTitle(CurrentDamageStats);
-            playerDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
-            UpdatePlayerDataGridMenuItems();
-
-            if (damageWindow.IsVisible)
-            {
-              UpdateDamageParseText();
-            }
-
-            Busy(false);
-            UpdatingStats = false;
-          }));
-        }).Start();
-      }
-    }
-    */
-
-    private void RebuildHealingStats(bool showAEHealing)
-    {
-      if (CurrentHealStats != null && HealStatsBuilder.HealGroups.Count > 0)
-      {
-        Busy(true);
-
-        new Task(() =>
-        {
-          CurrentHealStats = HealStatsBuilder.ComputeHealStats(CurrentHealStats.RaidStats, showAEHealing);
-
-          Dispatcher.InvokeAsync((() =>
-          {
-            healTitle.Content = StatsBuilder.BuildTitle(CurrentHealStats);
-            healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
-            UpdateHealDataGridMenuItems();
-
-            if (healWindow.IsVisible)
-            {
-              UpdateHealParseText();
-            }
-
-            Busy(false);
-            UpdatingStats = false;
-          }));
-        }).Start();
-      }
-    }
-
-    private void ComputerStats()
-    {
-      if (!UpdatingStats)
-      {
-        bool taskStarted = false;
-        UpdatingStats = true;
-
-        if (npcWindow.IsOpen)
-        {
-          var realItems = (npcWindow.Content as NpcTable).GetSelectedItems();
-          if (realItems.Count > 0)
-          {
-            healTitle.Content = "Calculating HPS...";
-            healDataGrid.ItemsSource = null;
-
-            if (realItems.Count > 0)
-            {
-              DamageSummaryTable.UpdateStats(realItems);
-              taskStarted = true;
-              Busy(true);
-
-              realItems = realItems.OrderBy(item => item.ID).ToList();
-              string title = realItems.First().Name;
-
-              bool showAEHealing = includeAEHealing.IsChecked.Value;
-
-              new Task(() =>
-              {
-                CurrentHealStats = HealStatsBuilder.BuildTotalStats(title, realItems, showAEHealing);
-
-                Dispatcher.InvokeAsync((() =>
-                {
-                  if (CurrentHealStats == null)
-                  {
-                    healTitle.Content = PLAYER_TABLE_LABEL;
-                    healDataGrid.ItemsSource = null;
-                  }
-                  else
-                  {
-                    includeAEHealing.IsEnabled = HealStatsBuilder.IsAEHealingAvailable;
-                    healTitle.Content = StatsBuilder.BuildTitle(CurrentHealStats);
-                    healDataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
-                  }
-
-                  UpdateHealDataGridMenuItems();
-
-                  if (healWindow.IsVisible)
-                  {
-                    UpdateHealParseText();
-                  }
-
-                  Busy(false);
-                  UpdatingStats = false;
-                }));
-              }).Start();
-            }
-          }
-        }
-
-        if (!taskStarted)
-        {
-          if (healDataGrid.ItemsSource is ObservableCollection<PlayerStats> healList)
-          {
-            CurrentHealStats = null;
-            healTitle.Content = PLAYER_TABLE_LABEL;
-            healList.Clear();
-          }
-
-          (DamageChartWindow?.Content as LineChart)?.Clear();
-          (HealingChartWindow?.Content as LineChart)?.Clear();
-
-          playerParseTextBox.Text = "";
-          UpdateHealDataGridMenuItems();
-          UpdatingStats = false;
-        }
-      }
-    }
-
-    private void UpdateHealDataGridMenuItems()
-    {
-      if (CurrentHealStats != null && CurrentHealStats.StatsList.Count > 0)
-      {
-        hdgMenuItemSelectAll.IsEnabled = healDataGrid.SelectedItems.Count < healDataGrid.Items.Count;
-        hdgMenuItemUnselectAll.IsEnabled = healDataGrid.SelectedItems.Count > 0;
-        hdgMenuItemShowBreakdown.IsEnabled = hdgMenuItemShowSpellCasts.IsEnabled = true;
-        UpdateClassMenuItems(hdgMenuItemShowBreakdown, healDataGrid, CurrentHealStats.UniqueClasses);
-        UpdateClassMenuItems(hdgMenuItemShowSpellCasts, healDataGrid, CurrentHealStats.UniqueClasses);
-      }
-      else
-      {
-        hdgMenuItemUnselectAll.IsEnabled = hdgMenuItemSelectAll.IsEnabled = hdgMenuItemShowBreakdown.IsEnabled = hdgMenuItemShowSpellCasts.IsEnabled = false;
-      }
-    }
-
-    private void UpdateClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
-    {
-      foreach (var item in menu.Items)
-      {
-        MenuItem menuItem = item as MenuItem;
-        if (menuItem.Header as string == "Selected")
-        {
-          menuItem.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        }
-        else
-        {
-          menuItem.IsEnabled = uniqueClasses.ContainsKey(menuItem.Header as string);
-        }
-      }
+      */
     }
 
     private void PlayerParseTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -743,6 +463,7 @@ namespace EQLogParser
 
     private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      LOG.Error("aaaa");
       var comboBox = sender as ComboBox;
       if (comboBox != null)
       {
@@ -754,6 +475,7 @@ namespace EQLogParser
           petMappingGrid.CommitEdit();
         }
       }
+      LOG.Error("aaaa2");
     }
 
     private void OpenLogFile(bool monitorOnly = false, int lastMins = -1)
@@ -849,15 +571,6 @@ namespace EQLogParser
       else if (sender == healWindow && healWindow.IsVisible)
       {
         UpdateHealParseText();
-      }
-    }
-
-    private void IncludeAEHealingChanged(object sender, RoutedEventArgs e)
-    {
-      if (Ready)
-      {
-        RebuildHealingStats(includeAEHealing.IsChecked.Value);
-        DataManager.Instance.SetApplicationSetting("IncludeAEHealing", includeAEHealing.IsChecked.Value.ToString());
       }
     }
   }
