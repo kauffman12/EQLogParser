@@ -18,32 +18,6 @@ namespace EQLogParser
     private static List<NonPlayer> Selected;
     private static string Title;
 
-    internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
-    {
-      List<string> list = new List<string>();
-
-      string title = "";
-      string details = "";
-
-      if (currentStats != null)
-      {
-        if (selected != null)
-        {
-          foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
-          {
-            string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(TOTAL_ONLY_FORMAT, FormatTotals(stats.Total));
-            list.Add(playerFormat + damageFormat + " ");
-          }
-        }
-
-        details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-        title = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
-      }
-
-      return new StatsSummary() { Title = title, RankedPlayers = details, };
-    }
-
     internal static CombinedHealStats BuildTotalStats(string title, List<NonPlayer> selected, bool showAE)
     {
       CombinedHealStats combined = null;
@@ -169,6 +143,32 @@ namespace EQLogParser
       return combined;
     }
 
+    internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
+    {
+      List<string> list = new List<string>();
+
+      string title = "";
+      string details = "";
+
+      if (currentStats != null)
+      {
+        if (selected != null)
+        {
+          foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+          {
+            string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
+            string damageFormat = string.Format(TOTAL_ONLY_FORMAT, FormatTotals(stats.Total));
+            list.Add(playerFormat + damageFormat + " ");
+          }
+        }
+
+        details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
+        title = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+      }
+
+      return new StatsSummary() { Title = title, RankedPlayers = details, };
+    }
+
     internal static void FireSelectionEvent(List<PlayerStats> selected)
     {
       // send update
@@ -204,6 +204,14 @@ namespace EQLogParser
       }
 
       return valid;
+    }
+  }
+
+  internal class HealParse : Parse
+  {
+    internal new StatsSummary Create(bool showTotals, bool rankPlayers)
+    {
+      return HealStatsBuilder.BuildSummary(Combined, Selected, showTotals, rankPlayers);
     }
   }
 }

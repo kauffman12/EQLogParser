@@ -573,5 +573,10 @@ namespace EQLogParser
         UpdateHealParseText();
       }
     }
+
+    private void ParseList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+
+    }
   }
 }

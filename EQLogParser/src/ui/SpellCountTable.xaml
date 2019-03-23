@@ -15,10 +15,10 @@
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,1,8,0" x:Name="countTypes" Height="25" SelectionChanged="Options_SelectionChanged" />
-      <ComboBox Margin="0,1,8,0" x:Name="minFreqList" Height="25" SelectionChanged="Options_SelectionChanged" />
-      <ComboBox Margin="0,1,8,0" x:Name="spellTypes" Height="25" SelectionChanged="Options_SelectionChanged" />
-      <ComboBox Margin="0,1,8,0" x:Name="castTypes" Height="25" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox Margin="0,1,8,0" x:Name="countTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox Margin="0,1,8,0" x:Name="minFreqList" Height="24" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox Margin="0,1,8,0" x:Name="spellTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox Margin="0,1,8,0" x:Name="castTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
     </StackPanel>
     <datagrid:ThemedDataGrid Grid.Row="1" x:Name="spellCountDataGrid" Margin="0,2,0,0"  AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" />
   </Grid>
