@@ -82,6 +82,8 @@ namespace EQLogParser
 
         string name = npcList?.First().Name;
         bool showBane = includeBane.IsChecked.Value;
+        dataGrid.ItemsSource = null;
+
         UpdateStatsTask = new Task(() =>
         {
           try
@@ -95,12 +97,13 @@ namespace EQLogParser
               CurrentDamageStats = DamageStatsBuilder.BuildTotalStats(name, npcList, showBane);
             }
 
+            var parse = new DamageParse() { Combined = CurrentDamageStats, Name = "Damage Parse" };
+
             Dispatcher.InvokeAsync((() =>
             {
               if (CurrentDamageStats == null)
               {
                 title.Content = NODATA_TABLE_LABEL;
-                dataGrid.ItemsSource = null;
               }
               else
               {

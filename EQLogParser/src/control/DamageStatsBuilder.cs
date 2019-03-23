@@ -23,33 +23,6 @@ namespace EQLogParser
 
     private static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
 
-    internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
-    {
-      List<string> list = new List<string>();
-
-      string title = "";
-      string details = "";
-
-      if (currentStats != null)
-      {
-        if (selected != null)
-        {
-          foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
-          {
-            string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(TOTAL_FORMAT, FormatTotals(stats.Total), "", FormatTotals(stats.DPS));
-            string timeFormat = string.Format(TIME_FORMAT, stats.TotalSeconds);
-            list.Add(playerFormat + damageFormat + " " + timeFormat);
-          }
-        }
-
-        details = list.Count > 0 ? ", " + string.Join(", ", list) : "";
-        title = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
-      }
-
-      return new StatsSummary() { Title = title, RankedPlayers = details };
-    }
-
     internal static CombinedDamageStats BuildTotalStats(string title, List<NonPlayer> selected, bool showBane)
     {
       CombinedDamageStats combined = null;
@@ -404,6 +377,33 @@ namespace EQLogParser
       return overlayStats;
     }
 
+    internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
+    {
+      List<string> list = new List<string>();
+
+      string title = "";
+      string details = "";
+
+      if (currentStats != null)
+      {
+        if (selected != null)
+        {
+          foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+          {
+            string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
+            string damageFormat = string.Format(TOTAL_FORMAT, FormatTotals(stats.Total), "", FormatTotals(stats.DPS));
+            string timeFormat = string.Format(TIME_FORMAT, stats.TotalSeconds);
+            list.Add(playerFormat + damageFormat + " " + timeFormat);
+          }
+        }
+
+        details = list.Count > 0 ? ", " + string.Join(", ", list) : "";
+        title = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+      }
+
+      return new StatsSummary() { Title = title, RankedPlayers = details };
+    }
+
     internal static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(CombinedDamageStats combined, PlayerStats selected)
     {
       Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
@@ -484,6 +484,14 @@ namespace EQLogParser
 
       Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
       LongIntAddHelper.Add(values, record.Total, 1);
+    }
+  }
+
+  internal class DamageParse : Parse
+  {
+    internal new StatsSummary Create(bool showTotals, bool rankPlayers)
+    {
+      return DamageStatsBuilder.BuildSummary(Combined, Selected, showTotals, rankPlayers);
     }
   }
 }

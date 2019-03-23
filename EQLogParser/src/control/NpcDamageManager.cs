@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace EQLogParser
 {
@@ -7,9 +6,9 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    internal const int NPC_DEATH_TIME = 25;
     internal double LastUpdateTime { get; set; }
 
-    public const int NPC_DEATH_TIME = 25;
     private int CurrentNpcID = 0;
     private int CurrentGroupID = 0;
 
@@ -24,7 +23,7 @@ namespace EQLogParser
       DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
     }
 
-    internal NonPlayer Find(string defender, string type)
+    private NonPlayer Find(string defender, string type)
     {
       NonPlayer npc = null;
 
