@@ -180,6 +180,9 @@
     <Compile Include="src\ui\HealBreakdown.xaml.cs">
       <DependentUpon>HealBreakdown.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\HealSummary.xaml.cs">
+      <DependentUpon>HealSummary.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\LineChart.xaml.cs">
       <DependentUpon>LineChart.xaml</DependentUpon>
     </Compile>
@@ -223,6 +226,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\HealBreakdown.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\HealSummary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

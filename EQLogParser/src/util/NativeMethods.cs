@@ -22,9 +22,11 @@ namespace EQLogParser
       // ...
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Portability", "CA1901:PInvokeDeclarationsShouldBePortable", MessageId = "return")]
     [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
     private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
     private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace EQLogParser
 {
@@ -24,6 +25,7 @@ namespace EQLogParser
     public const string RESIST_NAME = "Resisted Spells";
     public const string HOT_NAME = "HoT Tick";
     public const string HEAL_NAME = "Heal";
+    public const string NO_DATA = "No Data Available";
     public const string UNASSIGNED_PET_OWNER = "Unknown Pet Owner";
     public const string UNKNOWN_SPELL = "Unknown Spell";
     public const string UNKNOWN_PLAYER = "Unknown Player";
@@ -44,6 +46,11 @@ namespace EQLogParser
     public double LastTime { get; set; }
   }
 
+  public class PlayerStatsSelectionChangedEvent : EventArgs
+  {
+    public List<PlayerStats> Selected { get; set; }
+  }
+
   public class DamageProcessedEvent : TimedAction
   {
     public DamageRecord Record { get; set; }
@@ -62,10 +69,9 @@ namespace EQLogParser
 
   public class DataPointEvent
   {
-    public DataPoint Data { get; set; }
-    public string EventType { get; set; }
-    public bool ShowBane { get; set; }
-    public bool ShowAE { get; set; }
+    public string Action { get; set; }
+    public RecordGroupIterator Iterator { get; set; }
+    public List<PlayerStats> Selected { get; set; }
   }
 
   public class ProcessLine
@@ -200,6 +206,8 @@ namespace EQLogParser
     public string TargetTitle { get; set; }
     public string TimeTitle { get; set; }
     public string TotalTitle { get; set; }
+    public string FullTitle { get; set; }
+    public string ShortTitle { get; set; }
     public List<PlayerStats> StatsList { get; set; }
     public PlayerStats RaidStats { get; set; }
   }
@@ -250,7 +258,6 @@ namespace EQLogParser
   public class StatsSummary
   {
     public string Title { get; set; }
-    public string ShortTitle { get; set; }
     public string RankedPlayers { get; set; }
   }
 
