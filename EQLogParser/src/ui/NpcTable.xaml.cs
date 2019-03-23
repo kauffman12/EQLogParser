@@ -20,9 +20,11 @@ namespace EQLogParser
   /// </summary>
   public partial class NpcTable : UserControl
   {
-   // events
-   [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1009:DeclareEventHandlersCorrectly")]
-   public event EventHandler<IList> EventsSelectionChange;
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+    // events
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1009:DeclareEventHandlersCorrectly")]
+    public event EventHandler<IList> EventsSelectionChange;
 
     // brushes
     public static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
