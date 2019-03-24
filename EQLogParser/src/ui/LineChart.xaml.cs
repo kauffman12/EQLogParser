@@ -81,6 +81,7 @@ namespace EQLogParser
           Clear();
           break;
         case "UPDATE":
+          Clear();
           AddDataPoints(e.Iterator, e.Selected);
           break;
         case "SELECT":

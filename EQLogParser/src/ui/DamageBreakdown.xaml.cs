@@ -15,7 +15,8 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private List<PlayerSubStats> PlayerStats;
-    private CombinedDamageStats CurrentStats;
+    private PlayerStats RaidStats;
+    private Dictionary<string, List<PlayerStats>> ChildStats;
     private bool CurrentGroupDDSetting = true;
     private bool CurrentGroupDoTSetting = true;
     private bool CurrentGroupProcsSetting = true;
@@ -33,25 +34,26 @@ namespace EQLogParser
     private Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
     private static bool running = false;
 
-    public DamageBreakdown(MainWindow mainWindow, string title)
+    public DamageBreakdown(MainWindow mainWindow, CombinedDamageStats currentStats)
     {
       InitializeComponent();
       TheMainWindow = mainWindow;
-      titleLabel.Content = title;
+      titleLabel.Content = currentStats.ShortTitle;
+      RaidStats = currentStats.RaidStats;
+      ChildStats = currentStats.Children;
     }
 
-    public void Show(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
+    public void Show(List<PlayerStats> selectedStats)
     {
-      if (selectedStats != null && currentStats != null)
+      if (selectedStats != null)
       {
-        CurrentStats = currentStats;
         Display(selectedStats);
       }
     }
 
     private new void Display(List<PlayerStats> selectedStats = null)
     {
-      if (running == false)
+      if (running == false && ChildStats != null && RaidStats != null)
       {
         running = true;
         Dispatcher.InvokeAsync(() => TheMainWindow.Busy(true));
@@ -68,9 +70,9 @@ namespace EQLogParser
               PlayerStats = new List<PlayerSubStats>();
               foreach (var playerStat in selectedStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
               {
-                if (CurrentStats.Children.ContainsKey(playerStat.Name))
+                if (ChildStats.ContainsKey(playerStat.Name))
                 {
-                  foreach (var childStat in CurrentStats.Children[playerStat.Name])
+                  foreach (var childStat in ChildStats[playerStat.Name])
                   {
                     PlayerStats.Add(childStat);
                     BuildGroups(childStat, childStat.SubStats.Values.ToList());
@@ -206,7 +208,7 @@ namespace EQLogParser
         if (stats.Hits > 0)
         {
           stats.DPS = (long) Math.Round(stats.Total / stats.TotalSeconds, 2);
-          stats.SDPS = (long) Math.Round(stats.Total / CurrentStats.RaidStats.TotalSeconds, 2);
+          stats.SDPS = (long) Math.Round(stats.Total / RaidStats.TotalSeconds, 2);
           stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
 
           if (stats.CritHits > 0)

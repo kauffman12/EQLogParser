@@ -75,6 +75,14 @@ namespace EQLogParser
     public List<PlayerStats> Selected { get; set; }
   }
 
+  public class StatsGenerationEvent
+  {
+    public string State { get; set; }
+    public CombinedStats CombinedStats { get; set; }
+    public bool IsBaneAvailable { get; set; }
+    public bool IsAEHealingAvailable { get; set; }
+  }
+
   public class ProcessLine
   {
     public string Line { get; set; }

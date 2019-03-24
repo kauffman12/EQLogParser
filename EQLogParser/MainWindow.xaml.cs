@@ -112,8 +112,8 @@ namespace EQLogParser
         HealSummaryTable = healWindow.Content as HealSummary;
         HealSummaryTable.EventsSelectionChange += (sender, data) => UpdateDamageParseText();
 
-        DamageStatsManager.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
-        HealStatsManager.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
+        DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
+        HealStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -235,14 +235,12 @@ namespace EQLogParser
       var npcList = (npcWindow?.Content as NpcTable)?.GetSelectedItems();
       var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID).ToList();
 
-      DamageSummaryTable?.UpdateStats(filtered);
-      HealSummaryTable?.UpdateStats(filtered);
+      string name = npcList?.FirstOrDefault()?.Name;
+      bool isBaneEnabled = DamageSummaryTable?.IsBaneEnabled() == true;
+      bool isAEEnabled = HealSummaryTable?.IsAEHealingEnabled() == true;
 
-      if (filtered?.Count == 0)
-      {
-        (DamageChartWindow?.Content as LineChart)?.Clear();
-        (HealingChartWindow?.Content as LineChart)?.Clear();
-      }
+      Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(name, npcList, isBaneEnabled));
+      Task.Run(() => HealStatsManager.Instance.BuildTotalStats(name, npcList, isAEEnabled));
     }
 
     private void Window_Closed(object sender, System.EventArgs e)
@@ -298,14 +296,14 @@ namespace EQLogParser
     {
       var host = HealingChartWindow?.DockHost;
       DamageChartWindow = Helpers.OpenChart(dockSite, DamageChartWindow, host, LineChart.DAMAGE_CHOICES, "Damage Chart");
-      DamageStatsManager.FireUpdateEvent(DamageSummaryTable.IsBaneEnabled(), DamageSummaryTable.GetSelectedStats());
+      DamageStatsManager.Instance.FireUpdateEvent(DamageSummaryTable.IsBaneEnabled(), DamageSummaryTable.GetSelectedStats());
     }
 
     private void OpenHealingChart()
     {
       var host = DamageChartWindow?.DockHost;
       HealingChartWindow = Helpers.OpenChart(dockSite, HealingChartWindow, host, LineChart.HEALING_CHOICES, "Healing Chart");
-      HealStatsManager.FireUpdateEvent(true, DamageSummaryTable.GetSelectedStats());
+      HealStatsManager.Instance.FireUpdateEvent(true, DamageSummaryTable.GetSelectedStats());
     }
 
     // Main Menu Op File
@@ -328,12 +326,10 @@ namespace EQLogParser
 
     private void PlayerParseText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
-      LOG.Error("bbbb");
       if (!playerParseTextBox.IsFocused)
       {
         playerParseTextBox.Focus();
       }
-      LOG.Error("bbbb2");
     }
 
     private void UpdateLoadingProgress()
