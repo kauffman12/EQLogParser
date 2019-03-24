@@ -332,7 +332,7 @@ namespace EQLogParser
       CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
       CopyButton.Click += (object sender, RoutedEventArgs e) =>
       {
-        TheMainWindow.BuildDamageSummary(Stats, Stats.StatsList);
+        TheMainWindow.UpdateDamageParse(Stats, Stats.StatsList);
         TheMainWindow.CopyToEQ_Click(sender, e);
       };
 

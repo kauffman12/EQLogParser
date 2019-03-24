@@ -91,8 +91,8 @@ namespace EQLogParser
     {
       if (selected.Count > 0)
       {
-        var healTable = new HealBreakdown(TheMainWindow, CurrentHealStats.ShortTitle);
-        healTable.Show(selected, CurrentHealStats);
+        var healTable = new HealBreakdown(TheMainWindow, CurrentHealStats);
+        healTable.Show(selected);
         Helpers.OpenNewTab(TheMainWindow.dockSite, "healWindow", "Healing Breakdown", healTable);
       }
     }

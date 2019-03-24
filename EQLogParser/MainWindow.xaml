@@ -77,10 +77,10 @@
             <docking:TabbedMdiHost>
               <docking:SplitContainer Orientation="Vertical">
                 <docking:TabbedMdiContainer>
-                  <docking:DocumentWindow x:Name="damageWindow" Title="Damage Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False" ContainerMinSize="600,50" IsVisibleChanged="Window_VisibleChanged">
+                  <docking:DocumentWindow x:Name="damageWindow" Title="Damage Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False" ContainerMinSize="600,50">
                     <local:DamageSummary />
                   </docking:DocumentWindow>
-                  <docking:DocumentWindow x:Name="healWindow" Title="Healing Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False" IsVisibleChanged="Window_VisibleChanged">
+                  <docking:DocumentWindow x:Name="healWindow" Title="Healing Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False">
                     <local:HealSummary />
                   </docking:DocumentWindow>
                 </docking:TabbedMdiContainer>

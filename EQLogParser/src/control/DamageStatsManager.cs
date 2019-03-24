@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class DamageStatsManager
+  class DamageStatsManager : SummaryBuilder
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -294,19 +294,20 @@ namespace EQLogParser
     private void FireCompletedEvent(CombinedDamageStats combined)
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "COMPLETED", CombinedStats = combined, IsBaneAvailable = IsBaneAvailable });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.DAMAGE_PARSE, State = "COMPLETED", CombinedStats = combined,
+        IsBaneAvailable = IsBaneAvailable });
     }
 
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "STARTED" });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.DAMAGE_PARSE, State = "STARTED" });
     }
 
     private void FireNoDataEvent()
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "NONPC" });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.DAMAGE_PARSE, State = "NONPC" });
 
       // send update
       DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
@@ -488,7 +489,7 @@ namespace EQLogParser
       Helpers.LongIntAddHelper.Add(values, record.Total, 1);
     }
 
-    internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
+    public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
     {
       List<string> list = new List<string>();
 
@@ -513,14 +514,6 @@ namespace EQLogParser
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details };
-    }
-  }
-
-  internal class DamageParse : Parse
-  {
-    internal new StatsSummary Create(bool showTotals, bool rankPlayers)
-    {
-      return DamageStatsManager.BuildSummary(Combined, Selected, showTotals, rankPlayers);
     }
   }
 }
