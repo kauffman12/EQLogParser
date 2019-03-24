@@ -98,6 +98,9 @@ namespace EQLogParser
 
         VerifiedPlayersProperty = VerifiedPlayersView;
 
+        parseList.ItemsSource = new List<string>() { Labels.DAMAGE_PARSE, Labels.HEAL_PARSE };
+        parseList.SelectedIndex = 0;
+
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
         DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
         HealLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
@@ -402,7 +405,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         var summary = builder?.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
-        Parses[name] = new ParseData() { Builder = builder, CombinedStats = combined };
+        Parses[name] = new ParseData() { Builder = builder, CombinedStats = combined, Selected = selected };
         playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
         playerParseTextBox.SelectAll();
       });
@@ -418,19 +421,27 @@ namespace EQLogParser
 
     private void PlayerParseTextCheckChange(object sender, RoutedEventArgs e)
     {
-
+      if (parseList.SelectedIndex > -1)
+      {
+        var value = parseList.SelectedItem as string;
+        UpdateParse(value, Parses[value]?.Selected);
+      }
     }
 
     private void ParseList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-
+      var value = parseList.SelectedItem as string;
+      if (value != null && Parses.ContainsKey(value))
+      {
+        UpdateParse(value, Parses[value]?.Selected);
+      }
     }
 
     private void PlayerParseTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
       if (playerParseTextBox.Text == "" || playerParseTextBox.Text == SHARE_DPS_LABEL)
       {
-        //copyToEQButton.IsEnabled = copyDamageParseToEQClick.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
+        copyToEQButton.IsEnabled =  false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = SHARE_DPS_LABEL;
         sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
@@ -439,7 +450,7 @@ namespace EQLogParser
       }
       else if (playerParseTextBox.Text.Length > 509)
       {
-        //copyToEQButton.IsEnabled = copyDamageParseToEQClick.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
+        copyToEQButton.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = SHARE_DPS_TOO_BIG_LABEL;
         sharePlayerParseLabel.Foreground = WARNING_BRUSH;
@@ -449,11 +460,17 @@ namespace EQLogParser
       }
       else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != SHARE_DPS_LABEL)
       {
-        //copyToEQButton.IsEnabled = copyDamageParseToEQClick.IsEnabled = copyHealParseToEQClick.IsEnabled = true;
+        copyToEQButton.IsEnabled = true;
         copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
-        //var count = SelectedSummary == CurrentDamageSummary ? playerDataGrid.SelectedItems.Count : healDataGrid.SelectedItems.Count;
-        //string players = count == 1 ? "Player" : "Players";
-        //sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
+
+        ParseData data;
+        if (Parses.TryGetValue(parseList.SelectedItem as string, out data))
+        {
+          var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
+          string players = count == 1 ? "Player" : "Players";
+          sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
+        }
+
         sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
         sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + " / " + 509;
         sharePlayerParseWarningLabel.Foreground = GOOD_BRUSH;
