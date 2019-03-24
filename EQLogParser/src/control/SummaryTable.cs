@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
 namespace EQLogParser
 {
-  public class SummaryTable : UserControl, IDisposable
+  public class SummaryTable : UserControl
   {
     protected const string DEFAULT_TABLE_LABEL = "No NPCs Selected";
     protected const string NODATA_TABLE_LABEL = Labels.NO_DATA;
@@ -18,7 +17,6 @@ namespace EQLogParser
     protected MainWindow TheMainWindow;
     protected DataGrid TheDataGrid;
     protected Label TheTitle;
-    protected Task UpdateStatsTask;
 
     protected void InitSummaryTable(Label title, DataGrid dataGrid)
     {
@@ -35,7 +33,7 @@ namespace EQLogParser
       foreach (var item in menu.Items)
       {
         MenuItem menuItem = item as MenuItem;
-        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses.ContainsKey(menuItem.Header as string);
+        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses != null && uniqueClasses.ContainsKey(menuItem.Header as string);
       }
     }
 
@@ -127,29 +125,5 @@ namespace EQLogParser
         e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
       }
     }
-
-    #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        UpdateStatsTask?.Dispose();
-        UpdateStatsTask = null;
-        disposedValue = true;
-      }
-    }
-
-    ~SummaryTable() {
-      Dispose(false);
-    }
-
-    public void Dispose()
-    {
-      Dispose(true);
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }

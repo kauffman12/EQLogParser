@@ -10,29 +10,31 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static event EventHandler<DataPointEvent> EventsUpdateDataPoint;
-    internal static List<List<ActionBlock>> DamageGroups = new List<List<ActionBlock>>();
-    internal static Dictionary<string, byte> NpcNames = new Dictionary<string, byte>();
-    internal static bool IsBaneAvailable = false;
+    internal static DamageStatsManager Instance = new DamageStatsManager();
 
-    private static ConcurrentDictionary<string, byte> PlayerHasPet = new ConcurrentDictionary<string, byte>();
-    private static ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
-    private static List<Action> Resists = new List<Action>();
-    private static List<NonPlayer> Selected;
-    private static string Title;
+    internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
+    internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
-    private static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
+    internal List<List<ActionBlock>> DamageGroups = new List<List<ActionBlock>>();
+    internal Dictionary<string, byte> NpcNames = new Dictionary<string, byte>();
 
-    internal static CombinedDamageStats BuildTotalStats(string title, List<NonPlayer> selected, bool showBane)
+    private ConcurrentDictionary<string, byte> PlayerHasPet = new ConcurrentDictionary<string, byte>();
+    private ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
+    private List<Action> Resists = new List<Action>();
+    private List<NonPlayer> Selected;
+    private bool IsBaneAvailable = false;
+    private string Title;
+
+    internal void BuildTotalStats(string title, List<NonPlayer> selected, bool showBane)
     {
-      CombinedDamageStats combined = null;
       Selected = selected;
       Title = title;
 
       try
       {
-        PlayerStats raidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
+        FireNewStatsEvent();
 
+        PlayerStats raidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
         DamageGroups.Clear();
         NpcNames.Clear();
         PlayerHasPet.Clear();
@@ -76,24 +78,242 @@ namespace EQLogParser
             });
           });
 
-          combined = ComputeDamageStats(raidTotals, showBane);
+          ComputeDamageStats(raidTotals, showBane);
         }
         else
         {
-          // send update
-          DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
-          EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+          FireNoDataEvent();
         }
       }
       catch (Exception ex)
       {
         LOG.Error(ex);
       }
-
-      return combined;
     }
 
-    internal static CombinedDamageStats ComputeDamageStats(PlayerStats raidTotals, bool showBane = false)
+    internal void RebuildTotalStats(PlayerStats raidTotals, bool showBane = false)
+    {
+      FireNewStatsEvent();
+      ComputeDamageStats(raidTotals, showBane);
+    }
+
+    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, bool showBane, OverlayDamageStats overlayStats = null)
+    {
+      PlayerStats raidStats;
+      if (overlayStats == null)
+      {
+        overlayStats = new OverlayDamageStats();
+        overlayStats.TopLevelStats = new Dictionary<string, PlayerStats>();
+        overlayStats.AggregateStats = new Dictionary<string, PlayerStats>();
+        overlayStats.IndividualStats = new Dictionary<string, PlayerStats>();
+        overlayStats.UniqueNpcs = new Dictionary<string, byte>();
+        overlayStats.RaidStats = raidStats = new PlayerStats();
+        raidStats.BeginTime = beginTime;
+      }
+      else
+      {
+        raidStats = overlayStats.RaidStats;
+      }
+
+      if (beginTime - raidStats.LastTime > NpcDamageManager.NPC_DEATH_TIME)
+      {
+        raidStats.Total = 0;
+        raidStats.BeginTime = beginTime;
+        overlayStats.UniqueNpcs.Clear();
+        overlayStats.TopLevelStats.Clear();
+        overlayStats.AggregateStats.Clear();
+        overlayStats.IndividualStats.Clear();
+      }
+
+      raidStats.LastTime = beginTime;
+      raidStats.TotalSeconds = raidStats.LastTime - raidStats.BeginTime + 1;
+
+      if (!DataManager.Instance.IsProbablyNotAPlayer(record.Attacker) && (showBane || record.Type != Labels.BANE_NAME))
+      {
+        overlayStats.UniqueNpcs[record.Defender] = 1;
+        raidStats.Total += record.Total;
+
+        // see if there's a pet mapping, check this first
+        string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
+        if (pname != null || (pname = record.AttackerOwner) != "")
+        {
+          PlayerHasPet[pname] = 1;
+          PetToPlayer[record.Attacker] = pname;
+        }
+
+        string player = null;
+        bool isPet = PetToPlayer.TryGetValue(record.Attacker, out player);
+        bool needAggregate = isPet || (!isPet && PlayerHasPet.ContainsKey(record.Attacker) && overlayStats.TopLevelStats.ContainsKey(record.Attacker + " +Pets"));
+
+        if (!needAggregate || player == Labels.UNASSIGNED_PET_OWNER)
+        {
+          // not a pet
+          PlayerStats stats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
+          StatsUtil.UpdateStats(stats, record, beginTime);
+          overlayStats.TopLevelStats[record.Attacker] = stats;
+          stats.TotalSeconds = stats.LastTime - stats.BeginTime + 1;
+        }
+        else
+        {
+          string origName = player != null ? player : record.Attacker;
+          string aggregateName = origName + " +Pets";
+
+          PlayerStats aggregatePlayerStats;
+          aggregatePlayerStats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, aggregateName, origName);
+          overlayStats.TopLevelStats[aggregateName] = aggregatePlayerStats;
+
+          if (overlayStats.TopLevelStats.ContainsKey(origName))
+          {
+            var origPlayer = overlayStats.TopLevelStats[origName];
+            StatsUtil.MergeStats(aggregatePlayerStats, origPlayer);
+            overlayStats.TopLevelStats.Remove(origName);
+            overlayStats.IndividualStats.Remove(origName);
+          }
+
+          if (record.Attacker != origName && overlayStats.TopLevelStats.ContainsKey(record.Attacker))
+          {
+            var origPet = overlayStats.TopLevelStats[record.Attacker];
+            StatsUtil.MergeStats(aggregatePlayerStats, origPet);
+            overlayStats.TopLevelStats.Remove(record.Attacker);
+            overlayStats.IndividualStats.Remove(record.Attacker);
+          }
+
+          StatsUtil.UpdateStats(aggregatePlayerStats, record, beginTime);
+          aggregatePlayerStats.TotalSeconds = aggregatePlayerStats.LastTime - aggregatePlayerStats.BeginTime + 1;
+        }
+
+        raidStats.DPS = (long) Math.Round(raidStats.Total / raidStats.TotalSeconds, 2);
+
+        var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
+        int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.PlayerName));
+
+        int renumber;
+        if (found > 4)
+        {
+          var you = list[found];
+          you.Rank = Convert.ToUInt16(found + 1);
+          overlayStats.StatsList = list.Take(4).ToList();
+          overlayStats.StatsList.Add(you);
+          renumber = overlayStats.StatsList.Count - 1;
+        }
+        else
+        {
+          overlayStats.StatsList = list.Take(5).ToList();
+          renumber = overlayStats.StatsList.Count;
+        }
+
+        for (int i = 0; i < renumber; i++)
+        {
+          overlayStats.StatsList[i].Rank = Convert.ToUInt16(i + 1);
+        }
+
+        // only calculate the top few
+        Parallel.ForEach(overlayStats.StatsList, top => StatsUtil.UpdateCalculations(top, raidStats));
+        overlayStats.TargetTitle = (overlayStats.UniqueNpcs.Count > 1 ? "Combined (" + overlayStats.UniqueNpcs.Count + "): " : "") + record.Defender;
+      }
+
+      return overlayStats;
+    }
+
+    internal Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedDamageStats damageStats)
+    {
+      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
+
+      if (damageStats != null)
+      {
+        // get chart data for player and pets if available
+        List<PlayerStats> list = new List<PlayerStats>();
+        if (damageStats.Children.ContainsKey(selected.Name))
+        {
+          list.AddRange(damageStats.Children[selected.Name]);
+        }
+        else
+        {
+          list.Add(selected);
+        }
+
+        list.ForEach(stat =>
+        {
+          results[stat.Name] = new List<HitFreqChartData>();
+          foreach (string type in stat.SubStats.Keys)
+          {
+            List<int> critFreqs = new List<int>();
+            List<int> nonCritFreqs = new List<int>();
+            HitFreqChartData chartData = new HitFreqChartData() { HitType = type };
+
+            // add crits
+            var critDamages = stat.SubStats[type].CritFreqValues.Keys.OrderBy(key => key).ToList();
+            critDamages.ForEach(damage => critFreqs.Add(stat.SubStats[type].CritFreqValues[damage]));
+            chartData.CritYValues = critFreqs;
+            chartData.CritXValues = critDamages;
+
+            // add non crits
+            var nonCritDamages = stat.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key).ToList();
+            nonCritDamages.ForEach(damage => nonCritFreqs.Add(stat.SubStats[type].NonCritFreqValues[damage]));
+            chartData.NonCritYValues = nonCritFreqs;
+            chartData.NonCritXValues = nonCritDamages;
+            results[stat.Name].Add(chartData);
+          }
+        });
+      }
+
+      return results;
+    }
+
+    internal bool IsValidDamage(DamageRecord record)
+    {
+      bool valid = false;
+
+      if (record != null && NpcNames.ContainsKey(record.Defender) && !DataManager.Instance.IsProbablyNotAPlayer(record.Attacker))
+      {
+        if (record.Type == Labels.BANE_NAME)
+        {
+          IsBaneAvailable = true;
+        }
+
+        valid = true;
+      }
+
+      return valid;
+    }
+
+    internal void FireSelectionEvent(List<PlayerStats> selected)
+    {
+      // send update
+      DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
+      EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+    }
+
+    internal void FireUpdateEvent(bool showBane, List<PlayerStats> selected = null)
+    {
+      // send update
+      DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupIterator(DamageGroups, showBane) };
+      EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+    }
+
+    private void FireCompletedEvent(CombinedDamageStats combined)
+    {
+      // generating new stats
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "COMPLETED", CombinedStats = combined, IsBaneAvailable = IsBaneAvailable });
+    }
+
+    private void FireNewStatsEvent()
+    {
+      // generating new stats
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "STARTED" });
+    }
+
+    private void FireNoDataEvent()
+    {
+      // nothing to do
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "NONPC" });
+
+      // send update
+      DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
+      EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+    }
+
+    private void ComputeDamageStats(PlayerStats raidTotals, bool showBane = false)
     {
       CombinedDamageStats combined = null;
       ConcurrentDictionary<string, Dictionary<string, PlayerStats>> childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
@@ -256,125 +476,16 @@ namespace EQLogParser
         LOG.Error(ex);
       }
 
-      return combined;
+      FireCompletedEvent(combined);
     }
 
-    internal static OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, bool showBane, OverlayDamageStats overlayStats = null)
+    private void UpdateSubStats(PlayerSubStats subStats, DamageRecord record, double beginTime)
     {
-      PlayerStats raidStats;
-      if (overlayStats == null)
-      {
-        overlayStats = new OverlayDamageStats();
-        overlayStats.TopLevelStats = new Dictionary<string, PlayerStats>();
-        overlayStats.AggregateStats = new Dictionary<string, PlayerStats>();
-        overlayStats.IndividualStats = new Dictionary<string, PlayerStats>();
-        overlayStats.UniqueNpcs = new Dictionary<string, byte>();
-        overlayStats.RaidStats = raidStats = new PlayerStats();
-        raidStats.BeginTime = beginTime;
-      }
-      else
-      {
-        raidStats = overlayStats.RaidStats;
-      }
+      uint critHits = subStats.CritHits;
+      StatsUtil.UpdateStats(subStats, record, beginTime);
 
-      if (beginTime - raidStats.LastTime > NpcDamageManager.NPC_DEATH_TIME)
-      {
-        raidStats.Total = 0;
-        raidStats.BeginTime = beginTime;
-        overlayStats.UniqueNpcs.Clear();
-        overlayStats.TopLevelStats.Clear();
-        overlayStats.AggregateStats.Clear();
-        overlayStats.IndividualStats.Clear();
-      }
-
-      raidStats.LastTime = beginTime;
-      raidStats.TotalSeconds = raidStats.LastTime - raidStats.BeginTime + 1;
-
-      if (!DataManager.Instance.IsProbablyNotAPlayer(record.Attacker) && (showBane || record.Type != Labels.BANE_NAME))
-      {
-        overlayStats.UniqueNpcs[record.Defender] = 1;
-        raidStats.Total += record.Total;
-
-        // see if there's a pet mapping, check this first
-        string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-        if (pname != null || (pname = record.AttackerOwner) != "")
-        {
-          PlayerHasPet[pname] = 1;
-          PetToPlayer[record.Attacker] = pname;
-        }
-
-        string player = null;
-        bool isPet = PetToPlayer.TryGetValue(record.Attacker, out player);
-        bool needAggregate = isPet || (!isPet && PlayerHasPet.ContainsKey(record.Attacker) && overlayStats.TopLevelStats.ContainsKey(record.Attacker + " +Pets"));
-
-        if (!needAggregate || player == Labels.UNASSIGNED_PET_OWNER)
-        {
-          // not a pet
-          PlayerStats stats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
-          StatsUtil.UpdateStats(stats, record, beginTime);
-          overlayStats.TopLevelStats[record.Attacker] = stats;
-          stats.TotalSeconds = stats.LastTime - stats.BeginTime + 1;
-        }
-        else
-        {
-          string origName = player != null ? player : record.Attacker;
-          string aggregateName = origName + " +Pets";
-
-          PlayerStats aggregatePlayerStats;
-          aggregatePlayerStats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, aggregateName, origName);
-          overlayStats.TopLevelStats[aggregateName] = aggregatePlayerStats;
-
-          if (overlayStats.TopLevelStats.ContainsKey(origName))
-          {
-            var origPlayer = overlayStats.TopLevelStats[origName];
-            StatsUtil.MergeStats(aggregatePlayerStats, origPlayer);
-            overlayStats.TopLevelStats.Remove(origName);
-            overlayStats.IndividualStats.Remove(origName);
-          }
-
-          if (record.Attacker != origName && overlayStats.TopLevelStats.ContainsKey(record.Attacker))
-          {
-            var origPet = overlayStats.TopLevelStats[record.Attacker];
-            StatsUtil.MergeStats(aggregatePlayerStats, origPet);
-            overlayStats.TopLevelStats.Remove(record.Attacker);
-            overlayStats.IndividualStats.Remove(record.Attacker);
-          }
-
-          StatsUtil.UpdateStats(aggregatePlayerStats, record, beginTime);
-          aggregatePlayerStats.TotalSeconds = aggregatePlayerStats.LastTime - aggregatePlayerStats.BeginTime + 1;
-        }
-
-        raidStats.DPS = (long) Math.Round(raidStats.Total / raidStats.TotalSeconds, 2);
-
-        var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
-        int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.PlayerName));
-
-        int renumber;
-        if (found > 4)
-        {
-          var you = list[found];
-          you.Rank = Convert.ToUInt16(found + 1);
-          overlayStats.StatsList = list.Take(4).ToList();
-          overlayStats.StatsList.Add(you);
-          renumber = overlayStats.StatsList.Count - 1;
-        }
-        else
-        {
-          overlayStats.StatsList = list.Take(5).ToList();
-          renumber = overlayStats.StatsList.Count;
-        }
-
-        for (int i = 0; i < renumber; i++)
-        {
-          overlayStats.StatsList[i].Rank = Convert.ToUInt16(i + 1);
-        }
-
-        // only calculate the top few
-        Parallel.ForEach(overlayStats.StatsList, top => StatsUtil.UpdateCalculations(top, raidStats));
-        overlayStats.TargetTitle = (overlayStats.UniqueNpcs.Count > 1 ? "Combined (" + overlayStats.UniqueNpcs.Count + "): " : "") + record.Defender;
-      }
-
-      return overlayStats;
+      Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
+      Helpers.LongIntAddHelper.Add(values, record.Total, 1);
     }
 
     internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
@@ -402,88 +513,6 @@ namespace EQLogParser
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details };
-    }
-
-    internal static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(CombinedDamageStats combined, PlayerStats selected)
-    {
-      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
-
-      // get chart data for player and pets if available
-      List<PlayerStats> list = new List<PlayerStats>();
-      if (combined.Children.ContainsKey(selected.Name))
-      {
-        list.AddRange(combined.Children[selected.Name]);
-      }
-      else
-      {
-        list.Add(selected);
-      }
-
-      list.ForEach(stat =>
-      {
-        results[stat.Name] = new List<HitFreqChartData>();
-        foreach (string type in stat.SubStats.Keys)
-        {
-          List<int> critFreqs = new List<int>();
-          List<int> nonCritFreqs = new List<int>();
-          HitFreqChartData chartData = new HitFreqChartData() { HitType = type };
-
-          // add crits
-          var critDamages = stat.SubStats[type].CritFreqValues.Keys.OrderBy(key => key).ToList();
-          critDamages.ForEach(damage => critFreqs.Add(stat.SubStats[type].CritFreqValues[damage]));
-          chartData.CritYValues = critFreqs;
-          chartData.CritXValues = critDamages;
-
-          // add non crits
-          var nonCritDamages = stat.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key).ToList();
-          nonCritDamages.ForEach(damage => nonCritFreqs.Add(stat.SubStats[type].NonCritFreqValues[damage]));
-          chartData.NonCritYValues = nonCritFreqs;
-          chartData.NonCritXValues = nonCritDamages;
-          results[stat.Name].Add(chartData);
-        }
-      });
-
-      return results;
-    }
-
-    internal static void FireSelectionEvent(List<PlayerStats> selected)
-    {
-      // send update
-      DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
-      EventsUpdateDataPoint?.Invoke(DamageGroups, de);
-    }
-
-    internal static void FireUpdateEvent(bool showBane, List<PlayerStats> selected = null)
-    {
-      // send update
-      DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupIterator(DamageGroups, showBane) };
-      EventsUpdateDataPoint?.Invoke(DamageGroups, de);
-    }
-
-    internal static bool IsValidDamage(DamageRecord record)
-    {
-      bool valid = false;
-
-      if (record != null && NpcNames.ContainsKey(record.Defender) && !DataManager.Instance.IsProbablyNotAPlayer(record.Attacker))
-      {
-        if (record.Type == Labels.BANE_NAME)
-        {
-          IsBaneAvailable = true;
-        }
-
-        valid = true;
-      }
-
-      return valid;
-    }
-
-    private static void UpdateSubStats(PlayerSubStats subStats, DamageRecord record, double beginTime)
-    {
-      uint critHits = subStats.CritHits;
-      StatsUtil.UpdateStats(subStats, record, beginTime);
-
-      Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
-      LongIntAddHelper.Add(values, record.Total, 1);
     }
   }
 

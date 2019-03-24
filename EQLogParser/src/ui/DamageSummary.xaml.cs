@@ -21,10 +21,11 @@ namespace EQLogParser
     private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
+    private CombinedDamageStats CurrentDamageStats = null;
+
     // workaround for adjusting column withs of player datagrid
     private List<DataGrid> ChildGrids = new List<DataGrid>();
 
-    private CombinedDamageStats CurrentDamageStats = null;
     private bool Ready = false;
 
     public DamageSummary()
@@ -41,7 +42,6 @@ namespace EQLogParser
       // Clear/Reset
       DataManager.Instance.EventsClearedActiveData += (sender, cleared) =>
       {
-        CurrentDamageStats = null;
         dataGrid.ItemsSource = null;
         ChildGrids.Clear();
         title.Content = DEFAULT_TABLE_LABEL;
@@ -59,7 +59,13 @@ namespace EQLogParser
         TheMainWindow.OpenOverlay();
       }
 
+      DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       Ready = true;
+    }
+
+    ~DamageSummary()
+    {
+      DamageStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
     }
 
     internal bool IsBaneEnabled()
@@ -72,78 +78,48 @@ namespace EQLogParser
       return overlayOption.IsChecked.Value;
     }
 
-    internal void UpdateStats(List<NonPlayer> npcList, bool rebuild = false)
+    private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
     {
-      if (UpdateStatsTask == null && (rebuild || (npcList != null && npcList.Count > 0)))
+      Dispatcher.InvokeAsync(() =>
       {
-        TheMainWindow.Busy(true);
-        title.Content = "Calculating DPS...";
-        ChildGrids.Clear();
-
-        string name = npcList?.First().Name;
-        bool showBane = includeBane.IsChecked.Value;
-        dataGrid.ItemsSource = null;
-
-        UpdateStatsTask = new Task(() =>
+        switch(e.State)
         {
-          try
-          {
-            if (rebuild)
+          case "STARTED":
+            TheMainWindow.Busy(true);
+            title.Content = "Calculating DPS...";
+            dataGrid.ItemsSource = null;
+            ChildGrids.Clear();
+            break;
+          case "COMPLETED":
+            CurrentDamageStats = e.CombinedStats as CombinedDamageStats;
+
+            if (CurrentDamageStats == null)
             {
-              CurrentDamageStats = DamageStatsManager.ComputeDamageStats(CurrentDamageStats.RaidStats, showBane);
+              title.Content = NODATA_TABLE_LABEL;
             }
             else
             {
-              CurrentDamageStats = DamageStatsManager.BuildTotalStats(name, npcList, showBane);
+              includeBane.IsEnabled = e.IsBaneAvailable;
+              title.Content = CurrentDamageStats.FullTitle;
+              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
             }
 
-            var parse = new DamageParse() { Combined = CurrentDamageStats, Name = "Damage Parse" };
-
-            Dispatcher.InvokeAsync((() =>
-            {
-              if (CurrentDamageStats == null)
-              {
-                title.Content = NODATA_TABLE_LABEL;
-              }
-              else
-              {
-                includeBane.IsEnabled = DamageStatsManager.IsBaneAvailable;
-                title.Content = CurrentDamageStats.FullTitle;
-                dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
-              }
-
-              UpdateDataGridMenuItems();
-            }));
-          }
-          catch (Exception ex)
-          {
-            LOG.Error(ex);
-          }
-          finally
-          {
-            Dispatcher.InvokeAsync(() =>
-            {
-              UpdateStatsTask = null;
-              TheMainWindow.Busy(false);
-            });
-          }
-        });
-          
-        UpdateStatsTask.Start();    
-      }
-      else if (dataGrid.ItemsSource is ObservableCollection<PlayerStats> damageList)
-      {
-        CurrentDamageStats = null;
-        dataGrid.ItemsSource = null;
-        title.Content = DEFAULT_TABLE_LABEL;
-        UpdateDataGridMenuItems();
-      }
+            TheMainWindow.Busy(false);
+            UpdateDataGridMenuItems();
+            break;
+          case "NONPC":
+            title.Content = DEFAULT_TABLE_LABEL;
+            TheMainWindow.Busy(false);
+            UpdateDataGridMenuItems();
+            break;
+        }
+      });
     }
 
     protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var selected = GetSelectedStats();
-      DamageStatsManager.FireSelectionEvent(selected);
+      DamageStatsManager.Instance.FireSelectionEvent(selected);
       FireSelectionChangedEvent(selected);
       UpdateDataGridMenuItems();
     }
@@ -152,8 +128,8 @@ namespace EQLogParser
     {
       if (selected.Count > 0)
       {
-        var damageTable = new DamageBreakdown(TheMainWindow, CurrentDamageStats.ShortTitle);
-        damageTable.Show(selected, CurrentDamageStats);
+        var damageTable = new DamageBreakdown(TheMainWindow, CurrentDamageStats);
+        damageTable.Show(selected);
         Helpers.OpenNewTab(TheMainWindow.dockSite, "damageWindow", "Damage Breakdown", damageTable);
       }
     }
@@ -162,7 +138,7 @@ namespace EQLogParser
     {
       if (selected.Count > 0)
       {
-        var spellTable = new SpellCountTable(TheMainWindow, CurrentDamageStats.ShortTitle);
+        var spellTable = new SpellCountTable(TheMainWindow, CurrentDamageStats?.ShortTitle ?? "");
         spellTable.ShowSpells(selected, CurrentDamageStats);
         Helpers.OpenNewTab(TheMainWindow.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
       }
@@ -179,7 +155,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var chart = new HitFreqChart();
-        var results = DamageStatsManager.GetHitFreqValues(CurrentDamageStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
+        var results = DamageStatsManager.Instance.GetHitFreqValues(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentDamageStats);
         var hitFreqWindow = Helpers.OpenNewTab(TheMainWindow.dockSite, "freqChart", "Hit Frequency", chart, 400, 300);
 
         chart.Update(results);
@@ -192,10 +168,11 @@ namespace EQLogParser
     {
       Image image = (sender as Image);
       PlayerStats stats = image.DataContext as PlayerStats;
+      var children = CurrentDamageStats?.Children;
 
-      if (stats != null && CurrentDamageStats.Children.ContainsKey(stats.Name))
+      if (stats != null && children != null && children.ContainsKey(stats.Name))
       {
-        var list = CurrentDamageStats.Children[stats.Name];
+        var list = children[stats.Name];
         if (list.Count > 1 || stats.Name == Labels.UNASSIGNED_PET_OWNER || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name)))
         {
           var container = dataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
@@ -245,11 +222,13 @@ namespace EQLogParser
     {
       PlayerStats stats = e.Row.Item as PlayerStats;
       var childrenDataGrid = e.DetailsElement as DataGrid;
-      if (stats != null && childrenDataGrid != null && CurrentDamageStats != null && CurrentDamageStats.Children.ContainsKey(stats.Name))
+      var children = CurrentDamageStats?.Children;
+
+      if (stats != null && childrenDataGrid != null && children != null && children.ContainsKey(stats.Name))
       {
-        if (childrenDataGrid.ItemsSource != CurrentDamageStats.Children[stats.Name])
+        if (childrenDataGrid.ItemsSource != children[stats.Name])
         {
-          childrenDataGrid.ItemsSource = CurrentDamageStats.Children[stats.Name];
+          childrenDataGrid.ItemsSource = children[stats.Name];
           ChildGrids.Add(childrenDataGrid);
 
           // show bane column if needed
@@ -281,14 +260,14 @@ namespace EQLogParser
 
     private void UpdateDataGridMenuItems()
     {
-      if (CurrentDamageStats != null && CurrentDamageStats.StatsList?.Count > 0)
+      if (CurrentDamageStats?.StatsList?.Count > 0)
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowDamage.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
-        UpdateClassMenuItems(menuItemShowDamage, dataGrid, CurrentDamageStats.UniqueClasses);
-        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentDamageStats.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowDamage, dataGrid, CurrentDamageStats?.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentDamageStats?.UniqueClasses);
       }
       else
       {
@@ -301,8 +280,13 @@ namespace EQLogParser
     {
       if (Ready)
       {
-        UpdateStats(null, true);
-        DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", includeBane.IsChecked.Value.ToString());
+        bool isBaneEnabled = includeBane.IsChecked.Value;
+        DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", isBaneEnabled.ToString());
+
+        if (CurrentDamageStats != null && CurrentDamageStats.RaidStats != null)
+        {
+          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(CurrentDamageStats.RaidStats, isBaneEnabled));
+        }
       }
     }
 

@@ -42,6 +42,8 @@ namespace EQLogParser
   class Helpers
   {
     internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
+
+    internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     internal static DictionaryAddHelper<string, uint> StringUIntAddHelper = new DictionaryAddHelper<string, uint>();
 
     private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
