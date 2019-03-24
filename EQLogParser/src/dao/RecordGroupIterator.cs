@@ -15,7 +15,7 @@ namespace EQLogParser
     override protected bool IsValid(RecordWrapper wrapper)
     {
       DamageRecord record = wrapper.Record as DamageRecord;
-      return DamageStatsManager.IsValidDamage(record) && (ShowBane || record.Type != Labels.BANE_NAME);
+      return DamageStatsManager.Instance.IsValidDamage(record) && (ShowBane || record.Type != Labels.BANE_NAME);
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)
@@ -50,7 +50,7 @@ namespace EQLogParser
     override protected bool IsValid(RecordWrapper wrapper)
     {
       HealRecord record = wrapper.Record as HealRecord;
-      return HealStatsManager.IsValidHeal(record, ShowAE);
+      return HealStatsManager.Instance.IsValidHeal(record, ShowAE);
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)

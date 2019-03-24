@@ -59,21 +59,24 @@ namespace EQLogParser
 
     public void ShowSpells(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
     {
-      if (selectedStats != null && currentStats != null)
+      var childStats = currentStats?.Children;
+      var raidStats = currentStats?.RaidStats;
+
+      if (selectedStats != null && childStats != null && raidStats != null)
       {
         PlayerList = new List<string>();
         foreach (var stats in selectedStats)
         {
           string name = stats.Name;
-          if (currentStats.Children.ContainsKey(stats.Name) && currentStats.Children[stats.Name].Count > 1)
+          if (childStats.ContainsKey(stats.Name) && childStats[stats.Name].Count > 1)
           {
-            name = currentStats.Children[stats.Name].First().Name;
+            name = childStats[stats.Name].First().Name;
           }
 
           PlayerList.Add(name);
         }
 
-        TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, currentStats.RaidStats);
+        TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
         Display();
       }
     }

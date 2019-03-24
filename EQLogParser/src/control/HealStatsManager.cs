@@ -9,25 +9,28 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static event EventHandler<DataPointEvent> EventsUpdateDataPoint;
-    internal static List<List<ActionBlock>> HealGroups = new List<List<ActionBlock>>();
-    internal static bool IsAEHealingAvailable = false;
+    internal static HealStatsManager Instance = new HealStatsManager();
+
+    internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
+    internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
+
+    internal List<List<ActionBlock>> HealGroups = new List<List<ActionBlock>>();
+    internal bool IsAEHealingAvailable = false;
 
     private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
+    private List<NonPlayer> Selected;
+    private string Title;
 
-    private static List<NonPlayer> Selected;
-    private static string Title;
-
-    internal static CombinedHealStats BuildTotalStats(string title, List<NonPlayer> selected, bool showAE)
+    internal void BuildTotalStats(string title, List<NonPlayer> selected, bool showAE)
     {
-      CombinedHealStats combined = null;
       Selected = selected;
       Title = title;
 
       try
       {
-        PlayerStats raidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
+        FireNewStatsEvent();
 
+        PlayerStats raidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
         HealGroups.Clear();
 
         selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(raidTotals, npc, HEAL_OFFSET));
@@ -40,24 +43,85 @@ namespace EQLogParser
             HealGroups.Add(DataManager.Instance.GetHealsDuring(raidTotals.BeginTimes[i], raidTotals.LastTimes[i]));
           }
 
-          combined = ComputeHealStats(raidTotals, showAE);
+          ComputeHealStats(raidTotals, showAE);
         }
         else
         {
-          // send update
-          DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
-          EventsUpdateDataPoint?.Invoke(HealGroups, de);
+          FireNoDataEvent();
         }
       }
       catch (Exception e)
       {
         LOG.Error(e);
       }
-
-      return combined;
     }
 
-    internal static CombinedHealStats ComputeHealStats(PlayerStats raidTotals, bool showAE)
+    internal void RebuildTotalStats(PlayerStats raidTotals, bool showAE = false)
+    {
+      FireNewStatsEvent();
+      ComputeHealStats(raidTotals, showAE);
+    }
+
+    internal bool IsValidHeal(HealRecord record, bool showAE)
+    {
+      bool valid = false;
+
+      if (record != null && !DataManager.Instance.IsProbablyNotAPlayer(record.Healed))
+      {
+        valid = true;
+
+        SpellData spellData = null;
+        if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
+        {
+          if (spellData.Target == (byte) SpellTarget.TARGET_AE || spellData.Target == (byte) SpellTarget.NEARBY_PLAYERS_AE ||
+            spellData.Target == (byte) SpellTarget.TARGET_RING_AE)
+          {
+            IsAEHealingAvailable = true;
+            valid = showAE;
+          }
+        }
+      }
+
+      return valid;
+    }
+
+    internal void FireSelectionEvent(List<PlayerStats> selected)
+    {
+      // send update
+      DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
+      EventsUpdateDataPoint?.Invoke(HealGroups, de);
+    }
+
+    internal void FireUpdateEvent(bool showAE, List<PlayerStats> selected = null)
+    {
+      // send update
+      DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new HealGroupIterator(HealGroups, showAE) };
+      EventsUpdateDataPoint?.Invoke(HealGroups, de);
+    }
+
+    private void FireCompletedEvent(CombinedHealStats combined)
+    {
+      // generating new stats
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "COMPLETED", CombinedStats = combined, IsAEHealingAvailable = IsAEHealingAvailable });
+    }
+
+    private void FireNewStatsEvent()
+    {
+      // generating new stats
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "STARTED" });
+    }
+
+    private void FireNoDataEvent()
+    {
+      // nothing to do
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { State = "NONPC" });
+
+      // send update
+      DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
+      EventsUpdateDataPoint?.Invoke(HealGroups, de);
+    }
+
+    private void ComputeHealStats(PlayerStats raidTotals, bool showAE)
     {
       CombinedHealStats combined = null;
       Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
@@ -68,9 +132,7 @@ namespace EQLogParser
 
       try
       {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Iterator = new HealGroupIterator(HealGroups, showAE) };
-        EventsUpdateDataPoint?.Invoke(HealGroups, de);
+        FireUpdateEvent(showAE);
 
         HealGroups.ForEach(group =>
         {
@@ -135,12 +197,12 @@ namespace EQLogParser
           combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
         }
       }
-      catch(Exception ex)
+      catch (Exception ex)
       {
         LOG.Error(ex);
       }
 
-      return combined;
+      FireCompletedEvent(combined);
     }
 
     internal static StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
@@ -167,43 +229,6 @@ namespace EQLogParser
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details, };
-    }
-
-    internal static void FireSelectionEvent(List<PlayerStats> selected)
-    {
-      // send update
-      DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
-      EventsUpdateDataPoint?.Invoke(HealGroups, de);
-    }
-
-    internal static void FireUpdateEvent(bool showAE, List<PlayerStats> selected = null)
-    {
-      // send update
-      DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupIterator(HealGroups, showAE) };
-      EventsUpdateDataPoint?.Invoke(HealGroups, de);
-    }
-
-    internal static bool IsValidHeal(HealRecord record, bool showAE)
-    {
-      bool valid = false;
-
-      if (record != null && !DataManager.Instance.IsProbablyNotAPlayer(record.Healed))
-      {
-        valid = true;
-
-        SpellData spellData = null;
-        if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
-        {
-          if (spellData.Target == (byte) SpellTarget.TARGET_AE || spellData.Target == (byte) SpellTarget.NEARBY_PLAYERS_AE ||
-            spellData.Target == (byte) SpellTarget.TARGET_RING_AE)
-          {
-            IsAEHealingAvailable = true;
-            valid = showAE;
-          }
-        }
-      }
-
-      return valid;
     }
   }
 

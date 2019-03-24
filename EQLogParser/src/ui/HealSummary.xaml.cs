@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -29,78 +28,61 @@ namespace EQLogParser
       string value = DataManager.Instance.GetApplicationSetting("IncludeAEHealing");
       includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bValue) && bValue;
 
+      HealStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       Ready = true;
     }
 
-    internal void UpdateStats(List<NonPlayer> npcList, bool rebuild = false)
+    ~HealSummary()
     {
-      if (UpdateStatsTask == null && (rebuild || (npcList != null && npcList.Count > 0)))
+      HealStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
+    }
+
+    internal bool IsAEHealingEnabled()
+    {
+      return includeAEHealing.IsChecked.Value;
+    }
+
+    private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    {
+      Dispatcher.InvokeAsync(() =>
       {
-        TheMainWindow.Busy(true);
-        title.Content = "Calculating HPS...";
-
-        string name = npcList?.First().Name;
-        bool showAE = includeAEHealing.IsChecked.Value;
-        dataGrid.ItemsSource = null;
-
-        UpdateStatsTask = new Task(() =>
+        switch (e.State)
         {
-          try
-          {
-            if (rebuild)
+          case "STARTED":
+            TheMainWindow.Busy(true);
+            title.Content = "Calculating HPS...";
+            dataGrid.ItemsSource = null;
+            break;
+          case "COMPLETED":
+            CurrentHealStats = e.CombinedStats as CombinedHealStats;
+
+            if (CurrentHealStats == null)
             {
-              CurrentHealStats = HealStatsManager.ComputeHealStats(CurrentHealStats.RaidStats, showAE);
+              title.Content = NODATA_TABLE_LABEL;
             }
             else
             {
-              CurrentHealStats = HealStatsManager.BuildTotalStats(name, npcList, showAE);
+              includeAEHealing.IsEnabled = e.IsAEHealingAvailable;
+              title.Content = CurrentHealStats.FullTitle;
+              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
             }
- 
-            Dispatcher.InvokeAsync((() =>
-            {
-              if (CurrentHealStats == null)
-              {
-                title.Content = NODATA_TABLE_LABEL;
-              }
-              else
-              {
-                includeAEHealing.IsEnabled = HealStatsManager.IsAEHealingAvailable;
-                title.Content = CurrentHealStats.FullTitle;
-                dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
-              }
 
-              UpdateDataGridMenuItems();
-            }));
-          }
-          catch (Exception ex)
-          {
-            LOG.Error(ex);
-          }
-          finally
-          {
-            Dispatcher.InvokeAsync(() =>
-            {
-              UpdateStatsTask = null;
-              TheMainWindow.Busy(false);
-            });
-          }
-        });
-
-        UpdateStatsTask.Start();
-      }
-      else if (dataGrid.ItemsSource is ObservableCollection<PlayerStats> damageList)
-      {
-        CurrentHealStats = null;
-        dataGrid.ItemsSource = null;
-        title.Content = DEFAULT_TABLE_LABEL;
-        UpdateDataGridMenuItems();
-      }
+            TheMainWindow.Busy(false);
+            UpdateDataGridMenuItems();
+            break;
+          case "NONPC":
+            title.Content = DEFAULT_TABLE_LABEL;
+            TheMainWindow.Busy(false);
+            UpdateDataGridMenuItems();
+            break;
+        }
+      });
     }
 
     protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var selected = GetSelectedStats();
-      HealStatsManager.FireSelectionEvent(selected);
+      HealStatsManager.Instance.FireSelectionEvent(selected);
       FireSelectionChangedEvent(selected);
       UpdateDataGridMenuItems();
     }
@@ -145,8 +127,13 @@ namespace EQLogParser
     {
       if (Ready)
       {
-        UpdateStats(null, true);
-        DataManager.Instance.SetApplicationSetting("IncludeAEHealing", includeAEHealing.IsChecked.Value.ToString());
+        bool isAEHealingEnabled = includeAEHealing.IsChecked.Value == true;
+        DataManager.Instance.SetApplicationSetting("IncludeAEHealing", isAEHealingEnabled.ToString());
+
+        if (CurrentHealStats != null && CurrentHealStats.RaidStats != null)
+        {
+          Task.Run(() => HealStatsManager.Instance.RebuildTotalStats(CurrentHealStats.RaidStats, isAEHealingEnabled));
+        }
       }
     }
   }
