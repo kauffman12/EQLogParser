@@ -41,8 +41,10 @@ namespace EQLogParser
 
   class Helpers
   {
-    private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
     internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
+    internal static DictionaryAddHelper<string, uint> StringUIntAddHelper = new DictionaryAddHelper<string, uint>();
+
+    private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
 
     internal static string AbbreviateSpellName(string spell)
     {
@@ -168,21 +170,6 @@ namespace EQLogParser
       }
     }
 
-    internal static uint ParseUInt(string str)
-    {
-      uint y = 0;
-      for (int i = 0; i < str.Length; i++)
-      {
-        if (!char.IsDigit(str[i]))
-        {
-          return uint.MaxValue;
-        }
-
-        y = y * 10 + (Convert.ToUInt32(str[i]) - '0');
-      }
-      return y;
-    }
-
     internal static void OpenWindow(DockingWindow window)
     {
       if (!window.IsOpen)
@@ -240,54 +227,6 @@ namespace EQLogParser
       {
         return x.Name.CompareTo(y.Name);
       }
-    }
-  }
-
-  internal class DateUtil
-  {
-    // counting this thing is really slow
-    private string LastDateTimeString = "";
-    private double LastDateTime;
-
-    internal bool HasTimeInRange(double now, string line, int lastMins)
-    {
-      bool found = false;
-      if (line.Length > 24)
-      {
-        double dateTime = ParseDate(line.Substring(1, 24));
-        TimeSpan diff = TimeSpan.FromSeconds(now - dateTime);
-        found = (diff.TotalMinutes < lastMins);
-      }
-      return found;
-    }
-
-    internal double ParseDate(string timeString)
-    {
-      double result = double.NaN;
-
-      if (LastDateTimeString == timeString)
-      {
-        return LastDateTime;
-      }
-
-      DateTime dateTime;
-      DateTime.TryParseExact(timeString, "ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
-      if (dateTime == DateTime.MinValue)
-      {
-        DateTime.TryParseExact(timeString, "ddd MMM  d HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
-      }
-
-      if (dateTime == DateTime.MinValue)
-      {
-        LastDateTime = double.NaN;
-      }
-      else
-      {
-        result = LastDateTime = dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
-      }
-
-      LastDateTimeString = timeString;
-      return result;
     }
   }
 

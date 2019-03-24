@@ -29,6 +29,7 @@ namespace EQLogParser
     public const string UNASSIGNED_PET_OWNER = "Unknown Pet Owner";
     public const string UNKNOWN_SPELL = "Unknown Spell";
     public const string UNKNOWN_PLAYER = "Unknown Player";
+    public const string RAID_PLAYER = "Totals";
   }
 
   public class Action
