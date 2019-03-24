@@ -15,6 +15,9 @@ namespace EQLogParser
 {
   public partial class MainWindow : Window
   {
+    // binding property
+    public ObservableCollection<SortableName> VerifiedPlayersProperty { get; set; }
+
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
@@ -28,6 +31,7 @@ namespace EQLogParser
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
+
     private static long CastLineCount = 0;
     private static long DamageLineCount = 0;
     private static long HealLineCount = 0;
@@ -40,27 +44,24 @@ namespace EQLogParser
     private static ActionProcessor<string> DamageProcessor = null;
     private static ActionProcessor<string> HealProcessor = null;
 
+    // progress window
+    private static DateTime StartLoadTime;
+    private static bool MonitorOnly;
+
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
 
-    private DocumentWindow DamageChartWindow;
-    private DocumentWindow HealingChartWindow;
+    private NpcDamageManager NpcDamageManager = new NpcDamageManager();
+    private Dictionary<string, ParseData> Parses = new Dictionary<string, ParseData>();
 
-    // progress window
-    private static DateTime StartLoadTime; // millis
-    private static bool MonitorOnly;
+    private DocumentWindow DamageChartWindow = null;
+    private DocumentWindow HealingChartWindow = null;
 
-    private static NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private LogReader EQLogReader = null;
-
-    // binding property
-    public ObservableCollection<SortableName> VerifiedPlayersProperty { get; set; }
-
-    private OverlayWindow Overlay;
-    private DamageSummary DamageSummaryTable;
-    private HealSummary HealSummaryTable;
-
+    private OverlayWindow Overlay = null;
+    private DamageSummary DamageSummaryTable = null;
+    private HealSummary HealSummaryTable = null;
     private int BusyCount = 0;
 
     public MainWindow()
@@ -108,12 +109,15 @@ namespace EQLogParser
         (npcWindow.Content as NpcTable).EventsSelectionChange += (sender, data) => ComputeStats();
 
         DamageSummaryTable = damageWindow.Content as DamageSummary;
-        DamageSummaryTable.EventsSelectionChange += (sender, data) => UpdateDamageParseText();
+        DamageSummaryTable.EventsSelectionChange += (sender, data) => UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
         HealSummaryTable = healWindow.Content as HealSummary;
-        HealSummaryTable.EventsSelectionChange += (sender, data) => UpdateDamageParseText();
+        HealSummaryTable.EventsSelectionChange += (sender, data) => UpdateParse(Labels.HEAL_PARSE, data.Selected);
 
         DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
         HealStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
+
+        DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+        HealStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -177,14 +181,6 @@ namespace EQLogParser
       busyIcon.Visibility = BusyCount == 0 ? Visibility.Hidden : Visibility.Visible;
     }
 
-    internal StatsSummary BuildDamageSummary(CombinedStats combined, List<PlayerStats> selected)
-    {
-      var summary = DamageStatsManager.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
-      playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
-      playerParseTextBox.SelectAll();
-      return summary;
-    }
-
     internal void CopyToEQ_Click(object sender = null, RoutedEventArgs e = null)
     {
       Clipboard.SetDataObject(playerParseTextBox.Text);
@@ -217,6 +213,11 @@ namespace EQLogParser
     internal void CloseOverlay()
     {
       Overlay?.Close();
+    }
+
+    internal void UpdateDamageParse(CombinedStats combined, List<PlayerStats> selected)
+    {
+      UpdateParse("Damage", DamageStatsManager.Instance, combined, selected);
     }
 
     private void HandleChartUpdateEvent(DocumentWindow window, object sender, DataPointEvent e)
@@ -385,41 +386,44 @@ namespace EQLogParser
       });
     }
 
+    private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    {
+      switch(e.State)
+      {
+        case "COMPLETED":
+        case "NONPC":
+          UpdateParse(e.Name, sender as SummaryBuilder, e.CombinedStats);
+          break;
+      }
+    }
+
+    private void UpdateParse(string name, SummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        var summary = builder?.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
+        Parses[name] = new ParseData() { Builder = builder, CombinedStats = combined };
+        playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
+        playerParseTextBox.SelectAll();
+      });
+    }
+
+    private void UpdateParse(string name, List<PlayerStats> selected)
+    {
+      if (Parses.ContainsKey(name))
+      {
+        UpdateParse(name, Parses[name].Builder, Parses[name].CombinedStats, selected);
+      }
+    }
+
     private void PlayerParseTextCheckChange(object sender, RoutedEventArgs e)
     {
-      //if (SelectedSummary == CurrentDamageSummary)
-      //{
-      //  UpdateDamageParseText();
-      //}
 
-      //if (SelectedSummary == CurrentHealSummary)
-      //{
-      //  UpdateHealParseText();
-      //}
     }
 
-    private void UpdateDamageParseText()
+    private void ParseList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      /*
-      if (CurrentDamageStats != null)
-      {
-        List<PlayerStats> list = playerDataGrid?.SelectedItems.Count > 0 ? playerDataGrid.SelectedItems.Cast<PlayerStats>().ToList() : null;
-        SelectedSummary = CurrentDamageSummary = BuildDamageSummary(CurrentDamageStats, list);
-      }
-      */
-    }
 
-    private void UpdateHealParseText()
-    {
-      /*
-      if (CurrentHealStats != null)
-      {
-        List<PlayerStats> list = healDataGrid?.SelectedItems.Count > 0 ? healDataGrid.SelectedItems.Cast<PlayerStats>().ToList() : null;
-        SelectedSummary = CurrentHealSummary = HealStatsBuilder.BuildSummary(CurrentHealStats, list, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
-        playerParseTextBox.Text = CurrentHealSummary.Title + CurrentHealSummary.RankedPlayers;
-        playerParseTextBox.SelectAll();
-      }
-      */
     }
 
     private void PlayerParseTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -459,7 +463,6 @@ namespace EQLogParser
 
     private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      LOG.Error("aaaa");
       var comboBox = sender as ComboBox;
       if (comboBox != null)
       {
@@ -471,7 +474,6 @@ namespace EQLogParser
           petMappingGrid.CommitEdit();
         }
       }
-      LOG.Error("aaaa2");
     }
 
     private void OpenLogFile(bool monitorOnly = false, int lastMins = -1)
@@ -556,23 +558,6 @@ namespace EQLogParser
       CastProcessor?.Stop();
       DamageProcessor?.Stop();
       HealProcessor?.Stop();
-    }
-
-    private void Window_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-    {
-      if (sender == damageWindow && damageWindow.IsVisible)
-      {
-        UpdateDamageParseText();
-      }
-      else if (sender == healWindow && healWindow.IsVisible)
-      {
-        UpdateHealParseText();
-      }
-    }
-
-    private void ParseList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-
     }
   }
 }

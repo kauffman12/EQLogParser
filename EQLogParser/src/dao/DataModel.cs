@@ -30,11 +30,21 @@ namespace EQLogParser
     public const string UNKNOWN_SPELL = "Unknown Spell";
     public const string UNKNOWN_PLAYER = "Unknown Player";
     public const string RAID_PLAYER = "Totals";
+    public const string HEAL_PARSE = "Healing";
+    public const string DAMAGE_PARSE = "Damage";
   }
 
-  public class Action
+  public interface SummaryBuilder
   {
+    StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers);
+  }
 
+  public interface Action { }
+
+  public class ParseData
+  {
+    public CombinedStats CombinedStats { get; set; }
+    public SummaryBuilder Builder { get; set; }
   }
 
   public class TimedAction : Action
@@ -77,6 +87,7 @@ namespace EQLogParser
 
   public class StatsGenerationEvent
   {
+    public string Name { get; set; }
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }
     public bool IsBaneAvailable { get; set; }
