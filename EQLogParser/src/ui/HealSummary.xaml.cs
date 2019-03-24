@@ -71,6 +71,7 @@ namespace EQLogParser
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
+            CurrentHealStats = null;
             title.Content = DEFAULT_TABLE_LABEL;
             TheMainWindow.Busy(false);
             UpdateDataGridMenuItems();
@@ -114,12 +115,14 @@ namespace EQLogParser
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
+        copyHealParseToEQClick.IsEnabled = true;
         UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentHealStats.UniqueClasses);
         UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentHealStats.UniqueClasses);
       }
       else
       {
-        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
+        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = 
+          menuItemShowSpellCasts.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
       }
     }
 

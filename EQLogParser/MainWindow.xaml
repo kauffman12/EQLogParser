@@ -130,7 +130,7 @@
       </docking:DockSite.AutoHideRightContainers>
       <docking:DockSite.AutoHideBottomContainers>
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" IsActive="True" Title="Share Player Parses" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
+          <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" Title="Share Player Parses" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
             <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="100" />
@@ -153,7 +153,7 @@
                   <RowDefinition Height="50*" />
                 </Grid.RowDefinitions>
                 <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
-                  <ComboBox Margin="0,2,15,0" x:Name="parseList" IsEnabled="False" SelectedIndex="0" Height="22" SelectionChanged="ParseList_SelectionChanged" />
+                  <ComboBox Margin="0,0,15,0" x:Name="parseList" IsEnabled="True" Height="24" SelectionChanged="ParseList_SelectionChanged" />
                   <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Total</CheckBox>
                   <CheckBox x:Name="playerParseTextDoRank" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Rank Players</CheckBox>
                 </StackPanel>
