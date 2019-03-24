@@ -108,6 +108,7 @@ namespace EQLogParser
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
+            CurrentDamageStats = null;
             title.Content = DEFAULT_TABLE_LABEL;
             TheMainWindow.Busy(false);
             UpdateDataGridMenuItems();
@@ -266,13 +267,14 @@ namespace EQLogParser
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowDamage.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
+        copyDamageParseToEQClick.IsEnabled = true;
         UpdateClassMenuItems(menuItemShowDamage, dataGrid, CurrentDamageStats?.UniqueClasses);
         UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentDamageStats?.UniqueClasses);
       }
       else
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowDamage.IsEnabled =
-          menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = false;
+          menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
       }
     }
 

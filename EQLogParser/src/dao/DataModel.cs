@@ -45,6 +45,7 @@ namespace EQLogParser
   {
     public CombinedStats CombinedStats { get; set; }
     public SummaryBuilder Builder { get; set; }
+    public List<PlayerStats> Selected { get; set; }
   }
 
   public class TimedAction : Action
