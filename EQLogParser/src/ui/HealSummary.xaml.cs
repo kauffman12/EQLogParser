@@ -49,11 +49,11 @@ namespace EQLogParser
           {
             if (rebuild)
             {
-              CurrentHealStats = HealStatsBuilder.ComputeHealStats(CurrentHealStats.RaidStats, showAE);
+              CurrentHealStats = HealStatsManager.ComputeHealStats(CurrentHealStats.RaidStats, showAE);
             }
             else
             {
-              CurrentHealStats = HealStatsBuilder.BuildTotalStats(name, npcList, showAE);
+              CurrentHealStats = HealStatsManager.BuildTotalStats(name, npcList, showAE);
             }
  
             Dispatcher.InvokeAsync((() =>
@@ -64,7 +64,7 @@ namespace EQLogParser
               }
               else
               {
-                includeAEHealing.IsEnabled = HealStatsBuilder.IsAEHealingAvailable;
+                includeAEHealing.IsEnabled = HealStatsManager.IsAEHealingAvailable;
                 title.Content = CurrentHealStats.FullTitle;
                 dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
               }
@@ -100,7 +100,7 @@ namespace EQLogParser
     protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var selected = GetSelectedStats();
-      HealStatsBuilder.FireSelectionEvent(selected);
+      HealStatsManager.FireSelectionEvent(selected);
       FireSelectionChangedEvent(selected);
       UpdateDataGridMenuItems();
     }

@@ -73,7 +73,7 @@ namespace EQLogParser
     protected void DataGridShowBreakdownByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowBreakdown(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, TheDataGrid.Items));
+      ShowBreakdown(GetPlayerStatsByClass(menuItem.Tag as string));
     }
 
     protected void DataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
@@ -84,7 +84,25 @@ namespace EQLogParser
     protected void DataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCasts(StatsBuilder.GetSelectedPlayerStatsByClass(menuItem.Tag as string, TheDataGrid.Items));
+      ShowSpellCasts(GetPlayerStatsByClass(menuItem.Tag as string));
+    }
+
+    protected List<PlayerStats> GetPlayerStatsByClass(string classString)
+    {
+      SpellClasses type = (SpellClasses) Enum.Parse(typeof(SpellClasses), classString);
+      string className = DataManager.Instance.GetClassName(type);
+
+      List<PlayerStats> selectedStats = new List<PlayerStats>();
+      foreach (var item in TheDataGrid.Items)
+      {
+        PlayerStats stats = item as PlayerStats;
+        if (stats.ClassName == className)
+        {
+          selectedStats.Add(stats);
+        }
+      }
+
+      return selectedStats;
     }
 
     protected void FireSelectionChangedEvent(List<PlayerStats> selected)

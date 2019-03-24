@@ -388,7 +388,7 @@ namespace EQLogParser
                         int pointIndex = part.IndexOf(" point", forIndex + 3, StringComparison.Ordinal);
                         if (pointIndex > -1)
                         {
-                          damage = Helpers.ParseUInt(part.Substring(forIndex + 5, pointIndex - forIndex - 5));
+                          damage = StatsUtil.ParseUInt(part.Substring(forIndex + 5, pointIndex - forIndex - 5));
                           found = damage != uint.MaxValue;
                         }
                       }
@@ -427,7 +427,7 @@ namespace EQLogParser
                   int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
                   if (afterDmg > -1)
                   {
-                    damage = Helpers.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
+                    damage = StatsUtil.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
                     if (damage != uint.MaxValue)
                     {
                       // can be point or points
@@ -463,7 +463,7 @@ namespace EQLogParser
               int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
               if (afterDmg > -1)
               {
-                damage = Helpers.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
+                damage = StatsUtil.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
                 if (damage != uint.MaxValue)
                 {
                   int fromIndex = part.IndexOf(" from ", afterDmg, StringComparison.Ordinal);

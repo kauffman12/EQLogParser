@@ -3,38 +3,107 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Controls;
 
 namespace EQLogParser
 {
-  class StatsBuilder
+  class StatsUtil
   {
-    protected const string RAID_PLAYER = "Totals";
-    protected const string TIME_FORMAT = "in {0}s";
-    protected const string TOTAL_FORMAT = "{0}{1}@{2}";
-    protected const string TOTAL_ONLY_FORMAT = "{0}";
-    protected const string PLAYER_FORMAT = "{0} = ";
-    protected const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
+    internal const string TIME_FORMAT = "in {0}s";
+    internal const string TOTAL_FORMAT = "{0}{1}@{2}";
+    internal const string TOTAL_ONLY_FORMAT = "{0}";
+    internal const string PLAYER_FORMAT = "{0} = ";
+    internal const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
+    internal const int DEATH_TIME_OFFSET = 10; // seconds forward
 
-    protected static DictionaryAddHelper<string, uint> StringIntAddHelper = new DictionaryAddHelper<string, uint>();
-    private const int DEATH_TIME_OFFSET = 10; // seconds forward
-
-    internal static List<PlayerStats> GetSelectedPlayerStatsByClass(string classString, ItemCollection items)
+    internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
-      SpellClasses type = (SpellClasses) Enum.Parse(typeof(SpellClasses), classString);
-      string className = DataManager.Instance.GetClassName(type);
+      PlayerStats stats = null;
 
-      List<PlayerStats> selectedStats = new List<PlayerStats>();
-      foreach (var item in items)
+      lock (individualStats)
       {
-        PlayerStats stats = item as PlayerStats;
-        if (stats.ClassName == className)
+        if (!individualStats.ContainsKey(key))
         {
-          selectedStats.Add(stats);
+          stats = CreatePlayerStats(key, origName);
+          individualStats[key] = stats;
+        }
+        else
+        {
+          stats = individualStats[key];
         }
       }
 
-      return selectedStats;
+      return stats;
+    }
+
+    internal static PlayerStats CreatePlayerStats(string name, string origName = null)
+    {
+      string className = "";
+      origName = origName == null ? name : origName;
+
+      if (!DataManager.Instance.CheckNameForPet(origName))
+      {
+        className = DataManager.Instance.GetPlayerClass(origName);
+      }
+
+      return new PlayerStats()
+      {
+        Name = string.Intern(name),
+        ClassName = string.Intern(className),
+        OrigName = string.Intern(origName),
+        Percent = 100, // until something says otherwise
+        SubStats = new Dictionary<string, PlayerSubStats>(),
+        BeginTime = double.NaN,
+        BeginTimes = new List<double>(),
+        LastTimes = new List<double>(),
+        TimeDiffs = new List<double>()
+      };
+    }
+
+    internal static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string key, string type)
+    {
+      PlayerSubStats stats = null;
+
+      lock (individualStats)
+      {
+        if (!individualStats.ContainsKey(key))
+        {
+          stats = CreatePlayerSubStats(key, type);
+          individualStats[key] = stats;
+        }
+        else
+        {
+          stats = individualStats[key];
+        }
+      }
+
+      return stats;
+    }
+
+    internal static PlayerSubStats CreatePlayerSubStats(string name, string type)
+    {
+      return new PlayerSubStats()
+      {
+        ClassName = "",
+        Name = string.Intern(name),
+        Type = string.Intern(type),
+        CritFreqValues = new Dictionary<long, int>(),
+        NonCritFreqValues = new Dictionary<long, int>(),
+        BeginTime = double.NaN,
+        BeginTimes = new List<double>(),
+        LastTimes = new List<double>(),
+        TimeDiffs = new List<double>()
+      };
+    }
+
+    internal static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
+    {
+      string result;
+      result = targetTitle + " " + timeTitle;
+      if (damageTitle != "")
+      {
+        result += ", " + damageTitle;
+      }
+      return result;
     }
 
     internal static string FormatTotals(long total)
@@ -61,98 +130,22 @@ namespace EQLogParser
       return result;
     }
 
-    protected static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
+    internal static uint ParseUInt(string str)
     {
-      PlayerStats stats = null;
-
-      lock (individualStats)
+      uint y = 0;
+      for (int i = 0; i < str.Length; i++)
       {
-        if (!individualStats.ContainsKey(key))
+        if (!char.IsDigit(str[i]))
         {
-          stats = CreatePlayerStats(key, origName);
-          individualStats[key] = stats;
+          return uint.MaxValue;
         }
-        else
-        {
-          stats = individualStats[key];
-        }
+
+        y = y * 10 + (Convert.ToUInt32(str[i]) - '0');
       }
-
-      return stats;
+      return y;
     }
 
-    protected static PlayerStats CreatePlayerStats(string name, string origName = null)
-    {
-      string className = "";
-      origName = origName == null ? name : origName;
-
-      if (!DataManager.Instance.CheckNameForPet(origName))
-      {
-        className = DataManager.Instance.GetPlayerClass(origName);
-      }
-
-      return new PlayerStats()
-      {
-        Name = string.Intern(name),
-        ClassName = string.Intern(className),
-        OrigName = string.Intern(origName),
-        Percent = 100, // until something says otherwise
-        SubStats = new Dictionary<string, PlayerSubStats>(),
-        BeginTime = double.NaN,
-        BeginTimes = new List<double>(),
-        LastTimes = new List<double>(),
-        TimeDiffs = new List<double>()
-      };
-    }
-
-    protected static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string key, string type)
-    {
-      PlayerSubStats stats = null;
-
-      lock (individualStats)
-      {
-        if (!individualStats.ContainsKey(key))
-        {
-          stats = CreatePlayerSubStats(key, type);
-          individualStats[key] = stats;
-        }
-        else
-        {
-          stats = individualStats[key];
-        }
-      }
-
-      return stats;
-    }
-
-    protected static PlayerSubStats CreatePlayerSubStats(string name, string type)
-    {
-      return new PlayerSubStats()
-      {
-        ClassName = "",
-        Name = string.Intern(name),
-        Type = string.Intern(type),
-        CritFreqValues = new Dictionary<long, int>(),
-        NonCritFreqValues = new Dictionary<long, int>(),
-        BeginTime = double.NaN,
-        BeginTimes = new List<double>(),
-        LastTimes = new List<double>(),
-        TimeDiffs = new List<double>()
-      };
-    }
-
-    protected static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
-    {
-      string result;
-      result = targetTitle + " " + timeTitle;
-      if (damageTitle != "")
-      {
-        result += ", " + damageTitle;
-      }
-      return result;
-    }
-
-    protected static void UpdateTimeDiffs(PlayerSubStats subStats, FullTimedAction action, double offset = 0)
+    internal static void UpdateTimeDiffs(PlayerSubStats subStats, FullTimedAction action, double offset = 0)
     {
       int currentIndex = subStats.BeginTimes.Count - 1;
       if (currentIndex == -1)
@@ -181,7 +174,7 @@ namespace EQLogParser
       subStats.TimeDiffs[currentIndex] = subStats.LastTimes[currentIndex] - subStats.BeginTimes[currentIndex] + 1;
     }
 
-    protected static void UpdateStats(PlayerSubStats stats, HitRecord record, double beginTime)
+    internal static void UpdateStats(PlayerSubStats stats, HitRecord record, double beginTime)
     {
       if (record.Type == Labels.BANE_NAME)
       {
@@ -203,7 +196,7 @@ namespace EQLogParser
       stats.LastTime = beginTime;
     }
 
-    protected static void MergeStats(PlayerSubStats to, PlayerSubStats from)
+    internal static void MergeStats(PlayerSubStats to, PlayerSubStats from)
     {
       to.BaneHits += from.BaneHits;
       to.Total += from.Total;
@@ -217,7 +210,7 @@ namespace EQLogParser
       to.LastTime = double.IsNaN(to.LastTime) ? from.LastTime : Math.Max(to.LastTime, from.LastTime);
     }
 
-    protected static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, Dictionary<string, uint> resistCounts = null, PlayerStats superStats = null)
+    internal static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, Dictionary<string, uint> resistCounts = null, PlayerStats superStats = null)
     {
       if (stats.Hits > 0)
       {
@@ -291,7 +284,7 @@ namespace EQLogParser
       }
     }
 
-    protected static ConcurrentDictionary<string, uint> GetPlayerDeaths(PlayerStats raidStats)
+    internal static ConcurrentDictionary<string, uint> GetPlayerDeaths(PlayerStats raidStats)
     {
       Dictionary<string, uint> deathCounts = new Dictionary<string, uint>();
 
@@ -305,7 +298,7 @@ namespace EQLogParser
           block.Actions.ForEach(action =>
           {
             PlayerDeath death = action as PlayerDeath;
-            StringIntAddHelper.Add(deathCounts, death.Player, 1);
+            Helpers.StringUIntAddHelper.Add(deathCounts, death.Player, 1);
           });
         });
       }

@@ -159,14 +159,15 @@
       <DependentUpon>OverlayWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Settings.cs" />
-    <Compile Include="src\control\HealStatsBuilder.cs" />
-    <Compile Include="src\control\StatsBuilder.cs" />
+    <Compile Include="src\control\HealStatsManager.cs" />
+    <Compile Include="src\util\DateUtil.cs" />
+    <Compile Include="src\util\StatsUtil.cs" />
     <Compile Include="src\control\SummaryTable.cs" />
     <Compile Include="src\dao\RecordGroupIterator.cs" />
     <Compile Include="src\parsing\CastLineParser.cs" />
     <Compile Include="src\dao\DataManager.cs" />
     <Compile Include="src\control\SpellCountBuilder.cs" />
-    <Compile Include="src\control\DamageStatsBuilder.cs" />
+    <Compile Include="src\control\DamageStatsManager.cs" />
     <Compile Include="src\parsing\HealLineParser.cs" />
     <Compile Include="src\parsing\LineModifiersParser.cs" />
     <Compile Include="src\parsing\PreProcessor.cs" />

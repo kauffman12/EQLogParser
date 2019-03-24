@@ -142,7 +142,7 @@ namespace EQLogParser
           int amountEnd = part.IndexOf(" ", amountIndex, StringComparison.Ordinal);
           if (amountEnd > -1)
           {
-            uint value = Helpers.ParseUInt(part.Substring(amountIndex, amountEnd - amountIndex));
+            uint value = StatsUtil.ParseUInt(part.Substring(amountIndex, amountEnd - amountIndex));
             if (value != uint.MaxValue)
             {
               heal = value;
@@ -154,7 +154,7 @@ namespace EQLogParser
               overEnd = part.IndexOf(")", amountEnd + 2, StringComparison.Ordinal);
               if (overEnd > -1)
               {
-                uint value2 = Helpers.ParseUInt(part.Substring(amountEnd + 2, overEnd - amountEnd - 2));
+                uint value2 = StatsUtil.ParseUInt(part.Substring(amountEnd + 2, overEnd - amountEnd - 2));
                 if (value2 != uint.MaxValue)
                 {
                   overHeal = value2;

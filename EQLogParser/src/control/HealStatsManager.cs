@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class HealStatsBuilder : StatsBuilder
+  class HealStatsManager
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -26,11 +26,11 @@ namespace EQLogParser
 
       try
       {
-        PlayerStats raidTotals = CreatePlayerStats(RAID_PLAYER);
+        PlayerStats raidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
 
         HealGroups.Clear();
 
-        selected.ForEach(npc => UpdateTimeDiffs(raidTotals, npc, HEAL_OFFSET));
+        selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(raidTotals, npc, HEAL_OFFSET));
         raidTotals.TotalSeconds = raidTotals.TimeDiffs.Sum();
 
         if (raidTotals.BeginTimes.Count > 0 && raidTotals.BeginTimes.Count == raidTotals.LastTimes.Count)
@@ -86,14 +86,14 @@ namespace EQLogParser
               if (IsValidHeal(record, showAE))
               {
                 raidTotals.Total += record.Total;
-                PlayerStats stats = CreatePlayerStats(individualStats, record.Healer);
+                PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
 
-                UpdateStats(stats, record, block.BeginTime);
+                StatsUtil.UpdateStats(stats, record, block.BeginTime);
                 allStats[record.Healer] = stats;
 
                 var spellStatName = record.SubType ?? Labels.UNKNOWN_SPELL;
-                PlayerSubStats spellStats = CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
-                UpdateStats(spellStats, record, block.BeginTime);
+                PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
+                StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
                 allStats[stats.Name + "=" + spellStatName] = spellStats;
 
                 var healedStatName = record.Healed;
@@ -102,8 +102,8 @@ namespace EQLogParser
                   stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
                 }
 
-                PlayerSubStats healedStats = CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
-                UpdateStats(healedStats, record, block.BeginTime);
+                PlayerSubStats healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
+                StatsUtil.UpdateStats(healedStats, record, block.BeginTime);
                 allStats[stats.Name + "=" + healedStatName] = healedStats;
               }
             });
@@ -117,17 +117,17 @@ namespace EQLogParser
         });
 
         raidTotals.DPS = (long) Math.Round(raidTotals.Total / raidTotals.TotalSeconds, 2);
-        Parallel.ForEach(individualStats.Values, stats => UpdateCalculations(stats, raidTotals));
+        Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, raidTotals));
 
         combined = new CombinedHealStats();
         combined.RaidStats = raidTotals;
         combined.UniqueClasses = new Dictionary<string, byte>();
         combined.StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
         combined.TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title;
-        combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
-        combined.TotalTitle = string.Format(TOTAL_FORMAT, FormatTotals(raidTotals.Total), " Heals ", FormatTotals(raidTotals.DPS));
-        combined.FullTitle = FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
-        combined.ShortTitle = FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
+        combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, raidTotals.TotalSeconds);
+        combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(raidTotals.Total), " Heals ", StatsUtil.FormatTotals(raidTotals.DPS));
+        combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
+        combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
         for (int i = 0; i < combined.StatsList.Count; i++)
         {
@@ -156,14 +156,14 @@ namespace EQLogParser
         {
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {
-            string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(TOTAL_ONLY_FORMAT, FormatTotals(stats.Total));
+            string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
+            string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
             list.Add(playerFormat + damageFormat + " ");
           }
         }
 
         details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-        title = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+        title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details, };
@@ -211,7 +211,7 @@ namespace EQLogParser
   {
     internal new StatsSummary Create(bool showTotals, bool rankPlayers)
     {
-      return HealStatsBuilder.BuildSummary(Combined, Selected, showTotals, rankPlayers);
+      return HealStatsManager.BuildSummary(Combined, Selected, showTotals, rankPlayers);
     }
   }
 }
