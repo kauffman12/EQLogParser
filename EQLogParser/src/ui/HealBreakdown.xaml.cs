@@ -14,27 +14,25 @@ namespace EQLogParser
   public partial class HealBreakdown : BreakdownTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private CombinedHealStats CurrentStats;
     private static bool running = false;
     private bool CurrentShowSpellsChoice = true;
     List<PlayerStats> PlayerStats = null;
 
     private List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
 
-    public HealBreakdown(MainWindow mainWindow, string title)
+    public HealBreakdown(MainWindow mainWindow, CombinedHealStats currentStats)
     {
       InitializeComponent();
       TheMainWindow = mainWindow;
-      titleLabel.Content = title;
+      titleLabel.Content = currentStats.ShortTitle;
       choicesList.ItemsSource = ChoicesList;
       choicesList.SelectedIndex = 0;
     }
 
-    public void Show(List<PlayerStats> selectedStats, CombinedHealStats currentStats)
+    public void Show(List<PlayerStats> selectedStats)
     {
-      if (selectedStats != null && currentStats != null)
+      if (selectedStats != null)
       {
-        CurrentStats = currentStats;
         PlayerStats = selectedStats;
         Display();
       }
