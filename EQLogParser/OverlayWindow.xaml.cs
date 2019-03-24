@@ -155,7 +155,7 @@ namespace EQLogParser
 
     private void DamageLineParser_EventsDamageProcessed(object sender, DamageProcessedEvent e)
     {
-      Stats = DamageStatsBuilder.ComputeOverlayDamageStats(e.Record, e.BeginTime, false, Stats);
+      Stats = DamageStatsManager.ComputeOverlayDamageStats(e.Record, e.BeginTime, false, Stats);
       if (!UpdateTimer.IsEnabled)
       {
         UpdateTimer.Start();
@@ -170,8 +170,8 @@ namespace EQLogParser
         if (list.Count > 0)
         {
           TitleBlock.Text = Stats.TargetTitle;
-          TitleDamageBlock.Text = StatsBuilder.FormatTotals(Stats.RaidStats.Total) + " [" + Stats.RaidStats.TotalSeconds + "s @" + 
-            StatsBuilder.FormatTotals(Stats.RaidStats.DPS) + "]";
+          TitleDamageBlock.Text = StatsUtil.FormatTotals(Stats.RaidStats.Total) + " [" + Stats.RaidStats.TotalSeconds + "s @" +
+            StatsUtil.FormatTotals(Stats.RaidStats.DPS) + "]";
 
           long total = 0;
           int goodRowCount = 0;
@@ -191,7 +191,7 @@ namespace EQLogParser
               }
 
               NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
-              var damage = StatsBuilder.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsBuilder.FormatTotals(list[i].DPS) + "]";
+              var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
               DamageBlockList[i].Text = damage;
               goodRowCount++;
             }

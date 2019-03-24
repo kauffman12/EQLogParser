@@ -90,11 +90,11 @@ namespace EQLogParser
           {
             if (rebuild)
             {
-              CurrentDamageStats = DamageStatsBuilder.ComputeDamageStats(CurrentDamageStats.RaidStats, showBane);
+              CurrentDamageStats = DamageStatsManager.ComputeDamageStats(CurrentDamageStats.RaidStats, showBane);
             }
             else
             {
-              CurrentDamageStats = DamageStatsBuilder.BuildTotalStats(name, npcList, showBane);
+              CurrentDamageStats = DamageStatsManager.BuildTotalStats(name, npcList, showBane);
             }
 
             var parse = new DamageParse() { Combined = CurrentDamageStats, Name = "Damage Parse" };
@@ -107,7 +107,7 @@ namespace EQLogParser
               }
               else
               {
-                includeBane.IsEnabled = DamageStatsBuilder.IsBaneAvailable;
+                includeBane.IsEnabled = DamageStatsManager.IsBaneAvailable;
                 title.Content = CurrentDamageStats.FullTitle;
                 dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
               }
@@ -143,7 +143,7 @@ namespace EQLogParser
     protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var selected = GetSelectedStats();
-      DamageStatsBuilder.FireSelectionEvent(selected);
+      DamageStatsManager.FireSelectionEvent(selected);
       FireSelectionChangedEvent(selected);
       UpdateDataGridMenuItems();
     }
@@ -179,7 +179,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var chart = new HitFreqChart();
-        var results = DamageStatsBuilder.GetHitFreqValues(CurrentDamageStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
+        var results = DamageStatsManager.GetHitFreqValues(CurrentDamageStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         var hitFreqWindow = Helpers.OpenNewTab(TheMainWindow.dockSite, "freqChart", "Hit Frequency", chart, 400, 300);
 
         chart.Update(results);

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class DamageStatsBuilder : StatsBuilder
+  class DamageStatsManager
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -31,7 +31,7 @@ namespace EQLogParser
 
       try
       {
-        PlayerStats raidTotals = CreatePlayerStats(RAID_PLAYER);
+        PlayerStats raidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
 
         DamageGroups.Clear();
         NpcNames.Clear();
@@ -41,7 +41,7 @@ namespace EQLogParser
 
         selected.ForEach(npc =>
         {
-          UpdateTimeDiffs(raidTotals, npc);
+          StatsUtil.UpdateTimeDiffs(raidTotals, npc);
           NpcNames[npc.Name] = 1;
         });
 
@@ -121,7 +121,7 @@ namespace EQLogParser
               DamageRecord record = action as DamageRecord;
               if (IsValidDamage(record))
               {
-                PlayerStats stats = CreatePlayerStats(individualStats, record.Attacker);
+                PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
 
                 if (!showBane && record.Type == Labels.BANE_NAME)
                 {
@@ -130,7 +130,7 @@ namespace EQLogParser
                 else
                 {
                   raidTotals.Total += record.Total;
-                  UpdateStats(stats, record, block.BeginTime);
+                  StatsUtil.UpdateStats(stats, record, block.BeginTime);
                   allStats[record.Attacker] = stats;
 
                   string player = null;
@@ -144,8 +144,8 @@ namespace EQLogParser
                     string origName = (player != null) ? player : record.Attacker;
                     string aggregateName = (player == Labels.UNASSIGNED_PET_OWNER) ? origName : origName + " +Pets";
 
-                    PlayerStats aggregatePlayerStats = CreatePlayerStats(individualStats, aggregateName, origName);
-                    UpdateStats(aggregatePlayerStats, record, block.BeginTime);
+                    PlayerStats aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
+                    StatsUtil.UpdateStats(aggregatePlayerStats, record, block.BeginTime);
                     allStats[aggregateName] = aggregatePlayerStats;
                     topLevelStats[aggregateName] = aggregatePlayerStats;
 
@@ -158,7 +158,7 @@ namespace EQLogParser
                     childrenStats[aggregateName][stats.Name] = stats;
                   }
 
-                  PlayerSubStats subStats = CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                  PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
                   UpdateSubStats(subStats, record, block.BeginTime);
                   allStats[stats.Name + "=" + record.SubType] = subStats;
                 }
@@ -180,11 +180,11 @@ namespace EQLogParser
         Parallel.ForEach(Resists, resist =>
         {
           ResistRecord record = resist as ResistRecord;
-          StringIntAddHelper.Add(resistCounts, record.Spell, 1);
+          Helpers.StringUIntAddHelper.Add(resistCounts, record.Spell, 1);
         });
 
         // get death counts
-        ConcurrentDictionary<string, uint> deathCounts = GetPlayerDeaths(raidTotals);
+        ConcurrentDictionary<string, uint> deathCounts = StatsUtil.GetPlayerDeaths(raidTotals);
 
         Parallel.ForEach(individualStats.Values, stats =>
         {
@@ -197,7 +197,7 @@ namespace EQLogParser
             {
               foreach (var child in children.Values)
               {
-                UpdateCalculations(child, raidTotals, resistCounts);
+                StatsUtil.UpdateCalculations(child, raidTotals, resistCounts);
 
                 if (stats.Total > 0)
                 {
@@ -213,12 +213,12 @@ namespace EQLogParser
               }
             }
 
-            UpdateCalculations(stats, raidTotals, resistCounts);
+            StatsUtil.UpdateCalculations(stats, raidTotals, resistCounts);
             stats.Deaths = totalDeaths;
           }
           else if (!PetToPlayer.ContainsKey(stats.Name))
           {
-            UpdateCalculations(stats, raidTotals, resistCounts);
+            StatsUtil.UpdateCalculations(stats, raidTotals, resistCounts);
 
             uint count;
             if (deathCounts.TryGetValue(stats.Name, out count))
@@ -234,10 +234,10 @@ namespace EQLogParser
         combined.Children = new Dictionary<string, List<PlayerStats>>();
         combined.StatsList = topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
         combined.TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title;
-        combined.TimeTitle = string.Format(TIME_FORMAT, raidTotals.TotalSeconds);
-        combined.TotalTitle = string.Format(TOTAL_FORMAT, FormatTotals(raidTotals.Total), " Damage ", FormatTotals(raidTotals.DPS));
-        combined.FullTitle = FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
-        combined.ShortTitle = FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
+        combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, raidTotals.TotalSeconds);
+        combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(raidTotals.Total), " Damage ", StatsUtil.FormatTotals(raidTotals.DPS));
+        combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
+        combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
         for (int i = 0; i < combined.StatsList.Count; i++)
         {
@@ -310,8 +310,8 @@ namespace EQLogParser
         if (!needAggregate || player == Labels.UNASSIGNED_PET_OWNER)
         {
           // not a pet
-          PlayerStats stats = CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
-          UpdateStats(stats, record, beginTime);
+          PlayerStats stats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
+          StatsUtil.UpdateStats(stats, record, beginTime);
           overlayStats.TopLevelStats[record.Attacker] = stats;
           stats.TotalSeconds = stats.LastTime - stats.BeginTime + 1;
         }
@@ -321,13 +321,13 @@ namespace EQLogParser
           string aggregateName = origName + " +Pets";
 
           PlayerStats aggregatePlayerStats;
-          aggregatePlayerStats = CreatePlayerStats(overlayStats.IndividualStats, aggregateName, origName);
+          aggregatePlayerStats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, aggregateName, origName);
           overlayStats.TopLevelStats[aggregateName] = aggregatePlayerStats;
 
           if (overlayStats.TopLevelStats.ContainsKey(origName))
           {
             var origPlayer = overlayStats.TopLevelStats[origName];
-            MergeStats(aggregatePlayerStats, origPlayer);
+            StatsUtil.MergeStats(aggregatePlayerStats, origPlayer);
             overlayStats.TopLevelStats.Remove(origName);
             overlayStats.IndividualStats.Remove(origName);
           }
@@ -335,12 +335,12 @@ namespace EQLogParser
           if (record.Attacker != origName && overlayStats.TopLevelStats.ContainsKey(record.Attacker))
           {
             var origPet = overlayStats.TopLevelStats[record.Attacker];
-            MergeStats(aggregatePlayerStats, origPet);
+            StatsUtil.MergeStats(aggregatePlayerStats, origPet);
             overlayStats.TopLevelStats.Remove(record.Attacker);
             overlayStats.IndividualStats.Remove(record.Attacker);
           }
 
-          UpdateStats(aggregatePlayerStats, record, beginTime);
+          StatsUtil.UpdateStats(aggregatePlayerStats, record, beginTime);
           aggregatePlayerStats.TotalSeconds = aggregatePlayerStats.LastTime - aggregatePlayerStats.BeginTime + 1;
         }
 
@@ -370,7 +370,7 @@ namespace EQLogParser
         }
 
         // only calculate the top few
-        Parallel.ForEach(overlayStats.StatsList, top => UpdateCalculations(top, raidStats));
+        Parallel.ForEach(overlayStats.StatsList, top => StatsUtil.UpdateCalculations(top, raidStats));
         overlayStats.TargetTitle = (overlayStats.UniqueNpcs.Count > 1 ? "Combined (" + overlayStats.UniqueNpcs.Count + "): " : "") + record.Defender;
       }
 
@@ -390,15 +390,15 @@ namespace EQLogParser
         {
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {
-            string playerFormat = rankPlayers ? string.Format(PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(TOTAL_FORMAT, FormatTotals(stats.Total), "", FormatTotals(stats.DPS));
-            string timeFormat = string.Format(TIME_FORMAT, stats.TotalSeconds);
+            string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
+            string damageFormat = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS));
+            string timeFormat = string.Format(StatsUtil.TIME_FORMAT, stats.TotalSeconds);
             list.Add(playerFormat + damageFormat + " " + timeFormat);
           }
         }
 
         details = list.Count > 0 ? ", " + string.Join(", ", list) : "";
-        title = FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+        title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details };
@@ -480,7 +480,7 @@ namespace EQLogParser
     private static void UpdateSubStats(PlayerSubStats subStats, DamageRecord record, double beginTime)
     {
       uint critHits = subStats.CritHits;
-      UpdateStats(subStats, record, beginTime);
+      StatsUtil.UpdateStats(subStats, record, beginTime);
 
       Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
       LongIntAddHelper.Add(values, record.Total, 1);
@@ -491,7 +491,7 @@ namespace EQLogParser
   {
     internal new StatsSummary Create(bool showTotals, bool rankPlayers)
     {
-      return DamageStatsBuilder.BuildSummary(Combined, Selected, showTotals, rankPlayers);
+      return DamageStatsManager.BuildSummary(Combined, Selected, showTotals, rankPlayers);
     }
   }
 }

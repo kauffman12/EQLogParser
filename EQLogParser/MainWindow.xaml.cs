@@ -112,8 +112,8 @@ namespace EQLogParser
         HealSummaryTable = healWindow.Content as HealSummary;
         HealSummaryTable.EventsSelectionChange += (sender, data) => UpdateDamageParseText();
 
-        DamageStatsBuilder.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
-        HealStatsBuilder.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
+        DamageStatsManager.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
+        HealStatsManager.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -179,7 +179,7 @@ namespace EQLogParser
 
     internal StatsSummary BuildDamageSummary(CombinedStats combined, List<PlayerStats> selected)
     {
-      var summary = DamageStatsBuilder.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
+      var summary = DamageStatsManager.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
       playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
       playerParseTextBox.SelectAll();
       return summary;
@@ -298,14 +298,14 @@ namespace EQLogParser
     {
       var host = HealingChartWindow?.DockHost;
       DamageChartWindow = Helpers.OpenChart(dockSite, DamageChartWindow, host, LineChart.DAMAGE_CHOICES, "Damage Chart");
-      DamageStatsBuilder.FireUpdateEvent(DamageSummaryTable.IsBaneEnabled(), DamageSummaryTable.GetSelectedStats());
+      DamageStatsManager.FireUpdateEvent(DamageSummaryTable.IsBaneEnabled(), DamageSummaryTable.GetSelectedStats());
     }
 
     private void OpenHealingChart()
     {
       var host = DamageChartWindow?.DockHost;
       HealingChartWindow = Helpers.OpenChart(dockSite, HealingChartWindow, host, LineChart.HEALING_CHOICES, "Healing Chart");
-      HealStatsBuilder.FireUpdateEvent(true, DamageSummaryTable.GetSelectedStats());
+      HealStatsManager.FireUpdateEvent(true, DamageSummaryTable.GetSelectedStats());
     }
 
     // Main Menu Op File
