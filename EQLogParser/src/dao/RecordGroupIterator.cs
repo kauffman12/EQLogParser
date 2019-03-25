@@ -50,7 +50,7 @@ namespace EQLogParser
     override protected bool IsValid(RecordWrapper wrapper)
     {
       HealRecord record = wrapper.Record as HealRecord;
-      return HealStatsManager.Instance.IsValidHeal(record, ShowAE);
+      return HealingStatsManager.Instance.IsValidHeal(record, ShowAE);
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)

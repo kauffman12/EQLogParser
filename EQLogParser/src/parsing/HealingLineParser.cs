@@ -2,7 +2,7 @@
 
 namespace EQLogParser
 {
-  class HealLineParser
+  class HealingLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public static event EventHandler<string> EventsLineProcessed;

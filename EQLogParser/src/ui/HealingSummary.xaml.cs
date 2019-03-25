@@ -1,5 +1,4 @@
 ﻿
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -11,14 +10,14 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for HealSummary.xaml
   /// </summary>
-  public partial class HealSummary : SummaryTable
+  public partial class HealingSummary : SummaryTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private CombinedHealStats CurrentHealStats = null;
     private bool Ready = false;
 
-    public HealSummary()
+    public HealingSummary()
     {
       InitializeComponent();
       InitSummaryTable(title, dataGrid);
@@ -28,13 +27,13 @@ namespace EQLogParser
       string value = DataManager.Instance.GetApplicationSetting("IncludeAEHealing");
       includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bValue) && bValue;
 
-      HealStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       Ready = true;
     }
 
-    ~HealSummary()
+    ~HealingSummary()
     {
-      HealStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
+      HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
     }
 
     internal bool IsAEHealingEnabled()
@@ -83,7 +82,7 @@ namespace EQLogParser
     protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var selected = GetSelectedStats();
-      HealStatsManager.Instance.FireSelectionEvent(selected);
+      HealingStatsManager.Instance.FireSelectionEvent(selected);
       FireSelectionChangedEvent(selected);
       UpdateDataGridMenuItems();
     }
@@ -135,7 +134,7 @@ namespace EQLogParser
 
         if (CurrentHealStats != null && CurrentHealStats.RaidStats != null)
         {
-          Task.Run(() => HealStatsManager.Instance.RebuildTotalStats(CurrentHealStats.RaidStats, isAEHealingEnabled));
+          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(CurrentHealStats.RaidStats, isAEHealingEnabled));
         }
       }
     }

@@ -35,17 +35,25 @@
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
       </MenuItem>
       <MenuItem Header="_View" Height="20" Width="40">
-        <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindow_Click" Header="_Damage Chart" Height="20" />
-        <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindow_Click" Header="_Healing Chart" Height="20" />
+        <MenuItem x:Name="damageMenuItems" Header="_Damage" Height="20">
+          <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindow_Click" Header="Chart" Height="20" />
+          <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindow_Click" Header="Summary Table" Height="20" />
+        </MenuItem>
+        <MenuItem x:Name="healingMenuItems" Header="_Healing" Height="20">
+          <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindow_Click" Header="Chart" Height="20" />
+          <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindow_Click" Header="Summary Table" Height="20" />
+        </MenuItem>
         <Separator />
-        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_File Status" Height="20" />
         <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="playerspetsMenuItems" Header="Pets And Players" Height="20">
+          <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Players" Height="20" />
+          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Share Player Parses" Click="MenuItemWindow_Click" Height="20" />
+          <Separator />
+          <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="P_ets" Height="20" />
+          <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20" />
+        </MenuItem>
         <Separator />
-        <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Share Player DPS" Click="MenuItemWindow_Click" Height="20" />
-        <Separator />
-        <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Players" Height="20" />
-        <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="P_ets" Height="20" />
-        <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_Status" Height="20" />
       </MenuItem>
     </Menu>
     <fa:ImageAwesome Grid.Row="0" x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,5,15,1" Grid.Column="1"/>
@@ -58,7 +66,7 @@
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="progressWindow" CanFloat="False" CanAutoHide="False" IsOpen="False" Title="File Status" ContainerDockedSize="320,35">
+            <docking:ToolWindow x:Name="progressWindow" CanFloat="False" CanAutoHide="False" IsOpen="False" Title="Status" ContainerDockedSize="320,35">
               <WrapPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal">
                   <Label Width="85" x:Name="bytesReadTitle" HorizontalContentAlignment="Left" Margin="4,0,0,0">Reading:</Label>
@@ -76,14 +84,7 @@
           <docking:Workspace>
             <docking:TabbedMdiHost>
               <docking:SplitContainer Orientation="Vertical">
-                <docking:TabbedMdiContainer>
-                  <docking:DocumentWindow x:Name="damageWindow" Title="Damage Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False" ContainerMinSize="600,50">
-                    <local:DamageSummary />
-                  </docking:DocumentWindow>
-                  <docking:DocumentWindow x:Name="healWindow" Title="Healing Summary" Description="" CanDragTab="False" CanFloat="False" CanClose="False">
-                    <local:HealSummary />
-                  </docking:DocumentWindow>
-                </docking:TabbedMdiContainer>
+                <docking:TabbedMdiContainer />
               </docking:SplitContainer>
             </docking:TabbedMdiHost>
           </docking:Workspace>

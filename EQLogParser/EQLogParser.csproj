@@ -159,7 +159,7 @@
       <DependentUpon>OverlayWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Settings.cs" />
-    <Compile Include="src\control\HealStatsManager.cs" />
+    <Compile Include="src\control\HealingStatsManager.cs" />
     <Compile Include="src\util\DateUtil.cs" />
     <Compile Include="src\util\StatsUtil.cs" />
     <Compile Include="src\control\SummaryTable.cs" />
@@ -168,7 +168,7 @@
     <Compile Include="src\dao\DataManager.cs" />
     <Compile Include="src\control\SpellCountBuilder.cs" />
     <Compile Include="src\control\DamageStatsManager.cs" />
-    <Compile Include="src\parsing\HealLineParser.cs" />
+    <Compile Include="src\parsing\HealingLineParser.cs" />
     <Compile Include="src\parsing\LineModifiersParser.cs" />
     <Compile Include="src\parsing\PreProcessor.cs" />
     <Compile Include="src\control\BreakdownTable.cs" />
@@ -178,11 +178,11 @@
     <Compile Include="src\ui\DamageBreakdown.xaml.cs">
       <DependentUpon>DamageBreakdown.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\HealBreakdown.xaml.cs">
-      <DependentUpon>HealBreakdown.xaml</DependentUpon>
+    <Compile Include="src\ui\HealingBreakdown.xaml.cs">
+      <DependentUpon>HealingBreakdown.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\HealSummary.xaml.cs">
-      <DependentUpon>HealSummary.xaml</DependentUpon>
+    <Compile Include="src\ui\HealingSummary.xaml.cs">
+      <DependentUpon>HealingSummary.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\LineChart.xaml.cs">
       <DependentUpon>LineChart.xaml</DependentUpon>
@@ -226,11 +226,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\HealBreakdown.xaml">
+    <Page Include="src\ui\HealingBreakdown.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\HealSummary.xaml">
+    <Page Include="src\ui\HealingSummary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -123,41 +123,6 @@ namespace EQLogParser
       callingDataGrid.UnselectAll();
     }
 
-    internal static DocumentWindow OpenChart(DockSite dockSite, DocumentWindow chartWindow, DockHost host, List<string> choices, string title)
-    {
-      DocumentWindow newChartWindow = chartWindow;
-
-      if (chartWindow != null && chartWindow.IsOpen)
-      {
-        // just focus
-        OpenWindow(chartWindow);
-      }
-      else
-      {
-        var lineChart = new LineChart(choices);
-        newChartWindow = new DocumentWindow(dockSite, title, title, null, lineChart);
-
-        OpenWindow(newChartWindow);
-        newChartWindow.CanFloat = true;
-        newChartWindow.CanClose = true;
-
-        if (host != null)
-        {
-          newChartWindow.MoveToMdi(host);
-          if (newChartWindow.CanMoveToNextContainer)
-          {
-            newChartWindow.MoveToNextContainer();
-          }
-        }
-        else
-        {
-          newChartWindow.MoveToNewHorizontalContainer();
-        }
-      }
-
-      return newChartWindow;
-    }
-
     internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
     {
       var entry = new SortableName() { Name = string.Intern(name) };
