@@ -90,6 +90,18 @@ namespace EQLogParser
       }
     }
 
+    internal void FixSize()
+    {
+      Task.Delay(500).ContinueWith(task =>
+      {
+        Dispatcher.InvokeAsync(() =>
+        {
+          lvcChart.UpdateLayout();
+          lvcChart.Update();
+        });
+      });
+    }
+
     private void AddDataPoints(RecordGroupIterator recordIterator, List<PlayerStats> selected = null)
     {
       DateTime newTaskTime = DateTime.Now;

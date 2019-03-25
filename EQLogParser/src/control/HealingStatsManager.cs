@@ -18,36 +18,38 @@ namespace EQLogParser
     internal bool IsAEHealingAvailable = false;
 
     private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
+
+    private PlayerStats RaidTotals;
     private List<NonPlayer> Selected;
     private string Title;
 
-    internal void BuildTotalStats(string title, List<NonPlayer> selected, bool showAE)
+    internal void BuildTotalStats(HealingStatsOptions options)
     {
-      Selected = selected;
-      Title = title;
+      Selected = options.Npcs;
+      Title = options.Name;
 
       try
       {
-        FireNewStatsEvent();
+        FireNewStatsEvent(options);
 
-        PlayerStats raidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
+        RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
         HealGroups.Clear();
 
-        selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(raidTotals, npc, HEAL_OFFSET));
-        raidTotals.TotalSeconds = raidTotals.TimeDiffs.Sum();
+        Selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(RaidTotals, npc, HEAL_OFFSET));
+        RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
 
-        if (raidTotals.BeginTimes.Count > 0 && raidTotals.BeginTimes.Count == raidTotals.LastTimes.Count)
+        if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
         {
-          for (int i = 0; i < raidTotals.BeginTimes.Count; i++)
+          for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
           {
-            HealGroups.Add(DataManager.Instance.GetHealsDuring(raidTotals.BeginTimes[i], raidTotals.LastTimes[i]));
+            HealGroups.Add(DataManager.Instance.GetHealsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
           }
 
-          ComputeHealStats(raidTotals, showAE);
+          ComputeHealStats(options);
         }
         else
         {
-          FireNoDataEvent();
+          FireNoDataEvent(options);
         }
       }
       catch (Exception e)
@@ -56,10 +58,10 @@ namespace EQLogParser
       }
     }
 
-    internal void RebuildTotalStats(PlayerStats raidTotals, bool showAE = false)
+    internal void RebuildTotalStats(HealingStatsOptions options)
     {
-      FireNewStatsEvent();
-      ComputeHealStats(raidTotals, showAE);
+      FireNewStatsEvent(options);
+      ComputeHealStats(options);
     }
 
     internal bool IsValidHeal(HealRecord record, bool showAE)
@@ -85,55 +87,78 @@ namespace EQLogParser
       return valid;
     }
 
-    internal void FireSelectionEvent(List<PlayerStats> selected)
+    internal void FireSelectionEvent(HealingStatsOptions options, List<PlayerStats> selected)
     {
-      // send update
-      DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
-      EventsUpdateDataPoint?.Invoke(HealGroups, de);
+      if (options.RequestChartData)
+      {
+        // send update
+        DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
+        EventsUpdateDataPoint?.Invoke(HealGroups, de);
+      }
     }
 
-    internal void FireUpdateEvent(bool showAE, List<PlayerStats> selected = null)
+    internal void FireUpdateEvent(HealingStatsOptions options, List<PlayerStats> selected = null)
     {
-      // send update
-      DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new HealGroupIterator(HealGroups, showAE) };
-      EventsUpdateDataPoint?.Invoke(HealGroups, de);
+      if (options.RequestChartData)
+      {
+        // send update
+        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new HealGroupIterator(HealGroups, options.IsAEHealingEanbled) };
+        EventsUpdateDataPoint?.Invoke(HealGroups, de);
+      }
     }
 
-    private void FireCompletedEvent(CombinedHealStats combined)
+    private void FireCompletedEvent(HealingStatsOptions options, CombinedHealStats combined)
     {
-      // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.HEAL_PARSE, State = "COMPLETED", CombinedStats = combined,
-        IsAEHealingAvailable = IsAEHealingAvailable });
+      if (options.RequestSummaryData)
+      {
+        // generating new stats
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent()
+        {
+          Name = Labels.HEAL_PARSE,
+          State = "COMPLETED",
+          CombinedStats = combined,
+          IsAEHealingAvailable = IsAEHealingAvailable
+        });
+      }
     }
 
-    private void FireNewStatsEvent()
+    private void FireNewStatsEvent(HealingStatsOptions options)
     {
-      // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.HEAL_PARSE, State = "STARTED" });
+      if (options.RequestSummaryData)
+      {
+       // generating new stats
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.HEAL_PARSE, State = "STARTED" });
+      }
     }
 
-    private void FireNoDataEvent()
+    private void FireNoDataEvent(HealingStatsOptions options)
     {
-      // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.HEAL_PARSE, State = "NONPC" });
+      if (options.RequestSummaryData)
+      {
+        // nothing to do
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.HEAL_PARSE, State = "NONPC" });
+      }
 
-      // send update
-      DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
-      EventsUpdateDataPoint?.Invoke(HealGroups, de);
+      if (options.RequestChartData)
+      {
+        // send update
+        DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
+        EventsUpdateDataPoint?.Invoke(HealGroups, de);
+      }
     }
 
-    private void ComputeHealStats(PlayerStats raidTotals, bool showAE)
+    private void ComputeHealStats(HealingStatsOptions options)
     {
       CombinedHealStats combined = null;
       Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
       // always start over
-      raidTotals.Total = 0;
+      RaidTotals.Total = 0;
       IsAEHealingAvailable = false;
 
       try
       {
-        FireUpdateEvent(showAE);
+        FireUpdateEvent(options);
 
         HealGroups.ForEach(group =>
         {
@@ -146,9 +171,9 @@ namespace EQLogParser
             {
               HealRecord record = action as HealRecord;
 
-              if (IsValidHeal(record, showAE))
+              if (IsValidHeal(record, options.IsAEHealingEanbled))
               {
-                raidTotals.Total += record.Total;
+                RaidTotals.Total += record.Total;
                 PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
 
                 StatsUtil.UpdateStats(stats, record, block.BeginTime);
@@ -179,16 +204,16 @@ namespace EQLogParser
           });
         });
 
-        raidTotals.DPS = (long) Math.Round(raidTotals.Total / raidTotals.TotalSeconds, 2);
-        Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, raidTotals));
+        RaidTotals.DPS = (long) Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
+        Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, RaidTotals));
 
         combined = new CombinedHealStats();
-        combined.RaidStats = raidTotals;
+        combined.RaidStats = RaidTotals;
         combined.UniqueClasses = new Dictionary<string, byte>();
         combined.StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
         combined.TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title;
-        combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, raidTotals.TotalSeconds);
-        combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(raidTotals.Total), " Heals ", StatsUtil.FormatTotals(raidTotals.DPS));
+        combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds);
+        combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Heals ", StatsUtil.FormatTotals(RaidTotals.DPS));
         combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
         combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
@@ -203,7 +228,7 @@ namespace EQLogParser
         LOG.Error(ex);
       }
 
-      FireCompletedEvent(combined);
+      FireCompletedEvent(options, combined);
     }
 
     public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)

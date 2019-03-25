@@ -95,17 +95,17 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.DataGrid.Contrib.Wpf, Version=18.1.673.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.DataGrid.Contrib.Wpf, Version=18.1.675.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v18.1.0673\Assemblies\ActiproSoftware.DataGrid.Contrib.Wpf.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v18.1.0675\Assemblies\ActiproSoftware.DataGrid.Contrib.Wpf.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.Docking.Wpf, Version=18.1.673.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.Docking.Wpf, Version=18.1.675.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v18.1.0673\Assemblies\ActiproSoftware.Docking.Wpf.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v18.1.0675\Assemblies\ActiproSoftware.Docking.Wpf.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.Shared.Wpf, Version=18.1.673.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.Shared.Wpf, Version=18.1.675.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v18.1.0673\Assemblies\ActiproSoftware.Shared.Wpf.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v18.1.0675\Assemblies\ActiproSoftware.Shared.Wpf.dll</HintPath>
     </Reference>
     <Reference Include="Caching, Version=1.1.3.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Caching.dll.1.1.3\lib\Caching.dll</HintPath>

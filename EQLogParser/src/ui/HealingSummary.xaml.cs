@@ -81,9 +81,7 @@ namespace EQLogParser
 
     protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      var selected = GetSelectedStats();
-      HealingStatsManager.Instance.FireSelectionEvent(selected);
-      FireSelectionChangedEvent(selected);
+      FireSelectionChangedEvent(GetSelectedStats());
       UpdateDataGridMenuItems();
     }
 
@@ -134,7 +132,9 @@ namespace EQLogParser
 
         if (CurrentHealStats != null && CurrentHealStats.RaidStats != null)
         {
-          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(CurrentHealStats.RaidStats, isAEHealingEnabled));
+          includeAEHealing.IsEnabled = false;
+          var options = new HealingStatsOptions() { IsAEHealingEanbled = isAEHealingEnabled, RequestChartData = true, RequestSummaryData = true };
+          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options));
         }
       }
     }
