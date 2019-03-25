@@ -214,7 +214,7 @@ namespace EQLogParser
 
     internal void UpdateDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
-      UpdateParse("Damage", DamageStatsManager.Instance, combined, selected);
+      UpdateParse(Labels.DAMAGE_PARSE, DamageStatsManager.Instance, combined, selected);
     }
 
     private void HandleChartUpdateEvent(DocumentWindow window, object sender, DataPointEvent e)
@@ -567,6 +567,7 @@ namespace EQLogParser
         Parses[name] = new ParseData() { Builder = builder, CombinedStats = combined, Selected = selected };
         playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
         playerParseTextBox.SelectAll();
+        parseList.SelectedItem = name;
       });
     }
 
