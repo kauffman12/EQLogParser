@@ -14,18 +14,25 @@ namespace EQLogParser
 
     internal event EventHandler<PlayerStatsSelectionChangedEvent> EventsSelectionChange;
 
-    protected MainWindow TheMainWindow;
     protected DataGrid TheDataGrid;
     protected Label TheTitle;
+    protected bool connected = false;
 
     protected void InitSummaryTable(Label title, DataGrid dataGrid)
     {
-      TheMainWindow = Application.Current.MainWindow as MainWindow;
       TheDataGrid = dataGrid;
       TheTitle = title;
 
       title.Content = DEFAULT_TABLE_LABEL;
       dataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
+    }
+
+    internal void EnsureConnected()
+    {
+      if (!connected)
+      {
+        Summary_Loaded();
+      }
     }
 
     internal void UpdateClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
@@ -50,7 +57,7 @@ namespace EQLogParser
 
     protected void CopyToEQ_Click(object sender, RoutedEventArgs e)
     {
-      TheMainWindow.CopyToEQ_Click();
+      (Application.Current.MainWindow as MainWindow).CopyToEQ_Click();
     }
 
     protected void DataGridSelectAll_Click(object sender, RoutedEventArgs e)
@@ -124,6 +131,11 @@ namespace EQLogParser
       {
         e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
       }
+    }
+
+    protected virtual void Summary_Loaded(object sender = null, RoutedEventArgs e = null)
+    {
+      // do nothing
     }
   }
 }
