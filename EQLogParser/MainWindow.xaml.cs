@@ -42,7 +42,7 @@ namespace EQLogParser
 
     private static ActionProcessor<string> CastProcessor = null;
     private static ActionProcessor<string> DamageProcessor = null;
-    private static ActionProcessor<string> HealProcessor = null;
+    private static ActionProcessor<string> HealingProcessor = null;
 
     // progress window
     private static DateTime StartLoadTime;
@@ -55,13 +55,13 @@ namespace EQLogParser
     private NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private Dictionary<string, ParseData> Parses = new Dictionary<string, ParseData>();
 
+    private DocumentWindow DamageWindow = null;
+    private DocumentWindow HealingWindow = null;
     private DocumentWindow DamageChartWindow = null;
     private DocumentWindow HealingChartWindow = null;
 
     private LogReader EQLogReader = null;
     private OverlayWindow Overlay = null;
-    private DamageSummary DamageSummaryTable = null;
-    private HealSummary HealSummaryTable = null;
     private int BusyCount = 0;
 
     public MainWindow()
@@ -103,24 +103,19 @@ namespace EQLogParser
 
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
         DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
-        HealLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
+        HealingLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
 
-        HealLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record, data.BeginTime);
+        HealingLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record, data.BeginTime);
         DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.BeginTime);
         DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record, data.BeginTime);
 
         (npcWindow.Content as NpcTable).EventsSelectionChange += (sender, data) => ComputeStats();
 
-        DamageSummaryTable = damageWindow.Content as DamageSummary;
-        DamageSummaryTable.EventsSelectionChange += (sender, data) => UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
-        HealSummaryTable = healWindow.Content as HealSummary;
-        HealSummaryTable.EventsSelectionChange += (sender, data) => UpdateParse(Labels.HEAL_PARSE, data.Selected);
-
         DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
-        HealStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
+        HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
 
         DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-        HealStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+        HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -129,8 +124,7 @@ namespace EQLogParser
         DockingThemeCatalogRegistrar.Register();
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
 
-        OpenHealingChart();
-        OpenDamageChart();
+        OpenDamageSummary();
 
         // application data state last
         DataManager.Instance.LoadState();
@@ -171,8 +165,8 @@ namespace EQLogParser
 
     private void Instance_EventsClearedActiveData(object sender, bool e)
     {
-      (damageWindow?.Content as DamageSummary)?.Clear();
-      (healWindow?.Content as HealSummary)?.Clear();
+      (DamageWindow?.Content as DamageSummary)?.Clear();
+      (HealingWindow?.Content as HealingSummary)?.Clear();
       (DamageChartWindow?.Content as LineChart)?.Clear();
       (HealingChartWindow?.Content as LineChart)?.Clear();
     }
@@ -207,7 +201,7 @@ namespace EQLogParser
     internal void ResetOverlay()
     {
       Overlay?.Close();
-      if (DamageSummaryTable?.IsOverlayEnabled() == true)
+      if ((DamageWindow?.Content as DamageSummary)?.IsOverlayEnabled() == true)
       {
         OpenOverlay();
       }
@@ -239,12 +233,15 @@ namespace EQLogParser
       var npcList = (npcWindow?.Content as NpcTable)?.GetSelectedItems();
       var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID).ToList();
 
-      string name = npcList?.FirstOrDefault()?.Name;
-      bool isBaneEnabled = DamageSummaryTable?.IsBaneEnabled() == true;
-      bool isAEEnabled = HealSummaryTable?.IsAEHealingEnabled() == true;
+      string name = filtered?.FirstOrDefault()?.Name;
+      if (name != null)
+      {
+        bool isBaneEnabled = (DamageWindow?.Content as DamageSummary)?.IsBaneEnabled() == true;
+        bool isAEEnabled = (HealingWindow?.Content as HealingSummary)?.IsAEHealingEnabled() == true;
 
-      Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(name, npcList, isBaneEnabled));
-      Task.Run(() => HealStatsManager.Instance.BuildTotalStats(name, npcList, isAEEnabled));
+        Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(name, filtered, isBaneEnabled));
+        Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(name, filtered, isAEEnabled));
+      }
     }
 
     private void Window_Closed(object sender, System.EventArgs e)
@@ -294,20 +291,128 @@ namespace EQLogParser
       {
         OpenHealingChart();
       }
+      else if (e.Source == damageSummaryMenuItem)
+      {
+        OpenDamageSummary();
+      }
+      else if (e.Source == healingSummaryMenuItem)
+      {
+        OpenHealingSummary();
+      }
+    }
+
+    private bool OpenChart(DocumentWindow window, DocumentWindow other, string title, List<string> choices, out DocumentWindow newWindow)
+    {
+      bool updated = false;
+      newWindow = window;
+
+      if (newWindow?.IsOpen == true)
+      {
+        Helpers.OpenWindow(newWindow);
+      }
+      else
+      {
+        updated = true;
+        var chart = new LineChart(choices);
+        newWindow = new DocumentWindow(dockSite, title, title, null, chart);
+        Helpers.OpenWindow(newWindow);
+        newWindow.CanFloat = true;
+        newWindow.CanClose = true;
+
+        if (other?.IsOpen == true)
+        {
+          newWindow.MoveToNextContainer();
+        }
+        else
+        {
+          newWindow.MoveToNewHorizontalContainer();
+        }
+      }
+
+      return updated;
     }
 
     private void OpenDamageChart()
     {
-      var host = HealingChartWindow?.DockHost;
-      DamageChartWindow = Helpers.OpenChart(dockSite, DamageChartWindow, host, LineChart.DAMAGE_CHOICES, "Damage Chart");
-      DamageStatsManager.Instance.FireUpdateEvent(DamageSummaryTable.IsBaneEnabled(), DamageSummaryTable.GetSelectedStats());
+      if (OpenChart(DamageChartWindow, HealingChartWindow, "Damage Chart", LineChart.DAMAGE_CHOICES, out DamageChartWindow))
+      {
+        var summary = DamageWindow?.Content as DamageSummary;
+        if (summary != null)
+        {
+          DamageStatsManager.Instance.FireUpdateEvent(summary.IsBaneEnabled(), summary.GetSelectedStats());
+        }
+      }
     }
 
     private void OpenHealingChart()
     {
-      var host = DamageChartWindow?.DockHost;
-      HealingChartWindow = Helpers.OpenChart(dockSite, HealingChartWindow, host, LineChart.HEALING_CHOICES, "Healing Chart");
-      HealStatsManager.Instance.FireUpdateEvent(true, DamageSummaryTable.GetSelectedStats());
+      if (OpenChart(HealingChartWindow, DamageChartWindow, "Healing Chart", LineChart.HEALING_CHOICES, out HealingChartWindow))
+      {
+        var summary = HealingWindow?.Content as HealingSummary;
+        if (summary != null)
+        {
+          HealingStatsManager.Instance.FireUpdateEvent(true, summary.GetSelectedStats());
+        }
+      }
+    }
+
+    private void OpenDamageSummary()
+    {
+      if (DamageWindow?.IsOpen == true)
+      {
+        Helpers.OpenWindow(DamageWindow);
+      }
+      else
+      {
+        var damageSummary = new DamageSummary();
+        var site = (HealingWindow?.IsOpen == true) ? HealingWindow.DockSite : dockSite;
+        DamageWindow = new DocumentWindow(site, "damageSummary", "Damage Summary", null, damageSummary);
+        Helpers.OpenWindow(DamageWindow);
+        (DamageWindow.Content as DamageSummary).EventsSelectionChange += (sender, data) => UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
+        RepositionCharts(DamageWindow);
+      }
+    }
+
+    private void OpenHealingSummary()
+    {
+      if (HealingWindow?.IsOpen == true)
+      {
+        Helpers.OpenWindow(HealingWindow);
+      }
+      else
+      {
+        var healingSummary = new HealingSummary();
+        var site = (DamageWindow?.IsOpen == true) ? DamageWindow.DockSite : dockSite;
+        HealingWindow = new DocumentWindow(site, "healingSummary", "Healing Summary", null, healingSummary);
+        Helpers.OpenWindow(HealingWindow);
+        (HealingWindow.Content as HealingSummary).EventsSelectionChange += (sender, data) => UpdateParse(Labels.HEAL_PARSE, data.Selected);
+        RepositionCharts(HealingWindow);
+      }
+    }
+
+    private void RepositionCharts(DocumentWindow window)
+    {
+      var tabControl = window.ParentContainer as TabbedMdiContainer;
+   
+      if (tabControl != null)
+      {
+        bool moved = false;
+        foreach (var child in tabControl.Windows.Reverse().ToList())
+        {
+          if (child == DamageChartWindow || child == HealingChartWindow)
+          {
+            if (child.IsOpen && !moved)
+            {
+              moved = true;
+              child.MoveToNewHorizontalContainer();
+            }
+            else if (child.IsOpen && moved)
+            {
+              child.MoveToNextContainer();
+            }
+          }
+        }
+      }
     }
 
     // Main Menu Op File
@@ -371,7 +476,7 @@ namespace EQLogParser
 
             DataManager.Instance.SaveState();
 
-            if (DamageSummaryTable != null && DamageSummaryTable.IsOverlayEnabled())
+            if ((DamageWindow?.Content as DamageSummary)?.IsOverlayEnabled() == true)
             {
               OpenOverlay();
             }
@@ -512,7 +617,7 @@ namespace EQLogParser
           StopProcessing();
           CastProcessor = new ActionProcessor<string>("CastProcessor", CastLineParser.Process);
           DamageProcessor = new ActionProcessor<string>("DamageProcessor", DamageLineParser.Process);
-          HealProcessor = new ActionProcessor<string>("HealProcessor", HealLineParser.Process);
+          HealingProcessor = new ActionProcessor<string>("HealProcessor", HealingLineParser.Process);
 
           bytesReadLabel.Foreground = BRIGHT_TEXT_BRUSH;
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
@@ -560,9 +665,9 @@ namespace EQLogParser
         DamageProcessor.Add(line);
 
         HealLineCount++;
-        HealProcessor.Add(line);
+        HealingProcessor.Add(line);
 
-        if (DamageProcessor.Size() > 50000 || HealProcessor.Size() > 50000 || CastProcessor.Size() > 50000)
+        if (DamageProcessor.Size() > 50000 || HealingProcessor.Size() > 50000 || CastProcessor.Size() > 50000)
         {
           Thread.Sleep(15);
         }
@@ -574,7 +679,7 @@ namespace EQLogParser
       EQLogReader?.Stop();
       CastProcessor?.Stop();
       DamageProcessor?.Stop();
-      HealProcessor?.Stop();
+      HealingProcessor?.Stop();
     }
   }
 }
