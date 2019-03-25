@@ -311,14 +311,15 @@ namespace EQLogParser
       }
     }
 
-    private bool OpenChart(DocumentWindow window, DocumentWindow other, string title, List<string> choices, out DocumentWindow newWindow)
+    private bool OpenChart(DocumentWindow window, DocumentWindow other, FrameworkElement icon, string title, List<string> choices, out DocumentWindow newWindow)
     {
       bool updated = false;
       newWindow = window;
 
       if (newWindow?.IsOpen == true)
       {
-        Helpers.OpenWindow(newWindow);
+        newWindow.Close();
+        newWindow = null;
       }
       else
       {
@@ -344,7 +345,7 @@ namespace EQLogParser
 
     private void OpenDamageChart()
     {
-      if (OpenChart(DamageChartWindow, HealingChartWindow, "Damage Chart", LineChart.DAMAGE_CHOICES, out DamageChartWindow))
+      if (OpenChart(DamageChartWindow, HealingChartWindow, damageChartIcon, "Damage Chart", LineChart.DAMAGE_CHOICES, out DamageChartWindow))
       {
         List<PlayerStats> selected = null;
         bool isBaneEnabled = false;
@@ -362,7 +363,7 @@ namespace EQLogParser
 
     private void OpenHealingChart()
     {
-      if (OpenChart(HealingChartWindow, DamageChartWindow, "Healing Chart", LineChart.HEALING_CHOICES, out HealingChartWindow))
+      if (OpenChart(HealingChartWindow, DamageChartWindow, healingChartIcon, "Healing Chart", LineChart.HEALING_CHOICES, out HealingChartWindow))
       {
         List<PlayerStats> selected = null;
         bool isAEHealingEnabled = false;
@@ -382,15 +383,20 @@ namespace EQLogParser
     {
       if (DamageWindow?.IsOpen == true)
       {
-        Helpers.OpenWindow(DamageWindow);
+        DamageWindow.Close();
+        DamageWindow = null;
       }
       else
       {
         var damageSummary = new DamageSummary();
-        var site = (HealingWindow?.IsOpen == true) ? HealingWindow.DockSite : dockSite;
-        DamageWindow = new DocumentWindow(site, "damageSummary", "Damage Summary", null, damageSummary);
-
+        DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         Helpers.OpenWindow(DamageWindow);
+
+        if (HealingWindow?.IsOpen == true)
+        {
+          DamageWindow.MoveToPreviousContainer();
+        }
+
         (DamageWindow.Content as DamageSummary).EventsSelectionChange += (sender, data) =>
         {
           var table = sender as DamageSummary;
@@ -414,15 +420,20 @@ namespace EQLogParser
     {
       if (HealingWindow?.IsOpen == true)
       {
-        Helpers.OpenWindow(HealingWindow);
+        HealingWindow.Close();
+        HealingWindow = null;
       }
       else
       {
         var healingSummary = new HealingSummary();
-        var site = (DamageWindow?.IsOpen == true) ? DamageWindow.DockSite : dockSite;
-        HealingWindow = new DocumentWindow(site, "healingSummary", "Healing Summary", null, healingSummary);
-
+        HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         Helpers.OpenWindow(HealingWindow);
+
+        if (DamageWindow?.IsOpen == true)
+        {
+          HealingWindow.MoveToPreviousContainer();
+        }
+
         (HealingWindow.Content as HealingSummary).EventsSelectionChange += (sender, data) =>
         {
           var table = sender as HealingSummary;
@@ -735,6 +746,32 @@ namespace EQLogParser
       CastProcessor?.Stop();
       DamageProcessor?.Stop();
       HealingProcessor?.Stop();
+    }
+
+    private void WindowIcon_Loaded(object sender, RoutedEventArgs e)
+    {
+      var icon = sender as FrameworkElement;
+      if (icon == damageSummaryIcon)
+      {
+        icon.Visibility = DamageWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+      }
+      else if (icon == healingSummaryIcon)
+      {
+        icon.Visibility = HealingWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+      }
+      else if (icon == healingChartIcon)
+      {
+        icon.Visibility = HealingChartWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+      }
+      else if (icon == damageChartIcon)
+      {
+        icon.Visibility = DamageChartWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+      }
+      else if (icon == npcIcon)
+      {
+        icon.Visibility = npcWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+
+      }
     }
   }
 }
