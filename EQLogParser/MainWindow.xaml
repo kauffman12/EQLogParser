@@ -7,7 +7,6 @@
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
-        Width="1400"
         Title="" Closed="Window_Closed" TextOptions.TextFormattingMode="Display">
   <Window.Resources>
   </Window.Resources>
@@ -22,14 +21,45 @@
     </Grid.RowDefinitions>
     <Menu Grid.Row="0" Margin="0" Height="20" VerticalAlignment="Top" Grid.ColumnSpan="2">
       <MenuItem Header="_File" Height="20" Width="35">
-        <MenuItem Header="Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFile_Click" />
+        <MenuItem Header="Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFile_Click">
+          <MenuItem.Icon>
+            <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="11" Width="11" HorizontalAlignment="Center" Icon="Feed" Foreground="#FF4F9FE2" />
+          </MenuItem.Icon>
+        </MenuItem>
         <MenuItem Header="Open and Monitor _Log File" Height="20">
-          <MenuItem Header="Last  8 Hours" Tag="8" Height="20" Click="MenuItemSelectLogFile_Click" />
-          <MenuItem Header="Last 24 Hours" Tag="24 " Height="20" Click="MenuItemSelectLogFile_Click" />
-          <MenuItem Header="Last  7 Days" Tag="168" Height="20" Click="MenuItemSelectLogFile_Click" />
-          <MenuItem Header="Last 14 Days" Tag="336" Height="20" Click="MenuItemSelectLogFile_Click" />
-          <MenuItem Header="Last 30 Days" Tag="720" Height="20" Click="MenuItemSelectLogFile_Click" />
-          <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFile_Click" />
+          <MenuItem.Icon>
+            <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="FolderOpen" Foreground="#FF4F9FE2" />
+          </MenuItem.Icon>
+          <MenuItem Header="Last  8 Hours" Tag="8" Height="20" Click="MenuItemSelectLogFile_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Last 24 Hours" Tag="24 " Height="20" Click="MenuItemSelectLogFile_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Last  7 Days" Tag="168" Height="20" Click="MenuItemSelectLogFile_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Last 14 Days" Tag="336" Height="20" Click="MenuItemSelectLogFile_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Last 30 Days" Tag="720" Height="20" Click="MenuItemSelectLogFile_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFile_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
         </MenuItem>
         <Separator Height="0"/>
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
@@ -66,14 +96,34 @@
           </MenuItem.Icon>
         </MenuItem>
         <MenuItem x:Name="playerspetsMenuItems" Header="Pets And Players" Height="20">
-          <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Players" Height="20" />
-          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Share Player Parses" Click="MenuItemWindow_Click" Height="20" />
+          <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Players" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="verifiedPlayersIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Share Player Parses" Click="MenuItemWindow_Click" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="playerParseIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator />
-          <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="P_ets" Height="20" />
-          <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20" />
+          <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindow_Click" Header="P_ets" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="verifiedPetsIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindow_Click" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="petMappingIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
         </MenuItem>
         <Separator />
-        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_Status" Height="20" />
+        <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_Status" Height="20">
+          <MenuItem.Icon>
+            <fa:ImageAwesome x:Name="fileProgessIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+          </MenuItem.Icon>
+        </MenuItem>
       </MenuItem>
     </Menu>
     <fa:ImageAwesome Grid.Row="0" x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,5,15,1" Grid.Column="1"/>

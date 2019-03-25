@@ -14,7 +14,7 @@ namespace EQLogParser
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
-    internal List<List<ActionBlock>> HealGroups = new List<List<ActionBlock>>();
+    internal List<List<ActionBlock>> HealingGroups = new List<List<ActionBlock>>();
     internal bool IsAEHealingAvailable = false;
 
     private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
@@ -22,6 +22,17 @@ namespace EQLogParser
     private PlayerStats RaidTotals;
     private List<NonPlayer> Selected;
     private string Title;
+
+    internal HealingStatsManager()
+    {
+      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
+      {
+        HealingGroups.Clear();
+        RaidTotals = null;
+        Selected = null;
+        Title = "";
+      };
+    }
 
     internal void BuildTotalStats(HealingStatsOptions options)
     {
@@ -33,7 +44,7 @@ namespace EQLogParser
         FireNewStatsEvent(options);
 
         RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
-        HealGroups.Clear();
+        HealingGroups.Clear();
 
         Selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(RaidTotals, npc, HEAL_OFFSET));
         RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
@@ -42,7 +53,7 @@ namespace EQLogParser
         {
           for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
           {
-            HealGroups.Add(DataManager.Instance.GetHealsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
+            HealingGroups.Add(DataManager.Instance.GetHealsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
           }
 
           ComputeHealStats(options);
@@ -93,7 +104,7 @@ namespace EQLogParser
       {
         // send update
         DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
-        EventsUpdateDataPoint?.Invoke(HealGroups, de);
+        EventsUpdateDataPoint?.Invoke(HealingGroups, de);
       }
     }
 
@@ -102,8 +113,8 @@ namespace EQLogParser
       if (options.RequestChartData)
       {
         // send update
-        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new HealGroupIterator(HealGroups, options.IsAEHealingEanbled) };
-        EventsUpdateDataPoint?.Invoke(HealGroups, de);
+        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new HealGroupIterator(HealingGroups, options.IsAEHealingEanbled) };
+        EventsUpdateDataPoint?.Invoke(HealingGroups, de);
       }
     }
 
@@ -143,7 +154,7 @@ namespace EQLogParser
       {
         // send update
         DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
-        EventsUpdateDataPoint?.Invoke(HealGroups, de);
+        EventsUpdateDataPoint?.Invoke(HealingGroups, de);
       }
     }
 
@@ -160,7 +171,7 @@ namespace EQLogParser
       {
         FireUpdateEvent(options);
 
-        HealGroups.ForEach(group =>
+        HealingGroups.ForEach(group =>
         {
           // keep track of time range as well as the players that have been updated
           Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();

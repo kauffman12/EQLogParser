@@ -142,15 +142,14 @@ namespace EQLogParser
       if (!window.IsOpen)
       {
         window.IsOpen = true;
+        if (!window.IsActive)
+        {
+          window.Activate();
+        }
       }
       else
       {
-        window.Focus();
-      }
-
-      if (!window.IsActive)
-      {
-        window.Activate();
+        window.Close();
       }
     }
 

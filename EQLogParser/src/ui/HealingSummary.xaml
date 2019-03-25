@@ -6,7 +6,7 @@
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d"
-             d:DesignHeight="450" d:DesignWidth="1200">
+             d:DesignHeight="450" d:DesignWidth="1200" Loaded="Summary_Loaded" Unloaded="Summary_Unloaded">
   <Grid>
     <Grid.Resources>
       <local:ZeroConverter x:Key="ZeroConverter" />

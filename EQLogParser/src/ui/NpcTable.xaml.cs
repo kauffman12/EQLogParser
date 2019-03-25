@@ -86,11 +86,6 @@ namespace EQLogParser
       bool bValue;
       string showBreaks = DataManager.Instance.GetApplicationSetting("NpcShowInactivityBreaks");
       npcShowBreaks.IsChecked = showBreaks == null || (bool.TryParse(showBreaks, out bValue) && bValue);
-
-      // Clear/Reset
-      DataManager.Instance.EventsClearedActiveData += (sender, cleared) => NonPlayersView.Clear();
-      DataManager.Instance.EventsRemovedNonPlayer += (sender, name) => RemoveNonPlayer(name);
-      DataManager.Instance.EventsNewNonPlayer += (sender, npc) => AddNonPlayer(npc);
     }
 
     public List<NonPlayer> GetSelectedItems()
@@ -365,6 +360,36 @@ namespace EQLogParser
       {
         SearchTextTimer?.Start();
       }
+    }
+
+    private void Instance_EventsCleardActiveData(object sender, bool cleared)
+    {
+      NonPlayersView.Clear();
+      CurrentSearchRow = null;
+    }
+
+    private void Instance_EventsRemovedNonPlayer(object sender, string name)
+    {
+      RemoveNonPlayer(name);
+    }
+
+    private void Instance_EventsNewNonPlayer(object sender, NonPlayer npc)
+    {
+      AddNonPlayer(npc);
+    }
+
+    private void Table_Unloaded(object sender, RoutedEventArgs e)
+    {
+      DataManager.Instance.EventsClearedActiveData -= Instance_EventsCleardActiveData;
+      DataManager.Instance.EventsRemovedNonPlayer -= Instance_EventsRemovedNonPlayer;
+      DataManager.Instance.EventsNewNonPlayer -= Instance_EventsNewNonPlayer;
+    }
+
+    private void Table_Loaded(object sender, RoutedEventArgs e)
+    {
+      DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
+      DataManager.Instance.EventsRemovedNonPlayer += Instance_EventsRemovedNonPlayer;
+      DataManager.Instance.EventsNewNonPlayer += Instance_EventsNewNonPlayer;
     }
   }
 }
