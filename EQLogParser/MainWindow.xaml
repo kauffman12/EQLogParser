@@ -36,15 +36,35 @@
       </MenuItem>
       <MenuItem Header="_View" Height="20" Width="40">
         <MenuItem x:Name="damageMenuItems" Header="_Damage" Height="20">
-          <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindow_Click" Header="Chart" Height="20" />
-          <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindow_Click" Header="Summary Table" Height="20" />
+          <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindow_Click" Header="Chart" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="damageChartIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindow_Click" Header="Summary Table" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="damageSummaryIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
         </MenuItem>
         <MenuItem x:Name="healingMenuItems" Header="_Healing" Height="20">
-          <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindow_Click" Header="Chart" Height="20" />
-          <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindow_Click" Header="Summary Table" Height="20" />
+          <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindow_Click" Header="Chart" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="healingChartIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindow_Click" Header="Summary Table" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="healingSummaryIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
         </MenuItem>
         <Separator />
-        <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20" />
+        <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20">
+          <MenuItem.Icon>
+            <fa:ImageAwesome x:Name="npcIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+          </MenuItem.Icon>
+        </MenuItem>
         <MenuItem x:Name="playerspetsMenuItems" Header="Pets And Players" Height="20">
           <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindow_Click" Header="_Players" Height="20" />
           <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Share Player Parses" Click="MenuItemWindow_Click" Height="20" />
@@ -57,7 +77,7 @@
       </MenuItem>
     </Menu>
     <fa:ImageAwesome Grid.Row="0" x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,5,15,1" Grid.Column="1"/>
-    <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2">
+    <docking:DockSite Grid.Row="2" x:Name="dockSite" Grid.ColumnSpan="2">
       <docking:SplitContainer Orientation="Horizontal">
         <docking:SplitContainer Orientation="Vertical">
           <docking:ToolWindowContainer>
@@ -83,9 +103,6 @@
         <docking:SplitContainer Orientation="Vertical">
           <docking:Workspace>
             <docking:TabbedMdiHost>
-              <docking:SplitContainer Orientation="Vertical">
-                <docking:TabbedMdiContainer />
-              </docking:SplitContainer>
             </docking:TabbedMdiHost>
           </docking:Workspace>
         </docking:SplitContainer>
