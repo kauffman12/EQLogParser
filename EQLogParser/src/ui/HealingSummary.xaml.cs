@@ -14,7 +14,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private CombinedHealStats CurrentHealStats = null;
+    private CombinedHealStats CurrentHealingStats = null;
     private bool Ready = false;
 
     public HealingSummary()
@@ -26,19 +26,20 @@ namespace EQLogParser
       bool bValue;
       string value = DataManager.Instance.GetApplicationSetting("IncludeAEHealing");
       includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bValue) && bValue;
-
-      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       Ready = true;
-    }
-
-    ~HealingSummary()
-    {
-      HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
     }
 
     internal bool IsAEHealingEnabled()
     {
       return includeAEHealing.IsChecked.Value;
+    }
+
+
+    private void Instance_EventsClearedActiveData(object sender, bool cleared)
+    {
+      CurrentHealingStats = null;
+      dataGrid.ItemsSource = null;
+      title.Content = DEFAULT_TABLE_LABEL;
     }
 
     private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
@@ -48,31 +49,31 @@ namespace EQLogParser
         switch (e.State)
         {
           case "STARTED":
-            TheMainWindow.Busy(true);
+            (Application.Current.MainWindow as MainWindow).Busy(true);
             title.Content = "Calculating HPS...";
             dataGrid.ItemsSource = null;
             break;
           case "COMPLETED":
-            CurrentHealStats = e.CombinedStats as CombinedHealStats;
+            CurrentHealingStats = e.CombinedStats as CombinedHealStats;
 
-            if (CurrentHealStats == null)
+            if (CurrentHealingStats == null)
             {
               title.Content = NODATA_TABLE_LABEL;
             }
             else
             {
               includeAEHealing.IsEnabled = e.IsAEHealingAvailable;
-              title.Content = CurrentHealStats.FullTitle;
-              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealStats.StatsList);
+              title.Content = CurrentHealingStats.FullTitle;
+              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealingStats.StatsList);
             }
 
-            TheMainWindow.Busy(false);
+            (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
-            CurrentHealStats = null;
+            CurrentHealingStats = null;
             title.Content = DEFAULT_TABLE_LABEL;
-            TheMainWindow.Busy(false);
+            (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
         }
@@ -89,9 +90,10 @@ namespace EQLogParser
     {
       if (selected.Count > 0)
       {
-        var healTable = new HealBreakdown(TheMainWindow, CurrentHealStats);
+        var main = Application.Current.MainWindow as MainWindow;
+        var healTable = new HealBreakdown(main, CurrentHealingStats);
         healTable.Show(selected);
-        Helpers.OpenNewTab(TheMainWindow.dockSite, "healWindow", "Healing Breakdown", healTable);
+        Helpers.OpenNewTab(main.dockSite, "healWindow", "Healing Breakdown", healTable);
       }
     }
 
@@ -99,22 +101,23 @@ namespace EQLogParser
     {
       if (selected.Count > 0)
       {
-        var spellTable = new SpellCountTable(TheMainWindow, CurrentHealStats.ShortTitle);
-        spellTable.ShowSpells(selected, CurrentHealStats);
-        Helpers.OpenNewTab(TheMainWindow.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
+        var main = Application.Current.MainWindow as MainWindow;
+        var spellTable = new SpellCountTable(main, CurrentHealingStats.ShortTitle);
+        spellTable.ShowSpells(selected, CurrentHealingStats);
+        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
       }
     }
 
     private void UpdateDataGridMenuItems()
     {
-      if (CurrentHealStats != null && CurrentHealStats.StatsList.Count > 0)
+      if (CurrentHealingStats != null && CurrentHealingStats.StatsList.Count > 0)
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         copyHealParseToEQClick.IsEnabled = true;
-        UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentHealStats.UniqueClasses);
-        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentHealStats.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentHealingStats.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentHealingStats.UniqueClasses);
       }
       else
       {
@@ -130,13 +133,27 @@ namespace EQLogParser
         bool isAEHealingEnabled = includeAEHealing.IsChecked.Value == true;
         DataManager.Instance.SetApplicationSetting("IncludeAEHealing", isAEHealingEnabled.ToString());
 
-        if (CurrentHealStats != null && CurrentHealStats.RaidStats != null)
+        if (CurrentHealingStats != null && CurrentHealingStats.RaidStats != null)
         {
           includeAEHealing.IsEnabled = false;
           var options = new HealingStatsOptions() { IsAEHealingEanbled = isAEHealingEnabled, RequestChartData = true, RequestSummaryData = true };
           Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options));
         }
       }
+    }
+
+    private void Summary_Unloaded(object sender, RoutedEventArgs e)
+    {
+      HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
+      connected = false;
+    }
+
+    protected override void Summary_Loaded(object sender, RoutedEventArgs e)
+    {
+      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
+      connected = true;
     }
   }
 }

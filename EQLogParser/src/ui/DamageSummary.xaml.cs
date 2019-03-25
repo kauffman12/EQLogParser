@@ -39,14 +39,6 @@ namespace EQLogParser
         pd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
       }
 
-      // Clear/Reset
-      DataManager.Instance.EventsClearedActiveData += (sender, cleared) =>
-      {
-        dataGrid.ItemsSource = null;
-        ChildGrids.Clear();
-        title.Content = DEFAULT_TABLE_LABEL;
-      };
-
       // read bane and healing setting
       bool bValue;
       string value = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
@@ -56,16 +48,10 @@ namespace EQLogParser
       overlayOption.IsChecked = bool.TryParse(value, out bValue) && bValue;
       if (overlayOption.IsChecked.Value)
       {
-        TheMainWindow.OpenOverlay();
+        (Application.Current.MainWindow as MainWindow)?.OpenOverlay();
       }
 
-      DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       Ready = true;
-    }
-
-    ~DamageSummary()
-    {
-      DamageStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
     }
 
     internal bool IsBaneEnabled()
@@ -78,6 +64,14 @@ namespace EQLogParser
       return overlayOption.IsChecked.Value;
     }
 
+    private void Instance_EventsClearedActiveData(object sender, bool cleared)
+    {
+      CurrentDamageStats = null;
+      dataGrid.ItemsSource = null;
+      ChildGrids.Clear();
+      title.Content = DEFAULT_TABLE_LABEL;
+    }
+
     private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
     {
       Dispatcher.InvokeAsync(() =>
@@ -85,7 +79,7 @@ namespace EQLogParser
         switch(e.State)
         {
           case "STARTED":
-            TheMainWindow.Busy(true);
+            (Application.Current.MainWindow as MainWindow).Busy(true);
             title.Content = "Calculating DPS...";
             dataGrid.ItemsSource = null;
             ChildGrids.Clear();
@@ -104,13 +98,13 @@ namespace EQLogParser
               dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
             }
 
-            TheMainWindow.Busy(false);
+            (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
             CurrentDamageStats = null;
             title.Content = DEFAULT_TABLE_LABEL;
-            TheMainWindow.Busy(false);
+            (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
         }
@@ -127,9 +121,10 @@ namespace EQLogParser
     {
       if (selected.Count > 0)
       {
-        var damageTable = new DamageBreakdown(TheMainWindow, CurrentDamageStats);
+        var main = Application.Current.MainWindow as MainWindow;
+        var damageTable = new DamageBreakdown(main, CurrentDamageStats);
         damageTable.Show(selected);
-        Helpers.OpenNewTab(TheMainWindow.dockSite, "damageWindow", "Damage Breakdown", damageTable);
+        Helpers.OpenNewTab(main.dockSite, "damageWindow", "Damage Breakdown", damageTable);
       }
     }
 
@@ -137,9 +132,10 @@ namespace EQLogParser
     {
       if (selected.Count > 0)
       {
-        var spellTable = new SpellCountTable(TheMainWindow, CurrentDamageStats?.ShortTitle ?? "");
+        var main = Application.Current.MainWindow as MainWindow;
+        var spellTable = new SpellCountTable(main, CurrentDamageStats?.ShortTitle ?? "");
         spellTable.ShowSpells(selected, CurrentDamageStats);
-        Helpers.OpenNewTab(TheMainWindow.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
+        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
       }
     }
 
@@ -155,7 +151,9 @@ namespace EQLogParser
       {
         var chart = new HitFreqChart();
         var results = DamageStatsManager.Instance.GetHitFreqValues(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentDamageStats);
-        var hitFreqWindow = Helpers.OpenNewTab(TheMainWindow.dockSite, "freqChart", "Hit Frequency", chart, 400, 300);
+
+        var main = Application.Current.MainWindow as MainWindow;
+        var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "freqChart", "Hit Frequency", chart, 400, 300);
 
         chart.Update(results);
         hitFreqWindow.CanFloat = true;
@@ -298,15 +296,29 @@ namespace EQLogParser
       {
         if (overlayOption.IsChecked.Value)
         {
-          TheMainWindow.OpenOverlay(true, false);
+          (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
         }
         else
         {
-          TheMainWindow.CloseOverlay();
+          (Application.Current.MainWindow as MainWindow)?.CloseOverlay();
         }
 
         DataManager.Instance.SetApplicationSetting("IsDamageOverlayEnabled", overlayOption.IsChecked.Value.ToString());
       }
+    }
+
+    private void Summary_Unloaded(object sender, RoutedEventArgs e)
+    {
+      DamageStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
+      connected = false;
+    }
+
+    protected override void Summary_Loaded(object sender, RoutedEventArgs e)
+    {
+      DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
+      connected = true;
     }
   }
 }

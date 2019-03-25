@@ -26,6 +26,20 @@ namespace EQLogParser
     private bool IsBaneAvailable = false;
     private string Title;
 
+    internal DamageStatsManager()
+    {
+      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
+      {
+        DamageGroups.Clear();
+        RaidTotals = null;
+        PlayerHasPet.Clear();
+        PetToPlayer.Clear();
+        Resists.Clear();
+        Selected = null;
+        Title = "";
+      };
+    }
+
     internal void BuildTotalStats(DamageStatsOptions options)
     {
       Selected = options.Npcs;

@@ -384,11 +384,21 @@ namespace EQLogParser
       if (DamageWindow?.IsOpen == true)
       {
         DamageWindow.Close();
-        DamageWindow = null;
       }
       else
       {
-        var damageSummary = new DamageSummary();
+        // cleanup old
+        var damageSummary = DamageWindow?.Content as DamageSummary;
+        if (damageSummary != null)
+        {
+          DamageWindow.Content = null;
+        }
+        else
+        {
+          damageSummary = new DamageSummary();
+          damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
+        }
+
         DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         Helpers.OpenWindow(DamageWindow);
 
@@ -397,18 +407,11 @@ namespace EQLogParser
           DamageWindow.MoveToPreviousContainer();
         }
 
-        (DamageWindow.Content as DamageSummary).EventsSelectionChange += (sender, data) =>
-        {
-          var table = sender as DamageSummary;
-          var options = new DamageStatsOptions() { IsBaneEanbled = table.IsBaneEnabled(), RequestChartData = true };
-          DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-          UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
-        };
-
         RepositionCharts(DamageWindow);
 
         if (DamageStatsManager.Instance.DamageGroups.Count > 0)
         {
+          damageSummary.EnsureConnected();
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           var damageOptions = new DamageStatsOptions() { IsBaneEanbled = damageSummary.IsBaneEnabled(), RequestSummaryData = true };
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
@@ -421,11 +424,21 @@ namespace EQLogParser
       if (HealingWindow?.IsOpen == true)
       {
         HealingWindow.Close();
-        HealingWindow = null;
       }
       else
       {
-        var healingSummary = new HealingSummary();
+        // cleanup old
+        var healingSummary = HealingWindow?.Content as HealingSummary;
+        if (healingSummary != null)
+        {
+          HealingWindow.Content = null;
+        }
+        else
+        {
+          healingSummary = new HealingSummary();
+          healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
+        }
+
         HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         Helpers.OpenWindow(HealingWindow);
 
@@ -434,23 +447,32 @@ namespace EQLogParser
           HealingWindow.MoveToPreviousContainer();
         }
 
-        (HealingWindow.Content as HealingSummary).EventsSelectionChange += (sender, data) =>
-        {
-          var table = sender as HealingSummary;
-          var options = new HealingStatsOptions() { IsAEHealingEanbled = table.IsAEHealingEnabled(), RequestChartData = true };
-          HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-          UpdateParse(Labels.HEAL_PARSE, data.Selected);
-        };
-
         RepositionCharts(HealingWindow);
 
-        if (HealingStatsManager.Instance.HealGroups.Count > 0)
+        if (HealingStatsManager.Instance.HealingGroups.Count > 0)
         {
+          healingSummary.EnsureConnected();
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           var healingOptions = new HealingStatsOptions() { IsAEHealingEanbled = healingSummary.IsAEHealingEnabled(), RequestSummaryData = true };
           Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));
         }
       }
+    }
+
+    private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
+    {
+      var table = sender as DamageSummary;
+      var options = new DamageStatsOptions() { IsBaneEanbled = table.IsBaneEnabled(), RequestChartData = true };
+      DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
+      UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
+    }
+
+    private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
+    {
+      var table = sender as HealingSummary;
+      var options = new HealingStatsOptions() { IsAEHealingEanbled = table.IsAEHealingEnabled(), RequestChartData = true };
+      HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
+      UpdateParse(Labels.HEAL_PARSE, data.Selected);
     }
 
     private void RepositionCharts(DocumentWindow window)
@@ -770,7 +792,26 @@ namespace EQLogParser
       else if (icon == npcIcon)
       {
         icon.Visibility = npcWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-
+      }
+      else if (icon == verifiedPlayersIcon)
+      {
+        icon.Visibility = verifiedPlayersWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+      }
+      else if (icon == verifiedPetsIcon)
+      {
+        icon.Visibility = verifiedPetsWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+      }
+      else if (icon == petMappingIcon)
+      {
+        icon.Visibility = petMappingWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+      }
+      else if (icon == playerParseIcon)
+      {
+        icon.Visibility = playerParseTextWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+      }
+      else if (icon == fileProgessIcon)
+      {
+        icon.Visibility = progressWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
       }
     }
   }
