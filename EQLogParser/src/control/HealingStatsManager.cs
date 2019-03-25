@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class HealStatsManager : SummaryBuilder
+  class HealingStatsManager : SummaryBuilder
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static HealStatsManager Instance = new HealStatsManager();
+    internal static HealingStatsManager Instance = new HealingStatsManager();
 
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
