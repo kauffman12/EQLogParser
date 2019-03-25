@@ -119,9 +119,7 @@ namespace EQLogParser
 
     protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      var selected = GetSelectedStats();
-      DamageStatsManager.Instance.FireSelectionEvent(selected);
-      FireSelectionChangedEvent(selected);
+      FireSelectionChangedEvent(GetSelectedStats());
       UpdateDataGridMenuItems();
     }
 
@@ -287,7 +285,9 @@ namespace EQLogParser
 
         if (CurrentDamageStats != null && CurrentDamageStats.RaidStats != null)
         {
-          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(CurrentDamageStats.RaidStats, isBaneEnabled));
+          includeBane.IsEnabled = false;
+          var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, RequestChartData = true, RequestSummaryData = true };
+          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
         }
       }
     }

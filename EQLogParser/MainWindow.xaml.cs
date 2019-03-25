@@ -234,14 +234,24 @@ namespace EQLogParser
       var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID).ToList();
 
       string name = filtered?.FirstOrDefault()?.Name;
-      if (name != null)
+      var damageOptions = new DamageStatsOptions() { Name = name, Npcs = filtered, RequestChartData = DamageChartWindow?.IsOpen == true };
+      var damageSummary = DamageWindow?.Content as DamageSummary;
+      if (damageSummary != null && DamageWindow?.IsOpen == true)
       {
-        bool isBaneEnabled = (DamageWindow?.Content as DamageSummary)?.IsBaneEnabled() == true;
-        bool isAEEnabled = (HealingWindow?.Content as HealingSummary)?.IsAEHealingEnabled() == true;
-
-        Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(name, filtered, isBaneEnabled));
-        Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(name, filtered, isAEEnabled));
+        damageOptions.IsBaneEanbled = damageSummary.IsBaneEnabled();
+        damageOptions.RequestSummaryData = true;
       }
+
+      var healingOptions = new HealingStatsOptions() { Name = name, Npcs = filtered, RequestChartData = HealingChartWindow?.IsOpen == true };
+      var healingSummary = HealingWindow?.Content as HealingSummary;
+      if (healingSummary != null && HealingWindow?.IsOpen == true)
+      {
+        healingOptions.IsAEHealingEanbled = healingSummary.IsAEHealingEnabled();
+        healingOptions.RequestSummaryData = true;
+      }
+
+      Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
+      Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingOptions));
     }
 
     private void Window_Closed(object sender, System.EventArgs e)
@@ -336,11 +346,17 @@ namespace EQLogParser
     {
       if (OpenChart(DamageChartWindow, HealingChartWindow, "Damage Chart", LineChart.DAMAGE_CHOICES, out DamageChartWindow))
       {
+        List<PlayerStats> selected = null;
+        bool isBaneEnabled = false;
         var summary = DamageWindow?.Content as DamageSummary;
         if (summary != null)
         {
-          DamageStatsManager.Instance.FireUpdateEvent(summary.IsBaneEnabled(), summary.GetSelectedStats());
+          selected = summary.GetSelectedStats();
+          isBaneEnabled = summary.IsBaneEnabled();
         }
+
+        var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, RequestChartData = true };
+        DamageStatsManager.Instance.FireUpdateEvent(options, selected);
       }
     }
 
@@ -348,11 +364,17 @@ namespace EQLogParser
     {
       if (OpenChart(HealingChartWindow, DamageChartWindow, "Healing Chart", LineChart.HEALING_CHOICES, out HealingChartWindow))
       {
+        List<PlayerStats> selected = null;
+        bool isAEHealingEnabled = false;
         var summary = HealingWindow?.Content as HealingSummary;
         if (summary != null)
         {
-          HealingStatsManager.Instance.FireUpdateEvent(true, summary.GetSelectedStats());
+          selected = summary.GetSelectedStats();
+          isAEHealingEnabled = summary.IsAEHealingEnabled();
         }
+
+        var options = new HealingStatsOptions() { IsAEHealingEanbled = isAEHealingEnabled, RequestChartData = true };
+        HealingStatsManager.Instance.FireUpdateEvent(options, selected);
       }
     }
 
@@ -367,9 +389,24 @@ namespace EQLogParser
         var damageSummary = new DamageSummary();
         var site = (HealingWindow?.IsOpen == true) ? HealingWindow.DockSite : dockSite;
         DamageWindow = new DocumentWindow(site, "damageSummary", "Damage Summary", null, damageSummary);
+
         Helpers.OpenWindow(DamageWindow);
-        (DamageWindow.Content as DamageSummary).EventsSelectionChange += (sender, data) => UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
+        (DamageWindow.Content as DamageSummary).EventsSelectionChange += (sender, data) =>
+        {
+          var table = sender as DamageSummary;
+          var options = new DamageStatsOptions() { IsBaneEanbled = table.IsBaneEnabled(), RequestChartData = true };
+          DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
+          UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
+        };
+
         RepositionCharts(DamageWindow);
+
+        if (DamageStatsManager.Instance.DamageGroups.Count > 0)
+        {
+          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+          var damageOptions = new DamageStatsOptions() { IsBaneEanbled = damageSummary.IsBaneEnabled(), RequestSummaryData = true };
+          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
+        }
       }
     }
 
@@ -384,9 +421,24 @@ namespace EQLogParser
         var healingSummary = new HealingSummary();
         var site = (DamageWindow?.IsOpen == true) ? DamageWindow.DockSite : dockSite;
         HealingWindow = new DocumentWindow(site, "healingSummary", "Healing Summary", null, healingSummary);
+
         Helpers.OpenWindow(HealingWindow);
-        (HealingWindow.Content as HealingSummary).EventsSelectionChange += (sender, data) => UpdateParse(Labels.HEAL_PARSE, data.Selected);
+        (HealingWindow.Content as HealingSummary).EventsSelectionChange += (sender, data) =>
+        {
+          var table = sender as HealingSummary;
+          var options = new HealingStatsOptions() { IsAEHealingEanbled = table.IsAEHealingEnabled(), RequestChartData = true };
+          HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
+          UpdateParse(Labels.HEAL_PARSE, data.Selected);
+        };
+
         RepositionCharts(HealingWindow);
+
+        if (HealingStatsManager.Instance.HealGroups.Count > 0)
+        {
+          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+          var healingOptions = new HealingStatsOptions() { IsAEHealingEanbled = healingSummary.IsAEHealingEnabled(), RequestSummaryData = true };
+          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));
+        }
       }
     }
 
@@ -410,6 +462,8 @@ namespace EQLogParser
             {
               child.MoveToNextContainer();
             }
+
+            (child.Content as LineChart)?.FixSize();
           }
         }
       }

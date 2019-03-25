@@ -86,6 +86,24 @@ namespace EQLogParser
     public List<PlayerStats> Selected { get; set; }
   }
 
+  public class DamageStatsOptions
+  {
+    public string Name { get; set; }
+    public List<NonPlayer> Npcs { get; set; }
+    public bool IsBaneEanbled { get; set; }
+    public bool RequestChartData { get; set; }
+    public bool RequestSummaryData { get; set; }
+  }
+
+  public class HealingStatsOptions
+  {
+    public string Name { get; set; }
+    public List<NonPlayer> Npcs { get; set; }
+    public bool IsAEHealingEanbled { get; set; }
+    public bool RequestChartData { get; set; }
+    public bool RequestSummaryData { get; set; }
+  }
+
   public class StatsGenerationEvent
   {
     public string Name { get; set; }
