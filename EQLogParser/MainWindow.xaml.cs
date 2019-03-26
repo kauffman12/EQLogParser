@@ -28,8 +28,6 @@ namespace EQLogParser
 
     private const string APP_NAME = "EQ Log Parser";
     private const string VERSION = "v1.3.19";
-    private const string VERIFIED_PETS = "Verified Pets";
-    private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -249,19 +247,17 @@ namespace EQLogParser
     {
       var npcList = (npcWindow?.Content as NpcTable)?.GetSelectedItems();
       var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID).ToList();
-
       string name = filtered?.FirstOrDefault()?.Name;
+
       var damageOptions = new DamageStatsOptions() { Name = name, Npcs = filtered, RequestChartData = DamageChartWindow?.IsOpen == true };
-      var damageSummary = DamageWindow?.Content as DamageSummary;
-      if (damageSummary != null && DamageWindow?.IsOpen == true)
+      if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
       {
         damageOptions.IsBaneEanbled = damageSummary.IsBaneEnabled();
         damageOptions.RequestSummaryData = true;
       }
 
       var healingOptions = new HealingStatsOptions() { Name = name, Npcs = filtered, RequestChartData = HealingChartWindow?.IsOpen == true };
-      var healingSummary = HealingWindow?.Content as HealingSummary;
-      if (healingSummary != null && HealingWindow?.IsOpen == true)
+      if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
       {
         healingOptions.IsAEHealingEanbled = healingSummary.IsAEHealingEnabled();
         healingOptions.RequestSummaryData = true;
@@ -297,8 +293,7 @@ namespace EQLogParser
       }
       else
       {
-        var icon = (sender as MenuItem)?.Icon as ImageAwesome;
-        if (icon != null && IconToWindow.ContainsKey(icon.Name))
+        if ((sender as MenuItem)?.Icon is ImageAwesome icon && IconToWindow.ContainsKey(icon.Name))
         {
           Helpers.OpenWindow(IconToWindow[icon.Name]);
         }
@@ -345,8 +340,7 @@ namespace EQLogParser
       {
         List<PlayerStats> selected = null;
         bool isBaneEnabled = false;
-        var summary = DamageWindow?.Content as DamageSummary;
-        if (summary != null)
+        if (DamageWindow?.Content is DamageSummary summary)
         {
           selected = summary.GetSelectedStats();
           isBaneEnabled = summary.IsBaneEnabled();
@@ -363,8 +357,7 @@ namespace EQLogParser
       {
         List<PlayerStats> selected = null;
         bool isAEHealingEnabled = false;
-        var summary = HealingWindow?.Content as HealingSummary;
-        if (summary != null)
+        if (HealingWindow?.Content is HealingSummary summary)
         {
           selected = summary.GetSelectedStats();
           isAEHealingEnabled = summary.IsAEHealingEnabled();
@@ -384,8 +377,7 @@ namespace EQLogParser
       else
       {
         // cleanup old
-        var damageSummary = DamageWindow?.Content as DamageSummary;
-        if (damageSummary != null)
+        if (DamageWindow?.Content is DamageSummary damageSummary)
         {
           DamageWindow.Content = null;
         }
@@ -425,8 +417,7 @@ namespace EQLogParser
       else
       {
         // cleanup old
-        var healingSummary = HealingWindow?.Content as HealingSummary;
-        if (healingSummary != null)
+        if (HealingWindow?.Content is HealingSummary healingSummary)
         {
           HealingWindow.Content = null;
         }
@@ -475,9 +466,7 @@ namespace EQLogParser
 
     private void RepositionCharts(DocumentWindow window)
     {
-      var tabControl = window.ParentContainer as TabbedMdiContainer;
-
-      if (tabControl != null)
+      if (window.ParentContainer is TabbedMdiContainer tabControl)
       {
         bool moved = false;
         foreach (var child in tabControl.Windows.Reverse().ToList())
@@ -508,9 +497,8 @@ namespace EQLogParser
 
     private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
     {
-      MenuItem item = sender as MenuItem;
       int lastMins = -1;
-      if (item != null && item.Tag != null && item.Tag.ToString() != "")
+      if (sender is MenuItem item && item.Tag != null && item.Tag.ToString() != "")
       {
         lastMins = Convert.ToInt32(item.Tag.ToString()) * 60;
       }
@@ -585,12 +573,12 @@ namespace EQLogParser
       {
         case "COMPLETED":
         case "NONPC":
-          AddParse(e.Type, sender as SummaryBuilder, e.CombinedStats);
+          AddParse(e.Type, sender as ISummaryBuilder, e.CombinedStats);
           break;
       }
     }
 
-    private void AddParse(string type, SummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null)
+    private void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null)
     {
       Parses[type] = new ParseData() { Builder = builder, CombinedStats = combined, Selected = selected };
       TriggerParseUpdate(type);
@@ -674,8 +662,7 @@ namespace EQLogParser
         copyToEQButton.IsEnabled = true;
         copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
 
-        ParseData data;
-        if (Parses.TryGetValue(parseList.SelectedItem as string, out data))
+        if (Parses.TryGetValue(parseList.SelectedItem as string, out ParseData data))
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
           string players = count == 1 ? "Player" : "Players";
@@ -691,12 +678,10 @@ namespace EQLogParser
 
     private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      var comboBox = sender as ComboBox;
-      if (comboBox != null)
+      if (sender is ComboBox comboBox)
       {
         var selected = comboBox.SelectedItem as SortableName;
-        var mapping = comboBox.DataContext as PetMapping;
-        if (mapping != null && selected != null && selected.Name != mapping.Owner)
+        if (comboBox.DataContext is PetMapping mapping && selected != null && selected.Name != mapping.Owner)
         {
           DataManager.Instance.UpdatePetToPlayer(mapping.Pet, selected.Name);
           petMappingGrid.CommitEdit();
@@ -711,11 +696,12 @@ namespace EQLogParser
         MonitorOnly = monitorOnly;
 
         // WPF doesn't have its own file chooser so use Win32 Version
-        Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
-
-        // filter to txt files
-        dialog.DefaultExt = ".txt";
-        dialog.Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz";
+        Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog
+        {
+          // filter to txt files
+          DefaultExt = ".txt",
+          Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz"
+        };
 
         // show dialog and read result
         if (dialog.ShowDialog().Value)
@@ -790,8 +776,7 @@ namespace EQLogParser
 
     private void WindowIcon_Loaded(object sender, RoutedEventArgs e)
     {
-      var icon = sender as FrameworkElement;
-      if (icon != null && IconToWindow.ContainsKey(icon.Name))
+      if (sender is FrameworkElement icon && IconToWindow.ContainsKey(icon.Name))
       {
         icon.Visibility = IconToWindow[icon.Name]?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
       }
