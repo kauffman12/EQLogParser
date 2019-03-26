@@ -132,9 +132,9 @@ namespace EQLogParser
     {
       if (selected.Count > 0)
       {
-        var main = Application.Current.MainWindow as MainWindow;
-        var spellTable = new SpellCountTable(main, CurrentDamageStats?.ShortTitle ?? "");
+        var spellTable = new SpellCountTable(CurrentDamageStats?.ShortTitle ?? "");
         spellTable.ShowSpells(selected, CurrentDamageStats);
+        var main = Application.Current.MainWindow as MainWindow;
         Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
       }
     }
