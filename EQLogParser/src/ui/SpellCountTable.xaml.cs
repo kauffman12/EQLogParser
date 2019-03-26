@@ -29,16 +29,14 @@ namespace EQLogParser
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
     private int CurrentSpellType = 0;
-    private MainWindow TheMainWindow;
     private static bool running = false;
 
-    public SpellCountTable(MainWindow mainWindow, string title)
+    public SpellCountTable(string title)
     {
       InitializeComponent();
-      TheMainWindow = mainWindow;
       titleLabel.Content = title;
 
-      spellCountDataGrid.Sorting += (s, e2) =>
+      dataGrid.Sorting += (s, e2) =>
       {
         if (e2.Column.Header != null && (e2.Column.Header.ToString() != ""))
         {
@@ -46,7 +44,7 @@ namespace EQLogParser
         }
       };
 
-      spellCountDataGrid.ItemsSource = SpellRowsView;
+      dataGrid.ItemsSource = SpellRowsView;
       castTypes.ItemsSource = CastTypes;
       castTypes.SelectedIndex = 0;
       countTypes.ItemsSource = CountTypes;
@@ -104,7 +102,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(() =>
         {
           castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
-          TheMainWindow.Busy(true);
+          (Application.Current.MainWindow as MainWindow).Busy(true);
         });
 
         Task.Delay(20).ContinueWith(task =>
@@ -115,7 +113,7 @@ namespace EQLogParser
             {
               Dispatcher.InvokeAsync(() =>
               {
-                spellCountDataGrid.Columns.Add(new DataGridTextColumn()
+                dataGrid.Columns.Add(new DataGridTextColumn()
                 {
                   Header = "",
                   Binding = new Binding("Spell"),
@@ -166,7 +164,7 @@ namespace EQLogParser
                   DataGridTextColumn col = new DataGridTextColumn() { Header = header, Binding = new Binding(colBinding) };
                   col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
                   col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
-                  spellCountDataGrid.Columns.Add(col);
+                  dataGrid.Columns.Add(col);
                 });
 
                 Thread.Sleep(5);
@@ -179,7 +177,7 @@ namespace EQLogParser
                 DataGridTextColumn col = new DataGridTextColumn() { Header = totalHeader, Binding = new Binding("Values[" + colCount + "]") };
                 col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
                 col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
-                spellCountDataGrid.Columns.Add(col);
+                dataGrid.Columns.Add(col);
               });
 
               foreach (var spell in sortedSpellList)
@@ -226,7 +224,7 @@ namespace EQLogParser
             Dispatcher.InvokeAsync(() =>
             {
               castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
-              TheMainWindow.Busy(false);
+              (Application.Current.MainWindow as MainWindow).Busy(false);
             });
             running = false;
           }
@@ -268,9 +266,9 @@ namespace EQLogParser
         SpellRowsView.Clear();
       }
 
-      if (spellCountDataGrid.Columns.Count > 0)
+      if (dataGrid.Columns.Count > 0)
       {
-        spellCountDataGrid.Columns.Clear();
+        dataGrid.Columns.Clear();
       }
 
       CurrentCastType = castTypes.SelectedIndex;
@@ -278,6 +276,43 @@ namespace EQLogParser
       CurrentMinFreqCount = minFreqList.SelectedIndex;
       CurrentSpellType = spellTypes.SelectedIndex;
       Display();
+    }
+
+    private void CopyBBCode_Click(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        List<string> header = new List<string>();
+        List<List<string>> data = new List<List<string>>();
+
+        header.Add("");
+        for (int i = 1; i < dataGrid.Columns.Count; i++)
+        {
+          header.Add(dataGrid.Columns[i].Header as string);
+        }
+
+        foreach (var item in dataGrid.Items)
+        {
+          var counts = item as SpellCountRow;
+          List<string> row = new List<string>();
+
+          row.Add(counts.Spell);
+          foreach (var value in counts.Values)
+          {
+            row.Add(value.ToString());
+          }
+
+          data.Add(row);
+        }
+
+        string result = TextFormatUtils.BuildBBCodeTable(header, data, titleLabel.Content as string);
+        Clipboard.SetDataObject(result);
+      }
+      catch (Exception ex)
+      {
+        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
+        LOG.Error(ex);
+      }
     }
   }
 }

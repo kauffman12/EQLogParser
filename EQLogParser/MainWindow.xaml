@@ -32,30 +32,34 @@
           </MenuItem.Icon>
           <MenuItem Header="Last  8 Hours" Tag="8" Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Last 24 Hours" Tag="24 " Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Last  7 Days" Tag="168" Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Last 14 Days" Tag="336" Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Last 30 Days" Tag="720" Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFile_Click" />
+          <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFile_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Globe" Foreground="#5191c1" />
+            </MenuItem.Icon>
+          </MenuItem>
         </MenuItem>
         <Separator Height="0"/>
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
@@ -97,7 +101,7 @@
               <fa:ImageAwesome x:Name="verifiedPlayersIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Share Player Parses" Click="MenuItemWindow_Click" Height="20">
+          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Share Parses" Click="MenuItemWindow_Click" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerParseIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
@@ -194,7 +198,7 @@
       </docking:DockSite.AutoHideRightContainers>
       <docking:DockSite.AutoHideBottomContainers>
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" Title="Share Player Parses" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
+          <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" Title="Share Parses" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
             <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="100" />
