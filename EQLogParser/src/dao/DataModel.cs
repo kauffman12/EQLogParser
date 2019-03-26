@@ -34,21 +34,21 @@ namespace EQLogParser
     public const string DAMAGE_PARSE = "Damage";
   }
 
-  public interface SummaryBuilder
+  public interface ISummaryBuilder
   {
     StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers);
   }
 
-  public interface Action { }
+  public interface IAction { }
 
   public class ParseData
   {
     public CombinedStats CombinedStats { get; set; }
-    public SummaryBuilder Builder { get; set; }
+    public ISummaryBuilder Builder { get; set; }
     public List<PlayerStats> Selected { get; set; }
   }
 
-  public class TimedAction : Action
+  public class TimedAction : IAction
   {
     public double BeginTime { get; set; }
   }
@@ -124,12 +124,12 @@ namespace EQLogParser
     public string OptionalData { get; set; }
   }
 
-  public class ResistRecord : Action
+  public class ResistRecord : IAction
   {
     public string Spell { get; set; }
   }
 
-  public class HitRecord : Action
+  public class HitRecord : IAction
   {
     public uint Total { get; set; }
     public uint OverTotal { get; set; }
@@ -154,7 +154,7 @@ namespace EQLogParser
 
   public class ActionBlock : TimedAction
   {
-    public List<Action> Actions { get; set; }
+    public List<IAction> Actions { get; set; }
   }
 
   public class Hit : FullTimedAction
@@ -193,13 +193,13 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
-  public class PlayerDeath : Action
+  public class PlayerDeath : IAction
   {
     public string Player { get; set; }
     public string Npc { get; set; }
   }
 
-  public class ReceivedSpell : Action
+  public class ReceivedSpell : IAction
   {
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }

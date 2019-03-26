@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class HealingStatsManager : SummaryBuilder
+  class HealingStatsManager : ISummaryBuilder
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 

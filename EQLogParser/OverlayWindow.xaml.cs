@@ -40,14 +40,14 @@ namespace EQLogParser
     private List<TextBlock> DamageBlockList = new List<TextBlock>();
     private List<Rectangle> RectangleList = new List<Rectangle>();
 
-    private List<Color> TitleColorList = new List<Color>() { Color.FromRgb(50, 50, 50), Color.FromRgb(30, 30, 30), Color.FromRgb(10, 10, 10) };
+    private List<Color> TitleColorList = new List<Color> { Color.FromRgb(50, 50, 50), Color.FromRgb(30, 30, 30), Color.FromRgb(10, 10, 10) };
     private List<List<Color>> ColorList = new List<List<Color>>()
     {
-      new List<Color>() { Color.FromRgb(60, 134, 80), Color.FromRgb(54, 129, 27), Color.FromRgb(39, 69, 27) },
-      new List<Color>() { Color.FromRgb(43, 111, 102), Color.FromRgb(38, 101, 78), Color.FromRgb(33, 62, 54) },
-      new List<Color>() { Color.FromRgb(67, 91, 133), Color.FromRgb(50, 76, 121), Color.FromRgb(36, 49, 70) },
-      new List<Color>() { Color.FromRgb(137, 141, 41), Color.FromRgb(130, 129, 42), Color.FromRgb(85, 86, 11) },
-      new List<Color>() { Color.FromRgb(149, 94, 31), Color.FromRgb(128, 86, 25), Color.FromRgb(78, 53, 21) }
+      new List<Color> { Color.FromRgb(60, 134, 80), Color.FromRgb(54, 129, 27), Color.FromRgb(39, 69, 27) },
+      new List<Color> { Color.FromRgb(43, 111, 102), Color.FromRgb(38, 101, 78), Color.FromRgb(33, 62, 54) },
+      new List<Color> { Color.FromRgb(67, 91, 133), Color.FromRgb(50, 76, 121), Color.FromRgb(36, 49, 70) },
+      new List<Color> { Color.FromRgb(137, 141, 41), Color.FromRgb(130, 129, 42), Color.FromRgb(85, 86, 11) },
+      new List<Color> { Color.FromRgb(149, 94, 31), Color.FromRgb(128, 86, 25), Color.FromRgb(78, 53, 21) }
     };
 
     public OverlayWindow(bool configure = false)
@@ -65,35 +65,33 @@ namespace EQLogParser
       if (!offsetSize)
       {
         CreateRows();
-        this.Title = "Overlay";
-        this.MinHeight = 0;
-        UpdateTimer = new DispatcherTimer();
-        UpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, 1000);
+        Title = "Overlay";
+        MinHeight = 0;
+        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
         UpdateTimer.Tick += UpdateTimer_Tick;
-        this.AllowsTransparency = true;
-        this.Style = null;
-        this.WindowStyle = WindowStyle.None;
+        AllowsTransparency = true;
+        Style = null;
+        WindowStyle = WindowStyle.None;
         SetVisible(false);
       }
       else
       {
         CreateRows(true);
-        this.MinHeight = 130;
-        this.AllowsTransparency = false;
-        this.WindowStyle = WindowStyle.SingleBorderWindow;
+        MinHeight = 130;
+        AllowsTransparency = false;
+        WindowStyle = WindowStyle.SingleBorderWindow;
         SetVisible(true);
         LoadTestData();
       }
 
-      double dvalue = 0;
-      if (width != null && double.TryParse(width, out dvalue) && !double.IsNaN(dvalue))
+      if (width != null && double.TryParse(width, out double dvalue) && !double.IsNaN(dvalue))
       {
-        this.Width = offsetSize ? dvalue + margin.Left + margin.Right : dvalue;
+        Width = offsetSize ? dvalue + margin.Left + margin.Right : dvalue;
       }
 
       if (height != null && double.TryParse(height, out dvalue) && !double.IsNaN(dvalue))
       {
-        this.Height = offsetSize ? dvalue + margin.Top + margin.Bottom : 0;
+        Height = offsetSize ? dvalue + margin.Top + margin.Bottom : 0;
         if (!offsetSize)
         {
           CalculatedRowHeight = dvalue / (MAX_ROWS + 1);
@@ -102,18 +100,17 @@ namespace EQLogParser
 
       if (top != null && double.TryParse(top, out dvalue) && !double.IsNaN(dvalue))
       {
-        this.Top = offsetSize ? dvalue - margin.Top : dvalue;
+        Top = offsetSize ? dvalue - margin.Top : dvalue;
       }
 
       if (left != null && double.TryParse(left, out dvalue) && !double.IsNaN(dvalue))
       {
-        this.Left = offsetSize ? dvalue - margin.Left : dvalue;
+        Left = offsetSize ? dvalue - margin.Left : dvalue;
       }
 
-      int ivalue;
       string value = DataManager.Instance.GetApplicationSetting("OverlayFontSize");
       bool fontHasBeenSet = false;
-      if (value != null && int.TryParse(value, out ivalue) && ivalue >= 0 && ivalue <= 64)
+      if (value != null && int.TryParse(value, out int ivalue) && ivalue >= 0 && ivalue <= 64)
       {
         foreach (var item in fontSizeSelection.Items)
         {
@@ -314,19 +311,19 @@ namespace EQLogParser
       TitleRectangle = CreateRectangle(configure, TitleColorList);
       overlayCanvas.Children.Add(TitleRectangle);
 
-      TitlePanel = new StackPanel() { Orientation = Orientation.Horizontal };
+      TitlePanel = new StackPanel { Orientation = Orientation.Horizontal };
       TitlePanel.SetValue(Canvas.LeftProperty, 5.0);
       TitlePanel.SetValue(Panel.ZIndexProperty, 2);
 
       SettingsButton = CreateButton();
-      SettingsButton.ToolTip = new ToolTip() { Content = "Change Settings" };
+      SettingsButton.ToolTip = new ToolTip { Content = "Change Settings" };
       SettingsButton.Margin = new Thickness(8, 1, 0, 0);
       SettingsButton.Content = "\xE713";
       SettingsButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
       SettingsButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
 
       CopyButton = CreateButton();
-      CopyButton.ToolTip = new ToolTip() { Content = "Copy To EQ" };
+      CopyButton.ToolTip = new ToolTip { Content = "Copy To EQ" };
       CopyButton.Margin = new Thickness(4, 1, 0, 0);
       CopyButton.Content = "\xE8C8";
       CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
@@ -337,7 +334,7 @@ namespace EQLogParser
       };
 
       RefreshButton = CreateButton();
-      RefreshButton.ToolTip = new ToolTip() { Content = "Cancel Current Parse" };
+      RefreshButton.ToolTip = new ToolTip { Content = "Cancel Current Parse" };
       RefreshButton.Margin = new Thickness(4, 1, 0, 0);
       RefreshButton.Content = "\xE8BB";
       RefreshButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
@@ -377,9 +374,12 @@ namespace EQLogParser
 
     private LinearGradientBrush CreateBrush(List<Color> colors)
     {
-      var brush = new LinearGradientBrush();
-      brush.StartPoint = new Point(0.5, 0);
-      brush.EndPoint = new Point(0.5, 1);
+      var brush = new LinearGradientBrush
+      {
+        StartPoint = new Point(0.5, 0),
+        EndPoint = new Point(0.5, 1)
+      };
+
       brush.GradientStops.Add(new GradientStop(colors[0], 0.0));
       brush.GradientStops.Add(new GradientStop(colors[1], 0.5));
       brush.GradientStops.Add(new GradientStop(colors[2], 0.75));
@@ -388,21 +388,23 @@ namespace EQLogParser
 
     private Rectangle CreateRectangle(bool configure, List<Color> colors)
     {
-      var rectangle = new Rectangle();
-      rectangle.Fill = CreateBrush(colors);
+      var rectangle = new Rectangle
+      {
+        Fill = CreateBrush(colors)
+      };
+
       rectangle.SetValue(Panel.ZIndexProperty, 1);
-      rectangle.Effect = new BlurEffect() { Radius = 5, RenderingBias = 0 };
+      rectangle.Effect = new BlurEffect { Radius = 5, RenderingBias = 0 };
       rectangle.Opacity = configure ? 1.0 : DATA_OPACITY;
       return rectangle;
     }
 
     private TextBlock CreateTextBlock()
     {
-      var textBlock = new TextBlock();
-      textBlock.Foreground = TEXT_BRUSH;
+      var textBlock = new TextBlock { Foreground = TEXT_BRUSH };
       textBlock.SetValue(Panel.ZIndexProperty, 3);
       textBlock.UseLayoutRounding = true;
-      textBlock.Effect = new DropShadowEffect() { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
+      textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
       textBlock.FontFamily = new FontFamily("Lucidia Console");
       return textBlock;
     }
@@ -447,8 +449,7 @@ namespace EQLogParser
 
     private void FontSize_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      int size;
-      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out size))
+      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out int size))
       {
         SetFont(size);
       }
@@ -473,8 +474,7 @@ namespace EQLogParser
         DataManager.Instance.SetApplicationSetting("OverlayLeft", (this.Left + margin.Left).ToString());
       }
 
-      int size;
-      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out size))
+      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out int size))
       {
         DataManager.Instance.SetApplicationSetting("OverlayFontSize", size.ToString());
       }
