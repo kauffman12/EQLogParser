@@ -55,11 +55,7 @@
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFile_Click">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
+          <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFile_Click" />
         </MenuItem>
         <Separator Height="0"/>
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>

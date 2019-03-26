@@ -50,12 +50,9 @@ namespace EQLogParser
       new List<Color>() { Color.FromRgb(149, 94, 31), Color.FromRgb(128, 86, 25), Color.FromRgb(78, 53, 21) }
     };
 
-    private MainWindow TheMainWindow;
-
-    public OverlayWindow(MainWindow mainWindow, bool configure = false)
+    public OverlayWindow(bool configure = false)
     {
       InitializeComponent();
-      TheMainWindow = mainWindow;
 
       string width = DataManager.Instance.GetApplicationSetting("OverlayWidth");
       string height = DataManager.Instance.GetApplicationSetting("OverlayHeight");
@@ -323,7 +320,7 @@ namespace EQLogParser
       SettingsButton.Margin = new Thickness(8, 1, 0, 0);
       SettingsButton.Content = "\xE713";
       SettingsButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
-      SettingsButton.Click += (object sender, RoutedEventArgs e) => TheMainWindow.OpenOverlay(true, false);
+      SettingsButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
 
       CopyButton = CreateButton();
       CopyButton.ToolTip = new ToolTip() { Content = "Copy To EQ" };
@@ -332,8 +329,8 @@ namespace EQLogParser
       CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
       CopyButton.Click += (object sender, RoutedEventArgs e) =>
       {
-        TheMainWindow.UpdateDamageParse(Stats, Stats.StatsList);
-        TheMainWindow.CopyToEQ_Click(sender, e);
+        (Application.Current.MainWindow as MainWindow)?.AddDamageParse(Stats, Stats.StatsList);
+        (Application.Current.MainWindow as MainWindow)?.CopyToEQ_Click(sender, e);
       };
 
       RefreshButton = CreateButton();
@@ -479,7 +476,7 @@ namespace EQLogParser
         DataManager.Instance.SetApplicationSetting("OverlayFontSize", size.ToString());
       }
 
-      TheMainWindow.OpenOverlay(false, true);
+      (Application.Current.MainWindow as MainWindow)?.OpenOverlay(false, true);
     }
 
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
