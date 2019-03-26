@@ -43,17 +43,20 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
-      if (processed.Record != null && !double.IsNaN(LastUpdateTime))
+      if (processed.IsPlayerDamage)
       {
-        var seconds = processed.BeginTime - LastUpdateTime;
-        if (seconds > 60)
+        if (!double.IsNaN(LastUpdateTime))
         {
-          CurrentGroupID++;
-          DataManager.Instance.AddNonPlayerMapBreak(FormatTime(seconds));
+          var seconds = processed.BeginTime - LastUpdateTime;
+          if (seconds > 60)
+          {
+            CurrentGroupID++;
+            DataManager.Instance.AddNonPlayerMapBreak(FormatTime(seconds));
+          }
         }
-      }
 
-      AddOrUpdateNpc(processed.Record, processed.BeginTime, processed.TimeString.Substring(4, 15));
+        AddOrUpdateNpc(processed.Record, processed.BeginTime, processed.TimeString.Substring(4, 15));
+      }
     }
 
     private void AddOrUpdateNpc(DamageRecord record, double currentTime, string origTimeString)

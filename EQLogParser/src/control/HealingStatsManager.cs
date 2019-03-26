@@ -17,7 +17,7 @@ namespace EQLogParser
     internal List<List<ActionBlock>> HealingGroups = new List<List<ActionBlock>>();
     internal bool IsAEHealingAvailable = false;
 
-    private const int HEAL_OFFSET = 5; // additional # of seconds to count hilling after last damage is seen
+    private const int HEAL_OFFSET = 10; // additional # of seconds to count hilling after last damage is seen
 
     private PlayerStats RaidTotals;
     private List<NonPlayer> Selected;

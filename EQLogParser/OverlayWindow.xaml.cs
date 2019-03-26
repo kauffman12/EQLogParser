@@ -152,10 +152,13 @@ namespace EQLogParser
 
     private void DamageLineParser_EventsDamageProcessed(object sender, DamageProcessedEvent e)
     {
-      Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, false, Stats);
-      if (!UpdateTimer.IsEnabled)
+      if (e.IsPlayerDamage)
       {
-        UpdateTimer.Start();
+        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, false, Stats);
+        if (!UpdateTimer.IsEnabled)
+        {
+          UpdateTimer.Start();
+        }
       }
     }
 
