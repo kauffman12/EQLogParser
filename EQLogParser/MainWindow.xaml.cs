@@ -1,5 +1,6 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
+using FontAwesome.WPF;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -25,7 +26,7 @@ namespace EQLogParser
     private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
-    private const string APP_NAME = "EQLogParser";
+    private const string APP_NAME = "EQ Log Parser";
     private const string VERSION = "v1.3.18";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
@@ -55,6 +56,7 @@ namespace EQLogParser
     private NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private Dictionary<string, ParseData> Parses = new Dictionary<string, ParseData>();
 
+    Dictionary<string, DockingWindow> IconToWindow;
     private DocumentWindow DamageWindow = null;
     private DocumentWindow HealingWindow = null;
     private DocumentWindow DamageChartWindow = null;
@@ -72,6 +74,14 @@ namespace EQLogParser
 
         // update titles
         Title = APP_NAME + " " + VERSION;
+
+        // used for setting menu icons based on open windows
+        IconToWindow = new Dictionary<string, DockingWindow>()
+        {
+          { npcIcon.Name, npcWindow }, { verifiedPlayersIcon.Name, verifiedPlayersWindow },
+          { verifiedPetsIcon.Name, verifiedPetsWindow }, { petMappingIcon.Name, petMappingWindow },
+          { playerParseIcon.Name, playerParseTextWindow }, { fileProgessIcon.Name, progressWindow }
+        };
 
         // Clear/Reset
         DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
@@ -217,6 +227,13 @@ namespace EQLogParser
       AddParse(Labels.DAMAGE_PARSE, DamageStatsManager.Instance, combined, selected);
     }
 
+    private void Window_Closed(object sender, System.EventArgs e)
+    {
+      StopProcessing();
+      DataManager.Instance.SaveState();
+      Application.Current.Shutdown();
+    }
+
     private void HandleChartUpdateEvent(DocumentWindow window, object sender, DataPointEvent e)
     {
       Dispatcher.InvokeAsync(() =>
@@ -254,13 +271,6 @@ namespace EQLogParser
       Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingOptions));
     }
 
-    private void Window_Closed(object sender, System.EventArgs e)
-    {
-      StopProcessing();
-      DataManager.Instance.SaveState();
-      Application.Current.Shutdown();
-    }
-
     private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e)
     {
       playerParseTextWindow.State = DockingWindowState.AutoHide;
@@ -269,31 +279,7 @@ namespace EQLogParser
     // Main Menu
     private void MenuItemWindow_Click(object sender, RoutedEventArgs e)
     {
-      if (e.Source == npcWindowMenuitem)
-      {
-        Helpers.OpenWindow(npcWindow);
-      }
-      else if (e.Source == fileProgressWindowMenuItem)
-      {
-        Helpers.OpenWindow(progressWindow);
-      }
-      else if (e.Source == petMappingWindowMenuItem)
-      {
-        Helpers.OpenWindow(petMappingWindow);
-      }
-      else if (e.Source == verifiedPlayersWindowMenuItem)
-      {
-        Helpers.OpenWindow(verifiedPlayersWindow);
-      }
-      else if (e.Source == verifiedPetsWindowMenuItem)
-      {
-        Helpers.OpenWindow(verifiedPetsWindow);
-      }
-      else if (e.Source == playerParseTextWindowMenuItem)
-      {
-        Helpers.OpenWindow(playerParseTextWindow);
-      }
-      else if (e.Source == damageChartMenuItem)
+      if (e.Source == damageChartMenuItem)
       {
         OpenDamageChart();
       }
@@ -308,6 +294,14 @@ namespace EQLogParser
       else if (e.Source == healingSummaryMenuItem)
       {
         OpenHealingSummary();
+      }
+      else
+      {
+        var icon = (sender as MenuItem)?.Icon as ImageAwesome;
+        if (icon != null && IconToWindow.ContainsKey(icon.Name))
+        {
+          Helpers.OpenWindow(IconToWindow[icon.Name]);
+        }
       }
     }
 
@@ -326,6 +320,8 @@ namespace EQLogParser
         updated = true;
         var chart = new LineChart(choices);
         newWindow = new DocumentWindow(dockSite, title, title, null, chart);
+        IconToWindow[icon.Name] = newWindow;
+
         Helpers.OpenWindow(newWindow);
         newWindow.CanFloat = true;
         newWindow.CanClose = true;
@@ -400,8 +396,9 @@ namespace EQLogParser
         }
 
         DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
-        Helpers.OpenWindow(DamageWindow);
+        IconToWindow[damageSummaryIcon.Name] = DamageWindow;
 
+        Helpers.OpenWindow(DamageWindow);
         if (HealingWindow?.IsOpen == true)
         {
           DamageWindow.MoveToPreviousContainer();
@@ -440,8 +437,9 @@ namespace EQLogParser
         }
 
         HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
-        Helpers.OpenWindow(HealingWindow);
+        IconToWindow[healingSummaryIcon.Name] = HealingWindow;
 
+        Helpers.OpenWindow(HealingWindow);
         if (DamageWindow?.IsOpen == true)
         {
           HealingWindow.MoveToPreviousContainer();
@@ -478,7 +476,7 @@ namespace EQLogParser
     private void RepositionCharts(DocumentWindow window)
     {
       var tabControl = window.ParentContainer as TabbedMdiContainer;
-   
+
       if (tabControl != null)
       {
         bool moved = false;
@@ -583,7 +581,7 @@ namespace EQLogParser
 
     private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
     {
-      switch(e.State)
+      switch (e.State)
       {
         case "COMPLETED":
         case "NONPC":
@@ -654,7 +652,7 @@ namespace EQLogParser
     {
       if (playerParseTextBox.Text == "" || playerParseTextBox.Text == SHARE_DPS_LABEL)
       {
-        copyToEQButton.IsEnabled =  false;
+        copyToEQButton.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = SHARE_DPS_LABEL;
         sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
@@ -793,45 +791,9 @@ namespace EQLogParser
     private void WindowIcon_Loaded(object sender, RoutedEventArgs e)
     {
       var icon = sender as FrameworkElement;
-      if (icon == damageSummaryIcon)
+      if (icon != null && IconToWindow.ContainsKey(icon.Name))
       {
-        icon.Visibility = DamageWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == healingSummaryIcon)
-      {
-        icon.Visibility = HealingWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == healingChartIcon)
-      {
-        icon.Visibility = HealingChartWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == damageChartIcon)
-      {
-        icon.Visibility = DamageChartWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == npcIcon)
-      {
-        icon.Visibility = npcWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == verifiedPlayersIcon)
-      {
-        icon.Visibility = verifiedPlayersWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == verifiedPetsIcon)
-      {
-        icon.Visibility = verifiedPetsWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == petMappingIcon)
-      {
-        icon.Visibility = petMappingWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == playerParseIcon)
-      {
-        icon.Visibility = playerParseTextWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
-      }
-      else if (icon == fileProgessIcon)
-      {
-        icon.Visibility = progressWindow?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+        icon.Visibility = IconToWindow[icon.Name]?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
       }
     }
   }
