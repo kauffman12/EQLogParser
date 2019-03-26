@@ -160,6 +160,7 @@
     </Compile>
     <Compile Include="Settings.cs" />
     <Compile Include="src\control\HealingStatsManager.cs" />
+    <Compile Include="src\util\TextFormatUtils.cs" />
     <Compile Include="src\util\DateUtil.cs" />
     <Compile Include="src\util\StatsUtil.cs" />
     <Compile Include="src\control\SummaryTable.cs" />
