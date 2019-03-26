@@ -92,7 +92,7 @@ namespace EQLogParser
 
     internal void FixSize()
     {
-      Task.Delay(500).ContinueWith(task =>
+      Task.Delay(750).ContinueWith(task =>
       {
         Dispatcher.InvokeAsync(() =>
         {

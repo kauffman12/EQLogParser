@@ -23,36 +23,36 @@
       <MenuItem Header="_File" Height="20" Width="35">
         <MenuItem Header="Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFile_Click">
           <MenuItem.Icon>
-            <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="11" Width="11" HorizontalAlignment="Center" Icon="Feed" Foreground="#FF4F9FE2" />
+            <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Eye" Foreground="#5191c1" />
           </MenuItem.Icon>
         </MenuItem>
         <MenuItem Header="Open and Monitor _Log File" Height="20">
           <MenuItem.Icon>
-            <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="FolderOpen" Foreground="#FF4F9FE2" />
+            <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="FolderOpen" Foreground="#5191c1" />
           </MenuItem.Icon>
           <MenuItem Header="Last  8 Hours" Tag="8" Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Last 24 Hours" Tag="24 " Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Last  7 Days" Tag="168" Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Last 14 Days" Tag="336" Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Last 30 Days" Tag="720" Height="20" Click="MenuItemSelectLogFile_Click">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFile_Click" />
