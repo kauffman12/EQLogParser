@@ -315,10 +315,13 @@ namespace EQLogParser
       AddAction(PlayerDeaths, newDeath, beginTime);
     }
 
-    public void AddDamageRecord(DamageRecord record, double beginTime)
+    public void AddDamageRecord(DamageRecord record, bool isPlayerDamage, double beginTime)
     {
-      // ReplacePlayer is done in the line parser already
-      AddAction(AllDamageBlocks, record, beginTime);
+      if (isPlayerDamage)
+      {
+        // ReplacePlayer is done in the line parser already
+        AddAction(AllDamageBlocks, record, beginTime);
+      }
     }
 
     public void AddResistRecord(ResistRecord record, double beginTime)
@@ -667,9 +670,9 @@ namespace EQLogParser
     public void UpdateUnVerifiedPetOrPlayer(string name)
     {
       // avoid checking to remove unless needed
-      if (!IsProbablyNotAPlayer(name))
+      if (!IsProbablyNotAPlayer(name) && UnVerifiedPetOrPlayer.TryAdd(name, 1))
       {
-        UnVerifiedPetOrPlayer[name] = 1;
+        // only need to check first time added
         CheckNolongerNPC(name);
       }
     }

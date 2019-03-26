@@ -43,10 +43,11 @@ namespace EQLogParser
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
 
-          DamageRecord record = ParseDamage(pline);
+          bool isPlayerDamage;
+          DamageRecord record = ParseDamage(pline, out isPlayerDamage);
           if (record != null)
           {
-            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = pline.TimeString, BeginTime = pline.CurrentTime };
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, IsPlayerDamage = isPlayerDamage, TimeString = pline.TimeString, BeginTime = pline.CurrentTime };
             EventsDamageProcessed(record, e);
           }
         }
@@ -116,9 +117,10 @@ namespace EQLogParser
       EventsResistProcessed(defender, e);
     }
 
-    private static DamageRecord ParseDamage(ProcessLine pline)
+    private static DamageRecord ParseDamage(ProcessLine pline, out bool isPlayerDamage)
     {
       DamageRecord record = null;
+      isPlayerDamage = true;
 
       record = ParseAllDamage(pline);
       if (record != null)
@@ -140,7 +142,8 @@ namespace EQLogParser
             DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker);
           }
 
-          record = null;
+          // main spot where attacker is not a player or pet
+          isPlayerDamage = false;
         }
         else if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest") || record.Defender.EndsWith("satchel"))
         {
@@ -156,6 +159,7 @@ namespace EQLogParser
           }
 
           // if updating this fails then it's definitely a player or pet
+          // doesnt get used often?
           if (record != null && !DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender))
           {
             record = null;

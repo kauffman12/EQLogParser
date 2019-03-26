@@ -27,7 +27,7 @@ namespace EQLogParser
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.3.18";
+    private const string VERSION = "v1.3.19";
     private const string VERIFIED_PETS = "Verified Pets";
     private const string PLAYER_TABLE_LABEL = " No NPCs Selected";
     private const string SHARE_DPS_LABEL = "No Players Selected";
@@ -116,7 +116,7 @@ namespace EQLogParser
         HealingLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
 
         HealingLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record, data.BeginTime);
-        DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.BeginTime);
+        DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.IsPlayerDamage, data.BeginTime);
         DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record, data.BeginTime);
 
         (npcWindow.Content as NpcTable).EventsSelectionChange += (sender, data) => ComputeStats();

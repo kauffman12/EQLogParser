@@ -67,6 +67,7 @@ namespace EQLogParser
   {
     public DamageRecord Record { get; set; }
     public string TimeString { get; set; }
+    public bool IsPlayerDamage { get; set; }
   }
 
   public class HealProcessedEvent : TimedAction
