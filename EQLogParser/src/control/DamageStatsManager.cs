@@ -319,7 +319,7 @@ namespace EQLogParser
         // generating new stats
         EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent()
         {
-          Name = Labels.DAMAGE_PARSE,
+          Type = Labels.DAMAGE_PARSE,
           State = "COMPLETED",
           CombinedStats = combined,
           IsBaneAvailable = IsBaneAvailable
@@ -332,7 +332,7 @@ namespace EQLogParser
       if (options.RequestSummaryData)
       {
         // generating new stats
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.DAMAGE_PARSE, State = "STARTED" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGE_PARSE, State = "STARTED" });
       }
     }
 
@@ -341,7 +341,7 @@ namespace EQLogParser
       if (options.RequestSummaryData)
       {
         // nothing to do
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.DAMAGE_PARSE, State = "NONPC" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGE_PARSE, State = "NONPC" });
       }
 
       if (options.RequestChartData)

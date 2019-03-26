@@ -193,7 +193,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         Overlay?.Close();
-        Overlay = new OverlayWindow(this, configure);
+        Overlay = new OverlayWindow(configure);
         Overlay.Show();
       });
     }
@@ -212,9 +212,9 @@ namespace EQLogParser
       Overlay?.Close();
     }
 
-    internal void UpdateDamageParse(CombinedStats combined, List<PlayerStats> selected)
+    internal void AddDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
-      UpdateParse(Labels.DAMAGE_PARSE, DamageStatsManager.Instance, combined, selected);
+      AddParse(Labels.DAMAGE_PARSE, DamageStatsManager.Instance, combined, selected);
     }
 
     private void HandleChartUpdateEvent(DocumentWindow window, object sender, DataPointEvent e)
@@ -587,28 +587,58 @@ namespace EQLogParser
       {
         case "COMPLETED":
         case "NONPC":
-          UpdateParse(e.Name, sender as SummaryBuilder, e.CombinedStats);
+          AddParse(e.Type, sender as SummaryBuilder, e.CombinedStats);
           break;
       }
     }
 
-    private void UpdateParse(string name, SummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null)
+    private void AddParse(string type, SummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null)
+    {
+      Parses[type] = new ParseData() { Builder = builder, CombinedStats = combined, Selected = selected };
+      TriggerParseUpdate(type);
+    }
+
+    private void UpdateParse(string type, List<PlayerStats> selected)
+    {
+      if (Parses.ContainsKey(type))
+      {
+        Parses[type].Selected = selected;
+        TriggerParseUpdate(type);
+      }
+    }
+
+    private void TriggerParseUpdate(string type)
     {
       Dispatcher.InvokeAsync(() =>
       {
-        var summary = builder?.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
-        Parses[name] = new ParseData() { Builder = builder, CombinedStats = combined, Selected = selected };
-        playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
-        playerParseTextBox.SelectAll();
-        parseList.SelectedItem = name;
+        if (parseList.SelectedItem.ToString() == type)
+        {
+          SetParseTextByType(type);
+        }
+        else
+        {
+          parseList.SelectedItem = type;
+        }
       });
     }
 
-    private void UpdateParse(string name, List<PlayerStats> selected)
+    private void SetParseTextByType(string type)
     {
-      if (Parses.ContainsKey(name))
+      if (Parses.ContainsKey(type))
       {
-        UpdateParse(name, Parses[name].Builder, Parses[name].CombinedStats, selected);
+        var selected = Parses[type].Selected;
+        var combined = Parses[type].CombinedStats;
+        var summary = Parses[type].Builder?.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
+        playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
+        playerParseTextBox.SelectAll();
+      }
+    }
+
+    private void ParseList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (parseList.SelectedIndex > -1)
+      {
+        SetParseTextByType(parseList.SelectedItem as string);
       }
     }
 
@@ -616,17 +646,7 @@ namespace EQLogParser
     {
       if (parseList.SelectedIndex > -1)
       {
-        var value = parseList.SelectedItem as string;
-        UpdateParse(value, Parses[value]?.Selected);
-      }
-    }
-
-    private void ParseList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      var value = parseList.SelectedItem as string;
-      if (value != null && Parses.ContainsKey(value))
-      {
-        UpdateParse(value, Parses[value]?.Selected);
+        SetParseTextByType(parseList.SelectedItem as string);
       }
     }
 

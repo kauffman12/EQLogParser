@@ -106,7 +106,7 @@ namespace EQLogParser
 
   public class StatsGenerationEvent
   {
-    public string Name { get; set; }
+    public string Type { get; set; }
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }
     public bool IsBaneAvailable { get; set; }

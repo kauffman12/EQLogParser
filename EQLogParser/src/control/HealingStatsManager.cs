@@ -125,7 +125,7 @@ namespace EQLogParser
         // generating new stats
         EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent()
         {
-          Name = Labels.HEAL_PARSE,
+          Type = Labels.HEAL_PARSE,
           State = "COMPLETED",
           CombinedStats = combined,
           IsAEHealingAvailable = IsAEHealingAvailable
@@ -138,7 +138,7 @@ namespace EQLogParser
       if (options.RequestSummaryData)
       {
        // generating new stats
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.HEAL_PARSE, State = "STARTED" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEAL_PARSE, State = "STARTED" });
       }
     }
 
@@ -147,7 +147,7 @@ namespace EQLogParser
       if (options.RequestSummaryData)
       {
         // nothing to do
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Name = Labels.HEAL_PARSE, State = "NONPC" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEAL_PARSE, State = "NONPC" });
       }
 
       if (options.RequestChartData)
