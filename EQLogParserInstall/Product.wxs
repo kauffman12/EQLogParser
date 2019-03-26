@@ -84,9 +84,6 @@
       <Component Id="LiveCharts.Wpf.dll" Guid="DC2B7F21-1FF6-44F8-A496-2DACBBCA7AB4">
         <File Id="LiveCharts.Wpf.dll" Name="LiveCharts.Wpf.dll" Source="$(var.EQLogParser_TargetDir)LiveCharts.Wpf.dll" />
       </Component>
-      <Component Id="Caching.dll" Guid="74348E32-A112-488B-A33D-7F7E07CFF5C8">
-        <File Id="Caching.dll" Name="Caching.dll" Source="$(var.EQLogParser_TargetDir)Caching.dll" />
-      </Component>
       <Component Id="CsvHelper.dll" Guid="3D41FF8F-2D1B-4954-9925-FEE340AAC6A0">
         <File Id="CsvHelper.dll" Name="CsvHelper.dll" Source="$(var.EQLogParser_TargetDir)CsvHelper.dll" />
       </Component>

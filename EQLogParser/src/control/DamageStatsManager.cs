@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class DamageStatsManager : SummaryBuilder
+  class DamageStatsManager : ISummaryBuilder
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -21,7 +21,7 @@ namespace EQLogParser
     private PlayerStats RaidTotals;
     private ConcurrentDictionary<string, byte> PlayerHasPet = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
-    private List<Action> Resists = new List<Action>();
+    private List<IAction> Resists = new List<IAction>();
     private List<NonPlayer> Selected;
     private bool IsBaneAvailable = false;
     private string Title;

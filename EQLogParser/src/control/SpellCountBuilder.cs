@@ -20,8 +20,8 @@ namespace EQLogParser
       var begins = offsets.Item1;
       var lasts = offsets.Item2;
 
-      List<Action> castsDuring = new List<Action>();
-      List<Action> receivedDuring = new List<Action>();
+      List<IAction> castsDuring = new List<IAction>();
+      List<IAction> receivedDuring = new List<IAction>();
       for (int i = 0; i < begins.Count; i++)
       {
         var blocks = DataManager.Instance.GetCastsDuring(begins[i], lasts[i]);
@@ -65,7 +65,7 @@ namespace EQLogParser
         var begins = offsets.Item1;
         var lasts = offsets.Item2;
 
-        List<Action> actions = new List<Action>();
+        List<IAction> actions = new List<IAction>();
         for (int i = 0; i < begins.Count; i++)
         {
           var blocks = DataManager.Instance.GetCastsDuring(begins[i], lasts[i]);

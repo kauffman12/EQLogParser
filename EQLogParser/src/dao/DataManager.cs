@@ -1,5 +1,4 @@
-﻿using Caching;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,10 +29,10 @@ namespace EQLogParser
     private List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
     private List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
-    private List<ActionBlock> AllResists = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllResists = new List<ActionBlock>();
     private List<ActionBlock> PlayerDeaths = new List<ActionBlock>();
 
-    private LRUCache<SpellData> AllUniqueSpellsLRU = new LRUCache<SpellData>(2000, 500, false);
+    private Dictionary<string,SpellData> AllUniqueSpellsCache = new Dictionary<string,SpellData>();
     private Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
@@ -139,12 +138,9 @@ namespace EQLogParser
           foreach (string line in lines)
           {
             string[] data = line.Split('^');
-            int beneficial;
-            int.TryParse(data[2], out beneficial);
-            byte target;
-            byte.TryParse(data[3], out target);
-            ushort classMask;
-            ushort.TryParse(data[4], out classMask);
+            int.TryParse(data[2], out int beneficial);
+            byte.TryParse(data[3], out byte target);
+            ushort.TryParse(data[4], out ushort classMask);
             SpellData spellData = new SpellData()
             {
               ID = string.Intern(data[0]),
@@ -213,7 +209,7 @@ namespace EQLogParser
       UnVerifiedPetOrPlayer.Clear();
       AllSpellCastBlocks.Clear();
       AllUniqueSpellCasts.Clear();
-      AllUniqueSpellsLRU.Clear();
+      AllUniqueSpellsCache.Clear();
       AllReceivedSpellBlocks.Clear();
       AllDamageBlocks.Clear();
       AllHealBlocks.Clear();
@@ -269,8 +265,7 @@ namespace EQLogParser
 
     public string GetApplicationSetting(string key)
     {
-      string setting;
-      ApplicationSettings.TryGetValue(key, out setting);
+      ApplicationSettings.TryGetValue(key, out string setting);
       return setting;
     }
 
@@ -278,16 +273,14 @@ namespace EQLogParser
     {
       if (value == null)
       {
-        string setting;
-        if (ApplicationSettings.TryRemove(key, out setting))
+        if (ApplicationSettings.TryRemove(key, out string setting))
         {
           SettingsUpdated = true;
         }
       }
       else
       {
-        string existing;
-        if (ApplicationSettings.TryGetValue(key, out existing))
+        if (ApplicationSettings.TryGetValue(key, out string existing))
         {
           if (existing != value)
           {
@@ -332,8 +325,7 @@ namespace EQLogParser
 
     public void AddHealRecord(HealRecord record, double beginTime)
     {
-      bool replaced;
-      record.Healer = ReplacePlayer(record.Healer, out replaced);
+      record.Healer = ReplacePlayer(record.Healer, out bool replaced);
       record.Healed = ReplacePlayer(record.Healed, out replaced);
 
       AddAction(AllHealBlocks, record, beginTime);
@@ -350,8 +342,7 @@ namespace EQLogParser
 
     public void AddSpellCast(SpellCast cast, double beginTime)
     {
-      bool replaced;
-      cast.Caster = ReplacePlayer(cast.Caster, out replaced);
+      cast.Caster = ReplacePlayer(cast.Caster, out bool replaced);
       AddAction(AllSpellCastBlocks, cast, beginTime);
 
       string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
@@ -365,8 +356,7 @@ namespace EQLogParser
 
     public void AddReceivedSpell(ReceivedSpell received, double beginTime)
     {
-      bool replaced;
-      received.Receiver = ReplacePlayer(received.Receiver, out replaced);
+      received.Receiver = ReplacePlayer(received.Receiver, out bool replaced);
       AddAction(AllReceivedSpellBlocks, received, beginTime);
     }
 
@@ -393,8 +383,7 @@ namespace EQLogParser
       replaced = false;
       string result = name;
 
-      string found;
-      if (PlayerReplacement.TryGetValue(name, out found))
+      if (PlayerReplacement.TryGetValue(name, out string found))
       {
         replaced = true;
         result = found;
@@ -478,8 +467,7 @@ namespace EQLogParser
 
     public NonPlayer GetNonPlayer(string name)
     {
-      NonPlayer npc = null;
-      ActiveNonPlayerMap.TryGetValue(name, out npc);
+      ActiveNonPlayerMap.TryGetValue(name, out NonPlayer npc);
       return npc;
     }
 
@@ -496,8 +484,7 @@ namespace EQLogParser
     public string GetPlayerClass(string name)
     {
       string className = "";
-      SpellClassCounter counter;
-      if (PlayerToClass.TryGetValue(name, out counter))
+      if (PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
       {
         className = ClassNames[counter.CurrentClass];
       }
@@ -506,8 +493,7 @@ namespace EQLogParser
 
     public string GetPlayerFromPet(string pet)
     {
-      string player = null;
-      PetToPlayerMap.TryGetValue(pet, out player);
+      PetToPlayerMap.TryGetValue(pet, out string player);
       return player;
     }
 
@@ -550,7 +536,7 @@ namespace EQLogParser
       }
       else if (output.Count > 1)
       {
-        if (!AllUniqueSpellsLRU.TryGet(value, out result))
+        if (!AllUniqueSpellsCache.TryGetValue(value, out result))
         {
           result = output.Find(spellData => AllUniqueSpellCasts.ContainsKey(spellData.SpellAbbrv));
           if (result == null)
@@ -563,7 +549,7 @@ namespace EQLogParser
               result = output.Last();
             }
           }
-          AllUniqueSpellsLRU.AddReplace(value, result);
+          AllUniqueSpellsCache[value] = result;
         }
       }
       return result;
@@ -584,8 +570,7 @@ namespace EQLogParser
 
     public bool RemoveActiveNonPlayer(string name)
     {
-      NonPlayer npc;
-      return ActiveNonPlayerMap.TryRemove(name, out npc);
+      return ActiveNonPlayerMap.TryRemove(name, out NonPlayer npc);
     }
 
     public void UpdateIfNewNonPlayerMap(string name, NonPlayer npc)
@@ -604,11 +589,9 @@ namespace EQLogParser
 
     public void UpdatePlayerClassFromSpell(SpellCast cast)
     {
-      SpellClasses theClass;
-      if (SpellsToClass.TryGetValue(cast.Spell, out theClass))
+      if (SpellsToClass.TryGetValue(cast.Spell, out SpellClasses theClass))
       {
-        SpellClassCounter counter;
-        if (!PlayerToClass.TryGetValue(cast.Caster, out counter))
+        if (!PlayerToClass.TryGetValue(cast.Caster, out SpellClassCounter counter))
         {
           PlayerToClass.TryAdd(cast.Caster, new SpellClassCounter() { ClassCounts = new ConcurrentDictionary<SpellClasses, int>() });
           counter = PlayerToClass[cast.Caster];
@@ -728,19 +711,15 @@ namespace EQLogParser
       CheckNonPlayerMap(name);
 
       // remove from ProbablyNotAPlayer if it exists
-      long value;
-      ProbablyNotAPlayer.TryRemove(name, out value);
+      ProbablyNotAPlayer.TryRemove(name, out long value);
 
-      byte bvalue;
-      UnVerifiedPetOrPlayer.TryRemove(name, out bvalue);
+      UnVerifiedPetOrPlayer.TryRemove(name, out byte bvalue);
     }
 
     private void CheckNonPlayerMap(string name)
     {
-      NonPlayer npc;
-      byte bnpc;
-      bool removed = ActiveNonPlayerMap.TryRemove(name, out npc);
-      removed = LifetimeNonPlayerMap.TryRemove(name, out bnpc) || removed;
+      bool removed = ActiveNonPlayerMap.TryRemove(name, out NonPlayer npc);
+      removed = LifetimeNonPlayerMap.TryRemove(name, out byte bnpc) || removed;
 
       if (removed)
       {
@@ -770,16 +749,15 @@ namespace EQLogParser
       return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionBlock>();
     }
 
-    private void AddAction(List<ActionBlock> blockList, Action action, double beginTime)
+    private void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
     {
-      var last = blockList.LastOrDefault() as ActionBlock;
-      if (last != null && last.BeginTime == beginTime)
+      if (blockList.LastOrDefault() is ActionBlock last && last.BeginTime == beginTime)
       {
         last.Actions.Add(action);
       }
       else
       {
-        var newSegment = new ActionBlock() { Actions = new List<Action>(), BeginTime = beginTime };
+        var newSegment = new ActionBlock() { Actions = new List<IAction>(), BeginTime = beginTime };
         newSegment.Actions.Add(action);
         blockList.Add(newSegment);
       }
