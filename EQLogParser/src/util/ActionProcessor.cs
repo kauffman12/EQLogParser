@@ -35,6 +35,14 @@ namespace EQLogParser
       }
     }
 
+    public void Add(List<T> list)
+    {
+      lock (QueueLock)
+      {
+        Queue.AddRange(list);
+      }
+    }
+
     public long Size()
     {
       long count = 0;
