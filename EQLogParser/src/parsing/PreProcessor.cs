@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace EQLogParser
 {
@@ -8,35 +9,63 @@ namespace EQLogParser
 
     private const int MIN_LINE_LENGTH = 33;
     private const int ACTION_PART_INDEX = 27;
+    private const int MAX_NAME_CHECK = 24;
 
-    internal static bool NeedProcessing(string line)
+    private static List<string> YouCriteria = new List<string>
     {
-      bool needProcessing = line.Length > MIN_LINE_LENGTH;
+      "You say,", "You told ", "You tell ", "You say to", "You shout,"
+    };
+
+    private static List<string> OtherCriteria = new List<string>
+    {
+      " tells ", " says,", " shouts "
+    };
+
+    internal static bool IsChat(string line)
+    {
+      bool found = false;
 
       try
       {
-        int index;
-        if (needProcessing && line.Length >= 40 && (index = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1 &&
-          (line.IndexOf("say", index + 1, 3, StringComparison.Ordinal) > -1 || line.IndexOf("tell", 4, index + 1, StringComparison.Ordinal) > -1))
+        int max = Math.Min(line.Length - ACTION_PART_INDEX, MAX_NAME_CHECK);
+        found = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, ACTION_PART_INDEX, max, StringComparison.Ordinal) > -1) > -1;
+
+        if (!found)
         {
-          // ignore tells but check for some chat related things
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-
-          // check other things
-          if (!CheckForPlayersOrNPCs(pline))
+          int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal);
+          if (firstSpace > -1)
           {
-            CheckForPetLeader(pline);
-          }
+            max = Math.Min(line.Length - firstSpace, MAX_NAME_CHECK);
+            found = OtherCriteria.FindIndex(criteria => line.IndexOf(criteria, firstSpace, max, StringComparison.Ordinal) > -1) > -1;
 
-          needProcessing = false;
+            if (found)
+            {
+              ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+              if (!CheckForPetLeader(pline))
+              {
+                CheckGuildTells(pline);
+              }
+            }
+          }
         }
       }
-      catch (Exception e)
+      catch (Exception)
       {
-        LOG.Error(e);
+        // LOG.Debug(ex);
       }
 
-      return needProcessing;
+      return found;
+    }
+
+    internal static bool IsValid(string line)
+    {
+      bool valid = false;
+      if (line != null && line.Length > MIN_LINE_LENGTH)
+      {
+        ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+        valid = !CheckForPlayersOrNPCs(pline);
+      }
+      return valid;
     }
 
     private static bool CheckForPetLeader(ProcessLine pline)
@@ -69,6 +98,7 @@ namespace EQLogParser
     private static bool CheckForPlayersOrNPCs(ProcessLine pline)
     {
       bool found = false;
+
       int index = -1;
       if (pline.ActionPart.StartsWith("Targeted (", StringComparison.Ordinal))
       {
@@ -77,11 +107,6 @@ namespace EQLogParser
           DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
           found = true;
         }
-        //else if (pline.ActionPart.Length > 17 && pline.ActionPart[10] == 'N' && pline.ActionPart[11] == 'P') // NPC + Pet..
-        //{
-        //  DataManager.Instance.UpdateDefinitelyNotAPlayer(pline.ActionPart.Substring(16));
-        //  found = true;
-        //}
       }
       else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
         && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
@@ -90,21 +115,22 @@ namespace EQLogParser
         DataManager.Instance.UpdateUnVerifiedPetOrPlayer(test);
         found = true;
       }
-      else
-      {
-        if ((index = pline.ActionPart.IndexOf(" tells the guild, ", StringComparison.Ordinal)) > -1)
-        {
-          int firstSpace = pline.ActionPart.IndexOf(" ", StringComparison.Ordinal);
-          if (firstSpace > -1 && firstSpace == index)
-          {
-            string name = pline.ActionPart.Substring(0, index);
-            DataManager.Instance.UpdateVerifiedPlayers(name);
-          }
 
-          found = true; // found chat, not that it had to work
+      return found;
+    }
+
+    private static void CheckGuildTells(ProcessLine pline)
+    {
+      int index;
+      if ((index = pline.ActionPart.IndexOf(" tells the guild, ", StringComparison.Ordinal)) > -1)
+      {
+        int firstSpace = pline.ActionPart.IndexOf(" ", StringComparison.Ordinal);
+        if (firstSpace > -1 && firstSpace == index)
+        {
+          string name = pline.ActionPart.Substring(0, index);
+          DataManager.Instance.UpdateVerifiedPlayers(name);
         }
       }
-      return found;
     }
   }
 }

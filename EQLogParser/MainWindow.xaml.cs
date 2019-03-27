@@ -559,7 +559,7 @@ namespace EQLogParser
           }
           else
           {
-            Task.Delay(300).ContinueWith(task => UpdateLoadingProgress());
+            Task.Delay(500).ContinueWith(task => UpdateLoadingProgress());
           }
 
           Busy(false);
@@ -744,25 +744,34 @@ namespace EQLogParser
       }
     }
 
-    private void FileLoadingCallback(string line, long position)
+    private void FileLoadingCallback(List<string> lines, long position)
     {
+      while (DamageProcessor.Size() > 75000 || HealingProcessor.Size() > 75000 || CastProcessor.Size() > 75000)
+      {
+        Thread.Sleep(10);
+      }
+
       Interlocked.Exchange(ref FilePosition, position);
 
-      if (PreProcessor.NeedProcessing(line))
+      // null is used to update position
+      if (lines != null)
       {
-        CastLineCount++;
-        CastProcessor.Add(line);
-
-        DamageLineCount++;
-        DamageProcessor.Add(line);
-
-        HealLineCount++;
-        HealingProcessor.Add(line);
-
-        if (DamageProcessor.Size() > 50000 || HealingProcessor.Size() > 50000 || CastProcessor.Size() > 50000)
+        List<string> filtered;
+        if (lines.Count > 100)
         {
-          Thread.Sleep(15);
+          filtered = lines.AsParallel().Where(line => !PreProcessor.IsChat(line) && PreProcessor.IsValid(line)).ToList();
         }
+        else
+        {
+          filtered = lines.Where(line => !PreProcessor.IsChat(line) && PreProcessor.IsValid(line)).ToList();
+        }
+
+        CastLineCount += filtered.Count;
+        CastProcessor.Add(filtered);
+        DamageLineCount += filtered.Count;
+        DamageProcessor.Add(filtered);
+        HealLineCount += filtered.Count;
+        HealingProcessor.Add(filtered);
       }
     }
 
