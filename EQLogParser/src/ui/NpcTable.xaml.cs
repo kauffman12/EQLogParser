@@ -75,7 +75,7 @@ namespace EQLogParser
       };
 
       UpdateTimer = new DispatcherTimer();
-      UpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, 250);
+      UpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, 400);
       UpdateTimer.Tick += (sender, e) =>
       {
         npcDataGrid.ScrollIntoView(NonPlayersView.Last());
