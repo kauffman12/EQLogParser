@@ -21,25 +21,26 @@ namespace EQLogParser
       " tells ", " says,", " shouts "
     };
 
-    internal static bool IsChat(string line)
+    internal static string ParseChatType(string line)
     {
-      bool found = false;
+      string keyResult = null;
 
       try
       {
         int max = Math.Min(line.Length - ACTION_PART_INDEX, MAX_NAME_CHECK);
-        found = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, ACTION_PART_INDEX, max, StringComparison.Ordinal) > -1) > -1;
+        int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, ACTION_PART_INDEX, max, StringComparison.Ordinal) > -1);
 
-        if (!found)
+        if (index < 0)
         {
           int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal);
           if (firstSpace > -1)
           {
             max = Math.Min(line.Length - firstSpace, MAX_NAME_CHECK);
-            found = OtherCriteria.FindIndex(criteria => line.IndexOf(criteria, firstSpace, max, StringComparison.Ordinal) > -1) > -1;
+            index = OtherCriteria.FindIndex(criteria => line.IndexOf(criteria, firstSpace, max, StringComparison.Ordinal) > -1);
 
-            if (found)
+            if (index > -1)
             {
+              keyResult = OtherCriteria[index];
               ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
               if (!CheckForPetLeader(pline))
               {
@@ -48,13 +49,17 @@ namespace EQLogParser
             }
           }
         }
+        else
+        {
+          keyResult = YouCriteria[index];
+        }
       }
       catch (Exception)
       {
-        // LOG.Debug(ex);
+        //LOG.Debug(ex);
       }
 
-      return found;
+      return keyResult;
     }
 
     internal static bool IsValid(string line)

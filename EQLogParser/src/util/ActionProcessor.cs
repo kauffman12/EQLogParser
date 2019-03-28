@@ -12,7 +12,7 @@ namespace EQLogParser
     private object QueueLock = new object();
     private ProcessActionCallback callback;
     private bool stopped = false;
-    private int delayTime = 5;
+    private int delayTime = 10;
     private string name;
 
     public ActionProcessor(string name, ProcessActionCallback callback)
@@ -20,11 +20,6 @@ namespace EQLogParser
       this.name = name;
       this.callback = callback;
       Task.Run((() => Process()));
-    }
-
-    public void LowerPriority()
-    {
-      delayTime = 300;
     }
 
     public void Add(T data)

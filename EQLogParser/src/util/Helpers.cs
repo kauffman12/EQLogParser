@@ -13,7 +13,7 @@ using System.Windows.Input;
 
 namespace EQLogParser
 {
-  public class ZeroConverter : IValueConverter
+  internal class ZeroConverter : IValueConverter
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
@@ -28,8 +28,7 @@ namespace EQLogParser
     {
       if (value is string)
       {
-        double decValue;
-        if (!double.TryParse((string) value, out decValue))
+        if (!double.TryParse((string) value, out double decValue))
         {
           decValue = 0;
         }
@@ -46,12 +45,11 @@ namespace EQLogParser
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     internal static DictionaryAddHelper<string, uint> StringUIntAddHelper = new DictionaryAddHelper<string, uint>();
 
-    private static SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
+    private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
 
     internal static string AbbreviateSpellName(string spell)
     {
-      string result;
-      if (!SpellAbbrvCache.TryGetValue(spell, out result))
+      if (!SpellAbbrvCache.TryGetValue(spell, out string result))
       {
         result = spell;
 
@@ -238,12 +236,11 @@ namespace EQLogParser
 
   internal static class TextBoxBehavior
   {
-    public static readonly DependencyProperty TripleClickSelectAllProperty = DependencyProperty.RegisterAttached("TripleClickSelectAll", typeof(bool), typeof(TextBoxBehavior), new PropertyMetadata(false, OnPropertyChanged));
+    internal static readonly DependencyProperty TripleClickSelectAllProperty = DependencyProperty.RegisterAttached("TripleClickSelectAll", typeof(bool), typeof(TextBoxBehavior), new PropertyMetadata(false, OnPropertyChanged));
 
     private static void OnPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      var tb = d as TextBox;
-      if (tb != null)
+      if (d is TextBox tb)
       {
         var enable = (bool)e.NewValue;
         if (enable)
