@@ -114,6 +114,11 @@ namespace EQLogParser
     public bool IsAEHealingAvailable { get; set; }
   }
 
+  public class ChatLine : TimedAction
+  {
+    public string Line { get; set; }
+  }
+
   public class ProcessLine
   {
     public string Line { get; set; }
