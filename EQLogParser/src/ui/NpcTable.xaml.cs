@@ -58,24 +58,21 @@ namespace EQLogParser
       NonPlayersViewSource = new CollectionViewSource() { Source = NonPlayersView };
       npcDataGrid.ItemsSource = NonPlayersViewSource.View;
 
-      SelectionTimer = new DispatcherTimer();
-      SelectionTimer.Interval = new TimeSpan(0, 0, 0, 0, 400);
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 400) };
       SelectionTimer.Tick += (sender, e) =>
       {
         SelectionTimer.Stop();
         EventsSelectionChange(this, npcDataGrid.SelectedItems);
       };
 
-      SearchTextTimer = new DispatcherTimer();
-      SearchTextTimer.Interval = new TimeSpan(0, 0, 0, 0, 400);
+      SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 400) };
       SearchTextTimer.Tick += (sender, e) =>
       {
         SearchTextTimer.Stop();
         HandleSearchTextChanged();
       };
 
-      UpdateTimer = new DispatcherTimer();
-      UpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, 400);
+      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 400) };
       UpdateTimer.Tick += (sender, e) =>
       {
         npcDataGrid.ScrollIntoView(NonPlayersView.Last());
@@ -83,9 +80,8 @@ namespace EQLogParser
       };
 
       // read show breaks setting
-      bool bValue;
       string showBreaks = DataManager.Instance.GetApplicationSetting("NpcShowInactivityBreaks");
-      npcShowBreaks.IsChecked = showBreaks == null || (bool.TryParse(showBreaks, out bValue) && bValue);
+      npcShowBreaks.IsChecked = showBreaks == null || (bool.TryParse(showBreaks, out bool bValue) && bValue);
     }
 
     public List<NonPlayer> GetSelectedItems()
@@ -103,11 +99,13 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         NonPlayersView.Add(npc);
-        if ((this.Parent as ToolWindow).IsOpen && !npcDataGrid.IsMouseOver && !UpdateTimer.IsEnabled)
+        if ((Parent as ToolWindow).IsOpen && !npcDataGrid.IsMouseOver && !UpdateTimer.IsEnabled)
         {
           UpdateTimer.Start();
         }
-      });
+      },
+      DispatcherPriority.Background
+      );
     }
 
     private void RemoveNonPlayer(string name)
@@ -124,7 +122,9 @@ namespace EQLogParser
             npcDataGrid.Items.Refresh(); // re-numbers
           }
         }
-      });
+      },
+        DispatcherPriority.Background
+      );
     }
 
     private void Clear_Click(object sender, RoutedEventArgs e)
@@ -146,8 +146,7 @@ namespace EQLogParser
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
-      NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
-      if (npc != null && npc.GroupID > -1)
+      if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
         DataManager.Instance.UpdateVerifiedPets(npc.Name);
         DataManager.Instance.UpdatePetToPlayer(npc.Name, Labels.UNASSIGNED_PET_OWNER);
@@ -158,8 +157,7 @@ namespace EQLogParser
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
-      NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
-      if (npc != null && npc.GroupID > -1)
+      if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
         DataManager.Instance.UpdateVerifiedPlayers(npc.Name);
       }
@@ -170,8 +168,7 @@ namespace EQLogParser
       // set header count
       e.Row.Header = (e.Row.GetIndex() + 1).ToString();
 
-      NonPlayer npc = e.Row.Item as NonPlayer;
-      if (npc != null && npc.BeginTimeString == NonPlayer.BREAK_TIME)
+      if (e.Row.Item is NonPlayer npc && npc.BeginTimeString == NonPlayer.BREAK_TIME)
       {
         if (e.Row.Background != BREAK_TIME_BRUSH)
         {
@@ -208,14 +205,13 @@ namespace EQLogParser
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
-      NonPlayer npc = callingDataGrid.SelectedItem as NonPlayer;
-      if (npc != null && npc.GroupID > -1)
+      if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
         Parallel.ForEach(NonPlayersView, (one) =>
         {
           if (one.GroupID == npc.GroupID)
           {
-            Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one));
+            Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one), DispatcherPriority.Background);
           }
         });
       }
@@ -332,8 +328,7 @@ namespace EQLogParser
         {
           for (int i = CurrentNpcSearchIndex; i < npcDataGrid.Items.Count && i >= 0; i += (1 * direction))
           {
-            NonPlayer npc = npcDataGrid.Items[i] as NonPlayer;
-            if (npc != null && npc.Name != null && npc.Name.IndexOf(npcSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
+            if (npcDataGrid.Items[i] is NonPlayer npc && npc.Name != null && npc.Name.IndexOf(npcSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
             {
               npcDataGrid.ScrollIntoView(npc);
               var row = npcDataGrid.ItemContainerGenerator.ContainerFromItem(npc) as DataGridRow;

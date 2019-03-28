@@ -8,11 +8,9 @@ namespace EQLogParser
 {
   class LogReader
   {
-    public delegate void ParseLineCallback(List<string> lines, long position);
+    public delegate void ParseLineCallback(string line, long position);
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    private const int BUFFER_SIZE = 50000;
 
     public bool FileLoadComplete = false;
     public long FileSize;
@@ -46,8 +44,6 @@ namespace EQLogParser
           Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
           StreamReader reader;
           FileSize = fs.Length;
-
-          List<string> buffer = new List<string>(BUFFER_SIZE);
          
           if (!isGzip) // fs.Length works and we can seek properly
           {
@@ -102,12 +98,7 @@ namespace EQLogParser
                 string line = reader.ReadLine();
                 if (DateUtil.HasTimeInRange(now, line, LastMins))
                 {
-                  buffer.Add(line);
-                  if (buffer.Count >= BUFFER_SIZE)
-                  {
-                    LoadingCallback(buffer, fs.Position);
-                    buffer.Clear();
-                  }
+                  LoadingCallback(line, fs.Position);
                   break;
                 }
               }
@@ -131,21 +122,9 @@ namespace EQLogParser
 
           while (!reader.EndOfStream && Running)
           {
-            buffer.Add(reader.ReadLine());
-            if (buffer.Count >= BUFFER_SIZE)
-            {
-              LoadingCallback(buffer, fs.Position);
-              buffer.Clear();
-            }
+            LoadingCallback(reader.ReadLine(), fs.Position);
           }
 
-          if (buffer.Count > 0)
-          {
-            LoadingCallback(buffer, fs.Position);
-            buffer.Clear();
-          }
-
-          buffer.Add(null);
           FileLoadComplete = true;
 
           // setup watcher
@@ -176,8 +155,7 @@ namespace EQLogParser
                 {
                   while (Running && !reader.EndOfStream)
                   {
-                    buffer[0] = reader.ReadLine();
-                    LoadingCallback(buffer, fs.Length);
+                    LoadingCallback(reader.ReadLine(), fs.Length);
                   }
                 }
                 break;

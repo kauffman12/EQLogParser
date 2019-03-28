@@ -27,7 +27,7 @@ namespace EQLogParser
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.3.19";
+    private const string VERSION = "v1.3.20";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -51,10 +51,12 @@ namespace EQLogParser
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
 
+    private ChatManager PlayerChatManager;
     private NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private Dictionary<string, ParseData> Parses = new Dictionary<string, ParseData>();
 
     Dictionary<string, DockingWindow> IconToWindow;
+    private DocumentWindow ChatWindow = null;
     private DocumentWindow DamageWindow = null;
     private DocumentWindow HealingWindow = null;
     private DocumentWindow DamageChartWindow = null;
@@ -225,7 +227,7 @@ namespace EQLogParser
       AddParse(Labels.DAMAGE_PARSE, DamageStatsManager.Instance, combined, selected);
     }
 
-    private void Window_Closed(object sender, System.EventArgs e)
+    private void Window_Closed(object sender, EventArgs e)
     {
       StopProcessing();
       DataManager.Instance.SaveState();
@@ -290,6 +292,10 @@ namespace EQLogParser
       else if (e.Source == healingSummaryMenuItem)
       {
         OpenHealingSummary();
+      }
+      else if (e.Source == chatMenuItem)
+      {
+        OpenChat();
       }
       else
       {
@@ -445,6 +451,20 @@ namespace EQLogParser
           var healingOptions = new HealingStatsOptions() { IsAEHealingEanbled = healingSummary.IsAEHealingEnabled(), RequestSummaryData = true };
           Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));
         }
+      }
+    }
+
+    private void OpenChat()
+    {
+      if (ChatWindow?.IsOpen == true)
+      {
+        ChatWindow.Close();
+      }
+      else
+      {
+        ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat", null, new ChatViewer());
+        IconToWindow[chatIcon.Name] = ChatWindow;
+        Helpers.OpenWindow(ChatWindow);
       }
     }
 
@@ -729,8 +749,10 @@ namespace EQLogParser
             }
           }
 
+          PlayerChatManager = new ChatManager(name);
           DataManager.Instance.SetPlayerName(name);
           DataManager.Instance.Clear();
+
           NpcDamageManager.LastUpdateTime = double.NaN;
           progressWindow.IsOpen = true;
           EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, monitorOnly, lastMins);
@@ -744,34 +766,33 @@ namespace EQLogParser
       }
     }
 
-    private void FileLoadingCallback(List<string> lines, long position)
+    private void FileLoadingCallback(string line, long position)
     {
-      while (DamageProcessor.Size() > 75000 || HealingProcessor.Size() > 75000 || CastProcessor.Size() > 75000)
+      int sleep = (int) ((DamageProcessor.Size() + HealingProcessor.Size() + CastProcessor.Size()) / 5000);
+      if (sleep > 10)
       {
-        Thread.Sleep(10);
+        Thread.Sleep(5 * (sleep - 10));
       }
 
       Interlocked.Exchange(ref FilePosition, position);
 
-      // null is used to update position
-      if (lines != null)
+      if (PreProcessor.IsValid(line))
       {
-        List<string> filtered;
-        if (lines.Count > 100)
+        // avoid having other things parse chat by accident
+        string type = PreProcessor.ParseChatType(line);
+        if (type != null)
         {
-          filtered = lines.AsParallel().Where(line => !PreProcessor.IsChat(line) && PreProcessor.IsValid(line)).ToList();
+          PlayerChatManager.Add(type, line);
         }
         else
         {
-          filtered = lines.Where(line => !PreProcessor.IsChat(line) && PreProcessor.IsValid(line)).ToList();
+          CastLineCount += 1;
+          CastProcessor.Add(line);
+          DamageLineCount += 1;
+          DamageProcessor.Add(line);
+          HealLineCount += 1;
+          HealingProcessor.Add(line);
         }
-
-        CastLineCount += filtered.Count;
-        CastProcessor.Add(filtered);
-        DamageLineCount += filtered.Count;
-        DamageProcessor.Add(filtered);
-        HealLineCount += filtered.Count;
-        HealingProcessor.Add(filtered);
       }
     }
 

@@ -43,8 +43,7 @@ namespace EQLogParser
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
 
-          bool isPlayerDamage;
-          DamageRecord record = ParseDamage(pline, out isPlayerDamage);
+          DamageRecord record = ParseDamage(pline, out bool isPlayerDamage);
           if (record != null)
           {
             DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, IsPlayerDamage = isPlayerDamage, TimeString = pline.TimeString, BeginTime = pline.CurrentTime };
@@ -126,14 +125,10 @@ namespace EQLogParser
       if (record != null)
       {
         // Needed to replace 'You' and 'you', etc
-        bool replaced;
-        record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, out replaced);
+        record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, out bool replaced);
 
-        bool isDefenderPet, isAttackerPet;
-        CheckDamageRecordForPet(record, replaced, out isDefenderPet, out isAttackerPet);
-
-        bool isDefenderPlayer, isAttackerPlayer;
-        CheckDamageRecordForPlayer(record, replaced, out isDefenderPlayer, out isAttackerPlayer);
+        CheckDamageRecordForPet(record, replaced, out bool isDefenderPet, out bool isAttackerPet);
+        CheckDamageRecordForPlayer(record, replaced, out bool isDefenderPlayer, out bool isAttackerPlayer);
 
         if (isDefenderPlayer || isDefenderPet)
         {
@@ -253,8 +248,7 @@ namespace EQLogParser
             string owner = part.Substring(0, firstSpace - 2);
             if (DataManager.Instance.CheckNameForPlayer(owner) || Helpers.IsPossiblePlayerName(owner))
             {
-              int len;
-              if (IsPetOrMount(part, firstSpace + 1, out len))
+              if (IsPetOrMount(part, firstSpace + 1, out int len))
               {
                 //string petType = part.Substring(firstSpace + 1, len);
 
@@ -414,8 +408,7 @@ namespace EQLogParser
                 int posessiveIndex = defender.IndexOf("`s ", StringComparison.Ordinal);
                 if (posessiveIndex > -1)
                 {
-                  int len;
-                  if (IsPetOrMount(defender, posessiveIndex + 3, out len))
+                  if (IsPetOrMount(defender, posessiveIndex + 3, out int len))
                   {
                     if (Helpers.IsPossiblePlayerName(defender, posessiveIndex))
                     {
