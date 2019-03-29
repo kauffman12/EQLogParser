@@ -5,9 +5,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+  <Grid>
     <ScrollViewer x:Name="chatScroller">
-      <RichTextBox x:Name="chatBox"></RichTextBox>
+      <RichTextBox x:Name="chatBox" PreviewKeyDown="Chat_KeyDown" IsReadOnly="True">
+        <FlowDocument/>
+      </RichTextBox>
     </ScrollViewer>
     </Grid>
 </UserControl>

@@ -21,7 +21,7 @@ namespace EQLogParser
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
           pline.OptionalIndex = index - ACTION_PART_INDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
+          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
 
           HealRecord record = HandleHealed(pline);
           if (record != null)

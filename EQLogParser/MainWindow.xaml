@@ -65,7 +65,7 @@
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>
       </MenuItem>
       <MenuItem Header="_View" Height="20" Width="40">
-        <MenuItem x:Name="chatMenuItem" Click="MenuItemWindow_Click" Header="Chat" Height="20">
+        <MenuItem x:Name="chatMenuItem" Click="MenuItemWindow_Click" Header="Chat Viewer" Height="20">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="chatIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
