@@ -158,7 +158,8 @@
       <DependentUpon>OverlayWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Settings.cs" />
-    <Compile Include="src\control\ChatManager.cs" />
+    <Compile Include="src\dao\ChatIterator.cs" />
+    <Compile Include="src\dao\ChatManager.cs" />
     <Compile Include="src\control\HealingStatsManager.cs" />
     <Compile Include="src\ui\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>

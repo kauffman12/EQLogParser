@@ -731,15 +731,14 @@ namespace EQLogParser
     {
       ActionBlock startBlock = new ActionBlock() { BeginTime = beginTime - 1 };
       ActionBlock endBlock = new ActionBlock() { BeginTime = endTime + 1 };
-      TimedActionComparer comparer = new TimedActionComparer();
 
-      int startIndex = allActions.BinarySearch(startBlock, comparer);
+      int startIndex = allActions.BinarySearch(startBlock, Helpers.TimedActionComparer);
       if (startIndex < 0)
       {
         startIndex = Math.Abs(startIndex) - 1;
       }
 
-      int endIndex = allActions.BinarySearch(endBlock, comparer);
+      int endIndex = allActions.BinarySearch(endBlock, Helpers.TimedActionComparer);
       if (endIndex < 0)
       {
         endIndex = Math.Abs(endIndex) - 1;
@@ -768,14 +767,6 @@ namespace EQLogParser
       public int CurrentMax { get; set; }
       public SpellClasses CurrentClass { get; set; }
       public ConcurrentDictionary<SpellClasses, int> ClassCounts { get; set; }
-    }
-
-    private class TimedActionComparer : IComparer<TimedAction>
-    {
-      public int Compare(TimedAction x, TimedAction y)
-      {
-        return x.BeginTime.CompareTo(y.BeginTime);
-      }
     }
   }
 }
