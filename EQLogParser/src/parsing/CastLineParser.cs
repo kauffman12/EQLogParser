@@ -44,7 +44,7 @@ namespace EQLogParser
                 pline.OptionalIndex = index - ACTION_PART_INDEX;
                 pline.OptionalData = "you" + test;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
                 cast = HandleSpellCast(pline);
               }
             }
@@ -57,7 +57,7 @@ namespace EQLogParser
                 pline.OptionalIndex = index - ACTION_PART_INDEX;
                 pline.OptionalData = test;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
                 cast = HandleSpellCast(pline);
               }
             }
@@ -76,7 +76,7 @@ namespace EQLogParser
             ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
             pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
             pline.TimeString = pline.Line.Substring(1, 24);
-            pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
+            pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
             HandlePosessiveLandsOnOther(pline);
           }
           else if (firstSpace > -1)
@@ -90,7 +90,7 @@ namespace EQLogParser
                 pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
                 pline.OptionalData = player;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
                 HandleOtherLandsOnCases(pline);
               }
             }

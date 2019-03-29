@@ -462,7 +462,7 @@ namespace EQLogParser
       }
       else
       {
-        ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat", null, new ChatViewer());
+        ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat Viewer", null, new ChatViewer());
         IconToWindow[chatIcon.Name] = ChatWindow;
         Helpers.OpenWindow(ChatWindow);
       }

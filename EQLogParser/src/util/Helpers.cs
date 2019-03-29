@@ -13,6 +13,22 @@ using System.Windows.Input;
 
 namespace EQLogParser
 {
+  internal class TimedActionComparer : IComparer<TimedAction>
+  {
+    public int Compare(TimedAction x, TimedAction y)
+    {
+      return x.BeginTime.CompareTo(y.BeginTime);
+    }
+  }
+
+  internal class ReverseTimedActionComparer : IComparer<TimedAction>
+  {
+    public int Compare(TimedAction x, TimedAction y)
+    {
+      return y.BeginTime.CompareTo(x.BeginTime);
+    }
+  }
+
   internal class ZeroConverter : IValueConverter
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -40,11 +56,11 @@ namespace EQLogParser
 
   class Helpers
   {
+    internal static TimedActionComparer TimedActionComparer = new TimedActionComparer();
+    internal static ReverseTimedActionComparer ReverseTimedActionComparer = new ReverseTimedActionComparer();
     internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
-
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     internal static DictionaryAddHelper<string, uint> StringUIntAddHelper = new DictionaryAddHelper<string, uint>();
-
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
 
     internal static string AbbreviateSpellName(string spell)
