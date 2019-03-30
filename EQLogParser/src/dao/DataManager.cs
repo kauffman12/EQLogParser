@@ -19,6 +19,7 @@ namespace EQLogParser
 
     public string PlayerName { get; set; }
 
+    public static string ARCHIVE_DIR;
     private static string CONFIG_DIR;
     private static string PETMAP_FILE;
     private static string SETTINGS_FILE;
@@ -90,6 +91,7 @@ namespace EQLogParser
       {
         // needs to be during class initialization for some reason
         CONFIG_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\config");
+        ARCHIVE_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\archive\");
         PETMAP_FILE = CONFIG_DIR + @"\petmapping.txt";
         SETTINGS_FILE = CONFIG_DIR + @"\settings.txt";
 

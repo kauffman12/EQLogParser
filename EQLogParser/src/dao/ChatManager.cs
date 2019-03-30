@@ -11,12 +11,10 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static string ArchiveDir;
-    internal static string PlayerDir;
-
     private const int ACTION_PART_INDEX = 27;
     private const int TIMEOUT = 5000;
     private static readonly object LockObject = new object();
+    private static string PLAYER_DIR;
 
     private List<string> Lines = new List<string>();
     private List<string> Types = new List<string>();
@@ -47,16 +45,48 @@ namespace EQLogParser
       return chatLine;
     }
 
+    internal static List<string> GetArchivedPlayers()
+    {
+      var result = new List<string>();
+
+      if (Directory.Exists(DataManager.ARCHIVE_DIR))
+      {
+        foreach (var dir in Directory.GetDirectories(DataManager.ARCHIVE_DIR))
+        {
+          string name = Path.GetFileName(dir);
+          if (Helpers.IsPossiblePlayerName(name))
+          {
+            bool found = false;
+            foreach (var sub in Directory.GetDirectories(dir))
+            {
+              if (int.TryParse(Path.GetFileName(sub), out int year))
+              {
+                found = true;
+                break;
+              }
+            }
+
+            if (found)
+            {
+              result.Add(name);
+            }
+          }
+        }
+      }
+
+      return result.OrderBy(name => name).ToList();
+    }
+
     internal ChatManager(string player)
     {
       try
       {
-        ArchiveDir = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\archive\");
-        PlayerDir = ArchiveDir + player;
-        ArchiveTimeFile = PlayerDir + @"\timeindex";
+
+        PLAYER_DIR = DataManager.ARCHIVE_DIR + player;
+        ArchiveTimeFile = PLAYER_DIR + @"\timeindex";
 
         // create config dir if it doesn't exist
-        Directory.CreateDirectory(PlayerDir);
+        Directory.CreateDirectory(PLAYER_DIR);
       }
       catch (Exception ex)
       {
@@ -224,7 +254,7 @@ namespace EQLogParser
 
     private static string GetFileName(string year, string month)
     {
-      string folder = PlayerDir + @"\" + year;
+      string folder = PLAYER_DIR + @"\" + year;
       Directory.CreateDirectory(folder);
       return folder + @"\Chat-" + month + @".zip";
     }

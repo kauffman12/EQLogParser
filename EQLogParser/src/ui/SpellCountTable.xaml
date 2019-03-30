@@ -19,7 +19,7 @@
       <ComboBox Margin="0,1,8,0" x:Name="minFreqList" Height="24" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,1,8,0" x:Name="spellTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,1,8,0" x:Name="castTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
-      <Rectangle VerticalAlignment="Stretch" Width="1" Margin="2" Stroke="#111111" />
+      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
       <Button Margin="8,1,8,0" Padding="4,0,4,0" Height="24" Click="CopyBBCode_Click" Content="Copy BBCode"/>
     </StackPanel>
     <datagrid:ThemedDataGrid Grid.Row="1" x:Name="dataGrid" Margin="0,2,0,0"  AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" />

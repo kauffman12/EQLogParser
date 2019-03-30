@@ -35,5 +35,10 @@ namespace EQLogParser
     {
       (Application.Current.MainWindow as MainWindow).ResetOverlay();
     }
+
+    private void CloseDialog_MouseClick(object sender, RoutedEventArgs e)
+    {
+      Window.GetWindow(sender as Button).Close();
+    }
   }
 }
