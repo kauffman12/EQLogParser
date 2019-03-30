@@ -779,10 +779,10 @@ namespace EQLogParser
       if (PreProcessor.IsValid(line))
       {
         // avoid having other things parse chat by accident
-        string type = PreProcessor.ParseChatType(line);
-        if (type != null)
+        var chatType = PreProcessor.ParseChatType(line);
+        if (chatType != null)
         {
-          PlayerChatManager.Add(type, line);
+          PlayerChatManager.Add(chatType);
         }
         else
         {
