@@ -250,9 +250,9 @@ namespace EQLogParser
     }
   }
 
-  internal static class TextBoxBehavior
+  public static class TextBoxBehavior
   {
-    internal static readonly DependencyProperty TripleClickSelectAllProperty = DependencyProperty.RegisterAttached("TripleClickSelectAll", typeof(bool), typeof(TextBoxBehavior), new PropertyMetadata(false, OnPropertyChanged));
+    public static readonly DependencyProperty TripleClickSelectAllProperty = DependencyProperty.RegisterAttached("TripleClickSelectAll", typeof(bool), typeof(TextBoxBehavior), new PropertyMetadata(false, OnPropertyChanged));
 
     private static void OnPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -278,12 +278,12 @@ namespace EQLogParser
       }
     }
 
-    internal static void SetTripleClickSelectAll(DependencyObject element, bool value)
+    public static void SetTripleClickSelectAll(DependencyObject element, bool value)
     {
       element.SetValue(TripleClickSelectAllProperty, value);
     }
 
-    internal static bool GetTripleClickSelectAll(DependencyObject element)
+    public static bool GetTripleClickSelectAll(DependencyObject element)
     {
       return (bool) element.GetValue(TripleClickSelectAllProperty);
     }

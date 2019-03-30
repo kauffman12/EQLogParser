@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -40,6 +42,12 @@ namespace EQLogParser
   }
 
   public interface IAction { }
+
+  public class ColorItem
+  {
+    public SolidColorBrush Brush { get; set; }
+    public string Name { get; set; }
+  }
 
   public class ParseData
   {
