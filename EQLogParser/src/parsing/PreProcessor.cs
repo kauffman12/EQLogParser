@@ -9,21 +9,21 @@ namespace EQLogParser
 
     private const int MIN_LINE_LENGTH = 33;
     private const int ACTION_PART_INDEX = 27;
-    private const int MAX_NAME_CHECK = 24;
+    private const int MAX_NAME_CHECK = 25;
 
     private static List<string> YouCriteria = new List<string>
     {
-      "You say,", "You told ", "You tell ", "You say to", "You shout,"
+      "You say,", "You told ", "You tell ", "You say to ", "You shout,"
     };
 
     private static List<string> OtherCriteria = new List<string>
     {
-      " tells ", " says,", " shouts "
+      " says,", " tells ", " shouts,"
     };
 
-    internal static string ParseChatType(string line)
+    internal static ChatType ParseChatType(string line)
     {
-      string keyResult = null;
+      ChatType chatType = null;
 
       try
       {
@@ -38,9 +38,51 @@ namespace EQLogParser
             max = Math.Min(line.Length - firstSpace, MAX_NAME_CHECK);
             index = OtherCriteria.FindIndex(criteria => line.IndexOf(criteria, firstSpace, max, StringComparison.Ordinal) > -1);
 
-            if (index > -1)
+            if ((index == 0 && line.IndexOf(" says, ", firstSpace, 7, StringComparison.Ordinal) > -1) || index > 0)
             {
-              keyResult = OtherCriteria[index];
+              int start, end;
+              chatType = new ChatType { SenderIsYou = false, Sender = line.Substring(ACTION_PART_INDEX, firstSpace - ACTION_PART_INDEX), Line = line };
+
+              switch(index)
+              {
+                case 0:
+                  chatType.Channel = ChatChannels.SAY;
+                  break;
+                case 1:
+                  start = firstSpace + 7;
+                  if (line.IndexOf("you, ", start, 5, StringComparison.Ordinal) > -1)
+                  {
+                    chatType.Channel = ChatChannels.TELL;
+                    chatType.ReceiverIsYou = true;
+                    chatType.Receiver = "You";
+                  }
+                  else if (line.IndexOf("the guild", start, 9, StringComparison.Ordinal) > -1)
+                  {
+                    chatType.Channel = ChatChannels.GUILD;
+                  }
+                  else if (line.IndexOf("the group", start, 9, StringComparison.Ordinal) > -1)
+                  {
+                    chatType.Channel = ChatChannels.GROUP;
+                  }
+                  else if (line.IndexOf("the raid", start, 8, StringComparison.Ordinal) > -1)
+                  {
+                    chatType.Channel = ChatChannels.RAID;
+                  }
+                  else if (line.IndexOf("the fellowship", start, 14, StringComparison.Ordinal) > -1)
+                  {
+                    chatType.Channel = ChatChannels.FELLOWSHIP;
+                  }
+                  else if ((end = line.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
+                  {
+                    chatType.Channel = line.Substring(start, end - start);
+                    chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1);
+                  }
+                  break;
+                case 2:
+                  chatType.Channel = ChatChannels.SHOUT;
+                  break;
+              }
+
               ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
               if (!CheckForPetLeader(pline))
               {
@@ -51,7 +93,58 @@ namespace EQLogParser
         }
         else
         {
-          keyResult = YouCriteria[index];
+          int start, end;
+          chatType = new ChatType { SenderIsYou = true, Sender = "You", Line = line };
+          switch(index)
+          {
+            case 0:
+              chatType.Channel = ChatChannels.SAY;
+              break;
+            case 1:
+              chatType.Channel = ChatChannels.TELL;
+
+              start = ACTION_PART_INDEX + 9;
+              if ((end = line.IndexOf(",", start, MAX_NAME_CHECK, StringComparison.Ordinal)) > -1)
+              {
+                chatType.Receiver = line.Substring(start, end - start);
+              }
+              break;
+            case 2:
+              start = ACTION_PART_INDEX + 9;
+
+              if (line.IndexOf("your party", start, 10, StringComparison.Ordinal) > -1)
+              {
+                chatType.Channel = ChatChannels.GROUP;
+              }
+              else if (line.IndexOf("your raid", start, 9, StringComparison.Ordinal) > -1)
+              {
+                chatType.Channel = ChatChannels.RAID;
+              }
+              else
+              {
+                if ((end = line.IndexOf(":", start, StringComparison.Ordinal)) > -1)
+                {
+                  chatType.Channel = line.Substring(start, end - start);
+                  chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1);
+                }
+              }
+              break;
+            case 3:
+              start = ACTION_PART_INDEX + 11;
+              if (line.IndexOf("your guild", start, 10, StringComparison.Ordinal) > -1)
+              {
+                chatType.Channel = ChatChannels.GUILD;
+              }
+              else if (line.IndexOf("your fellowship", start, 15, StringComparison.Ordinal) > -1)
+              {
+                chatType.Channel = ChatChannels.FELLOWSHIP;
+              }
+              break;
+            case 4:
+              chatType.Channel = ChatChannels.SHOUT;
+              break;
+          }
+
         }
       }
       catch (Exception)
@@ -59,7 +152,7 @@ namespace EQLogParser
         //LOG.Debug(ex);
       }
 
-      return keyResult;
+      return chatType;
     }
 
     internal static bool IsValid(string line)

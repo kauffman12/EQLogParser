@@ -12,19 +12,17 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const int ACTION_PART_INDEX = 27;
-    private const int TIMEOUT = 5000;
+    private const int TIMEOUT = 2000;
     private static readonly object LockObject = new object();
     private static string PLAYER_DIR;
 
-    private List<string> Lines = new List<string>();
-    private List<string> Types = new List<string>();
+    private Dictionary<string, Dictionary<string, byte>> ChannelEntryCache = null;
+    private List<ChatType> ChatTypes = new List<ChatType>();
     private List<ChatLine> CurrentList = null;
     private ZipArchive CurrentArchive = null;
     private string CurrentArchiveKey = null;
     private string CurrentEntryKey = null;
     private bool CurrentListModified = false;
-
-    private readonly string ArchiveTimeFile;
     private bool Running = false;
 
     internal static ChatLine CreateLine(DateUtil dateUtil, string line)
@@ -81,9 +79,7 @@ namespace EQLogParser
     {
       try
       {
-
         PLAYER_DIR = DataManager.ARCHIVE_DIR + player;
-        ArchiveTimeFile = PLAYER_DIR + @"\timeindex";
 
         // create config dir if it doesn't exist
         Directory.CreateDirectory(PLAYER_DIR);
@@ -94,12 +90,11 @@ namespace EQLogParser
       }
     }
 
-    internal void Add(string type, string line)
+    internal void Add(ChatType chatType)
     {
       lock (LockObject)
       {
-        Types.Add(type);
-        Lines.Add(line);
+        ChatTypes.Add(chatType);
 
         if (!Running)
         {
@@ -113,40 +108,30 @@ namespace EQLogParser
     {
       try
       {
-        List<string> workingLines = null;
-        List<string> workingTypes = null;
+        List<ChatType> working = null;
         DateUtil dateUtil = new DateUtil();
         DateUtil dateUtilSavedLines = new DateUtil();
 
         lock (LockObject)
         {
-          workingLines = Lines;
-          workingTypes = Types;
-          Lines = new List<string>();
-          Types = new List<string>();
+          working = ChatTypes;
+          ChatTypes = new List<ChatType>();
         }
 
-        for (int i=0; i<workingLines.Count; i++)
+        for (int i=0; i<working.Count; i++)
         {
-          string line = workingLines[i];
-          string type = workingTypes[i];
-
-          string actionPart = line.Substring(ACTION_PART_INDEX);
-          int endSpot = actionPart.IndexOf(type, StringComparison.Ordinal);
-          if (endSpot > -1 && (endSpot == 0 || Helpers.IsPossiblePlayerName(actionPart, endSpot)))
-          {
-            var chatLine = CreateLine(dateUtil, line);
-            DateTime dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
-            string year = dateTime.ToString("yyyy");
-            string month = dateTime.ToString("MM");
-            string day = dateTime.ToString("dd");
-            AddToArchive(year, month, day, chatLine, dateUtilSavedLines);
-          }
+          var chatType = working[i];
+          var chatLine = CreateLine(dateUtil, chatType.Line);
+          DateTime dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
+          string year = dateTime.ToString("yyyy");
+          string month = dateTime.ToString("MM");
+          string day = dateTime.ToString("dd");
+          AddToArchive(year, month, day, chatLine, chatType, dateUtilSavedLines);
         }
 
         lock(LockObject)
         {
-          if (Lines.Count > 0)
+          if (ChatTypes.Count > 0)
           {
             new Timer(new TimerCallback(ArchiveChat)).Change(0, Timeout.Infinite);
           }
@@ -167,7 +152,7 @@ namespace EQLogParser
       }
     }
 
-    private void AddToArchive(string year, string month, string day, ChatLine chatLine, DateUtil dateUtil)
+    private void AddToArchive(string year, string month, string day, ChatLine chatLine, ChatType chatType, DateUtil dateUtil)
     {
       string entryKey = day;
       string archiveKey = year + "-" + month;
@@ -178,6 +163,7 @@ namespace EQLogParser
         string fileName = GetFileName(year, month);
         var mode = File.Exists(fileName) ? ZipArchiveMode.Update : ZipArchiveMode.Create;
         CurrentArchive = ZipFile.Open(fileName, mode);
+        ChannelEntryCache = new Dictionary<string, Dictionary<string, byte>>();
         CurrentArchiveKey = archiveKey;
       }
 
@@ -192,14 +178,22 @@ namespace EQLogParser
         {
           using (var reader = new StreamReader(entry.Open()))
           {
+            List<string> temp = new List<string>();
             while (reader.BaseStream.CanRead && !reader.EndOfStream)
             {
-              var existingLine = CreateLine(dateUtil, reader.ReadLine());
+              temp.Insert(0, reader.ReadLine()); // reverse
+            }
+
+            // this is so the date precision numbers are calculated in the same order
+            // as the new lines being added
+            temp.ForEach(line =>
+            {
+              var existingLine = CreateLine(dateUtil, line);
               if (existingLine != null)
               {
-                CurrentList.Add(existingLine);
+                CurrentList.Insert(0, existingLine); // reverse back
               }
-            }
+            });
           }
         }
       }
@@ -209,12 +203,28 @@ namespace EQLogParser
       {
         index = Math.Abs(index) - 1;
         CurrentList.Insert(index, chatLine);
+        UpdateCache(entryKey, chatType);
         CurrentListModified = true;
       }
       else if (chatLine.Line != CurrentList[index].Line)
       {
         CurrentList.Insert(index, chatLine);
+        UpdateCache(entryKey, chatType);
         CurrentListModified = true;
+      }
+    }
+
+    private void UpdateCache(string entryKey, ChatType chatType)
+    {
+      if (chatType.Channel != null)
+      {
+        if (!ChannelEntryCache.ContainsKey(entryKey))
+        {
+          ChannelEntryCache.Add(entryKey, new Dictionary<string, byte>());
+        }
+
+        var channels = ChannelEntryCache[entryKey];
+        channels[chatType.Channel] = 1;
       }
     }
 
@@ -245,6 +255,7 @@ namespace EQLogParser
         CurrentArchive.Dispose();
         CurrentArchive = null;
         CurrentArchiveKey = null;
+        ChannelEntryCache = null;
       }
 
       CurrentList = null;
