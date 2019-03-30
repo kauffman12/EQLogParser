@@ -21,7 +21,7 @@ namespace EQLogParser
 
     internal ChatIterator(string player)
     {
-      Home = ChatManager.ArchiveDir + player;
+      Home = DataManager.ARCHIVE_DIR + player;
 
       if (Directory.Exists(Home))
       {
@@ -32,6 +32,14 @@ namespace EQLogParser
           GetNextYear();
         }
       }
+    }
+
+    internal void Close()
+    {
+      CurrentReader?.Close();
+      CurrentArchive?.Dispose();
+      CurrentReader = null;
+      CurrentArchive = null;
     }
 
     public IEnumerator<ChatLine> GetEnumerator()
