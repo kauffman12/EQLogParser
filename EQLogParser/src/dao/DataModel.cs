@@ -36,6 +36,17 @@ namespace EQLogParser
     public const string DAMAGE_PARSE = "Damage";
   }
 
+  public static class ChatChannels
+  {
+    public const string SAY = "Say";
+    public const string GUILD = "Guild";
+    public const string FELLOWSHIP = "Fellowship";
+    public const string TELL = "Tell";
+    public const string SHOUT = "Shout";
+    public const string GROUP = "Group";
+    public const string RAID = "Raid";
+  }
+
   public interface ISummaryBuilder
   {
     StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers);
@@ -47,6 +58,16 @@ namespace EQLogParser
   {
     public SolidColorBrush Brush { get; set; }
     public string Name { get; set; }
+  }
+
+  public class ChatType
+  {
+    public string Channel { get; set; }
+    public string Sender { get; set; }
+    public string Receiver { get; set; }
+    public bool SenderIsYou { get; set; }
+    public bool ReceiverIsYou { get; set; }
+    public string Line { get; set; }
   }
 
   public class ParseData
