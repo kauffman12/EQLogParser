@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace EQLogParser
@@ -58,6 +57,13 @@ namespace EQLogParser
   {
     public SolidColorBrush Brush { get; set; }
     public string Name { get; set; }
+  }
+
+  public class CheckedItem
+  {
+    public string Text { get; set; }
+    public string SelectedText { get; set; }
+    public bool IsChecked { get; set; }
   }
 
   public class ChatType

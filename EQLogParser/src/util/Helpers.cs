@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -44,13 +45,47 @@ namespace EQLogParser
     {
       if (value is string)
       {
-        if (!double.TryParse((string) value, out double decValue))
+        if (!double.TryParse((string)value, out double decValue))
         {
           decValue = 0;
         }
         return decValue;
       }
       return 0;
+    }
+  }
+
+  internal class ComboBoxItemTemplateSelector : DataTemplateSelector
+  {
+    public List<DataTemplate> SelectedItemTemplates { get; } = new List<DataTemplate>();
+    public List<DataTemplate> DropDownItemTemplates { get; } = new List<DataTemplate>();
+
+    public override DataTemplate SelectTemplate(object item, DependencyObject container)
+    {
+      return GetVisualParent<ComboBoxItem>(container) == null ? ChooseFrom(SelectedItemTemplates, item) : ChooseFrom(DropDownItemTemplates, item);
+    }
+
+    private static DataTemplate ChooseFrom(IEnumerable<DataTemplate> templates, object item)
+    {
+      DataTemplate result = null;
+
+      if (item != null)
+      {
+        var targetType = item.GetType();
+        result = templates.FirstOrDefault(t => (t.DataType as Type) == targetType);
+      }
+
+      return result;
+    }
+
+    private static T GetVisualParent<T>(DependencyObject child) where T : Visual
+    {
+      while (child != null && !(child is T))
+      {
+        child = VisualTreeHelper.GetParent(child);
+      }
+
+      return child as T;
     }
   }
 
@@ -214,7 +249,7 @@ namespace EQLogParser
   {
     internal void AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
     {
-      lock(dict)
+      lock (dict)
       {
         if (!dict.ContainsKey(key))
         {
@@ -233,7 +268,7 @@ namespace EQLogParser
   {
     internal void Add(Dictionary<T1, T2> dict, T1 key, T2 value)
     {
-      lock(dict)
+      lock (dict)
       {
         if (!dict.ContainsKey(key))
         {
@@ -241,7 +276,7 @@ namespace EQLogParser
         }
       }
 
-      lock(key)
+      lock (key)
       {
         dynamic temp = dict[key];
         temp += value;
@@ -285,7 +320,7 @@ namespace EQLogParser
 
     public static bool GetTripleClickSelectAll(DependencyObject element)
     {
-      return (bool) element.GetValue(TripleClickSelectAllProperty);
+      return (bool)element.GetValue(TripleClickSelectAllProperty);
     }
   }
 }

@@ -776,10 +776,10 @@ namespace EQLogParser
 
       Interlocked.Exchange(ref FilePosition, position);
 
-      if (PreProcessor.IsValid(line))
+      if (ChatLineParser.IsValid(line))
       {
         // avoid having other things parse chat by accident
-        var chatType = PreProcessor.ParseChatType(line);
+        var chatType = ChatLineParser.ParseChatType(line);
         if (chatType != null)
         {
           PlayerChatManager.Add(chatType);
