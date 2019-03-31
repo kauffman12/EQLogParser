@@ -175,7 +175,7 @@
     <Compile Include="src\control\DamageStatsManager.cs" />
     <Compile Include="src\parsing\HealingLineParser.cs" />
     <Compile Include="src\parsing\LineModifiersParser.cs" />
-    <Compile Include="src\parsing\PreProcessor.cs" />
+    <Compile Include="src\parsing\ChatLineParser.cs" />
     <Compile Include="src\control\BreakdownTable.cs" />
     <Compile Include="src\ui\DamageSummary.xaml.cs">
       <DependentUpon>DamageSummary.xaml</DependentUpon>

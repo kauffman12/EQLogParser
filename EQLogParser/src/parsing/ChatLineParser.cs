@@ -3,13 +3,12 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  class PreProcessor
+  class ChatLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const int MIN_LINE_LENGTH = 33;
     private const int ACTION_PART_INDEX = 27;
-    private const int MAX_NAME_CHECK = 25;
 
     private static List<string> YouCriteria = new List<string>
     {
@@ -27,67 +26,70 @@ namespace EQLogParser
 
       try
       {
-        int max = Math.Min(line.Length - ACTION_PART_INDEX, MAX_NAME_CHECK);
-        int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, ACTION_PART_INDEX, max, StringComparison.Ordinal) > -1);
+        int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, ACTION_PART_INDEX, StringComparison.Ordinal) > -1);
 
         if (index < 0)
         {
-          int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal);
-          if (firstSpace > -1)
+          int criteriaIndex = -1;
+          for (int i=0; i<OtherCriteria.Count; i++)
           {
-            max = Math.Min(line.Length - firstSpace, MAX_NAME_CHECK);
-            index = OtherCriteria.FindIndex(criteria => line.IndexOf(criteria, firstSpace, max, StringComparison.Ordinal) > -1);
-
-            if ((index == 0 && line.IndexOf(" says, ", firstSpace, 7, StringComparison.Ordinal) > -1) || index > 0)
+            criteriaIndex = line.IndexOf(OtherCriteria[i], ACTION_PART_INDEX, StringComparison.Ordinal);
+            if (criteriaIndex > -1)
             {
-              int start, end;
-              chatType = new ChatType { SenderIsYou = false, Sender = line.Substring(ACTION_PART_INDEX, firstSpace - ACTION_PART_INDEX), Line = line };
+              index = i;
+              break;
+            }
+          }
 
-              switch(index)
-              {
-                case 0:
-                  chatType.Channel = ChatChannels.SAY;
-                  break;
-                case 1:
-                  start = firstSpace + 7;
-                  if (line.IndexOf("you, ", start, 5, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.TELL;
-                    chatType.ReceiverIsYou = true;
-                    chatType.Receiver = "You";
-                  }
-                  else if (line.IndexOf("the guild", start, 9, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.GUILD;
-                  }
-                  else if (line.IndexOf("the group", start, 9, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.GROUP;
-                  }
-                  else if (line.IndexOf("the raid", start, 8, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.RAID;
-                  }
-                  else if (line.IndexOf("the fellowship", start, 14, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.FELLOWSHIP;
-                  }
-                  else if ((end = line.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
-                  {
-                    chatType.Channel = line.Substring(start, end - start);
-                    chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1);
-                  }
-                  break;
-                case 2:
-                  chatType.Channel = ChatChannels.SHOUT;
-                  break;
-              }
+          if (index > -1 && criteriaIndex > -1)
+          {
+            int start, end;
+            chatType = new ChatType { SenderIsYou = false, Sender = line.Substring(ACTION_PART_INDEX, criteriaIndex - ACTION_PART_INDEX), Line = line };
 
-              ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-              if (!CheckForPetLeader(pline))
-              {
-                CheckGuildTells(pline);
-              }
+            switch(index)
+            {
+              case 0:
+                chatType.Channel = ChatChannels.SAY;
+                break;
+              case 1:
+                start = criteriaIndex + 7;
+                if (line.IndexOf("you, ", start, 5, StringComparison.Ordinal) > -1)
+                {
+                  chatType.Channel = ChatChannels.TELL;
+                  chatType.ReceiverIsYou = true;
+                  chatType.Receiver = "You";
+                }
+                else if (line.IndexOf("the guild", start, 9, StringComparison.Ordinal) > -1)
+                {
+                  chatType.Channel = ChatChannels.GUILD;
+                }
+                else if (line.IndexOf("the group", start, 9, StringComparison.Ordinal) > -1)
+                {
+                  chatType.Channel = ChatChannels.GROUP;
+                }
+                else if (line.IndexOf("the raid", start, 8, StringComparison.Ordinal) > -1)
+                {
+                  chatType.Channel = ChatChannels.RAID;
+                }
+                else if (line.IndexOf("the fellowship", start, 14, StringComparison.Ordinal) > -1)
+                {
+                  chatType.Channel = ChatChannels.FELLOWSHIP;
+                }
+                else if ((end = line.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
+                {
+                  chatType.Channel = line.Substring(start, end - start);
+                  chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1);
+                }
+                break;
+              case 2:
+                chatType.Channel = ChatChannels.SHOUT;
+                break;
+            }
+
+            ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+            if (!CheckForPetLeader(pline))
+            {
+              CheckGuildTells(pline);
             }
           }
         }
@@ -104,7 +106,7 @@ namespace EQLogParser
               chatType.Channel = ChatChannels.TELL;
 
               start = ACTION_PART_INDEX + 9;
-              if ((end = line.IndexOf(",", start, MAX_NAME_CHECK, StringComparison.Ordinal)) > -1)
+              if ((end = line.IndexOf(",", start, StringComparison.Ordinal)) > -1)
               {
                 chatType.Receiver = line.Substring(start, end - start);
               }
@@ -147,9 +149,9 @@ namespace EQLogParser
 
         }
       }
-      catch (Exception)
+      catch (Exception ex)
       {
-        //LOG.Debug(ex);
+        LOG.Debug(ex);
       }
 
       return chatType;
