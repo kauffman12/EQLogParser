@@ -6,12 +6,13 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  class ChatIterator : IEnumerable<ChatLine>
+  class ChatIterator : IEnumerable<string>
   {
+    private const string END_RESULT = "END";
     private readonly string Home;
-    private readonly DateUtil DateUtil = new DateUtil();
     private ZipArchive CurrentArchive = null;
     private StreamReader CurrentReader = null;
+    private Dictionary<string, byte> ValidChannels = null;
     private List<string> Directories;
     private List<string> Months;
     private List<string> Entries;
@@ -19,7 +20,7 @@ namespace EQLogParser
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
 
-    internal ChatIterator(string player)
+    internal ChatIterator(string player, List<string> channels = null)
     {
       Home = DataManager.ARCHIVE_DIR + player;
 
@@ -32,6 +33,12 @@ namespace EQLogParser
           GetNextYear();
         }
       }
+
+      if (channels != null)
+      {
+        ValidChannels = new Dictionary<string, byte>();
+        channels.ForEach(chan => ValidChannels[chan] = 1);
+      }
     }
 
     internal void Close()
@@ -42,12 +49,12 @@ namespace EQLogParser
       CurrentArchive = null;
     }
 
-    public IEnumerator<ChatLine> GetEnumerator()
+    public IEnumerator<string> GetEnumerator()
     {
-      ChatLine chatLine;
-      while ((chatLine = GetNextChat()) != null)
+      string line;
+      while ((line = GetNextChat()) != null)
       {
-        yield return chatLine;
+        yield return line;
       }
 
       yield break;
@@ -58,9 +65,9 @@ namespace EQLogParser
       return GetEnumerator();
     }
 
-    private ChatLine GetNextChat()
+    private string GetNextChat()
     {
-      ChatLine result = null;
+      string result = null;
 
       if (CurrentArchive == null && CurrentMonth < Months.Count)
       {
@@ -88,11 +95,17 @@ namespace EQLogParser
 
       if (CurrentReader != null)
       {
-        if (!CurrentReader.EndOfStream)
+        result = END_RESULT;
+        while (!CurrentReader.EndOfStream && result == END_RESULT)
         {
-          result = ChatManager.CreateLine(DateUtil, CurrentReader.ReadLine());
+          var chatType = ChatLineParser.ParseChatType(CurrentReader.ReadLine());
+          if (ValidChannels == null || ValidChannels.ContainsKey(chatType.Channel))
+          {
+            result = chatType.Line;
+          }
         }
-        else
+
+        if (result == END_RESULT)
         {
           CurrentReader.Close();
           CurrentReader = null;
@@ -148,7 +161,7 @@ namespace EQLogParser
       if (CurrentDirectory > -1 && CurrentDirectory < Directories.Count && CurrentMonth > -1 && CurrentMonth < Months.Count)
       {
         result = ZipFile.OpenRead(Months[CurrentMonth]);
-        Entries = result.Entries.OrderByDescending(entry => entry.Name).Select(entry => entry.Name).ToList();
+        Entries = result.Entries.Where(entry => entry.Name != ChatManager.INDEX).OrderByDescending(entry => entry.Name).Select(entry => entry.Name).ToList();
         CurrentEntry = -1;
       }
 

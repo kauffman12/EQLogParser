@@ -11,8 +11,10 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    internal const string INDEX = "index";
+
     private const int ACTION_PART_INDEX = 27;
-    private const int TIMEOUT = 2000;
+    private const int TIMEOUT = 3000;
     private static readonly object LockObject = new object();
     private static string PLAYER_DIR;
 
@@ -22,6 +24,7 @@ namespace EQLogParser
     private ZipArchive CurrentArchive = null;
     private string CurrentArchiveKey = null;
     private string CurrentEntryKey = null;
+    private bool ChannelEntryCacheUpdated = false;
     private bool CurrentListModified = false;
     private bool Running = false;
 
@@ -163,8 +166,8 @@ namespace EQLogParser
         string fileName = GetFileName(year, month);
         var mode = File.Exists(fileName) ? ZipArchiveMode.Update : ZipArchiveMode.Create;
         CurrentArchive = ZipFile.Open(fileName, mode);
-        ChannelEntryCache = new Dictionary<string, Dictionary<string, byte>>();
         CurrentArchiveKey = archiveKey;
+        LoadCache();
       }
 
       if (entryKey != CurrentEntryKey)
@@ -214,6 +217,72 @@ namespace EQLogParser
       }
     }
 
+    private void LoadCache()
+    {
+      ChannelEntryCache = new Dictionary<string, Dictionary<string, byte>>();
+      ChannelEntryCacheUpdated = false;
+
+      if (CurrentArchive != null && CurrentArchive.Mode != ZipArchiveMode.Create)
+      {
+        try
+        {
+          var indexEntry = CurrentArchive.GetEntry(INDEX);
+          if (indexEntry != null)
+          {
+            using (var reader = new StreamReader(indexEntry.Open()))
+            {
+              while (!reader.EndOfStream)
+              {
+                var temp = reader.ReadLine().Split('|');
+                if (temp != null && temp.Length == 2)
+                {
+                  ChannelEntryCache[temp[0]] = new Dictionary<string, byte>();
+                  foreach (var channel in temp[1].Split(','))
+                  {
+                    ChannelEntryCache[temp[0]][channel] = 1;
+                  }
+                }
+              }
+            }
+          }
+        }
+        catch (Exception ex)
+        {
+          LOG.Debug(ex);
+        }
+      }
+    }
+
+    private void SaveCache()
+    {
+      var indexList = new List<string>();
+      foreach (var keyvalue in ChannelEntryCache)
+      {
+        var channels = new List<string>();
+        foreach (var channel in (keyvalue.Value as Dictionary<string, byte>).Keys)
+        {
+          channels.Add(channel);
+        }
+
+        if (channels.Count > 0)
+        {
+          var list= string.Join(",", channels);
+          var temp = keyvalue.Key + "|" + list;
+          indexList.Add(temp);
+        }
+      }
+
+      if (indexList.Count > 0)
+      {
+        var indexEntry = GetEntry(INDEX);
+        using (var writer = new StreamWriter(indexEntry.Open()))
+        {
+          indexList.ForEach(item => writer.WriteLine(item));
+          writer.Close();
+        }
+      }
+    }
+
     private void UpdateCache(string entryKey, ChatType chatType)
     {
       if (chatType.Channel != null)
@@ -224,7 +293,12 @@ namespace EQLogParser
         }
 
         var channels = ChannelEntryCache[entryKey];
-        channels[chatType.Channel] = 1;
+        if (!channels.ContainsKey(chatType.Channel))
+        {
+          channels[chatType.Channel] = 1;
+          ChannelEntryCacheUpdated = true;
+          DataManager.Instance.AddChannel(chatType.Channel);
+        }
       }
     }
 
@@ -236,11 +310,11 @@ namespace EQLogParser
         {
           if (CurrentList.Count > 0 && CurrentListModified)
           {
-            var entry = CurrentArchive.Mode == ZipArchiveMode.Create ? CurrentArchive.CreateEntry(CurrentEntryKey) :
-              CurrentArchive.GetEntry(CurrentEntryKey) ?? CurrentArchive.CreateEntry(CurrentEntryKey);
+            var entry = GetEntry(CurrentEntryKey);
             using (var writer = new StreamWriter(entry.Open()))
             {
               CurrentList.ForEach(chatLine => writer.WriteLine(chatLine.Line));
+              writer.Close();
             }
           }
         }
@@ -252,10 +326,17 @@ namespace EQLogParser
 
       if (closeArchive && CurrentArchive != null)
       {
+        if (ChannelEntryCacheUpdated)
+        {
+          SaveCache();
+        }
+
         CurrentArchive.Dispose();
         CurrentArchive = null;
         CurrentArchiveKey = null;
+        ChannelEntryCacheUpdated = false;
         ChannelEntryCache = null;
+
       }
 
       CurrentList = null;
@@ -263,7 +344,12 @@ namespace EQLogParser
       CurrentListModified = false;
     }
 
-    private static string GetFileName(string year, string month)
+    private ZipArchiveEntry GetEntry(string key)
+    {
+      return CurrentArchive.Mode == ZipArchiveMode.Create ? CurrentArchive.CreateEntry(key) : CurrentArchive.GetEntry(key) ?? CurrentArchive.CreateEntry(key);
+    }
+
+    private string GetFileName(string year, string month)
     {
       string folder = PLAYER_DIR + @"\" + year;
       Directory.CreateDirectory(folder);
