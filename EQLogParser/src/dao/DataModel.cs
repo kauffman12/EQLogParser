@@ -37,6 +37,7 @@ namespace EQLogParser
 
   public static class ChatChannels
   {
+    public const string AUCTION = "Auction";
     public const string SAY = "Say";
     public const string GUILD = "Guild";
     public const string FELLOWSHIP = "Fellowship";
@@ -44,6 +45,7 @@ namespace EQLogParser
     public const string SHOUT = "Shout";
     public const string GROUP = "Group";
     public const string RAID = "Raid";
+    public const string OOC = "OOC";
   }
 
   public interface ISummaryBuilder
@@ -74,6 +76,7 @@ namespace EQLogParser
     public bool SenderIsYou { get; set; }
     public bool ReceiverIsYou { get; set; }
     public string Line { get; set; }
+    public int KeywordStart { get; set; }
   }
 
   public class ParseData

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -15,10 +16,12 @@ namespace EQLogParser
 
     private const int ACTION_PART_INDEX = 27;
     private const int TIMEOUT = 3000;
+
     private static readonly object LockObject = new object();
     private static string PLAYER_DIR;
 
     private Dictionary<string, Dictionary<string, byte>> ChannelEntryCache = null;
+    private Dictionary<string, byte> ChannelCache = new Dictionary<string, byte>();
     private List<ChatType> ChatTypes = new List<ChatType>();
     private List<ChatLine> CurrentList = null;
     private ZipArchive CurrentArchive = null;
@@ -27,23 +30,23 @@ namespace EQLogParser
     private bool ChannelEntryCacheUpdated = false;
     private bool CurrentListModified = false;
     private bool Running = false;
+    private bool ChannelsUpdated = false;
 
-    internal static ChatLine CreateLine(DateUtil dateUtil, string line)
+    internal ChatManager(string player)
     {
-      ChatLine chatLine = null;
-
       try
       {
-        string dateString = line.Substring(1, 24);
-        dateUtil.ParseDate(dateString, out double precise);
-        chatLine = new ChatLine { Line = line, BeginTime = precise };
-      }
-      catch(Exception)
-      {
-        // ignore
-      }
+        PLAYER_DIR = DataManager.ARCHIVE_DIR + player;
 
-      return chatLine;
+        // create config dir if it doesn't exist
+        Directory.CreateDirectory(PLAYER_DIR);
+
+        GetChannels(player).ForEach(channel => ChannelCache[channel] = 1);
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+      }
     }
 
     internal static List<string> GetArchivedPlayers()
@@ -78,19 +81,30 @@ namespace EQLogParser
       return result.OrderBy(name => name).ToList();
     }
 
-    internal ChatManager(string player)
+    internal static List<string> GetChannels(string player)
     {
+      string playerDir = DataManager.ARCHIVE_DIR + player;
+      var file = playerDir + @"\channels.txt";
+
+      List<string> channelList = new List<string>();
+
       try
       {
-        PLAYER_DIR = DataManager.ARCHIVE_DIR + player;
-
-        // create config dir if it doesn't exist
-        Directory.CreateDirectory(PLAYER_DIR);
+        if (File.Exists(file))
+        {
+          string[] lines = File.ReadAllLines(file);
+          foreach (string line in lines)
+          {
+            channelList.Add(line);
+          }
+        }
       }
-      catch (Exception ex)
+      catch(Exception ex)
       {
         LOG.Error(ex);
       }
+
+      return channelList.OrderBy(key => key).ToList();
     }
 
     internal void Add(ChatType chatType)
@@ -141,6 +155,7 @@ namespace EQLogParser
           else
           {
             SaveCurrent(true);
+            SaveChannels();
             Running = false;
           }
         }
@@ -297,7 +312,7 @@ namespace EQLogParser
         {
           channels[chatType.Channel] = 1;
           ChannelEntryCacheUpdated = true;
-          DataManager.Instance.AddChannel(chatType.Channel);
+          AddChannel(chatType.Channel);
         }
       }
     }
@@ -342,6 +357,49 @@ namespace EQLogParser
       CurrentList = null;
       CurrentEntryKey = null;
       CurrentListModified = false;
+    }
+
+    private void SaveChannels()
+    {
+      try
+      {
+        if (ChannelsUpdated)
+        {
+          var file = PLAYER_DIR + @"\channels.txt";
+          File.WriteAllLines(file, ChannelCache.Keys.ToList());
+        }
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+      }
+    }
+
+    private void AddChannel(string channel)
+    {
+      if (!ChannelCache.ContainsKey(channel))
+      {
+        ChannelCache[channel] = 1;
+        ChannelsUpdated = true;
+      }
+    }
+
+    private ChatLine CreateLine(DateUtil dateUtil, string line)
+    {
+      ChatLine chatLine = null;
+
+      try
+      {
+        string dateString = line.Substring(1, 24);
+        dateUtil.ParseDate(dateString, out double precise);
+        chatLine = new ChatLine { Line = line, BeginTime = precise };
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+
+      return chatLine;
     }
 
     private ZipArchiveEntry GetEntry(string key)

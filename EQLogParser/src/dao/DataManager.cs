@@ -22,11 +22,9 @@ namespace EQLogParser
     public static string ARCHIVE_DIR;
     private static string CONFIG_DIR;
     private static string PETMAP_FILE;
-    private static string CHANNELS_FILE;
     private static string SETTINGS_FILE;
     private bool PetMappingUpdated = false;
     private bool SettingsUpdated = false;
-    private bool ChannelsUpdated = false;
 
     private List<ActionBlock> AllDamageBlocks = new List<ActionBlock>();
     private List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
@@ -50,7 +48,6 @@ namespace EQLogParser
     private ConcurrentDictionary<string, string> ApplicationSettings = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
     private ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
-    private ConcurrentDictionary<string, byte> AllChannels = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
     private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
     private ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
@@ -97,7 +94,6 @@ namespace EQLogParser
         ARCHIVE_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\archive\");
         PETMAP_FILE = CONFIG_DIR + @"\petmapping.txt";
         SETTINGS_FILE = CONFIG_DIR + @"\settings.txt";
-        CHANNELS_FILE = CONFIG_DIR + @"\channels.txt";
 
         // create config dir if it doesn't exist
         System.IO.Directory.CreateDirectory(CONFIG_DIR);
@@ -112,15 +108,6 @@ namespace EQLogParser
             {
               ApplicationSettings[parts[0]] = parts[1];
             }
-          }
-        }
-
-        if (System.IO.File.Exists(CHANNELS_FILE))
-        {
-          string[] lines = System.IO.File.ReadAllLines(CHANNELS_FILE);
-          foreach (string line in lines)
-          {
-            AllChannels[line] = 1;
           }
         }
       }
@@ -275,9 +262,6 @@ namespace EQLogParser
 
         SaveConfiguration(SETTINGS_FILE, SettingsUpdated, ApplicationSettings);
         SettingsUpdated = false;
-
-        SaveChannels();
-        ChannelsUpdated = false;
       }
     }
 
@@ -311,19 +295,6 @@ namespace EQLogParser
           ApplicationSettings[key] = value;
           SettingsUpdated = true;
         }
-      }
-    }
-
-    public List<string> GetChannels()
-    {
-      return AllChannels.Keys.OrderBy(key => key).ToList();
-    }
-
-    public void AddChannel(string channel)
-    {
-      if (AllChannels.TryAdd(channel, 1))
-      {
-        ChannelsUpdated = true;
       }
     }
 
@@ -706,21 +677,6 @@ namespace EQLogParser
       {
         EventsNewVerifiedPlayer(this, name);
         CheckNolongerNPC(name);
-      }
-    }
-
-    private void SaveChannels()
-    {
-      try
-      {
-        if (ChannelsUpdated)
-        {
-          System.IO.File.WriteAllLines(CHANNELS_FILE, AllChannels.Keys.ToList());
-        }
-      }
-      catch (Exception ex)
-      {
-        LOG.Error(ex);
       }
     }
 

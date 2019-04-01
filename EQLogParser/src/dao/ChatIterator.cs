@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -6,10 +7,11 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  class ChatIterator : IEnumerable<string>
+  class ChatIterator : IEnumerable<ChatType>
   {
-    private const string END_RESULT = "END";
+    private static ChatType END_RESULT = new ChatType();
     private readonly string Home;
+
     private ZipArchive CurrentArchive = null;
     private StreamReader CurrentReader = null;
     private Dictionary<string, byte> ValidChannels = null;
@@ -19,8 +21,9 @@ namespace EQLogParser
     private int CurrentDirectory = -1;
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
+    private string Keyword;
 
-    internal ChatIterator(string player, List<string> channels = null)
+    internal ChatIterator(string player, List<string> channels = null, string keyword = null)
     {
       Home = DataManager.ARCHIVE_DIR + player;
 
@@ -39,6 +42,8 @@ namespace EQLogParser
         ValidChannels = new Dictionary<string, byte>();
         channels.ForEach(chan => ValidChannels[chan] = 1);
       }
+
+      Keyword = keyword;
     }
 
     internal void Close()
@@ -49,9 +54,9 @@ namespace EQLogParser
       CurrentArchive = null;
     }
 
-    public IEnumerator<string> GetEnumerator()
+    public IEnumerator<ChatType> GetEnumerator()
     {
-      string line;
+      ChatType line;
       while ((line = GetNextChat()) != null)
       {
         yield return line;
@@ -65,9 +70,9 @@ namespace EQLogParser
       return GetEnumerator();
     }
 
-    private string GetNextChat()
+    private ChatType GetNextChat()
     {
-      string result = null;
+      ChatType result = null;
 
       if (CurrentArchive == null && CurrentMonth < Months.Count)
       {
@@ -101,7 +106,19 @@ namespace EQLogParser
           var chatType = ChatLineParser.ParseChatType(CurrentReader.ReadLine());
           if (ValidChannels == null || ValidChannels.ContainsKey(chatType.Channel))
           {
-            result = chatType.Line;
+            if (Keyword != null)
+            {
+              int foundIndex = chatType.Line.IndexOf(Keyword, StringComparison.OrdinalIgnoreCase);
+              if (foundIndex > -1)
+              {
+                result = chatType;
+                chatType.KeywordStart = foundIndex;
+              }
+            }
+            else
+            {
+              result = chatType;
+            }
           }
         }
 
