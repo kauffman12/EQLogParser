@@ -9,8 +9,11 @@ namespace EQLogParser
 {
   class ChatIterator : IEnumerable<ChatType>
   {
-    private static ChatType END_RESULT = new ChatType();
+    private static readonly ChatType END_RESULT = new ChatType();
+
     private readonly string Home;
+    private readonly string Keyword;
+    private readonly string From;
 
     private ZipArchive CurrentArchive = null;
     private StreamReader CurrentReader = null;
@@ -21,9 +24,8 @@ namespace EQLogParser
     private int CurrentDirectory = -1;
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
-    private string Keyword;
 
-    internal ChatIterator(string player, List<string> channels = null, string keyword = null)
+    internal ChatIterator(string player, List<string> channels = null, string from = null, string keyword = null)
     {
       Home = DataManager.ARCHIVE_DIR + player;
 
@@ -44,6 +46,7 @@ namespace EQLogParser
       }
 
       Keyword = keyword;
+      From = from;
     }
 
     internal void Close()
@@ -106,18 +109,22 @@ namespace EQLogParser
           var chatType = ChatLineParser.ParseChatType(CurrentReader.ReadLine());
           if (ValidChannels == null || ValidChannels.ContainsKey(chatType.Channel))
           {
-            if (Keyword != null)
+            if (From == null || chatType.Sender.Equals(From, StringComparison.OrdinalIgnoreCase))
             {
-              int foundIndex = chatType.Line.IndexOf(Keyword, StringComparison.OrdinalIgnoreCase);
-              if (foundIndex > -1)
+              if (Keyword != null)
+              {
+                int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
+                int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
+                if (foundIndex > -1)
+                {
+                  result = chatType;
+                  chatType.KeywordStart = foundIndex;
+                }
+              }
+              else
               {
                 result = chatType;
-                chatType.KeywordStart = foundIndex;
               }
-            }
-            else
-            {
-              result = chatType;
             }
           }
         }

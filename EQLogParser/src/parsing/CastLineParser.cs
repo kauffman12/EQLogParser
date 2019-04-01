@@ -9,7 +9,6 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public static event EventHandler<string> EventsLineProcessed;
 
-    private const int ACTION_PART_INDEX = 27;
     private static DateUtil DateUtil = new DateUtil();
 
     public static ConcurrentDictionary<string, byte> IgnoreMap = new ConcurrentDictionary<string, byte>(
@@ -28,20 +27,20 @@ namespace EQLogParser
       try
       {
         int index = -1;
-        if (line.Length > 44 && (index = line.IndexOf(" begin", ACTION_PART_INDEX + 3, StringComparison.Ordinal)) > -1)
+        if (line.Length > 44 && (index = line.IndexOf(" begin", Parsing.ACTION_INDEX + 3, StringComparison.Ordinal)) > -1)
         {
           SpellCast cast = null;
           ProcessLine pline = null;
-          int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX);
+          int firstSpace = line.IndexOf(" ", Parsing.ACTION_INDEX);
           if (firstSpace > -1 && firstSpace == index)
           {
-            if (firstSpace == (ACTION_PART_INDEX + 3) && line.Substring(ACTION_PART_INDEX, 3) == "You")
+            if (firstSpace == (Parsing.ACTION_INDEX + 3) && line.Substring(Parsing.ACTION_INDEX, 3) == "You")
             {
               var test = line.Substring(index + 7, 4);
               if (test == "cast" || test == "sing")
               {
-                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-                pline.OptionalIndex = index - ACTION_PART_INDEX;
+                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
+                pline.OptionalIndex = index - Parsing.ACTION_INDEX;
                 pline.OptionalData = "you" + test;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
@@ -53,8 +52,8 @@ namespace EQLogParser
               var test = line.Substring(index + 11, 4);
               if (test == "cast" || test == "sing")
               {
-                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-                pline.OptionalIndex = index - ACTION_PART_INDEX;
+                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
+                pline.OptionalIndex = index - Parsing.ACTION_INDEX;
                 pline.OptionalData = test;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
@@ -70,24 +69,24 @@ namespace EQLogParser
         }
         else // lands on messages
         {
-          int firstSpace = line.IndexOf(" ", ACTION_PART_INDEX, StringComparison.Ordinal);
+          int firstSpace = line.IndexOf(" ", Parsing.ACTION_INDEX, StringComparison.Ordinal);
           if (firstSpace > -1 && line[firstSpace - 2] == '\'' && line[firstSpace - 1] == 's')
           {
-            ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-            pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
+            ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
+            pline.OptionalIndex = firstSpace + 1 - Parsing.ACTION_INDEX;
             pline.TimeString = pline.Line.Substring(1, 24);
             pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
             HandlePosessiveLandsOnOther(pline);
           }
           else if (firstSpace > -1)
           {
-            string player = line.Substring(ACTION_PART_INDEX, firstSpace - ACTION_PART_INDEX);
+            string player = line.Substring(Parsing.ACTION_INDEX, firstSpace - Parsing.ACTION_INDEX);
             if (!IgnoreMap.ContainsKey(player))
             {
               if (line.Length > firstSpace + 6)
               {
-                ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-                pline.OptionalIndex = firstSpace + 1 - ACTION_PART_INDEX;
+                ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
+                pline.OptionalIndex = firstSpace + 1 - Parsing.ACTION_INDEX;
                 pline.OptionalData = player;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);

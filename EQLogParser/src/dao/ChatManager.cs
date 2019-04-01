@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -14,9 +13,7 @@ namespace EQLogParser
 
     internal const string INDEX = "index";
 
-    private const int ACTION_PART_INDEX = 27;
     private const int TIMEOUT = 3000;
-
     private static readonly object LockObject = new object();
     private static string PLAYER_DIR;
 

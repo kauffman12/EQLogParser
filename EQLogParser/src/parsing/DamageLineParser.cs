@@ -11,7 +11,6 @@ namespace EQLogParser
     public static event EventHandler<ResistProcessedEvent> EventsResistProcessed;
     public static event EventHandler<string> EventsLineProcessed;
 
-    private const int ACTION_PART_INDEX = 27;
     private static DateUtil DateUtil = new DateUtil();
     private static Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
 
@@ -37,9 +36,9 @@ namespace EQLogParser
       try
       {
         int index;
-        if (line.Length >= 40 && line.IndexOf(" damage", ACTION_PART_INDEX + 13, StringComparison.Ordinal) > -1)
+        if (line.Length >= 40 && line.IndexOf(" damage", Parsing.ACTION_INDEX + 13, StringComparison.Ordinal) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
 
@@ -50,18 +49,18 @@ namespace EQLogParser
             EventsDamageProcessed(record, e);
           }
         }
-        else if (line.Length < 102 && (index = line.IndexOf(" slain ", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
+        else if (line.Length < 102 && (index = line.IndexOf(" slain ", Parsing.ACTION_INDEX, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-          pline.OptionalIndex = index - ACTION_PART_INDEX;
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
+          pline.OptionalIndex = index - Parsing.ACTION_INDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
           HandleSlain(pline);
         }
-        else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
+        else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", Parsing.ACTION_INDEX, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-          pline.OptionalIndex = index - ACTION_PART_INDEX;
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
+          pline.OptionalIndex = index - Parsing.ACTION_INDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
           HandleResist(pline);
