@@ -132,7 +132,7 @@
       </MenuItem>
     </Menu>
     <fa:ImageAwesome Grid.Row="0" x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,5,15,1" Grid.Column="1"/>
-    <docking:DockSite Grid.Row="2" x:Name="dockSite" Grid.ColumnSpan="2">
+    <docking:DockSite Grid.Row="2" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown">
       <docking:SplitContainer Orientation="Horizontal">
         <docking:SplitContainer Orientation="Vertical">
           <docking:ToolWindowContainer>

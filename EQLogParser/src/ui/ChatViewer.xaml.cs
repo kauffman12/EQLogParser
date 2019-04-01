@@ -17,13 +17,18 @@ namespace EQLogParser
   /// </summary>
   public partial class ChatViewer : UserControl
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+    private const string TEXT_FILTER_DEFAULT = "Keyword Search";
     private static List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static List<ColorItem> ColorItems;
     private static bool Running = false;
 
+    private DispatcherTimer TextFilterTimer;
     private ChatIterator CurrentIterator = null;
     private string LastChannelSelection = null;
     private string LastPlayerSelection = null;
+    private string LastTextFilter = null;
     private bool Connected = false;
     private bool Ready = false;
 
@@ -35,6 +40,7 @@ namespace EQLogParser
         Select(prop => new ColorItem() { Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(prop.Name)), Name = prop.Name }).
         OrderBy(item => item.Name).ToList();
 
+      textFilter.Text = TEXT_FILTER_DEFAULT;
       fontSize.ItemsSource = FontSizeList;
       fontColor.ItemsSource = ColorItems;
 
@@ -66,18 +72,12 @@ namespace EQLogParser
         fontSize.SelectedItem = dsize;
       }
 
-      List<CheckedItem> items = new List<CheckedItem>();
-      DataManager.Instance.GetChannels().ForEach(chan =>
+      TextFilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      TextFilterTimer.Tick += (sender, e) =>
       {
-        items.Add(new CheckedItem { Text = chan, IsChecked = true });
-      });
-
-      if (items.Count > 0)
-      {
-        items[0].SelectedText = items.Count + " Selected Channels";
-        channels.ItemsSource = items;
-        channels.SelectedItem = items[0];
-      }
+        TextFilterTimer.Stop();
+        ChangeSearch();
+      };
 
       Ready = true;
       ChangeSearch();
@@ -89,49 +89,83 @@ namespace EQLogParser
       {
         Running = true;
 
-        Task.Run(() =>
+        Task.Delay(200).ContinueWith(task =>
         {
-          var page = CurrentIterator.Take(count);
- 
-          Dispatcher.InvokeAsync(() =>
+          try
           {
-            Paragraph para = new Paragraph { Margin = new Thickness(0) };
+            var page = CurrentIterator.Take(count);
 
-            var chatList = page.Reverse().ToList();
-            if (chatList.Count > 0)
+            Dispatcher.InvokeAsync(() =>
             {
-              for (int i = 0; i < chatList.Count; i++)
-              {
-                var text = (i == (chatList.Count - 1)) ? chatList[i] : (chatList[i] + Environment.NewLine);
-                para.Inlines.Add(new Run { Text = text });
-              }
+              Paragraph para = new Paragraph { Margin = new Thickness(0) };
 
-              var blocks = (chatBox.Document as FlowDocument).Blocks;
-              if (blocks.Count == 0)
+              var chatList = page.Reverse().ToList();
+              if (chatList.Count > 0)
               {
-                blocks.Add(para);
-                chatScroller.ScrollToEnd();
-              }
-              else
-              {
-                blocks.InsertBefore(blocks.FirstBlock, para);
-
-                if (adjustScroll)
+                for (int i = 0; i < chatList.Count; i++)
                 {
-                  chatScroller.ScrollToVerticalOffset(0.40 * chatScroller.ExtentHeight);
+                  var text = chatList[i].Line;
+
+                  if (LastTextFilter != null && chatList[i].KeywordStart > -1)
+                  {
+                    var first = text.Substring(0, chatList[i].KeywordStart);
+                    var second = text.Substring(chatList[i].KeywordStart, LastTextFilter.Length);
+                    var last = text.Substring(chatList[i].KeywordStart + LastTextFilter.Length);
+
+                    if (first.Length > 0)
+                    {
+                      para.Inlines.Add(new Run(first));
+                    }
+
+                    para.Inlines.Add(new Run { Text = second, Foreground = chatBox.Background, Background = chatBox.Foreground });
+
+                    if (last.Length > 0)
+                    {
+                      para.Inlines.Add(new Run(last));
+                    }
+                  }
+                  else
+                  {
+                    para.Inlines.Add(new Run(text));
+                  }
+
+                  if (i < chatList.Count - 1)
+                  {
+                    para.Inlines.Add(new Run(Environment.NewLine));
+                  }
+                }
+
+                var blocks = (chatBox.Document as FlowDocument).Blocks;
+                if (blocks.Count == 0)
+                {
+                  blocks.Add(para);
+                  chatScroller.ScrollToEnd();
+                }
+                else
+                {
+                  blocks.InsertBefore(blocks.FirstBlock, para);
+
+                  if (adjustScroll)
+                  {
+                    chatScroller.ScrollToVerticalOffset(0.40 * chatScroller.ExtentHeight);
+                  }
                 }
               }
-            }
 
-            if (!Connected)
-            {
-              chatScroller.ScrollChanged += Chat_ScrollChanged;
-              Connected = true;
-            }
+              if (!Connected)
+              {
+                chatScroller.ScrollChanged += Chat_ScrollChanged;
+                Connected = true;
+              }
 
-          }, DispatcherPriority.Background);
+            }, DispatcherPriority.Background);
 
-          Running = false;
+            Running = false;
+          }
+          catch (Exception ex)
+          {
+            LOG.Debug(ex);
+          }
         });
       }
     }
@@ -142,7 +176,7 @@ namespace EQLogParser
       List<string> selected = new List<string>();
 
       StringBuilder builder = new StringBuilder();
-      foreach(var item in channels.Items)
+      foreach (var item in channels.Items)
       {
         if (item is CheckedItem checkedItem && checkedItem.IsChecked)
         {
@@ -166,11 +200,13 @@ namespace EQLogParser
       if (players.SelectedItem is string name && name != "" && !name.StartsWith("No "))
       {
         var channelList = GetSelectedChannels(out bool changed);
-        if (changed || LastPlayerSelection != name)
+        string text = (textFilter.Text != "" && textFilter.Text != TEXT_FILTER_DEFAULT) ? textFilter.Text : null;
+        if (changed || LastPlayerSelection != name || LastTextFilter != text)
         {
           LastPlayerSelection = name;
+          LastTextFilter = text;
           CurrentIterator?.Close();
-          CurrentIterator = new ChatIterator(name, channelList);
+          CurrentIterator = new ChatIterator(name, channelList, text);
 
           chatScroller.ScrollChanged -= Chat_ScrollChanged;
           Connected = false;
@@ -205,11 +241,25 @@ namespace EQLogParser
 
     private void Player_Changed(object sender, SelectionChangedEventArgs e)
     {
-      if (Ready)
+      if (players.SelectedItem is string name && name != "" && !name.StartsWith("No "))
       {
-        if (players.SelectedItem is string name && name != "" && !name.StartsWith("No "))
+        List<CheckedItem> items = new List<CheckedItem>();
+        ChatManager.GetChannels(players.SelectedItem as string).ForEach(chan =>
         {
-          DataManager.Instance.SetApplicationSetting("ChatSelectedPlayer", name);
+          items.Add(new CheckedItem { Text = chan, IsChecked = true });
+        });
+
+        if (items.Count > 0)
+        {
+          items[0].SelectedText = items.Count + " Selected Channels";
+          channels.ItemsSource = items;
+          channels.SelectedItem = items[0];
+        }
+
+        DataManager.Instance.SetApplicationSetting("ChatSelectedPlayer", name);
+
+        if (Ready)
+        {
           ChangeSearch();
         }
       }
@@ -229,8 +279,7 @@ namespace EQLogParser
           }
         }
 
-        var selected = channels.SelectedItem as CheckedItem;
-        if (selected == null)
+        if (!(channels.SelectedItem is CheckedItem selected))
         {
           selected = channels.Items[0] as CheckedItem;
         }
@@ -251,8 +300,30 @@ namespace EQLogParser
       if (fontColor.SelectedItem != null)
       {
         var item = fontColor.SelectedItem as ColorItem;
+
+        List<Run> highlighted = new List<Run>();
+        foreach (var block in chatBox.Document.Blocks)
+        {
+          if (block is Paragraph para)
+          {
+            foreach (var inline in para.Inlines)
+            {
+              if (inline.Foreground != null && inline.Foreground != chatBox.Foreground)
+              {
+                highlighted.Add(inline as Run);
+              }
+            }
+          }
+        }
+
         chatBox.Foreground = item.Brush;
         DataManager.Instance.SetApplicationSetting("ChatFontColor", item.Name);
+
+        highlighted.ForEach(run =>
+        {
+          run.Foreground = chatBox.Background;
+          run.Background = chatBox.Foreground;
+        });
       }
     }
 
@@ -260,7 +331,7 @@ namespace EQLogParser
     {
       if (fontSize.SelectedItem != null)
       {
-        chatBox.FontSize = (double) fontSize.SelectedItem;
+        chatBox.FontSize = (double)fontSize.SelectedItem;
         DataManager.Instance.SetApplicationSetting("ChatFontSize", fontSize.SelectedItem.ToString());
       }
     }
@@ -272,6 +343,34 @@ namespace EQLogParser
         var family = fontFamily.SelectedItem as FontFamily;
         chatBox.FontFamily = family;
         DataManager.Instance.SetApplicationSetting("ChatFontFamily", family.ToString());
+      }
+    }
+
+    private void TextFilter_KeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Escape)
+      {
+        textFilter.Text = TEXT_FILTER_DEFAULT;
+        textFilter.FontStyle = FontStyles.Italic;
+        chatBox.Focus();
+      }
+    }
+
+    private void TextFilter_GotFocus(object sender, RoutedEventArgs e)
+    {
+      if (textFilter.Text == TEXT_FILTER_DEFAULT)
+      {
+        textFilter.Text = "";
+        textFilter.FontStyle = FontStyles.Normal;
+      }
+    }
+
+    private void TextFilter_LostFocus(object sender, RoutedEventArgs e)
+    {
+      if (textFilter.Text == "")
+      {
+        textFilter.Text = TEXT_FILTER_DEFAULT;
+        textFilter.FontStyle = FontStyles.Italic;
       }
     }
 
@@ -288,6 +387,12 @@ namespace EQLogParser
           fontSize.SelectedIndex++;
         }
       }
+    }
+
+    private void TextFilter_TextChange(object sender, TextChangedEventArgs e)
+    {
+      TextFilterTimer?.Stop();
+      TextFilterTimer?.Start();
     }
   }
 }

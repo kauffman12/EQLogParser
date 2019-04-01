@@ -811,5 +811,10 @@ namespace EQLogParser
         icon.Visibility = IconToWindow[icon.Name]?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
       }
     }
+
+    private void NPCWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+      (npcWindow?.Content as NpcTable).NPCSearchBox_KeyDown(sender, e);
+    }
   }
 }

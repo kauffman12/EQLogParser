@@ -12,12 +12,12 @@ namespace EQLogParser
 
     private static List<string> YouCriteria = new List<string>
     {
-      "You say,", "You told ", "You tell ", "You say to ", "You shout,"
+      "You say,", "You told ", "You tell ", "You say to ", "You shout,", "You say out of", "You auction,"
     };
 
     private static List<string> OtherCriteria = new List<string>
     {
-      " says,", " tells ", " shouts,"
+      " says,", " tells ", " shouts,", "says out of", " auctions,"
     };
 
     internal static ChatType ParseChatType(string line)
@@ -84,6 +84,12 @@ namespace EQLogParser
               case 2:
                 chatType.Channel = ChatChannels.SHOUT;
                 break;
+              case 3:
+                chatType.Channel = ChatChannels.OOC;
+                break;
+              case 4:
+                chatType.Channel = ChatChannels.AUCTION;
+                break;
             }
 
             ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
@@ -144,6 +150,12 @@ namespace EQLogParser
               break;
             case 4:
               chatType.Channel = ChatChannels.SHOUT;
+              break;
+            case 5:
+              chatType.Channel = ChatChannels.OOC; 
+              break;
+            case 6:
+              chatType.Channel = ChatChannels.AUCTION;
               break;
           }
 

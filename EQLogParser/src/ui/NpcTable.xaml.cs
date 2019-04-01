@@ -58,21 +58,21 @@ namespace EQLogParser
       NonPlayersViewSource = new CollectionViewSource() { Source = NonPlayersView };
       npcDataGrid.ItemsSource = NonPlayersViewSource.View;
 
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 400) };
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SelectionTimer.Tick += (sender, e) =>
       {
         SelectionTimer.Stop();
         EventsSelectionChange(this, npcDataGrid.SelectedItems);
       };
 
-      SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 400) };
+      SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SearchTextTimer.Tick += (sender, e) =>
       {
         SearchTextTimer.Stop();
         HandleSearchTextChanged();
       };
 
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 400) };
+      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 350) };
       UpdateTimer.Tick += (sender, e) =>
       {
         npcDataGrid.ScrollIntoView(NonPlayersView.Last());
@@ -260,21 +260,25 @@ namespace EQLogParser
       }
     }
 
-    private void NPCSearchBox_KeyDown(object sender, KeyEventArgs e)
+    // internal for workaround with event being lost
+    internal void NPCSearchBox_KeyDown(object sender, KeyEventArgs e)
     {
-      if (e.Key == Key.Escape)
+      if (npcSearchBox.IsFocused)
       {
-        npcSearchBox.Text = NPC_SEARCH_TEXT;
-        npcSearchBox.FontStyle = FontStyles.Italic;
-        if (CurrentSearchRow != null)
+        if (e.Key == Key.Escape)
         {
-          CurrentSearchRow.Background = null;
+          npcSearchBox.Text = NPC_SEARCH_TEXT;
+          npcSearchBox.FontStyle = FontStyles.Italic;
+          if (CurrentSearchRow != null)
+          {
+            CurrentSearchRow.Background = null;
+          }
+          npcDataGrid.Focus();
         }
-        npcDataGrid.Focus();
-      }
-      else if (e.Key == Key.Enter)
-      {
-        SearchForNPC(e.KeyboardDevice.IsKeyDown(Key.RightShift) || e.KeyboardDevice.IsKeyDown(Key.LeftShift));
+        else if (e.Key == Key.Enter)
+        {
+          SearchForNPC(e.KeyboardDevice.IsKeyDown(Key.RightShift) || e.KeyboardDevice.IsKeyDown(Key.LeftShift));
+        }
       }
     }
 

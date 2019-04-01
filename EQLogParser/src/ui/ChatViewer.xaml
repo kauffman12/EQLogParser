@@ -11,11 +11,8 @@
       <RowDefinition Height="30" />
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
-    <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
-      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
-    </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <ComboBox x:Name="players" SelectedIndex="0" Height="24" Width="120" Margin="4,0,0,0" SelectionChanged="Player_Changed">
+      <ComboBox x:Name="players" SelectedIndex="0" Height="24" Width="120" Margin="8,0,0,0" SelectionChanged="Player_Changed">
         <ComboBoxItem>No Chat Data</ComboBoxItem>
       </ComboBox>
       <ComboBox x:Name="channels" Height="24" Width="130" Margin="0,0,4,0" DropDownClosed="Channels_DropDownClosed">
@@ -30,17 +27,19 @@
               <DataTemplate DataType="{x:Type local:CheckedItem}">
                 <StackPanel Orientation="Horizontal">
                   <CheckBox IsChecked="{Binding IsChecked}" Width="20" />
-                  <TextBlock Text="{Binding Text}" />
+                  <TextBlock Text="{Binding Text}" IsHitTestVisible="false" />
                 </StackPanel>
               </DataTemplate>
             </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
           </local:ComboBoxItemTemplateSelector>
         </ComboBox.ItemTemplateSelector>
       </ComboBox>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="4,0,4,0" Stroke="#111111" />
+      <TextBox x:Name="textFilter" Height="24" VerticalContentAlignment="Center" Background="#202020" Foreground="#EEEEEE" FontStyle="Italic" Width="200" LostFocus="TextFilter_LostFocus" GotFocus="TextFilter_GotFocus" PreviewKeyDown="TextFilter_KeyDown" TextChanged="TextFilter_TextChange"></TextBox>
+    </StackPanel>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox x:Name="fontFamily" Height="24" Width="120" Margin="4,0,0,0" ItemsSource="{x:Static Fonts.SystemFontFamilies}" SelectionChanged="FontFamily_Changed"></ComboBox>
       <ComboBox x:Name="fontSize" Height="24" SelectionChanged="FontSize_Changed"/>
-      <ComboBox x:Name="fontColor" Height="24" SelectionChanged="FontColor_Changed">
+      <ComboBox x:Name="fontColor" Height="24" Margin="0,0,8,0" SelectionChanged="FontColor_Changed">
         <ComboBox.ItemTemplateSelector>
           <local:ComboBoxItemTemplateSelector>
             <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
@@ -63,7 +62,7 @@
       </ComboBox>
     </StackPanel>
     <ScrollViewer Grid.Row="1" x:Name="chatScroller">
-      <RichTextBox x:Name="chatBox" Foreground="Orange" FontSize="16" PreviewKeyDown="Chat_KeyDown" IsReadOnly="True" PreviewMouseWheel="Chat_MouseWheel">
+      <RichTextBox x:Name="chatBox" FontSize="16" PreviewKeyDown="Chat_KeyDown" IsReadOnly="True" PreviewMouseWheel="Chat_MouseWheel">
         <FlowDocument>
           <Paragraph/>
         </FlowDocument>
