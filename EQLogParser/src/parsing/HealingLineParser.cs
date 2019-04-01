@@ -8,7 +8,6 @@ namespace EQLogParser
     public static event EventHandler<string> EventsLineProcessed;
     public static event EventHandler<HealProcessedEvent> EventsHealProcessed;
 
-    private const int ACTION_PART_INDEX = 27;
     private static DateUtil DateUtil = new DateUtil();
 
     public static void Process(string line)
@@ -16,10 +15,10 @@ namespace EQLogParser
       try
       {
         int index;
-        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - ACTION_PART_INDEX, StringComparison.Ordinal)) > -1)
+        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - Parsing.ACTION_INDEX, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(ACTION_PART_INDEX) };
-          pline.OptionalIndex = index - ACTION_PART_INDEX;
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
+          pline.OptionalIndex = index - Parsing.ACTION_INDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
 
