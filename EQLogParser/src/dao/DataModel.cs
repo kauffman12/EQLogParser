@@ -48,6 +48,11 @@ namespace EQLogParser
     public const string OOC = "OOC";
   }
 
+  public static class Parsing
+  {
+    public const int ACTION_INDEX = 27;
+  }
+
   public interface ISummaryBuilder
   {
     StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers);
@@ -76,6 +81,7 @@ namespace EQLogParser
     public bool SenderIsYou { get; set; }
     public bool ReceiverIsYou { get; set; }
     public string Line { get; set; }
+    public int AfterSenderIndex { get; set; }
     public int KeywordStart { get; set; }
   }
 

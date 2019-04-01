@@ -19,16 +19,19 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private const string TEXT_FILTER_DEFAULT = "Keyword Search";
+    private const string TEXT_FILTER_DEFAULT = "Message Search";
+    private const string FROM_FILTER_DEFAULT = "From (You | Player)";
+
     private static List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static List<ColorItem> ColorItems;
     private static bool Running = false;
 
-    private DispatcherTimer TextFilterTimer;
+    private DispatcherTimer FilterTimer;
     private ChatIterator CurrentIterator = null;
     private string LastChannelSelection = null;
     private string LastPlayerSelection = null;
     private string LastTextFilter = null;
+    private string LastFromFilter = null;
     private bool Connected = false;
     private bool Ready = false;
 
@@ -41,6 +44,7 @@ namespace EQLogParser
         OrderBy(item => item.Name).ToList();
 
       textFilter.Text = TEXT_FILTER_DEFAULT;
+      fromFilter.Text = FROM_FILTER_DEFAULT;
       fontSize.ItemsSource = FontSizeList;
       fontColor.ItemsSource = ColorItems;
 
@@ -72,10 +76,10 @@ namespace EQLogParser
         fontSize.SelectedItem = dsize;
       }
 
-      TextFilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-      TextFilterTimer.Tick += (sender, e) =>
+      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      FilterTimer.Tick += (sender, e) =>
       {
-        TextFilterTimer.Stop();
+        FilterTimer.Stop();
         ChangeSearch();
       };
 
@@ -201,12 +205,14 @@ namespace EQLogParser
       {
         var channelList = GetSelectedChannels(out bool changed);
         string text = (textFilter.Text != "" && textFilter.Text != TEXT_FILTER_DEFAULT) ? textFilter.Text : null;
-        if (changed || LastPlayerSelection != name || LastTextFilter != text)
+        string from = (fromFilter.Text != "" && fromFilter.Text != FROM_FILTER_DEFAULT) ? fromFilter.Text : null;
+        if (changed || LastPlayerSelection != name || LastTextFilter != text || LastFromFilter != from)
         {
           LastPlayerSelection = name;
           LastTextFilter = text;
+          LastFromFilter = from;
           CurrentIterator?.Close();
-          CurrentIterator = new ChatIterator(name, channelList, text);
+          CurrentIterator = new ChatIterator(name, channelList, from, text);
 
           chatScroller.ScrollChanged -= Chat_ScrollChanged;
           Connected = false;
@@ -346,6 +352,34 @@ namespace EQLogParser
       }
     }
 
+    private void FromFilter_KeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Escape)
+      {
+        fromFilter.Text = FROM_FILTER_DEFAULT;
+        fromFilter.FontStyle = FontStyles.Italic;
+        chatBox.Focus();
+      }
+    }
+
+    private void FromFilter_GotFocus(object sender, RoutedEventArgs e)
+    {
+      if (fromFilter.Text == FROM_FILTER_DEFAULT)
+      {
+        fromFilter.Text = "";
+        fromFilter.FontStyle = FontStyles.Normal;
+      }
+    }
+
+    private void FromFilter_LostFocus(object sender, RoutedEventArgs e)
+    {
+      if (fromFilter.Text == "")
+      {
+        fromFilter.Text = FROM_FILTER_DEFAULT;
+        fromFilter.FontStyle = FontStyles.Italic;
+      }
+    }
+
     private void TextFilter_KeyDown(object sender, KeyEventArgs e)
     {
       if (e.Key == Key.Escape)
@@ -374,6 +408,12 @@ namespace EQLogParser
       }
     }
 
+    private void Filter_TextChange(object sender, TextChangedEventArgs e)
+    {
+      FilterTimer?.Stop();
+      FilterTimer?.Start();
+    }
+
     private void Chat_MouseWheel(object sender, MouseWheelEventArgs e)
     {
       if ((Keyboard.Modifiers & ModifierKeys.Control) > 0)
@@ -387,12 +427,6 @@ namespace EQLogParser
           fontSize.SelectedIndex++;
         }
       }
-    }
-
-    private void TextFilter_TextChange(object sender, TextChangedEventArgs e)
-    {
-      TextFilterTimer?.Stop();
-      TextFilterTimer?.Start();
     }
   }
 }
