@@ -20,7 +20,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string TEXT_FILTER_DEFAULT = "Message Search";
-    private const string FROM_FILTER_DEFAULT = "From (You | Player)";
+    private const string FROM_FILTER_DEFAULT = "From";
 
     private static List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static List<ColorItem> ColorItems;
@@ -40,13 +40,24 @@ namespace EQLogParser
       InitializeComponent();
 
       ColorItems = typeof(Colors).GetProperties().
+        Where(prop => prop.Name != "Transparent").
         Select(prop => new ColorItem() { Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(prop.Name)), Name = prop.Name }).
         OrderBy(item => item.Name).ToList();
+
+      ColorItem DefaultBackground = new ColorItem { Name = "Default", Brush = new SolidColorBrush(Color.FromRgb(32, 32, 32)) };
+      ColorItem DefaultForeground = new ColorItem { Name = "Default", Brush = new SolidColorBrush(Colors.White) };
 
       textFilter.Text = TEXT_FILTER_DEFAULT;
       fromFilter.Text = FROM_FILTER_DEFAULT;
       fontSize.ItemsSource = FontSizeList;
-      fontColor.ItemsSource = ColorItems;
+
+      var fgList = new List<ColorItem>(ColorItems);
+      fgList.Insert(0, DefaultForeground);
+      fontFgColor.ItemsSource = fgList;
+
+      var bgList = new List<ColorItem>(ColorItems);
+      bgList.Insert(0, DefaultBackground);
+      fontBgColor.ItemsSource = bgList;
 
       var playerList = ChatManager.GetArchivedPlayers();
       if (playerList.Count > 0)
@@ -58,11 +69,13 @@ namespace EQLogParser
         players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
       }
 
-      string color = DataManager.Instance.GetApplicationSetting("ChatFontColor");
-      if (color != null)
-      {
-        fontColor.SelectedItem = ColorItems.Find(item => item.Name == color);
-      }
+      string fgColor = DataManager.Instance.GetApplicationSetting("ChatFontFgColor");
+      fgColor = fgColor ?? "Default";
+      fontFgColor.SelectedItem = fgList.Find(item => item.Name == fgColor);
+
+      string bgColor = DataManager.Instance.GetApplicationSetting("ChatFontBgColor");
+      bgColor = bgColor ?? "Default";
+      fontBgColor.SelectedItem = bgList.Find(item => item.Name == bgColor);
 
       string family = DataManager.Instance.GetApplicationSetting("ChatFontFamily");
       if (family != null)
@@ -97,78 +110,87 @@ namespace EQLogParser
         {
           try
           {
-            var page = CurrentIterator.Take(count);
+            var chatList = CurrentIterator.Take(count).Reverse().ToList();
 
             Dispatcher.InvokeAsync(() =>
             {
-              Paragraph para = new Paragraph { Margin = new Thickness(0) };
-
-              var chatList = page.Reverse().ToList();
-              if (chatList.Count > 0)
+              try
               {
-                for (int i = 0; i < chatList.Count; i++)
+                Paragraph para = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 0) };
+
+                if (chatList.Count > 0)
                 {
-                  var text = chatList[i].Line;
-
-                  if (LastTextFilter != null && chatList[i].KeywordStart > -1)
+                  for (int i = 0; i < chatList.Count; i++)
                   {
-                    var first = text.Substring(0, chatList[i].KeywordStart);
-                    var second = text.Substring(chatList[i].KeywordStart, LastTextFilter.Length);
-                    var last = text.Substring(chatList[i].KeywordStart + LastTextFilter.Length);
+                    var text = chatList[i].Line;
 
-                    if (first.Length > 0)
+                    if (LastTextFilter != null && chatList[i].KeywordStart > -1)
                     {
-                      para.Inlines.Add(new Run(first));
+                      var first = text.Substring(0, chatList[i].KeywordStart);
+                      var second = text.Substring(chatList[i].KeywordStart, LastTextFilter.Length);
+                      var last = text.Substring(chatList[i].KeywordStart + LastTextFilter.Length);
+
+                      if (first.Length > 0)
+                      {
+                        para.Inlines.Add(new Run(first));
+                      }
+
+                      para.Inlines.Add(new Run { Text = second, FontStyle = FontStyles.Italic, FontWeight = FontWeights.Bold });
+
+                      if (last.Length > 0)
+                      {
+                        para.Inlines.Add(new Run(last));
+                      }
+                    }
+                    else
+                    {
+                      para.Inlines.Add(new Run(text));
                     }
 
-                    para.Inlines.Add(new Run { Text = second, Foreground = chatBox.Background, Background = chatBox.Foreground });
-
-                    if (last.Length > 0)
+                    if (i < chatList.Count - 1)
                     {
-                      para.Inlines.Add(new Run(last));
+                      para.Inlines.Add(new Run(Environment.NewLine));
                     }
+                  }
+
+                  var blocks = (chatBox.Document as FlowDocument).Blocks;
+                  if (blocks.Count == 0)
+                  {
+                    blocks.Add(para);
+                    chatScroller.ScrollToEnd();
+                    para.Padding = new Thickness(4, 0, 0, 4);
                   }
                   else
                   {
-                    para.Inlines.Add(new Run(text));
-                  }
+                    blocks.InsertBefore(blocks.FirstBlock, para);
 
-                  if (i < chatList.Count - 1)
-                  {
-                    para.Inlines.Add(new Run(Environment.NewLine));
+                    if (adjustScroll)
+                    {
+                      chatScroller.ScrollToVerticalOffset(0.40 * chatScroller.ExtentHeight);
+                    }
                   }
                 }
 
-                var blocks = (chatBox.Document as FlowDocument).Blocks;
-                if (blocks.Count == 0)
+                if (!Connected)
                 {
-                  blocks.Add(para);
-                  chatScroller.ScrollToEnd();
-                }
-                else
-                {
-                  blocks.InsertBefore(blocks.FirstBlock, para);
-
-                  if (adjustScroll)
-                  {
-                    chatScroller.ScrollToVerticalOffset(0.40 * chatScroller.ExtentHeight);
-                  }
+                  chatScroller.ScrollChanged += Chat_ScrollChanged;
+                  Connected = true;
                 }
               }
-
-              if (!Connected)
+              catch (Exception ex2)
               {
-                chatScroller.ScrollChanged += Chat_ScrollChanged;
-                Connected = true;
+                LOG.Error(ex2);
               }
-
+              finally
+              {
+                Running = false;
+              }
+  
             }, DispatcherPriority.Background);
-
-            Running = false;
           }
           catch (Exception ex)
           {
-            LOG.Debug(ex);
+            LOG.Error(ex);
           }
         });
       }
@@ -301,35 +323,25 @@ namespace EQLogParser
       }
     }
 
-    private void FontColor_Changed(object sender, SelectionChangedEventArgs e)
+    private void FontFgColor_Changed(object sender, SelectionChangedEventArgs e)
     {
-      if (fontColor.SelectedItem != null)
+      if (fontFgColor.SelectedItem != null)
       {
-        var item = fontColor.SelectedItem as ColorItem;
-
-        List<Run> highlighted = new List<Run>();
-        foreach (var block in chatBox.Document.Blocks)
-        {
-          if (block is Paragraph para)
-          {
-            foreach (var inline in para.Inlines)
-            {
-              if (inline.Foreground != null && inline.Foreground != chatBox.Foreground)
-              {
-                highlighted.Add(inline as Run);
-              }
-            }
-          }
-        }
+        var item = fontFgColor.SelectedItem as ColorItem;
 
         chatBox.Foreground = item.Brush;
-        DataManager.Instance.SetApplicationSetting("ChatFontColor", item.Name);
+        DataManager.Instance.SetApplicationSetting("ChatFontFgColor", item.Name);
+      }
+    }
 
-        highlighted.ForEach(run =>
-        {
-          run.Foreground = chatBox.Background;
-          run.Background = chatBox.Foreground;
-        });
+    private void FontBgColor_Changed(object sender, SelectionChangedEventArgs e)
+    {
+      if (fontBgColor.SelectedItem != null)
+      {
+        var item = fontBgColor.SelectedItem as ColorItem;
+
+        chatBox.Background = item.Brush;
+        DataManager.Instance.SetApplicationSetting("ChatFontBgColor", item.Name);
       }
     }
 

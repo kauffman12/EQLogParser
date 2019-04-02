@@ -37,7 +37,8 @@ namespace EQLogParser
 
       try
       {
-        int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, Parsing.ACTION_INDEX, StringComparison.Ordinal) > -1);
+        int max = Math.Min(15, line.Length - Parsing.ACTION_INDEX);
+        int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, Parsing.ACTION_INDEX, max, StringComparison.Ordinal) > -1);
 
         if (index < 0)
         {
@@ -90,7 +91,7 @@ namespace EQLogParser
                 else if ((end = line.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
                 {
                   chatType.Channel = line.Substring(start, end - start);
-                  chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1);
+                  chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1).ToLower();
                 }
                 break;
               case 2:

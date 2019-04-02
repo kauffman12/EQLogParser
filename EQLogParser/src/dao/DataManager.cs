@@ -18,6 +18,7 @@ namespace EQLogParser
     public event EventHandler<bool> EventsClearedActiveData;
 
     public string PlayerName { get; set; }
+    public string ServerName { get; set; }
 
     public static string ARCHIVE_DIR;
     private static string CONFIG_DIR;
@@ -378,6 +379,11 @@ namespace EQLogParser
       PlayerReplacement["Itself"] = name;
       UpdateVerifiedPlayers(name);
       PlayerName = name;
+    }
+
+    public void SetServerName(string server)
+    {
+      ServerName = server;
     }
 
     public string ReplacePlayer(string name, out bool replaced)
