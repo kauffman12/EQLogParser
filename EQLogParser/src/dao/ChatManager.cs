@@ -91,7 +91,7 @@ namespace EQLogParser
         {
           result = ZipFile.Open(fileName, mode);
         }
-        catch (IOException ex)
+        catch (IOException)
         {
           // wait for file to be freed
           Thread.Sleep(2000);

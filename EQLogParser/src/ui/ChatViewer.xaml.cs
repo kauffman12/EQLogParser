@@ -106,20 +106,20 @@ namespace EQLogParser
       {
         Running = true;
 
-        Task.Delay(200).ContinueWith(task =>
+        Task.Delay(50).ContinueWith(task =>
         {
           try
           {
             var chatList = CurrentIterator.Take(count).Reverse().ToList();
 
-            Dispatcher.InvokeAsync(() =>
+            if (chatList.Count > 0)
             {
-              try
+              Dispatcher.InvokeAsync(() =>
               {
-                Paragraph para = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 0) };
-
-                if (chatList.Count > 0)
+                try
                 {
+                  Paragraph para = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 0) };
+
                   for (int i = 0; i < chatList.Count; i++)
                   {
                     var text = chatList[i].Line;
@@ -163,30 +163,25 @@ namespace EQLogParser
                   else
                   {
                     blocks.InsertBefore(blocks.FirstBlock, para);
+                  }
 
-                    if (adjustScroll)
-                    {
-                      chatScroller.ScrollToVerticalOffset(0.40 * chatScroller.ExtentHeight);
-                    }
+                  if (!Connected)
+                  {
+                    chatScroller.ScrollChanged += Chat_ScrollChanged;
+                    Connected = true;
                   }
                 }
-
-                if (!Connected)
+                catch (Exception ex2)
                 {
-                  chatScroller.ScrollChanged += Chat_ScrollChanged;
-                  Connected = true;
+                  LOG.Error(ex2);
                 }
-              }
-              catch (Exception ex2)
-              {
-                LOG.Error(ex2);
-              }
-              finally
-              {
-                Running = false;
-              }
-  
-            }, DispatcherPriority.Background);
+                finally
+                {
+                  Running = false;
+                }
+
+              }, DispatcherPriority.Normal);
+            }
           }
           catch (Exception ex)
           {
@@ -247,13 +242,20 @@ namespace EQLogParser
 
     private void Chat_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-      if (e.VerticalChange < 0 && e.VerticalOffset / e.ExtentHeight < 0.35)
+      if (e.VerticalChange < 0 && e.VerticalOffset / e.ExtentHeight <= 0.10)
       {
-        DisplayPage(15, e.VerticalChange < 0);
+        int pageSize = (int)(100 * chatBox.ExtentHeight / 5000);
+        pageSize = pageSize > 250 ? 250 : pageSize;
+        DisplayPage(pageSize, e.VerticalChange < 0);
+      }
+
+      if (chatScroller.VerticalOffset >= 0 && e.ViewportHeightChange > 0)
+      {
+        chatScroller.ScrollToVerticalOffset(chatScroller.VerticalOffset + e.ViewportHeightChange);
       }
     }
 
-    private void Chat_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void Chat_KeyDown(object sender, KeyEventArgs e)
     {
       if (e.Key == Key.PageDown)
       {
