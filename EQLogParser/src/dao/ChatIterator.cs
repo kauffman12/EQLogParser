@@ -15,8 +15,8 @@ namespace EQLogParser
     private readonly string Keyword;
     private readonly string From;
 
-    private ZipArchive CurrentArchive = null;
-    private StreamReader CurrentReader = null;
+    private string CurrentArchive = null;
+    private StringReader CurrentReader = null;
     private Dictionary<string, byte> ValidChannels = null;
     private List<string> Directories;
     private List<string> Months;
@@ -52,7 +52,6 @@ namespace EQLogParser
     internal void Close()
     {
       CurrentReader?.Close();
-      CurrentArchive?.Dispose();
       CurrentReader = null;
       CurrentArchive = null;
     }
@@ -95,7 +94,6 @@ namespace EQLogParser
         if (CurrentReader == null)
         {
           CurrentMonth++;
-          CurrentArchive?.Dispose();
           CurrentArchive = null;
           return GetNextChat();
         }
@@ -104,12 +102,14 @@ namespace EQLogParser
       if (CurrentReader != null)
       {
         result = END_RESULT;
-        while (!CurrentReader.EndOfStream && result == END_RESULT)
+        string nextLine = null;
+        while ((nextLine = CurrentReader.ReadLine()) != null && result == END_RESULT)
         {
-          var chatType = ChatLineParser.ParseChatType(CurrentReader.ReadLine());
-          if (ValidChannels == null || ValidChannels.ContainsKey(chatType.Channel))
+          var chatType = ChatLineParser.ParseChatType(nextLine);
+
+          if (ValidChannels == null || (chatType.Channel != null && ValidChannels.ContainsKey(chatType.Channel)))
           {
-            if (From == null || chatType.Sender.Equals(From, StringComparison.OrdinalIgnoreCase))
+            if (From == null || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
             {
               if (Keyword != null)
               {
@@ -165,28 +165,40 @@ namespace EQLogParser
       return success;
     }
 
-    private StreamReader GetNextReader()
+    private StringReader GetNextReader()
     {
-      StreamReader result = null;
+      StringReader result = null;
 
       CurrentEntry++;
       if (CurrentEntry < Entries.Count)
       {
-        result = new StreamReader(CurrentArchive.GetEntry(Entries[CurrentEntry]).Open());
+        var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
+        if (archive != null)
+        {
+          var reader = new StreamReader(archive.GetEntry(Entries[CurrentEntry]).Open());
+          result = new StringReader(reader.ReadToEnd());
+          reader.Close();
+          archive.Dispose();
+        }
       }
 
       return result;
     }
 
-    private ZipArchive GetArchive()
+    private string GetArchive()
     {
-      ZipArchive result = null;
+      string result = null;
 
       if (CurrentDirectory > -1 && CurrentDirectory < Directories.Count && CurrentMonth > -1 && CurrentMonth < Months.Count)
       {
-        result = ZipFile.OpenRead(Months[CurrentMonth]);
-        Entries = result.Entries.Where(entry => entry.Name != ChatManager.INDEX).OrderByDescending(entry => entry.Name).Select(entry => entry.Name).ToList();
-        CurrentEntry = -1;
+        var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
+        if (archive != null)
+        {
+          Entries = archive.Entries.Where(entry => entry.Name != ChatManager.INDEX).OrderByDescending(entry => entry.Name).Select(entry => entry.Name).ToList();
+          CurrentEntry = -1;
+          result = Months[CurrentMonth];
+          archive.Dispose();
+        }
       }
 
       return result;
