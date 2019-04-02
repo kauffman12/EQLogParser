@@ -140,7 +140,7 @@ namespace EQLogParser
                 if ((end = line.IndexOf(":", start, StringComparison.Ordinal)) > -1)
                 {
                   chatType.Channel = line.Substring(start, end - start);
-                  chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1);
+                  chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1).ToLower();
                 }
               }
               break;
