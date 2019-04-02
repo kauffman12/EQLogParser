@@ -27,7 +27,7 @@ namespace EQLogParser
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.3.20";
+    private const string VERSION = "v1.4.3";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -737,20 +737,30 @@ namespace EQLogParser
           CastLineCount = DamageLineCount = HealLineCount = CastLinesProcessed = DamageLinesProcessed = HealLinesProcessed = FilePosition = 0;
 
           string name = "Uknown";
+          string server = "Uknown";
           if (dialog.FileName.Length > 0)
           {
             LOG.Info("Selected Log File: " + dialog.FileName);
             string fileName = dialog.FileName.Substring(dialog.FileName.LastIndexOf("\\") + 1);
+
+            int ext = fileName.LastIndexOf(".");
+            if (ext > -1)
+            {
+              fileName = fileName.Substring(0, ext);
+            }
+
             string[] parts = fileName.Split('_');
 
             if (parts.Length > 1)
             {
               name = parts[1];
+              server = parts[2];
             }
           }
 
-          PlayerChatManager = new ChatManager(name);
+          PlayerChatManager = new ChatManager(name + "." + server);
           DataManager.Instance.SetPlayerName(name);
+          DataManager.Instance.SetServerName(server);
           DataManager.Instance.Clear();
 
           NpcDamageManager.LastUpdateTime = double.NaN;

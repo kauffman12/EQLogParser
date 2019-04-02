@@ -55,7 +55,9 @@ namespace EQLogParser
         foreach (var dir in Directory.GetDirectories(DataManager.ARCHIVE_DIR))
         {
           string name = Path.GetFileName(dir);
-          if (Helpers.IsPossiblePlayerName(name))
+          var split = name.Split('.');
+
+          if (split.Length > 1 && split[1].Length > 3)
           {
             bool found = false;
             foreach (var sub in Directory.GetDirectories(dir))
@@ -76,6 +78,27 @@ namespace EQLogParser
       }
 
       return result.OrderBy(name => name).ToList();
+    }
+
+    internal static ZipArchive OpenArchive(string fileName, ZipArchiveMode mode)
+    {
+      ZipArchive result = null;
+
+      int tries = 10;
+      while (result == null && tries-- > 0)
+      {
+        try
+        {
+          result = ZipFile.Open(fileName, mode);
+        }
+        catch (IOException ex)
+        {
+          // wait for file to be freed
+          Thread.Sleep(2000);
+        }
+      }
+
+      return result;
     }
 
     internal static List<string> GetChannels(string player)
@@ -177,7 +200,8 @@ namespace EQLogParser
         SaveCurrent(true);
         string fileName = GetFileName(year, month);
         var mode = File.Exists(fileName) ? ZipArchiveMode.Update : ZipArchiveMode.Create;
-        CurrentArchive = ZipFile.Open(fileName, mode);
+
+        CurrentArchive = OpenArchive(fileName, mode);
         CurrentArchiveKey = archiveKey;
         LoadCache();
       }
