@@ -14,6 +14,8 @@ namespace EQLogParser
     internal const string INDEX = "index";
 
     private const int TIMEOUT = 3000;
+    private const string SELECTED_CHANNELS_FILE = "channels-selected.txt";
+
     private static readonly object LockObject = new object();
     private static string PLAYER_DIR;
 
@@ -37,8 +39,6 @@ namespace EQLogParser
 
         // create config dir if it doesn't exist
         Directory.CreateDirectory(PLAYER_DIR);
-
-        GetChannels(player).ForEach(channel => ChannelCache[channel] = 1);
       }
       catch (Exception ex)
       {
@@ -80,6 +80,24 @@ namespace EQLogParser
       return result.OrderBy(name => name).ToList();
     }
 
+    internal static void SetSelectedChannels(string player, List<string> channels)
+    {
+      try
+      {
+        var playerDir = DataManager.ARCHIVE_DIR + player;
+
+        // create config dir if it doesn't exist
+        Directory.CreateDirectory(playerDir);
+
+        var fileName = playerDir + @"\" + SELECTED_CHANNELS_FILE;
+        File.WriteAllLines(fileName, channels);
+      }
+      catch(Exception ex)
+      {
+        LOG.Error(ex);
+      }
+    }
+
     internal static ZipArchive OpenArchive(string fileName, ZipArchiveMode mode)
     {
       ZipArchive result = null;
@@ -101,12 +119,13 @@ namespace EQLogParser
       return result;
     }
 
-    internal static List<string> GetChannels(string player)
+    internal static List<ChannelDetails> GetChannels(string player)
     {
       string playerDir = DataManager.ARCHIVE_DIR + player;
       var file = playerDir + @"\channels.txt";
 
-      List<string> channelList = new List<string>();
+      var selected = GetSelectedChannels(player);
+      List<ChannelDetails> channelList = new List<ChannelDetails>();
 
       try
       {
@@ -115,7 +134,9 @@ namespace EQLogParser
           string[] lines = File.ReadAllLines(file);
           foreach (string line in lines)
           {
-            channelList.Add(line);
+            var isChecked = selected == null ? false : selected.Contains(line);
+            ChannelDetails details = new ChannelDetails { Text = line, IsChecked = isChecked };
+            channelList.Add(details);
           }
         }
       }
@@ -124,7 +145,7 @@ namespace EQLogParser
         LOG.Error(ex);
       }
 
-      return channelList.OrderBy(key => key).ToList();
+      return channelList.OrderBy(key => key.Text).ToList();
     }
 
     internal void Add(ChatType chatType)
@@ -378,6 +399,28 @@ namespace EQLogParser
       CurrentList = null;
       CurrentEntryKey = null;
       CurrentListModified = false;
+    }
+
+    private static List<string> GetSelectedChannels(string player)
+    {
+      List<string> result = null;
+
+      try
+      {
+        var playerDir = DataManager.ARCHIVE_DIR + player;
+
+        var fileName = playerDir + @"\" + SELECTED_CHANNELS_FILE;
+        if (File.Exists(fileName))
+        {
+          result = File.ReadAllLines(fileName).ToList();
+        }
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+      }
+
+      return result;
     }
 
     private void SaveChannels()

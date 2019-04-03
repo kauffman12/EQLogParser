@@ -66,7 +66,7 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
-  public class CheckedItem
+  public class ChannelDetails
   {
     public string Text { get; set; }
     public string SelectedText { get; set; }

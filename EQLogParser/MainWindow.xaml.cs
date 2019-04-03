@@ -27,7 +27,7 @@ namespace EQLogParser
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.4.3";
+    private const string VERSION = "v1.4.7";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
