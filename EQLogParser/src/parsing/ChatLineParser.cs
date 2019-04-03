@@ -14,7 +14,7 @@ namespace EQLogParser
 
     private static List<string> OtherCriteria = new List<string>
     {
-      " says,", " tells ", " shouts,", "says out of", " auctions,"
+      " says,", " tells ", " shouts,", "says out of", " auctions,", " told you,"
     };
 
     internal static ChatType Process(string line)
@@ -37,7 +37,8 @@ namespace EQLogParser
 
       try
       {
-        int max = Math.Min(15, line.Length - Parsing.ACTION_INDEX);
+        int count;
+        int max = Math.Min(16, line.Length - Parsing.ACTION_INDEX);
         int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, Parsing.ACTION_INDEX, max, StringComparison.Ordinal) > -1);
 
         if (index < 0)
@@ -45,11 +46,19 @@ namespace EQLogParser
           int criteriaIndex = -1;
           for (int i=0; i<OtherCriteria.Count; i++)
           {
-            criteriaIndex = line.IndexOf(OtherCriteria[i], Parsing.ACTION_INDEX, StringComparison.Ordinal);
-            if (criteriaIndex > -1)
+            int lastIndex = line.IndexOf("'", Parsing.ACTION_INDEX, StringComparison.Ordinal);
+            if (lastIndex > -1)
             {
-              index = i;
-              break;
+              count = lastIndex - Parsing.ACTION_INDEX;
+              if (count > 0)
+              {
+                criteriaIndex = line.IndexOf(OtherCriteria[i], Parsing.ACTION_INDEX, count, StringComparison.Ordinal);
+                if (criteriaIndex > -1)
+                {
+                  index = i;
+                  break;
+                }
+              }
             }
           }
 
@@ -102,6 +111,14 @@ namespace EQLogParser
                 break;
               case 4:
                 chatType.Channel = ChatChannels.AUCTION;
+                break;
+              case 5:
+                if (line.IndexOf(" told you,", criteriaIndex, 10, StringComparison.Ordinal) > -1)
+                {
+                  chatType.Channel = ChatChannels.TELL;
+                  chatType.ReceiverIsYou = true;
+                  chatType.Receiver = "You";
+                }
                 break;
             }
           }
