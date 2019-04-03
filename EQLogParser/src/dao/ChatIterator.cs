@@ -103,7 +103,7 @@ namespace EQLogParser
       {
         result = END_RESULT;
         string nextLine = null;
-        while ((nextLine = CurrentReader.ReadLine()) != null && result == END_RESULT)
+        while (result == END_RESULT && (nextLine = CurrentReader.ReadLine()) != null)
         {
           var chatType = ChatLineParser.ParseChatType(nextLine);
 
@@ -111,19 +111,22 @@ namespace EQLogParser
           {
             if (From == null || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
             {
-              if (Keyword != null)
+              if (!DataManager.Instance.CheckNameForPet(chatType.Sender) && Helpers.IsPossiblePlayerName(chatType.Sender))
               {
-                int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
-                int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
-                if (foundIndex > -1)
+                if (Keyword != null)
+                {
+                  int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
+                  int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
+                  if (foundIndex > -1)
+                  {
+                    result = chatType;
+                    chatType.KeywordStart = foundIndex;
+                  }
+                }
+                else
                 {
                   result = chatType;
-                  chatType.KeywordStart = foundIndex;
                 }
-              }
-              else
-              {
-                result = chatType;
               }
             }
           }
