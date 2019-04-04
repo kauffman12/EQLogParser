@@ -18,21 +18,21 @@ namespace EQLogParser
 
   public static class Labels
   {
-    public const string DD_NAME = "Direct Damage";
-    public const string DOT_NAME = "DoT Tick";
-    public const string DS_NAME = "Damage Shield";
-    public const string BANE_NAME = "Bane Damage";
-    public const string PROC_NAME = "Proc";
-    public const string RESIST_NAME = "Resisted Spells";
-    public const string HOT_NAME = "HoT Tick";
-    public const string HEAL_NAME = "Heal";
-    public const string NO_DATA = "No Data Available";
-    public const string UNASSIGNED_PET_OWNER = "Unknown Pet Owner";
-    public const string UNKNOWN_SPELL = "Unknown Spell";
-    public const string UNKNOWN_PLAYER = "Unknown Player";
-    public const string RAID_PLAYER = "Totals";
-    public const string HEAL_PARSE = "Healing";
-    public const string DAMAGE_PARSE = "Damage";
+    public const string DD = "Direct Damage";
+    public const string DOT = "DoT Tick";
+    public const string DS = "Damage Shield";
+    public const string BANE = "Bane Damage";
+    public const string PROC = "Proc";
+    public const string RESIST = "Resisted Spells";
+    public const string HOT = "HoT Tick";
+    public const string HEAL = "Heal";
+    public const string NODATA = "No Data Available";
+    public const string UNASSIGNED = "Unknown Pet Owner";
+    public const string UNKSPELL = "Unknown Spell";
+    public const string UNKPLAYER = "Unknown Player";
+    public const string RAID = "Totals";
+    public const string HEALPARSE = "Healing";
+    public const string DAMAGEPARSE = "Damage";
   }
 
   public static class ChatChannels
@@ -50,7 +50,7 @@ namespace EQLogParser
 
   public static class Parsing
   {
-    public const int ACTION_INDEX = 27;
+    public const int ACTIONINDEX = 27;
   }
 
   public interface ISummaryBuilder
@@ -64,6 +64,12 @@ namespace EQLogParser
   {
     public SolidColorBrush Brush { get; set; }
     public string Name { get; set; }
+  }
+
+  public class AutoCompleteText
+  {
+    public string Text { get; set; }
+    public List<string> Items { get; set; }
   }
 
   public class ChannelDetails

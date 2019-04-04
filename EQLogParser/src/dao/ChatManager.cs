@@ -21,17 +21,20 @@ namespace EQLogParser
     private static readonly object LockObject = new object();
     private static string PLAYER_DIR;
 
-    private Dictionary<string, Dictionary<string, byte>> ChannelEntryCache = null;
     private readonly Dictionary<string, byte> ChannelCache = new Dictionary<string, byte>();
+    private readonly Dictionary<string, byte> PlayerCache = new Dictionary<string, byte>();
+    private bool ChannelCacheUpdated = false;
+    private bool PlayerCacheUpdated = false;
+
+    private Dictionary<string, Dictionary<string, byte>> ChannelIndex = null;
     private List<ChatType> ChatTypes = new List<ChatType>();
     private List<ChatLine> CurrentList = null;
     private ZipArchive CurrentArchive = null;
     private string CurrentArchiveKey = null;
     private string CurrentEntryKey = null;
-    private bool ChannelEntryCacheUpdated = false;
+    private bool ChannelIndexUpdated = false;
     private bool CurrentListModified = false;
     private bool Running = false;
-    private bool ChannelsUpdated = false;
 
     internal ChatManager(string player)
     {
@@ -41,6 +44,9 @@ namespace EQLogParser
 
         // create config dir if it doesn't exist
         Directory.CreateDirectory(PLAYER_DIR);
+
+        GetSavedChannels(player).ForEach(channel => ChannelCache[channel] = 1);
+        GetPlayers(player).ForEach(channel => PlayerCache[channel] = 1);
       }
       catch (IOException ex)
       {
@@ -86,17 +92,13 @@ namespace EQLogParser
       return result.OrderBy(name => name).ToList();
     }
 
-    internal static void SetSelectedChannels(string player, List<string> channels)
+    internal static void SaveSelectedChannels(string player, List<string> channels)
     {
       try
       {
-        var playerDir = DataManager.ARCHIVE_DIR + player;
-
         // create config dir if it doesn't exist
-        Directory.CreateDirectory(playerDir);
-
-        var fileName = playerDir + @"\" + SELECTED_CHANNELS_FILE;
-        File.WriteAllLines(fileName, channels);
+        Directory.CreateDirectory(DataManager.ARCHIVE_DIR + player);
+        Helpers.SaveList(DataManager.ARCHIVE_DIR + player + @"\" + SELECTED_CHANNELS_FILE, channels);
       }
       catch (IOException ex)
       {
@@ -105,10 +107,6 @@ namespace EQLogParser
       catch (UnauthorizedAccessException uax)
       {
         LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
       }
     }
 
@@ -135,39 +133,24 @@ namespace EQLogParser
 
     internal static List<ChannelDetails> GetChannels(string player)
     {
-      string playerDir = DataManager.ARCHIVE_DIR + player;
-      var file = playerDir + @"\channels.txt";
-
       var selected = GetSelectedChannels(player);
       List<ChannelDetails> channelList = new List<ChannelDetails>();
 
-      try
+      foreach (string line in GetSavedChannels(player))
       {
-        if (File.Exists(file))
-        {
-          string[] lines = File.ReadAllLines(file);
-          foreach (string line in lines)
-          {
-            var isChecked = selected == null ? true : selected.Contains(line);
-            ChannelDetails details = new ChannelDetails { Text = line, IsChecked = isChecked };
-            channelList.Add(details);
-          }
-        }
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
+        var isChecked = selected == null ? true : selected.Contains(line);
+        ChannelDetails details = new ChannelDetails { Text = line, IsChecked = isChecked };
+        channelList.Add(details);
       }
 
       return channelList.OrderBy(key => key.Text).ToList();
+    }
+
+    internal static List<string> GetPlayers(string player)
+    {
+      string playerDir = DataManager.ARCHIVE_DIR + player;
+      var file = playerDir + @"\players.txt";
+      return Helpers.ReadList(file);
     }
 
     internal void Add(ChatType chatType)
@@ -182,6 +165,13 @@ namespace EQLogParser
           new Timer(new TimerCallback(ArchiveChat)).Change(TIMEOUT, Timeout.Infinite);
         }
       }
+    }
+
+    private static List<string> GetSavedChannels(string player)
+    {
+      string playerDir = DataManager.ARCHIVE_DIR + player;
+      var file = playerDir + @"\channels.txt";
+      return Helpers.ReadList(file);
     }
 
     private void ArchiveChat(object state)
@@ -218,7 +208,19 @@ namespace EQLogParser
           else
           {
             SaveCurrent(true);
-            SaveChannels();
+
+            if (ChannelCacheUpdated)
+            {
+              Helpers.SaveList(PLAYER_DIR + @"\channels.txt", ChannelCache.Keys.ToList());
+              ChannelCacheUpdated = false;
+            }
+
+            if (PlayerCacheUpdated)
+            {
+              Helpers.SaveList(PLAYER_DIR + @"\players.txt", PlayerCache.Keys.OrderBy(player => player).ToList());
+              PlayerCacheUpdated = false;
+            }
+
             Running = false;
           }
         }
@@ -298,8 +300,8 @@ namespace EQLogParser
 
     private void LoadCache()
     {
-      ChannelEntryCache = new Dictionary<string, Dictionary<string, byte>>();
-      ChannelEntryCacheUpdated = false;
+      ChannelIndex = new Dictionary<string, Dictionary<string, byte>>();
+      ChannelIndexUpdated = false;
 
       if (CurrentArchive != null && CurrentArchive.Mode != ZipArchiveMode.Create)
       {
@@ -315,10 +317,10 @@ namespace EQLogParser
                 var temp = reader.ReadLine().Split('|');
                 if (temp != null && temp.Length == 2)
                 {
-                  ChannelEntryCache[temp[0]] = new Dictionary<string, byte>();
+                  ChannelIndex[temp[0]] = new Dictionary<string, byte>();
                   foreach (var channel in temp[1].Split(','))
                   {
-                    ChannelEntryCache[temp[0]][channel] = 1;
+                    ChannelIndex[temp[0]][channel] = 1;
                   }
                 }
               }
@@ -339,7 +341,7 @@ namespace EQLogParser
     private void SaveCache()
     {
       var indexList = new List<string>();
-      foreach (var keyvalue in ChannelEntryCache)
+      foreach (var keyvalue in ChannelIndex)
       {
         var channels = new List<string>();
         foreach (var channel in (keyvalue.Value as Dictionary<string, byte>).Keys)
@@ -370,19 +372,22 @@ namespace EQLogParser
     {
       if (chatType.Channel != null)
       {
-        if (!ChannelEntryCache.ContainsKey(entryKey))
+        if (!ChannelIndex.ContainsKey(entryKey))
         {
-          ChannelEntryCache.Add(entryKey, new Dictionary<string, byte>());
+          ChannelIndex.Add(entryKey, new Dictionary<string, byte>());
         }
 
-        var channels = ChannelEntryCache[entryKey];
+        var channels = ChannelIndex[entryKey];
         if (!channels.ContainsKey(chatType.Channel))
         {
           channels[chatType.Channel] = 1;
-          ChannelEntryCacheUpdated = true;
+          ChannelIndexUpdated = true;
           AddChannel(chatType.Channel);
         }
       }
+
+      AddPlayer(chatType.Sender);
+      AddPlayer(chatType.Receiver);
     }
 
     private void SaveCurrent(bool closeArchive)
@@ -402,7 +407,7 @@ namespace EQLogParser
 
       if (closeArchive && CurrentArchive != null)
       {
-        if (ChannelEntryCacheUpdated)
+        if (ChannelIndexUpdated)
         {
           SaveCache();
         }
@@ -410,8 +415,8 @@ namespace EQLogParser
         CurrentArchive.Dispose();
         CurrentArchive = null;
         CurrentArchiveKey = null;
-        ChannelEntryCacheUpdated = false;
-        ChannelEntryCache = null;
+        ChannelIndexUpdated = false;
+        ChannelIndex = null;
 
       }
 
@@ -422,56 +427,14 @@ namespace EQLogParser
 
     private static List<string> GetSelectedChannels(string player)
     {
-      List<string> result = null;
-
-      try
+      List<string> result = null; // throw null to check case where file has never existed vs empty content
+      var playerDir = DataManager.ARCHIVE_DIR + player;
+      string fileName = playerDir + @"\" + SELECTED_CHANNELS_FILE;
+      if (File.Exists(fileName))
       {
-        var playerDir = DataManager.ARCHIVE_DIR + player;
-
-        var fileName = playerDir + @"\" + SELECTED_CHANNELS_FILE;
-        if (File.Exists(fileName))
-        {
-          result = File.ReadAllLines(fileName).ToList();
-        }
+        result = Helpers.ReadList(fileName);
       }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
-
       return result;
-    }
-
-    private void SaveChannels()
-    {
-      try
-      {
-        if (ChannelsUpdated)
-        {
-          var file = PLAYER_DIR + @"\channels.txt";
-          File.WriteAllLines(file, ChannelCache.Keys.ToList());
-        }
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
     }
 
     private void AddChannel(string channel)
@@ -479,7 +442,20 @@ namespace EQLogParser
       if (!ChannelCache.ContainsKey(channel))
       {
         ChannelCache[channel] = 1;
-        ChannelsUpdated = true;
+        ChannelCacheUpdated = true;
+      }
+    }
+
+    private void AddPlayer(string value)
+    {
+      if (!string.IsNullOrEmpty(value))
+      {
+        string player = value.ToLower(CultureInfo.CurrentCulture);
+        if (!PlayerCache.ContainsKey(player) && !DataManager.Instance.CheckNameForPet(player) && Helpers.IsPossiblePlayerName(player))
+        {
+          PlayerCache[player] = 1;
+          PlayerCacheUpdated = true;
+        }
       }
     }
 

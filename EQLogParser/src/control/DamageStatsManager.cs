@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -19,9 +20,9 @@ namespace EQLogParser
     internal Dictionary<string, byte> NpcNames = new Dictionary<string, byte>();
 
     private PlayerStats RaidTotals;
-    private ConcurrentDictionary<string, byte> PlayerHasPet = new ConcurrentDictionary<string, byte>();
-    private ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
-    private List<IAction> Resists = new List<IAction>();
+    private readonly ConcurrentDictionary<string, byte> PlayerHasPet = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
+    private readonly List<IAction> Resists = new List<IAction>();
     private List<NonPlayer> Selected;
     private bool IsBaneAvailable = false;
     private string Title;
@@ -49,7 +50,7 @@ namespace EQLogParser
       {
         FireNewStatsEvent(options);
 
-        RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
+        RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
         DamageGroups.Clear();
         NpcNames.Clear();
         PlayerHasPet.Clear();
@@ -117,12 +118,15 @@ namespace EQLogParser
       PlayerStats raidStats;
       if (overlayStats == null)
       {
-        overlayStats = new OverlayDamageStats();
-        overlayStats.TopLevelStats = new Dictionary<string, PlayerStats>();
-        overlayStats.AggregateStats = new Dictionary<string, PlayerStats>();
-        overlayStats.IndividualStats = new Dictionary<string, PlayerStats>();
-        overlayStats.UniqueNpcs = new Dictionary<string, byte>();
-        overlayStats.RaidStats = raidStats = new PlayerStats();
+        overlayStats = new OverlayDamageStats
+        {
+          TopLevelStats = new Dictionary<string, PlayerStats>(),
+          AggregateStats = new Dictionary<string, PlayerStats>(),
+          IndividualStats = new Dictionary<string, PlayerStats>(),
+          UniqueNpcs = new Dictionary<string, byte>(),
+          RaidStats = raidStats = new PlayerStats()
+        };
+
         raidStats.BeginTime = beginTime;
       }
       else
@@ -143,7 +147,7 @@ namespace EQLogParser
       raidStats.LastTime = beginTime;
       raidStats.TotalSeconds = raidStats.LastTime - raidStats.BeginTime + 1;
 
-      if (!DataManager.Instance.IsProbablyNotAPlayer(record.Attacker) && (showBane || record.Type != Labels.BANE_NAME))
+      if (!DataManager.Instance.IsProbablyNotAPlayer(record.Attacker) && (showBane || record.Type != Labels.BANE))
       {
         overlayStats.UniqueNpcs[record.Defender] = 1;
         raidStats.Total += record.Total;
@@ -156,11 +160,10 @@ namespace EQLogParser
           PetToPlayer[record.Attacker] = pname;
         }
 
-        string player = null;
-        bool isPet = PetToPlayer.TryGetValue(record.Attacker, out player);
+        bool isPet = PetToPlayer.TryGetValue(record.Attacker, out string player);
         bool needAggregate = isPet || (!isPet && PlayerHasPet.ContainsKey(record.Attacker) && overlayStats.TopLevelStats.ContainsKey(record.Attacker + " +Pets"));
 
-        if (!needAggregate || player == Labels.UNASSIGNED_PET_OWNER)
+        if (!needAggregate || player == Labels.UNASSIGNED)
         {
           // not a pet
           PlayerStats stats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
@@ -170,7 +173,7 @@ namespace EQLogParser
         }
         else
         {
-          string origName = player != null ? player : record.Attacker;
+          string origName = player ?? record.Attacker;
           string aggregateName = origName + " +Pets";
 
           PlayerStats aggregatePlayerStats;
@@ -281,7 +284,7 @@ namespace EQLogParser
 
       if (record != null && NpcNames.ContainsKey(record.Defender) && !DataManager.Instance.IsProbablyNotAPlayer(record.Attacker))
       {
-        if (record.Type == Labels.BANE_NAME)
+        if (record.Type == Labels.BANE)
         {
           IsBaneAvailable = true;
         }
@@ -319,7 +322,7 @@ namespace EQLogParser
         // generating new stats
         EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent()
         {
-          Type = Labels.DAMAGE_PARSE,
+          Type = Labels.DAMAGEPARSE,
           State = "COMPLETED",
           CombinedStats = combined,
           IsBaneAvailable = IsBaneAvailable
@@ -332,7 +335,7 @@ namespace EQLogParser
       if (options.RequestSummaryData)
       {
         // generating new stats
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGE_PARSE, State = "STARTED" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGEPARSE, State = "STARTED" });
       }
     }
 
@@ -341,7 +344,7 @@ namespace EQLogParser
       if (options.RequestSummaryData)
       {
         // nothing to do
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGE_PARSE, State = "NONPC" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGEPARSE, State = "NONPC" });
       }
 
       if (options.RequestChartData)
@@ -385,7 +388,7 @@ namespace EQLogParser
                 {
                   PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
 
-                  if (!options.IsBaneEanbled && record.Type == Labels.BANE_NAME)
+                  if (!options.IsBaneEanbled && record.Type == Labels.BANE)
                   {
                     stats.BaneHits++;
                   }
@@ -395,24 +398,22 @@ namespace EQLogParser
                     StatsUtil.UpdateStats(stats, record, block.BeginTime);
                     allStats[record.Attacker] = stats;
 
-                    string player = null;
-                    if (!PetToPlayer.TryGetValue(record.Attacker, out player) && !PlayerHasPet.ContainsKey(record.Attacker))
+                    if (!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerHasPet.ContainsKey(record.Attacker))
                     {
                       // not a pet
                       topLevelStats[record.Attacker] = stats;
                     }
                     else
                     {
-                      string origName = (player != null) ? player : record.Attacker;
-                      string aggregateName = (player == Labels.UNASSIGNED_PET_OWNER) ? origName : origName + " +Pets";
+                      string origName = player ?? record.Attacker;
+                      string aggregateName = (player == Labels.UNASSIGNED) ? origName : origName + " +Pets";
 
                       PlayerStats aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
                       StatsUtil.UpdateStats(aggregatePlayerStats, record, block.BeginTime);
                       allStats[aggregateName] = aggregatePlayerStats;
                       topLevelStats[aggregateName] = aggregatePlayerStats;
 
-                      Dictionary<string, PlayerStats> children;
-                      if (!childrenStats.TryGetValue(aggregateName, out children))
+                      if (!childrenStats.TryGetValue(aggregateName, out Dictionary<string, PlayerStats> children))
                       {
                         childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
                       }
@@ -450,12 +451,10 @@ namespace EQLogParser
 
           Parallel.ForEach(individualStats.Values, stats =>
           {
-            PlayerStats topLevel;
-            if (topLevelStats.TryGetValue(stats.Name, out topLevel))
+            if (topLevelStats.TryGetValue(stats.Name, out PlayerStats topLevel))
             {
               uint totalDeaths = 0;
-              Dictionary<string, PlayerStats> children;
-              if (childrenStats.TryGetValue(stats.Name, out children))
+              if (childrenStats.TryGetValue(stats.Name, out Dictionary<string, PlayerStats> children))
               {
                 foreach (var child in children.Values)
                 {
@@ -466,8 +465,7 @@ namespace EQLogParser
                     child.Percent = Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                   }
 
-                  uint count;
-                  if (deathCounts.TryGetValue(child.Name, out count))
+                  if (deathCounts.TryGetValue(child.Name, out uint count))
                   {
                     child.Deaths = count;
                     totalDeaths += child.Deaths;
@@ -482,22 +480,24 @@ namespace EQLogParser
             {
               StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
 
-              uint count;
-              if (deathCounts.TryGetValue(stats.Name, out count))
+              if (deathCounts.TryGetValue(stats.Name, out uint count))
               {
                 stats.Deaths = count;
               }
             }
           });
 
-          combined = new CombinedDamageStats();
-          combined.RaidStats = RaidTotals;
-          combined.UniqueClasses = new Dictionary<string, byte>();
-          combined.Children = new Dictionary<string, List<PlayerStats>>();
-          combined.StatsList = topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
-          combined.TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title;
-          combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds);
-          combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Damage ", StatsUtil.FormatTotals(RaidTotals.DPS));
+          combined = new CombinedDamageStats
+          {
+            RaidStats = RaidTotals,
+            UniqueClasses = new Dictionary<string, byte>(),
+            Children = new Dictionary<string, List<PlayerStats>>(),
+            StatsList = topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList(),
+            TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
+            TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
+            TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Damage ", StatsUtil.FormatTotals(RaidTotals.DPS))
+          };
+
           combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
           combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
@@ -506,29 +506,23 @@ namespace EQLogParser
             combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
             combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
 
-            Dictionary<string, PlayerStats> children;
-            if (childrenStats.TryGetValue(combined.StatsList[i].Name, out children))
+            if (childrenStats.TryGetValue(combined.StatsList[i].Name, out Dictionary<string, PlayerStats> children))
             {
               combined.Children.Add(combined.StatsList[i].Name, children.Values.OrderByDescending(stats => stats.Total).ToList());
             }
           }
         }
       }
-      catch (Exception ex)
+      catch (ArgumentNullException anx)
       {
-        LOG.Error(ex);
+        LOG.Error(anx);
+      }
+      catch (AggregateException agx)
+      {
+        LOG.Error(agx);
       }
 
       FireCompletedEvent(options, combined);
-    }
-
-    private void UpdateSubStats(PlayerSubStats subStats, DamageRecord record, double beginTime)
-    {
-      uint critHits = subStats.CritHits;
-      StatsUtil.UpdateStats(subStats, record, beginTime);
-
-      Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
-      Helpers.LongIntAddHelper.Add(values, record.Total, 1);
     }
 
     public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
@@ -544,9 +538,9 @@ namespace EQLogParser
         {
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {
-            string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS));
-            string timeFormat = string.Format(StatsUtil.TIME_FORMAT, stats.TotalSeconds);
+            string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
+            string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS));
+            string timeFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, stats.TotalSeconds);
             list.Add(playerFormat + damageFormat + " " + timeFormat);
           }
         }
@@ -556,6 +550,15 @@ namespace EQLogParser
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details };
+    }
+
+    private static void UpdateSubStats(PlayerSubStats subStats, DamageRecord record, double beginTime)
+    {
+      uint critHits = subStats.CritHits;
+      StatsUtil.UpdateStats(subStats, record, beginTime);
+
+      Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
+      Helpers.LongIntAddHelper.Add(values, record.Total, 1);
     }
   }
 }

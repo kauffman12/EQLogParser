@@ -28,7 +28,7 @@ namespace EQLogParser
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.4.8";
+    private const string VERSION = "v1.4.9";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -107,7 +107,7 @@ namespace EQLogParser
           verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersView.Count + ")";
         });
 
-        parseList.ItemsSource = new List<string>() { Labels.DAMAGE_PARSE, Labels.HEAL_PARSE };
+        parseList.ItemsSource = new List<string>() { Labels.DAMAGEPARSE, Labels.HEALPARSE };
         parseList.SelectedIndex = 0;
 
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
@@ -224,7 +224,7 @@ namespace EQLogParser
 
     internal void AddDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
-      AddParse(Labels.DAMAGE_PARSE, DamageStatsManager.Instance, combined, selected);
+      AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected);
     }
 
     private void Window_Closed(object sender, EventArgs e)
@@ -473,7 +473,7 @@ namespace EQLogParser
       var table = sender as DamageSummary;
       var options = new DamageStatsOptions() { IsBaneEanbled = table.IsBaneEnabled(), RequestChartData = true };
       DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-      UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
+      UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
@@ -481,7 +481,7 @@ namespace EQLogParser
       var table = sender as HealingSummary;
       var options = new HealingStatsOptions() { IsAEHealingEanbled = table.IsAEHealingEnabled(), RequestChartData = true };
       HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-      UpdateParse(Labels.HEAL_PARSE, data.Selected);
+      UpdateParse(Labels.HEALPARSE, data.Selected);
     }
 
     private void RepositionCharts(DocumentWindow window)

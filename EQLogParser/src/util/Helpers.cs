@@ -5,7 +5,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Security;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -91,6 +93,8 @@ namespace EQLogParser
 
   class Helpers
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     internal static TimedActionComparer TimedActionComparer = new TimedActionComparer();
     internal static ReverseTimedActionComparer ReverseTimedActionComparer = new ReverseTimedActionComparer();
     internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
@@ -199,6 +203,53 @@ namespace EQLogParser
       else
       {
         window.Close();
+      }
+    }
+
+    internal static List<string> ReadList(string fileName)
+    {
+      List<string> result = new List<string>();
+
+      try
+      {
+        if (File.Exists(fileName))
+        {
+          result.AddRange(File.ReadAllLines(fileName));
+        }
+      }
+      catch (IOException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
+      }
+
+      return result;
+    }
+
+    internal static void SaveList(string fileName, List<string> list)
+    {
+      try
+      {
+        File.WriteAllLines(fileName, list);
+      }
+      catch (IOException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
     }
 
