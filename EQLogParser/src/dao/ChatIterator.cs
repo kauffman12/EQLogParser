@@ -14,7 +14,10 @@ namespace EQLogParser
     private readonly string Home;
     private readonly string Keyword;
     private readonly string From;
+    private readonly double StartDate;
+    private readonly double EndDate;
 
+    private DateUtil DateUtil = new DateUtil();
     private string CurrentArchive = null;
     private StringReader CurrentReader = null;
     private Dictionary<string, byte> ValidChannels = null;
@@ -25,7 +28,8 @@ namespace EQLogParser
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
 
-    internal ChatIterator(string player, List<string> channels = null, string from = null, string keyword = null)
+    internal ChatIterator(string player, List<string> channels = null, double startDate = double.NaN, 
+      double endDate = double.NaN, string from = null, string keyword = null)
     {
       Home = DataManager.ARCHIVE_DIR + player;
 
@@ -45,6 +49,8 @@ namespace EQLogParser
         channels.ForEach(chan => ValidChannels[chan] = 1);
       }
 
+      StartDate = startDate;
+      EndDate = endDate;
       Keyword = keyword;
       From = from;
     }
@@ -109,23 +115,26 @@ namespace EQLogParser
 
           if (ValidChannels == null || (chatType.Channel != null && ValidChannels.ContainsKey(chatType.Channel)))
           {
-            if (From == null || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
+            if ((double.IsNaN(StartDate) || ParseDate(chatType.Line) >= StartDate) && (double.IsNaN(EndDate) || ParseDate(chatType.Line) < EndDate))
             {
-              if (!DataManager.Instance.CheckNameForPet(chatType.Sender) && Helpers.IsPossiblePlayerName(chatType.Sender))
+              if (From == null || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
               {
-                if (Keyword != null)
+                if (!DataManager.Instance.CheckNameForPet(chatType.Sender) && Helpers.IsPossiblePlayerName(chatType.Sender))
                 {
-                  int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
-                  int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
-                  if (foundIndex > -1)
+                  if (Keyword != null)
+                  {
+                    int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
+                    int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
+                    if (foundIndex > -1)
+                    {
+                      result = chatType;
+                      chatType.KeywordStart = foundIndex;
+                    }
+                  }
+                  else
                   {
                     result = chatType;
-                    chatType.KeywordStart = foundIndex;
                   }
-                }
-                else
-                {
-                  result = chatType;
                 }
               }
             }
@@ -205,6 +214,12 @@ namespace EQLogParser
       }
 
       return result;
+    }
+
+    private double ParseDate(string line)
+    {
+      string timeString = line.Substring(1, 24);
+      return DateUtil.ParseDate(timeString, out double precise);
     }
   }
 }
