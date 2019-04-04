@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Security;
 
 namespace EQLogParser
 {
@@ -97,11 +100,11 @@ namespace EQLogParser
         SETTINGS_FILE = CONFIG_DIR + @"\settings.txt";
 
         // create config dir if it doesn't exist
-        System.IO.Directory.CreateDirectory(CONFIG_DIR);
+        Directory.CreateDirectory(CONFIG_DIR);
 
-        if (System.IO.File.Exists(SETTINGS_FILE))
+        if (File.Exists(SETTINGS_FILE))
         {
-          string[] lines = System.IO.File.ReadAllLines(SETTINGS_FILE);
+          string[] lines = File.ReadAllLines(SETTINGS_FILE);
           foreach (string line in lines)
           {
             string[] parts = line.Split('=');
@@ -112,28 +115,44 @@ namespace EQLogParser
           }
         }
       }
-      catch (Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
 
       // Populate generated pets
       try
       {
-        if (System.IO.File.Exists(@"data\petnames.txt"))
+        if (File.Exists(@"data\petnames.txt"))
         {
-          string[] lines = System.IO.File.ReadAllLines(@"data\petnames.txt");
+          string[] lines = File.ReadAllLines(@"data\petnames.txt");
           lines.ToList().ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
         }
       }
-      catch (Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
 
       try
       {
-        if (System.IO.File.Exists(@"data\spells.txt"))
+        if (File.Exists(@"data\spells.txt"))
         {
           DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
           string[] lines = System.IO.File.ReadAllLines(@"data\spells.txt");
@@ -141,9 +160,9 @@ namespace EQLogParser
           foreach (string line in lines)
           {
             string[] data = line.Split('^');
-            int.TryParse(data[2], out int beneficial);
-            byte.TryParse(data[3], out byte target);
-            ushort.TryParse(data[4], out ushort classMask);
+            int beneficial = int.Parse(data[2], CultureInfo.CurrentCulture);
+            byte target = byte.Parse(data[3], CultureInfo.CurrentCulture);
+            ushort classMask = ushort.Parse(data[4], CultureInfo.CurrentCulture);
             SpellData spellData = new SpellData()
             {
               ID = string.Intern(data[0]),
@@ -154,15 +173,15 @@ namespace EQLogParser
               ClassMask = classMask,
               LandsOnYou = string.Intern(data[5]),
               LandsOnOther = string.Intern(data[6]),
-              Damaging = byte.Parse(data[7]) == 1,
-              IsProc = byte.Parse(data[8]) == 1
+              Damaging = byte.Parse(data[7], CultureInfo.CurrentCulture) == 1,
+              IsProc = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1
             };
 
             SpellsDB[spellData.ID] = spellData;
             SpellsNameDB[spellData.Spell] = spellData;
             SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
 
-            if (spellData.LandsOnOther.StartsWith("'s "))
+            if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
             {
               helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
             }
@@ -171,16 +190,24 @@ namespace EQLogParser
               helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
             }
 
-            if (spellData.LandsOnYou != "" && spellData.LandsOnOther != "") // just do stuff in common
+            if (spellData.LandsOnYou.Length > 0 && spellData.LandsOnOther.Length > 0) // just do stuff in common
             {
               helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
             }
           }
         }
       }
-      catch (Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
 
       Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
@@ -456,7 +483,7 @@ namespace EQLogParser
     public SpellData GetSpellByAbbrv(string abbrv)
     {
       SpellData result = null;
-      if (abbrv != "" && abbrv != Labels.UNKNOWN_SPELL && SpellsAbbrvDB.ContainsKey(abbrv))
+      if (abbrv.Length > 0 && abbrv != Labels.UNKNOWN_SPELL && SpellsAbbrvDB.ContainsKey(abbrv))
       {
         result = SpellsAbbrvDB[abbrv];
       }
@@ -466,7 +493,7 @@ namespace EQLogParser
     public SpellData GetSpellByName(string name)
     {
       SpellData result = null;
-      if (name != "" && name != Labels.UNKNOWN_SPELL && SpellsNameDB.ContainsKey(name))
+      if (name.Length > 0 && name != Labels.UNKNOWN_SPELL && SpellsNameDB.ContainsKey(name))
       {
         result = SpellsNameDB[name];
       }

@@ -4,6 +4,7 @@ using FontAwesome.WPF;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace EQLogParser
   public partial class MainWindow : Window
   {
     // binding property
-    public ObservableCollection<SortableName> VerifiedPlayersProperty { get; set; }
+    public ObservableCollection<SortableName> VerifiedPlayersProperty => VerifiedPlayersView;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -106,8 +107,6 @@ namespace EQLogParser
           verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersView.Count + ")";
         });
 
-        VerifiedPlayersProperty = VerifiedPlayersView;
-
         parseList.ItemsSource = new List<string>() { Labels.DAMAGE_PARSE, Labels.HEAL_PARSE };
         parseList.SelectedIndex = 0;
 
@@ -143,6 +142,7 @@ namespace EQLogParser
       catch (Exception e)
       {
         LOG.Error(e);
+        throw;
       }
       finally
       {
@@ -518,9 +518,9 @@ namespace EQLogParser
     private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
     {
       int lastMins = -1;
-      if (sender is MenuItem item && item.Tag != null && item.Tag.ToString() != "")
+      if (sender is MenuItem item && !string.IsNullOrEmpty(item.Tag as string))
       {
-        lastMins = Convert.ToInt32(item.Tag.ToString()) * 60;
+        lastMins = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
       }
 
       OpenLogFile(false, lastMins);
@@ -545,10 +545,10 @@ namespace EQLogParser
 
           bytesReadTitle.Content = "Reading:";
           processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
-          double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double) FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          double castPercent = CastLineCount > 0 ? Math.Round((double) CastLinesProcessed / CastLineCount * 100, 1) : 0;
-          double damagePercent = DamageLineCount > 0 ? Math.Round((double) DamageLinesProcessed / DamageLineCount * 100, 1) : 0;
-          double healPercent = HealLineCount > 0 ? Math.Round((double) HealLinesProcessed / HealLineCount * 100, 1) : 0;
+          double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
+          double castPercent = CastLineCount > 0 ? Math.Round((double)CastLinesProcessed / CastLineCount * 100, 1) : 0;
+          double damagePercent = DamageLineCount > 0 ? Math.Round((double)DamageLinesProcessed / DamageLineCount * 100, 1) : 0;
+          double healPercent = HealLineCount > 0 ? Math.Round((double)HealLinesProcessed / HealLineCount * 100, 1) : 0;
           bytesReadLabel.Content = filePercent + "%";
 
           if ((filePercent >= 100 || MonitorOnly) && EQLogReader.FileLoadComplete)
@@ -579,7 +579,7 @@ namespace EQLogParser
           }
           else
           {
-            Task.Delay(500).ContinueWith(task => UpdateLoadingProgress());
+            _ = Task.Delay(500).ContinueWith(task => UpdateLoadingProgress(), TaskScheduler.Default);
           }
 
           Busy(false);
@@ -658,7 +658,7 @@ namespace EQLogParser
 
     private void PlayerParseTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-      if (playerParseTextBox.Text == "" || playerParseTextBox.Text == SHARE_DPS_LABEL)
+      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == SHARE_DPS_LABEL)
       {
         copyToEQButton.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
@@ -686,7 +686,7 @@ namespace EQLogParser
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
           string players = count == 1 ? "Player" : "Players";
-          sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
+          sharePlayerParseLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0} {1} Selected", count, players);
         }
 
         sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
@@ -700,8 +700,7 @@ namespace EQLogParser
     {
       if (sender is ComboBox comboBox)
       {
-        var selected = comboBox.SelectedItem as SortableName;
-        if (comboBox.DataContext is PetMapping mapping && selected != null && selected.Name != mapping.Owner)
+        if (comboBox.DataContext is PetMapping mapping && comboBox.SelectedItem is SortableName selected && selected.Name != mapping.Owner)
         {
           DataManager.Instance.UpdatePetToPlayer(mapping.Pet, selected.Name);
           petMappingGrid.CommitEdit();
@@ -741,9 +740,9 @@ namespace EQLogParser
           if (dialog.FileName.Length > 0)
           {
             LOG.Info("Selected Log File: " + dialog.FileName);
-            string fileName = dialog.FileName.Substring(dialog.FileName.LastIndexOf("\\") + 1);
+            string fileName = dialog.FileName.Substring(dialog.FileName.LastIndexOf("\\", StringComparison.Ordinal) + 1);
 
-            int ext = fileName.LastIndexOf(".");
+            int ext = fileName.LastIndexOf(".", StringComparison.Ordinal);
             if (ext > -1)
             {
               fileName = fileName.Substring(0, ext);
@@ -773,12 +772,13 @@ namespace EQLogParser
       catch (Exception e)
       {
         LOG.Error(e);
+        throw;
       }
     }
 
     private void FileLoadingCallback(string line, long position)
     {
-      int sleep = (int) ((DamageProcessor.Size() + HealingProcessor.Size() + CastProcessor.Size()) / 5000);
+      int sleep = (int)((DamageProcessor.Size() + HealingProcessor.Size() + CastProcessor.Size()) / 5000);
       if (sleep > 10)
       {
         Thread.Sleep(5 * (sleep - 10));

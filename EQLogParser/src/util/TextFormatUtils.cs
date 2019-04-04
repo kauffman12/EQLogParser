@@ -1,5 +1,6 @@
 ﻿
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -22,7 +23,7 @@ namespace EQLogParser
 
       if (title != null)
       {
-        sb.AppendFormat(BB_TITLE, title);
+        sb.AppendFormat(CultureInfo.CurrentCulture, BB_TITLE, title);
       }
 
       // start table
@@ -30,7 +31,7 @@ namespace EQLogParser
 
       // header
       sb.Append(BB_ROW_START);
-      header.ForEach(item => sb.AppendFormat(BB_CELL_HEADER, item));
+      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, BB_CELL_HEADER, item));
       sb.Append(BB_ROW_END);
 
       // data
@@ -40,16 +41,15 @@ namespace EQLogParser
         var first = row.FirstOrDefault();
         if (first != null)
         {
-          sb.AppendFormat(BB_CELL_FIRST, first);
+          sb.AppendFormat(CultureInfo.CurrentCulture, BB_CELL_FIRST, first);
         }
 
-        row.Skip(1).ToList().ForEach(item => sb.AppendFormat(BB_CELL_BODY, item));
+        row.Skip(1).ToList().ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, BB_CELL_BODY, item));
         sb.Append(BB_ROW_END);
       });
 
       // end table
       sb.Append(BB_TABLE_END);
-
       return sb.ToString();
     }
   }

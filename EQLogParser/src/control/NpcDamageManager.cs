@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace EQLogParser
 {
@@ -30,12 +31,12 @@ namespace EQLogParser
       if (type == Labels.DOT_NAME || type == Labels.DS_NAME)
       {
         // DoTs or DS will show upper case when they shouldn't because they start a sentence so try lower case first
-        npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0]) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
+        npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
       }
       else
       {
         // DDs are correct but still need to deal with names saved by a DoT so try upper case second
-        npc = DataManager.Instance.GetNonPlayer(defender) ?? DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0]) + defender.Substring(1));
+        npc = DataManager.Instance.GetNonPlayer(defender) ?? DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1));
       }
 
       return npc;
