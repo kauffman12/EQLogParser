@@ -14,8 +14,8 @@ namespace EQLogParser
     private readonly string Home;
     private readonly string Keyword;
     private readonly string From;
-    private readonly double StartDate;
-    private readonly double EndDate;
+    private readonly double StartDate = 0;
+    private readonly double EndDate = 0;
 
     private DateUtil DateUtil = new DateUtil();
     private string CurrentArchive = null;
@@ -28,8 +28,8 @@ namespace EQLogParser
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
 
-    internal ChatIterator(string player, List<string> channels = null, double startDate = double.NaN, 
-      double endDate = double.NaN, string from = null, string keyword = null)
+    internal ChatIterator(string player, List<string> channels = null, double startDate = 0, 
+      double endDate = 0, string from = null, string keyword = null)
     {
       Home = DataManager.ARCHIVE_DIR + player;
 
@@ -115,7 +115,7 @@ namespace EQLogParser
 
           if (ValidChannels == null || (chatType.Channel != null && ValidChannels.ContainsKey(chatType.Channel)))
           {
-            if ((double.IsNaN(StartDate) || ParseDate(chatType.Line) >= StartDate) && (double.IsNaN(EndDate) || ParseDate(chatType.Line) < EndDate))
+            if ((StartDate == 0 || ParseDate(chatType.Line) >= StartDate) && (EndDate == 0 || ParseDate(chatType.Line) < EndDate))
             {
               if (From == null || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
               {
@@ -219,7 +219,8 @@ namespace EQLogParser
     private double ParseDate(string line)
     {
       string timeString = line.Substring(1, 24);
-      return DateUtil.ParseDate(timeString, out double precise);
+      double parsed = DateUtil.ParseDate(timeString, out double precise);
+      return double.IsNaN(parsed) ? 0 : parsed;
     }
   }
 }

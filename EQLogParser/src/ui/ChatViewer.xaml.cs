@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -37,8 +36,8 @@ namespace EQLogParser
     private string LastPlayerSelection = null;
     private string LastTextFilter = null;
     private string LastFromFilter = null;
-    private double LastStartDate = double.NaN;
-    private double LastEndDate = double.NaN;
+    private double LastStartDate = 0;
+    private double LastEndDate = 0;
     private bool Connected = false;
     private bool Ready = false;
 
@@ -105,98 +104,89 @@ namespace EQLogParser
       if (!Running)
       {
         Running = true;
-
         Task.Delay(10).ContinueWith(task =>
         {
-          try
+          var chatList = CurrentIterator.Take(count).ToList();
+          if (chatList.Count > 0)
           {
-            var chatList = CurrentIterator.Take(count).ToList();
-
-            if (chatList.Count > 0)
+            Dispatcher.InvokeAsync(() =>
             {
-              Dispatcher.InvokeAsync(() =>
+              try
               {
-                try
+                bool needScroll = false;
+                if (chatBox.Document.Blocks.Count == 0)
                 {
-                  bool needScroll = false;
-                  if (chatBox.Document.Blocks.Count == 0)
-                  {
-                    MainParagraph = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
-                    chatBox.Document.Blocks.Add(MainParagraph);
-                    MainParagraph.Inlines.Add(new Run());
-                    needScroll = true;
-                  }
-
-                  for (int i = 0; i < chatList.Count; i++)
-                  {
-                    var text = chatList[i].Line;
-
-                    Span span = new Span();
-                    if (LastTextFilter != null && chatList[i].KeywordStart > -1)
-                    {
-                      var first = text.Substring(0, chatList[i].KeywordStart);
-                      var second = text.Substring(chatList[i].KeywordStart, LastTextFilter.Length);
-                      var last = text.Substring(chatList[i].KeywordStart + LastTextFilter.Length);
-
-                      if (first.Length > 0)
-                      {
-                        span.Inlines.Add(new Run(first));
-                      }
-
-                      span.Inlines.Add(new Run { Text = second, FontStyle = FontStyles.Italic, FontWeight = FontWeights.Bold });
-
-                      if (last.Length > 0)
-                      {
-                        span.Inlines.Add(new Run(last));
-                      }
-                    }
-                    else
-                    {
-                      span.Inlines.Add(new Run(text));
-                    }
-
-                    MainParagraph.Inlines.InsertAfter(MainParagraph.Inlines.FirstInline, span);
-
-                    if (i != 0)
-                    {
-                      span.Inlines.Add(Environment.NewLine);
-                    }
-
-                    CurrentLineCount++;
-                  }
-
-                  if (needScroll)
-                  {
-                    chatScroller.ScrollToEnd();
-                  }
-
-                  if (!Connected)
-                  {
-                    chatScroller.ScrollChanged += Chat_ScrollChanged;
-                    Connected = true;
-                  }
-
-                  statusCount.Text = CurrentLineCount + " Lines";
-                }
-                catch (Exception ex2)
-                {
-                  LOG.Error(ex2);
-                }
-                finally
-                {
-                  Running = false;
+                  MainParagraph = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
+                  chatBox.Document.Blocks.Add(MainParagraph);
+                  MainParagraph.Inlines.Add(new Run());
+                  needScroll = true;
                 }
 
-              }, DispatcherPriority.Normal);
-            }
-            else
-            {
-              Running = false;
-            }
+                for (int i = 0; i < chatList.Count; i++)
+                {
+                  var text = chatList[i].Line;
+
+                  Span span = new Span();
+                  if (LastTextFilter != null && chatList[i].KeywordStart > -1)
+                  {
+                    var first = text.Substring(0, chatList[i].KeywordStart);
+                    var second = text.Substring(chatList[i].KeywordStart, LastTextFilter.Length);
+                    var last = text.Substring(chatList[i].KeywordStart + LastTextFilter.Length);
+
+                    if (first.Length > 0)
+                    {
+                      span.Inlines.Add(new Run(first));
+                    }
+
+                    span.Inlines.Add(new Run { Text = second, FontStyle = FontStyles.Italic, FontWeight = FontWeights.Bold });
+
+                    if (last.Length > 0)
+                    {
+                      span.Inlines.Add(new Run(last));
+                    }
+                  }
+                  else
+                  {
+                    span.Inlines.Add(new Run(text));
+                  }
+
+                  MainParagraph.Inlines.InsertAfter(MainParagraph.Inlines.FirstInline, span);
+
+                  if (i != 0)
+                  {
+                    span.Inlines.Add(Environment.NewLine);
+                  }
+
+                  CurrentLineCount++;
+                }
+
+                if (needScroll)
+                {
+                  chatScroller.ScrollToEnd();
+                }
+
+                if (!Connected)
+                {
+                  chatScroller.ScrollChanged += Chat_ScrollChanged;
+                  Connected = true;
+                }
+
+                statusCount.Text = CurrentLineCount + " Lines";
+              }
+              catch (Exception ex2)
+              {
+                LOG.Error(ex2);
+              }
+              finally
+              {
+                Running = false;
+              }
+
+            }, DispatcherPriority.Normal);
           }
-          catch (Exception ex)
+          else
           {
-            LOG.Error(ex);
+            Running = false;
           }
         });
       }
@@ -464,7 +454,7 @@ namespace EQLogParser
 
     private double GetEndDate()
     {
-      double result = double.NaN;
+      double result = 0;
 
       if (DateTime.TryParse(endDate.Text, out DateTime value))
       {
@@ -476,7 +466,7 @@ namespace EQLogParser
 
     private double GetStartDate()
     {
-      double result = double.NaN;
+      double result = 0;
 
       if (DateTime.TryParse(startDate.Text, out DateTime value))
       {
@@ -523,6 +513,7 @@ namespace EQLogParser
       if (e.Key == Key.Escape)
       {
         ResetDateText(sender);
+        chatBox.Focus();
       }
       else if (e.Key == Key.Enter)
       {
