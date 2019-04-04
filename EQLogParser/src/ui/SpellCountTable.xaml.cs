@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -38,7 +40,7 @@ namespace EQLogParser
 
       dataGrid.Sorting += (s, e2) =>
       {
-        if (e2.Column.Header != null && (e2.Column.Header.ToString() != ""))
+        if (!string.IsNullOrEmpty(e2.Column.Header as string))
         {
           e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Ascending;
         }
@@ -218,6 +220,7 @@ namespace EQLogParser
           catch (Exception ex)
           {
             LOG.Error(ex);
+            throw;
           }
           finally
           {
@@ -228,16 +231,14 @@ namespace EQLogParser
             });
             running = false;
           }
-        });
+        }, TaskScheduler.Default);
       }
     }
 
     private uint UpdateMaps(string id, string player, uint playerCount, Dictionary<string, uint> maxCounts, Dictionary<string, uint> totalCountMap,
       Dictionary<string, uint> uniqueSpellsMap, Dictionary<string, Dictionary<string, uint>> filteredPlayerMap, bool received, uint totalCasts)
     {
-      uint updatedCount = totalCasts;
       var spellData = TheSpellCounts.UniqueSpells[id];
-
       if (CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.Beneficial) || (CurrentSpellType == 2 && !spellData.Beneficial))
       {
         string name = spellData.SpellAbbrv;
@@ -294,12 +295,10 @@ namespace EQLogParser
         foreach (var item in dataGrid.Items)
         {
           var counts = item as SpellCountRow;
-          List<string> row = new List<string>();
-
-          row.Add(counts.Spell);
+          List<string> row = new List<string> { counts.Spell };
           foreach (var value in counts.Values)
           {
-            row.Add(value.ToString());
+            row.Add(value.ToString(CultureInfo.CurrentCulture));
           }
 
           data.Add(row);
@@ -308,9 +307,13 @@ namespace EQLogParser
         string result = TextFormatUtils.BuildBBCodeTable(header, data, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
-      catch (Exception ex)
+      catch (ArgumentNullException ane)
       {
         Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
+        LOG.Error(ane);
+      }
+      catch (ExternalException ex)
+      {
         LOG.Error(ex);
       }
     }

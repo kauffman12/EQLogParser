@@ -226,7 +226,7 @@ namespace EQLogParser
       bool found = stop < 3 ? false : true;
       for (int i = 0; found != false && i < stop; i++)
       {
-        if (!Char.IsLetter(part, i))
+        if (!char.IsLetter(part, i))
         {
           found = false;
           break;
@@ -240,7 +240,7 @@ namespace EQLogParser
     {
       public int Compare(SortableName x, SortableName y)
       {
-        return x.Name.CompareTo(y.Name);
+        return string.CompareOrdinal(x.Name, y.Name);
       }
     }
   }

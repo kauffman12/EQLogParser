@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -290,19 +291,6 @@ namespace EQLogParser
       }
     }
 
-    private void SetSize(FrameworkElement element, double height, double width)
-    {
-      if (!double.IsNaN(height) && element.Height != height)
-      {
-        element.Height = height;
-      }
-
-      if (!double.IsNaN(width) && element.Width != width)
-      {
-        element.Width = width;
-      }
-    }
-
     private void CreateRows(bool configure = false)
     {
       configPanel.SetValue(Panel.ZIndexProperty, 3);
@@ -372,20 +360,6 @@ namespace EQLogParser
       }
     }
 
-    private LinearGradientBrush CreateBrush(List<Color> colors)
-    {
-      var brush = new LinearGradientBrush
-      {
-        StartPoint = new Point(0.5, 0),
-        EndPoint = new Point(0.5, 1)
-      };
-
-      brush.GradientStops.Add(new GradientStop(colors[0], 0.0));
-      brush.GradientStops.Add(new GradientStop(colors[1], 0.5));
-      brush.GradientStops.Add(new GradientStop(colors[2], 0.75));
-      return brush;
-    }
-
     private Rectangle CreateRectangle(bool configure, List<Color> colors)
     {
       var rectangle = new Rectangle
@@ -397,30 +371,6 @@ namespace EQLogParser
       rectangle.Effect = new BlurEffect { Radius = 5, RenderingBias = 0 };
       rectangle.Opacity = configure ? 1.0 : DATA_OPACITY;
       return rectangle;
-    }
-
-    private TextBlock CreateTextBlock()
-    {
-      var textBlock = new TextBlock { Foreground = TEXT_BRUSH };
-      textBlock.SetValue(Panel.ZIndexProperty, 3);
-      textBlock.UseLayoutRounding = true;
-      textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
-      textBlock.FontFamily = new FontFamily("Lucidia Console");
-      return textBlock;
-    }
-
-    private Button CreateButton()
-    {
-      var button = new Button();
-      button.SetValue(Panel.ZIndexProperty, 3);
-      button.Background = null;
-      button.Foreground = TEXT_BRUSH;
-      button.BorderBrush = null;
-      button.VerticalAlignment = VerticalAlignment.Top;
-      button.Padding = new Thickness(0, 0, 0, 0);
-      button.FontFamily = new FontFamily("Segoe MDL2 Assets");
-      button.IsEnabled = true;
-      return button;
     }
 
     private void SetFont(int size)
@@ -459,24 +409,24 @@ namespace EQLogParser
     {
       if (!double.IsNaN(overlayCanvas.ActualHeight) && overlayCanvas.ActualHeight > 0)
       {
-        DataManager.Instance.SetApplicationSetting("OverlayHeight", overlayCanvas.ActualHeight.ToString());
+        DataManager.Instance.SetApplicationSetting("OverlayHeight", overlayCanvas.ActualHeight.ToString(CultureInfo.CurrentCulture));
       }
 
       if (!double.IsNaN(overlayCanvas.ActualWidth) && overlayCanvas.ActualWidth > 0)
       {
-        DataManager.Instance.SetApplicationSetting("OverlayWidth", overlayCanvas.ActualWidth.ToString());
+        DataManager.Instance.SetApplicationSetting("OverlayWidth", overlayCanvas.ActualWidth.ToString(CultureInfo.CurrentCulture));
       }
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
       if (this.Top + margin.Top > 0 && (this.Left + margin.Left) > 0)
       {
-        DataManager.Instance.SetApplicationSetting("OverlayTop", (this.Top + margin.Top).ToString());
-        DataManager.Instance.SetApplicationSetting("OverlayLeft", (this.Left + margin.Left).ToString());
+        DataManager.Instance.SetApplicationSetting("OverlayTop", (this.Top + margin.Top).ToString(CultureInfo.CurrentCulture));
+        DataManager.Instance.SetApplicationSetting("OverlayLeft", (this.Left + margin.Left).ToString(CultureInfo.CurrentCulture));
       }
 
       if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out int size))
       {
-        DataManager.Instance.SetApplicationSetting("OverlayFontSize", size.ToString());
+        DataManager.Instance.SetApplicationSetting("OverlayFontSize", size.ToString(CultureInfo.CurrentCulture));
       }
 
       (Application.Current.MainWindow as MainWindow)?.OpenOverlay(false, true);
@@ -499,6 +449,57 @@ namespace EQLogParser
 
       exStyle |= (int) NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
       NativeMethods.SetWindowLong(wndHelper.Handle, (int) NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr) exStyle);
+    }
+
+    private static LinearGradientBrush CreateBrush(List<Color> colors)
+    {
+      var brush = new LinearGradientBrush
+      {
+        StartPoint = new Point(0.5, 0),
+        EndPoint = new Point(0.5, 1)
+      };
+
+      brush.GradientStops.Add(new GradientStop(colors[0], 0.0));
+      brush.GradientStops.Add(new GradientStop(colors[1], 0.5));
+      brush.GradientStops.Add(new GradientStop(colors[2], 0.75));
+      return brush;
+    }
+
+    private static Button CreateButton()
+    {
+      var button = new Button();
+      button.SetValue(Panel.ZIndexProperty, 3);
+      button.Background = null;
+      button.Foreground = TEXT_BRUSH;
+      button.BorderBrush = null;
+      button.VerticalAlignment = VerticalAlignment.Top;
+      button.Padding = new Thickness(0, 0, 0, 0);
+      button.FontFamily = new FontFamily("Segoe MDL2 Assets");
+      button.IsEnabled = true;
+      return button;
+    }
+
+    private static TextBlock CreateTextBlock()
+    {
+      var textBlock = new TextBlock { Foreground = TEXT_BRUSH };
+      textBlock.SetValue(Panel.ZIndexProperty, 3);
+      textBlock.UseLayoutRounding = true;
+      textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
+      textBlock.FontFamily = new FontFamily("Lucidia Console");
+      return textBlock;
+    }
+
+    private static void SetSize(FrameworkElement element, double height, double width)
+    {
+      if (!double.IsNaN(height) && element.Height != height)
+      {
+        element.Height = height;
+      }
+
+      if (!double.IsNaN(width) && element.Width != width)
+      {
+        element.Width = width;
+      }
     }
   }
 }

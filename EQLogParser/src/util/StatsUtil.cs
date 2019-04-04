@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -38,7 +39,7 @@ namespace EQLogParser
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
       string className = "";
-      origName = origName == null ? name : origName;
+      origName = origName ?? name;
 
       if (!DataManager.Instance.CheckNameForPet(origName))
       {
@@ -99,7 +100,7 @@ namespace EQLogParser
     {
       string result;
       result = targetTitle + " " + timeTitle;
-      if (damageTitle != "")
+      if (damageTitle.Length == 0)
       {
         result += ", " + damageTitle;
       }
@@ -112,7 +113,7 @@ namespace EQLogParser
 
       if (total < 1000)
       {
-        result = total.ToString();
+        result = total.ToString(CultureInfo.CurrentCulture);
       }
       else if (total < 1000000)
       {
@@ -260,8 +261,7 @@ namespace EQLogParser
 
         if (resistCounts != null && superStats.Name == DataManager.Instance.PlayerName)
         {
-          uint value;
-          if (resistCounts.TryGetValue(stats.Name, out value))
+          if (resistCounts.TryGetValue(stats.Name, out uint value))
           {
             stats.Resists = value;
             stats.ResistRate = stats.LuckRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
@@ -270,9 +270,7 @@ namespace EQLogParser
       }
 
       // handle sub stats
-      var playerStats = stats as PlayerStats;
-
-      if (playerStats != null)
+      if (stats is PlayerStats playerStats)
       {
         Parallel.ForEach(playerStats.SubStats.Values, subStats => UpdateCalculations(subStats, raidTotals, resistCounts, playerStats));
 
@@ -307,7 +305,7 @@ namespace EQLogParser
     }
   }
 
-  internal class Parse
+  internal abstract class Parse
   {
     internal string Name { get; set; }
     internal CombinedDamageStats Combined { get; set; }

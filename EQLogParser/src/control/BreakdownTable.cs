@@ -8,7 +8,7 @@ using System.Windows.Data;
 
 namespace EQLogParser
 {
-  public class BreakdownTable : UserControl
+  public abstract class BreakdownTable : UserControl
   {
     protected string CurrentSortKey = "Total";
     protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
