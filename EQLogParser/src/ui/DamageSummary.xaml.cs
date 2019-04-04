@@ -170,7 +170,7 @@ namespace EQLogParser
       if (stats != null && children != null && children.ContainsKey(stats.Name))
       {
         var list = children[stats.Name];
-        if (list.Count > 1 || stats.Name == Labels.UNASSIGNED_PET_OWNER || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name)))
+        if (list.Count > 1 || stats.Name == Labels.UNASSIGNED || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name)))
         {
           var container = dataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
           if (container != null)

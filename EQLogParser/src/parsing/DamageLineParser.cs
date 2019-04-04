@@ -36,9 +36,9 @@ namespace EQLogParser
       try
       {
         int index;
-        if (line.Length >= 40 && line.IndexOf(" damage", Parsing.ACTION_INDEX + 13, StringComparison.Ordinal) > -1)
+        if (line.Length >= 40 && line.IndexOf(" damage", Parsing.ACTIONINDEX + 13, StringComparison.Ordinal) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
 
@@ -49,18 +49,18 @@ namespace EQLogParser
             EventsDamageProcessed(record, e);
           }
         }
-        else if (line.Length < 102 && (index = line.IndexOf(" slain ", Parsing.ACTION_INDEX, StringComparison.Ordinal)) > -1)
+        else if (line.Length < 102 && (index = line.IndexOf(" slain ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
-          pline.OptionalIndex = index - Parsing.ACTION_INDEX;
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
+          pline.OptionalIndex = index - Parsing.ACTIONINDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
           HandleSlain(pline);
         }
-        else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", Parsing.ACTION_INDEX, StringComparison.Ordinal)) > -1)
+        else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
-          pline.OptionalIndex = index - Parsing.ACTION_INDEX;
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
+          pline.OptionalIndex = index - Parsing.ACTIONINDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
           HandleResist(pline);
@@ -182,7 +182,7 @@ namespace EQLogParser
 
           if (isAttackerPet)
           {
-            record.AttackerOwner = Labels.UNASSIGNED_PET_OWNER;
+            record.AttackerOwner = Labels.UNASSIGNED;
           }
         }
       }
@@ -271,7 +271,7 @@ namespace EQLogParser
                       if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
                       {
                         action = "DoT";
-                        type = Labels.DOT_NAME;
+                        type = Labels.DOT;
                         afterAction = sizeSoFar + "has taken".Length + 1;
                         defenderOwner = owner;
                         defender = part.Substring(0, sizeSoFar - 1);
@@ -304,7 +304,7 @@ namespace EQLogParser
                   if (testAction == "has" && part.IndexOf(" taken ", sizeSoFar + 3, 7, StringComparison.Ordinal) > -1)
                   {
                     action = "DoT";
-                    type = Labels.DOT_NAME;
+                    type = Labels.DOT;
                     afterAction = sizeSoFar + "has taken".Length + 1;
                     defender = player;
                   }
@@ -331,14 +331,14 @@ namespace EQLogParser
               {
                 action = "DoT";
                 defender = part.Substring(0, hasTakenIndex - 1);
-                type = Labels.DOT_NAME;
+                type = Labels.DOT;
                 afterAction = hasTakenIndex + 10;
               }
               else
               {
                 action = "Bane";
                 defender = part.Substring(0, hasTakenIndex - 1);
-                type = Labels.BANE_NAME;
+                type = Labels.BANE;
                 afterAction = extraIndex + 9;
               }
             }
@@ -354,7 +354,7 @@ namespace EQLogParser
                 {
                   defender = part.Substring(0, isIndex);
                   action = "DS";
-                  type = Labels.DS_NAME;
+                  type = Labels.DS;
                   afterAction = byIndex + 4;
 
                   // The following DD/DoT code doesn't really help parse damage shields so continue here... need to clean this up eventually
@@ -433,7 +433,7 @@ namespace EQLogParser
                         found = true;
                         if (part.IndexOf("of damage.", point + 7, StringComparison.Ordinal) == -1)
                         {
-                          type = Labels.DD_NAME;
+                          type = Labels.DD;
 
                           int byIndex = part.IndexOf(" by ", point + 18, StringComparison.Ordinal);
                           if (byIndex > -1)

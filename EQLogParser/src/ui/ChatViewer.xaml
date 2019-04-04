@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:fa="http://schemas.fontawesome.io/icons/"
+  	         xmlns:behaviors="clr-namespace:WPFTextBoxAutoComplete;assembly=WPFTextBoxAutoComplete"
              x:Class="EQLogParser.ChatViewer"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -52,8 +53,8 @@
         <fa:ImageAwesome Height="15" Width="15" Margin="-21,0,0,0" HorizontalAlignment="Center" Icon="Calendar"  Foreground="#5191c1" PreviewMouseLeftButtonUp="EndDate_MouseClick" />
       </StackPanel>
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <TextBox x:Name="toFilter" Margin="4,0,0,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="100" LostFocus="ToFilter_LostFocus" GotFocus="ToFilter_GotFocus" PreviewKeyDown="ToFilter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
-      <TextBox x:Name="fromFilter" Margin="0,0,0,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="100" LostFocus="FromFilter_LostFocus" GotFocus="FromFilter_GotFocus" PreviewKeyDown="FromFilter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
+      <TextBox x:Name="toFilter" Margin="4,0,0,0" Height="24" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Items}" behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="100" LostFocus="ToFilter_LostFocus" GotFocus="ToFilter_GotFocus" PreviewKeyDown="ToFilter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
+      <TextBox x:Name="fromFilter" Margin="0,0,0,0" Height="24" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Items}" behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="100" LostFocus="FromFilter_LostFocus" GotFocus="FromFilter_GotFocus" PreviewKeyDown="FromFilter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
       <TextBox x:Name="textFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="200" LostFocus="TextFilter_LostFocus" GotFocus="TextFilter_GotFocus" PreviewKeyDown="TextFilter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
     </StackPanel>
     <ScrollViewer x:Name="chatScroller" Grid.Row="1" BorderThickness="1" BorderBrush="Black">

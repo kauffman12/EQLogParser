@@ -135,13 +135,13 @@ namespace EQLogParser
     {
       string result = type;
 
-      if (type == Labels.DD_NAME || type == Labels.DOT_NAME)
+      if (type == Labels.DD || type == Labels.DOT)
       {
         if (!SpellTypeCache.TryGetValue(name, out result))
         {
           string spellName = Helpers.AbbreviateSpellName(name);
           SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
-          result = (data != null && data.IsProc) ? Labels.PROC_NAME : type;
+          result = (data != null && data.IsProc) ? Labels.PROC : type;
           SpellTypeCache[name] = result;
         }
       }
@@ -152,10 +152,10 @@ namespace EQLogParser
     private void BuildGroups(PlayerStats playerStats, List<PlayerSubStats> all)
     {
       List<PlayerSubStats> list = new List<PlayerSubStats>();
-      PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT_NAME, Type = Labels.DOT_NAME };
-      PlayerSubStats dds = new PlayerSubStats() { Name = Labels.DD_NAME, Type = Labels.DD_NAME };
-      PlayerSubStats procs = new PlayerSubStats() { Name = Labels.PROC_NAME, Type = Labels.PROC_NAME };
-      PlayerSubStats resisted = new PlayerSubStats() { Name = Labels.RESIST_NAME, Type = Labels.RESIST_NAME, ResistRate = 100 };
+      PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT, Type = Labels.DOT };
+      PlayerSubStats dds = new PlayerSubStats() { Name = Labels.DD, Type = Labels.DD };
+      PlayerSubStats procs = new PlayerSubStats() { Name = Labels.PROC, Type = Labels.PROC };
+      PlayerSubStats resisted = new PlayerSubStats() { Name = Labels.RESIST, Type = Labels.RESIST, ResistRate = 100 };
       List<PlayerSubStats> allDots = new List<PlayerSubStats>();
       List<PlayerSubStats> allDds = new List<PlayerSubStats>();
       List<PlayerSubStats> allProcs = new List<PlayerSubStats>();
@@ -167,19 +167,19 @@ namespace EQLogParser
 
         switch(CheckSpellType(sub.Name, sub.Type))
         {
-          case Labels.DOT_NAME:
+          case Labels.DOT:
             stats = dots;
             allDots.Add(sub);
             break;
-          case Labels.DD_NAME:
+          case Labels.DD:
             stats = dds;
             allDds.Add(sub);
             break;
-          case Labels.PROC_NAME:
+          case Labels.PROC:
             stats = procs;
             allProcs.Add(sub);
             break;
-          case Labels.RESIST_NAME:
+          case Labels.RESIST:
             stats = resisted;
             allResisted.Add(sub);
             break;
@@ -224,7 +224,7 @@ namespace EQLogParser
           stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
           stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
 
-          var tcMult = stats.Type == Labels.DOT_NAME ? 1 : 2;
+          var tcMult = stats.Type == Labels.DOT ? 1 : 2;
           stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
           stats.Percent = Math.Round(playerStats.Percent / 100 * (Convert.ToDouble(stats.Total) / playerStats.Total) * 100, 2);
           stats.ResistRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);

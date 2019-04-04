@@ -43,7 +43,7 @@ namespace EQLogParser
       {
         FireNewStatsEvent(options);
 
-        RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_PLAYER);
+        RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
         HealingGroups.Clear();
 
         Selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(RaidTotals, npc, HEAL_OFFSET));
@@ -125,7 +125,7 @@ namespace EQLogParser
         // generating new stats
         EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent()
         {
-          Type = Labels.HEAL_PARSE,
+          Type = Labels.HEALPARSE,
           State = "COMPLETED",
           CombinedStats = combined,
           IsAEHealingAvailable = IsAEHealingAvailable
@@ -138,7 +138,7 @@ namespace EQLogParser
       if (options.RequestSummaryData)
       {
        // generating new stats
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEAL_PARSE, State = "STARTED" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = "STARTED" });
       }
     }
 
@@ -147,7 +147,7 @@ namespace EQLogParser
       if (options.RequestSummaryData)
       {
         // nothing to do
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEAL_PARSE, State = "NONPC" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = "NONPC" });
       }
 
       if (options.RequestChartData)
@@ -190,7 +190,7 @@ namespace EQLogParser
                 StatsUtil.UpdateStats(stats, record, block.BeginTime);
                 allStats[record.Healer] = stats;
 
-                var spellStatName = record.SubType ?? Labels.UNKNOWN_SPELL;
+                var spellStatName = record.SubType ?? Labels.UNKSPELL;
                 PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
                 StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
                 allStats[stats.Name + "=" + spellStatName] = spellStats;

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -29,6 +30,7 @@ namespace EQLogParser
     private static List<ColorItem> ColorItems;
     private static bool Running = false;
 
+    private List<string> PlayerAutoCompleteList = new List<string>();
     private Paragraph MainParagraph;
     private DispatcherTimer FilterTimer;
     private ChatFilter CurrentChatFilter = null;
@@ -55,12 +57,13 @@ namespace EQLogParser
 
       ColorItem DefaultForeground = new ColorItem { Name = "Default", Brush = new SolidColorBrush(Colors.White) };
 
+      fontSize.ItemsSource = FontSizeList;
       startDate.Text = START_DATE_DEFAULT;
       endDate.Text = END_DATE_DEFAULT;
       textFilter.Text = TEXT_FILTER_DEFAULT;
-      toFilter.Text = TO_FILTER_DEFAULT;
-      fromFilter.Text = FROM_FILTER_DEFAULT;
-      fontSize.ItemsSource = FontSizeList;
+
+      toFilter.DataContext = new AutoCompleteText() { Text = TO_FILTER_DEFAULT, Items = PlayerAutoCompleteList };
+      fromFilter.DataContext = new AutoCompleteText() { Text = FROM_FILTER_DEFAULT, Items = PlayerAutoCompleteList };
 
       var fgList = new List<ColorItem>(ColorItems);
       fgList.Insert(0, DefaultForeground);
@@ -250,7 +253,7 @@ namespace EQLogParser
 
           if (changed)
           {
-            ChatManager.SetSelectedChannels(name, channelList);
+            ChatManager.SaveSelectedChannels(name, channelList);
           }
 
           chatBox.Document.Blocks.Clear();
@@ -304,6 +307,7 @@ namespace EQLogParser
         channels.ItemsSource = items;
         channels.SelectedItem = items[0];
 
+        PlayerAutoCompleteList = ChatManager.GetPlayers(name);
         DataManager.Instance.SetApplicationSetting("ChatSelectedPlayer", name);
 
         if (Ready)
@@ -377,6 +381,13 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape)
       {
+        if (filter.DataContext is AutoCompleteText context && context.Items.Count > 0)
+        {
+          context.Items = new List<string>();
+          filter.DataContext = null;
+          filter.DataContext = context;
+        }
+
         filter.Text = text;
         filter.FontStyle = FontStyles.Italic;
         chatBox.Focus();
@@ -401,6 +412,13 @@ namespace EQLogParser
     {
       if (filter.Text == text)
       {
+        if (filter.DataContext is AutoCompleteText context)
+        {
+          context.Items = PlayerAutoCompleteList;
+          filter.DataContext = null;
+          filter.DataContext = context;
+        }
+
         filter.Text = "";
         filter.FontStyle = FontStyles.Normal;
       }
@@ -425,6 +443,13 @@ namespace EQLogParser
     {
       if (filter.Text.Length == 0)
       {
+        if (filter.DataContext is AutoCompleteText context && context.Items.Count > 0)
+        {
+          context.Items = new List<string>();
+          filter.DataContext = null;
+          filter.DataContext = context;
+        }
+
         filter.Text = text;
         filter.FontStyle = FontStyles.Italic;
       }

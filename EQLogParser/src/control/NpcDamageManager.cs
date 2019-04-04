@@ -28,7 +28,7 @@ namespace EQLogParser
     {
       NonPlayer npc = null;
 
-      if (type == Labels.DOT_NAME || type == Labels.DS_NAME)
+      if (type == Labels.DOT || type == Labels.DS)
       {
         // DoTs or DS will show upper case when they shouldn't because they start a sentence so try lower case first
         npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);

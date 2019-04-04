@@ -178,13 +178,13 @@ namespace EQLogParser
       if (selected == null || selected.Count == 0)
       {
         sortedValues = theValues.Values.OrderByDescending(values => values.Last().Total).Take(5).ToList();
-        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : Labels.NO_DATA;
+        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : Labels.NODATA;
       }
       else
       {
         List<string> names = selected.Select(stats => stats.OrigName).Take(10).ToList();
         sortedValues = theValues.Values.Where(values => names.Contains(values.First().Name)).ToList();
-        label = sortedValues.Count > 0 ? "Selected Player(s)" : Labels.NO_DATA;
+        label = sortedValues.Count > 0 ? "Selected Player(s)" : Labels.NODATA;
       }
 
       sortedValues = Smoothing(sortedValues);
@@ -395,7 +395,7 @@ namespace EQLogParser
         Helpers.ChartResetView(lvcChart);
         lvcChart.AxisX[0].LabelFormatter = GetLabelFormat;
         lvcChart.Series = null;
-        titleLabel.Content = Labels.NO_DATA;
+        titleLabel.Content = Labels.NODATA;
       }
     }
 
