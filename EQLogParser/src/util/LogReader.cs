@@ -14,12 +14,12 @@ namespace EQLogParser
 
     public bool FileLoadComplete = false;
     public long FileSize;
-    private string FileName;
+    private readonly string FileName;
     private readonly ParseLineCallback LoadingCallback;
     private bool Running = false;
     private readonly bool MonitorOnly;
     private readonly int LastMins;
-    private DateUtil DateUtil = new DateUtil();
+    private readonly DateUtil DateUtil = new DateUtil();
 
     public LogReader(string fileName, ParseLineCallback loadingCallback, bool monitorOnly, int lastMins)
     {
@@ -36,9 +36,9 @@ namespace EQLogParser
       {
         try
         {
-          string logFilePath = FileName.Substring(0, FileName.LastIndexOf("\\")) + "\\";
-          string logFileName = FileName.Substring(FileName.LastIndexOf("\\") + 1);
-          bool isGzip = logFileName.EndsWith(".gz");
+          string logFilePath = FileName.Substring(0, FileName.LastIndexOf("\\", StringComparison.Ordinal)) + "\\";
+          string logFileName = FileName.Substring(FileName.LastIndexOf("\\", StringComparison.Ordinal) + 1);
+          bool isGzip = logFileName.EndsWith(".gz", StringComparison.Ordinal);
 
           Stream gs;
           Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -165,7 +165,7 @@ namespace EQLogParser
           reader.Close();
           fsw.Dispose();
         }
-        catch (Exception e)
+        catch (IOException e)
         {
           LOG.Error(e);
         }

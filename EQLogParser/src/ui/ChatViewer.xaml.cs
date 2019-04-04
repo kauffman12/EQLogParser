@@ -176,6 +176,7 @@ namespace EQLogParser
               catch (Exception ex2)
               {
                 LOG.Error(ex2);
+                throw;
               }
               finally
               {
@@ -188,7 +189,7 @@ namespace EQLogParser
           {
             Running = false;
           }
-        });
+        }, TaskScheduler.Default);
       }
     }
 
@@ -219,11 +220,11 @@ namespace EQLogParser
 
     private void ChangeSearch()
     {
-      if (players.SelectedItem is string name && name != "" && !name.StartsWith("No "))
+      if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         var channelList = GetSelectedChannels(out bool changed);
-        string text = (textFilter.Text != "" && textFilter.Text != TEXT_FILTER_DEFAULT) ? textFilter.Text : null;
-        string from = (fromFilter.Text != "" && fromFilter.Text != FROM_FILTER_DEFAULT) ? fromFilter.Text : null;
+        string text = (textFilter.Text.Length != 0 && textFilter.Text != TEXT_FILTER_DEFAULT) ? textFilter.Text : null;
+        string from = (fromFilter.Text.Length != 0 && fromFilter.Text != FROM_FILTER_DEFAULT) ? fromFilter.Text : null;
         double startDate = GetStartDate();
         double endDate = GetEndDate();
         if (changed || LastPlayerSelection != name || LastTextFilter != text || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
@@ -282,7 +283,7 @@ namespace EQLogParser
 
     private void Player_Changed(object sender, SelectionChangedEventArgs e)
     {
-      if (players.SelectedItem is string name && name != "" && !name.StartsWith("No "))
+      if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         List<ChannelDetails> items = new List<ChannelDetails>();
         int selectedCount = 0;
@@ -386,7 +387,7 @@ namespace EQLogParser
 
     private void FromFilter_LostFocus(object sender, RoutedEventArgs e)
     {
-      if (fromFilter.Text == "")
+      if (fromFilter.Text.Length == 0)
       {
         fromFilter.Text = FROM_FILTER_DEFAULT;
         fromFilter.FontStyle = FontStyles.Italic;
@@ -414,7 +415,7 @@ namespace EQLogParser
 
     private void TextFilter_LostFocus(object sender, RoutedEventArgs e)
     {
-      if (textFilter.Text == "")
+      if (textFilter.Text.Length == 0)
       {
         textFilter.Text = TEXT_FILTER_DEFAULT;
         textFilter.FontStyle = FontStyles.Italic;
@@ -444,10 +445,10 @@ namespace EQLogParser
 
     private void Calendar_SelectedDatesChanged(object s, SelectionChangedEventArgs e)
     {
-      var target = calendarPopup.PlacementTarget as TextBox;
-      if (target != null)
+      if (calendarPopup.PlacementTarget is TextBox target)
       {
         target.Text = calendar.SelectedDate?.ToShortDateString();
+        target.FontStyle = FontStyles.Normal;
         calendarPopup.IsOpen = false;
       }
     }
@@ -533,7 +534,7 @@ namespace EQLogParser
     private void DateChooser_LostFocus(object sender, RoutedEventArgs e)
     {
       var text = (sender as TextBox)?.Text;
-      if (!DateTime.TryParse(text, out DateTime result))
+      if (!DateTime.TryParse(text, out _))
       {
         ResetDateText(sender);
       }
@@ -544,10 +545,12 @@ namespace EQLogParser
       if (startDate == sender)
       {
         startDate.Text = START_DATE_DEFAULT;
+        startDate.FontStyle = FontStyles.Italic;
       }
       else if (endDate == sender)
       {
         endDate.Text = END_DATE_DEFAULT;
+        endDate.FontStyle = FontStyles.Italic;
       }
     }
   }
