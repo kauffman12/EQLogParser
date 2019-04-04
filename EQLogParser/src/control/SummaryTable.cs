@@ -94,7 +94,7 @@ namespace EQLogParser
 
     protected List<PlayerStats> GetPlayerStatsByClass(string classString)
     {
-      SpellClasses type = (SpellClasses) Enum.Parse(typeof(SpellClasses), classString);
+      SpellClass type = (SpellClass) Enum.Parse(typeof(SpellClass), classString);
       string className = DataManager.Instance.GetClassName(type);
 
       List<PlayerStats> selectedStats = new List<PlayerStats>();

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security;
 using System.Threading;
 
 namespace EQLogParser
@@ -20,7 +22,7 @@ namespace EQLogParser
     private static string PLAYER_DIR;
 
     private Dictionary<string, Dictionary<string, byte>> ChannelEntryCache = null;
-    private Dictionary<string, byte> ChannelCache = new Dictionary<string, byte>();
+    private readonly Dictionary<string, byte> ChannelCache = new Dictionary<string, byte>();
     private List<ChatType> ChatTypes = new List<ChatType>();
     private List<ChatLine> CurrentList = null;
     private ZipArchive CurrentArchive = null;
@@ -40,9 +42,13 @@ namespace EQLogParser
         // create config dir if it doesn't exist
         Directory.CreateDirectory(PLAYER_DIR);
       }
-      catch (Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
       }
     }
 
@@ -92,9 +98,17 @@ namespace EQLogParser
         var fileName = playerDir + @"\" + SELECTED_CHANNELS_FILE;
         File.WriteAllLines(fileName, channels);
       }
-      catch(Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
     }
 
@@ -134,15 +148,23 @@ namespace EQLogParser
           string[] lines = File.ReadAllLines(file);
           foreach (string line in lines)
           {
-            var isChecked = selected == null ? false : selected.Contains(line);
+            var isChecked = selected == null ? true : selected.Contains(line);
             ChannelDetails details = new ChannelDetails { Text = line, IsChecked = isChecked };
             channelList.Add(details);
           }
         }
       }
-      catch(Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
 
       return channelList.OrderBy(key => key.Text).ToList();
@@ -181,9 +203,9 @@ namespace EQLogParser
           var chatType = working[i];
           var chatLine = CreateLine(dateUtil, chatType.Line);
           DateTime dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
-          string year = dateTime.ToString("yyyy");
-          string month = dateTime.ToString("MM");
-          string day = dateTime.ToString("dd");
+          string year = dateTime.ToString("yyyy", CultureInfo.CurrentCulture);
+          string month = dateTime.ToString("MM", CultureInfo.CurrentCulture);
+          string day = dateTime.ToString("dd", CultureInfo.CurrentCulture);
           AddToArchive(year, month, day, chatLine, chatType, dateUtilSavedLines);
         }
 
@@ -201,9 +223,9 @@ namespace EQLogParser
           }
         }
       }
-      catch (Exception ex)
+      catch (ObjectDisposedException ex)
       {
-        LOG.Debug(ex);
+        LOG.Error(ex);
       }
       finally
       {
@@ -303,9 +325,13 @@ namespace EQLogParser
             }
           }
         }
-        catch (Exception ex)
+        catch (IOException ex)
         {
-          LOG.Debug(ex);
+          LOG.Error(ex);
+        }
+        catch (InvalidDataException ide)
+        {
+          LOG.Error(ide);
         }
       }
     }
@@ -363,21 +389,14 @@ namespace EQLogParser
     {
       if (CurrentList != null && CurrentArchive != null && CurrentEntryKey != null)
       {
-        try
+        if (CurrentList.Count > 0 && CurrentListModified)
         {
-          if (CurrentList.Count > 0 && CurrentListModified)
+          var entry = GetEntry(CurrentEntryKey);
+          using (var writer = new StreamWriter(entry.Open()))
           {
-            var entry = GetEntry(CurrentEntryKey);
-            using (var writer = new StreamWriter(entry.Open()))
-            {
-              CurrentList.ForEach(chatLine => writer.WriteLine(chatLine.Line));
-              writer.Close();
-            }
+            CurrentList.ForEach(chatLine => writer.WriteLine(chatLine.Line));
+            writer.Close();
           }
-        }
-        catch (Exception ex)
-        {
-          LOG.Debug(ex);
         }
       }
 
@@ -415,9 +434,17 @@ namespace EQLogParser
           result = File.ReadAllLines(fileName).ToList();
         }
       }
-      catch (Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
 
       return result;
@@ -433,9 +460,17 @@ namespace EQLogParser
           File.WriteAllLines(file, ChannelCache.Keys.ToList());
         }
       }
-      catch (Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
     }
 
@@ -450,20 +485,9 @@ namespace EQLogParser
 
     private ChatLine CreateLine(DateUtil dateUtil, string line)
     {
-      ChatLine chatLine = null;
-
-      try
-      {
-        string dateString = line.Substring(1, 24);
-        dateUtil.ParseDate(dateString, out double precise);
-        chatLine = new ChatLine { Line = line, BeginTime = precise };
-      }
-      catch (Exception)
-      {
-        // ignore
-      }
-
-      return chatLine;
+      string dateString = line.Substring(1, 24);
+      dateUtil.ParseDate(dateString, out double precise);
+      return new ChatLine { Line = line, BeginTime = precise };
     }
 
     private ZipArchiveEntry GetEntry(string key)

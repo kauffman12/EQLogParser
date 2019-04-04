@@ -30,36 +30,36 @@ namespace EQLogParser
     private bool PetMappingUpdated = false;
     private bool SettingsUpdated = false;
 
-    private List<ActionBlock> AllDamageBlocks = new List<ActionBlock>();
-    private List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
-    private List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
-    private List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllDamageBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllResists = new List<ActionBlock>();
-    private List<ActionBlock> PlayerDeaths = new List<ActionBlock>();
+    private readonly List<ActionBlock> PlayerDeaths = new List<ActionBlock>();
 
-    private Dictionary<string,SpellData> AllUniqueSpellsCache = new Dictionary<string,SpellData>();
-    private Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
-    private Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
-    private Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
-    private Dictionary<SpellClasses, string> ClassNames = new Dictionary<SpellClasses, string>();
-    private Dictionary<string, SpellData> SpellsDB = new Dictionary<string, SpellData>();
-    private Dictionary<string, SpellData> SpellsNameDB = new Dictionary<string, SpellData>();
-    private Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
-    private Dictionary<string, SpellClasses> SpellsToClass = new Dictionary<string, SpellClasses>();
-    private Dictionary<string, byte> GameGeneratedPets = new Dictionary<string, byte>();
-    private Dictionary<string, string> PlayerReplacement = new Dictionary<string, string>();
+    private readonly Dictionary<string,SpellData> AllUniqueSpellsCache = new Dictionary<string,SpellData>();
+    private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
+    private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
+    private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
+    private readonly Dictionary<SpellClass, string> ClassNames = new Dictionary<SpellClass, string>();
+    private readonly Dictionary<string, SpellData> SpellsDB = new Dictionary<string, SpellData>();
+    private readonly Dictionary<string, SpellData> SpellsNameDB = new Dictionary<string, SpellData>();
+    private readonly Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
+    private readonly Dictionary<string, SpellClass> SpellsToClass = new Dictionary<string, SpellClass>();
+    private readonly Dictionary<string, byte> GameGeneratedPets = new Dictionary<string, byte>();
+    private readonly Dictionary<string, string> PlayerReplacement = new Dictionary<string, string>();
 
-    private ConcurrentDictionary<string, string> ApplicationSettings = new ConcurrentDictionary<string, string>();
-    private ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
-    private ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
-    private ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
-    private ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
-    private ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
-    private ConcurrentDictionary<string, byte> DefinitelyNotAPlayer = new ConcurrentDictionary<string, byte>();
-    private ConcurrentDictionary<string, long> ProbablyNotAPlayer = new ConcurrentDictionary<string, long>();
-    private ConcurrentDictionary<string, byte> UnVerifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
-    private ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
-    private ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, string> ApplicationSettings = new ConcurrentDictionary<string, string>();
+    private readonly ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
+    private readonly ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
+    private readonly ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
+    private readonly ConcurrentDictionary<string, byte> DefinitelyNotAPlayer = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, long> ProbablyNotAPlayer = new ConcurrentDictionary<string, long>();
+    private readonly ConcurrentDictionary<string, byte> UnVerifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
 
     private DataManager()
     {
@@ -73,22 +73,22 @@ namespace EQLogParser
       VerifiedPlayers["your"] = 1;
       VerifiedPlayers["Your"] = 1;
       VerifiedPlayers["YOUR"] = 1;
-      ClassNames[SpellClasses.WAR] = string.Intern("Warrior");
-      ClassNames[SpellClasses.CLR] = string.Intern("Cleric");
-      ClassNames[SpellClasses.PAL] = string.Intern("Paladin");
-      ClassNames[SpellClasses.RNG] = string.Intern("Ranger");
-      ClassNames[SpellClasses.SHD] = string.Intern("Shadow Knight");
-      ClassNames[SpellClasses.DRU] = string.Intern("Druid");
-      ClassNames[SpellClasses.MNK] = string.Intern("Monk");
-      ClassNames[SpellClasses.BRD] = string.Intern("Bard");
-      ClassNames[SpellClasses.ROG] = string.Intern("Rogue");
-      ClassNames[SpellClasses.SHM] = string.Intern("Shaman");
-      ClassNames[SpellClasses.NEC] = string.Intern("Necromancer");
-      ClassNames[SpellClasses.WIZ] = string.Intern("Wizard");
-      ClassNames[SpellClasses.MAG] = string.Intern("Magician");
-      ClassNames[SpellClasses.ENC] = string.Intern("Enchanter");
-      ClassNames[SpellClasses.BST] = string.Intern("Beastlord");
-      ClassNames[SpellClasses.BER] = string.Intern("Berserker");
+      ClassNames[SpellClass.WAR] = string.Intern("Warrior");
+      ClassNames[SpellClass.CLR] = string.Intern("Cleric");
+      ClassNames[SpellClass.PAL] = string.Intern("Paladin");
+      ClassNames[SpellClass.RNG] = string.Intern("Ranger");
+      ClassNames[SpellClass.SHD] = string.Intern("Shadow Knight");
+      ClassNames[SpellClass.DRU] = string.Intern("Druid");
+      ClassNames[SpellClass.MNK] = string.Intern("Monk");
+      ClassNames[SpellClass.BRD] = string.Intern("Bard");
+      ClassNames[SpellClass.ROG] = string.Intern("Rogue");
+      ClassNames[SpellClass.SHM] = string.Intern("Shaman");
+      ClassNames[SpellClass.NEC] = string.Intern("Necromancer");
+      ClassNames[SpellClass.WIZ] = string.Intern("Wizard");
+      ClassNames[SpellClass.MAG] = string.Intern("Magician");
+      ClassNames[SpellClass.ENC] = string.Intern("Enchanter");
+      ClassNames[SpellClass.BST] = string.Intern("Beastlord");
+      ClassNames[SpellClass.BER] = string.Intern("Berserker");
 
       // General Settings
       try
@@ -211,11 +211,11 @@ namespace EQLogParser
       }
 
       Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
-      var classEnums = Enum.GetValues(typeof(SpellClasses)).Cast<SpellClasses>().ToList();
+      var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
       foreach (var spell in SpellsDB.Values)
       {
         // exact match meaning class-only spell
-        if (classEnums.Contains((SpellClasses)spell.ClassMask))
+        if (classEnums.Contains((SpellClass)spell.ClassMask))
         {
           // these need to be unique and keep track if a conflict is found
           if (SpellsToClass.ContainsKey(spell.Spell))
@@ -225,7 +225,7 @@ namespace EQLogParser
           }
           else if (!keepOut.ContainsKey(spell.Spell))
           {
-            SpellsToClass[spell.Spell] = (SpellClasses) spell.ClassMask;
+            SpellsToClass[spell.Spell] = (SpellClass) spell.ClassMask;
           }
         }
       }
@@ -256,9 +256,9 @@ namespace EQLogParser
         {
           UpdateVerifiedPlayers(Labels.UNASSIGNED_PET_OWNER);
 
-          if (System.IO.File.Exists(PETMAP_FILE))
+          if (File.Exists(PETMAP_FILE))
           {
-            string[] lines = System.IO.File.ReadAllLines(PETMAP_FILE);
+            string[] lines = File.ReadAllLines(PETMAP_FILE);
             foreach (string line in lines)
             {
               string[] parts = line.Split('=');
@@ -271,9 +271,17 @@ namespace EQLogParser
             }
           }
         }
-        catch (Exception ex)
+        catch (IOException ex)
         {
           LOG.Error(ex);
+        }
+        catch (UnauthorizedAccessException uax)
+        {
+          LOG.Error(uax);
+        }
+        catch (SecurityException se)
+        {
+          LOG.Error(se);
         }
 
         // dont count initial load
@@ -303,7 +311,7 @@ namespace EQLogParser
     {
       if (value == null)
       {
-        if (ApplicationSettings.TryRemove(key, out string setting))
+        if (ApplicationSettings.TryRemove(key, out _))
         {
           SettingsUpdated = true;
         }
@@ -355,8 +363,8 @@ namespace EQLogParser
 
     public void AddHealRecord(HealRecord record, double beginTime)
     {
-      record.Healer = ReplacePlayer(record.Healer, out bool replaced);
-      record.Healed = ReplacePlayer(record.Healed, out replaced);
+      record.Healer = ReplacePlayer(record.Healer, out _);
+      record.Healed = ReplacePlayer(record.Healed, out _);
 
       AddAction(AllHealBlocks, record, beginTime);
 
@@ -372,7 +380,7 @@ namespace EQLogParser
 
     public void AddSpellCast(SpellCast cast, double beginTime)
     {
-      cast.Caster = ReplacePlayer(cast.Caster, out bool replaced);
+      cast.Caster = ReplacePlayer(cast.Caster, out _);
       AddAction(AllSpellCastBlocks, cast, beginTime);
 
       string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
@@ -386,7 +394,7 @@ namespace EQLogParser
 
     public void AddReceivedSpell(ReceivedSpell received, double beginTime)
     {
-      received.Receiver = ReplacePlayer(received.Receiver, out bool replaced);
+      received.Receiver = ReplacePlayer(received.Receiver, out _);
       AddAction(AllReceivedSpellBlocks, received, beginTime);
     }
 
@@ -506,7 +514,7 @@ namespace EQLogParser
       return npc;
     }
 
-    public string GetClassName(SpellClasses type)
+    public string GetClassName(SpellClass type)
     {
       string name = "";
       if (ClassNames.ContainsKey(type))
@@ -605,7 +613,7 @@ namespace EQLogParser
 
     public bool RemoveActiveNonPlayer(string name)
     {
-      return ActiveNonPlayerMap.TryRemove(name, out NonPlayer npc);
+      return ActiveNonPlayerMap.TryRemove(name, out _);
     }
 
     public void UpdateIfNewNonPlayerMap(string name, NonPlayer npc)
@@ -624,11 +632,11 @@ namespace EQLogParser
 
     public void UpdatePlayerClassFromSpell(SpellCast cast)
     {
-      if (SpellsToClass.TryGetValue(cast.Spell, out SpellClasses theClass))
+      if (SpellsToClass.TryGetValue(cast.Spell, out SpellClass theClass))
       {
         if (!PlayerToClass.TryGetValue(cast.Caster, out SpellClassCounter counter))
         {
-          PlayerToClass.TryAdd(cast.Caster, new SpellClassCounter() { ClassCounts = new ConcurrentDictionary<SpellClasses, int>() });
+          PlayerToClass.TryAdd(cast.Caster, new SpellClassCounter() { ClassCounts = new ConcurrentDictionary<SpellClass, int>() });
           counter = PlayerToClass[cast.Caster];
         }
 
@@ -728,12 +736,20 @@ namespace EQLogParser
             }
           }
 
-          System.IO.File.WriteAllLines(fileName, lines);
+          File.WriteAllLines(fileName, lines);
         }
       }
-      catch (Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
     }
 
@@ -743,9 +759,8 @@ namespace EQLogParser
       CheckNonPlayerMap(name);
 
       // remove from ProbablyNotAPlayer if it exists
-      ProbablyNotAPlayer.TryRemove(name, out long value);
-
-      UnVerifiedPetOrPlayer.TryRemove(name, out byte bvalue);
+      ProbablyNotAPlayer.TryRemove(name, out _);
+      UnVerifiedPetOrPlayer.TryRemove(name, out _);
     }
 
     private void CheckNonPlayerMap(string name)
@@ -797,8 +812,8 @@ namespace EQLogParser
     private class SpellClassCounter
     {
       public int CurrentMax { get; set; }
-      public SpellClasses CurrentClass { get; set; }
-      public ConcurrentDictionary<SpellClasses, int> ClassCounts { get; set; }
+      public SpellClass CurrentClass { get; set; }
+      public ConcurrentDictionary<SpellClass, int> ClassCounts { get; set; }
     }
   }
 }

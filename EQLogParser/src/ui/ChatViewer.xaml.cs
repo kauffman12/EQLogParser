@@ -23,6 +23,7 @@ namespace EQLogParser
     private const string START_DATE_DEFAULT = "Start Date";
     private const string TEXT_FILTER_DEFAULT = "Message Search";
     private const string FROM_FILTER_DEFAULT = "From";
+    private const string TO_FILTER_DEFAULT = "To";
 
     private static List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static List<ColorItem> ColorItems;
@@ -30,11 +31,13 @@ namespace EQLogParser
 
     private Paragraph MainParagraph;
     private DispatcherTimer FilterTimer;
+    private ChatFilter CurrentChatFilter = null;
     private ChatIterator CurrentIterator = null;
     private int CurrentLineCount = 0;
     private string LastChannelSelection = null;
     private string LastPlayerSelection = null;
     private string LastTextFilter = null;
+    private string LastToFilter = null;
     private string LastFromFilter = null;
     private double LastStartDate = 0;
     private double LastEndDate = 0;
@@ -55,6 +58,7 @@ namespace EQLogParser
       startDate.Text = START_DATE_DEFAULT;
       endDate.Text = END_DATE_DEFAULT;
       textFilter.Text = TEXT_FILTER_DEFAULT;
+      toFilter.Text = TO_FILTER_DEFAULT;
       fromFilter.Text = FROM_FILTER_DEFAULT;
       fontSize.ItemsSource = FontSizeList;
 
@@ -224,18 +228,21 @@ namespace EQLogParser
       {
         var channelList = GetSelectedChannels(out bool changed);
         string text = (textFilter.Text.Length != 0 && textFilter.Text != TEXT_FILTER_DEFAULT) ? textFilter.Text : null;
+        string to = (toFilter.Text.Length != 0 && toFilter.Text != TO_FILTER_DEFAULT) ? toFilter.Text : null;
         string from = (fromFilter.Text.Length != 0 && fromFilter.Text != FROM_FILTER_DEFAULT) ? fromFilter.Text : null;
         double startDate = GetStartDate();
         double endDate = GetEndDate();
-        if (changed || LastPlayerSelection != name || LastTextFilter != text || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
+        if (changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
         {
           LastPlayerSelection = name;
           LastTextFilter = text;
+          LastToFilter = to;
           LastFromFilter = from;
           LastStartDate = startDate;
           LastEndDate = endDate;
           CurrentIterator?.Close();
-          CurrentIterator = new ChatIterator(name, channelList, startDate, endDate, from, text);
+          CurrentChatFilter = new ChatFilter(channelList, startDate, endDate, to, from, text);
+          CurrentIterator = new ChatIterator(name, CurrentChatFilter);
           CurrentLineCount = 0;
 
           chatScroller.ScrollChanged -= Chat_ScrollChanged;
@@ -366,60 +373,76 @@ namespace EQLogParser
       }
     }
 
-    private void FromFilter_KeyDown(object sender, KeyEventArgs e)
+    private void Filter_KeyDown(TextBox filter, string text, KeyEventArgs e)
     {
       if (e.Key == Key.Escape)
       {
-        fromFilter.Text = FROM_FILTER_DEFAULT;
-        fromFilter.FontStyle = FontStyles.Italic;
+        filter.Text = text;
+        filter.FontStyle = FontStyles.Italic;
         chatBox.Focus();
       }
     }
 
-    private void FromFilter_GotFocus(object sender, RoutedEventArgs e)
+    private void ToFilter_KeyDown(object sender, KeyEventArgs e)
     {
-      if (fromFilter.Text == FROM_FILTER_DEFAULT)
-      {
-        fromFilter.Text = "";
-        fromFilter.FontStyle = FontStyles.Normal;
-      }
+      Filter_KeyDown(toFilter, TO_FILTER_DEFAULT, e);
     }
-
-    private void FromFilter_LostFocus(object sender, RoutedEventArgs e)
+    private void FromFilter_KeyDown(object sender, KeyEventArgs e)
     {
-      if (fromFilter.Text.Length == 0)
-      {
-        fromFilter.Text = FROM_FILTER_DEFAULT;
-        fromFilter.FontStyle = FontStyles.Italic;
-      }
+      Filter_KeyDown(fromFilter, FROM_FILTER_DEFAULT, e);
     }
 
     private void TextFilter_KeyDown(object sender, KeyEventArgs e)
     {
-      if (e.Key == Key.Escape)
+      Filter_KeyDown(textFilter, TEXT_FILTER_DEFAULT, e);
+    }
+
+    private void Filter_GotFocus(TextBox filter, string text)
+    {
+      if (filter.Text == text)
       {
-        textFilter.Text = TEXT_FILTER_DEFAULT;
-        textFilter.FontStyle = FontStyles.Italic;
-        chatBox.Focus();
+        filter.Text = "";
+        filter.FontStyle = FontStyles.Normal;
       }
+    }
+
+    private void ToFilter_GotFocus(object sender, RoutedEventArgs e)
+    {
+      Filter_GotFocus(toFilter, TO_FILTER_DEFAULT);
+    }
+
+    private void FromFilter_GotFocus(object sender, RoutedEventArgs e)
+    {
+      Filter_GotFocus(fromFilter, FROM_FILTER_DEFAULT);
     }
 
     private void TextFilter_GotFocus(object sender, RoutedEventArgs e)
     {
-      if (textFilter.Text == TEXT_FILTER_DEFAULT)
+      Filter_GotFocus(textFilter, TEXT_FILTER_DEFAULT);
+    }
+
+    private void Filter_LostFocus(TextBox filter, string text)
+    {
+      if (filter.Text.Length == 0)
       {
-        textFilter.Text = "";
-        textFilter.FontStyle = FontStyles.Normal;
+        filter.Text = text;
+        filter.FontStyle = FontStyles.Italic;
       }
+    }
+
+    private void ToFilter_LostFocus(object sender, RoutedEventArgs e)
+    {
+      Filter_LostFocus(toFilter, TO_FILTER_DEFAULT);
+    }
+
+    private void FromFilter_LostFocus(object sender, RoutedEventArgs e)
+    {
+      Filter_LostFocus(fromFilter, FROM_FILTER_DEFAULT);
     }
 
     private void TextFilter_LostFocus(object sender, RoutedEventArgs e)
     {
-      if (textFilter.Text.Length == 0)
-      {
-        textFilter.Text = TEXT_FILTER_DEFAULT;
-        textFilter.FontStyle = FontStyles.Italic;
-      }
+      Filter_LostFocus(textFilter, TEXT_FILTER_DEFAULT);
     }
 
     private void Filter_TextChanged(object sender, TextChangedEventArgs e)
