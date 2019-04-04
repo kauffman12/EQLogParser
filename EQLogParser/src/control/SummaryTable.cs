@@ -10,7 +10,7 @@ namespace EQLogParser
   public class SummaryTable : UserControl
   {
     protected const string DEFAULT_TABLE_LABEL = "No NPCs Selected";
-    protected const string NODATA_TABLE_LABEL = Labels.NO_DATA;
+    protected const string NODATA_TABLE_LABEL = Labels.NODATA;
 
     internal event EventHandler<PlayerStatsSelectionChangedEvent> EventsSelectionChange;
 

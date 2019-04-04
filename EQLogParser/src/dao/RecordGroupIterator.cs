@@ -15,7 +15,7 @@ namespace EQLogParser
     override protected bool IsValid(RecordWrapper wrapper)
     {
       DamageRecord record = wrapper.Record as DamageRecord;
-      return DamageStatsManager.Instance.IsValidDamage(record) && (ShowBane || record.Type != Labels.BANE_NAME);
+      return DamageStatsManager.Instance.IsValidDamage(record) && (ShowBane || record.Type != Labels.BANE);
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)

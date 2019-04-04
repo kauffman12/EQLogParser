@@ -177,7 +177,7 @@ namespace EQLogParser
 
     internal static void UpdateStats(PlayerSubStats stats, HitRecord record, double beginTime)
     {
-      if (record.Type == Labels.BANE_NAME)
+      if (record.Type == Labels.BANE)
       {
         stats.BaneHits++;
       }
@@ -219,7 +219,7 @@ namespace EQLogParser
         stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
         stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
 
-        var tcMult = stats.Type == Labels.HOT_NAME || stats.Type == Labels.DOT_NAME ? 1 : 2;
+        var tcMult = stats.Type == Labels.HOT || stats.Type == Labels.DOT ? 1 : 2;
         stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
       }
 

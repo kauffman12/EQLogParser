@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.4.8" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.4.9" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x86" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -86,6 +86,9 @@
       </Component>
       <Component Id="CsvHelper.dll" Guid="3D41FF8F-2D1B-4954-9925-FEE340AAC6A0">
         <File Id="CsvHelper.dll" Name="CsvHelper.dll" Source="$(var.EQLogParser_TargetDir)CsvHelper.dll" />
+      </Component>
+      <Component Id="WPFTextBoxAutoComplete.dll" Guid="2AE4D9AC-7BB6-4239-88B0-37E94A1B6944">
+        <File Id="WPFTextBoxAutoComplete.dll" Name="WPFTextBoxAutoComplete.dll" Source="$(var.EQLogParser_TargetDir)WPFTextBoxAutoComplete.dll" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">

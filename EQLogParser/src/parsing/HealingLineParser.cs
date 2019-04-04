@@ -15,10 +15,10 @@ namespace EQLogParser
       try
       {
         int index;
-        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - Parsing.ACTION_INDEX, StringComparison.Ordinal)) > -1)
+        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTION_INDEX) };
-          pline.OptionalIndex = index - Parsing.ACTION_INDEX;
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
+          pline.OptionalIndex = index - Parsing.ACTIONINDEX;
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
 
@@ -62,7 +62,7 @@ namespace EQLogParser
       string healer = "";
       string healed = "";
       string spell = null;
-      string type = Labels.HEAL_NAME;
+      string type = Labels.HEAL;
       uint heal= 0;
       uint overHeal = 0;
 
@@ -83,7 +83,7 @@ namespace EQLogParser
 
           if (part.Length > optional + 17 && part.IndexOf("over time", optional + 8, 9, StringComparison.Ordinal) > -1)
           {
-            type = Labels.HOT_NAME;
+            type = Labels.HOT;
           }
         }
         else if (previous - 5 >= 0 && test.IndexOf("have been", previous - 4, StringComparison.Ordinal) > -1)
@@ -92,7 +92,7 @@ namespace EQLogParser
 
           if (part.Length > optional + 17 && part.IndexOf("over time", optional + 8, 9, StringComparison.Ordinal) > -1)
           {
-            type = Labels.HOT_NAME;
+            type = Labels.HOT;
           }
         }
       }
@@ -113,7 +113,7 @@ namespace EQLogParser
           {
             if (forIndex - 9 >= 0 && part.IndexOf("over time", forIndex - 9, StringComparison.Ordinal) > -1)
             {
-              type = Labels.HOT_NAME;
+              type = Labels.HOT;
               healed = part.Substring(afterHealed, forIndex - afterHealed - 10);
             }
             else
@@ -126,11 +126,11 @@ namespace EQLogParser
         }
         else
         {
-          if (type == Labels.HEAL_NAME)
+          if (type == Labels.HEAL)
           {
             amountIndex = optional + 12;
           }
-          else if (type == Labels.HOT_NAME)
+          else if (type == Labels.HOT)
           {
             amountIndex = optional + 22;
           }

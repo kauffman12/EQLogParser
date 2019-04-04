@@ -155,7 +155,7 @@ namespace EQLogParser
         if (File.Exists(@"data\spells.txt"))
         {
           DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
-          string[] lines = System.IO.File.ReadAllLines(@"data\spells.txt");
+          string[] lines = File.ReadAllLines(@"data\spells.txt");
 
           foreach (string line in lines)
           {
@@ -254,7 +254,7 @@ namespace EQLogParser
         // Pet settings
         try
         {
-          UpdateVerifiedPlayers(Labels.UNASSIGNED_PET_OWNER);
+          UpdateVerifiedPlayers(Labels.UNASSIGNED);
 
           if (File.Exists(PETMAP_FILE))
           {
@@ -446,7 +446,7 @@ namespace EQLogParser
 
         if (!PetToPlayerMap.ContainsKey(name))
         {
-          UpdatePetToPlayer(name, Labels.UNASSIGNED_PET_OWNER);
+          UpdatePetToPlayer(name, Labels.UNASSIGNED);
         }
       }
 
@@ -491,7 +491,7 @@ namespace EQLogParser
     public SpellData GetSpellByAbbrv(string abbrv)
     {
       SpellData result = null;
-      if (abbrv.Length > 0 && abbrv != Labels.UNKNOWN_SPELL && SpellsAbbrvDB.ContainsKey(abbrv))
+      if (abbrv.Length > 0 && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv))
       {
         result = SpellsAbbrvDB[abbrv];
       }
@@ -501,7 +501,7 @@ namespace EQLogParser
     public SpellData GetSpellByName(string name)
     {
       SpellData result = null;
-      if (name.Length > 0 && name != Labels.UNKNOWN_SPELL && SpellsNameDB.ContainsKey(name))
+      if (name.Length > 0 && name != Labels.UNKSPELL && SpellsNameDB.ContainsKey(name))
       {
         result = SpellsNameDB[name];
       }
@@ -730,7 +730,7 @@ namespace EQLogParser
           List<string> lines = new List<string>();
           foreach (var keypair in dict)
           {
-            if (keypair.Value != Labels.UNASSIGNED_PET_OWNER)
+            if (keypair.Value != Labels.UNASSIGNED)
             {
               lines.Add(keypair.Key + "=" + keypair.Value);
             }
