@@ -12,24 +12,18 @@ namespace EQLogParser
     private static readonly ChatType END_RESULT = new ChatType();
 
     private readonly string Home;
-    private readonly string Keyword;
-    private readonly string From;
-    private readonly double StartDate = 0;
-    private readonly double EndDate = 0;
 
-    private DateUtil DateUtil = new DateUtil();
     private string CurrentArchive = null;
+    private readonly ChatFilter CurrentChatFilter = null;
     private StringReader CurrentReader = null;
-    private Dictionary<string, byte> ValidChannels = null;
-    private List<string> Directories;
+    private readonly List<string> Directories;
     private List<string> Months;
     private List<string> Entries;
     private int CurrentDirectory = -1;
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
 
-    internal ChatIterator(string player, List<string> channels = null, double startDate = 0, 
-      double endDate = 0, string from = null, string keyword = null)
+    internal ChatIterator(string player, ChatFilter ChatFilter)
     {
       Home = DataManager.ARCHIVE_DIR + player;
 
@@ -43,16 +37,7 @@ namespace EQLogParser
         }
       }
 
-      if (channels != null)
-      {
-        ValidChannels = new Dictionary<string, byte>();
-        channels.ForEach(chan => ValidChannels[chan] = 1);
-      }
-
-      StartDate = startDate;
-      EndDate = endDate;
-      Keyword = keyword;
-      From = from;
+      CurrentChatFilter = ChatFilter;
     }
 
     internal void Close()
@@ -108,37 +93,11 @@ namespace EQLogParser
       if (CurrentReader != null)
       {
         result = END_RESULT;
-        string nextLine = null;
+        string nextLine;
         while (result == END_RESULT && (nextLine = CurrentReader.ReadLine()) != null)
         {
           var chatType = ChatLineParser.ParseChatType(nextLine);
-
-          if (ValidChannels == null || (chatType.Channel != null && ValidChannels.ContainsKey(chatType.Channel)))
-          {
-            if ((StartDate == 0 || ParseDate(chatType.Line) >= StartDate) && (EndDate == 0 || ParseDate(chatType.Line) < EndDate))
-            {
-              if (From == null || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
-              {
-                if (!DataManager.Instance.CheckNameForPet(chatType.Sender) && Helpers.IsPossiblePlayerName(chatType.Sender))
-                {
-                  if (Keyword != null)
-                  {
-                    int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
-                    int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
-                    if (foundIndex > -1)
-                    {
-                      result = chatType;
-                      chatType.KeywordStart = foundIndex;
-                    }
-                  }
-                  else
-                  {
-                    result = chatType;
-                  }
-                }
-              }
-            }
-          }
+          result = CurrentChatFilter.PassFilter(chatType) ? chatType : result;
         }
 
         if (result == END_RESULT)
@@ -214,13 +173,6 @@ namespace EQLogParser
       }
 
       return result;
-    }
-
-    private double ParseDate(string line)
-    {
-      string timeString = line.Substring(1, 24);
-      double parsed = DateUtil.ParseDate(timeString, out double precise);
-      return double.IsNaN(parsed) ? 0 : parsed;
     }
   }
 }
