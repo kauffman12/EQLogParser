@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -19,6 +20,8 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private const string END_DATE_DEFAULT = "End Date";
+    private const string START_DATE_DEFAULT = "Start Date";
     private const string TEXT_FILTER_DEFAULT = "Message Search";
     private const string FROM_FILTER_DEFAULT = "From";
 
@@ -34,6 +37,8 @@ namespace EQLogParser
     private string LastPlayerSelection = null;
     private string LastTextFilter = null;
     private string LastFromFilter = null;
+    private double LastStartDate = double.NaN;
+    private double LastEndDate = double.NaN;
     private bool Connected = false;
     private bool Ready = false;
 
@@ -48,6 +53,8 @@ namespace EQLogParser
 
       ColorItem DefaultForeground = new ColorItem { Name = "Default", Brush = new SolidColorBrush(Colors.White) };
 
+      startDate.Text = START_DATE_DEFAULT;
+      endDate.Text = END_DATE_DEFAULT;
       textFilter.Text = TEXT_FILTER_DEFAULT;
       fromFilter.Text = FROM_FILTER_DEFAULT;
       fontSize.ItemsSource = FontSizeList;
@@ -227,13 +234,17 @@ namespace EQLogParser
         var channelList = GetSelectedChannels(out bool changed);
         string text = (textFilter.Text != "" && textFilter.Text != TEXT_FILTER_DEFAULT) ? textFilter.Text : null;
         string from = (fromFilter.Text != "" && fromFilter.Text != FROM_FILTER_DEFAULT) ? fromFilter.Text : null;
-        if (changed || LastPlayerSelection != name || LastTextFilter != text || LastFromFilter != from)
+        double startDate = GetStartDate();
+        double endDate = GetEndDate();
+        if (changed || LastPlayerSelection != name || LastTextFilter != text || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
         {
           LastPlayerSelection = name;
           LastTextFilter = text;
           LastFromFilter = from;
+          LastStartDate = startDate;
+          LastEndDate = endDate;
           CurrentIterator?.Close();
-          CurrentIterator = new ChatIterator(name, channelList, from, text);
+          CurrentIterator = new ChatIterator(name, channelList, startDate, endDate, from, text);
           CurrentLineCount = 0;
 
           chatScroller.ScrollChanged -= Chat_ScrollChanged;
@@ -420,7 +431,7 @@ namespace EQLogParser
       }
     }
 
-    private void Filter_TextChange(object sender, TextChangedEventArgs e)
+    private void Filter_TextChanged(object sender, TextChangedEventArgs e)
     {
       FilterTimer?.Stop();
       FilterTimer?.Start();
@@ -438,6 +449,114 @@ namespace EQLogParser
         {
           fontSize.SelectedIndex++;
         }
+      }
+    }
+
+    private void Calendar_SelectedDatesChanged(object s, SelectionChangedEventArgs e)
+    {
+      var target = calendarPopup.PlacementTarget as TextBox;
+      if (target != null)
+      {
+        target.Text = calendar.SelectedDate?.ToShortDateString();
+        calendarPopup.IsOpen = false;
+      }
+    }
+
+    private double GetEndDate()
+    {
+      double result = double.NaN;
+
+      if (DateTime.TryParse(endDate.Text, out DateTime value))
+      {
+        result = value.Ticks / TimeSpan.FromSeconds(1).Ticks;
+      }
+
+      return result;
+    }
+
+    private double GetStartDate()
+    {
+      double result = double.NaN;
+
+      if (DateTime.TryParse(startDate.Text, out DateTime value))
+      {
+        result = value.Ticks / TimeSpan.FromSeconds(1).Ticks;
+      }
+
+      return result;
+    }
+
+    private void DateTimeMouseClick(TextBox box, MouseButtonEventArgs e)
+    {
+      if (calendarPopup.IsOpen && calendarPopup.PlacementTarget == box)
+      {
+        calendarPopup.IsOpen = false;
+      }
+      else if (e.ClickCount == 1 && e.ChangedButton == MouseButton.Left)
+      {
+        calendarPopup.PlacementTarget = null;
+
+        if (DateTime.TryParse(box.Text, out DateTime result))
+        {
+          calendar.SelectedDates.Clear();
+          calendar.SelectedDates.Add(result);
+          calendar.DisplayDate = result;
+        }
+
+        calendarPopup.PlacementTarget = box;
+        calendarPopup.IsOpen = true;
+      }
+    }
+
+    private void StartDate_MouseClick(object sender, MouseButtonEventArgs e)
+    {
+      DateTimeMouseClick(startDate, e);
+    }
+
+    private void EndDate_MouseClick(object sender, MouseButtonEventArgs e)
+    {
+      DateTimeMouseClick(endDate, e);
+    }
+
+    private void DateChooser_KeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Escape)
+      {
+        ResetDateText(sender);
+      }
+      else if (e.Key == Key.Enter)
+      {
+        chatBox.Focus();
+      }
+    }
+
+    private void DateChooser_GotFocus(object sender, RoutedEventArgs e)
+    {
+      var text = (sender as TextBox)?.Text;
+      if (text.Contains("Date"))
+      {
+        (sender as TextBox).Text = "";
+      }
+    }
+
+    private void DateChooser_LostFocus(object sender, RoutedEventArgs e)
+    {
+      var text = (sender as TextBox)?.Text;
+      if (!DateTime.TryParse(text, out DateTime result))
+      {
+        ResetDateText(sender);
+      }
+    }
+
+    private void ResetDateText(object sender)
+    {
+      if (startDate == sender)
+      {
+        startDate.Text = START_DATE_DEFAULT;
+      }
+      else if (endDate == sender)
+      {
+        endDate.Text = END_DATE_DEFAULT;
       }
     }
   }
