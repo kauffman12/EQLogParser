@@ -122,7 +122,7 @@ namespace EQLogParser
       if (selected.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var damageTable = new DamageBreakdown(main, CurrentDamageStats);
+        var damageTable = new DamageBreakdown(CurrentDamageStats);
         damageTable.Show(selected);
         Helpers.OpenNewTab(main.dockSite, "damageWindow", "Damage Breakdown", damageTable);
       }

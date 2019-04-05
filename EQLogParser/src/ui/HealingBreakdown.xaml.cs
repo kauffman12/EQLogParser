@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -20,10 +22,9 @@ namespace EQLogParser
 
     private List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
 
-    public HealBreakdown(MainWindow mainWindow, CombinedHealStats currentStats)
+    public HealBreakdown(CombinedHealStats currentStats)
     {
       InitializeComponent();
-      TheMainWindow = mainWindow;
       titleLabel.Content = currentStats.ShortTitle;
       choicesList.ItemsSource = ChoicesList;
       choicesList.SelectedIndex = 0;
@@ -43,7 +44,7 @@ namespace EQLogParser
       if (running == false)
       {
         running = true;
-        Dispatcher.InvokeAsync(() => TheMainWindow.Busy(true));
+        Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(true));
 
         Task.Delay(20).ContinueWith(task =>
         {
@@ -69,7 +70,7 @@ namespace EQLogParser
               }
             }
 
-            Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
+            Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list, DispatcherPriority.Background);
 
             if (CurrentColumn != null)
             {
@@ -82,10 +83,10 @@ namespace EQLogParser
           }
           finally
           {
-            Dispatcher.InvokeAsync(() => TheMainWindow.Busy(false));
+            Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(false));
             running = false;
           }
-        });
+        }, TaskScheduler.Default);
       }
     }
 

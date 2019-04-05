@@ -38,7 +38,7 @@ namespace EQLogParser
     {
       if (value.GetType() == typeof(double))
       {
-        return System.Convert.ToDouble(value) > 0 ? value.ToString() : "-";
+        return System.Convert.ToDouble(value, CultureInfo.CurrentCulture) > 0 ? value.ToString() : "-";
       }
       return string.Empty;
     }
