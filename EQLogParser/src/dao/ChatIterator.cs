@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -26,6 +27,7 @@ namespace EQLogParser
     internal ChatIterator(string player, ChatFilter ChatFilter)
     {
       Home = DataManager.ARCHIVE_DIR + player;
+      CurrentChatFilter = ChatFilter;
 
       if (Directory.Exists(Home))
       {
@@ -36,8 +38,6 @@ namespace EQLogParser
           GetNextYear();
         }
       }
-
-      CurrentChatFilter = ChatFilter;
     }
 
     internal void Close()
@@ -67,11 +67,11 @@ namespace EQLogParser
     {
       ChatType result = null;
 
-      if (CurrentArchive == null && CurrentMonth < Months.Count)
+      if (CurrentArchive == null && Months != null && CurrentMonth < Months.Count)
       {
         CurrentArchive = GetArchive();
       }
-      else if (CurrentArchive == null && CurrentMonth >= Months.Count)
+      else if (CurrentArchive == null && Months != null && CurrentMonth >= Months.Count)
       {
         if (GetNextYear())
         {
@@ -120,14 +120,19 @@ namespace EQLogParser
 
       if (CurrentDirectory < Directories.Count && Directory.Exists(Directories[CurrentDirectory]))
       {
-        var months = Directory.GetFiles(Directories[CurrentDirectory]);
-        if (months.Length > 0)
+        string dir = Path.GetFileName(Directories[CurrentDirectory]);
+        if (DateTime.TryParseExact(dir, "yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime parsed) && CurrentChatFilter.DuringYear(parsed))
         {
-          Months = months.ToList().OrderByDescending(month => month).ToList();
-          CurrentMonth = 0;
-          success = true;
+          var months = Directory.GetFiles(Directories[CurrentDirectory]);
+          if (months.Length > 0)
+          {
+            Months = months.ToList().OrderByDescending(month => month).ToList();
+            CurrentMonth = 0;
+            success = true;
+          }
         }
-        else
+
+        if (!success)
         {
           return GetNextYear();
         }
@@ -160,15 +165,44 @@ namespace EQLogParser
     {
       string result = null;
 
-      if (CurrentDirectory > -1 && CurrentDirectory < Directories.Count && CurrentMonth > -1 && CurrentMonth < Months.Count)
+      if (CurrentDirectory > -1 && CurrentDirectory < Directories.Count && CurrentMonth > -1 && Months != null && CurrentMonth < Months.Count)
       {
-        var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
-        if (archive != null)
+        string dir = Path.GetFileName(Directories[CurrentDirectory]);
+        string fileName = Path.GetFileName(Months[CurrentMonth]);
+        if (dir != null && fileName != null)
         {
-          Entries = archive.Entries.Where(entry => entry.Name != ChatManager.INDEX).OrderByDescending(entry => entry.Name).Select(entry => entry.Name).ToList();
-          CurrentEntry = -1;
-          result = Months[CurrentMonth];
-          archive.Dispose();
+          string monthString = dir + "-" + fileName.Substring(5, 2);
+          if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime parsed) && CurrentChatFilter.DuringMonth(parsed))
+          {
+            var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
+            if (archive != null)
+            {
+              Entries = archive.Entries.Where(entry =>
+              {
+                bool found = false;
+                if (entry.Name != ChatManager.INDEX)
+                {
+                  string dayString = monthString + "-" + entry.Name;
+                  if (DateTime.TryParseExact(dayString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime day) && CurrentChatFilter.DuringDay(day))
+                  {
+                    found = true;
+                  }
+                }
+
+                return found;
+              }).OrderByDescending(entry => entry.Name).Select(entry => entry.Name).ToList();
+
+              CurrentEntry = -1;
+              result = Months[CurrentMonth];
+              archive.Dispose();
+            }
+          }
+        }
+
+        if (result == null)
+        {
+          CurrentMonth++;
+          return GetArchive();
         }
       }
 

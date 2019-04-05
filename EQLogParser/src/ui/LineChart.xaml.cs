@@ -1,11 +1,16 @@
 ﻿using ActiproSoftware.Windows.Themes;
+using CsvHelper;
+using CsvHelper.Configuration;
 using LiveCharts;
 using LiveCharts.Configurations;
 using LiveCharts.Wpf;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,8 +25,7 @@ namespace EQLogParser
   /// </summary>
   public partial class LineChart : UserControl
   {
-    public static List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
-    public static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private static CartesianMapper<DataPoint> CONFIG_VPS = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
@@ -45,6 +49,7 @@ namespace EQLogParser
     Dictionary<string, ChartValues<DataPoint>> ChartValues = null;
     private CartesianMapper<DataPoint> CurrentConfig;
     private List<PlayerStats> LastSelected = null;
+    private List<ChartValues<DataPoint>> LastSortedValues = null;
 
     public LineChart(List<string> choices)
     {
@@ -185,7 +190,7 @@ namespace EQLogParser
         label = sortedValues.Count > 0 ? "Selected Player(s)" : Labels.NODATA;
       }
 
-      sortedValues = Smoothing(sortedValues);
+      LastSortedValues = sortedValues = Smoothing(sortedValues);
 
       Dispatcher.InvokeAsync(() =>
       {
@@ -355,6 +360,83 @@ namespace EQLogParser
       }
     }
 
+    private void SaveCSV_Click(object sender, RoutedEventArgs e)
+    {
+      if (LastSortedValues != null)
+      {
+        var records = new List<LineChartTable>();
+        LastSortedValues.ForEach(sortedValue =>
+        {
+          foreach (var chartData in sortedValue)
+          {
+            LineChartTable entry = new LineChartTable();
+            entry.Name = chartData.Name;
+            entry.Time = chartData.CurrentTime;
+
+            if (CurrentConfig == CONFIG_AVG)
+            {
+              entry.Value = chartData.Avg;
+            }
+            else if (CurrentConfig == CONFIG_CRIT_RATE)
+            {
+              entry.Value = chartData.CritRate;
+            }
+            else if (CurrentConfig == CONFIG_TOTAL)
+            {
+              entry.Value = chartData.Total;
+            }
+            else if (CurrentConfig == CONFIG_VPS)
+            {
+              entry.Value = chartData.VPS;
+            }
+
+            records.Add(entry);
+          }
+        });
+
+        StringWriter writer = null;
+        CsvWriter csv = null;
+
+        try
+        {
+          writer = new StringWriter();
+          csv = new CsvWriter(writer);
+
+          LineChartTableMap.Label = choicesList.SelectedValue as string;
+          csv.Configuration.RegisterClassMap<LineChartTableMap>();
+          csv.WriteRecords(records);
+
+          SaveFileDialog saveFileDialog = new SaveFileDialog();
+          string filter = "CSV file (*.csv)|*.csv";
+          saveFileDialog.Filter = filter;
+          bool? result = saveFileDialog.ShowDialog();
+          if (result == true)
+          {
+            File.WriteAllText(saveFileDialog.FileName, writer.ToString());
+          }
+        }
+        catch (IOException ex)
+        {
+          LOG.Error(ex);
+        }
+        catch (UnauthorizedAccessException uax)
+        {
+          LOG.Error(uax);
+        }
+        catch (SecurityException se)
+        {
+          LOG.Error(se);
+        }
+        finally
+        {
+          if (writer != null)
+          {
+            writer.Dispose();
+          }
+        }
+      }
+    }
+
     private static List<ChartValues<DataPoint>> Smoothing(List<ChartValues<DataPoint>> data)
     {
       List<ChartValues<DataPoint>> smoothed = new List<ChartValues<DataPoint>>();
@@ -410,6 +492,24 @@ namespace EQLogParser
       });
 
       return smoothed;
+    }
+
+    private class LineChartTable
+    {
+      public string Name { get; set; }
+      public double Time { get; set; }
+      public double Value { get; set; }     
+    }
+
+    private class LineChartTableMap : ClassMap<LineChartTable>
+    {
+      public static string Label = "Value";
+      public LineChartTableMap()
+      {
+        _ = Map(m => m.Time).Name("Seconds");
+        _ = Map(m => m.Value).Name(Label);
+        _ = Map(m => m.Name).Name("Name");
+      }
     }
   }
 }

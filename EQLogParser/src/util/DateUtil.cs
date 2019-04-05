@@ -10,6 +10,11 @@ namespace EQLogParser
     private double LastDateTime;
     private double increment = 0.0;
 
+    internal static double ToDouble(DateTime dateTime)
+    {
+      return dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
+    }
+
     internal bool HasTimeInRange(double now, string line, int lastMins)
     {
       bool found = false;
@@ -46,7 +51,7 @@ namespace EQLogParser
       }
       else
       {
-        result = LastDateTime = dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
+        result = LastDateTime = ToDouble(dateTime);
       }
 
       LastDateTimeString = timeString;

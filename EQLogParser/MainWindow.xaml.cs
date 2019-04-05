@@ -22,10 +22,15 @@ namespace EQLogParser
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private enum LogOption { OPEN, MONITOR, ARCHIVE };
+
     private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
     private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
+
+    private static List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
+    private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
     private const string APP_NAME = "EQ Log Parser";
     private const string VERSION = "v1.4.10";
@@ -46,7 +51,7 @@ namespace EQLogParser
 
     // progress window
     private static DateTime StartLoadTime;
-    private static bool MonitorOnly;
+    private static LogOption CurrentLogOption;
 
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
@@ -342,7 +347,7 @@ namespace EQLogParser
 
     private void OpenDamageChart()
     {
-      if (OpenChart(DamageChartWindow, HealingChartWindow, damageChartIcon, "Damage Chart", LineChart.DAMAGE_CHOICES, out DamageChartWindow))
+      if (OpenChart(DamageChartWindow, HealingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
       {
         List<PlayerStats> selected = null;
         bool isBaneEnabled = false;
@@ -359,7 +364,7 @@ namespace EQLogParser
 
     private void OpenHealingChart()
     {
-      if (OpenChart(HealingChartWindow, DamageChartWindow, healingChartIcon, "Healing Chart", LineChart.HEALING_CHOICES, out HealingChartWindow))
+      if (OpenChart(HealingChartWindow, DamageChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
       {
         List<PlayerStats> selected = null;
         bool isAEHealingEnabled = false;
@@ -462,7 +467,7 @@ namespace EQLogParser
       }
       else
       {
-        ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat Viewer", null, new ChatViewer());
+        ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat Search", null, new ChatViewer());
         IconToWindow[chatIcon.Name] = ChatWindow;
         Helpers.OpenWindow(ChatWindow);
       }
@@ -512,7 +517,14 @@ namespace EQLogParser
     // Main Menu Op File
     private void MenuItemSelectMonitorLogFile_Click(object sender, RoutedEventArgs e)
     {
-      OpenLogFile(true);
+      CurrentLogOption = LogOption.MONITOR;
+      OpenLogFile();
+    }
+
+    private void MenuItemSelectArchiveChat_Click(object sender, RoutedEventArgs e)
+    {
+      CurrentLogOption = LogOption.ARCHIVE;
+      OpenLogFile();
     }
 
     private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
@@ -523,7 +535,8 @@ namespace EQLogParser
         lastMins = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
       }
 
-      OpenLogFile(false, lastMins);
+      CurrentLogOption = LogOption.OPEN;
+      OpenLogFile(lastMins);
     }
 
     private void PlayerParseText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
@@ -551,17 +564,25 @@ namespace EQLogParser
           double healPercent = HealLineCount > 0 ? Math.Round((double)HealLinesProcessed / HealLineCount * 100, 1) : 0;
           bytesReadLabel.Content = filePercent + "%";
 
-          if ((filePercent >= 100 || MonitorOnly) && EQLogReader.FileLoadComplete)
+          if (EQLogReader.FileLoadComplete)
           {
-            bytesReadTitle.Content = "Monitoring:";
-            bytesReadLabel.Content = "Active";
-            bytesReadLabel.Foreground = GOOD_BRUSH;
+            if ((filePercent >= 100 && CurrentLogOption != LogOption.ARCHIVE) || CurrentLogOption == LogOption.MONITOR)
+            {
+              bytesReadTitle.Content = "Monitoring:";
+              bytesReadLabel.Content = "Active";
+              bytesReadLabel.Foreground = GOOD_BRUSH;
+            }
+            else if (filePercent >= 100 && CurrentLogOption == LogOption.ARCHIVE)
+            {
+              bytesReadTitle.Content = "Archiving:";
+              bytesReadLabel.Content = "Complete";
+              bytesReadLabel.Foreground = GOOD_BRUSH;
+            }
           }
 
-          if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100) || MonitorOnly) && EQLogReader.FileLoadComplete)
+          if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100) || 
+          CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
           {
-            bytesReadTitle.Content = "Monitoring";
-
             if (npcWindow.IsOpen)
             {
               (npcWindow.Content as NpcTable).SelectLastRow();
@@ -708,12 +729,10 @@ namespace EQLogParser
       }
     }
 
-    private void OpenLogFile(bool monitorOnly = false, int lastMins = -1)
+    private void OpenLogFile(int lastMins = -1)
     {
       try
       {
-        MonitorOnly = monitorOnly;
-
         // WPF doesn't have its own file chooser so use Win32 Version
         Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog
         {
@@ -764,7 +783,7 @@ namespace EQLogParser
 
           NpcDamageManager.LastUpdateTime = double.NaN;
           progressWindow.IsOpen = true;
-          EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, monitorOnly, lastMins);
+          EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
           UpdateLoadingProgress();
         }
@@ -794,7 +813,7 @@ namespace EQLogParser
         {
           PlayerChatManager.Add(chatType);
         }
-        else
+        else if (CurrentLogOption != LogOption.ARCHIVE)
         {
           CastLineCount += 1;
           CastProcessor.Add(line);
