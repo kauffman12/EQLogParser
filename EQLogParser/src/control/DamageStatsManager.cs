@@ -85,7 +85,7 @@ namespace EQLogParser
                 DamageRecord record = action as DamageRecord;
                 // see if there's a pet mapping, check this first
                 string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-                if (pname != null || (pname = record.AttackerOwner) != "")
+                if (pname != null || (pname = record.AttackerOwner).Length != 0)
                 {
                   PlayerHasPet[pname] = 1;
                   PetToPlayer[record.Attacker] = pname;
@@ -154,7 +154,7 @@ namespace EQLogParser
 
         // see if there's a pet mapping, check this first
         string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-        if (pname != null || (pname = record.AttackerOwner) != "")
+        if (pname != null || (pname = record.AttackerOwner).Length != 0)
         {
           PlayerHasPet[pname] = 1;
           PetToPlayer[record.Attacker] = pname;
@@ -203,7 +203,7 @@ namespace EQLogParser
         raidStats.DPS = (long) Math.Round(raidStats.Total / raidStats.TotalSeconds, 2);
 
         var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
-        int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.PlayerName));
+        int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.PlayerName, StringComparison.Ordinal));
 
         int renumber;
         if (found > 4)
@@ -391,6 +391,11 @@ namespace EQLogParser
                   if (!options.IsBaneEanbled && record.Type == Labels.BANE)
                   {
                     stats.BaneHits++;
+
+                    if (individualStats.TryGetValue(stats.OrigName + " +Pets", out PlayerStats temp))
+                    {
+                      temp.BaneHits++;
+                    }
                   }
                   else
                   {
