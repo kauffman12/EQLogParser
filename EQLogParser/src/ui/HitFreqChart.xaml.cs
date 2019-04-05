@@ -5,6 +5,7 @@ using LiveCharts.Wpf;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security;
@@ -263,14 +264,14 @@ namespace EQLogParser
         {
           maxY = Math.Max(maxY, YValues[i]);
           yChartValues.Add(YValues[i]);
-          xChartValues.Add(XValues[i].ToString() + (XValuesDiff[i] == 0 ? "" : " \n+" + XValuesDiff[i].ToString()));
+          xChartValues.Add(XValues[i].ToString(CultureInfo.CurrentCulture) + (XValuesDiff[i] == 0 ? "" : " \n+" + XValuesDiff[i].ToString(CultureInfo.CurrentCulture)));
         }
 
         var series = new SeriesCollection();
         var firstSeries = new ColumnSeries();
         firstSeries.Values = yChartValues;
         firstSeries.DataLabels = true;
-        firstSeries.LabelPoint = point => point.Y.ToString();
+        firstSeries.LabelPoint = point => point.Y.ToString(CultureInfo.CurrentCulture);
         firstSeries.FontSize = 14;
         firstSeries.FontWeight = FontWeights.Bold;
         firstSeries.Foreground = new SolidColorBrush(Colors.White);
