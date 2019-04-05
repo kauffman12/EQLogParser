@@ -9,7 +9,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public static event EventHandler<string> EventsLineProcessed;
 
-    private static DateUtil DateUtil = new DateUtil();
+    private static readonly DateUtil DateUtil = new DateUtil();
 
     public static ConcurrentDictionary<string, byte> IgnoreMap = new ConcurrentDictionary<string, byte>(
       new List<KeyValuePair<string, byte>>
@@ -31,7 +31,7 @@ namespace EQLogParser
         {
           SpellCast cast = null;
           ProcessLine pline = null;
-          int firstSpace = line.IndexOf(" ", Parsing.ACTIONINDEX);
+          int firstSpace = line.IndexOf(" ", Parsing.ACTIONINDEX, StringComparison.Ordinal);
           if (firstSpace > -1 && firstSpace == index)
           {
             if (firstSpace == (Parsing.ACTIONINDEX + 3) && line.Substring(Parsing.ACTIONINDEX, 3) == "You")
@@ -98,7 +98,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Error(e);
+        LOG.Debug(e);
       }
 
       EventsLineProcessed(line, line);
@@ -108,11 +108,11 @@ namespace EQLogParser
     {
       string player = pline.OptionalData;
       string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
-      SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(matchOn, out List<SpellData> output);
+      SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(matchOn, out _);
       if (result == null)
       {
         matchOn = pline.ActionPart;
-        result = DataManager.Instance.GetLandsOnYou(matchOn, out output);
+        result = DataManager.Instance.GetLandsOnYou(matchOn, out _);
         if (result != null)
         {
           player = "You";
@@ -129,7 +129,7 @@ namespace EQLogParser
     public static void HandlePosessiveLandsOnOther(ProcessLine pline)
     {
       string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
-      SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(matchOn, out List<SpellData> output);
+      SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(matchOn, out _);
       if (result != null)
       {
         var newSpell = new ReceivedSpell() { Receiver = string.Intern(pline.ActionPart.Substring(0, pline.OptionalIndex - 3)), SpellData = result };
@@ -150,7 +150,7 @@ namespace EQLogParser
           if (pline.ActionPart.Length > pline.OptionalIndex + bracketIndex)
           {
             int finalBracket;
-            int index = pline.ActionPart.IndexOf("<", pline.OptionalIndex + bracketIndex);
+            int index = pline.ActionPart.IndexOf("<", pline.OptionalIndex + bracketIndex, StringComparison.Ordinal);
             if (index > -1 && (finalBracket = pline.ActionPart.IndexOf(">", pline.OptionalIndex + bracketIndex, StringComparison.Ordinal)) > -1)
             {
               cast = new SpellCast()

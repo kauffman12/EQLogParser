@@ -37,7 +37,7 @@ namespace EQLogParser
     private readonly List<ActionBlock> AllResists = new List<ActionBlock>();
     private readonly List<ActionBlock> PlayerDeaths = new List<ActionBlock>();
 
-    private readonly Dictionary<string,SpellData> AllUniqueSpellsCache = new Dictionary<string,SpellData>();
+    private readonly Dictionary<string, SpellData> AllUniqueSpellsCache = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
@@ -90,125 +90,66 @@ namespace EQLogParser
       ClassNames[SpellClass.BST] = string.Intern("Beastlord");
       ClassNames[SpellClass.BER] = string.Intern("Berserker");
 
-      // General Settings
-      try
+      // needs to be during class initialization for some reason
+      CONFIG_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\config");
+      ARCHIVE_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\archive\");
+      PETMAP_FILE = CONFIG_DIR + @"\petmapping.txt";
+      SETTINGS_FILE = CONFIG_DIR + @"\settings.txt";
+
+      // create config dir if it doesn't exist
+      Directory.CreateDirectory(CONFIG_DIR);
+
+      Helpers.ReadList(SETTINGS_FILE).ForEach(line =>
       {
-        // needs to be during class initialization for some reason
-        CONFIG_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\config");
-        ARCHIVE_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\archive\");
-        PETMAP_FILE = CONFIG_DIR + @"\petmapping.txt";
-        SETTINGS_FILE = CONFIG_DIR + @"\settings.txt";
-
-        // create config dir if it doesn't exist
-        Directory.CreateDirectory(CONFIG_DIR);
-
-        if (File.Exists(SETTINGS_FILE))
+        string[] parts = line.Split('=');
+        if (parts != null && parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
         {
-          string[] lines = File.ReadAllLines(SETTINGS_FILE);
-          foreach (string line in lines)
-          {
-            string[] parts = line.Split('=');
-            if (parts != null && parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
-            {
-              ApplicationSettings[parts[0]] = parts[1];
-            }
-          }
+          ApplicationSettings[parts[0]] = parts[1];
         }
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
+      });
 
       // Populate generated pets
-      try
+      Helpers.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
+
+      DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
+      Helpers.ReadList(@"data\spells.txt").ForEach(line =>
       {
-        if (File.Exists(@"data\petnames.txt"))
+        string[] data = line.Split('^');
+        int beneficial = int.Parse(data[2], CultureInfo.CurrentCulture);
+        byte target = byte.Parse(data[3], CultureInfo.CurrentCulture);
+        ushort classMask = ushort.Parse(data[4], CultureInfo.CurrentCulture);
+        SpellData spellData = new SpellData()
         {
-          string[] lines = File.ReadAllLines(@"data\petnames.txt");
-          lines.ToList().ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
-        }
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
+          ID = string.Intern(data[0]),
+          Spell = string.Intern(data[1]),
+          SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
+          Beneficial = beneficial != 0,
+          Target = target,
+          ClassMask = classMask,
+          LandsOnYou = string.Intern(data[5]),
+          LandsOnOther = string.Intern(data[6]),
+          Damaging = byte.Parse(data[7], CultureInfo.CurrentCulture) == 1,
+          IsProc = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1
+        };
 
-      try
-      {
-        if (File.Exists(@"data\spells.txt"))
+        SpellsDB[spellData.ID] = spellData;
+        SpellsNameDB[spellData.Spell] = spellData;
+        SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+
+        if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
         {
-          DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
-          string[] lines = File.ReadAllLines(@"data\spells.txt");
-
-          foreach (string line in lines)
-          {
-            string[] data = line.Split('^');
-            int beneficial = int.Parse(data[2], CultureInfo.CurrentCulture);
-            byte target = byte.Parse(data[3], CultureInfo.CurrentCulture);
-            ushort classMask = ushort.Parse(data[4], CultureInfo.CurrentCulture);
-            SpellData spellData = new SpellData()
-            {
-              ID = string.Intern(data[0]),
-              Spell = string.Intern(data[1]),
-              SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
-              Beneficial = beneficial != 0,
-              Target = target,
-              ClassMask = classMask,
-              LandsOnYou = string.Intern(data[5]),
-              LandsOnOther = string.Intern(data[6]),
-              Damaging = byte.Parse(data[7], CultureInfo.CurrentCulture) == 1,
-              IsProc = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1
-            };
-
-            SpellsDB[spellData.ID] = spellData;
-            SpellsNameDB[spellData.Spell] = spellData;
-            SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
-
-            if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
-            {
-              helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
-            }
-            else if (spellData.LandsOnOther.Length > 1)
-            {
-              helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
-            }
-
-            if (spellData.LandsOnYou.Length > 0 && spellData.LandsOnOther.Length > 0) // just do stuff in common
-            {
-              helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
-            }
-          }
+          helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
         }
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
+        else if (spellData.LandsOnOther.Length > 1)
+        {
+          helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
+        }
+
+        if (spellData.LandsOnYou.Length > 0 && spellData.LandsOnOther.Length > 0) // just do stuff in common
+        {
+          helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
+        }
+      });
 
       Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
@@ -225,7 +166,7 @@ namespace EQLogParser
           }
           else if (!keepOut.ContainsKey(spell.Spell))
           {
-            SpellsToClass[spell.Spell] = (SpellClass) spell.ClassMask;
+            SpellsToClass[spell.Spell] = (SpellClass)spell.ClassMask;
           }
         }
       }
@@ -249,40 +190,20 @@ namespace EQLogParser
 
     public void LoadState()
     {
-      lock(this)
+      lock (this)
       {
         // Pet settings
-        try
+        UpdateVerifiedPlayers(Labels.UNASSIGNED);
+        Helpers.ReadList(PETMAP_FILE).ForEach(line =>
         {
-          UpdateVerifiedPlayers(Labels.UNASSIGNED);
-
-          if (File.Exists(PETMAP_FILE))
+          string[] parts = line.Split('=');
+          if (parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
           {
-            string[] lines = File.ReadAllLines(PETMAP_FILE);
-            foreach (string line in lines)
-            {
-              string[] parts = line.Split('=');
-              if (parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
-              {
-                UpdatePetToPlayer(parts[0], parts[1]);
-                UpdateVerifiedPlayers(parts[1]);
-                UpdateVerifiedPets(parts[0]);
-              }
-            }
+            UpdatePetToPlayer(parts[0], parts[1]);
+            UpdateVerifiedPlayers(parts[1]);
+            UpdateVerifiedPets(parts[0]);
           }
-        }
-        catch (IOException ex)
-        {
-          LOG.Error(ex);
-        }
-        catch (UnauthorizedAccessException uax)
-        {
-          LOG.Error(uax);
-        }
-        catch (SecurityException se)
-        {
-          LOG.Error(se);
-        }
+        });
 
         // dont count initial load
         PetMappingUpdated = false;
@@ -291,7 +212,7 @@ namespace EQLogParser
 
     public void SaveState()
     {
-      lock(this)
+      lock (this)
       {
         SaveConfiguration(PETMAP_FILE, PetMappingUpdated, PetToPlayerMap);
         PetMappingUpdated = false;

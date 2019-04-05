@@ -13,18 +13,15 @@ namespace EQLogParser
     protected string CurrentSortKey = "Total";
     protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     protected DataGridTextColumn CurrentColumn = null;
-    protected MainWindow TheMainWindow;
 
     protected void Custom_Sorting(object sender, DataGridSortingEventArgs e)
     {
-      var column = e.Column as DataGridTextColumn;
-      if (column != null)
+      if (e.Column is DataGridTextColumn column)
       {
         // prevent the built-in sort from sorting
         e.Handled = true;
 
-        var binding = column.Binding as Binding;
-        if (binding != null && binding.Path != null) // dont sort on percent total, its not useful
+        if (column.Binding is Binding binding && binding.Path != null) // dont sort on percent total, its not useful
         {
           CurrentSortKey = binding.Path.Path;
           CurrentColumn = column;

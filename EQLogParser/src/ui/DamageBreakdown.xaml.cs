@@ -34,10 +34,9 @@ namespace EQLogParser
     private Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
     private static bool running = false;
 
-    public DamageBreakdown(MainWindow mainWindow, CombinedDamageStats currentStats)
+    public DamageBreakdown(CombinedDamageStats currentStats)
     {
       InitializeComponent();
-      TheMainWindow = mainWindow;
       titleLabel.Content = currentStats.ShortTitle;
       RaidStats = currentStats.RaidStats;
       ChildStats = currentStats.Children;
@@ -56,7 +55,7 @@ namespace EQLogParser
       if (running == false && ChildStats != null && RaidStats != null)
       {
         running = true;
-        Dispatcher.InvokeAsync(() => TheMainWindow.Busy(true));
+        Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(true));
 
         Task.Delay(5).ContinueWith(task =>
         {
@@ -124,10 +123,10 @@ namespace EQLogParser
           }
           finally
           {
-            Dispatcher.InvokeAsync(() => TheMainWindow.Busy(false));
+            Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(false));
             running = false;
           }
-        });
+        }, TaskScheduler.Default);
       }
     }
 

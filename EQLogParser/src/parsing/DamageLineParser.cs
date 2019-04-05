@@ -11,10 +11,10 @@ namespace EQLogParser
     public static event EventHandler<ResistProcessedEvent> EventsResistProcessed;
     public static event EventHandler<string> EventsLineProcessed;
 
-    private static DateUtil DateUtil = new DateUtil();
-    private static Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly DateUtil DateUtil = new DateUtil();
+    private static readonly Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
 
-    private static Dictionary<string, byte> HitMap = new Dictionary<string, byte>()
+    private static readonly Dictionary<string, byte> HitMap = new Dictionary<string, byte>()
     {
       { "bash", 1 }, { "bit", 1 }, { "backstab", 1 }, { "claw", 1 }, { "crush", 1 }, { "frenzies", 1 },
       { "frenzy", 1 }, { "gore", 1 }, { "hit", 1 }, { "kick", 1 }, { "maul", 1 }, { "punch", 1 },
@@ -26,7 +26,7 @@ namespace EQLogParser
       { "sweep", 1 }, { "sweeps", 1 }
     };
 
-    private static Dictionary<string, string> HitAdditionalMap = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> HitAdditionalMap = new Dictionary<string, string>()
     {
       { "frenzies", "frenzies on" }, { "frenzy", "frenzy on" }
     };
@@ -68,7 +68,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Error(e);
+        LOG.Debug(e);
       }
 
       EventsLineProcessed(line, line);
@@ -117,10 +117,9 @@ namespace EQLogParser
 
     private static DamageRecord ParseDamage(ProcessLine pline, out bool isPlayerDamage)
     {
-      DamageRecord record = null;
       isPlayerDamage = true;
 
-      record = ParseAllDamage(pline);
+      DamageRecord record = ParseAllDamage(pline);
       if (record != null)
       {
         // Needed to replace 'You' and 'you', etc
@@ -166,7 +165,6 @@ namespace EQLogParser
 
     private static void CheckDamageRecordForPet(DamageRecord record, bool replacedAttacker, out bool isDefenderPet, out bool isAttackerPet)
     {
-      isDefenderPet = false;
       isAttackerPet = false;
 
       if (!replacedAttacker)

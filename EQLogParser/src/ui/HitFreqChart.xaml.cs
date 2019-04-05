@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -78,9 +79,17 @@ namespace EQLogParser
           File.WriteAllText(saveFileDialog.FileName, writer.ToString());
         }
       }
-      catch (Exception ex)
+      catch (IOException ex)
       {
         LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
       }
       finally
       {
@@ -107,7 +116,7 @@ namespace EQLogParser
               string type = hitTypeList.SelectedItem as string;
               string critType = critTypeList.SelectedItem as string;
 
-              if (player != null && type != null && critType != null && player != "" && type != "" && critType != "")
+              if (player != null && type != null && critType != null && player.Length > 0 && type.Length > 0 && critType.Length > 0)
               {
                 DIMap = null;
                 var data = ChartData[player];
@@ -150,13 +159,18 @@ namespace EQLogParser
 
               Updating = false;
             }
-            catch (Exception ex)
+            catch (ArgumentNullException ex)
             {
               Updating = false;
               LOG.Error(ex);
             }
+            catch (InvalidOperationException ioe)
+            {
+              Updating = false;
+              LOG.Error(ioe);
+            }
           });
-        });
+        }, TaskScheduler.Default);
       }
     }
 

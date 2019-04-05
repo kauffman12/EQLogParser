@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace EQLogParser
 {
@@ -7,12 +8,12 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static List<string> YouCriteria = new List<string>
+    private static readonly List<string> YouCriteria = new List<string>
     {
       "You say,", "You told ", "You tell ", "You say to ", "You shout,", "You say out of", "You auction,"
     };
 
-    private static List<string> OtherCriteria = new List<string>
+    private static readonly List<string> OtherCriteria = new List<string>
     {
       " says,", " tells ", " shouts,", "says out of", " auctions,", " told you,"
     };
@@ -100,7 +101,7 @@ namespace EQLogParser
                 else if ((end = line.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
                 {
                   chatType.Channel = line.Substring(start, end - start);
-                  chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1).ToLower();
+                  chatType.Channel = char.ToUpper(chatType.Channel[0], CultureInfo.CurrentCulture) + chatType.Channel.Substring(1).ToLower(CultureInfo.CurrentCulture);
                 }
                 break;
               case 2:
@@ -157,7 +158,7 @@ namespace EQLogParser
                 if ((end = line.IndexOf(":", start, StringComparison.Ordinal)) > -1)
                 {
                   chatType.Channel = line.Substring(start, end - start);
-                  chatType.Channel = char.ToUpper(chatType.Channel[0]) + chatType.Channel.Substring(1).ToLower();
+                  chatType.Channel = char.ToUpper(chatType.Channel[0], CultureInfo.CurrentCulture) + chatType.Channel.Substring(1).ToLower(CultureInfo.CurrentCulture);
                 }
               }
               break;

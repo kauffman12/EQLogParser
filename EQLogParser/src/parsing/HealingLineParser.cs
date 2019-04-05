@@ -8,7 +8,7 @@ namespace EQLogParser
     public static event EventHandler<string> EventsLineProcessed;
     public static event EventHandler<HealProcessedEvent> EventsHealProcessed;
 
-    private static DateUtil DateUtil = new DateUtil();
+    private static readonly DateUtil DateUtil = new DateUtil();
 
     public static void Process(string line)
     {
@@ -32,7 +32,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Error(e);
+        LOG.Debug(e);
       }
 
       EventsLineProcessed(line, line);
@@ -104,7 +104,7 @@ namespace EQLogParser
       if (!done)
       {
         int amountIndex = -1;
-        if (healed == "")
+        if (healed.Length == 0)
         {
           int afterHealed = optional + 8;
           int forIndex = part.IndexOf(" for ", afterHealed, StringComparison.Ordinal);
@@ -174,7 +174,7 @@ namespace EQLogParser
           }
         }
 
-        if (healed != "")
+        if (healed.Length > 0)
         {
           // check for pets
           int possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
@@ -190,7 +190,7 @@ namespace EQLogParser
             heal = 0;
           }
 
-          if (healer != "" && heal != 0)
+          if (healer.Length > 0 && heal != 0)
           {
             record = new HealRecord()
             {
