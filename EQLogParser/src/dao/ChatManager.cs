@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Security;
 using System.Threading;
 
 namespace EQLogParser
@@ -13,9 +12,12 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    internal static event EventHandler<string> EventsUpdatePlayer;
+    internal static event EventHandler<List<string>> EventsNewChannels;
+
     internal const string INDEX = "index";
 
-    private const int TIMEOUT = 3000;
+    private const int TIMEOUT = 2000;
     private const string SELECTED_CHANNELS_FILE = "channels-selected.txt";
 
     private static readonly object LockObject = new object();
@@ -32,6 +34,7 @@ namespace EQLogParser
     private ZipArchive CurrentArchive = null;
     private string CurrentArchiveKey = null;
     private string CurrentEntryKey = null;
+    private readonly string CurrentPlayer = null;
     private bool ChannelIndexUpdated = false;
     private bool CurrentListModified = false;
     private bool Running = false;
@@ -42,8 +45,12 @@ namespace EQLogParser
       {
         PLAYER_DIR = DataManager.ARCHIVE_DIR + player;
 
-        // create config dir if it doesn't exist
-        Directory.CreateDirectory(PLAYER_DIR);
+        if (!Directory.Exists(PLAYER_DIR))
+        {
+          CurrentPlayer = player;
+          // create config dir if it doesn't exist
+          Directory.CreateDirectory(PLAYER_DIR);
+        }
 
         GetSavedChannels(player).ForEach(channel => ChannelCache[channel] = 1);
         GetPlayers(player).ForEach(channel => PlayerCache[channel] = 1);
@@ -211,8 +218,10 @@ namespace EQLogParser
 
             if (ChannelCacheUpdated)
             {
-              Helpers.SaveList(PLAYER_DIR + @"\channels.txt", ChannelCache.Keys.ToList());
+              var current = ChannelCache.Keys.ToList();
+              Helpers.SaveList(PLAYER_DIR + @"\channels.txt", current);
               ChannelCacheUpdated = false;
+              EventsNewChannels?.Invoke(this, current);
             }
 
             if (PlayerCacheUpdated)
@@ -221,6 +230,7 @@ namespace EQLogParser
               PlayerCacheUpdated = false;
             }
 
+            EventsUpdatePlayer?.Invoke(this, CurrentPlayer);
             Running = false;
           }
         }

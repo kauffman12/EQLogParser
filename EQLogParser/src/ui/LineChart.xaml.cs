@@ -4,6 +4,7 @@ using LiveCharts.Configurations;
 using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -19,8 +20,6 @@ namespace EQLogParser
   /// </summary>
   public partial class LineChart : UserControl
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     public static List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     public static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
@@ -99,7 +98,7 @@ namespace EQLogParser
           lvcChart.UpdateLayout();
           lvcChart.Update();
         });
-      });
+      }, TaskScheduler.Default);
     }
 
     private void AddDataPoints(RecordGroupIterator recordIterator, List<PlayerStats> selected = null)
@@ -118,8 +117,7 @@ namespace EQLogParser
         {
           double diff = double.IsNaN(lastTime) ? 1 : dataPoint.CurrentTime - lastTime;
 
-          DataPoint aggregate;
-          if (!playerData.TryGetValue(dataPoint.Name, out aggregate))
+          if (!playerData.TryGetValue(dataPoint.Name, out DataPoint aggregate))
           {
             aggregate = new DataPoint() { Name = dataPoint.Name };
             playerData[dataPoint.Name] = aggregate;
@@ -270,7 +268,7 @@ namespace EQLogParser
     {
       string dateTimeString;
       DateTime dt = value > 0 ? new DateTime((long) (value * TimeSpan.FromSeconds(1).Ticks)) : new DateTime();
-      dateTimeString = dt.ToString("HH:mm:ss");
+      dateTimeString = dt.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
       return dateTimeString;
     }
 
@@ -299,10 +297,12 @@ namespace EQLogParser
 
     private void Insert(DataPoint aggregate, Dictionary<string, ChartValues<DataPoint>> chartValues)
     {
-      DataPoint newEntry = new DataPoint();
-      newEntry.Name = aggregate.Name;
-      newEntry.CurrentTime = aggregate.CurrentTime;
-      newEntry.Total = aggregate.Total;
+      DataPoint newEntry = new DataPoint
+      {
+        Name = aggregate.Name,
+        CurrentTime = aggregate.CurrentTime,
+        Total = aggregate.Total
+      };
 
       double totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
       newEntry.VPS = (long) Math.Round(aggregate.RollingTotal / totalSeconds, 2);
@@ -313,8 +313,7 @@ namespace EQLogParser
         newEntry.CritRate = Math.Round(Convert.ToDouble(aggregate.RollingCritHits) / aggregate.RollingHits * 100, 2);
       }
 
-      ChartValues<DataPoint> playerValues;
-      if (!chartValues.TryGetValue(aggregate.Name, out playerValues))
+      if (!chartValues.TryGetValue(aggregate.Name, out ChartValues<DataPoint> playerValues))
       {
         playerValues = new ChartValues<DataPoint>();
         chartValues[aggregate.Name] = playerValues;
@@ -331,7 +330,32 @@ namespace EQLogParser
       }
     }
 
-    private List<ChartValues<DataPoint>> Smoothing(List<ChartValues<DataPoint>> data)
+    private void Reset()
+    {
+      if (lvcChart.Series != null)
+      {
+        Helpers.ChartResetView(lvcChart);
+        lvcChart.AxisX[0].LabelFormatter = GetLabelFormat;
+        lvcChart.Series = null;
+        titleLabel.Content = Labels.NODATA;
+      }
+    }
+
+    private void Chart_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+      Helpers.ChartResetView(lvcChart);
+    }
+
+    private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (ChartValues != null)
+      {
+        CurrentConfig = CHOICES[choicesList.SelectedIndex];
+        Plot(ChartValues, DateTime.Now, LastSelected);
+      }
+    }
+
+    private static List<ChartValues<DataPoint>> Smoothing(List<ChartValues<DataPoint>> data)
     {
       List<ChartValues<DataPoint>> smoothed = new List<ChartValues<DataPoint>>();
 
@@ -386,31 +410,6 @@ namespace EQLogParser
       });
 
       return smoothed;
-    }
-
-    private void Reset()
-    {
-      if (lvcChart.Series != null)
-      {
-        Helpers.ChartResetView(lvcChart);
-        lvcChart.AxisX[0].LabelFormatter = GetLabelFormat;
-        lvcChart.Series = null;
-        titleLabel.Content = Labels.NODATA;
-      }
-    }
-
-    private void Chart_DoubleClick(object sender, MouseButtonEventArgs e)
-    {
-      Helpers.ChartResetView(lvcChart);
-    }
-
-    private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (ChartValues != null)
-      {
-        CurrentConfig = CHOICES[choicesList.SelectedIndex];
-        Plot(ChartValues, DateTime.Now, LastSelected);
-      }
     }
   }
 }

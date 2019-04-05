@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -16,7 +15,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for ChatViewer.xaml
   /// </summary>
-  public partial class ChatViewer : UserControl
+  public partial class ChatViewer : UserControl, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -33,6 +32,7 @@ namespace EQLogParser
     private List<string> PlayerAutoCompleteList = new List<string>();
     private Paragraph MainParagraph;
     private DispatcherTimer FilterTimer;
+    private DispatcherTimer RefreshTimer;
     private ChatFilter CurrentChatFilter = null;
     private ChatIterator CurrentIterator = null;
     private int CurrentLineCount = 0;
@@ -69,16 +69,6 @@ namespace EQLogParser
       fgList.Insert(0, DefaultForeground);
       fontFgColor.ItemsSource = fgList;
 
-      var playerList = ChatManager.GetArchivedPlayers();
-      if (playerList.Count > 0)
-      {
-        players.Items.Clear();
-        players.ItemsSource = playerList;
-
-        string player = DataManager.Instance.GetApplicationSetting("ChatSelectedPlayer");
-        players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
-      }
-
       string fgColor = DataManager.Instance.GetApplicationSetting("ChatFontFgColor");
       fgColor = fgColor ?? "Default";
       fontFgColor.SelectedItem = fgList.Find(item => item.Name == fgColor);
@@ -88,11 +78,19 @@ namespace EQLogParser
       {
         fontFamily.SelectedItem = new FontFamily(family);
       }
+      else
+      {
+        fontFamily.SelectedItem = chatBox.FontFamily;
+      }
 
       string size = DataManager.Instance.GetApplicationSetting("ChatFontSize");
       if (size != null && double.TryParse(size, out double dsize))
       {
         fontSize.SelectedItem = dsize;
+      }
+      else
+      {
+        fontSize.SelectedValue = chatBox.FontSize;
       }
 
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
@@ -102,11 +100,42 @@ namespace EQLogParser
         ChangeSearch();
       };
 
+      RefreshTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 2) };
+      RefreshTimer.Tick += (sender, e) =>
+      {
+        if (chatScroller.ScrollableHeight == chatScroller.VerticalOffset)
+        {
+          ChangeSearch(true);
+          RefreshTimer.Stop();
+        }
+      };
+
+      LoadPlayers();
+
       Ready = true;
       ChangeSearch();
+
+      ChatManager.EventsUpdatePlayer += ChatManager_EventsUpdatePlayer;
+      ChatManager.EventsNewChannels += ChatManager_EventsNewChannels;
     }
 
-    private void DisplayPage(int count, bool adjustScroll = false)
+    private void ChatManager_EventsNewChannels(object sender, List<string> e)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (players.SelectedValue is string player)
+        {
+          LoadChannels(player);
+        }
+      }, DispatcherPriority.Background);
+    }
+
+    private void ChatManager_EventsUpdatePlayer(object sender, string player)
+    {
+      LoadPlayers(player);
+    }
+
+    private void DisplayPage(int count)
     {
       if (!Running)
       {
@@ -200,6 +229,56 @@ namespace EQLogParser
       }
     }
 
+    private void LoadChannels(string player)
+    {
+      List<ChannelDetails> items = new List<ChannelDetails>();
+      int selectedCount = 0;
+      ChatManager.GetChannels(player).ForEach(chan =>
+      {
+        selectedCount += chan.IsChecked ? 1 : 0;
+        items.Add(chan);
+      });
+
+      items[0].SelectedText = selectedCount + " Selected Channels";
+      channels.ItemsSource = items;
+      channels.SelectedItem = items[0];
+    }
+
+    private void LoadPlayers(string updatedPlayer = null)
+    {
+      _ = Dispatcher.InvokeAsync(() =>
+        {
+          if (updatedPlayer == null || (updatedPlayer != null && !players.Items.Contains(updatedPlayer)))
+          {
+            var playerList = ChatManager.GetArchivedPlayers();
+            if (playerList.Count > 0)
+            {
+              if (players.ItemsSource == null)
+              {
+                players.Items.Clear();
+              }
+
+              players.ItemsSource = playerList;
+
+              string player = DataManager.Instance.GetApplicationSetting("ChatSelectedPlayer");
+              if (player == null && DataManager.Instance.PlayerName != null && DataManager.Instance.ServerName != null)
+              {
+                player = DataManager.Instance.PlayerName + "." + DataManager.Instance.ServerName;
+              }
+
+              players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
+            }
+          }
+          else
+          {
+            if (!RefreshTimer.IsEnabled)
+            {
+              RefreshTimer.Start();
+            }
+          }
+        }, DispatcherPriority.Background);
+    }
+
     private List<string> GetSelectedChannels(out bool changed)
     {
       changed = false;
@@ -225,7 +304,7 @@ namespace EQLogParser
       return selected;
     }
 
-    private void ChangeSearch()
+    private void ChangeSearch(bool refresh = false)
     {
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
@@ -235,7 +314,7 @@ namespace EQLogParser
         string from = (fromFilter.Text.Length != 0 && fromFilter.Text != FROM_FILTER_DEFAULT) ? fromFilter.Text : null;
         double startDate = GetStartDate();
         double endDate = GetEndDate();
-        if (changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
+        if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
         {
           LastPlayerSelection = name;
           LastTextFilter = text;
@@ -268,7 +347,7 @@ namespace EQLogParser
       {
         int pageSize = (int)(100 * chatBox.ExtentHeight / 5000);
         pageSize = pageSize > 250 ? 250 : pageSize;
-        DisplayPage(pageSize, e.VerticalChange < 0);
+        DisplayPage(pageSize);
       }
 
       if (chatScroller.VerticalOffset >= 0 && e.ViewportHeightChange > 0)
@@ -295,18 +374,7 @@ namespace EQLogParser
     {
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
-        List<ChannelDetails> items = new List<ChannelDetails>();
-        int selectedCount = 0;
-        ChatManager.GetChannels(players.SelectedItem as string).ForEach(chan =>
-        {
-          selectedCount += chan.IsChecked ? 1 : 0;
-          items.Add(chan);
-        });
-
-        items[0].SelectedText = selectedCount + " Selected Channels";
-        channels.ItemsSource = items;
-        channels.SelectedItem = items[0];
-
+        LoadChannels(players.SelectedItem as string);
         PlayerAutoCompleteList = ChatManager.GetPlayers(name);
         DataManager.Instance.SetApplicationSetting("ChatSelectedPlayer", name);
 
@@ -601,5 +669,36 @@ namespace EQLogParser
         endDate.FontStyle = FontStyles.Italic;
       }
     }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        if (disposing)
+        {
+          // TODO: dispose managed state (managed objects).
+        }
+
+        ChatManager.EventsUpdatePlayer -= ChatManager_EventsUpdatePlayer;
+        ChatManager.EventsNewChannels -= ChatManager_EventsNewChannels;
+
+        RefreshTimer.Stop();
+        FilterTimer.Stop();
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }

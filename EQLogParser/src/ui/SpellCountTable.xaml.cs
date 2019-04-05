@@ -159,7 +159,7 @@ namespace EQLogParser
               {
                 string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
                 double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
-                string header = name + " = " + ((CurrentCountType == 0) ? total.ToString() : Math.Round(total / totalCasts * 100, 2).ToString());
+                string header = name + " = " + ((CurrentCountType == 0) ? total.ToString(CultureInfo.CurrentCulture) : Math.Round(total / totalCasts * 100, 2).ToString(CultureInfo.CurrentCulture));
 
                 Dispatcher.InvokeAsync(() =>
                 {
@@ -185,7 +185,7 @@ namespace EQLogParser
               foreach (var spell in sortedSpellList)
               {
                 SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new double[sortedPlayers.Count + 1] };
-                row.IsReceived = spell.StartsWith("Received");
+                row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
 
                 int i;
                 for (i = 0; i < sortedPlayers.Count; i++)

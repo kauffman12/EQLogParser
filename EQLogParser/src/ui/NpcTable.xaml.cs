@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -20,15 +21,13 @@ namespace EQLogParser
   /// </summary>
   public partial class NpcTable : UserControl
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     // events
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1009:DeclareEventHandlersCorrectly")]
     public event EventHandler<IList> EventsSelectionChange;
 
     // brushes
-    public static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
-    public static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
+    private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
+    private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
     private const string NPC_SEARCH_TEXT = "NPC Search";
 
@@ -166,7 +165,7 @@ namespace EQLogParser
     private void LoadingRow(object sender, DataGridRowEventArgs e)
     {
       // set header count
-      e.Row.Header = (e.Row.GetIndex() + 1).ToString();
+      e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
 
       if (e.Row.Item is NonPlayer npc && npc.BeginTimeString == NonPlayer.BREAK_TIME)
       {
@@ -230,7 +229,7 @@ namespace EQLogParser
           NonPlayersViewSource.View.Filter = new Predicate<object>(item => ((NonPlayer) item).GroupID > -1);
         }
 
-        DataManager.Instance.SetApplicationSetting("NpcShowInactivityBreaks", npcShowBreaks.IsChecked.Value.ToString());
+        DataManager.Instance.SetApplicationSetting("NpcShowInactivityBreaks", npcShowBreaks.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
       }
     }
 
@@ -253,7 +252,7 @@ namespace EQLogParser
 
     private void NPCSearchBox_LostFocus(object sender, RoutedEventArgs e)
     {
-      if (npcSearchBox.Text == "")
+      if (npcSearchBox.Text.Length == 0)
       {
         npcSearchBox.Text = NPC_SEARCH_TEXT;
         npcSearchBox.FontStyle = FontStyles.Italic;
