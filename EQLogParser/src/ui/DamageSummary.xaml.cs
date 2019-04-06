@@ -15,7 +15,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageSummary.xaml
   /// </summary>
-  public partial class DamageSummary : SummaryTable
+  public partial class DamageSummary : SummaryTable, IDisposable
   {
     private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
@@ -50,6 +50,9 @@ namespace EQLogParser
       }
 
       Ready = true;
+
+      DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
     }
 
     internal bool IsBaneEnabled()
@@ -302,18 +305,34 @@ namespace EQLogParser
       }
     }
 
-    private void Summary_Unloaded(object sender, RoutedEventArgs e)
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
     {
-      DamageStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
-      connected = false;
+      if (!disposedValue)
+      {
+        if (disposing)
+        {
+          // TODO: dispose managed state (managed objects).
+          CurrentDamageStats = null;
+          ChildGrids = null;
+        }
+
+        DamageStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
+        DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
+        disposedValue = true;
+      }
     }
 
-    protected override void Summary_Loaded(object sender, RoutedEventArgs e)
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
     {
-      DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
-      connected = true;
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
     }
+    #endregion
   }
 }
