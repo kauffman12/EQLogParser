@@ -56,7 +56,6 @@ namespace EQLogParser
       return 0;
     }
   }
-
   internal class ComboBoxItemTemplateSelector : DataTemplateSelector
   {
     public List<DataTemplate> SelectedItemTemplates { get; } = new List<DataTemplate>();
@@ -107,8 +106,7 @@ namespace EQLogParser
       if (!SpellAbbrvCache.TryGetValue(spell, out string result))
       {
         result = spell;
-
-        int index = -1;
+        int index;
         if ((index = spell.IndexOf(" Rk. ", StringComparison.Ordinal)) > -1)
         {
           result = spell.Substring(0, index);
@@ -287,6 +285,26 @@ namespace EQLogParser
       return found;
     }
 
+    internal static bool IsPossiblePlayerNameWithServer(string part, int stop = -1)
+    {
+      if (stop == -1)
+      {
+        stop = part.Length;
+      }
+
+      bool found = stop < 3 ? false : true;
+      for (int i = 0; found != false && i < stop; i++)
+      {
+        if (!char.IsLetter(part, i) && part[i] != '.')
+        {
+          found = false;
+          break;
+        }
+      }
+
+      return found;
+    }
+
     private class SortableNameComparer : IComparer<SortableName>
     {
       public int Compare(SortableName x, SortableName y)
@@ -323,7 +341,7 @@ namespace EQLogParser
       {
         if (!dict.ContainsKey(key))
         {
-          dict[key] = default(T2);
+          dict[key] = default;
         }
       }
 

@@ -117,9 +117,17 @@ namespace EQLogParser
               }
             }
           }
-          catch (Exception ex)
+          catch (ArgumentNullException ane)
           {
-            LOG.Error(ex);
+            LOG.Error(ane);
+          }
+          catch (NullReferenceException nre)
+          {
+            LOG.Error(nre);
+          }
+          catch (ArgumentOutOfRangeException aro)
+          {
+            LOG.Error(aro);
           }
           finally
           {

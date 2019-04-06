@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -16,8 +17,6 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageSummary : SummaryTable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
@@ -40,9 +39,8 @@ namespace EQLogParser
       }
 
       // read bane and healing setting
-      bool bValue;
       string value = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
-      includeBane.IsChecked = value != null && bool.TryParse(value, out bValue) && bValue;
+      includeBane.IsChecked = value != null && bool.TryParse(value, out bool bValue) && bValue;
 
       value = DataManager.Instance.GetApplicationSetting("IsDamageOverlayEnabled");
       overlayOption.IsChecked = bool.TryParse(value, out bValue) && bValue;
@@ -164,16 +162,14 @@ namespace EQLogParser
     private void DataGridExpander_Loaded(object sender, RoutedEventArgs e)
     {
       Image image = (sender as Image);
-      PlayerStats stats = image.DataContext as PlayerStats;
       var children = CurrentDamageStats?.Children;
 
-      if (stats != null && children != null && children.ContainsKey(stats.Name))
+      if (image.DataContext is PlayerStats stats && children != null && children.ContainsKey(stats.Name))
       {
         var list = children[stats.Name];
-        if (list.Count > 1 || stats.Name == Labels.UNASSIGNED || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name)))
+        if (list.Count > 1 || stats.Name == Labels.UNASSIGNED || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name, StringComparison.Ordinal)))
         {
-          var container = dataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
-          if (container != null)
+          if (dataGrid.ItemContainerGenerator.ContainerFromItem(stats) is DataGridRow container)
           {
             image.Source = container.DetailsVisibility != Visibility.Visible ? EXPAND_BITMAP : COLLAPSE_BITMAP;
           }
@@ -185,9 +181,8 @@ namespace EQLogParser
     {
       Image image = (sender as Image);
       PlayerStats stats = image.DataContext as PlayerStats;
-      var container = dataGrid.ItemContainerGenerator.ContainerFromItem(stats) as DataGridRow;
 
-      if (image != null && container != null)
+      if (image != null && dataGrid.ItemContainerGenerator.ContainerFromItem(stats) is DataGridRow container)
       {
         if (image.Source == COLLAPSE_BITMAP)
         {
@@ -208,8 +203,11 @@ namespace EQLogParser
       {
         e.Handled = true;
         MouseWheelEventArgs wheelArgs = e as MouseWheelEventArgs;
-        var newEvent = new MouseWheelEventArgs(wheelArgs.MouseDevice, wheelArgs.Timestamp, wheelArgs.Delta);
-        newEvent.RoutedEvent = MouseWheelEvent;
+        var newEvent = new MouseWheelEventArgs(wheelArgs.MouseDevice, wheelArgs.Timestamp, wheelArgs.Delta)
+        {
+          RoutedEvent = MouseWheelEvent
+        };
+
         var container = dataGrid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
         container.RaiseEvent(newEvent);
       }
@@ -217,11 +215,8 @@ namespace EQLogParser
 
     private void ChildrenGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
     {
-      PlayerStats stats = e.Row.Item as PlayerStats;
-      var childrenDataGrid = e.DetailsElement as DataGrid;
       var children = CurrentDamageStats?.Children;
-
-      if (stats != null && childrenDataGrid != null && children != null && children.ContainsKey(stats.Name))
+      if (e.Row.Item is PlayerStats stats && e.DetailsElement is DataGrid childrenDataGrid && children != null && children.ContainsKey(stats.Name))
       {
         if (childrenDataGrid.ItemsSource != children[stats.Name])
         {
@@ -279,7 +274,7 @@ namespace EQLogParser
       if (Ready)
       {
         bool isBaneEnabled = includeBane.IsChecked.Value;
-        DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", isBaneEnabled.ToString());
+        DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", isBaneEnabled.ToString(CultureInfo.CurrentCulture));
 
         if (CurrentDamageStats != null && CurrentDamageStats.RaidStats != null)
         {
@@ -303,7 +298,7 @@ namespace EQLogParser
           (Application.Current.MainWindow as MainWindow)?.CloseOverlay();
         }
 
-        DataManager.Instance.SetApplicationSetting("IsDamageOverlayEnabled", overlayOption.IsChecked.Value.ToString());
+        DataManager.Instance.SetApplicationSetting("IsDamageOverlayEnabled", overlayOption.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
       }
     }
 
