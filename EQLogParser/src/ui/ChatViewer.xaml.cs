@@ -129,6 +129,8 @@ namespace EQLogParser
                   var newItem = new Span(new Run(Environment.NewLine));
                   newItem.Inlines.Add(new Run(chatType.Line));
                   MainParagraph.Inlines.InsertAfter(MainParagraph.Inlines.LastInline, newItem);
+                  CurrentLineCount++;
+
                   FirstChat = chatType;
                 }
               }, DispatcherPriority.Background);
@@ -153,13 +155,13 @@ namespace EQLogParser
 
     private void ChatManager_EventsNewChannels(object sender, List<string> e)
     {
-      Dispatcher.InvokeAsync(() =>
-      {
-        if (players.SelectedValue is string player)
+      _ = Dispatcher.InvokeAsync(() =>
         {
-          LoadChannels(player);
-        }
-      }, DispatcherPriority.Background);
+          if (players.SelectedValue is string player)
+          {
+            LoadChannels(player);
+          }
+        }, DispatcherPriority.Background);
     }
 
     private void ChatManager_EventsUpdatePlayer(object sender, string player)
@@ -706,6 +708,10 @@ namespace EQLogParser
         endDate.Text = END_DATE_DEFAULT;
         endDate.FontStyle = FontStyles.Italic;
       }
+    }
+    private void Refresh_MouseClick(object sender, MouseButtonEventArgs e)
+    {
+      ChangeSearch(true);
     }
 
     #region IDisposable Support

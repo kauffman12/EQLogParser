@@ -16,7 +16,6 @@ namespace EQLogParser
 
     protected DataGrid TheDataGrid;
     protected Label TheTitle;
-    protected bool connected = false;
 
     protected void InitSummaryTable(Label title, DataGrid dataGrid)
     {
@@ -25,14 +24,6 @@ namespace EQLogParser
 
       title.Content = DEFAULT_TABLE_LABEL;
       dataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
-    }
-
-    internal void EnsureConnected()
-    {
-      if (!connected)
-      {
-        Summary_Loaded();
-      }
     }
 
     internal void UpdateClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
@@ -131,11 +122,6 @@ namespace EQLogParser
       {
         e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
       }
-    }
-
-    protected virtual void Summary_Loaded(object sender = null, RoutedEventArgs e = null)
-    {
-      // do nothing
     }
   }
 }
