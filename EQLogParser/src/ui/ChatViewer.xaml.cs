@@ -129,7 +129,7 @@ namespace EQLogParser
                   var newItem = new Span(new Run(Environment.NewLine));
                   newItem.Inlines.Add(new Run(chatType.Line));
                   MainParagraph.Inlines.InsertAfter(MainParagraph.Inlines.LastInline, newItem);
-                  CurrentLineCount++;
+                  statusCount.Text = ++CurrentLineCount + " Lines";
 
                   FirstChat = chatType;
                 }
