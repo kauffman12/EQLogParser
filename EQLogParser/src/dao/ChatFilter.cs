@@ -10,6 +10,7 @@ namespace EQLogParser
     private readonly string From;
     private readonly double StartDate = 0;
     private readonly double EndDate = 0;
+    private readonly DateUtil DateUtil = new DateUtil();
     private readonly Dictionary<string, byte> ValidChannels = null;
 
     internal ChatFilter(List<string> channels = null, double startDate = 0,
@@ -52,6 +53,23 @@ namespace EQLogParser
       return (StartDate == 0 || (StartDate < end)) && (EndDate == 0 || (EndDate >= begin));
     }
 
+    internal bool PastLiveFilter(ChatType chatType)
+    {
+      bool pass = false;
+      string timeString = chatType.Line.Substring(1, 24);
+      if (timeString != null)
+      {
+        double time = DateUtil.ParseDate(timeString, out double _);
+        if (!double.IsNaN(time))
+        {
+          double endOfDay = EndDate + 86400;
+          pass = (StartDate == 0 || time >= StartDate) && (EndDate == 0 || time < endOfDay) && PassFilter(chatType);
+        }
+      }
+
+      return pass;
+    }
+
     internal bool PassFilter(ChatType chatType)
     {
       bool passed = false;
@@ -62,7 +80,7 @@ namespace EQLogParser
         {
           if (From == null || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
           {
-            if (!DataManager.Instance.CheckNameForPet(chatType.Sender) && Helpers.IsPossiblePlayerName(chatType.Sender))
+            if (!DataManager.Instance.CheckNameForPet(chatType.Sender) && Helpers.IsPossiblePlayerNameWithServer(chatType.Sender))
             {
               if (Keyword != null)
               {

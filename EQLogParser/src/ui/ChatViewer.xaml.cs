@@ -35,6 +35,7 @@ namespace EQLogParser
     private DispatcherTimer RefreshTimer;
     private ChatFilter CurrentChatFilter = null;
     private ChatIterator CurrentIterator = null;
+    private ChatType FirstChat = null;
     private int CurrentLineCount = 0;
     private string LastChannelSelection = null;
     private string LastPlayerSelection = null;
@@ -100,13 +101,44 @@ namespace EQLogParser
         ChangeSearch();
       };
 
-      RefreshTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 2) };
+      RefreshTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 1) };
       RefreshTimer.Tick += (sender, e) =>
       {
-        if (chatScroller.ScrollableHeight == chatScroller.VerticalOffset)
+        ChatIterator newIterator = new ChatIterator(players.SelectedValue as string, CurrentChatFilter);
+        var tempChat = FirstChat;
+        var tempFilter = CurrentChatFilter;
+
+        if (tempChat != null)
         {
-          ChangeSearch(true);
-          RefreshTimer.Stop();
+          Task.Run(() =>
+          {
+            foreach (var chatType in newIterator.TakeWhile(chatType => chatType.Line != tempChat.Line).Reverse())
+            {
+              Dispatcher.Invoke(() =>
+              {
+                // make sure user didnt start new search
+                if (tempFilter == CurrentChatFilter && RefreshTimer.IsEnabled && tempFilter.PastLiveFilter(chatType))
+                {
+                  if (chatBox.Document.Blocks.Count == 0)
+                  {
+                    MainParagraph = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
+                    chatBox.Document.Blocks.Add(MainParagraph);
+                    MainParagraph.Inlines.Add(new Run());
+                  }
+
+                  var newItem = new Span(new Run(Environment.NewLine));
+                  newItem.Inlines.Add(new Run(chatType.Line));
+                  MainParagraph.Inlines.InsertAfter(MainParagraph.Inlines.LastInline, newItem);
+                  FirstChat = chatType;
+                }
+              }, DispatcherPriority.Background);
+            }
+
+            Dispatcher.Invoke(() =>
+            {
+              RefreshTimer.Stop();
+            });
+          });
         }
       };
 
@@ -145,7 +177,7 @@ namespace EQLogParser
           var chatList = CurrentIterator.Take(count).ToList();
           if (chatList.Count > 0)
           {
-            Dispatcher.InvokeAsync(() =>
+            Dispatcher.Invoke(() =>
             {
               try
               {
@@ -160,6 +192,11 @@ namespace EQLogParser
 
                 for (int i = 0; i < chatList.Count; i++)
                 {
+                  if (needScroll && i == 0)
+                  {
+                    FirstChat = chatList[i];
+                  }
+
                   var text = chatList[i].Line;
 
                   Span span = new Span();
@@ -316,16 +353,17 @@ namespace EQLogParser
         double endDate = GetEndDate();
         if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
         {
+          CurrentChatFilter = new ChatFilter(channelList, startDate, endDate, to, from, text);
+          CurrentIterator?.Close();
+          CurrentIterator = new ChatIterator(name, CurrentChatFilter);
+          CurrentLineCount = 0;
+          RefreshTimer.Stop();
           LastPlayerSelection = name;
           LastTextFilter = text;
           LastToFilter = to;
           LastFromFilter = from;
           LastStartDate = startDate;
           LastEndDate = endDate;
-          CurrentIterator?.Close();
-          CurrentChatFilter = new ChatFilter(channelList, startDate, endDate, to, from, text);
-          CurrentIterator = new ChatIterator(name, CurrentChatFilter);
-          CurrentLineCount = 0;
 
           chatScroller.ScrollChanged -= Chat_ScrollChanged;
           Connected = false;

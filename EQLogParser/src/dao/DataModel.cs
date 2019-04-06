@@ -12,8 +12,8 @@ namespace EQLogParser
 
   public enum SpellTarget
   {
-    LOS = 1, CASTER_AE = 2, CASTER_GROUP = 3, CASTER_PB = 4, SINGLE = 5, SELF = 6, TARGET_AE = 8,
-    NEARBY_PLAYERS_AE = 40, DIRECTION_AE = 42, TARGET_RING_AE = 45
+    LOS = 1, CASTERAE = 2, CASTERGROUP = 3, CASTERPB = 4, SINGLETARGET = 5, SELF = 6, TARGETAE = 8,
+    NEARBYPLAYERSAE = 40, DIRECTIONAE = 42, TARGETRINGAE = 45
   }
 
   public static class Labels

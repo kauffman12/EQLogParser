@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -82,12 +83,11 @@ namespace EQLogParser
       if (record != null && !DataManager.Instance.IsProbablyNotAPlayer(record.Healed))
       {
         valid = true;
-
-        SpellData spellData = null;
+        SpellData spellData;
         if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
         {
-          if (spellData.Target == (byte) SpellTarget.TARGET_AE || spellData.Target == (byte) SpellTarget.NEARBY_PLAYERS_AE ||
-            spellData.Target == (byte) SpellTarget.TARGET_RING_AE)
+          if (spellData.Target == (byte) SpellTarget.TARGETAE || spellData.Target == (byte) SpellTarget.NEARBYPLAYERSAE ||
+            spellData.Target == (byte) SpellTarget.TARGETRINGAE)
           {
             IsAEHealingAvailable = true;
             valid = showAE;
@@ -218,13 +218,15 @@ namespace EQLogParser
         RaidTotals.DPS = (long) Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
         Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, RaidTotals));
 
-        combined = new CombinedHealStats();
-        combined.RaidStats = RaidTotals;
-        combined.UniqueClasses = new Dictionary<string, byte>();
-        combined.StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
-        combined.TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title;
-        combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds);
-        combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Heals ", StatsUtil.FormatTotals(RaidTotals.DPS));
+        combined = new CombinedHealStats
+        {
+          RaidStats = RaidTotals,
+          UniqueClasses = new Dictionary<string, byte>(),
+          StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList(),
+          TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
+          TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
+          TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Heals ", StatsUtil.FormatTotals(RaidTotals.DPS))
+        };
         combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
         combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
@@ -234,9 +236,17 @@ namespace EQLogParser
           combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
         }
       }
-      catch (Exception ex)
+      catch (ArgumentNullException ane)
       {
-        LOG.Error(ex);
+        LOG.Error(ane);
+      }
+      catch (NullReferenceException nre)
+      {
+        LOG.Error(nre);
+      }
+      catch(ArgumentOutOfRangeException aro)
+      {
+        LOG.Error(aro);
       }
 
       FireCompletedEvent(options, combined);
@@ -255,8 +265,8 @@ namespace EQLogParser
         {
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {
-            string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+            string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
+            string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
             list.Add(playerFormat + damageFormat + " ");
           }
         }

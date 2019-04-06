@@ -360,19 +360,6 @@ namespace EQLogParser
       }
     }
 
-    private Rectangle CreateRectangle(bool configure, List<Color> colors)
-    {
-      var rectangle = new Rectangle
-      {
-        Fill = CreateBrush(colors)
-      };
-
-      rectangle.SetValue(Panel.ZIndexProperty, 1);
-      rectangle.Effect = new BlurEffect { Radius = 5, RenderingBias = 0 };
-      rectangle.Opacity = configure ? 1.0 : DATA_OPACITY;
-      return rectangle;
-    }
-
     private void SetFont(int size)
     {
       fontSizeLabel.FontSize = size - 1;
@@ -478,7 +465,18 @@ namespace EQLogParser
       button.IsEnabled = true;
       return button;
     }
+    private static Rectangle CreateRectangle(bool configure, List<Color> colors)
+    {
+      var rectangle = new Rectangle
+      {
+        Fill = CreateBrush(colors)
+      };
 
+      rectangle.SetValue(Panel.ZIndexProperty, 1);
+      rectangle.Effect = new BlurEffect { Radius = 5, RenderingBias = 0 };
+      rectangle.Opacity = configure ? 1.0 : DATA_OPACITY;
+      return rectangle;
+    }
     private static TextBlock CreateTextBlock()
     {
       var textBlock = new TextBlock { Foreground = TEXT_BRUSH };
