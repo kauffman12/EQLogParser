@@ -43,11 +43,11 @@ namespace EQLogParser
     {
       try
       {
+        CurrentPlayer = player;
         PLAYER_DIR = DataManager.ARCHIVE_DIR + player;
 
         if (!Directory.Exists(PLAYER_DIR))
         {
-          CurrentPlayer = player;
           // create config dir if it doesn't exist
           Directory.CreateDirectory(PLAYER_DIR);
         }

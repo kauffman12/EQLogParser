@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace EQLogParser
@@ -66,9 +67,21 @@ namespace EQLogParser
           HandleResist(pline);
         }
       }
-      catch (Exception e)
+      catch (ArgumentNullException ne)
       {
-        LOG.Debug(e);
+        LOG.Error(ne);
+      }
+      catch (NullReferenceException nr)
+      {
+        LOG.Error(nr);
+      }
+      catch (ArgumentOutOfRangeException aor)
+      {
+        LOG.Error(aor);
+      }
+      catch (ArgumentException ae)
+      {
+        LOG.Error(ae);
       }
 
       EventsLineProcessed(line, line);
@@ -77,7 +90,7 @@ namespace EQLogParser
     private static void HandleSlain(ProcessLine pline)
     {
       string test = null;
-      if (pline.ActionPart.Length > 16 && pline.ActionPart.StartsWith("You have slain ") && pline.ActionPart[pline.ActionPart.Length-1] == '!')
+      if (pline.ActionPart.Length > 16 && pline.ActionPart.StartsWith("You have slain ", StringComparison.Ordinal) && pline.ActionPart[pline.ActionPart.Length-1] == '!')
       {
         test = pline.ActionPart.Substring(15, pline.ActionPart.Length - 15 - 1);
       }
@@ -91,7 +104,7 @@ namespace EQLogParser
       {
         if (DataManager.Instance.CheckNameForPlayer(test) || DataManager.Instance.CheckNameForPet(test))
         {
-          int byIndex = pline.ActionPart.IndexOf(" by ");
+          int byIndex = pline.ActionPart.IndexOf(" by ", StringComparison.Ordinal);
           if (byIndex > -1)
           {
             DataManager.Instance.AddPlayerDeath(test, pline.ActionPart.Substring(byIndex + 4), pline.CurrentTime);
@@ -99,7 +112,7 @@ namespace EQLogParser
         }
         else if (!DataManager.Instance.RemoveActiveNonPlayer(test) && char.IsUpper(test[0]))
         {
-          DataManager.Instance.RemoveActiveNonPlayer(char.ToLower(test[0]) + test.Substring(1));
+          DataManager.Instance.RemoveActiveNonPlayer(char.ToLower(test[0], CultureInfo.CurrentCulture) + test.Substring(1));
         }
       }
     }
@@ -138,7 +151,7 @@ namespace EQLogParser
           // main spot where attacker is not a player or pet
           isPlayerDamage = false;
         }
-        else if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest") || record.Defender.EndsWith("satchel"))
+        else if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest", StringComparison.Ordinal) || record.Defender.EndsWith("satchel", StringComparison.Ordinal))
         {
           record = null;
         }
@@ -169,7 +182,7 @@ namespace EQLogParser
 
       if (!replacedAttacker)
       {
-        if (record.AttackerOwner != "")
+        if (record.AttackerOwner.Length > 0)
         {
           DataManager.Instance.UpdateVerifiedPets(record.Attacker);
           isAttackerPet = true;
@@ -185,7 +198,7 @@ namespace EQLogParser
         }
       }
 
-      if (record.DefenderOwner != "")
+      if (record.DefenderOwner.Length > 0)
       {
         DataManager.Instance.UpdateVerifiedPets(record.Defender);
         isDefenderPet = true;
@@ -202,19 +215,19 @@ namespace EQLogParser
 
       if (!replacedAttacker)
       {
-        if (record.AttackerOwner != "")
+        if (record.AttackerOwner.Length > 0)
         {
           DataManager.Instance.UpdateVerifiedPlayers(record.AttackerOwner);
           isAttackerPlayer = true;
         }
 
-        if (record.DefenderOwner != "")
+        if (record.DefenderOwner.Length > 0)
         {
           DataManager.Instance.UpdateVerifiedPlayers(record.DefenderOwner);
         }
       }
 
-      isDefenderPlayer = record.DefenderOwner == "" && DataManager.Instance.CheckNameForPlayer(record.Defender);
+      isDefenderPlayer = record.DefenderOwner.Length == 0 && DataManager.Instance.CheckNameForPlayer(record.Defender);
     }
 
     private static DamageRecord ParseAllDamage(ProcessLine pline)
@@ -222,169 +235,220 @@ namespace EQLogParser
       DamageRecord record = null;
       string part = pline.ActionPart;
 
-      try
+      bool found = false;
+      string type = "";
+      string attacker = "";
+      string attackerOwner = "";
+      string defender = "";
+      string defenderOwner = "";
+      int afterAction = -1;
+      uint damage = 0;
+      string action = "";
+      string spell = "";
+
+      // find first space and see if we have a name at the beginning
+      int firstSpace = part.IndexOf(" ", StringComparison.Ordinal);
+      if (firstSpace > 0)
       {
-        bool found = false;
-        string type = "";
-        string attacker = "";
-        string attackerOwner = "";
-        string defender = "";
-        string defenderOwner = "";
-        int afterAction = -1;
-        uint damage = 0;
-        string action = "";
-        string spell = "";
-
-        // find first space and see if we have a name at the beginning
-        int firstSpace = part.IndexOf(" ", StringComparison.Ordinal);
-        if (firstSpace > 0)
+        // check if name has a possessive
+        if (firstSpace >= 2 && part[firstSpace - 2] == '`' && part[firstSpace - 1] == 's')
         {
-          // check if name has a possessive
-          if (firstSpace >= 2 && part[firstSpace - 2] == '`' && part[firstSpace - 1] == 's')
+          string owner = part.Substring(0, firstSpace - 2);
+          if (DataManager.Instance.CheckNameForPlayer(owner) || Helpers.IsPossiblePlayerName(owner))
           {
-            string owner = part.Substring(0, firstSpace - 2);
-            if (DataManager.Instance.CheckNameForPlayer(owner) || Helpers.IsPossiblePlayerName(owner))
+            if (IsPetOrMount(part, firstSpace + 1, out int len))
             {
-              if (IsPetOrMount(part, firstSpace + 1, out int len))
+              int sizeSoFar = firstSpace + 1 + len + 1;
+              if (part.Length > sizeSoFar)
               {
-                //string petType = part.Substring(firstSpace + 1, len);
-
-                int sizeSoFar = firstSpace + 1 + len + 1;
-                if (part.Length > sizeSoFar)
+                int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
+                if (secondSpace > -1)
                 {
-                  int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
-                  if (secondSpace > -1)
-                  {
-                    string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
+                  string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
 
-                    if ((type = CheckType(testAction)) != "")
+                  if ((type = CheckType(testAction)).Length> 0)
+                  {
+                    action = "DD";
+                    afterAction = sizeSoFar + type.Length + 1;
+                    attackerOwner = owner;
+                    attacker = part.Substring(0, sizeSoFar - 1);
+                  }
+                  else
+                  {
+                    if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
                     {
-                      action = "DD";
-                      afterAction = sizeSoFar + type.Length + 1;
-                      attackerOwner = owner;
-                      attacker = part.Substring(0, sizeSoFar - 1);
-                    }
-                    else
-                    {
-                      if (testAction == "has" && part.Substring(sizeSoFar + 3, 7) == " taken ")
-                      {
-                        action = "DoT";
-                        type = Labels.DOT;
-                        afterAction = sizeSoFar + "has taken".Length + 1;
-                        defenderOwner = owner;
-                        defender = part.Substring(0, sizeSoFar - 1);
-                      }
+                      action = "DoT";
+                      type = Labels.DOT;
+                      afterAction = sizeSoFar + "has taken".Length + 1;
+                      defenderOwner = owner;
+                      defender = part.Substring(0, sizeSoFar - 1);
                     }
                   }
                 }
               }
             }
           }
-          else
+        }
+        else
+        {
+          string player = part.Substring(0, firstSpace);
+          if (DataManager.Instance.CheckNameForPlayer(player) || Helpers.IsPossiblePlayerName(part, firstSpace))
           {
-            string player = part.Substring(0, firstSpace);
-            if (DataManager.Instance.CheckNameForPlayer(player) || Helpers.IsPossiblePlayerName(part, firstSpace))
+            int sizeSoFar = firstSpace + 1;
+            int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
+            if (secondSpace > -1)
             {
-              int sizeSoFar = firstSpace + 1;
-              int secondSpace = part.IndexOf(" ", sizeSoFar, StringComparison.Ordinal);
-              if (secondSpace > -1)
+              string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
+
+              if ((type = CheckType(testAction)).Length > 0)
               {
-                string testAction = part.Substring(sizeSoFar, secondSpace - sizeSoFar);
-
-                if ((type = CheckType(testAction)) != "")
-                {
-                  action = "DD";
-                  afterAction = sizeSoFar + type.Length + 1;
-                  attacker = player;
-                }
-                else
-                {
-                  if (testAction == "has" && part.IndexOf(" taken ", sizeSoFar + 3, 7, StringComparison.Ordinal) > -1)
-                  {
-                    action = "DoT";
-                    type = Labels.DOT;
-                    afterAction = sizeSoFar + "has taken".Length + 1;
-                    defender = player;
-                  }
-                }
-              }
-            }
-          }
-
-          // === TODO == 
-          // Your body and mind are wracked by elemental madness!  You have taken 5800 points of damage.
-          //
-
-          if (action == "")
-          {
-            // check if it's an NPC if it's a DoT and they're the defender
-            // ALSO true for Damage Shields and BANE
-            int hasTakenIndex = part.IndexOf("has taken ", firstSpace + 1, StringComparison.Ordinal);
-            if (hasTakenIndex > -1)
-            {
-              // [Fri Feb 08 19:58:38 2019] Ladenfir has taken 81527 damage from Magnificent Presence by Unfettered Emerald Excellence.
-              // [Fri Feb 08 21:00:14 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Abazzagorath's Shackles of Tunare II spell.
-              int extraIndex = part.IndexOf("an extra ", hasTakenIndex + 10, StringComparison.Ordinal);
-              if (extraIndex == -1)
-              {
-                action = "DoT";
-                defender = part.Substring(0, hasTakenIndex - 1);
-                type = Labels.DOT;
-                afterAction = hasTakenIndex + 10;
+                action = "DD";
+                afterAction = sizeSoFar + type.Length + 1;
+                attacker = player;
               }
               else
               {
-                action = "Bane";
-                defender = part.Substring(0, hasTakenIndex - 1);
-                type = Labels.BANE;
-                afterAction = extraIndex + 9;
+                if (testAction == "has" && part.IndexOf(" taken ", sizeSoFar + 3, 7, StringComparison.Ordinal) > -1)
+                {
+                  action = "DoT";
+                  type = Labels.DOT;
+                  afterAction = sizeSoFar + "has taken".Length + 1;
+                  defender = player;
+                }
               }
             }
-            else // Maybe it's a Damage Shield
-            {
-              // [Sat Feb 09 21:12:43 2019] A lava protector is[are] pierced by Incogitable's thorns for 124 points of non-melee damage.
-              // [Sat Feb 09 21:32:22 2019] A molten spirit is[are] pierced by YOUR thorns for 182 points of non-melee damage.
-              int byIndex = part.IndexOf(" by ");
-              if (byIndex > -1)
-              {
-                int isIndex = part.IndexOf(" is ", 0, byIndex, StringComparison.Ordinal);
-                if (isIndex > -1 || (isIndex = part.IndexOf(" are ", 0, byIndex, StringComparison.Ordinal)) > -1)
-                {
-                  defender = part.Substring(0, isIndex);
-                  action = "DS";
-                  type = Labels.DS;
-                  afterAction = byIndex + 4;
+          }
+        }
 
-                  // The following DD/DoT code doesn't really help parse damage shields so continue here... need to clean this up eventually
-                  if (part.Length > afterAction + 25)
+        // === TODO == 
+        // Your body and mind are wracked by elemental madness!  You have taken 5800 points of damage.
+        //
+
+        if (action.Length == 0)
+        {
+          // check if it's an NPC if it's a DoT and they're the defender
+          // ALSO true for Damage Shields and BANE
+          int hasTakenIndex = part.IndexOf("has taken ", firstSpace + 1, StringComparison.Ordinal);
+          if (hasTakenIndex > -1)
+          {
+            // [Fri Feb 08 19:58:38 2019] Ladenfir has taken 81527 damage from Magnificent Presence by Unfettered Emerald Excellence.
+            // [Fri Feb 08 21:00:14 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Abazzagorath's Shackles of Tunare II spell.
+            int extraIndex = part.IndexOf("an extra ", hasTakenIndex + 10, StringComparison.Ordinal);
+            if (extraIndex == -1)
+            {
+              action = "DoT";
+              defender = part.Substring(0, hasTakenIndex - 1);
+              type = Labels.DOT;
+              afterAction = hasTakenIndex + 10;
+            }
+            else
+            {
+              action = "Bane";
+              defender = part.Substring(0, hasTakenIndex - 1);
+              type = Labels.BANE;
+              afterAction = extraIndex + 9;
+            }
+          }
+          else // Maybe it's a Damage Shield
+          {
+            // [Sat Feb 09 21:12:43 2019] A lava protector is[are] pierced by Incogitable's thorns for 124 points of non-melee damage.
+            // [Sat Feb 09 21:32:22 2019] A molten spirit is[are] pierced by YOUR thorns for 182 points of non-melee damage.
+            int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
+            if (byIndex > -1)
+            {
+              int isIndex = part.IndexOf(" is ", 0, byIndex, StringComparison.Ordinal);
+              if (isIndex > -1 || (isIndex = part.IndexOf(" are ", 0, byIndex, StringComparison.Ordinal)) > -1)
+              {
+                defender = part.Substring(0, isIndex);
+                action = "DS";
+                type = Labels.DS;
+                afterAction = byIndex + 4;
+
+                // The following DD/DoT code doesn't really help parse damage shields so continue here... need to clean this up eventually
+                if (part.Length > afterAction + 25)
+                {
+                  // check for YOUR
+                  int afterAttacker = -1;
+                  if (part[afterAction] == 'Y' && part[afterAction + 1] == 'O' && part[afterAction + 2] == 'U' && part[afterAction + 3] == 'R' && part[afterAction + 4] == ' ')
                   {
-                    // check for YOUR
-                    int afterAttacker = -1;
-                    if (part[afterAction] == 'Y' && part[afterAction + 1] == 'O' && part[afterAction + 2] == 'U' && part[afterAction + 3] == 'R' && part[afterAction + 4] == ' ')
+                    attacker = "YOUR";
+                    afterAttacker = afterAction + 5;
+                  }
+                  else
+                  {
+                    int test = part.IndexOf("'s", afterAction, 25, StringComparison.Ordinal);
+                    if (test > -1)
                     {
-                      attacker = "YOUR";
-                      afterAttacker = afterAction + 5;
+                      attacker = part.Substring(afterAction, test - afterAction);
+                      afterAttacker = test + 3;
                     }
-                    else
+                  }
+
+                  if (attacker.Length > 0 && afterAttacker > -1)
+                  {
+                    int forIndex = part.IndexOf(" for ", afterAttacker, StringComparison.Ordinal);
+                    if (forIndex > -1)
                     {
-                      int test = part.IndexOf("'s", afterAction, 25, StringComparison.Ordinal);
-                      if (test > -1)
+                      int pointIndex = part.IndexOf(" point", forIndex + 3, StringComparison.Ordinal);
+                      if (pointIndex > -1)
                       {
-                        attacker = part.Substring(afterAction, test - afterAction);
-                        afterAttacker = test + 3;
+                        damage = StatsUtil.ParseUInt(part.Substring(forIndex + 5, pointIndex - forIndex - 5));
+                        found = damage != uint.MaxValue;
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        }
 
-                    if (attacker != "" && afterAttacker > -1)
+        if (!found && type.Length > 0 && action.Length > 0 && part.Length > afterAction)
+        {
+          if (action == "DD")
+          {
+            int forIndex = part.IndexOf(" for ", afterAction, StringComparison.Ordinal);
+            if (forIndex > -1)
+            {
+              defender = part.Substring(afterAction, forIndex - afterAction);
+              int posessiveIndex = defender.IndexOf("`s ", StringComparison.Ordinal);
+              if (posessiveIndex > -1)
+              {
+                if (IsPetOrMount(defender, posessiveIndex + 3, out _))
+                {
+                  if (Helpers.IsPossiblePlayerName(defender, posessiveIndex))
+                  {
+                    defenderOwner = defender.Substring(0, posessiveIndex);
+                  }
+                }
+              }
+
+              int dmgStart = afterAction + defender.Length + 5;
+              if (part.Length > dmgStart)
+              {
+                int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
+                if (afterDmg > -1)
+                {
+                  damage = StatsUtil.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
+                  if (damage != uint.MaxValue)
+                  {
+                    // can be point or points
+                    int point;
+                    if ((point = part.IndexOf(" point", afterDmg, StringComparison.Ordinal)) > -1)
                     {
-                      int forIndex = part.IndexOf(" for ", afterAttacker, StringComparison.Ordinal);
-                      if (forIndex > -1)
+                      found = true;
+                      if (part.IndexOf("of damage.", point + 7, StringComparison.Ordinal) == -1)
                       {
-                        int pointIndex = part.IndexOf(" point", forIndex + 3, StringComparison.Ordinal);
-                        if (pointIndex > -1)
+                        type = Labels.DD;
+
+                        int byIndex = part.IndexOf(" by ", point + 18, StringComparison.Ordinal);
+                        if (byIndex > -1)
                         {
-                          damage = StatsUtil.ParseUInt(part.Substring(forIndex + 5, pointIndex - forIndex - 5));
-                          found = damage != uint.MaxValue;
+                          int endIndex = part.LastIndexOf(".", StringComparison.Ordinal);
+                          if (endIndex > -1 && endIndex > byIndex)
+                          {
+                            spell = part.Substring(byIndex + 4, endIndex - byIndex - 4);
+                          }
                         }
                       }
                     }
@@ -393,164 +457,103 @@ namespace EQLogParser
               }
             }
           }
-
-          if (!found && type != "" && action != "" && part.Length > afterAction)
+          else if (action == "DoT" || action == "Bane")
           {
-            if (action == "DD")
+            // @"^(.+) has taken (\d+) damage from (.+) by (\w+)\."
+            // Kizant`s pet has taken
+            int dmgStart = afterAction;
+            int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
+            if (afterDmg > -1)
             {
-              int forIndex = part.IndexOf(" for ", afterAction, StringComparison.Ordinal);
-              if (forIndex > -1)
+              damage = StatsUtil.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
+              if (damage != uint.MaxValue)
               {
-                defender = part.Substring(afterAction, forIndex - afterAction);
-                int posessiveIndex = defender.IndexOf("`s ", StringComparison.Ordinal);
-                if (posessiveIndex > -1)
+                int fromIndex = part.IndexOf(" from ", afterDmg, StringComparison.Ordinal);
+                if (fromIndex > -1)
                 {
-                  if (IsPetOrMount(defender, posessiveIndex + 3, out int len))
+                  if (part.IndexOf(" your ", fromIndex + 5, 6, StringComparison.Ordinal) > 1)
                   {
-                    if (Helpers.IsPossiblePlayerName(defender, posessiveIndex))
+                    int periodIndex = part.LastIndexOf('.');
+                    if (periodIndex > -1)
                     {
-                      defenderOwner = defender.Substring(0, posessiveIndex);
-                      //defenderPetType = defender.Substring(posessiveIndex + 3, len);
+                      // if this is needed for Bane then remember to account for the word " spell" appearing at the end
+                      // but don't set spell for now or it will be counted as a DoT and we dont use it anyway
+                      if (action == "DoT")
+                      {
+                        spell = part.Substring(fromIndex + 11, periodIndex - fromIndex - 11);
+                      }
                     }
+
+                    attacker = "your";
+                    found = true;
                   }
-                }
-
-                int dmgStart = afterAction + defender.Length + 5;
-                if (part.Length > dmgStart)
-                {
-                  int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
-                  if (afterDmg > -1)
+                  else if (action == "DoT")
                   {
-                    damage = StatsUtil.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
-                    if (damage != uint.MaxValue)
+                    // Horizon of Destiny has taken 30812 damage from Strangulate Rk. III by Kimb.
+                    // Warm Heart Flickers has taken 55896 damage from your Strangulate Rk. III.
+                    int byIndex = part.IndexOf("by ", fromIndex, StringComparison.Ordinal);
+                    if (byIndex > -1)
                     {
-                      // can be point or points
-                      int point;
-                      if ((point = part.IndexOf(" point", afterDmg, StringComparison.Ordinal)) > -1)
-                      {
-                        found = true;
-                        if (part.IndexOf("of damage.", point + 7, StringComparison.Ordinal) == -1)
-                        {
-                          type = Labels.DD;
-
-                          int byIndex = part.IndexOf(" by ", point + 18, StringComparison.Ordinal);
-                          if (byIndex > -1)
-                          {
-                            int endIndex = part.LastIndexOf(".", StringComparison.Ordinal);
-                            if (endIndex > -1 && endIndex > byIndex)
-                            {
-                              spell = part.Substring(byIndex + 4, endIndex - byIndex - 4);
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            else if (action == "DoT" || action == "Bane")
-            {
-              // @"^(.+) has taken (\d+) damage from (.+) by (\w+)\."
-              // Kizant`s pet has taken
-              int dmgStart = afterAction;
-              int afterDmg = part.IndexOf(" ", dmgStart, StringComparison.Ordinal);
-              if (afterDmg > -1)
-              {
-                damage = StatsUtil.ParseUInt(part.Substring(dmgStart, afterDmg - dmgStart));
-                if (damage != uint.MaxValue)
-                {
-                  int fromIndex = part.IndexOf(" from ", afterDmg, StringComparison.Ordinal);
-                  if (fromIndex > -1)
-                  {
-                    if (part.IndexOf(" your ", fromIndex + 5, 6, StringComparison.Ordinal) > 1)
-                    {
-                      int periodIndex = part.LastIndexOf('.');
-                      if (periodIndex > -1)
-                      {
-                        // if this is needed for Bane then remember to account for the word " spell" appearing at the end
-                        // but don't set spell for now or it will be counted as a DoT and we dont use it anyway
-                        if (action == "DoT")
-                        {
-                          spell = part.Substring(fromIndex + 11, periodIndex - fromIndex - 11);
-                        }
-                      }
-
-                      attacker = "your";
-                      found = true;
-                    }
-                    else if (action == "DoT")
-                    {
-                      // Horizon of Destiny has taken 30812 damage from Strangulate Rk. III by Kimb.
-                      // Warm Heart Flickers has taken 55896 damage from your Strangulate Rk. III.
-                      int byIndex = part.IndexOf("by ", fromIndex, StringComparison.Ordinal);
-                      if (byIndex > -1)
-                      {
-                        int endIndex = part.IndexOf(".", byIndex + 3, StringComparison.Ordinal);
-                        if (endIndex > -1)
-                        {
-                          string player = part.Substring(byIndex + 3, endIndex - byIndex - 3);
-                          if (Helpers.IsPossiblePlayerName(player, player.Length))
-                          {
-                            // damage parsed above
-                            attacker = player;
-                            spell = part.Substring(afterDmg + 13, byIndex - afterDmg - 14);
-                            found = true;
-                          }
-                        }
-                      }
-                    }
-                    else if (action == "Bane")
-                    {
-                      int endIndex = part.IndexOf("'s", fromIndex, StringComparison.Ordinal);
+                      int endIndex = part.IndexOf(".", byIndex + 3, StringComparison.Ordinal);
                       if (endIndex > -1)
                       {
-                        string player = part.Substring(fromIndex + 6, endIndex - fromIndex - 6);
+                        string player = part.Substring(byIndex + 3, endIndex - byIndex - 3);
                         if (Helpers.IsPossiblePlayerName(player, player.Length))
                         {
                           // damage parsed above
                           attacker = player;
+                          spell = part.Substring(afterDmg + 13, byIndex - afterDmg - 14);
                           found = true;
                         }
                       }
                     }
                   }
+                  else if (action == "Bane")
+                  {
+                    int endIndex = part.IndexOf("'s", fromIndex, StringComparison.Ordinal);
+                    if (endIndex > -1)
+                    {
+                      string player = part.Substring(fromIndex + 6, endIndex - fromIndex - 6);
+                      if (Helpers.IsPossiblePlayerName(player, player.Length))
+                      {
+                        // damage parsed above
+                        attacker = player;
+                        found = true;
+                      }
+                    }
+                  }
                 }
               }
             }
           }
+        }
 
-          if (found)
+        if (found)
+        {
+          record = new DamageRecord()
           {
-            record = new DamageRecord()
-            {
-              Attacker = string.Intern(FixName(attacker)),
-              Defender = string.Intern(FixName(defender)),
-              Type = string.Intern(char.ToUpper(type[0]) + type.Substring(1)),
-              Total = damage,
-              AttackerOwner = string.Intern(attackerOwner),
-              DefenderOwner = string.Intern(defenderOwner),
-              ModifiersMask = -1
-            };
+            Attacker = string.Intern(FixName(attacker)),
+            Defender = string.Intern(FixName(defender)),
+            Type = string.Intern(char.ToUpper(type[0], CultureInfo.CurrentCulture) + type.Substring(1)),
+            Total = damage,
+            AttackerOwner = string.Intern(attackerOwner),
+            DefenderOwner = string.Intern(defenderOwner),
+            ModifiersMask = -1
+          };
 
-            // set sub type if spell is available
-            record.SubType = spell == "" ? record.Type : string.Intern(spell);
+          // set sub type if spell is available
+          record.SubType = spell.Length == 0 ? record.Type : string.Intern(spell);
 
-            if (part[part.Length - 1] == ')')
+          if (part[part.Length - 1] == ')')
+          {
+            // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
+            int firstParen = part.LastIndexOf('(', part.Length - 4);
+            if (firstParen > -1)
             {
-              // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
-              int firstParen = part.LastIndexOf('(', part.Length - 4);
-              if (firstParen > -1)
-              {
-                record.ModifiersMask = LineModifiersParser.Parse(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
-              }
+              record.ModifiersMask = LineModifiersParser.Parse(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
             }
           }
         }
-      }
-      catch (Exception e)
-      {
-        LOG.Error(e);
       }
 
       return record;

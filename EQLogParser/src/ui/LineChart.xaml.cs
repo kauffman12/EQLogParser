@@ -369,9 +369,11 @@ namespace EQLogParser
         {
           foreach (var chartData in sortedValue)
           {
-            LineChartTable entry = new LineChartTable();
-            entry.Name = chartData.Name;
-            entry.Time = chartData.CurrentTime;
+            LineChartTable entry = new LineChartTable
+            {
+              Name = chartData.Name,
+              Time = chartData.CurrentTime
+            };
 
             if (CurrentConfig == CONFIG_AVG)
             {
