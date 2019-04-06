@@ -33,7 +33,7 @@ namespace EQLogParser
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.4.10";
+    private const string VERSION = "v1.4.11";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -411,7 +411,6 @@ namespace EQLogParser
 
         if (DamageStatsManager.Instance.DamageGroups.Count > 0)
         {
-          damageSummary.EnsureConnected();
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           var damageOptions = new DamageStatsOptions() { IsBaneEanbled = damageSummary.IsBaneEnabled(), RequestSummaryData = true };
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
@@ -451,7 +450,6 @@ namespace EQLogParser
 
         if (HealingStatsManager.Instance.HealingGroups.Count > 0)
         {
-          healingSummary.EnsureConnected();
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           var healingOptions = new HealingStatsOptions() { IsAEHealingEanbled = healingSummary.IsAEHealingEnabled(), RequestSummaryData = true };
           Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));

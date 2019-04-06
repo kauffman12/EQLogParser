@@ -21,12 +21,17 @@
     </Grid.RowDefinitions>
     <Menu Grid.Row="0" Margin="0" Height="20" VerticalAlignment="Top" Grid.ColumnSpan="2">
       <MenuItem Header="_File" Height="20" Width="35">
-        <MenuItem Header="Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFile_Click">
+        <MenuItem Header="_Archive Chat" Height="20" Click="MenuItemSelectArchiveChat_Click" ToolTip="Only Archive Chat from a Log File">
+          <MenuItem.Icon>
+            <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Database" Foreground="#5191c1" />
+          </MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFile_Click" ToolTip="Monitor Log File for changes">
           <MenuItem.Icon>
             <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Eye" Foreground="#5191c1" />
           </MenuItem.Icon>
         </MenuItem>
-        <MenuItem Header="Open and Monitor _Log File" Height="20">
+        <MenuItem Header="Open and Monitor _Log File" Height="20" ToolTip="Open Log File, Archive Chat and Start Monitoring">
           <MenuItem.Icon>
             <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="FolderOpen" Foreground="#5191c1" />
           </MenuItem.Icon>
@@ -60,11 +65,6 @@
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Globe" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
-        </MenuItem>
-        <MenuItem Header="Only _Archive Chat" Height="20" Click="MenuItemSelectArchiveChat_Click">
-          <MenuItem.Icon>
-            <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Database" Foreground="#5191c1" />
-          </MenuItem.Icon>
         </MenuItem>
         <Separator Height="0"/>
         <MenuItem Header="E_xit" Height="20" Click="Window_Closed" InputGestureText="Alt+F4"/>

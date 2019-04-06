@@ -19,7 +19,7 @@
       <ComboBox x:Name="players" SelectedIndex="0" Height="24" Width="120" Margin="4,0,0,0" SelectionChanged="Player_Changed" BorderBrush="#FF707070">
         <ComboBoxItem Content="No Chat Data"/>
       </ComboBox>
-      <ComboBox x:Name="channels" Height="24" Width="135" Margin="0,0,4,0" DropDownClosed="Channels_DropDownClosed" BorderBrush="#FF707070">
+      <ComboBox x:Name="channels" Height="24" Width="135" Margin="0,0,0,0" DropDownClosed="Channels_DropDownClosed" BorderBrush="#FF707070">
         <ComboBox.ItemTemplateSelector>
           <local:ComboBoxItemTemplateSelector>
             <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
@@ -38,6 +38,9 @@
           </local:ComboBoxItemTemplateSelector>
         </ComboBox.ItemTemplateSelector>
       </ComboBox>
+      <Button Height="24" Width="25" PreviewMouseLeftButtonUp="Refresh_MouseClick">
+        <fa:ImageAwesome Height="14" Width="14" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Refresh" ToolTip="Refresh Results" Foreground="#5191c1"/>
+      </Button>
     </StackPanel>
     <Popup x:Name="calendarPopup" StaysOpen="True">
       <Calendar x:Name="calendar" SelectedDatesChanged="Calendar_SelectedDatesChanged" />

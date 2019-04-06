@@ -1,4 +1,5 @@
 ﻿
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for HealSummary.xaml
   /// </summary>
-  public partial class HealingSummary : SummaryTable
+  public partial class HealingSummary : SummaryTable, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -26,7 +27,10 @@ namespace EQLogParser
       bool bValue;
       string value = DataManager.Instance.GetApplicationSetting("IncludeAEHealing");
       includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bValue) && bValue;
+
       Ready = true;
+      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
     }
 
     internal bool IsAEHealingEnabled()
@@ -142,18 +146,33 @@ namespace EQLogParser
       }
     }
 
-    private void Summary_Unloaded(object sender, RoutedEventArgs e)
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
     {
-      HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
-      connected = false;
+      if (!disposedValue)
+      {
+        if (disposing)
+        {
+          // TODO: dispose managed state (managed objects).
+          CurrentHealingStats = null;
+        }
+
+        HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
+        DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
+        disposedValue = true;
+      }
     }
 
-    protected override void Summary_Loaded(object sender, RoutedEventArgs e)
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
     {
-      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
-      connected = true;
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
     }
+    #endregion
   }
 }
