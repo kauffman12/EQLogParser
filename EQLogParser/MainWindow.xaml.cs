@@ -36,7 +36,7 @@ namespace EQLogParser
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.4.13";
+    private const string VERSION = "v1.4.14";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -559,9 +559,9 @@ namespace EQLogParser
           bytesReadTitle.Content = "Reading:";
           processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          double castPercent = CastLineCount > 0 ? Math.Round((double)CastLinesProcessed / CastLineCount * 100, 1) : 0;
-          double damagePercent = DamageLineCount > 0 ? Math.Round((double)DamageLinesProcessed / DamageLineCount * 100, 1) : 0;
-          double healPercent = HealLineCount > 0 ? Math.Round((double)HealLinesProcessed / HealLineCount * 100, 1) : 0;
+          double castPercent = CastLineCount > 0 ? Math.Round((double)CastLinesProcessed / CastLineCount * 100, 1) : 100;
+          double damagePercent = DamageLineCount > 0 ? Math.Round((double)DamageLinesProcessed / DamageLineCount * 100, 1) : 100;
+          double healPercent = HealLineCount > 0 ? Math.Round((double)HealLinesProcessed / HealLineCount * 100, 1) : 100;
           bytesReadLabel.Content = filePercent + "%";
 
           if (EQLogReader.FileLoadComplete)
