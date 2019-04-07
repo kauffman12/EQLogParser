@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -18,7 +20,7 @@ namespace EQLogParser
   public partial class MainWindow : Window
   {
     // binding property
-    public ObservableCollection<SortableName> VerifiedPlayersProperty => VerifiedPlayersView;
+    public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -29,11 +31,12 @@ namespace EQLogParser
     private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
+    private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled); 
     private static List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.4.12";
+    private const string VERSION = "v1.4.13";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -54,7 +57,6 @@ namespace EQLogParser
     private static LogOption CurrentLogOption;
 
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
-    private ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
 
     private ChatManager PlayerChatManager;
@@ -105,11 +107,11 @@ namespace EQLogParser
         });
 
         // verified player table
-        verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
+        verifiedPlayersGrid.ItemsSource = VerifiedPlayersProperty;
         DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          Helpers.InsertNameIntoSortedList(name, VerifiedPlayersView);
-          verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersView.Count + ")";
+          Helpers.InsertNameIntoSortedList(name, VerifiedPlayersProperty);
+          verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersProperty.Count + ")";
         });
 
         parseList.ItemsSource = new List<string>() { Labels.DAMAGEPARSE, Labels.HEALPARSE };
@@ -757,20 +759,20 @@ namespace EQLogParser
           if (dialog.FileName.Length > 0)
           {
             LOG.Info("Selected Log File: " + dialog.FileName);
-            string fileName = dialog.FileName.Substring(dialog.FileName.LastIndexOf("\\", StringComparison.Ordinal) + 1);
 
-            int ext = fileName.LastIndexOf(".", StringComparison.Ordinal);
-            if (ext > -1)
+            string file = Path.GetFileName(dialog.FileName);
+            MatchCollection matches = ParseFileName.Matches(file);
+            if (matches.Count == 1)
             {
-              fileName = fileName.Substring(0, ext);
-            }
+              if (matches[0].Groups.Count > 1)
+              {
+                name = matches[0].Groups[1].Value;
+              }
 
-            string[] parts = fileName.Split('_');
-
-            if (parts.Length > 1)
-            {
-              name = parts[1];
-              server = parts[2];
+              if (matches[0].Groups.Count > 2)
+              {
+                server = matches[0].Groups[2].Value;
+              }
             }
           }
 
