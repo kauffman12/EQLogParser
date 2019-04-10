@@ -63,7 +63,29 @@ namespace EQLogParser
             }
           }
 
-          if (index > -1 && criteriaIndex > -1)
+          if (index < 0)
+          {
+            index = line.IndexOf(" ", Parsing.ACTIONINDEX, StringComparison.Ordinal);
+            if (index > -1 && index + 5 < line.Length)
+            {
+              if (line[index + 1] == '-' && line[index + 2] == '>')
+              {
+                int lastIndex = line.IndexOf(":", index + 4, StringComparison.Ordinal);
+                if (lastIndex > -1)
+                {
+                  string sender = line.Substring(Parsing.ACTIONINDEX, index - Parsing.ACTIONINDEX);
+                  string receiver = line.Substring(index + 4, lastIndex - index - 4);
+                  chatType = new ChatType { Channel = ChatChannels.TELL, Sender = sender, Receiver = receiver, Line = line, AfterSenderIndex = lastIndex };
+
+                  if (DataManager.Instance.PlayerName == sender)
+                  {
+                    chatType.SenderIsYou = true;
+                  }
+                }
+              }
+            }
+          }
+          else if (index > -1 && criteriaIndex > -1)
           {
             int start, end;
             int senderLen = criteriaIndex - Parsing.ACTIONINDEX;
@@ -79,7 +101,6 @@ namespace EQLogParser
                 if (line.IndexOf("you, ", start, 5, StringComparison.Ordinal) > -1)
                 {
                   chatType.Channel = ChatChannels.TELL;
-                  chatType.ReceiverIsYou = true;
                   chatType.Receiver = "You";
                 }
                 else if (line.IndexOf("the guild", start, 9, StringComparison.Ordinal) > -1)
@@ -117,7 +138,6 @@ namespace EQLogParser
                 if (line.IndexOf(" told you,", criteriaIndex, 10, StringComparison.Ordinal) > -1)
                 {
                   chatType.Channel = ChatChannels.TELL;
-                  chatType.ReceiverIsYou = true;
                   chatType.Receiver = "You";
                 }
                 break;

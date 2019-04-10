@@ -85,7 +85,6 @@ namespace EQLogParser
     public string Sender { get; set; }
     public string Receiver { get; set; }
     public bool SenderIsYou { get; set; }
-    public bool ReceiverIsYou { get; set; }
     public string Line { get; set; }
     public int AfterSenderIndex { get; set; }
     public int KeywordStart { get; set; }
