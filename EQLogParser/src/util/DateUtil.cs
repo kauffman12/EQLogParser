@@ -21,8 +21,11 @@ namespace EQLogParser
       if (line.Length > 24)
       {
         double dateTime = ParseDate(line.Substring(1, 24), out double precise);
-        TimeSpan diff = TimeSpan.FromSeconds(now - dateTime);
-        found = (diff.TotalMinutes < lastMins);
+        if (!double.IsNaN(dateTime))
+        {
+          TimeSpan diff = TimeSpan.FromSeconds(now - dateTime);
+          found = (diff.TotalMinutes < lastMins);
+        }
       }
       return found;
     }

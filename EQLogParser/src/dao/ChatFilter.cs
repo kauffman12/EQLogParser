@@ -5,6 +5,7 @@ namespace EQLogParser
 {
   class ChatFilter
   {
+    private readonly string Player;
     private readonly string Keyword;
     private readonly string To;
     private readonly string From;
@@ -13,9 +14,22 @@ namespace EQLogParser
     private readonly DateUtil DateUtil = new DateUtil();
     private readonly Dictionary<string, byte> ValidChannels = null;
 
-    internal ChatFilter(List<string> channels = null, double startDate = 0,
+    internal ChatFilter(string player, List<string> channels = null, double startDate = 0,
       double endDate = 0, string to = null, string from = null, string keyword = null)
     {
+      if (player.Length > 0)
+      {
+        int index = player.IndexOf(".", StringComparison.Ordinal);
+        if (index > -1)
+        {
+          Player = player.Substring(0, index);
+        }
+        else
+        {
+          Player = player;
+        }
+      }
+
       if (channels != null)
       {
         ValidChannels = new Dictionary<string, byte>();
@@ -76,9 +90,11 @@ namespace EQLogParser
 
       if (ValidChannels == null || (chatType.Channel != null && ValidChannels.ContainsKey(chatType.Channel)))
       {
-        if (To == null || (chatType.Receiver != null && chatType.Receiver.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1))
+        if (To == null || ("You".Equals(To, StringComparison.OrdinalIgnoreCase) && chatType.Receiver == Player) ||
+          (Player.Equals(To, StringComparison.OrdinalIgnoreCase) && chatType.Receiver == "You") || (chatType.Receiver != null && chatType.Receiver.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1))
         {
-          if (From == null || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
+          if (From == null || ("You".Equals(From, StringComparison.OrdinalIgnoreCase) && chatType.Sender == Player) ||
+            (Player.Equals(From, StringComparison.OrdinalIgnoreCase) && chatType.Sender == "You") || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
           {
             if (!DataManager.Instance.CheckNameForPet(chatType.Sender) && Helpers.IsPossiblePlayerNameWithServer(chatType.Sender))
             {

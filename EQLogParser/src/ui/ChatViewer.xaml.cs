@@ -355,7 +355,7 @@ namespace EQLogParser
         double endDate = GetEndDate();
         if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
         {
-          CurrentChatFilter = new ChatFilter(channelList, startDate, endDate, to, from, text);
+          CurrentChatFilter = new ChatFilter(name, channelList, startDate, endDate, to, from, text);
           CurrentIterator?.Close();
           CurrentIterator = new ChatIterator(name, CurrentChatFilter);
           CurrentLineCount = 0;
