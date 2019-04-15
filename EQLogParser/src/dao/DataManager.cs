@@ -42,7 +42,6 @@ namespace EQLogParser
     private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<SpellClass, string> ClassNames = new Dictionary<SpellClass, string>();
-    private readonly Dictionary<string, SpellData> SpellsDB = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, SpellData> SpellsNameDB = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, SpellClass> SpellsToClass = new Dictionary<string, SpellClass>();
@@ -112,6 +111,7 @@ namespace EQLogParser
       Helpers.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
 
       DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
+      var spellList = new List<SpellData>();
       Helpers.ReadList(@"data\spells.txt").ForEach(line =>
       {
         string[] data = line.Split('^');
@@ -132,7 +132,7 @@ namespace EQLogParser
           IsProc = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1
         };
 
-        SpellsDB[spellData.ID] = spellData;
+        spellList.Add(spellData);
         SpellsNameDB[spellData.Spell] = spellData;
         SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
 
@@ -153,7 +153,7 @@ namespace EQLogParser
 
       Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
-      foreach (var spell in SpellsDB.Values)
+      spellList.ForEach(spell =>
       {
         // exact match meaning class-only spell
         if (classEnums.Contains((SpellClass)spell.ClassMask))
@@ -169,7 +169,7 @@ namespace EQLogParser
             SpellsToClass[spell.Spell] = (SpellClass)spell.ClassMask;
           }
         }
-      }
+      });
     }
 
     public void Clear()
