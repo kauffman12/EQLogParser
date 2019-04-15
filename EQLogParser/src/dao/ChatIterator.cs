@@ -97,6 +97,12 @@ namespace EQLogParser
         while (result == END_RESULT && (nextLine = CurrentReader.ReadLine()) != null)
         {
           var chatType = ChatLineParser.ParseChatType(nextLine);
+          if (chatType != null && chatType.Line.Length > 0)
+          {
+            // fix  % chars
+            chatType.Line = chatType.Line.Replace("&PCT;", "%");
+          }
+
           result = CurrentChatFilter.PassFilter(chatType) ? chatType : result;
         }
 

@@ -36,7 +36,7 @@ namespace EQLogParser
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.4.15";
+    private const string VERSION = "v1.4.16";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -394,12 +394,9 @@ namespace EQLogParser
         {
           DamageWindow.Content = null;
         }
-        else
-        {
-          damageSummary = new DamageSummary();
-          damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
-        }
 
+        damageSummary = new DamageSummary();
+        damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
         DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
 
@@ -433,12 +430,9 @@ namespace EQLogParser
         {
           HealingWindow.Content = null;
         }
-        else
-        {
-          healingSummary = new HealingSummary();
-          healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
-        }
 
+        healingSummary = new HealingSummary();
+        healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
         HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         IconToWindow[healingSummaryIcon.Name] = HealingWindow;
 
