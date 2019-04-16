@@ -19,6 +19,9 @@ namespace EQLogParser
   public partial class SpellCountTable : UserControl
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+    private static bool Running = false;
+
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
     private ObservableCollection<SpellCountRow> SpellRowsView = new ObservableCollection<SpellCountRow>();
@@ -31,7 +34,8 @@ namespace EQLogParser
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
     private int CurrentSpellType = 0;
-    private static bool running = false;
+    private bool CurrentShowSelfOnly = false;
+    private bool Ready = false;
 
     public SpellCountTable(string title)
     {
@@ -55,6 +59,7 @@ namespace EQLogParser
       minFreqList.SelectedIndex = 0;
       spellTypes.ItemsSource = SpellTypes;
       spellTypes.SelectedIndex = 0;
+      Ready = true;
     }
 
     public void ShowSpells(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
@@ -98,9 +103,9 @@ namespace EQLogParser
 
     private void Display()
     {
-      if (running == false)
+      if (Running == false)
       {
-        running = true;
+        Running = true;
         Dispatcher.InvokeAsync(() =>
         {
           castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
@@ -229,7 +234,8 @@ namespace EQLogParser
               castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
               (Application.Current.MainWindow as MainWindow).Busy(false);
             });
-            running = false;
+
+            Running = false;
           }
         }, TaskScheduler.Default);
       }
@@ -239,7 +245,8 @@ namespace EQLogParser
       Dictionary<string, uint> uniqueSpellsMap, Dictionary<string, Dictionary<string, uint>> filteredPlayerMap, bool received, uint totalCasts)
     {
       var spellData = TheSpellCounts.UniqueSpells[id];
-      if (CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.Beneficial) || (CurrentSpellType == 2 && !spellData.Beneficial))
+      if ((CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.Beneficial) || (CurrentSpellType == 2 && !spellData.Beneficial)) 
+        && (CurrentShowSelfOnly == true || spellData.LandsOnOther.Length > 0))
       {
         string name = spellData.SpellAbbrv;
 
@@ -260,23 +267,37 @@ namespace EQLogParser
       return totalCasts;
     }
 
+    private void OptionsChanged()
+    {
+      if (Ready)
+      {
+        if (SpellRowsView.Count > 0)
+        {
+          SpellRowsView.Clear();
+        }
+
+        if (dataGrid.Columns.Count > 0)
+        {
+          dataGrid.Columns.Clear();
+        }
+
+        CurrentCastType = castTypes.SelectedIndex;
+        CurrentCountType = countTypes.SelectedIndex;
+        CurrentMinFreqCount = minFreqList.SelectedIndex;
+        CurrentSpellType = spellTypes.SelectedIndex;
+        CurrentShowSelfOnly = showSelfOnly.IsChecked.Value;
+        Display();
+      }
+    }
+
     private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (SpellRowsView.Count > 0)
-      {
-        SpellRowsView.Clear();
-      }
+      OptionsChanged();
+    }
 
-      if (dataGrid.Columns.Count > 0)
-      {
-        dataGrid.Columns.Clear();
-      }
-
-      CurrentCastType = castTypes.SelectedIndex;
-      CurrentCountType = countTypes.SelectedIndex;
-      CurrentMinFreqCount = minFreqList.SelectedIndex;
-      CurrentSpellType = spellTypes.SelectedIndex;
-      Display();
+    private void SelfOnlyChange(object sender, RoutedEventArgs e)
+    {
+      OptionsChanged();
     }
 
     private void CopyBBCode_Click(object sender, RoutedEventArgs e)
@@ -317,5 +338,6 @@ namespace EQLogParser
         LOG.Error(ex);
       }
     }
+
   }
 }

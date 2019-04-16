@@ -13,11 +13,12 @@
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <Slider x:Name="pageSlider" Margin="0,4,20,0" Width="266" ValueChanged="PageSlider_ValueChanged" SmallChange="1" LargeChange="10" />
-      <ComboBox Margin="0,2,8,0" x:Name="playerList" Height="25" SelectionChanged="PlayerList_SelectionChanged" />
-      <ComboBox Margin="0,2,8,0" x:Name="critTypeList" Height="25" SelectionChanged="CritTypeList_SelectionChanged" />
-      <ComboBox Margin="0,2,8,0" x:Name="hitTypeList" Height="25" SelectionChanged="List_SelectionChanged" />
-      <ComboBox Margin="0,2,8,0" x:Name="minFreqList" Height="25" SelectionChanged="List_SelectionChanged" />
-      <Button Margin="0,2,8,0" Padding="4,0,4,0" Height="25" Click="SaveCSV_Click" Content="Export CSV"/>
+      <ComboBox Margin="0,0,0,0" x:Name="playerList" Height="24" SelectionChanged="PlayerList_SelectionChanged" />
+      <ComboBox Margin="0,0,0,0" x:Name="critTypeList" Height="24" SelectionChanged="CritTypeList_SelectionChanged" />
+      <ComboBox Margin="0,0,0,0" x:Name="hitTypeList" Height="24" SelectionChanged="List_SelectionChanged" />
+      <ComboBox Margin="0,0,4,0" x:Name="minFreqList" Height="24" SelectionChanged="List_SelectionChanged" />
+      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
+      <Button Margin="4,0,4,0" Height="24" Width="75" Click="SaveCSV_Click" Content="Export CSV"/>
     </StackPanel>
     <lvc:CartesianChart Grid.Row="1" x:Name="lvcChart" Hoverable="False" MouseDoubleClick="Chart_DoubleClick" LegendLocation="None" DisableAnimations="True" SizeChanged="Chart_SizeChanged">
       <lvc:CartesianChart.AxisY>

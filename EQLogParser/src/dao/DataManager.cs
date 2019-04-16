@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -27,6 +28,7 @@ namespace EQLogParser
     private static string CONFIG_DIR;
     private static string PETMAP_FILE;
     private static string SETTINGS_FILE;
+    private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private bool PetMappingUpdated = false;
     private bool SettingsUpdated = false;
 
@@ -145,7 +147,7 @@ namespace EQLogParser
           helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
         }
 
-        if (spellData.LandsOnYou.Length > 0 && spellData.LandsOnOther.Length > 0) // just do stuff in common
+        if (spellData.LandsOnYou.Length > 0) // just do stuff in common
         {
           helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
         }
@@ -507,12 +509,33 @@ namespace EQLogParser
           {
             // one more thing, if all the abbrviations look the same then we know the spell
             // even if the version is wrong. grab the last one
-            var distinct = output.Select(spellData => spellData.SpellAbbrv).Distinct().ToList();
+            var distinct = output.Distinct(AbbrvComparer).ToList();
             if (distinct.Count == 1)
             {
-              result = output.Last();
+              result = distinct.Last();
+            }
+            else
+            {
+              // see if the spells look similar and pick one
+              bool found = true;
+              var data = distinct.First();
+              foreach (var spell in distinct.Skip(1))
+              {
+                if (spell.Beneficial != data.Beneficial || spell.ClassMask != data.ClassMask || spell.Target != data.Target ||
+                  spell.Damaging != data.Damaging)
+                {
+                  found = false;
+                  break;
+                }
+              }
+
+              if (found)
+              {
+                result = distinct.Last();
+              }
             }
           }
+
           AllUniqueSpellsCache[value] = result;
         }
       }
@@ -735,6 +758,19 @@ namespace EQLogParser
       public int CurrentMax { get; set; }
       public SpellClass CurrentClass { get; set; }
       public ConcurrentDictionary<SpellClass, int> ClassCounts { get; set; }
+    }
+
+    private class SpellAbbrvComparer : IEqualityComparer<SpellData>
+    {
+      public bool Equals(SpellData x, SpellData y)
+      {
+        return x.SpellAbbrv == y.SpellAbbrv;
+      }
+
+      public int GetHashCode(SpellData obj)
+      {
+        return obj.SpellAbbrv.GetHashCode();
+      }
     }
   }
 }
