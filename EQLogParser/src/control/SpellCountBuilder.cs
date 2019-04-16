@@ -46,7 +46,7 @@ namespace EQLogParser
         UpdateMaps(received.SpellData, received.Receiver, playerReceivedCounts, maxReceivedCounts, spellMap);
       }
 
-      return new SpellCountData()
+      return new SpellCountData
       {
         PlayerCastCounts = playerCastCounts,
         PlayerReceivedCounts = playerReceivedCounts,

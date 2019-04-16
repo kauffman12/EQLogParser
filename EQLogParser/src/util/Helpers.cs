@@ -343,10 +343,7 @@ namespace EQLogParser
         {
           dict[key] = default;
         }
-      }
 
-      lock (key)
-      {
         dynamic temp = dict[key];
         temp += value;
         dict[key] = temp;

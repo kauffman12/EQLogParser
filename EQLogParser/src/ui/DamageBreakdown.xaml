@@ -19,13 +19,13 @@
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showPets" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Show Pets</CheckBox>
+      <CheckBox x:Name="showPets" IsChecked="True" Margin="2,0,4,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Show Pets</CheckBox>
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <Label Margin="2,0,4,2" VerticalAlignment="Center" FontStyle="Italic" FontSize="14">Combine:</Label>
+      <Label Margin="0,0,4,2" VerticalAlignment="Center" FontStyle="Italic" FontSize="14">Combine:</Label>
       <CheckBox x:Name="groupDoT" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">DoTs</CheckBox>
       <CheckBox x:Name="groupDirectDamage" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Direct Damage</CheckBox>
       <CheckBox x:Name="groupProcs" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Procs</CheckBox>
-      <CheckBox x:Name="groupResisted" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Resisted Spells</CheckBox>
+      <CheckBox x:Name="groupResisted" IsChecked="True" Margin="2,0,4,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Resisted Spells</CheckBox>
     </StackPanel>
       <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="Custom_Sorting" LoadingRow="Loading_Row">
       <DataGrid.Columns>
