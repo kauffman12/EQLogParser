@@ -36,7 +36,7 @@ namespace EQLogParser
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.4.17";
+    private const string VERSION = "v1.4.18";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 

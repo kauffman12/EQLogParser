@@ -246,7 +246,7 @@ namespace EQLogParser
     {
       var spellData = TheSpellCounts.UniqueSpells[id];
       if ((CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.Beneficial) || (CurrentSpellType == 2 && !spellData.Beneficial)) 
-        && (CurrentShowSelfOnly == true || spellData.LandsOnOther.Length > 0))
+        && (!received || CurrentShowSelfOnly == true || spellData.LandsOnOther.Length > 0))
       {
         string name = spellData.SpellAbbrv;
 
