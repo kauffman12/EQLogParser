@@ -30,9 +30,21 @@ namespace EQLogParser
           }
         }
       }
-      catch (Exception e)
+      catch (ArgumentNullException ne)
       {
-        LOG.Debug(e);
+        LOG.Error(ne);
+      }
+      catch (NullReferenceException nr)
+      {
+        LOG.Error(nr);
+      }
+      catch (ArgumentOutOfRangeException aor)
+      {
+        LOG.Error(aor);
+      }
+      catch (ArgumentException ae)
+      {
+        LOG.Error(ae);
       }
 
       EventsLineProcessed(line, line);

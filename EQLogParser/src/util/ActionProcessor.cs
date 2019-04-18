@@ -9,15 +9,13 @@ namespace EQLogParser
     public delegate void ProcessActionCallback(T data);
     private List<T> Queue = new List<T>();
     private List<T> temp = null;
-    private object QueueLock = new object();
-    private ProcessActionCallback callback;
+    private readonly object QueueLock = new object();
+    private readonly ProcessActionCallback callback;
     private bool stopped = false;
-    private int delayTime = 10;
-    private string name;
+    private readonly int delayTime = 10;
 
     public ActionProcessor(string name, ProcessActionCallback callback)
     {
-      this.name = name;
       this.callback = callback;
       Task.Run((() => Process()));
     }
