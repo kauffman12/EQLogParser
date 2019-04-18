@@ -301,18 +301,36 @@ namespace EQLogParser
       }
     }
 
+    public void HandleSpellInterrupt(string player, string spell, double beginTime)
+    {
+      player = ReplacePlayer(player, out _);
+
+      for (int i=AllSpellCastBlocks.Count-1; i>=0 && beginTime-AllSpellCastBlocks[i].BeginTime<=5; i--)
+      {
+        int index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => ((SpellCast)action).Spell == spell && ((SpellCast)action).Caster == player);
+        if (index > -1)
+        {
+          AllSpellCastBlocks[i].Actions.RemoveAt(index);
+          break;
+        }
+      }
+    }
+
     public void AddSpellCast(SpellCast cast, double beginTime)
     {
-      cast.Caster = ReplacePlayer(cast.Caster, out _);
-      AddAction(AllSpellCastBlocks, cast, beginTime);
-
-      string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
-      if (abbrv != null)
+      if (SpellsNameDB.ContainsKey(cast.Spell))
       {
-        AllUniqueSpellCasts[abbrv] = 1;
-      }
+        cast.Caster = ReplacePlayer(cast.Caster, out _);
+        AddAction(AllSpellCastBlocks, cast, beginTime);
 
-      UpdatePlayerClassFromSpell(cast);
+        string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
+        if (abbrv != null)
+        {
+          AllUniqueSpellCasts[abbrv] = 1;
+        }
+
+        UpdatePlayerClassFromSpell(cast);
+      }
     }
 
     public void AddReceivedSpell(ReceivedSpell received, double beginTime)

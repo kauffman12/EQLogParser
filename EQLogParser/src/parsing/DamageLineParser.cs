@@ -527,30 +527,38 @@ namespace EQLogParser
             }
           }
         }
-
+          
         if (found)
         {
-          record = new DamageRecord()
+          // some new special cases
+          if (spell.Length > 0 && spell.StartsWith("Elemental Conversion", StringComparison.Ordinal))
           {
-            Attacker = string.Intern(FixName(attacker)),
-            Defender = string.Intern(FixName(defender)),
-            Type = string.Intern(char.ToUpper(type[0], CultureInfo.CurrentCulture) + type.Substring(1)),
-            Total = damage,
-            AttackerOwner = string.Intern(attackerOwner),
-            DefenderOwner = string.Intern(defenderOwner),
-            ModifiersMask = -1
-          };
-
-          // set sub type if spell is available
-          record.SubType = spell.Length == 0 ? record.Type : string.Intern(spell);
-
-          if (part[part.Length - 1] == ')')
+            DataManager.Instance.UpdateVerifiedPets(defender);
+          }
+          else
           {
-            // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
-            int firstParen = part.LastIndexOf('(', part.Length - 4);
-            if (firstParen > -1)
+            record = new DamageRecord()
             {
-              record.ModifiersMask = LineModifiersParser.Parse(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
+              Attacker = string.Intern(FixName(attacker)),
+              Defender = string.Intern(FixName(defender)),
+              Type = string.Intern(char.ToUpper(type[0], CultureInfo.CurrentCulture) + type.Substring(1)),
+              Total = damage,
+              AttackerOwner = string.Intern(attackerOwner),
+              DefenderOwner = string.Intern(defenderOwner),
+              ModifiersMask = -1
+            };
+
+            // set sub type if spell is available
+            record.SubType = spell.Length == 0 ? record.Type : string.Intern(spell);
+
+            if (part[part.Length - 1] == ')')
+            {
+              // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
+              int firstParen = part.LastIndexOf('(', part.Length - 4);
+              if (firstParen > -1)
+              {
+                record.ModifiersMask = LineModifiersParser.Parse(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
+              }
             }
           }
         }

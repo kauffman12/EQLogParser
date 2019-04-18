@@ -40,24 +40,45 @@ namespace EQLogParser
               if (test == "cast" || test == "sing")
               {
                 pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
-                pline.OptionalIndex = index - Parsing.ACTIONINDEX;
                 pline.OptionalData = "you" + test;
+                pline.OptionalIndex = 3;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
-                cast = HandleSpellCast(pline);
+                cast = HandleSpellCast(pline, line.Substring(Parsing.ACTIONINDEX, index - Parsing.ACTIONINDEX));
               }
             }
             else
             {
-              var test = line.Substring(index + 11, 4);
-              if (test == "cast" || test == "sing")
+              // [Sun Mar 31 19:40:12 2019] Jiren begins to cast a spell. <Blood Pact Strike XXV>
+              // [Thu Apr 18 01:46:06 2019] Incogitable begins casting Dizzying Wheel Rk. II.
+
+              int spellIndex = -1;
+              var test = line.Substring(index + 8, 7);
+              if (test == "casting" || test == "singing")
+              {
+                spellIndex = firstSpace - Parsing.ACTIONINDEX + 16;
+              }
+              else
+              {
+                test = line.Substring(index + 11, 4);
+                if (test == "cast")
+                {
+                  spellIndex = firstSpace - Parsing.ACTIONINDEX + 26;
+                }
+                else if (test == "sing")
+                {
+                  spellIndex = firstSpace - Parsing.ACTIONINDEX + 25;
+                }
+              }
+
+              if (spellIndex > -1)
               {
                 pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
-                pline.OptionalIndex = index - Parsing.ACTIONINDEX;
                 pline.OptionalData = test;
+                pline.OptionalIndex = spellIndex;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
-                cast = HandleSpellCast(pline);
+                cast = HandleSpellCast(pline, line.Substring(Parsing.ACTIONINDEX, index - Parsing.ACTIONINDEX));
               }
             }
 
@@ -65,6 +86,50 @@ namespace EQLogParser
             {
               DataManager.Instance.AddSpellCast(cast, pline.CurrentTime);
             }
+          }
+        }
+        else if (line.EndsWith(" spell is interrupted.", StringComparison.Ordinal))
+        {
+          //[Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
+          //[Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX), OptionalIndex = line.Length - 22 };
+          pline.TimeString = pline.Line.Substring(1, 24);
+          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out _);
+
+          string player = null;
+          string spell = null;
+          int end = line.Length - 22;
+          int len;
+
+          if (line.IndexOf("Your", Parsing.ACTIONINDEX, 4, StringComparison.Ordinal) > -1)
+          {
+            player = "You";
+            len = end - Parsing.ACTIONINDEX - 5;
+            if (len > 0)
+            {
+              spell = line.Substring(Parsing.ACTIONINDEX + 5, len);
+            }
+          }
+          else
+          {
+            int possessive = line.IndexOf("'s ", Parsing.ACTIONINDEX, StringComparison.Ordinal);
+            if (possessive > -1)
+            {
+              player = line.Substring(Parsing.ACTIONINDEX, possessive - Parsing.ACTIONINDEX);
+
+              len = end - possessive - 3;
+              if (len > 0)
+              {
+                spell = line.Substring(possessive + 3, len);
+              }
+            }
+          }
+
+          if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(spell))
+          {
+            string timeString = line.Substring(1, 24);
+            double currentTime = DateUtil.ParseDate(timeString, out _);
+            DataManager.Instance.HandleSpellInterrupt(player, spell, currentTime);
           }
         }
         else // lands on messages
@@ -116,7 +181,7 @@ namespace EQLogParser
       EventsLineProcessed(line, line);
     }
 
-    public static void HandleOtherLandsOnCases(ProcessLine pline)
+    private static void HandleOtherLandsOnCases(ProcessLine pline)
     {
       string player = pline.OptionalData;
       string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
@@ -138,7 +203,7 @@ namespace EQLogParser
       }
     }
 
-    public static void HandlePosessiveLandsOnOther(ProcessLine pline)
+    private static void HandlePosessiveLandsOnOther(ProcessLine pline)
     {
       string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
       SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(matchOn, out _);
@@ -149,28 +214,23 @@ namespace EQLogParser
       }
     }
 
-    public static SpellCast HandleSpellCast(ProcessLine pline)
+    private static SpellCast HandleSpellCast(ProcessLine pline, string caster)
     {
       SpellCast cast = null;
-      string caster = pline.ActionPart.Substring(0, pline.OptionalIndex);
 
       switch (pline.OptionalData)
       {
+        case "casting":
+        case "singing":
         case "cast":
         case "sing":
-          int bracketIndex = (pline.OptionalData == "cast") ? 25 : 24;
-          if (pline.ActionPart.Length > pline.OptionalIndex + bracketIndex)
+          if (pline.ActionPart.Length > pline.OptionalIndex)
           {
-            int finalBracket;
-            int index = pline.ActionPart.IndexOf("<", pline.OptionalIndex + bracketIndex, StringComparison.Ordinal);
-            if (index > -1 && (finalBracket = pline.ActionPart.IndexOf(">", pline.OptionalIndex + bracketIndex, StringComparison.Ordinal)) > -1)
+            cast = new SpellCast()
             {
-              cast = new SpellCast()
-              {
-                Caster = string.Intern(caster),
-                Spell = string.Intern(pline.ActionPart.Substring(index + 1, finalBracket - index - 1))
-              };
-            }
+              Caster = string.Intern(caster),
+              Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex, pline.ActionPart.Length - pline.OptionalIndex - 1))
+            };
           }
           break;
         case "youcast":
