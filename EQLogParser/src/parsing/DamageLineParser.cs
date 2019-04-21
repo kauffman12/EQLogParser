@@ -137,6 +137,7 @@ namespace EQLogParser
       {
         // Needed to replace 'You' and 'you', etc
         record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, out bool replaced);
+        record.Defender = DataManager.Instance.ReplacePlayer(record.Defender, out _);
 
         CheckDamageRecordForPet(record, replaced, out bool isDefenderPet, out bool isAttackerPet);
         CheckDamageRecordForPlayer(record, replaced, out bool isDefenderPlayer, out bool isAttackerPlayer);
@@ -147,6 +148,10 @@ namespace EQLogParser
           {
             DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker);
           }
+          else if (record.Attacker == record.Defender)
+          {
+            record = null;
+          }
 
           // main spot where attacker is not a player or pet
           isPlayerDamage = false;
@@ -156,17 +161,17 @@ namespace EQLogParser
           record = null;
         }
 
-        if (record != null && record.Attacker != record.Defender)
+        if (record != null)
         {
           if (DataManager.Instance.IsProbablyNotAPlayer(record.Attacker))
           {
             DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Defender);
-            record = null;
+            isPlayerDamage = false;
           }
 
           // if updating this fails then it's definitely a player or pet
           // doesnt get used often?
-          if (record != null && !DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender))
+          if (record != null && !DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender) && isPlayerDamage)
           {
             record = null;
           }
