@@ -32,7 +32,8 @@ namespace EQLogParser
     private bool PetMappingUpdated = false;
     private bool SettingsUpdated = false;
 
-    private readonly List<ActionBlock> AllDamageBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> PlayerAttackDamageBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> PlayerDefendDamageBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
@@ -68,12 +69,15 @@ namespace EQLogParser
       VerifiedPlayers["himself"] = 1;
       VerifiedPlayers["herself"] = 1;
       VerifiedPlayers["itself"] = 1;
+      VerifiedPlayers["yourself"] = 1;
       VerifiedPlayers["you"] = 1;
       VerifiedPlayers["YOU"] = 1;
       VerifiedPlayers["You"] = 1;
       VerifiedPlayers["your"] = 1;
       VerifiedPlayers["Your"] = 1;
       VerifiedPlayers["YOUR"] = 1;
+      DefinitelyNotAPlayer["Unknown"] = 1;
+      DefinitelyNotAPlayer["unknown"] = 1;
       ClassNames[SpellClass.WAR] = string.Intern("Warrior");
       ClassNames[SpellClass.CLR] = string.Intern("Cleric");
       ClassNames[SpellClass.PAL] = string.Intern("Paladin");
@@ -184,7 +188,8 @@ namespace EQLogParser
       AllUniqueSpellCasts.Clear();
       AllUniqueSpellsCache.Clear();
       AllReceivedSpellBlocks.Clear();
-      AllDamageBlocks.Clear();
+      PlayerAttackDamageBlocks.Clear();
+      PlayerDefendDamageBlocks.Clear();
       AllHealBlocks.Clear();
       PlayerDeaths.Clear();
       EventsClearedActiveData(this, true);
@@ -274,7 +279,12 @@ namespace EQLogParser
       if (isPlayerDamage)
       {
         // ReplacePlayer is done in the line parser already
-        AddAction(AllDamageBlocks, record, beginTime);
+        AddAction(PlayerAttackDamageBlocks, record, beginTime);
+      }
+      else
+      {
+        // ReplacePlayer is done in the line parser already
+        AddAction(PlayerDefendDamageBlocks, record, beginTime);
       }
     }
 
@@ -404,9 +414,14 @@ namespace EQLogParser
       return SearchActions(AllSpellCastBlocks, beginTime, endTime);
     }
 
-    public List<ActionBlock> GetDamageDuring(double beginTime, double endTime)
+    public List<ActionBlock> GetAttackDamageDuring(double beginTime, double endTime)
     {
-      return SearchActions(AllDamageBlocks, beginTime, endTime);
+      return SearchActions(PlayerAttackDamageBlocks, beginTime, endTime);
+    }
+
+    public List<ActionBlock> GetDefendDamageDuring(double beginTime, double endTime)
+    {
+      return SearchActions(PlayerDefendDamageBlocks, beginTime, endTime);
     }
 
     public List<ActionBlock> GetHealsDuring(double beginTime, double endTime)

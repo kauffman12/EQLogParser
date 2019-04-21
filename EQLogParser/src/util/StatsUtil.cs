@@ -100,7 +100,7 @@ namespace EQLogParser
     {
       string result;
       result = targetTitle + " " + timeTitle;
-      if (damageTitle.Length == 0)
+      if (damageTitle.Length > 0)
       {
         result += ", " + damageTitle;
       }
