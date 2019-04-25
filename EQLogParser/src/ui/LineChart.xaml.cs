@@ -106,7 +106,7 @@ namespace EQLogParser
       }, TaskScheduler.Default);
     }
 
-    private void AddDataPoints(RecordGroupIterator recordIterator, List<PlayerStats> selected = null)
+    private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null)
     {
       DateTime newTaskTime = DateTime.Now;
 

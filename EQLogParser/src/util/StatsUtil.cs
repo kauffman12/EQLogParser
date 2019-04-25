@@ -182,6 +182,11 @@ namespace EQLogParser
         stats.BaneHits++;
       }
 
+      if (record.Type != Labels.BANE && record.Type != Labels.DOT && record.Type != Labels.DD && record.Type != Labels.DS)
+      {
+        stats.MeleeHits++;
+      }
+
       stats.Total += record.Total;
       stats.Hits += 1;
       stats.Max = Math.Max(stats.Max, record.Total);
@@ -200,6 +205,7 @@ namespace EQLogParser
     internal static void MergeStats(PlayerSubStats to, PlayerSubStats from)
     {
       to.BaneHits += from.BaneHits;
+      to.MeleeHits += from.MeleeHits;
       to.Total += from.Total;
       to.Hits += from.Hits;
       to.Max = Math.Max(to.Max, from.Max);
@@ -207,66 +213,73 @@ namespace EQLogParser
       to.CritHits += from.CritHits;
       to.LuckyHits += from.LuckyHits;
       to.TwincastHits += from.TwincastHits;
+      to.StrikethroughHits += from.StrikethroughHits;
+      to.RiposteHits += from.RiposteHits;
+      to.RampageHits += from.RampageHits;
       to.BeginTime = double.IsNaN(to.BeginTime) ? from.BeginTime : Math.Min(to.BeginTime, from.BeginTime);
       to.LastTime = double.IsNaN(to.LastTime) ? from.LastTime : Math.Max(to.LastTime, from.LastTime);
     }
 
-    internal static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, Dictionary<string, uint> resistCounts = null, PlayerStats superStats = null)
+    internal static void CalculateRates(PlayerSubStats stats, PlayerStats raidStats, PlayerStats superStats)
     {
       if (stats.Hits > 0)
       {
-        stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
+        stats.DPS = (long)Math.Round(stats.Total / stats.TotalSeconds, 2);
+        stats.SDPS = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
+        stats.Avg = (long)Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
+
+        if ((stats.CritHits - stats.LuckyHits) > 0)
+        {
+          stats.AvgCrit = (long)Math.Round(Convert.ToDecimal(stats.TotalCrit) / (stats.CritHits - stats.LuckyHits), 2);
+        }
+
+        if (stats.LuckyHits > 0)
+        {
+          stats.AvgLucky = (long)Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
+        }
+
+        if (stats.Total > 0)
+        {
+          stats.ExtraRate = Math.Round(Convert.ToDouble(stats.Extra) / stats.Total * 100, 2);
+        }
+
         stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
         stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
+        stats.StrikethroughRate = Math.Round(Convert.ToDouble(stats.StrikethroughHits) / stats.MeleeHits * 100, 2);
+        stats.RiposteRate = Math.Round(Convert.ToDouble(stats.RiposteHits) / stats.MeleeHits * 100, 2);
 
         var tcMult = stats.Type == Labels.HOT || stats.Type == Labels.DOT ? 1 : 2;
         stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
+        stats.ResistRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
+
+        if (superStats != null && superStats.Total > 0)
+        {
+          stats.Percent = Math.Round(superStats.Percent / 100 * (Convert.ToDouble(stats.Total) / superStats.Total) * 100, 2);
+          stats.SDPS = (long) Math.Round(stats.Total / superStats.TotalSeconds, 2);
+        }
+        else if (superStats == null)
+        {
+          stats.SDPS = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
+        }
+      }
+    }
+
+    internal static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, Dictionary<string, uint> resistCounts = null, PlayerStats superStats = null)
+    {
+      if (superStats != null)
+      {
+        if (resistCounts != null && superStats.Name == DataManager.Instance.PlayerName && resistCounts.TryGetValue(stats.Name, out uint value))
+        {
+          stats.Resists = value;
+        }
       }
 
-      if (stats.Total > 0)
-      {
-        stats.ExtraRate = Math.Round(Convert.ToDouble(stats.Extra) / stats.Total * 100, 2);
-      }
-
-      if ((stats.CritHits - stats.LuckyHits) > 0)
-      {
-        stats.AvgCrit = (long) Math.Round(Convert.ToDecimal(stats.TotalCrit) / (stats.CritHits - stats.LuckyHits), 2);
-      }
-
-      if (stats.LuckyHits > 0)
-      {
-        stats.AvgLucky = (long) Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
-      }
+      CalculateRates(stats, raidTotals, superStats);
 
       // total percents
       if (raidTotals.Total > 0)
       {
         stats.PercentOfRaid = Math.Round(Convert.ToDouble(stats.Total) / raidTotals.Total * 100, 2);
-      }
-
-      stats.DPS = (long) Math.Round(stats.Total / stats.TotalSeconds, 2);
-
-      if (superStats == null)
-      {
-        stats.SDPS = (long) Math.Round(stats.Total / raidTotals.TotalSeconds, 2);
-      }
-      else
-      {
-        if (superStats.Total > 0)
-        {
-          stats.Percent = Math.Round(Convert.ToDouble(stats.Total) / superStats.Total * 100, 2);
-        }
-
-        stats.SDPS = (long) Math.Round(stats.Total / superStats.TotalSeconds, 2);
-
-        if (resistCounts != null && superStats.Name == DataManager.Instance.PlayerName)
-        {
-          if (resistCounts.TryGetValue(stats.Name, out uint value))
-          {
-            stats.Resists = value;
-            stats.ResistRate = stats.LuckRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
-          }
-        }
       }
 
       // handle sub stats

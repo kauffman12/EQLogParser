@@ -23,6 +23,9 @@ namespace EQLogParser
     public static int TWINCAST = 1;
     public static int CRIT = 2;
     public static int LUCKY = 4;
+    public static int RAMPAGE = 8;
+    public static int STRIKETHROUGH = 16;
+    public static int RIPOSTE = 32;
 
     private static ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
 
@@ -30,6 +33,36 @@ namespace EQLogParser
     {
       if (record.ModifiersMask > -1)
       {
+        if ((record.ModifiersMask & RAMPAGE) != 0)
+        {
+          playerStats.RampageHits++;
+
+          if (theHit != null)
+          {
+            theHit.RampageHits++;
+          }
+        }
+
+        if ((record.ModifiersMask & STRIKETHROUGH) != 0)
+        {
+          playerStats.StrikethroughHits++;
+
+          if (theHit != null)
+          {
+            theHit.StrikethroughHits++;
+          }
+        }
+
+        if ((record.ModifiersMask & RIPOSTE) != 0)
+        {
+          playerStats.RiposteHits++;
+
+          if (theHit != null)
+          {
+            theHit.RiposteHits++;
+          }
+        }
+
         if ((record.ModifiersMask & TWINCAST) != 0)
         {
           playerStats.TwincastHits++;
@@ -78,7 +111,7 @@ namespace EQLogParser
     {
       int result = -1;
 
-      if (modifiers != null && modifiers != "")
+      if (!string.IsNullOrEmpty(modifiers))
       {
         if (!MaskCache.TryGetValue(modifiers, out result))
         {
@@ -118,6 +151,15 @@ namespace EQLogParser
             case "Twincast":
               result = result | TWINCAST;
               break;
+            case "Rampage":
+              result = result | RAMPAGE;
+              break;
+            case "Strikethrough":
+              result = result | STRIKETHROUGH;
+              break;
+            case "Riposte":
+              result = result | RIPOSTE;
+              break;
           }
 
           temp = ""; // reset
@@ -128,7 +170,7 @@ namespace EQLogParser
         }
       }
 
-      if (temp != "")
+      if (!string.IsNullOrEmpty(temp))
       {
         LOG.Debug("Unknown Modifiers: " + modifiers);
       }
