@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -6,36 +7,36 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class HealingStatsManager : ISummaryBuilder
+  class TankingStatsManager : ISummaryBuilder
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static HealingStatsManager Instance = new HealingStatsManager();
+    internal static TankingStatsManager Instance = new TankingStatsManager();
 
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
-    internal List<List<ActionBlock>> HealingGroups = new List<List<ActionBlock>>();
-    internal bool IsAEHealingAvailable = false;
+    internal Dictionary<string, byte> NpcNames = new Dictionary<string, byte>();
+    internal List<List<ActionBlock>> TankingGroups = new List<List<ActionBlock>>();
 
-    private const int HEAL_OFFSET = 10; // additional # of seconds to count
+    private const int TANK_OFFSET = 10; // additional # of seconds to count
 
     private PlayerStats RaidTotals;
     private List<NonPlayer> Selected;
     private string Title;
 
-    internal HealingStatsManager()
+    internal TankingStatsManager()
     {
       DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
       {
-        HealingGroups.Clear();
+        TankingGroups.Clear();
         RaidTotals = null;
         Selected = null;
         Title = "";
       };
     }
 
-    internal void BuildTotalStats(HealingStatsOptions options)
+    internal void BuildTotalStats(TankingStatsOptions options)
     {
       Selected = options.Npcs;
       Title = options.Name;
@@ -45,19 +46,25 @@ namespace EQLogParser
         FireNewStatsEvent(options);
 
         RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
-        HealingGroups.Clear();
+        TankingGroups.Clear();
+        NpcNames.Clear();
 
-        Selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(RaidTotals, npc, HEAL_OFFSET));
+        Selected.ForEach(npc =>
+        {
+          StatsUtil.UpdateTimeDiffs(RaidTotals, npc, TANK_OFFSET);
+          NpcNames[npc.Name] = 1;
+        });
+
         RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
 
         if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
         {
           for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
           {
-            HealingGroups.Add(DataManager.Instance.GetHealsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
+            TankingGroups.Add(DataManager.Instance.GetDefendDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
           }
 
-          ComputeHealingStats(options);
+          ComputeTankingStats(options);
         }
         else
         {
@@ -82,102 +89,90 @@ namespace EQLogParser
       }
     }
 
-    internal void RebuildTotalStats(HealingStatsOptions options)
+    internal void RebuildTotalStats(TankingStatsOptions options)
     {
       FireNewStatsEvent(options);
-      ComputeHealingStats(options);
+      ComputeTankingStats(options);
     }
 
-    internal bool IsValidHeal(HealRecord record, bool showAE)
-    {
-      bool valid = false;
-
-      if (record != null && !DataManager.Instance.IsProbablyNotAPlayer(record.Healed))
-      {
-        valid = true;
-        SpellData spellData;
-        if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
-        {
-          if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
-            spellData.Target == (byte)SpellTarget.TARGETRINGAE)
-          {
-            IsAEHealingAvailable = true;
-            valid = showAE;
-          }
-        }
-      }
-
-      return valid;
-    }
-
-    internal void FireSelectionEvent(HealingStatsOptions options, List<PlayerStats> selected)
+    internal void FireSelectionEvent(TankingStatsOptions options, List<PlayerStats> selected)
     {
       if (options.RequestChartData)
       {
         // send update
         DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
-        EventsUpdateDataPoint?.Invoke(HealingGroups, de);
+        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
       }
     }
 
-    internal void FireUpdateEvent(HealingStatsOptions options, List<PlayerStats> selected = null)
+    internal void FireUpdateEvent(TankingStatsOptions options, List<PlayerStats> selected = null)
     {
       if (options.RequestChartData)
       {
         // send update
-        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new HealGroupCollection(HealingGroups, options.IsAEHealingEanbled) };
-        EventsUpdateDataPoint?.Invoke(HealingGroups, de);
+        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new TankGroupCollection(TankingGroups) };
+        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
       }
     }
 
-    private void FireCompletedEvent(HealingStatsOptions options, CombinedHealStats combined)
+    private void FireCompletedEvent(TankingStatsOptions options, CombinedTankStats combined)
     {
       if (options.RequestSummaryData)
       {
         // generating new stats
         EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent()
         {
-          Type = Labels.HEALPARSE,
+          Type = Labels.TANKPARSE,
           State = "COMPLETED",
-          CombinedStats = combined,
-          IsAEHealingAvailable = IsAEHealingAvailable
+          CombinedStats = combined
         });
       }
     }
 
-    private void FireNewStatsEvent(HealingStatsOptions options)
+    private void FireNewStatsEvent(TankingStatsOptions options)
     {
       if (options.RequestSummaryData)
       {
         // generating new stats
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = "STARTED" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.TANKPARSE, State = "STARTED" });
       }
     }
 
-    private void FireNoDataEvent(HealingStatsOptions options)
+    private void FireNoDataEvent(TankingStatsOptions options)
     {
       if (options.RequestSummaryData)
       {
         // nothing to do
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = "NONPC" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.TANKPARSE, State = "NONPC" });
       }
 
       if (options.RequestChartData)
       {
         // send update
         DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
-        EventsUpdateDataPoint?.Invoke(HealingGroups, de);
+        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
       }
     }
 
-    private void ComputeHealingStats(HealingStatsOptions options)
+    internal bool IsValidDamage(DamageRecord record)
     {
-      CombinedHealStats combined = null;
+      bool valid = false;
+
+      if (record != null && NpcNames.ContainsKey(record.Attacker) && !DataManager.Instance.IsProbablyNotAPlayer(record.Defender))
+      {
+        valid = true;
+      }
+
+      return valid;
+    }
+
+    private void ComputeTankingStats(TankingStatsOptions options)
+    {
+      CombinedTankStats combined = null;
       Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
       // always start over
       RaidTotals.Total = 0;
-      IsAEHealingAvailable = false;
 
       try
       {
@@ -185,8 +180,7 @@ namespace EQLogParser
 
         if (options.RequestSummaryData)
         {
-
-          HealingGroups.ForEach(group =>
+          TankingGroups.ForEach(group =>
           {
             // keep track of time range as well as the players that have been updated
             Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
@@ -195,30 +189,15 @@ namespace EQLogParser
             {
               block.Actions.ForEach(action =>
               {
-                HealRecord record = action as HealRecord;
+                DamageRecord record = action as DamageRecord;
 
-                if (IsValidHeal(record, options.IsAEHealingEanbled))
+                if (IsValidDamage(record))
                 {
                   RaidTotals.Total += record.Total;
-                  PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
+                  PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
 
                   StatsUtil.UpdateStats(stats, record, block.BeginTime);
-                  allStats[record.Healer] = stats;
-
-                  var spellStatName = record.SubType ?? Labels.UNKSPELL;
-                  PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
-                  StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
-                  allStats[stats.Name + "=" + spellStatName] = spellStats;
-
-                  var healedStatName = record.Healed;
-                  if (stats.SubStats2 == null)
-                  {
-                    stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
-                  }
-
-                  PlayerSubStats healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
-                  StatsUtil.UpdateStats(healedStats, record, block.BeginTime);
-                  allStats[stats.Name + "=" + healedStatName] = healedStats;
+                  allStats[record.Defender] = stats;
                 }
               });
             });
@@ -233,14 +212,14 @@ namespace EQLogParser
           RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
           Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, RaidTotals));
 
-          combined = new CombinedHealStats
+          combined = new CombinedTankStats
           {
             RaidStats = RaidTotals,
             UniqueClasses = new Dictionary<string, byte>(),
             StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList(),
             TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
             TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
-            TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Heals ", StatsUtil.FormatTotals(RaidTotals.DPS))
+            TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Tanked ", StatsUtil.FormatTotals(RaidTotals.DPS))
           };
 
           combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
@@ -268,6 +247,7 @@ namespace EQLogParser
 
       FireCompletedEvent(options, combined);
     }
+
 
     public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
     {

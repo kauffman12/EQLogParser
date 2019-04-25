@@ -133,6 +133,10 @@ namespace EQLogParser
           // wait for file to be freed
           Thread.Sleep(2000);
         }
+        catch (InvalidDataException)
+        {
+
+        }
       }
 
       return result;
@@ -261,7 +265,7 @@ namespace EQLogParser
         LoadCache();
       }
 
-      if (entryKey != CurrentEntryKey)
+      if (entryKey != CurrentEntryKey && CurrentArchive != null)
       {
         SaveCurrent(false);
         CurrentEntryKey = entryKey;
@@ -292,19 +296,22 @@ namespace EQLogParser
         }
       }
 
-      int index = CurrentList.BinarySearch(chatLine, Helpers.ReverseTimedActionComparer);
-      if (index < 0)
+      if (CurrentList != null)
       {
-        index = Math.Abs(index) - 1;
-        CurrentList.Insert(index, chatLine);
-        UpdateCache(entryKey, chatType);
-        CurrentListModified = true;
-      }
-      else if (chatLine.Line != CurrentList[index].Line)
-      {
-        CurrentList.Insert(index, chatLine);
-        UpdateCache(entryKey, chatType);
-        CurrentListModified = true;
+        int index = CurrentList.BinarySearch(chatLine, Helpers.ReverseTimedActionComparer);
+        if (index < 0)
+        {
+          index = Math.Abs(index) - 1;
+          CurrentList.Insert(index, chatLine);
+          UpdateCache(entryKey, chatType);
+          CurrentListModified = true;
+        }
+        else if (chatLine.Line != CurrentList[index].Line)
+        {
+          CurrentList.Insert(index, chatLine);
+          UpdateCache(entryKey, chatType);
+          CurrentListModified = true;
+        }
       }
     }
 

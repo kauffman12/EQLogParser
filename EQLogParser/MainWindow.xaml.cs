@@ -36,7 +36,7 @@ namespace EQLogParser
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.4.19";
+    private const string VERSION = "v1.5.0";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -67,8 +67,10 @@ namespace EQLogParser
     private DocumentWindow ChatWindow = null;
     private DocumentWindow DamageWindow = null;
     private DocumentWindow HealingWindow = null;
+    private DocumentWindow TankingWindow = null;
     private DocumentWindow DamageChartWindow = null;
     private DocumentWindow HealingChartWindow = null;
+    private DocumentWindow TankingChartWindow = null;
 
     private LogReader EQLogReader = null;
     private OverlayWindow Overlay = null;
@@ -184,6 +186,7 @@ namespace EQLogParser
     {
       (DamageWindow?.Content as DamageSummary)?.Clear();
       (HealingWindow?.Content as HealingSummary)?.Clear();
+      (TankingWindow?.Content as TankingSummary)?.Clear();
       (DamageChartWindow?.Content as LineChart)?.Clear();
       (HealingChartWindow?.Content as LineChart)?.Clear();
     }
@@ -272,8 +275,15 @@ namespace EQLogParser
         healingOptions.RequestSummaryData = true;
       }
 
+      var tankingOptions = new TankingStatsOptions() { Name = name, Npcs = filtered, RequestChartData = TankingChartWindow?.IsOpen == true };
+      if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
+      {
+        tankingOptions.RequestSummaryData = true;
+      }
+
       Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
       Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingOptions));
+      Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingOptions));
     }
 
     private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e)
@@ -299,6 +309,10 @@ namespace EQLogParser
       else if (e.Source == healingSummaryMenuItem)
       {
         OpenHealingSummary();
+      }
+      else if (e.Source == tankingSummaryMenuItem)
+      {
+        OpenTankingSummary();
       }
       else if (e.Source == chatMenuItem)
       {
@@ -389,19 +403,13 @@ namespace EQLogParser
       }
       else
       {
-        // cleanup old
-        if (DamageWindow?.Content is DamageSummary damageSummary)
-        {
-          DamageWindow.Content = null;
-        }
-
-        damageSummary = new DamageSummary();
+        var damageSummary = new DamageSummary();
         damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
         DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
 
         Helpers.OpenWindow(DamageWindow);
-        if (HealingWindow?.IsOpen == true)
+        if (HealingWindow?.IsOpen == true || TankingWindow?.IsOpen == true)
         {
           DamageWindow.MoveToPreviousContainer();
         }
@@ -425,19 +433,13 @@ namespace EQLogParser
       }
       else
       {
-        // cleanup old
-        if (HealingWindow?.Content is HealingSummary healingSummary)
-        {
-          HealingWindow.Content = null;
-        }
-
-        healingSummary = new HealingSummary();
+        var healingSummary = new HealingSummary();
         healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
         HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         IconToWindow[healingSummaryIcon.Name] = HealingWindow;
 
         Helpers.OpenWindow(HealingWindow);
-        if (DamageWindow?.IsOpen == true)
+        if (DamageWindow?.IsOpen == true || TankingWindow?.IsOpen == true)
         {
           HealingWindow.MoveToPreviousContainer();
         }
@@ -449,6 +451,36 @@ namespace EQLogParser
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           var healingOptions = new HealingStatsOptions() { IsAEHealingEanbled = healingSummary.IsAEHealingEnabled(), RequestSummaryData = true };
           Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));
+        }
+      }
+    }
+
+    private void OpenTankingSummary()
+    {
+      if (TankingWindow?.IsOpen == true)
+      {
+        TankingWindow.Close();
+      }
+      else
+      {
+        var tankingSummary = new TankingSummary();
+        tankingSummary.EventsSelectionChange += TankingSummary_SelectionChanged;
+        TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
+        IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
+
+        Helpers.OpenWindow(TankingWindow);
+        if (DamageWindow?.IsOpen == true || HealingWindow?.IsOpen == true)
+        {
+          TankingWindow.MoveToPreviousContainer();
+        }
+
+        RepositionCharts(TankingWindow);
+
+        if (TankingStatsManager.Instance.TankingGroups.Count > 0)
+        {
+          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+          var tankingOptions = new TankingStatsOptions() { RequestSummaryData = true };
+          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
     }
@@ -481,6 +513,14 @@ namespace EQLogParser
       var options = new HealingStatsOptions() { IsAEHealingEanbled = table.IsAEHealingEnabled(), RequestChartData = true };
       HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
       UpdateParse(Labels.HEALPARSE, data.Selected);
+    }
+
+    private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
+    {
+      var table = sender as TankingSummary;
+      var options = new TankingStatsOptions() { RequestChartData = true };
+      TankingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
+      UpdateParse(Labels.TANKPARSE, data.Selected);
     }
 
     private void RepositionCharts(DocumentWindow window)

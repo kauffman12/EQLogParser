@@ -179,6 +179,7 @@ namespace EQLogParser
             allDots.Add(sub);
             break;
           case Labels.DD:
+          case Labels.BANE:
             stats = dds;
             allDds.Add(sub);
             break;
@@ -212,30 +213,7 @@ namespace EQLogParser
 
       foreach(var stats in new PlayerSubStats[] { dots, dds, procs, resisted })
       {
-        if (stats.Hits > 0)
-        {
-          stats.DPS = (long) Math.Round(stats.Total / stats.TotalSeconds, 2);
-          stats.SDPS = (long) Math.Round(stats.Total / RaidStats.TotalSeconds, 2);
-          stats.Avg = (long) Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
-
-          if (stats.CritHits > 0)
-          {
-            stats.AvgCrit = (long) Math.Round(Convert.ToDecimal(stats.TotalCrit) / stats.CritHits, 2);
-          }
-
-          if (stats.LuckyHits > 0)
-          {
-            stats.AvgLucky = (long) Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
-          }
-
-          stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
-          stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
-
-          var tcMult = stats.Type == Labels.DOT ? 1 : 2;
-          stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
-          stats.Percent = Math.Round(playerStats.Percent / 100 * (Convert.ToDouble(stats.Total) / playerStats.Total) * 100, 2);
-          stats.ResistRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
-        }
+        StatsUtil.CalculateRates(stats, RaidStats, playerStats);
       }
 
       UnGroupedDD[playerStats.Name] = allDds;

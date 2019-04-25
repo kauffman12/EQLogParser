@@ -85,7 +85,7 @@ namespace EQLogParser
                 DamageRecord record = action as DamageRecord;
                 // see if there's a pet mapping, check this first
                 string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-                if (pname != null || (pname = record.AttackerOwner).Length != 0)
+                if (pname != null || !string.IsNullOrEmpty((pname = record.AttackerOwner)))
                 {
                   PlayerHasPet[pname] = 1;
                   PetToPlayer[record.Attacker] = pname;
@@ -101,9 +101,21 @@ namespace EQLogParser
           FireNoDataEvent(options);
         }
       }
-      catch (Exception ex)
+      catch (ArgumentNullException ne)
       {
-        LOG.Error(ex);
+        LOG.Error(ne);
+      }
+      catch (NullReferenceException nr)
+      {
+        LOG.Error(nr);
+      }
+      catch (ArgumentOutOfRangeException aor)
+      {
+        LOG.Error(aor);
+      }
+      catch (ArgumentException ae)
+      {
+        LOG.Error(ae);
       }
     }
 
@@ -154,7 +166,7 @@ namespace EQLogParser
 
         // see if there's a pet mapping, check this first
         string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-        if (pname != null || (pname = record.AttackerOwner).Length != 0)
+        if (pname != null || !string.IsNullOrEmpty((pname = record.AttackerOwner)))
         {
           PlayerHasPet[pname] = 1;
           PetToPlayer[record.Attacker] = pname;
@@ -310,7 +322,7 @@ namespace EQLogParser
       if (options.RequestChartData)
       {
         // send update
-        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupIterator(DamageGroups, options.IsBaneEanbled) };
+        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupCollection(DamageGroups, options.IsBaneEanbled) };
         EventsUpdateDataPoint?.Invoke(DamageGroups, de);
       }
     }
@@ -371,7 +383,6 @@ namespace EQLogParser
       {
         FireUpdateEvent(options);
 
-        // special cast
         if (options.RequestSummaryData)
         {
           DamageGroups.ForEach(group =>
