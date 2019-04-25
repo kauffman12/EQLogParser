@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
-        Title="" Closed="Window_Closed" TextOptions.TextFormattingMode="Display">
+        Title="" Closed="Window_Closed" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False">
   <Window.Resources>
   </Window.Resources>
   <Grid>
@@ -99,6 +99,20 @@
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
+        <MenuItem x:Name="tankingMenuItems" Header="_Tanking" Height="20">
+          <!--
+          <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindow_Click" Header="Chart" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="tankingChartIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          -->
+          <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindow_Click" Header="Summary Table" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="tankingSummaryIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </MenuItem>        
         <Separator />
         <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindow_Click" Height="20">
           <MenuItem.Icon>

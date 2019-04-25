@@ -32,6 +32,7 @@ namespace EQLogParser
     public const string UNKPLAYER = "Unknown Player";
     public const string RAID = "Totals";
     public const string HEALPARSE = "Healing";
+    public const string TANKPARSE = "Tanking";
     public const string DAMAGEPARSE = "Damage";
   }
 
@@ -132,7 +133,7 @@ namespace EQLogParser
   public class DataPointEvent
   {
     public string Action { get; set; }
-    public RecordGroupIterator Iterator { get; set; }
+    public RecordGroupCollection Iterator { get; set; }
     public List<PlayerStats> Selected { get; set; }
   }
 
@@ -150,6 +151,14 @@ namespace EQLogParser
     public string Name { get; set; }
     public List<NonPlayer> Npcs { get; set; }
     public bool IsAEHealingEanbled { get; set; }
+    public bool RequestChartData { get; set; }
+    public bool RequestSummaryData { get; set; }
+  }
+
+  public class TankingStatsOptions
+  {
+    public string Name { get; set; }
+    public List<NonPlayer> Npcs { get; set; }
     public bool RequestChartData { get; set; }
     public bool RequestSummaryData { get; set; }
   }
@@ -218,6 +227,10 @@ namespace EQLogParser
     public uint Hits { get; set; }
     public uint CritHits { get; set; }
     public uint LuckyHits { get; set; }
+    public uint MeleeHits { get; set; }
+    public uint StrikethroughHits { get; set; }
+    public uint RiposteHits { get; set; }
+    public uint RampageHits { get; set; }
     public uint TwincastHits { get; set; }
     public long Total { get; set; }
     public long TotalCrit { get; set; }
@@ -317,6 +330,11 @@ namespace EQLogParser
     public Dictionary<string, byte> UniqueClasses { get; set; }
   }
 
+  public class CombinedTankStats : CombinedStats
+  {
+    public Dictionary<string, byte> UniqueClasses { get; set; }
+  }
+
   public class OverlayDamageStats : CombinedStats
   {
     public Dictionary<string, PlayerStats> TopLevelStats { get; set; }
@@ -371,6 +389,8 @@ namespace EQLogParser
     public double CritRate { get; set; }
     public double ExtraRate { get; set; }
     public double LuckRate { get; set; }
+    public double StrikethroughRate { get; set; }
+    public double RiposteRate { get; set; }
     public double TwincastRate { get; set; }
     public double ResistRate { get; set; }
     public double Percent { get; set; }

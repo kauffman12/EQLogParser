@@ -168,6 +168,7 @@
       <DependentUpon>OverlayWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Settings.cs" />
+    <Compile Include="src\control\TankingStatsManager.cs" />
     <Compile Include="src\dao\ChatFilter.cs" />
     <Compile Include="src\dao\ChatIterator.cs" />
     <Compile Include="src\dao\ChatManager.cs" />
@@ -176,11 +177,14 @@
     <Compile Include="src\ui\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\TankingSummary.xaml.cs">
+      <DependentUpon>TankingSummary.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\util\TextFormatUtils.cs" />
     <Compile Include="src\util\DateUtil.cs" />
     <Compile Include="src\util\StatsUtil.cs" />
     <Compile Include="src\control\SummaryTable.cs" />
-    <Compile Include="src\dao\RecordGroupIterator.cs" />
+    <Compile Include="src\dao\RecordGroupCollections.cs" />
     <Compile Include="src\parsing\CastLineParser.cs" />
     <Compile Include="src\dao\DataManager.cs" />
     <Compile Include="src\control\SpellCountBuilder.cs" />
@@ -268,6 +272,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\SpellCountTable.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\TankingSummary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

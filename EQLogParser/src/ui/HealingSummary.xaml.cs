@@ -24,9 +24,8 @@ namespace EQLogParser
       InitSummaryTable(title, dataGrid);
 
       // AE healing
-      bool bValue;
       string value = DataManager.Instance.GetApplicationSetting("IncludeAEHealing");
-      includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bValue) && bValue;
+      includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bool bValue) && bValue;
 
       Ready = true;
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;

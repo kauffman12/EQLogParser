@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  public class DamageGroupIterator : RecordGroupIterator
+  public class DamageGroupCollection : RecordGroupCollection
   {
     private bool ShowBane;
 
-    public DamageGroupIterator(List<List<ActionBlock>> recordGroups, bool showBane) : base(recordGroups)
+    public DamageGroupCollection(List<List<ActionBlock>> recordGroups, bool showBane) : base(recordGroups)
     {
       ShowBane = showBane;
     }
@@ -27,7 +27,7 @@ namespace EQLogParser
       {
         string attacker = record.Attacker;
         string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-        if (pname != null || (record.AttackerOwner != "" && (pname = record.AttackerOwner) != ""))
+        if (pname != null || (!string.IsNullOrEmpty(record.AttackerOwner) && !string.IsNullOrEmpty((pname = record.AttackerOwner))))
         {
           attacker = pname;
         }
@@ -39,10 +39,10 @@ namespace EQLogParser
     }
   }
 
-  public class HealGroupIterator : RecordGroupIterator
+  public class HealGroupCollection : RecordGroupCollection
   {
     private bool ShowAE;
-    public HealGroupIterator(List<List<ActionBlock>> recordGroups, bool showAE) : base(recordGroups)
+    public HealGroupCollection(List<List<ActionBlock>> recordGroups, bool showAE) : base(recordGroups)
     {
       ShowAE = showAE;
     }
@@ -67,7 +67,33 @@ namespace EQLogParser
     }
   }
 
-  public abstract class RecordGroupIterator : IEnumerable<DataPoint>
+  public class TankGroupCollection : RecordGroupCollection
+  {
+    public TankGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
+    {
+    }
+
+    override protected bool IsValid(RecordWrapper wrapper)
+    {
+      DamageRecord record = wrapper.Record as DamageRecord;
+      return TankingStatsManager.Instance.IsValidDamage(record);
+    }
+
+    override protected DataPoint Create(RecordWrapper wrapper)
+    {
+      DataPoint dataPoint = null;
+      DamageRecord record = wrapper.Record as DamageRecord;
+
+      if (record != null)
+      {
+        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = record.Defender, CurrentTime = wrapper.BeginTime };
+      }
+
+      return dataPoint;
+    }
+  }
+
+  public abstract class RecordGroupCollection : IEnumerable<DataPoint>
   {
     private static RecordWrapper StopWrapper = new RecordWrapper();
     private List<List<ActionBlock>> RecordGroups;
@@ -75,7 +101,7 @@ namespace EQLogParser
     private int CurrentBlock;
     private int CurrentRecord;
 
-    public RecordGroupIterator(List<List<ActionBlock>> recordGroups)
+    public RecordGroupCollection(List<List<ActionBlock>> recordGroups)
     {
       RecordGroups = recordGroups;
       CurrentGroup = 0;
