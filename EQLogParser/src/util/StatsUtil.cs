@@ -247,6 +247,7 @@ namespace EQLogParser
         stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
         stats.StrikethroughRate = Math.Round(Convert.ToDouble(stats.StrikethroughHits) / stats.MeleeHits * 100, 2);
         stats.RiposteRate = Math.Round(Convert.ToDouble(stats.RiposteHits) / stats.MeleeHits * 100, 2);
+        stats.RampageRate = Math.Round(Convert.ToDouble(stats.RampageHits) / stats.MeleeHits * 100, 2);
 
         var tcMult = stats.Type == Labels.HOT || stats.Type == Labels.DOT ? 1 : 2;
         stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -23,6 +25,7 @@ namespace EQLogParser
     private PlayerStats RaidTotals;
     private List<NonPlayer> Selected;
     private string Title;
+    private bool UpdatingGroups = false;
 
     internal HealingStatsManager()
     {
@@ -37,6 +40,8 @@ namespace EQLogParser
 
     internal void BuildTotalStats(HealingStatsOptions options)
     {
+      UpdatingGroups = true;
+
       Selected = options.Npcs;
       Title = options.Name;
 
@@ -80,12 +85,55 @@ namespace EQLogParser
       {
         LOG.Error(ae);
       }
+      finally
+      {
+        UpdatingGroups = false;
+      }
     }
 
     internal void RebuildTotalStats(HealingStatsOptions options)
     {
       FireNewStatsEvent(options);
       ComputeHealingStats(options);
+    }
+
+    internal void PopulateHealing(List<PlayerStats> stats)
+    {
+      while (UpdatingGroups)
+      {
+        Thread.Sleep(100);
+      }
+
+      Dictionary<string, long> totals = new Dictionary<string, long>();
+
+      HealingGroups.ForEach(group =>
+      {
+        group.ForEach(block =>
+        {
+          block.Actions.ForEach(action =>
+          {
+            var record = action as HealRecord;
+            if (record != null)
+            {
+              long value = 0;
+              if (totals.ContainsKey(record.Healed))
+              {
+                value = totals[record.Healed];
+              }
+
+              totals[record.Healed] = record.Total + value;
+            }
+          });
+        });
+      });
+
+      Parallel.ForEach(stats, stat =>
+      {
+        if (totals.ContainsKey(stat.Name))
+        {
+          stat.Extra = totals[stat.Name];
+        }
+      });
     }
 
     internal bool IsValidHeal(HealRecord record, bool showAE)
