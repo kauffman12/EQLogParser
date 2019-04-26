@@ -62,6 +62,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> UnVerifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, byte> OtherSelves = new ConcurrentDictionary<string, byte>();
 
     private DataManager()
     {
@@ -76,6 +77,12 @@ namespace EQLogParser
       VerifiedPlayers["your"] = 1;
       VerifiedPlayers["Your"] = 1;
       VerifiedPlayers["YOUR"] = 1;
+      OtherSelves["himself"] = 1;
+      OtherSelves["herself"] = 1;
+      OtherSelves["itself"] = 1;
+      OtherSelves["Himself"] = 1;
+      OtherSelves["Herself"] = 1;
+      OtherSelves["Itself"] = 1;
       DefinitelyNotAPlayer["Unknown"] = 1;
       DefinitelyNotAPlayer["unknown"] = 1;
       ClassNames[SpellClass.WAR] = string.Intern("Warrior");
@@ -296,8 +303,8 @@ namespace EQLogParser
 
     public void AddHealRecord(HealRecord record, double beginTime)
     {
-      record.Healer = ReplacePlayer(record.Healer, out _);
-      record.Healed = ReplacePlayer(record.Healed, out _);
+      record.Healer = ReplacePlayer(record.Healer, record.Healed, out _);
+      record.Healed = ReplacePlayer(record.Healed, record.Healer, out _);
 
       AddAction(AllHealBlocks, record, beginTime);
 
@@ -313,7 +320,7 @@ namespace EQLogParser
 
     public void HandleSpellInterrupt(string player, string spell, double beginTime)
     {
-      player = ReplacePlayer(player, out _);
+      player = ReplacePlayer(player, player, out _);
 
       for (int i=AllSpellCastBlocks.Count-1; i>=0 && beginTime-AllSpellCastBlocks[i].BeginTime<=5; i--)
       {
@@ -330,7 +337,7 @@ namespace EQLogParser
     {
       if (SpellsNameDB.ContainsKey(cast.Spell))
       {
-        cast.Caster = ReplacePlayer(cast.Caster, out _);
+        cast.Caster = ReplacePlayer(cast.Caster, cast.Receiver, out _);
         AddAction(AllSpellCastBlocks, cast, beginTime);
 
         string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
@@ -345,7 +352,7 @@ namespace EQLogParser
 
     public void AddReceivedSpell(ReceivedSpell received, double beginTime)
     {
-      received.Receiver = ReplacePlayer(received.Receiver, out _);
+      received.Receiver = ReplacePlayer(received.Receiver, received.Receiver, out _);
       AddAction(AllReceivedSpellBlocks, received, beginTime);
     }
 
@@ -357,12 +364,8 @@ namespace EQLogParser
       PlayerReplacement["your"] = name;
       PlayerReplacement["Your"] = name;
       PlayerReplacement["YOUR"] = name;
-      PlayerReplacement["himself"] = name;
-      PlayerReplacement["herself"] = name;
-      PlayerReplacement["itself"] = name;
-      PlayerReplacement["Himself"] = name;
-      PlayerReplacement["Herself"] = name;
-      PlayerReplacement["Itself"] = name;
+      PlayerReplacement["yourself"] = name;
+      PlayerReplacement["Yourself"] = name;
       UpdateVerifiedPlayers(name);
       PlayerName = name;
     }
@@ -372,15 +375,22 @@ namespace EQLogParser
       ServerName = server;
     }
 
-    public string ReplacePlayer(string name, out bool replaced)
+    public string ReplacePlayer(string name, string alternative, out bool replaced)
     {
       replaced = false;
       string result = name;
 
-      if (PlayerReplacement.TryGetValue(name, out string found))
+      if (OtherSelves.ContainsKey(name))
       {
-        replaced = true;
-        result = found;
+        result = alternative;
+      }
+      else
+      {
+        if (PlayerReplacement.TryGetValue(name, out string found))
+        {
+          replaced = true;
+          result = found;
+        }
       }
 
       return string.Intern(result);

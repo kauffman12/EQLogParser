@@ -390,6 +390,7 @@ namespace EQLogParser
     public double ExtraRate { get; set; }
     public double LuckRate { get; set; }
     public double StrikethroughRate { get; set; }
+    public double RampageRate { get; set; }
     public double RiposteRate { get; set; }
     public double TwincastRate { get; set; }
     public double ResistRate { get; set; }

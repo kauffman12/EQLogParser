@@ -138,8 +138,8 @@ namespace EQLogParser
       if (record != null)
       {
         // Needed to replace 'You' and 'you', etc
-        record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, out bool replaced);
-        record.Defender = DataManager.Instance.ReplacePlayer(record.Defender, out _);
+        record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, record.Defender, out bool replaced);
+        record.Defender = DataManager.Instance.ReplacePlayer(record.Defender, record.Attacker, out _);
 
         CheckDamageRecordForPet(record, replaced, out bool isDefenderPet, out bool isAttackerPet);
         CheckDamageRecordForPlayer(record, replaced, out bool isDefenderPlayer, out bool isAttackerPlayer);

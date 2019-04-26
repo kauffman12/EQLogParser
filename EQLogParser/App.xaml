@@ -431,6 +431,9 @@
     <Style x:Key="RiposteColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Percent of Melee hits received which were from Riposte" />
     </Style>
+    <Style x:Key="RampageColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Percent of Melee hits received which were from Rampage" />
+    </Style>
 
     <!-- Window/Chrome Styles -->
     <Style x:Key="StandardStyle" TargetType="{x:Type Window}">
