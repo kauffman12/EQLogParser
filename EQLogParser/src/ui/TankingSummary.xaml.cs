@@ -74,6 +74,8 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentTankingStats.FullTitle;
+
+              HealingStatsManager.Instance.PopulateHealing(CurrentTankingStats.StatsList);
               dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentTankingStats.StatsList);
             }
 
