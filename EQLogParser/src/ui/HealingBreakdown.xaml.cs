@@ -22,7 +22,7 @@ namespace EQLogParser
 
     private List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
 
-    public HealBreakdown(CombinedHealStats currentStats)
+    public HealBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
       titleLabel.Content = currentStats.ShortTitle;

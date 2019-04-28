@@ -115,7 +115,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireCompletedEvent(TankingStatsOptions options, CombinedTankStats combined)
+    private void FireCompletedEvent(TankingStatsOptions options, CombinedStats combined)
     {
       if (options.RequestSummaryData)
       {
@@ -168,7 +168,7 @@ namespace EQLogParser
 
     private void ComputeTankingStats(TankingStatsOptions options)
     {
-      CombinedTankStats combined = null;
+      CombinedStats combined = null;
       Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
       // always start over
@@ -198,6 +198,10 @@ namespace EQLogParser
 
                   StatsUtil.UpdateStats(stats, record, block.BeginTime);
                   allStats[record.Defender] = stats;
+
+                  PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                  UpdateSubStats(subStats, record, block.BeginTime);
+                  allStats[stats.Name + "=" + record.SubType] = subStats;
                 }
               });
             });
@@ -212,7 +216,7 @@ namespace EQLogParser
           RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
           Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, RaidTotals));
 
-          combined = new CombinedTankStats
+          combined = new CombinedStats
           {
             RaidStats = RaidTotals,
             UniqueClasses = new Dictionary<string, byte>(),
@@ -273,6 +277,11 @@ namespace EQLogParser
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details, };
+    }
+
+    private static void UpdateSubStats(PlayerSubStats subStats, DamageRecord record, double beginTime)
+    {
+      StatsUtil.UpdateStats(subStats, record, beginTime);
     }
   }
 }

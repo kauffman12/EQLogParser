@@ -20,8 +20,6 @@ namespace EQLogParser
     private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
     private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
-    private CombinedDamageStats CurrentDamageStats = null;
-
     // workaround for adjusting column withs of player datagrid
     private List<DataGrid> ChildGrids = new List<DataGrid>();
 
@@ -67,7 +65,7 @@ namespace EQLogParser
 
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
     {
-      CurrentDamageStats = null;
+      CurrentStats = null;
       dataGrid.ItemsSource = null;
       ChildGrids.Clear();
       title.Content = DEFAULT_TABLE_LABEL;
@@ -86,24 +84,24 @@ namespace EQLogParser
             ChildGrids.Clear();
             break;
           case "COMPLETED":
-            CurrentDamageStats = e.CombinedStats as CombinedDamageStats;
+            CurrentStats = e.CombinedStats as CombinedStats;
 
-            if (CurrentDamageStats == null)
+            if (CurrentStats == null)
             {
               title.Content = NODATA_TABLE_LABEL;
             }
             else
             {
               includeBane.IsEnabled = e.IsBaneAvailable;
-              title.Content = CurrentDamageStats.FullTitle;
-              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentDamageStats.StatsList);
+              title.Content = CurrentStats.FullTitle;
+              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
             }
 
             (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
-            CurrentDamageStats = null;
+            CurrentStats = null;
             title.Content = DEFAULT_TABLE_LABEL;
             (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
@@ -123,20 +121,9 @@ namespace EQLogParser
       if (selected.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var damageTable = new DamageBreakdown(CurrentDamageStats);
+        var damageTable = new DamageBreakdown(CurrentStats);
         damageTable.Show(selected);
         Helpers.OpenNewTab(main.dockSite, "damageWindow", "Damage Breakdown", damageTable);
-      }
-    }
-
-    protected override void ShowSpellCasts(List<PlayerStats> selected)
-    {
-      if (selected.Count > 0)
-      {
-        var spellTable = new SpellCountTable(CurrentDamageStats?.ShortTitle ?? "");
-        spellTable.ShowSpells(selected, CurrentDamageStats);
-        var main = Application.Current.MainWindow as MainWindow;
-        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
       }
     }
 
@@ -151,7 +138,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var chart = new HitFreqChart();
-        var results = DamageStatsManager.Instance.GetHitFreqValues(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentDamageStats);
+        var results = DamageStatsManager.Instance.GetHitFreqValues(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
 
         var main = Application.Current.MainWindow as MainWindow;
         var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "freqChart", "Hit Frequency", chart, 400, 300);
@@ -165,7 +152,7 @@ namespace EQLogParser
     private void DataGridExpander_Loaded(object sender, RoutedEventArgs e)
     {
       Image image = (sender as Image);
-      var children = CurrentDamageStats?.Children;
+      var children = CurrentStats?.Children;
 
       if (image.DataContext is PlayerStats stats && children != null && children.ContainsKey(stats.Name))
       {
@@ -218,7 +205,7 @@ namespace EQLogParser
 
     private void ChildrenGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
     {
-      var children = CurrentDamageStats?.Children;
+      var children = CurrentStats?.Children;
       if (e.Row.Item is PlayerStats stats && e.DetailsElement is DataGrid childrenDataGrid && children != null && children.ContainsKey(stats.Name))
       {
         if (childrenDataGrid.ItemsSource != children[stats.Name])
@@ -255,15 +242,15 @@ namespace EQLogParser
 
     private void UpdateDataGridMenuItems()
     {
-      if (CurrentDamageStats?.StatsList?.Count > 0)
+      if (CurrentStats?.StatsList?.Count > 0)
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowDamage.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyDamageParseToEQClick.IsEnabled = true;
-        UpdateClassMenuItems(menuItemShowDamage, dataGrid, CurrentDamageStats?.UniqueClasses);
-        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentDamageStats?.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowDamage, dataGrid, CurrentStats?.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
       }
       else
       {
@@ -279,7 +266,7 @@ namespace EQLogParser
         bool isBaneEnabled = includeBane.IsChecked.Value;
         DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", isBaneEnabled.ToString(CultureInfo.CurrentCulture));
 
-        if (CurrentDamageStats != null && CurrentDamageStats.RaidStats != null)
+        if (CurrentStats != null && CurrentStats.RaidStats != null)
         {
           includeBane.IsEnabled = false;
           var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, RequestChartData = true, RequestSummaryData = true };
@@ -315,7 +302,7 @@ namespace EQLogParser
         if (disposing)
         {
           // TODO: dispose managed state (managed objects).
-          CurrentDamageStats = null;
+          CurrentStats = null;
           ChildGrids = null;
         }
 

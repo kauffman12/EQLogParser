@@ -14,8 +14,6 @@ namespace EQLogParser
   public partial class HealingSummary : SummaryTable, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    private CombinedHealStats CurrentHealingStats = null;
     private bool Ready = false;
 
     public HealingSummary()
@@ -40,7 +38,7 @@ namespace EQLogParser
 
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
     {
-      CurrentHealingStats = null;
+      CurrentStats = null;
       dataGrid.ItemsSource = null;
       title.Content = DEFAULT_TABLE_LABEL;
     }
@@ -57,24 +55,24 @@ namespace EQLogParser
             dataGrid.ItemsSource = null;
             break;
           case "COMPLETED":
-            CurrentHealingStats = e.CombinedStats as CombinedHealStats;
+            CurrentStats = e.CombinedStats as CombinedStats;
 
-            if (CurrentHealingStats == null)
+            if (CurrentStats == null)
             {
               title.Content = NODATA_TABLE_LABEL;
             }
             else
             {
               includeAEHealing.IsEnabled = e.IsAEHealingAvailable;
-              title.Content = CurrentHealingStats.FullTitle;
-              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentHealingStats.StatsList);
+              title.Content = CurrentStats.FullTitle;
+              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
             }
 
             (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
-            CurrentHealingStats = null;
+            CurrentStats = null;
             title.Content = DEFAULT_TABLE_LABEL;
             (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
@@ -94,33 +92,22 @@ namespace EQLogParser
       if (selected.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var healTable = new HealBreakdown(CurrentHealingStats);
+        var healTable = new HealBreakdown(CurrentStats);
         healTable.Show(selected);
         Helpers.OpenNewTab(main.dockSite, "healWindow", "Healing Breakdown", healTable);
       }
     }
 
-    protected override void ShowSpellCasts(List<PlayerStats> selected)
-    {
-      if (selected.Count > 0)
-      {
-        var spellTable = new SpellCountTable(CurrentHealingStats.ShortTitle);
-        spellTable.ShowSpells(selected, CurrentHealingStats);
-        var main = Application.Current.MainWindow as MainWindow;
-        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
-      }
-    }
-
     private void UpdateDataGridMenuItems()
     {
-      if (CurrentHealingStats != null && CurrentHealingStats.StatsList.Count > 0)
+      if (CurrentStats != null && CurrentStats.StatsList.Count > 0)
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         copyHealParseToEQClick.IsEnabled = true;
-        UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentHealingStats.UniqueClasses);
-        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentHealingStats.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats.UniqueClasses);
       }
       else
       {
@@ -136,7 +123,7 @@ namespace EQLogParser
         bool isAEHealingEnabled = includeAEHealing.IsChecked.Value == true;
         DataManager.Instance.SetApplicationSetting("IncludeAEHealing", isAEHealingEnabled.ToString());
 
-        if (CurrentHealingStats != null && CurrentHealingStats.RaidStats != null)
+        if (CurrentStats != null && CurrentStats.RaidStats != null)
         {
           includeAEHealing.IsEnabled = false;
           var options = new HealingStatsOptions() { IsAEHealingEanbled = isAEHealingEnabled, RequestChartData = true, RequestSummaryData = true };
@@ -155,7 +142,7 @@ namespace EQLogParser
         if (disposing)
         {
           // TODO: dispose managed state (managed objects).
-          CurrentHealingStats = null;
+          CurrentStats = null;
         }
 
         HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
