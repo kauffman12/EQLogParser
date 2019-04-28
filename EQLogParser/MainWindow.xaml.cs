@@ -34,6 +34,7 @@ namespace EQLogParser
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled); 
     private static List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
+    private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
     private const string VERSION = "v1.5.2";
@@ -58,6 +59,7 @@ namespace EQLogParser
 
     private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
+    private ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
 
     private ChatManager PlayerChatManager;
     private NpcDamageManager NpcDamageManager = new NpcDamageManager();
@@ -116,8 +118,8 @@ namespace EQLogParser
           verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersProperty.Count + ")";
         });
 
-        parseList.ItemsSource = new List<string>() { Labels.DAMAGEPARSE, Labels.HEALPARSE };
-        parseList.SelectedIndex = 0;
+        parseList.ItemsSource = AvailableParses;
+        parseList.SelectedIndex = -1;
 
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
         DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
@@ -131,9 +133,11 @@ namespace EQLogParser
 
         DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
         HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
+        TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(TankingChartWindow, sender, data);
 
         DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
         HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+        TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -189,6 +193,7 @@ namespace EQLogParser
       (TankingWindow?.Content as TankingSummary)?.Clear();
       (DamageChartWindow?.Content as LineChart)?.Clear();
       (HealingChartWindow?.Content as LineChart)?.Clear();
+      (TankingChartWindow?.Content as LineChart)?.Clear();
     }
 
     internal void Busy(bool state)
@@ -302,6 +307,10 @@ namespace EQLogParser
       {
         OpenHealingChart();
       }
+      else if (e.Source == tankingChartMenuItem)
+      {
+        OpenTankingChart();
+      }
       else if (e.Source == damageSummaryMenuItem)
       {
         OpenDamageSummary();
@@ -327,7 +336,7 @@ namespace EQLogParser
       }
     }
 
-    private bool OpenChart(DocumentWindow window, DocumentWindow other, FrameworkElement icon, string title, List<string> choices, out DocumentWindow newWindow)
+    private bool OpenChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title, List<string> choices, out DocumentWindow newWindow)
     {
       bool updated = false;
       newWindow = window;
@@ -348,7 +357,7 @@ namespace EQLogParser
         newWindow.CanFloat = true;
         newWindow.CanClose = true;
 
-        if (other?.IsOpen == true)
+        if (other1?.IsOpen == true || other2?.IsOpen == true)
         {
           newWindow.MoveToNextContainer();
         }
@@ -363,7 +372,7 @@ namespace EQLogParser
 
     private void OpenDamageChart()
     {
-      if (OpenChart(DamageChartWindow, HealingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
+      if (OpenChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
       {
         List<PlayerStats> selected = null;
         bool isBaneEnabled = false;
@@ -380,7 +389,7 @@ namespace EQLogParser
 
     private void OpenHealingChart()
     {
-      if (OpenChart(HealingChartWindow, DamageChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
+      if (OpenChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
       {
         List<PlayerStats> selected = null;
         bool isAEHealingEnabled = false;
@@ -392,6 +401,16 @@ namespace EQLogParser
 
         var options = new HealingStatsOptions() { IsAEHealingEanbled = isAEHealingEnabled, RequestChartData = true };
         HealingStatsManager.Instance.FireUpdateEvent(options, selected);
+      }
+    }
+
+    private void OpenTankingChart()
+    {
+      if (OpenChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, out TankingChartWindow))
+      {
+        List<PlayerStats> selected = (TankingWindow?.Content is TankingSummary summary) ? summary.GetSelectedStats() : null;
+        var options = new TankingStatsOptions() { RequestChartData = true };
+        TankingStatsManager.Instance.FireUpdateEvent(options, selected);
       }
     }
 
@@ -529,7 +548,7 @@ namespace EQLogParser
         bool moved = false;
         foreach (var child in tabControl.Windows.Reverse().ToList())
         {
-          if (child == DamageChartWindow || child == HealingChartWindow)
+          if (child == DamageChartWindow || child == HealingChartWindow || child == TankingChartWindow)
           {
             if (child.IsOpen && !moved)
             {
@@ -655,6 +674,12 @@ namespace EQLogParser
     private void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null)
     {
       Parses[type] = new ParseData() { Builder = builder, CombinedStats = combined, Selected = selected };
+
+      if (!AvailableParses.Contains(type))
+      {
+        Dispatcher.InvokeAsync(() => AvailableParses.Add(type));
+      }
+
       TriggerParseUpdate(type);
     }
 
@@ -671,7 +696,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (parseList.SelectedItem.ToString() == type)
+        if (parseList.SelectedItem?.ToString() == type)
         {
           SetParseTextByType(type);
         }
@@ -736,7 +761,7 @@ namespace EQLogParser
         copyToEQButton.IsEnabled = true;
         copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
 
-        if (Parses.TryGetValue(parseList.SelectedItem as string, out ParseData data))
+        if (parseList.SelectedItem != null && Parses.TryGetValue(parseList.SelectedItem as string, out ParseData data))
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
           string players = count == 1 ? "Player" : "Players";
