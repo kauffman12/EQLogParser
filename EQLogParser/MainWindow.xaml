@@ -100,13 +100,11 @@
           </MenuItem>
         </MenuItem>
         <MenuItem x:Name="tankingMenuItems" Header="_Tanking" Height="20">
-          <!--
           <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindow_Click" Header="Chart" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="tankingChartIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          -->
           <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindow_Click" Header="Summary Table" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="tankingSummaryIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
