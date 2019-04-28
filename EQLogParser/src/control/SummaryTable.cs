@@ -16,6 +16,7 @@ namespace EQLogParser
 
     protected DataGrid TheDataGrid;
     protected Label TheTitle;
+    protected CombinedStats CurrentStats;
 
     protected void InitSummaryTable(Label title, DataGrid dataGrid)
     {
@@ -111,9 +112,15 @@ namespace EQLogParser
       // need to override this method
     }
 
-    protected virtual void ShowSpellCasts(List<PlayerStats> selected)
+    protected void ShowSpellCasts(List<PlayerStats> selected)
     {
-      // need to override this method
+      if (selected.Count > 0)
+      {
+        var spellTable = new SpellCountTable(CurrentStats?.ShortTitle ?? "");
+        spellTable.ShowSpells(selected, CurrentStats);
+        var main = Application.Current.MainWindow as MainWindow;
+        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
+      }
     }
 
     private void DataGrid_Sorting(object sender, DataGridSortingEventArgs e)

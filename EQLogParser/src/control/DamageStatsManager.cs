@@ -245,7 +245,7 @@ namespace EQLogParser
       return overlayStats;
     }
 
-    internal Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedDamageStats damageStats)
+    internal Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
     {
       Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
 
@@ -327,7 +327,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireCompletedEvent(DamageStatsOptions options, CombinedDamageStats combined)
+    private void FireCompletedEvent(DamageStatsOptions options, CombinedStats combined)
     {
       if (options.RequestSummaryData)
       {
@@ -369,7 +369,7 @@ namespace EQLogParser
 
     private void ComputeDamageStats(DamageStatsOptions options)
     {
-      CombinedDamageStats combined = null;
+      CombinedStats combined = null;
       ConcurrentDictionary<string, Dictionary<string, PlayerStats>> childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
       ConcurrentDictionary<string, PlayerStats> topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
       ConcurrentDictionary<string, PlayerStats> aggregateStats = new ConcurrentDictionary<string, PlayerStats>();
@@ -503,7 +503,7 @@ namespace EQLogParser
             }
           });
 
-          combined = new CombinedDamageStats
+          combined = new CombinedStats
           {
             RaidStats = RaidTotals,
             UniqueClasses = new Dictionary<string, byte>(),

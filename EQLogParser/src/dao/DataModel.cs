@@ -317,22 +317,8 @@ namespace EQLogParser
     public string ShortTitle { get; set; }
     public List<PlayerStats> StatsList { get; set; }
     public PlayerStats RaidStats { get; set; }
-  }
-
-  public class CombinedDamageStats : CombinedStats
-  {
+    public Dictionary<string, byte> UniqueClasses { get; set; }
     public Dictionary<string, List<PlayerStats>> Children { get; set; }
-    public Dictionary<string, byte> UniqueClasses { get; set; }
-  }
-
-  public class CombinedHealStats : CombinedStats
-  {
-    public Dictionary<string, byte> UniqueClasses { get; set; }
-  }
-
-  public class CombinedTankStats : CombinedStats
-  {
-    public Dictionary<string, byte> UniqueClasses { get; set; }
   }
 
   public class OverlayDamageStats : CombinedStats

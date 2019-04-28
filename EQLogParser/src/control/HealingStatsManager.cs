@@ -112,8 +112,7 @@ namespace EQLogParser
         {
           block.Actions.ForEach(action =>
           {
-            var record = action as HealRecord;
-            if (record != null)
+            if (action is HealRecord record)
             {
               long value = 0;
               if (totals.ContainsKey(record.Healed))
@@ -178,7 +177,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireCompletedEvent(HealingStatsOptions options, CombinedHealStats combined)
+    private void FireCompletedEvent(HealingStatsOptions options, CombinedStats combined)
     {
       if (options.RequestSummaryData)
       {
@@ -220,7 +219,7 @@ namespace EQLogParser
 
     private void ComputeHealingStats(HealingStatsOptions options)
     {
-      CombinedHealStats combined = null;
+      CombinedStats combined = null;
       Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
       // always start over
@@ -281,7 +280,7 @@ namespace EQLogParser
           RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
           Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, RaidTotals));
 
-          combined = new CombinedHealStats
+          combined = new CombinedStats
           {
             RaidStats = RaidTotals,
             UniqueClasses = new Dictionary<string, byte>(),

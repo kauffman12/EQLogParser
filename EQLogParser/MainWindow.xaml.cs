@@ -36,7 +36,7 @@ namespace EQLogParser
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.1";
+    private const string VERSION = "v1.5.2";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -517,7 +517,6 @@ namespace EQLogParser
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
     {
-      var table = sender as TankingSummary;
       var options = new TankingStatsOptions() { RequestChartData = true };
       TankingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
       UpdateParse(Labels.TANKPARSE, data.Selected);
@@ -834,7 +833,7 @@ namespace EQLogParser
       int sleep = (int)((DamageProcessor.Size() + HealingProcessor.Size() + CastProcessor.Size()) / 5000);
       if (sleep > 10)
       {
-        Thread.Sleep(5 * (sleep - 10));
+        Thread.Sleep(4 * (sleep - 10));
       }
 
       Interlocked.Exchange(ref FilePosition, position);

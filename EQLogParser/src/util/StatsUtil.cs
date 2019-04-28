@@ -322,7 +322,7 @@ namespace EQLogParser
   internal abstract class Parse
   {
     internal string Name { get; set; }
-    internal CombinedDamageStats Combined { get; set; }
+    internal CombinedStats Combined { get; set; }
     internal List<PlayerStats> Selected { get; set; }
     internal virtual StatsSummary Create(bool showTotals, bool rankPlayers)
     {

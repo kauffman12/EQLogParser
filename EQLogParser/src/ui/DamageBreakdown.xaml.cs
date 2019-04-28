@@ -32,9 +32,9 @@ namespace EQLogParser
     private Dictionary<string, List<PlayerSubStats>> UnGroupedResisted = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
-    private static bool running = false;
+    private static bool Running = false;
 
-    public DamageBreakdown(CombinedDamageStats currentStats)
+    public DamageBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
       titleLabel.Content = currentStats.ShortTitle;
@@ -52,9 +52,9 @@ namespace EQLogParser
 
     private new void Display(List<PlayerStats> selectedStats = null)
     {
-      if (running == false && ChildStats != null && RaidStats != null)
+      if (Running == false && ChildStats != null && RaidStats != null)
       {
-        running = true;
+        Running = true;
         Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(true));
 
         Task.Delay(5).ContinueWith(task =>
@@ -132,7 +132,7 @@ namespace EQLogParser
           finally
           {
             Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(false));
-            running = false;
+            Running = false;
           }
         }, TaskScheduler.Default);
       }

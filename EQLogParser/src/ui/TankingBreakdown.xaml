@@ -1,0 +1,38 @@
+﻿<local:BreakdownTable x:Class="EQLogParser.TankingBreakdown"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:local="clr-namespace:EQLogParser"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+    <Grid.Resources>
+      <local:ZeroConverter x:Key="ZeroConverter" />
+    </Grid.Resources>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="300*"></RowDefinition>
+    </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+    </StackPanel>
+    <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="Custom_Sorting" LoadingRow="Loading_Row">
+      <DataGrid.Columns>
+        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="150" Width="150*"/>
+        <DataGridTextColumn Binding="{Binding Percent, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource PlayerTotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
+        <DataGridTextColumn Binding="{Binding Total}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damaged" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90*"/>
+        <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource DPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
+        <DataGridTextColumn Binding="{Binding SDPS}" HeaderStyle="{StaticResource SDPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SDPS" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
+        <DataGridTextColumn Binding="{Binding TotalSeconds}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
+        <DataGridTextColumn Binding="{Binding Hits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
+        <DataGridTextColumn Binding="{Binding Max}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
+        <DataGridTextColumn Binding="{Binding Avg}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
+        <DataGridTextColumn Binding="{Binding StrikethroughRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource StrikethroughColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Strike" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>
+        <DataGridTextColumn Binding="{Binding RiposteRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource RiposteColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Riposte" IsReadOnly="True" CanUserReorder="False" MinWidth="80" Width="80*"/>
+        <DataGridTextColumn Binding="{Binding RampageRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource RiposteColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Rampage" IsReadOnly="True" CanUserReorder="False" MinWidth="84" Width="84*"/>
+      </DataGrid.Columns>
+    </datagrid:ThemedDataGrid>
+  </Grid>
+</local:BreakdownTable>
