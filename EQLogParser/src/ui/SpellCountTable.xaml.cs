@@ -62,18 +62,18 @@ namespace EQLogParser
       Ready = true;
     }
 
-    public void ShowSpells(List<PlayerStats> selectedStats, CombinedDamageStats currentStats)
+    public void ShowSpells(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
       var childStats = currentStats?.Children;
       var raidStats = currentStats?.RaidStats;
 
-      if (selectedStats != null && childStats != null && raidStats != null)
+      if (selectedStats != null && raidStats != null)
       {
         PlayerList = new List<string>();
         foreach (var stats in selectedStats)
         {
           string name = stats.Name;
-          if (childStats.ContainsKey(stats.Name) && childStats[stats.Name].Count > 1)
+          if (childStats != null && childStats.ContainsKey(stats.Name) && childStats[stats.Name].Count > 1)
           {
             name = childStats[stats.Name].First().Name;
           }
@@ -82,21 +82,6 @@ namespace EQLogParser
         }
 
         TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
-        Display();
-      }
-    }
-
-    public void ShowSpells(List<PlayerStats> selectedStats, CombinedHealStats currentStats)
-    {
-      if (selectedStats != null && currentStats != null)
-      {
-        PlayerList = new List<string>();
-        foreach (var stats in selectedStats)
-        {
-          PlayerList.Add(stats.Name);
-        }
-
-        TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, currentStats.RaidStats);
         Display();
       }
     }

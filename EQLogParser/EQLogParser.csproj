@@ -177,6 +177,9 @@
     <Compile Include="src\ui\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\TankingBreakdown.xaml.cs">
+      <DependentUpon>TankingBreakdown.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
@@ -272,6 +275,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\SpellCountTable.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\TankingBreakdown.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
