@@ -97,40 +97,74 @@ namespace EQLogParser
       ComputeHealingStats(options);
     }
 
-    internal void PopulateHealing(List<PlayerStats> stats)
+    internal void PopulateHealing(List<PlayerStats> playerStats)
     {
       while (UpdatingGroups)
       {
         Thread.Sleep(100);
       }
 
+      Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
       Dictionary<string, long> totals = new Dictionary<string, long>();
 
       HealingGroups.ForEach(group =>
       {
+        // keep track of time range as well as the players that have been updated
+        Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
+
         group.ForEach(block =>
         {
           block.Actions.ForEach(action =>
           {
             if (action is HealRecord record)
             {
-              long value = 0;
-              if (totals.ContainsKey(record.Healed))
+              if (IsValidHeal(record, true))
               {
-                value = totals[record.Healed];
-              }
+                PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
+                StatsUtil.UpdateStats(stats, record, block.BeginTime);
+                allStats[record.Healed] = stats;
 
-              totals[record.Healed] = record.Total + value;
+                PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.Healer, record.Type);
+                StatsUtil.UpdateStats(subStats, record, block.BeginTime);
+                allStats[record.Healer + "-" + record.Healed] = subStats;
+
+                long value = 0;
+                if (totals.ContainsKey(record.Healed))
+                {
+                  value = totals[record.Healed];
+                }
+
+                totals[record.Healed] = record.Total + value;
+              }
             }
           });
         });
+
+        Parallel.ForEach(allStats.Values, stats =>
+        {
+          stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
+          stats.BeginTime = double.NaN;
+        });
       });
 
-      Parallel.ForEach(stats, stat =>
+      Parallel.ForEach(playerStats, stat =>
       {
-        if (totals.ContainsKey(stat.Name))
+        if (individualStats.ContainsKey(stat.Name))
         {
-          stat.Extra = totals[stat.Name];
+          if (totals.ContainsKey(stat.Name))
+          {
+            stat.Extra = totals[stat.Name];
+          }
+
+          var indStat = individualStats[stat.Name];
+          stat.SubStats2 = new Dictionary<string, PlayerSubStats>();
+          stat.SubStats2.Add("receivedHealing", indStat);
+
+          StatsUtil.UpdateCalculations(indStat, RaidTotals);
+          foreach(var subStat in indStat.SubStats.Values)
+          {
+            StatsUtil.UpdateCalculations(subStat, indStat);
+          }
         }
       });
     }

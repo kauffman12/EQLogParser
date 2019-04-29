@@ -61,6 +61,25 @@
             <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
             <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
           </MenuItem>
+          <MenuItem x:Name="menuItemShowReceivedHealing" IsEnabled="False" Header="Received Healing Breakdown">
+            <MenuItem Header="Selected" IsEnabled="False" Click="DataGridShowBreakdown2_Click"/>
+            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridShowBreakdown2ByClass_Click"/>
+          </MenuItem>          
           <Separator />
           <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
           <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>

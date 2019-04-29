@@ -177,6 +177,9 @@
     <Compile Include="src\ui\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\ReceivedHealingBreakdown.xaml.cs">
+      <DependentUpon>ReceivedHealingBreakdown.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\TankingBreakdown.xaml.cs">
       <DependentUpon>TankingBreakdown.xaml</DependentUpon>
     </Compile>
@@ -271,6 +274,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\NpcTable.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\ReceivedHealingBreakdown.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
