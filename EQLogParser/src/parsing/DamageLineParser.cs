@@ -329,7 +329,7 @@ namespace EQLogParser
       {
         record = ParsePointsOf(data, nonMelee, forIndex, byIndex, hitIndex, builder, nameList);
       }
-      else if (parseType == ParseType.HASTAKEN && takenIndex < fromIndex && fromIndex > -1 && byIndex > -1 && fromIndex < byIndex)
+      else if (parseType == ParseType.HASTAKEN && takenIndex < fromIndex && fromIndex > -1)
       {
         record = ParseHasTaken(data, takenIndex, fromIndex, byIndex, builder);
       }
@@ -467,17 +467,31 @@ namespace EQLogParser
       DamageRecord record = null;
 
       uint damage = StatsUtil.ParseUInt(data[takenIndex + 1]);
-      string spell = string.Join(" ", data, fromIndex + 1, byIndex - fromIndex - 1);
       string defender = string.Join(" ", data, 0, takenIndex - 1);
-      string attacker = ReadStringToPeriod(data, byIndex, builder);
-      
-      // check for pets
-      HasOwner(attacker, out string attackerOwner);
-      HasOwner(defender, out string defenderOwner);
 
-      if (attacker != null && defender != null)
+      string spell = null;
+      string attacker = null;
+      if (byIndex > -1 && fromIndex < byIndex)
       {
-        record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, spell, Labels.DOT);
+        spell = string.Join(" ", data, fromIndex + 1, byIndex - fromIndex - 1);
+        attacker = ReadStringToPeriod(data, byIndex, builder);
+      }
+      else if (data[fromIndex + 1] == "your")
+      {
+        spell = ReadStringToPeriod(data, fromIndex + 1, builder);
+        attacker = "you";
+      }
+
+      if (attacker != null && spell != null)
+      {
+        // check for pets
+        HasOwner(attacker, out string attackerOwner);
+        HasOwner(defender, out string defenderOwner);
+
+        if (attacker != null && defender != null)
+        {
+          record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, spell, Labels.DOT);
+        }
       }
 
       return record;

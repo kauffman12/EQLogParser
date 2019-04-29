@@ -67,10 +67,21 @@ namespace EQLogParser
       ShowBreakdown(GetSelectedStats());
     }
 
+    protected void DataGridShowBreakdown2_Click(object sender, RoutedEventArgs e)
+    {
+      ShowBreakdown2(GetSelectedStats());
+    }
+
     protected void DataGridShowBreakdownByClass_Click(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
       ShowBreakdown(GetPlayerStatsByClass(menuItem.Tag as string));
+    }
+
+    protected void DataGridShowBreakdown2ByClass_Click(object sender, RoutedEventArgs e)
+    {
+      MenuItem menuItem = (sender as MenuItem);
+      ShowBreakdown2(GetPlayerStatsByClass(menuItem.Tag as string));
     }
 
     protected void DataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
@@ -108,6 +119,11 @@ namespace EQLogParser
     }
 
     protected virtual void ShowBreakdown(List<PlayerStats> selected)
+    {
+      // need to override this method
+    }
+
+    protected virtual void ShowBreakdown2(List<PlayerStats> selected)
     {
       // need to override this method
     }
