@@ -182,7 +182,7 @@ namespace EQLogParser
         stats.BaneHits++;
       }
 
-      if (record.Type != Labels.BANE && record.Type != Labels.DOT && record.Type != Labels.DD && record.Type != Labels.DS)
+      if (record.Type != Labels.BANE && record.Type != Labels.DOT && record.Type != Labels.DD && record.Type != Labels.DS && record.Type != Labels.HEAL)
       {
         stats.MeleeHits++;
       }

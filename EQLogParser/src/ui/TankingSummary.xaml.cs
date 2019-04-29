@@ -39,6 +39,17 @@ namespace EQLogParser
       }
     }
 
+    protected override void ShowBreakdown2(List<PlayerStats> selected)
+    {
+      if (selected.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        var receivedHealingTable = new ReceivedHealingBreakdown(CurrentStats);
+        receivedHealingTable.Show(selected);
+        Helpers.OpenNewTab(main.dockSite, "receivedHealingWindow", "Received Healing Breakdown", receivedHealingTable);
+      }
+    }
+
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
@@ -91,14 +102,15 @@ namespace EQLogParser
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        menuItemShowTanking.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
+        menuItemShowReceivedHealing.IsEnabled = menuItemShowTanking.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         copyTankingParseToEQClick.IsEnabled = true;
+        UpdateClassMenuItems(menuItemShowReceivedHealing, dataGrid, CurrentStats?.UniqueClasses);
         UpdateClassMenuItems(menuItemShowTanking, dataGrid, CurrentStats?.UniqueClasses);
         UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
       }
       else
       {
-        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowTanking.IsEnabled =
+        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowReceivedHealing.IsEnabled = menuItemShowTanking.IsEnabled =
            menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled = false;
       }
     }
