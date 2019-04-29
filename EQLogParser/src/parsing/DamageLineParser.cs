@@ -16,6 +16,7 @@ namespace EQLogParser
     private enum ParseType { HASTAKEN, YOUHAVETAKEN, POINTSOF, UNKNOWN };
     private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
 
     private static readonly Dictionary<string, byte> HitMap = new Dictionary<string, byte>()
     {
@@ -490,7 +491,7 @@ namespace EQLogParser
 
         if (attacker != null && defender != null)
         {
-          record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, spell, Labels.DOT);
+          record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, spell, GetTypeFromSpell(spell, Labels.DOT));
         }
       }
 
@@ -550,7 +551,7 @@ namespace EQLogParser
       {
         if ((isNonMelee || !string.IsNullOrEmpty(spell)) && hit.StartsWith("hit", StringComparison.Ordinal))
         {
-          hit = Labels.DD;
+          hit = GetTypeFromSpell(spell, Labels.DD);
         }
         else
         {
@@ -603,8 +604,9 @@ namespace EQLogParser
         builder.Clear();
         for (int i = byIndex + 1; i < data.Length; i++)
         {
+          int len = data[i].Length;
           builder.Append(data[i]);
-          if (data[i].EndsWith(".", StringComparison.Ordinal))
+          if ((len >= 1 && data[i][len-1] == '.') && !(len >= 3 && data[i][len - 2] == 'k' && data[i][len - 3] == 'R'))
           {
             builder.Remove(builder.Length - 1, 1);
             break;
@@ -659,6 +661,21 @@ namespace EQLogParser
       else
       {
         result = name;
+      }
+
+      return result;
+    }
+
+    private static string GetTypeFromSpell(string name, string type)
+    {
+      string result = type;
+
+      if (!SpellTypeCache.TryGetValue(name, out result))
+      {
+        string spellName = Helpers.AbbreviateSpellName(name);
+        SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
+        result = (data != null && data.IsProc) ? Labels.PROC : type;
+        SpellTypeCache[name] = result;
       }
 
       return result;
