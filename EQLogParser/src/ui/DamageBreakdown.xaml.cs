@@ -31,7 +31,6 @@ namespace EQLogParser
     private Dictionary<string, List<PlayerSubStats>> UnGroupedProcs = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> UnGroupedResisted = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
-    private Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
     private static bool Running = false;
 
     public DamageBreakdown(CombinedStats currentStats)
@@ -91,9 +90,6 @@ namespace EQLogParser
                   BuildGroups(playerStat, playerStat.SubStats.Values.ToList());
                 }
               }
-
-              // no longer needed
-              SpellTypeCache.Clear();
             }
 
             if (PlayerStats != null)
@@ -138,24 +134,6 @@ namespace EQLogParser
       }
     }
 
-    private string CheckSpellType(string name, string type)
-    {
-      string result = type;
-
-      if (type == Labels.DD || type == Labels.DOT)
-      {
-        if (!SpellTypeCache.TryGetValue(name, out result))
-        {
-          string spellName = Helpers.AbbreviateSpellName(name);
-          SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
-          result = (data != null && data.IsProc) ? Labels.PROC : type;
-          SpellTypeCache[name] = result;
-        }
-      }
-
-      return result;
-    }
-
     private void BuildGroups(PlayerStats playerStats, List<PlayerSubStats> all)
     {
       List<PlayerSubStats> list = new List<PlayerSubStats>();
@@ -172,7 +150,7 @@ namespace EQLogParser
       {
         PlayerSubStats stats = null;
 
-        switch(CheckSpellType(sub.Name, sub.Type))
+        switch(sub.Type)
         {
           case Labels.DOT:
             stats = dots;

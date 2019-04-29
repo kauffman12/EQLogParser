@@ -249,7 +249,7 @@ namespace EQLogParser
         stats.RiposteRate = Math.Round(Convert.ToDouble(stats.RiposteHits) / stats.MeleeHits * 100, 2);
         stats.RampageRate = Math.Round(Convert.ToDouble(stats.RampageHits) / stats.MeleeHits * 100, 2);
 
-        var tcMult = stats.Type == Labels.HOT || stats.Type == Labels.DOT ? 1 : 2;
+        var tcMult = stats.Type == Labels.DD ? 2 : 1;
         stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
         stats.ResistRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
 
