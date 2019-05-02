@@ -138,46 +138,55 @@ namespace EQLogParser
       DamageRecord record = ParseAllDamage(pline);
       if (record != null)
       {
-        // Needed to replace 'You' and 'you', etc
-        record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, record.Defender, out bool replaced);
-        record.Defender = DataManager.Instance.ReplacePlayer(record.Defender, record.Attacker, out _);
-
-        CheckDamageRecordForPet(record, replaced, out bool isDefenderPet, out bool isAttackerPet);
-        CheckDamageRecordForPlayer(record, replaced, out bool isDefenderPlayer, out bool isAttackerPlayer);
-
-        if (isDefenderPlayer || isDefenderPet)
-        {
-          if (record.Attacker != record.Defender && !(isAttackerPlayer || isAttackerPet))
-          {
-            DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker);
-          }
-          else if (record.Attacker == record.Defender)
-          {
-            record = null;
-          }
-
-          // main spot where attacker is not a player or pet
-          isPlayerDamage = false;
-        }
-        else if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest", StringComparison.Ordinal) || record.Defender.EndsWith("satchel", StringComparison.Ordinal))
+        if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest", StringComparison.Ordinal) || record.Defender.EndsWith("satchel", StringComparison.Ordinal))
         {
           record = null;
         }
-
-        if (record != null)
+        else
         {
-          if (DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker))
-          {
-            DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Defender);
-            isPlayerDamage = false;
-          }
+          // Needed to replace 'You' and 'you', etc
+          record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, record.Defender, out bool replaced);
+          record.Defender = DataManager.Instance.ReplacePlayer(record.Defender, record.Attacker, out _);
 
-          // if updating this fails then it's definitely a player or pet
-          // doesnt get used often?
-          bool defenderProbablyNot = DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender);
-          if (!defenderProbablyNot && isPlayerDamage || !isPlayerDamage && defenderProbablyNot)
+          if (record.Attacker == record.Defender)
           {
             record = null;
+          }
+          else
+          {
+            CheckDamageRecordForPet(record, replaced, out bool isDefenderPet, out bool isAttackerPet);
+            CheckDamageRecordForPlayer(record, replaced, out bool isDefenderPlayer, out bool isAttackerPlayer);
+
+            if (isDefenderPlayer || isDefenderPet)
+            {
+              if (!isAttackerPlayer && !isAttackerPet)
+              {
+                DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker);
+              }
+
+              // main spot where attacker is not a player or pet
+              isPlayerDamage = false;
+            }
+
+            if ((isAttackerPlayer || isAttackerPet) && !isDefenderPlayer && !isDefenderPet)
+            {
+              DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender);
+            }
+            else if (!isAttackerPlayer && !isAttackerPet && !isDefenderPlayer && !isDefenderPet)
+            {
+              var isDefenderProbablyNotAPlayer = DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender, false);
+              var isAttackerProbablyNotAPlayer = DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker, false);
+
+              if (isDefenderProbablyNotAPlayer && !isAttackerProbablyNotAPlayer)
+              {
+                DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Attacker);
+              }
+              else if (!isDefenderProbablyNotAPlayer && isAttackerProbablyNotAPlayer)
+              {
+                DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Defender);
+                isPlayerDamage = false;
+              }
+            }
           }
         }
       }
@@ -288,7 +297,7 @@ namespace EQLogParser
                 extraIndex = test2;
               }
             }
-            else if (test1 > 1 && data[test1] == "have" && data[test1-1] == "You")
+            else if (test1 >= 1 && data[test1] == "have" && data[test1-1] == "You")
             {
               parseType = ParseType.YOUHAVETAKEN;
             }
@@ -304,7 +313,11 @@ namespace EQLogParser
             isAreIndex = i;
             break;
           case "for":
-            forIndex = i;
+            int next = i + 1;
+            if (data.Length > next && data[next].Length > 0 && char.IsNumber(data[next][0]))
+            {
+              forIndex = i;
+            }
             break;
           case "from":
             fromIndex = i;
@@ -391,7 +404,7 @@ namespace EQLogParser
       DamageRecord record = null;
 
       string defender = "you";
-      string attacker = ReadStringToPeriod(data, byIndex + 1, builder);
+      string attacker = ReadStringToPeriod(data, byIndex, builder);
       string spell = string.Join(" ", data, fromIndex + 1, byIndex - fromIndex - 1);
       uint damage = StatsUtil.ParseUInt(data[takenIndex + 1]);
 
@@ -668,9 +681,7 @@ namespace EQLogParser
 
     private static string GetTypeFromSpell(string name, string type)
     {
-      string result = type;
-
-      if (!SpellTypeCache.TryGetValue(name, out result))
+      if (!SpellTypeCache.TryGetValue(name, out string result))
       {
         string spellName = Helpers.AbbreviateSpellName(name);
         SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);

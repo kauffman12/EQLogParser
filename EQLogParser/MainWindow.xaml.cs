@@ -37,7 +37,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.5";
+    private const string VERSION = "v1.5.7";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
