@@ -29,6 +29,7 @@ namespace EQLogParser
     private static string PETMAP_FILE;
     private static string SETTINGS_FILE;
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
+
     private bool PetMappingUpdated = false;
     private bool SettingsUpdated = false;
 
@@ -195,6 +196,7 @@ namespace EQLogParser
       AllUniqueSpellCasts.Clear();
       AllUniqueSpellsCache.Clear();
       AllReceivedSpellBlocks.Clear();
+      AllResists.Clear();
       PlayerAttackDamageBlocks.Clear();
       PlayerDefendDamageBlocks.Clear();
       AllHealBlocks.Clear();
@@ -322,7 +324,7 @@ namespace EQLogParser
     {
       player = ReplacePlayer(player, player, out _);
 
-      for (int i=AllSpellCastBlocks.Count-1; i>=0 && beginTime-AllSpellCastBlocks[i].BeginTime<=5; i--)
+      for (int i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
       {
         int index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => ((SpellCast)action).Spell == spell && ((SpellCast)action).Caster == player);
         if (index > -1)
@@ -654,7 +656,7 @@ namespace EQLogParser
       }
     }
 
-    public bool UpdateProbablyNotAPlayer(string name)
+    public bool UpdateProbablyNotAPlayer(string name, bool addIfMissing = true)
     {
       bool updated = false;
       if (!VerifiedPlayers.ContainsKey(name) && !VerifiedPets.ContainsKey(name) && !GameGeneratedPets.ContainsKey(name) &&
@@ -662,20 +664,23 @@ namespace EQLogParser
       {
         if (!DefinitelyNotAPlayer.ContainsKey(name) && Helpers.IsPossiblePlayerName(name))
         {
-          long value = 0;
-          if (ProbablyNotAPlayer.ContainsKey(name))
+          if (addIfMissing)
           {
-            value = ProbablyNotAPlayer[name];
-          }
+            long value = 0;
+            if (ProbablyNotAPlayer.ContainsKey(name))
+            {
+              value = ProbablyNotAPlayer[name];
+            }
 
-          ProbablyNotAPlayer[name] = ++value;
+            ProbablyNotAPlayer[name] = ++value;
+            updated = true;
+          }
         }
         else
         {
           DefinitelyNotAPlayer[name] = 1;
+          updated = true;
         }
-
-        updated = true;
       }
       return updated;
     }
@@ -746,8 +751,8 @@ namespace EQLogParser
       CheckNonPlayerMap(name);
 
       // remove from ProbablyNotAPlayer if it exists
-      ProbablyNotAPlayer.TryRemove(name, out _);
       UnVerifiedPetOrPlayer.TryRemove(name, out _);
+      ProbablyNotAPlayer.TryRemove(name, out _);
     }
 
     private void CheckNonPlayerMap(string name)
