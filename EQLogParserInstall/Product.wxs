@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.5.7" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.5.8" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x86" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
+    <Icon Id="icon.ico" SourceFile="$(var.EQLogParser.ProjectDir)\EQLogParser.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="icon.ico" />
+
 		<Feature Id="ProductFeature" Title="EQLogParser" Level="1">
 			<ComponentGroupRef Id="ProductComponents" />
       <ComponentGroupRef Id="ProductDataComponents" />
       <ComponentRef Id="ApplicationShortcut" />
+      <ComponentRef Id="ApplicationShortcutDesktop" />
       <ComponentRef Id="Logs" />
 		</Feature>
 
@@ -25,6 +29,7 @@
  
 	<Fragment>
     <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="DesktopFolder" Name="Desktop" />
       <Directory Id="ProgramFilesFolder">
         <Directory Id="INSTALLFOLDER" Name="EQLogParser">
           <Directory Id="DATAFOLDER" Name="data" />
@@ -48,8 +53,15 @@
     </Directory>
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="ApplicationShortcut" Guid="7D5D3FA6-1F71-411B-A1F0-EF477E38B3ED">
-        <Shortcut Id="ApplicationStartMenuShortcut" Name="EQLogParser" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
+        <Shortcut Id="ApplicationStartMenuShortcut" Name="EQ Log Parser" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
         <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="ApplicationShortcutDesktop" Guid="969EAC06-8AFD-48A9-814C-ADBE6F7C073E">
+        <Shortcut Id="ApplicationDesktopShortcut" Name="EQ Log Parser" Icon="icon.ico" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="CleanUpDesktopShortCut" Directory="DesktopFolder" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </DirectoryRef>
@@ -89,6 +101,9 @@
       </Component>
       <Component Id="WPFTextBoxAutoComplete.dll" Guid="2AE4D9AC-7BB6-4239-88B0-37E94A1B6944">
         <File Id="WPFTextBoxAutoComplete.dll" Name="WPFTextBoxAutoComplete.dll" Source="$(var.EQLogParser_TargetDir)WPFTextBoxAutoComplete.dll" />
+      </Component>
+      <Component Id="Hardcodet.Wpf.TaskbarNotification.dll" Guid="98ACDE1E-0088-4EAF-90C4-955CF4464F04">
+        <File Id="Hardcodet.Wpf.TaskbarNotification.dll" Name="Hardcodet.Wpf.TaskbarNotification.dll" Source="$(var.EQLogParser_TargetDir)Hardcodet.Wpf.TaskbarNotification.dll" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
