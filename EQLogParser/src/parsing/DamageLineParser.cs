@@ -136,6 +136,7 @@ namespace EQLogParser
       isPlayerDamage = true;
 
       DamageRecord record = ParseAllDamage(pline);
+
       if (record != null)
       {
         if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest", StringComparison.Ordinal) || record.Defender.EndsWith("satchel", StringComparison.Ordinal))
@@ -185,6 +186,10 @@ namespace EQLogParser
               {
                 DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Defender);
                 isPlayerDamage = false;
+              }
+              else if(isDefenderProbablyNotAPlayer && isAttackerProbablyNotAPlayer)
+              {
+                record = null;
               }
             }
           }

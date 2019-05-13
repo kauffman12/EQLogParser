@@ -26,7 +26,7 @@ namespace EQLogParser
 
     private NonPlayer Find(string defender, string type)
     {
-      NonPlayer npc = null;
+      NonPlayer npc;
 
       if (type == Labels.DOT || type == Labels.DS)
       {
