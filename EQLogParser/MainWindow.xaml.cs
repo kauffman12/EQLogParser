@@ -37,7 +37,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.7";
+    private const string VERSION = "v1.5.8";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -245,6 +245,7 @@ namespace EQLogParser
     private void Window_Closed(object sender, EventArgs e)
     {
       StopProcessing();
+      taskBarIcon.Dispose();
       DataManager.Instance.SaveState();
       Application.Current.Shutdown();
     }
@@ -907,6 +908,34 @@ namespace EQLogParser
     private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e)
     {
       (e.Window.Content as IDisposable)?.Dispose();
+    }
+
+    private void TrayIcon_MouseUp(object sender, RoutedEventArgs e)
+    {
+      if (Visibility == Visibility.Hidden)
+      {
+        Show();
+      }
+
+      Activate();
+
+      if (WindowState == WindowState.Minimized)
+      {
+        WindowState = WindowState.Normal;
+      }
+    }
+
+    private void Window_StateChanged(object sender, EventArgs e)
+    {
+      if (WindowState != WindowState.Minimized)
+      {
+        ShowInTaskbar = true;
+      }
+      else
+      {
+        ShowInTaskbar = false;
+        Hide();
+      }
     }
   }
 }

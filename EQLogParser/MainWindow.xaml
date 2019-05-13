@@ -4,10 +4,12 @@
         xmlns:docking="http://schemas.actiprosoftware.com/winfx/xaml/docking"
         xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
+        xmlns:tb="http://www.hardcodet.net/taskbar"
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
-        Title="" Closed="Window_Closed" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False">
+        Icon="EQLogParser.ico"
+        Title="" Closed="Window_Closed" TextOptions.TextFormattingMode="Display" StateChanged="Window_StateChanged">
   <Window.Resources>
   </Window.Resources>
   <Grid>
@@ -19,6 +21,13 @@
       <RowDefinition Height="20" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
+    <tb:TaskbarIcon x:Name="taskBarIcon" ToolTipText="EQ Log Parser" TrayLeftMouseUp="TrayIcon_MouseUp" TrayRightMouseUp="TrayIcon_MouseUp" IconSource="EQLogParser.ico">
+      <tb:TaskbarIcon.TrayToolTip>
+        <Border Background="White" BorderBrush="Gray" BorderThickness="2" CornerRadius="4" Opacity="0.8">
+          <TextBlock Text="EQ Log Parser" HorizontalAlignment="Center" Height="18" Margin="4,0,4,0" VerticalAlignment="Center" />
+        </Border>
+      </tb:TaskbarIcon.TrayToolTip>
+    </tb:TaskbarIcon>
     <Menu Grid.Row="0" Margin="0" Height="20" VerticalAlignment="Top" Grid.ColumnSpan="2">
       <MenuItem Header="_File" Height="20" Width="35">
         <MenuItem Header="_Archive Chat" Height="20" Click="MenuItemSelectArchiveChat_Click" ToolTip="Only Archive Chat from a Log File">

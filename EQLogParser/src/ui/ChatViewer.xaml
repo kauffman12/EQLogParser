@@ -16,7 +16,6 @@
       <RowDefinition Height="20" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-      <Label Height="30" FontSize="15" FontWeight="Bold">Test</Label>
       <ComboBox x:Name="players" SelectedIndex="0" Height="24" Width="120" Margin="4,0,0,0" SelectionChanged="Player_Changed" BorderBrush="#FF707070">
         <ComboBoxItem Content="No Chat Data"/>
       </ComboBox>

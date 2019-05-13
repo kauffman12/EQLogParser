@@ -675,6 +675,10 @@ namespace EQLogParser
             ProbablyNotAPlayer[name] = ++value;
             updated = true;
           }
+          else
+          {
+            updated = ProbablyNotAPlayer.ContainsKey(name);
+          }
         }
         else
         {
