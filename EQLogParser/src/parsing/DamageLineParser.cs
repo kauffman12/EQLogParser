@@ -686,12 +686,19 @@ namespace EQLogParser
 
     private static string GetTypeFromSpell(string name, string type)
     {
-      if (!SpellTypeCache.TryGetValue(name, out string result))
+      if (name == null || !SpellTypeCache.TryGetValue(name, out string result))
       {
-        string spellName = Helpers.AbbreviateSpellName(name);
-        SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
-        result = (data != null && data.IsProc) ? Labels.PROC : type;
-        SpellTypeCache[name] = result;
+        if (name != null)
+        {
+          string spellName = Helpers.AbbreviateSpellName(name);
+          SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
+          result = (data != null && data.IsProc) ? Labels.PROC : type;
+          SpellTypeCache[name] = result;
+        }
+        else
+        {
+          result = type;
+        }
       }
 
       return result;
