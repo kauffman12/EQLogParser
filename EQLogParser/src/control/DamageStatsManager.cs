@@ -390,7 +390,45 @@ namespace EQLogParser
             // keep track of time range as well as the players that have been updated
             Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
 
-            group.ForEach(block =>
+            int found = -1;
+            if (options.IsPullerEnabled)
+            {
+              // ignore initial low activity time
+              double previousDps = 0;
+              long rolling = 0;
+              for (int i = 0; group.Count >= 10 && i < 10; i++)
+              {
+                if (previousDps == 0)
+                {
+                  rolling = group[i].Actions.Sum(test => (test as DamageRecord).Total);
+                  previousDps = rolling / 1.0;
+                }
+                else
+                {
+                  double theTime = group[i].BeginTime - group[0].BeginTime + 1;
+                  if (theTime > 12.0)
+                  {
+                    break;
+                  }
+
+                  rolling += group[i].Actions.Sum(test => (test as DamageRecord).Total);
+                  double currentDps = rolling / (theTime);
+                  if (currentDps / previousDps > 1.75)
+                  {
+                    found = i - 1;
+                    break;
+                  }
+                  else
+                  {
+                    previousDps = currentDps;
+                  }
+                }
+              }
+            }
+
+            var goodGroups = found > -1 ? group.GetRange(found, group.Count - found) : group;
+
+            goodGroups.ForEach(block =>
             {
               block.Actions.ForEach(action =>
               {
@@ -469,7 +507,6 @@ namespace EQLogParser
           {
             if (topLevelStats.TryGetValue(stats.Name, out PlayerStats topLevel))
             {
-              uint totalDeaths = 0;
               if (childrenStats.TryGetValue(stats.Name, out Dictionary<string, PlayerStats> children))
               {
                 foreach (var child in children.Values)
@@ -481,24 +518,23 @@ namespace EQLogParser
                     child.Percent = Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                   }
 
-                  if (deathCounts.TryGetValue(child.Name, out uint count))
+                  if (deathCounts.TryGetValue(child.Name, out uint childDeaths))
                   {
-                    child.Deaths = count;
-                    totalDeaths += child.Deaths;
+                    child.Deaths = childDeaths;
+
+                    if (stats.Name.Contains(child.Name))
+                    {
+                      stats.Deaths = childDeaths;
+                    }
                   }
                 }
               }
 
               StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
-              stats.Deaths = totalDeaths;
-            }
-            else if (!PetToPlayer.ContainsKey(stats.Name))
-            {
-              StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
 
-              if (deathCounts.TryGetValue(stats.Name, out uint count))
+              if (deathCounts.TryGetValue(stats.Name, out uint deaths))
               {
-                stats.Deaths = count;
+                stats.Deaths = deaths;
               }
             }
           });

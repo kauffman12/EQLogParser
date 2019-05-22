@@ -20,6 +20,7 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="overlayOption" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OverlayOptionChanged" Unchecked="OverlayOptionChanged">Enable Overlay</CheckBox>
+      <CheckBox x:Name="pullerOption" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="PullerOptionChanged" Unchecked="PullerOptionChanged">Ignore Initial Pull</CheckBox>
       <CheckBox x:Name="includeBane" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="IncludeBaneChanged" Unchecked="IncludeBaneChanged">Include Bane Damage</CheckBox>
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"

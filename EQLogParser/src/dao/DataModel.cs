@@ -141,6 +141,7 @@ namespace EQLogParser
   {
     public string Name { get; set; }
     public List<NonPlayer> Npcs { get; set; }
+    public bool IsPullerEnabled { get; set; }
     public bool IsBaneEanbled { get; set; }
     public bool RequestChartData { get; set; }
     public bool RequestSummaryData { get; set; }
