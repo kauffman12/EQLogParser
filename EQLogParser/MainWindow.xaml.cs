@@ -37,7 +37,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.9";
+    private const string VERSION = "v1.5.10";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -271,6 +271,7 @@ namespace EQLogParser
       if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
       {
         damageOptions.IsBaneEanbled = damageSummary.IsBaneEnabled();
+        damageOptions.IsPullerEnabled = damageSummary.IsPullerEnabled();
         damageOptions.RequestSummaryData = true;
       }
 
@@ -377,13 +378,15 @@ namespace EQLogParser
       {
         List<PlayerStats> selected = null;
         bool isBaneEnabled = false;
+        bool isPullerEnabled = false;
         if (DamageWindow?.Content is DamageSummary summary)
         {
           selected = summary.GetSelectedStats();
           isBaneEnabled = summary.IsBaneEnabled();
+          isPullerEnabled = summary.IsPullerEnabled();
         }
 
-        var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, RequestChartData = true };
+        var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, IsPullerEnabled = isPullerEnabled, RequestChartData = true };
         DamageStatsManager.Instance.FireUpdateEvent(options, selected);
       }
     }
@@ -439,7 +442,7 @@ namespace EQLogParser
         if (DamageStatsManager.Instance.DamageGroups.Count > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var damageOptions = new DamageStatsOptions() { IsBaneEanbled = damageSummary.IsBaneEnabled(), RequestSummaryData = true };
+          var damageOptions = new DamageStatsOptions() { IsBaneEanbled = damageSummary.IsBaneEnabled(), IsPullerEnabled = damageSummary.IsPullerEnabled(), RequestSummaryData = true };
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
         }
       }
@@ -522,7 +525,7 @@ namespace EQLogParser
     private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
     {
       var table = sender as DamageSummary;
-      var options = new DamageStatsOptions() { IsBaneEanbled = table.IsBaneEnabled(), RequestChartData = true };
+      var options = new DamageStatsOptions() { IsBaneEanbled = table.IsBaneEnabled(), IsPullerEnabled = table.IsPullerEnabled(), RequestChartData = true };
       DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
       UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }

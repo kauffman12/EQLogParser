@@ -42,32 +42,30 @@ namespace EQLogParser
         int index;
         if (line.Length >= 40 && line.IndexOf(" damage", Parsing.ACTIONINDEX + 13, StringComparison.Ordinal) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
+          var actionPart = line.Substring(Parsing.ACTIONINDEX);
+          var timeString = line.Substring(1, 24);
+          var currentTime = DateUtil.ParseDate(timeString, out double precise);
 
-          DamageRecord record = ParseDamage(pline, out bool isPlayerDamage);
+          DamageRecord record = ParseDamage(actionPart, out bool isPlayerDamage);
           if (record != null)
           {
-            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, IsPlayerDamage = isPlayerDamage, TimeString = pline.TimeString, BeginTime = pline.CurrentTime };
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, IsPlayerDamage = isPlayerDamage, TimeString = timeString, BeginTime = currentTime };
             EventsDamageProcessed(record, e);
           }
         }
         else if (line.Length < 102 && (index = line.IndexOf(" slain ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
-          pline.OptionalIndex = index - Parsing.ACTIONINDEX;
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
-          HandleSlain(pline);
+          var actionPart = line.Substring(Parsing.ACTIONINDEX);
+          var timeString = line.Substring(1, 24);
+          var currentTime = DateUtil.ParseDate(timeString, out double precise);
+          HandleSlain(actionPart, currentTime, index - Parsing.ACTIONINDEX);
         }
         else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
-          pline.OptionalIndex = index - Parsing.ACTIONINDEX;
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
-          HandleResist(pline);
+          var actionPart = line.Substring(Parsing.ACTIONINDEX);
+          var timeString = line.Substring(1, 24);
+          var currentTime = DateUtil.ParseDate(timeString, out double precise);
+          HandleResist(actionPart, currentTime, index - Parsing.ACTIONINDEX);
         }
       }
       catch (ArgumentNullException ne)
@@ -90,16 +88,20 @@ namespace EQLogParser
       EventsLineProcessed(line, line);
     }
 
-    private static void HandleSlain(ProcessLine pline)
+    private static void HandleSlain(string part, double currentTime, int optionalIndex)
     {
       string test = null;
-      if (pline.ActionPart.Length > 16 && pline.ActionPart.StartsWith("You have slain ", StringComparison.Ordinal) && pline.ActionPart[pline.ActionPart.Length-1] == '!')
+      if (part.Length > 16 && part.StartsWith("You have slain ", StringComparison.Ordinal) && part[part.Length-1] == '!')
       {
-        test = pline.ActionPart.Substring(15, pline.ActionPart.Length - 15 - 1);
+        test = part.Substring(15, part.Length - 15 - 1);
       }
-      else if (pline.OptionalIndex > 9)
+      else if (optionalIndex > 9)
       {
-        test = pline.ActionPart.Substring(0, pline.OptionalIndex - 9);
+        test = part.Substring(0, optionalIndex - 9);
+        if (test.Length == 4 && test[3] == ' ')
+        {
+          test = DataManager.Instance.PlayerName;
+        }
       }
 
       // Gotcharms has been slain by an animated mephit!
@@ -107,10 +109,12 @@ namespace EQLogParser
       {
         if (DataManager.Instance.CheckNameForPlayer(test) || DataManager.Instance.CheckNameForPet(test))
         {
-          int byIndex = pline.ActionPart.IndexOf(" by ", StringComparison.Ordinal);
+          int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
           if (byIndex > -1)
           {
-            DataManager.Instance.AddPlayerDeath(test, pline.ActionPart.Substring(byIndex + 4), pline.CurrentTime);
+            int len = part.Length - byIndex - 4 - 1;
+            string npc = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
+            DataManager.Instance.AddPlayerDeath(test, npc, currentTime);
           }
         }
         else if (!DataManager.Instance.RemoveActiveNonPlayer(test) && char.IsUpper(test[0]))
@@ -120,22 +124,22 @@ namespace EQLogParser
       }
     }
 
-    private static void HandleResist(ProcessLine pline)
+    private static void HandleResist(string part, double currentTime, int optionalIndex)
     {
       // [Mon Feb 11 20:00:28 2019] An inferno flare resisted your Frostreave Strike III!
-      string defender = pline.ActionPart.Substring(0, pline.OptionalIndex);
-      string spell = pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1);
+      string defender = part.Substring(0, optionalIndex);
+      string spell = part.Substring(optionalIndex + 15, part.Length - optionalIndex - 15 - 1);
 
       ResistRecord record = new ResistRecord() { Spell = spell };
-      ResistProcessedEvent e = new ResistProcessedEvent() { Record = record, BeginTime = pline.CurrentTime };
+      ResistProcessedEvent e = new ResistProcessedEvent() { Record = record, BeginTime = currentTime };
       EventsResistProcessed(defender, e);
     }
 
-    private static DamageRecord ParseDamage(ProcessLine pline, out bool isPlayerDamage)
+    private static DamageRecord ParseDamage(string actionPart, out bool isPlayerDamage)
     {
       isPlayerDamage = true;
 
-      DamageRecord record = ParseAllDamage(pline);
+      DamageRecord record = ParseAllDamage(actionPart);
 
       if (record != null)
       {
@@ -253,20 +257,20 @@ namespace EQLogParser
       isDefenderPlayer = string.IsNullOrEmpty(record.DefenderOwner) && DataManager.Instance.CheckNameForPlayer(record.Defender);
     }
 
-    private static DamageRecord ParseAllDamage(ProcessLine pline)
+    private static DamageRecord ParseAllDamage(string actionPart)
     {
       DamageRecord record = null;
-      string part = pline.ActionPart;
       ParseType parseType = ParseType.UNKNOWN;
 
+      string withoutMods = actionPart;
       int modifiersIndex = -1;
-      if (part[part.Length - 1] == ')')
+      if (actionPart[actionPart.Length - 1] == ')')
       {
         // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
-        modifiersIndex = part.LastIndexOf('(', part.Length - 4);
+        modifiersIndex = actionPart.LastIndexOf('(', actionPart.Length - 4);
         if (modifiersIndex > -1)
         {
-          part = part.Substring(0, modifiersIndex);
+          withoutMods = actionPart.Substring(0, modifiersIndex);
         }
       }
 
@@ -282,7 +286,7 @@ namespace EQLogParser
 
       List<string> nameList = new List<string>();
       StringBuilder builder = new StringBuilder();
-      var data = part.Split(' ');
+      var data = withoutMods.Split(' ');
 
       for (int i=0; i<data.Length; i++)
       {
@@ -368,7 +372,7 @@ namespace EQLogParser
 
       if (record != null && modifiersIndex > -1)
       {
-        record.ModifiersMask = LineModifiersParser.Parse(pline.ActionPart.Substring(modifiersIndex + 1, pline.ActionPart.Length - 1 - modifiersIndex - 1));
+        record.ModifiersMask = LineModifiersParser.Parse(actionPart.Substring(modifiersIndex + 1, actionPart.Length - 1 - modifiersIndex - 1));
       }
 
       return record;
