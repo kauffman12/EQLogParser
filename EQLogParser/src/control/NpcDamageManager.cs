@@ -5,8 +5,6 @@ namespace EQLogParser
 {
   class NpcDamageManager
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     internal const int NPC_DEATH_TIME = 25;
     internal double LastUpdateTime { get; set; }
 

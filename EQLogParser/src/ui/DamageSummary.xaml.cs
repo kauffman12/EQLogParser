@@ -40,6 +40,9 @@ namespace EQLogParser
       string value = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
       includeBane.IsChecked = value != null && bool.TryParse(value, out bool bValue) && bValue;
 
+      value = DataManager.Instance.GetApplicationSetting("IngoreInitialPullDamage");
+      pullerOption.IsChecked = value != null && bool.TryParse(value, out bool bValue2) && bValue2;
+
       value = DataManager.Instance.GetApplicationSetting("IsDamageOverlayEnabled");
       overlayOption.IsChecked = bool.TryParse(value, out bValue) && bValue;
       if (overlayOption.IsChecked.Value)
@@ -56,6 +59,11 @@ namespace EQLogParser
     internal bool IsBaneEnabled()
     {
       return includeBane.IsChecked.Value;
+    }
+
+    internal bool IsPullerEnabled()
+    {
+      return pullerOption.IsChecked.Value;
     }
 
     internal bool IsOverlayEnabled()
@@ -263,13 +271,30 @@ namespace EQLogParser
     {
       if (Ready)
       {
+        bool isPullerEnabled = pullerOption.IsChecked.Value;
         bool isBaneEnabled = includeBane.IsChecked.Value;
         DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", isBaneEnabled.ToString(CultureInfo.CurrentCulture));
 
         if (CurrentStats != null && CurrentStats.RaidStats != null)
         {
           includeBane.IsEnabled = false;
-          var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, RequestChartData = true, RequestSummaryData = true };
+          var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, IsPullerEnabled = isPullerEnabled, RequestChartData = true, RequestSummaryData = true };
+          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
+        }
+      }
+    }
+
+    private void PullerOptionChanged(object sender, RoutedEventArgs e)
+    {
+      if (Ready)
+      {
+        bool isBaneEnabled = includeBane.IsChecked.Value;
+        bool isPullerEnabled =  pullerOption.IsChecked.Value;
+        DataManager.Instance.SetApplicationSetting("IngoreInitialPullDamage", isPullerEnabled.ToString(CultureInfo.CurrentCulture));
+
+        if (CurrentStats != null && CurrentStats.RaidStats != null)
+        {
+          var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, IsPullerEnabled = isPullerEnabled, RequestChartData = true, RequestSummaryData = true };
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
         }
       }
