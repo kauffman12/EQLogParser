@@ -58,11 +58,18 @@ namespace EQLogParser
           found = true;
         }
       }
-      else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 25 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
-        && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
+      else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 27 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
+        && (index + 9) == pline.ActionPart.Length && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
       {
         string test = pline.ActionPart.Substring(0, index);
         DataManager.Instance.UpdateUnVerifiedPetOrPlayer(test);
+        found = true;
+      }
+      else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 35 && (index = pline.ActionPart.IndexOf(" joined the raid.", StringComparison.Ordinal)) > -1
+        && (index + 17) == pline.ActionPart.Length && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
+      {
+        string test = pline.ActionPart.Substring(0, index);
+        DataManager.Instance.UpdateVerifiedPlayers(test);
         found = true;
       }
 

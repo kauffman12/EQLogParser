@@ -247,6 +247,12 @@ namespace EQLogParser
           DataManager.Instance.UpdateVerifiedPlayers(record.AttackerOwner);
           isAttackerPlayer = true;
         }
+        else if ((record.ModifiersMask & LineModifiersParser.CRIT) == 0 && (record.Type == Labels.DD || record.Type == Labels.DOT))
+        {
+          // only players can crit a spell
+          DataManager.Instance.UpdateVerifiedPlayers(record.Attacker);
+          isAttackerPlayer = true;
+        }
 
         if (!string.IsNullOrEmpty(record.DefenderOwner))
         {

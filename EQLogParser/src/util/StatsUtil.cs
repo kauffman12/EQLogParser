@@ -38,13 +38,8 @@ namespace EQLogParser
 
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
-      string className = "";
       origName = origName ?? name;
-
-      if (!DataManager.Instance.CheckNameForPet(origName))
-      {
-        className = DataManager.Instance.GetPlayerClass(origName);
-      }
+      string className = DataManager.Instance.GetPlayerClass(origName);
 
       return new PlayerStats()
       {
