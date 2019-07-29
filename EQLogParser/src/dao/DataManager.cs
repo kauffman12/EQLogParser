@@ -695,7 +695,7 @@ namespace EQLogParser
       if (!IsProbablyNotAPlayer(name) && UnVerifiedPetOrPlayer.TryAdd(name, 1))
       {
         // only need to check first time added
-        CheckNolongerNPC(name);
+        CheckNonPlayerMap(name);
       }
     }
 
@@ -703,8 +703,11 @@ namespace EQLogParser
     {
       if (VerifiedPets.TryAdd(name, 1))
       {
+        UnVerifiedPetOrPlayer.TryRemove(name, out _);
+        ProbablyNotAPlayer.TryRemove(name, out _);
+
         EventsNewVerifiedPet(this, name);
-        CheckNolongerNPC(name);
+        CheckNonPlayerMap(name);
       }
     }
 
@@ -712,8 +715,11 @@ namespace EQLogParser
     {
       if (VerifiedPlayers.TryAdd(name, 1))
       {
+        UnVerifiedPetOrPlayer.TryRemove(name, out _);
+        ProbablyNotAPlayer.TryRemove(name, out _);
+
         EventsNewVerifiedPlayer(this, name);
-        CheckNolongerNPC(name);
+        CheckNonPlayerMap(name);
       }
     }
 
@@ -747,16 +753,6 @@ namespace EQLogParser
       {
         LOG.Error(se);
       }
-    }
-
-    private void CheckNolongerNPC(string name)
-    {
-      // remove from NPC map if it exists
-      CheckNonPlayerMap(name);
-
-      // remove from ProbablyNotAPlayer if it exists
-      UnVerifiedPetOrPlayer.TryRemove(name, out _);
-      ProbablyNotAPlayer.TryRemove(name, out _);
     }
 
     private void CheckNonPlayerMap(string name)
