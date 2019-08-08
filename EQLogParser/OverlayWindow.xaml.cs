@@ -188,7 +188,10 @@ namespace EQLogParser
                 RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
               }
 
+              // var name = list[i].Name.Contains("Kizant") ? list[i].Name : "Uknown Player"; 
+              // NameBlockList[i].Text = list[i].Rank + ". " + name;
               NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
+
               var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
               DamageBlockList[i].Text = damage;
               goodRowCount++;

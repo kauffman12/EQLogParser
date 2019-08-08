@@ -31,9 +31,11 @@ namespace EQLogParser
     public const string UNKSPELL = "Unknown Spell";
     public const string UNKPLAYER = "Unknown Player";
     public const string RAID = "Totals";
+    public const string RIPOSTE = "Riposte";
     public const string HEALPARSE = "Healing";
     public const string TANKPARSE = "Tanking";
     public const string DAMAGEPARSE = "Damage";
+    public const string MISS = "Miss";
   }
 
   public static class ChatChannels
@@ -221,13 +223,15 @@ namespace EQLogParser
     public List<IAction> Actions { get; set; }
   }
 
-  public class Hit : FullTimedAction
+  public class Attempt : FullTimedAction
   {
     public uint Max { get; set; }
     public uint BaneHits{ get; set; }
     public uint Hits { get; set; }
+    public uint Misses { get; set; }
     public uint CritHits { get; set; }
     public uint LuckyHits { get; set; }
+    public uint MeleeAttempts { get; set; }
     public uint MeleeHits { get; set; }
     public uint StrikethroughHits { get; set; }
     public uint RiposteHits { get; set; }
@@ -360,7 +364,7 @@ namespace EQLogParser
     public string RankedPlayers { get; set; }
   }
 
-  public class PlayerSubStats : Hit
+  public class PlayerSubStats : Attempt
   {
     public ushort Rank { get; set; }
     public string Name { get; set; }
@@ -375,6 +379,7 @@ namespace EQLogParser
     public long AvgLucky { get; set; }
     public double CritRate { get; set; }
     public double ExtraRate { get; set; }
+    public double MeleeHitRate { get; set; }
     public double LuckRate { get; set; }
     public double StrikethroughRate { get; set; }
     public double RampageRate { get; set; }
