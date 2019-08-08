@@ -37,7 +37,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.11";
+    private const string VERSION = "v1.5.13";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -800,11 +800,12 @@ namespace EQLogParser
         {
           // filter to txt files
           DefaultExt = ".txt",
-          Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz"
+          Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz",
         };
 
-        // show dialog and read result
-        if (dialog.ShowDialog().Value)
+          // show dialog and read result
+        var result = dialog.ShowDialog();
+        if (result.Value)
         {
           StopProcessing();
           CastProcessor = new ActionProcessor<string>("CastProcessor", CastLineParser.Process);
@@ -850,10 +851,17 @@ namespace EQLogParser
           UpdateLoadingProgress();
         }
       }
-      catch (Exception e)
+      catch (InvalidCastException)
       {
-        LOG.Error(e);
-        throw;
+        // ignore
+      }
+      catch (ArgumentException)
+      {
+        // ignore
+      }
+      catch (FormatException)
+      {
+        // ignore
       }
     }
 

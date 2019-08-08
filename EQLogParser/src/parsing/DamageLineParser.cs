@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -18,22 +19,25 @@ namespace EQLogParser
     private static readonly Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
 
-    private static readonly Dictionary<string, byte> HitMap = new Dictionary<string, byte>()
+    private static readonly Dictionary<string, string> HitMap = new Dictionary<string, string>()
     {
-      { "bash", 1 }, { "bit", 1 }, { "backstab", 1 }, { "claw", 1 }, { "crush", 1 }, { "frenzies", 1 },
-      { "frenzy", 1 }, { "gore", 1 }, { "hit", 1 }, { "kick", 1 }, { "maul", 1 }, { "punch", 1 },
-      { "pierce", 1 }, { "rend", 1 }, { "shoot", 1 }, { "slash", 1 }, { "slam", 1 }, { "slice", 1 },
-      { "smash", 1 }, { "sting", 1 }, { "strike", 1 }, { "bashes", 1 }, { "bites", 1 }, { "backstabs", 1 },
-      { "claws", 1 }, { "crushes", 1 }, { "gores", 1 }, { "hits", 1 }, { "kicks", 1 }, { "mauls", 1 },
-      { "punches", 1 }, { "pierces", 1 }, { "rends", 1 }, { "shoots", 1 }, { "slashes", 1 }, { "slams", 1 },
-      { "slices", 1 }, { "smashes", 1 }, { "stings", 1 }, { "strikes", 1 }, { "learn", 1 }, { "learns", 1 },
-      { "sweep", 1 }, { "sweeps", 1 }
+      { "bash", "bashes" }, { "backstab", "backstabs" }, { "bit", "bites" }, { "claw", "claws" }, { "crush", "crushes" },
+      { "frenzy", "frenzies" }, { "gore", "gores" }, { "hit", "hits" }, { "kick", "kicks" }, { "learn", "learns" },
+      { "maul", "mauls" }, { "punch", "punches" }, { "pierce", "pierces" }, { "rend", "rends" }, { "shoot", "shoots" },
+      { "slash", "slashes" }, { "slam", "slams" }, { "slice", "slices" }, { "smash", "smashes" }, { "sting", "stings" },
+      { "strike", "strikes" }, { "sweep", "sweeps" }
     };
 
     private static readonly Dictionary<string, string> HitAdditionalMap = new Dictionary<string, string>()
     {
-      { "frenzies", "frenzies on" }, { "frenzy", "frenzy on" }
+      { "frenzy", "frenzies" }, { "frenzies", "frenzies" },
     };
+
+    static DamageLineParser()
+    {
+      // add two way mapping
+      HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]);
+    }
 
     public static void Process(string line)
     {
@@ -53,7 +57,20 @@ namespace EQLogParser
             EventsDamageProcessed(record, e);
           }
         }
-        else if (line.Length < 102 && (index = line.IndexOf(" slain ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
+        else if (line.Length >= 49 && (index = line.IndexOf(", but miss", Parsing.ACTIONINDEX + 22, StringComparison.Ordinal)) > -1)
+        {
+          var actionPart = line.Substring(Parsing.ACTIONINDEX);
+          var timeString = line.Substring(1, 24);
+          var currentTime = DateUtil.ParseDate(timeString, out double precise);
+
+          DamageRecord record = ParseMiss(actionPart, index, out bool isPlayerMiss);
+          if (record != null)
+          {
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, IsPlayerDamage = isPlayerMiss, TimeString = timeString, BeginTime = currentTime };
+            EventsDamageProcessed(record, e);
+          }
+        }
+        else if (line.Length > 30 && line.Length < 102 && (index = line.IndexOf(" slain ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
           var actionPart = line.Substring(Parsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
@@ -135,14 +152,225 @@ namespace EQLogParser
       EventsResistProcessed(defender, e);
     }
 
+    private static DamageRecord ParseMiss(string actionPart, int index, out bool isPlayerMiss)
+    {
+      // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but misses! (Strikethrough)
+      // [Sat Aug 03 00:20:57 2019] You try to crush a Kar`Zok soldier, but miss! (Riposte Strikethrough)
+      DamageRecord record = null;
+
+      string withoutMods = actionPart;
+      int modifiersIndex = -1;
+      if (actionPart[actionPart.Length - 1] == ')')
+      {
+        // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
+        modifiersIndex = actionPart.LastIndexOf('(', actionPart.Length - 4);
+        if (modifiersIndex > -1)
+        {
+          withoutMods = actionPart.Substring(0, modifiersIndex);
+        }
+      }
+
+      int tryStartIndex;
+      int hitStartIndex = -1;
+      int missesIndex = index - Parsing.ACTIONINDEX;
+
+      if (withoutMods[0] == 'Y' && withoutMods[1] == 'o' && withoutMods[2] == 'u')
+      {
+        tryStartIndex = 3;
+        hitStartIndex = 11;
+      }
+      else
+      {
+        tryStartIndex = withoutMods.IndexOf(" tries to ", StringComparison.Ordinal);
+        if (tryStartIndex > -1)
+        {
+          hitStartIndex = tryStartIndex + 10;
+        }
+      }
+
+      if (tryStartIndex > -1 && hitStartIndex > -1 && tryStartIndex < missesIndex)
+      {
+        int hitEndIndex = withoutMods.IndexOf(" ", hitStartIndex, StringComparison.Ordinal);
+        if (hitEndIndex > -1)
+        {
+          string hit = withoutMods.Substring(hitStartIndex, hitEndIndex - hitStartIndex);
+
+          if (hit.Contains("frenz"))
+          {
+            if (true)
+            {
+
+            }
+          }
+
+          bool additional;
+          string subType = GetTypeFromHit(hit, out additional);
+          if (subType != null)
+          {
+            int hitLength = hit.Length + (additional ? 3 : 0);
+
+            // check for pets
+            string attacker = withoutMods.Substring(0, tryStartIndex);
+            int defStart = hitStartIndex + hitLength + 1;
+            int missesEnd = missesIndex - defStart;
+
+            if (missesEnd > 0)
+            {
+              string defender = withoutMods.Substring(defStart, missesEnd);
+              HasOwner(attacker, out string attackerOwner);
+              HasOwner(defender, out string defenderOwner);
+
+              if (attacker != null && defender != null)
+              {
+                record = BuildRecord(attacker, defender, 0, attackerOwner, defenderOwner, subType, Labels.MISS);
+              }
+
+              if (record != null && modifiersIndex > -1)
+              {
+                record.ModifiersMask = LineModifiersParser.Parse(actionPart.Substring(modifiersIndex + 1, actionPart.Length - 1 - modifiersIndex - 1));
+              }
+            }
+          }
+        }
+      }
+
+      return ValidateDamage(record, out isPlayerMiss);
+    }
+
     private static DamageRecord ParseDamage(string actionPart, out bool isPlayerDamage)
     {
+      DamageRecord record = null;
+      ParseType parseType = ParseType.UNKNOWN;
+
+      string withoutMods = actionPart;
+      int modifiersIndex = -1;
+      if (actionPart[actionPart.Length - 1] == ')')
+      {
+        // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
+        modifiersIndex = actionPart.LastIndexOf('(', actionPart.Length - 4);
+        if (modifiersIndex > -1)
+        {
+          withoutMods = actionPart.Substring(0, modifiersIndex);
+        }
+      }
+
+      int pointsIndex = -1;
+      int forIndex = -1;
+      int fromIndex = -1;
+      int byIndex = -1;
+      int takenIndex = -1;
+      int hitIndex = -1;
+      int extraIndex = -1;
+      int isAreIndex = -1;
+      bool nonMelee = false;
+
+      List<string> nameList = new List<string>();
+      StringBuilder builder = new StringBuilder();
+      var data = withoutMods.Split(' ');
+
+      for (int i = 0; i < data.Length; i++)
+      {
+        switch (data[i])
+        {
+          case "taken":
+            takenIndex = i;
+
+            int test1 = i - 1;
+            if (test1 > 0 && data[test1] == "has")
+            {
+              parseType = ParseType.HASTAKEN;
+
+              int test2 = i + 2;
+              if (data.Length > test2 && data[test2] == "extra" && data[test2 - 1] == "an")
+              {
+                extraIndex = test2;
+              }
+            }
+            else if (test1 >= 1 && data[test1] == "have" && data[test1 - 1] == "You")
+            {
+              parseType = ParseType.YOUHAVETAKEN;
+            }
+            break;
+          case "by":
+            byIndex = i;
+            break;
+          case "non-melee":
+            nonMelee = true;
+            break;
+          case "is":
+          case "are":
+            isAreIndex = i;
+            break;
+          case "for":
+            int next = i + 1;
+            if (data.Length > next && data[next].Length > 0 && char.IsNumber(data[next][0]))
+            {
+              forIndex = i;
+            }
+            break;
+          case "from":
+            fromIndex = i;
+            break;
+          case "points":
+            int ofIndex = i + 1;
+            if (ofIndex < data.Length && data[ofIndex] == "of")
+            {
+              parseType = ParseType.POINTSOF;
+              pointsIndex = i;
+            }
+            break;
+          default:
+            if (HitMap.ContainsKey(data[i]))
+            {
+              hitIndex = i;
+            }
+            break;
+        }
+      }
+
+      if (parseType == ParseType.POINTSOF && forIndex > -1 && forIndex < pointsIndex && hitIndex > -1)
+      {
+        record = ParsePointsOf(data, nonMelee, forIndex, byIndex, hitIndex, builder, nameList);
+      }
+      else if (parseType == ParseType.HASTAKEN && takenIndex < fromIndex && fromIndex > -1)
+      {
+        record = ParseHasTaken(data, takenIndex, fromIndex, byIndex, builder);
+      }
+      else if (parseType == ParseType.POINTSOF && extraIndex > -1 && takenIndex > -1 && takenIndex < fromIndex)
+      {
+        record = ParseExtra(data, takenIndex, extraIndex, fromIndex, nameList);
+      }
+      // there are more messages without a specificied attacker or spell but do these first
+      else if (parseType == ParseType.YOUHAVETAKEN && takenIndex > -1 && fromIndex > -1 && byIndex > fromIndex)
+      {
+        record = ParseYouHaveTaken(data, takenIndex, fromIndex, byIndex, builder);
+      }
+      else if (parseType == ParseType.POINTSOF && isAreIndex > -1 && byIndex > isAreIndex && forIndex > byIndex)
+      {
+        record = ParseDS(data, isAreIndex, byIndex, forIndex);
+      }
+
+      if (record != null && modifiersIndex > -1)
+      {
+        record.ModifiersMask = LineModifiersParser.Parse(actionPart.Substring(modifiersIndex + 1, actionPart.Length - 1 - modifiersIndex - 1));
+      }
+
+      record = ValidateDamage(record, out isPlayerDamage);
+      return record;
+    }
+
+    private static DamageRecord ValidateDamage(DamageRecord record, out bool isPlayerDamage)
+    {
       isPlayerDamage = true;
-
-      DamageRecord record = ParseAllDamage(actionPart);
-
+      
       if (record != null)
       {
+        // handle riposte separately
+        if (record.ModifiersMask > -1 && (record.ModifiersMask & LineModifiersParser.RIPOSTE) != 0)
+        {
+          record.SubType = Labels.RIPOSTE;
+        }
+
         if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest", StringComparison.Ordinal) || record.Defender.EndsWith("satchel", StringComparison.Ordinal))
         {
           record = null;
@@ -261,127 +489,6 @@ namespace EQLogParser
       }
 
       isDefenderPlayer = string.IsNullOrEmpty(record.DefenderOwner) && DataManager.Instance.CheckNameForPlayer(record.Defender);
-    }
-
-    private static DamageRecord ParseAllDamage(string actionPart)
-    {
-      DamageRecord record = null;
-      ParseType parseType = ParseType.UNKNOWN;
-
-      string withoutMods = actionPart;
-      int modifiersIndex = -1;
-      if (actionPart[actionPart.Length - 1] == ')')
-      {
-        // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
-        modifiersIndex = actionPart.LastIndexOf('(', actionPart.Length - 4);
-        if (modifiersIndex > -1)
-        {
-          withoutMods = actionPart.Substring(0, modifiersIndex);
-        }
-      }
-
-      int pointsIndex = -1;
-      int forIndex = -1;
-      int fromIndex = -1;
-      int byIndex = -1;
-      int takenIndex = -1;
-      int hitIndex = -1;
-      int extraIndex = -1;
-      int isAreIndex = -1;
-      bool nonMelee = false;
-
-      List<string> nameList = new List<string>();
-      StringBuilder builder = new StringBuilder();
-      var data = withoutMods.Split(' ');
-
-      for (int i=0; i<data.Length; i++)
-      {
-        switch(data[i])
-        {
-          case "taken":
-            takenIndex = i;
-
-            int test1 = i - 1;
-            if (test1 > 0 && data[test1] == "has")
-            {
-              parseType = ParseType.HASTAKEN;
-
-              int test2 = i + 2;
-              if (data.Length > test2 && data[test2] == "extra" && data[test2 - 1] == "an")
-              {
-                extraIndex = test2;
-              }
-            }
-            else if (test1 >= 1 && data[test1] == "have" && data[test1-1] == "You")
-            {
-              parseType = ParseType.YOUHAVETAKEN;
-            }
-            break;
-          case "by":
-            byIndex = i;
-            break;
-          case "non-melee":
-            nonMelee = true;
-            break;
-          case "is":
-          case "are":
-            isAreIndex = i;
-            break;
-          case "for":
-            int next = i + 1;
-            if (data.Length > next && data[next].Length > 0 && char.IsNumber(data[next][0]))
-            {
-              forIndex = i;
-            }
-            break;
-          case "from":
-            fromIndex = i;
-            break;
-          case "points":
-            int ofIndex = i + 1;
-            if (ofIndex < data.Length && data[ofIndex] == "of")
-            {
-              parseType = ParseType.POINTSOF;
-              pointsIndex = i;
-            }
-            break;
-          default:
-            if (HitMap.ContainsKey(data[i]))
-            {
-              hitIndex = i;
-            }
-            break;
-        }
-      }
-
-      if (parseType == ParseType.POINTSOF && forIndex > -1 && forIndex < pointsIndex && hitIndex > -1)
-      {
-        record = ParsePointsOf(data, nonMelee, forIndex, byIndex, hitIndex, builder, nameList);
-      }
-      else if (parseType == ParseType.HASTAKEN && takenIndex < fromIndex && fromIndex > -1)
-      {
-        record = ParseHasTaken(data, takenIndex, fromIndex, byIndex, builder);
-      }
-      else if (parseType == ParseType.POINTSOF && extraIndex > -1 && takenIndex > -1 && takenIndex < fromIndex)
-      {
-        record = ParseExtra(data, takenIndex, extraIndex, fromIndex, nameList);
-      }
-      // there are more messages without a specificied attacker or spell but do these first
-      else if (parseType == ParseType.YOUHAVETAKEN && takenIndex > -1 && fromIndex > -1 && byIndex > fromIndex)
-      {
-        record = ParseYouHaveTaken(data, takenIndex, fromIndex, byIndex, builder);
-      }
-      else if (parseType == ParseType.POINTSOF && isAreIndex > -1 && byIndex > isAreIndex && forIndex > byIndex)
-      {
-        record = ParseDS(data, isAreIndex, byIndex, forIndex);
-      }
-
-      if (record != null && modifiersIndex > -1)
-      {
-        record.ModifiersMask = LineModifiersParser.Parse(actionPart.Substring(modifiersIndex + 1, actionPart.Length - 1 - modifiersIndex - 1));
-      }
-
-      return record;
     }
 
     private static DamageRecord ParseDS(string[] data, int isAreIndex, int byIndex, int forIndex)
@@ -557,10 +664,11 @@ namespace EQLogParser
         attacker = string.Join(" ", nameList);
       }
 
-      string hit = data[hitIndex];
-      if (HitAdditionalMap.ContainsKey(hit))
+      bool additional;
+      string type = GetTypeFromHit(data[hitIndex], out additional);
+
+      if (additional)
       {
-        hit = HitAdditionalMap[hit];
         hitIndex++; // multi-word hit value
       }
 
@@ -577,22 +685,18 @@ namespace EQLogParser
       }
       else if (attacker != null && defender != null)
       {
-        if ((isNonMelee || !string.IsNullOrEmpty(spell)) && hit.StartsWith("hit", StringComparison.Ordinal))
+        if ((isNonMelee || !string.IsNullOrEmpty(spell)) && type.StartsWith("hit", StringComparison.OrdinalIgnoreCase))
         {
-          hit = GetTypeFromSpell(spell, Labels.DD);
-        }
-        else
-        {
-          hit = char.ToUpper(hit[0], CultureInfo.CurrentCulture) + hit.Substring(1);
+          type = GetTypeFromSpell(spell, Labels.DD);
         }
 
-        record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, spell, hit);
+        record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, spell, type);
       }
 
       return record;
     }
 
-    private static DamageRecord BuildRecord(string attacker, string defender, uint damage, string attackerOwner, string defenderOwner, string spell, string type)
+    private static DamageRecord BuildRecord(string attacker, string defender, uint damage, string attackerOwner, string defenderOwner, string subType, string type)
     {
       if (attacker.EndsWith("'s corpse", StringComparison.Ordinal))
       {
@@ -619,7 +723,7 @@ namespace EQLogParser
       }
 
       // set sub type if spell is available
-      record.SubType = string.IsNullOrEmpty(spell) ? record.Type : string.Intern(spell);
+      record.SubType = string.IsNullOrEmpty(subType) ? record.Type : string.Intern(subType);
       return record;
     }
 
@@ -729,6 +833,27 @@ namespace EQLogParser
         len = end;
       }
       return found;
+    }
+
+    private static string GetTypeFromHit(string hit, out bool additional)
+    {
+      additional = false;
+
+      if (HitAdditionalMap.TryGetValue(hit, out string type))
+      {
+        additional = true;
+      }
+      else
+      {
+        HitMap.TryGetValue(hit, out type);
+      }
+
+      if (!string.IsNullOrEmpty(type) && type.Length > 1)
+      {
+        type = char.ToUpper(type[0], CultureInfo.CurrentCulture) + type.Substring(1);
+      }
+      
+      return type;
     }
   }
 }
