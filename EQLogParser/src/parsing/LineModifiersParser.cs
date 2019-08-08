@@ -29,7 +29,7 @@ namespace EQLogParser
 
     private static ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
 
-    internal static void Parse(HitRecord record, Hit playerStats, Hit theHit = null)
+    internal static void Parse(HitRecord record, Attempt playerStats, Attempt theHit = null)
     {
       if (record.ModifiersMask > -1)
       {

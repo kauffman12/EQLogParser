@@ -172,19 +172,36 @@ namespace EQLogParser
 
     internal static void UpdateStats(PlayerSubStats stats, HitRecord record, double beginTime)
     {
-      if (record.Type == Labels.BANE)
+      switch(record.Type)
       {
-        stats.BaneHits++;
+        case Labels.BANE:
+          stats.BaneHits++;
+          stats.Hits += 1;
+          break;
+        case Labels.MISS:
+          stats.Misses++;
+          stats.MeleeAttempts += 1;
+          break;
+        case Labels.PROC:
+        case Labels.DOT:
+        case Labels.DD:
+        case Labels.HOT:
+        case Labels.HEAL:
+        case Labels.DS:
+          stats.Hits += 1;
+          break;
+        default:
+          stats.Hits += 1;
+          stats.MeleeHits++;
+          stats.MeleeAttempts += 1;
+          break;
       }
 
-      if (record.Type != Labels.BANE && record.Type != Labels.DOT && record.Type != Labels.DD && record.Type != Labels.DS && record.Type != Labels.HEAL)
+      if (record.Total > 0)
       {
-        stats.MeleeHits++;
+        stats.Total += record.Total;
+        stats.Max = Math.Max(stats.Max, record.Total);
       }
-
-      stats.Total += record.Total;
-      stats.Hits += 1;
-      stats.Max = Math.Max(stats.Max, record.Total);
 
       if (record.Total > 0 && record.OverTotal > 0)
       {
@@ -200,6 +217,8 @@ namespace EQLogParser
     internal static void MergeStats(PlayerSubStats to, PlayerSubStats from)
     {
       to.BaneHits += from.BaneHits;
+      to.Misses += from.Misses;
+      to.MeleeAttempts += from.MeleeAttempts;
       to.MeleeHits += from.MeleeHits;
       to.Total += from.Total;
       to.Hits += from.Hits;
@@ -243,6 +262,7 @@ namespace EQLogParser
         stats.StrikethroughRate = Math.Round(Convert.ToDouble(stats.StrikethroughHits) / stats.MeleeHits * 100, 2);
         stats.RiposteRate = Math.Round(Convert.ToDouble(stats.RiposteHits) / stats.MeleeHits * 100, 2);
         stats.RampageRate = Math.Round(Convert.ToDouble(stats.RampageHits) / stats.MeleeHits * 100, 2);
+        stats.MeleeHitRate = Math.Round(Convert.ToDouble(stats.MeleeHits) / stats.MeleeAttempts * 100, 2);
 
         var tcMult = stats.Type == Labels.DD ? 2 : 1;
         stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
