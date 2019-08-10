@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -20,12 +21,14 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private static readonly BitmapImage REMOVE_IMAGE = new BitmapImage(new Uri(@"pack://application:,,,/icons/delete-icon-8.png"));
     private static bool Running = false;
 
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
     private ObservableCollection<SpellCountRow> SpellRowsView = new ObservableCollection<SpellCountRow>();
     private DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
+    private Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
     private List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
     private List<string> CountTypes = new List<string>() { "Spells By Count", "Spells By Percent" };
     private List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
@@ -126,8 +129,7 @@ namespace EQLogParser
                 {
                   foreach (string id in TheSpellCounts.PlayerCastCounts[player].Keys)
                   {
-                    totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts,
-                      totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
+                    totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
                   }
                 }
 
@@ -135,8 +137,7 @@ namespace EQLogParser
                 {
                   foreach (string id in TheSpellCounts.PlayerReceivedCounts[player].Keys)
                   {
-                    totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts,
-                      totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
+                    totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
                   }
                 }
               });
@@ -172,9 +173,14 @@ namespace EQLogParser
                 dataGrid.Columns.Add(col);
               });
 
+              int existingIndex = 0;
               foreach (var spell in sortedSpellList)
               {
-                SpellCountRow row = new SpellCountRow() { Spell = spell, Values = new double[sortedPlayers.Count + 1] };
+                var row = (SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new SpellCountRow();
+
+                row.Spell = spell;
+                row.Values = new double[sortedPlayers.Count + 1];
+                row.Image = REMOVE_IMAGE;
                 row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
 
                 int i;
@@ -190,8 +196,7 @@ namespace EQLogParser
                       }
                       else
                       {
-                        row.Values[i] = Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] /
-                          totalCountMap[sortedPlayers[i]] * 100, 2);
+                        row.Values[i] = Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2);
                       }
                     }
                     else
@@ -202,7 +207,13 @@ namespace EQLogParser
                 }
 
                 row.Values[i] = CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
-                Dispatcher.InvokeAsync(() => SpellRowsView.Add(row));
+
+                if ((SpellRowsView.Count <= existingIndex))
+                {
+                  Dispatcher.InvokeAsync(() => SpellRowsView.Add(row));
+                }
+
+                existingIndex++;
                 Thread.Sleep(5);
               }
             }
@@ -240,7 +251,7 @@ namespace EQLogParser
           name = "Received " + name;
         }
 
-        if (maxCounts[id] > CurrentMinFreqCount)
+        if (!HiddenSpells.ContainsKey(name) && maxCounts[id] > CurrentMinFreqCount)
         {
           AddHelper.Add(totalCountMap, player, playerCount);
           AddHelper.Add(uniqueSpellsMap, name, playerCount);
@@ -256,14 +267,9 @@ namespace EQLogParser
     {
       if (Ready)
       {
-        if (SpellRowsView.Count > 0)
+        for (int i = dataGrid.Columns.Count - 1; i > 0; i--)
         {
-          SpellRowsView.Clear();
-        }
-
-        if (dataGrid.Columns.Count > 0)
-        {
-          dataGrid.Columns.Clear();
+          dataGrid.Columns.RemoveAt(i);
         }
 
         CurrentCastType = castTypes.SelectedIndex;
@@ -277,15 +283,32 @@ namespace EQLogParser
 
     private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      if (SpellRowsView.Count > 0)
+      {
+        SpellRowsView.Clear();
+      }
+
       OptionsChanged();
     }
 
     private void SelfOnlyChange(object sender, RoutedEventArgs e)
     {
+      if (SpellRowsView.Count > 0)
+      {
+        SpellRowsView.Clear();
+      }
+
       OptionsChanged();
     }
 
-    private void CopyBBCode_Click(object sender, RoutedEventArgs e)
+    private void ReloadClick(object sender, RoutedEventArgs e)
+    {
+      HiddenSpells.Clear();
+      SpellRowsView.Clear();
+      OptionsChanged();
+    }
+
+    private void CopyBBCodeClick(object sender, RoutedEventArgs e)
     {
       try
       {
@@ -324,5 +347,18 @@ namespace EQLogParser
       }
     }
 
+    private void RemoveSpellMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+      Image image = sender as Image;
+
+      // Don't allow if the previous operation hasn't finished
+      // this probably needs to be better...
+      if (!Running && image.DataContext is SpellCountRow spr)
+      {
+        HiddenSpells[spr.Spell] = 1;
+        SpellRowsView.Remove(spr);
+        OptionsChanged();
+      }
+    }
   }
 }

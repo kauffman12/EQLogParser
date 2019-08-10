@@ -372,7 +372,7 @@ namespace EQLogParser
       try
       {
         string player = playerList.SelectedItem as string;
-        if (player != null && player != "")
+        if (!string.IsNullOrEmpty(player))
         {
           var data = ChartData[player];
           string selectedHitType = hitTypeList.SelectedItem as string;

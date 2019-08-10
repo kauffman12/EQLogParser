@@ -157,7 +157,7 @@ namespace EQLogParser
       }
     }
 
-    private void DataGridExpander_Loaded(object sender, RoutedEventArgs e)
+    private void DataGridExpanderLoaded(object sender, RoutedEventArgs e)
     {
       Image image = (sender as Image);
       var children = CurrentStats?.Children;
@@ -175,7 +175,7 @@ namespace EQLogParser
       }
     }
 
-    private void DataGridExpander_MouseDown(object sender, MouseButtonEventArgs e)
+    private void DataGridExpanderMouseDown(object sender, MouseButtonEventArgs e)
     {
       Image image = (sender as Image);
       PlayerStats stats = image.DataContext as PlayerStats;
@@ -195,7 +195,7 @@ namespace EQLogParser
       }
     }
 
-    private void ChildrenDataGrid_PrevMouseWheel(object sender, MouseEventArgs e)
+    private void ChildrenDataGridPrevMouseWheel(object sender, MouseEventArgs e)
     {
       if (!e.Handled)
       {
@@ -211,7 +211,7 @@ namespace EQLogParser
       }
     }
 
-    private void ChildrenGrid_RowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
+    private void ChildrenGridRowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
     {
       var children = CurrentStats?.Children;
       if (e.Row.Item is PlayerStats stats && e.DetailsElement is DataGrid childrenDataGrid && children != null && children.ContainsKey(stats.Name))

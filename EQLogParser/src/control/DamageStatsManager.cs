@@ -609,8 +609,12 @@ namespace EQLogParser
       uint critHits = subStats.CritHits;
       StatsUtil.UpdateStats(subStats, record, beginTime);
 
-      Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
-      Helpers.LongIntAddHelper.Add(values, record.Total, 1);
+      // dont count misses or where no damage was done
+      if (record.Total > 0)
+      {
+        Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
+        Helpers.LongIntAddHelper.Add(values, record.Total, 1);
+      }
     }
   }
 }

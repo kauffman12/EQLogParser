@@ -476,19 +476,18 @@ namespace EQLogParser
       }
     }
 
-    private ChatLine CreateLine(DateUtil dateUtil, string line)
-    {
-      string dateString = line.Substring(1, 24);
-      dateUtil.ParseDate(dateString, out double precise);
-      return new ChatLine { Line = line, BeginTime = precise };
-    }
-
     private ZipArchiveEntry GetEntry(string key)
     {
       return CurrentArchive.Mode == ZipArchiveMode.Create ? CurrentArchive.CreateEntry(key) : CurrentArchive.GetEntry(key) ?? CurrentArchive.CreateEntry(key);
     }
 
-    private string GetFileName(string year, string month)
+    private static ChatLine CreateLine(DateUtil dateUtil, string line)
+    {
+      string dateString = line.Substring(1, 24);
+      dateUtil.ParseDate(dateString, out double precise);
+      return new ChatLine { Line = line, BeginTime = precise };
+    }
+    private static string GetFileName(string year, string month)
     {
       string folder = PLAYER_DIR + @"\" + year;
       Directory.CreateDirectory(folder);

@@ -13,7 +13,6 @@ namespace EQLogParser
   /// </summary>
   public partial class HealingSummary : SummaryTable, IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private bool Ready = false;
 
     public HealingSummary()

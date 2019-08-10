@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -110,7 +111,7 @@ namespace EQLogParser
     public double LastTime { get; set; }
   }
 
-  public class PlayerStatsSelectionChangedEvent : EventArgs
+  public class PlayerStatsSelectionChangedEventArgs : EventArgs
   {
     public List<PlayerStats> Selected { get; set; }
   }
@@ -311,6 +312,7 @@ namespace EQLogParser
     public string Spell { get; set; }
     public double[] Values { get; set; }
     public bool IsReceived { get; set; }
+    public BitmapImage Image { get; set; }
   }
 
   public class CombinedStats

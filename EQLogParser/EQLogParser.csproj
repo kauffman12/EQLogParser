@@ -347,6 +347,7 @@
     <Content Include="data\petnames.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Resource Include="icons\delete-icon-8.png" />
     <Resource Include="EQLogParser.ico" />
   </ItemGroup>
   <ItemGroup>
