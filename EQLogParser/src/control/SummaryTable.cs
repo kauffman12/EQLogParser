@@ -12,7 +12,7 @@ namespace EQLogParser
     protected const string DEFAULT_TABLE_LABEL = "No NPCs Selected";
     protected const string NODATA_TABLE_LABEL = Labels.NODATA;
 
-    internal event EventHandler<PlayerStatsSelectionChangedEvent> EventsSelectionChange;
+    internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
     protected DataGrid TheDataGrid;
     protected Label TheTitle;
@@ -115,7 +115,7 @@ namespace EQLogParser
 
     protected void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
-      EventsSelectionChange(this, new PlayerStatsSelectionChangedEvent() { Selected = selected });
+      EventsSelectionChange(this, new PlayerStatsSelectionChangedEventArgs() { Selected = selected });
     }
 
     protected virtual void ShowBreakdown(List<PlayerStats> selected)

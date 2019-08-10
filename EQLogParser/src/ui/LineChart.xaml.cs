@@ -77,7 +77,7 @@ namespace EQLogParser
       Reset();
     }
 
-    internal void HandleUpdateEvent(object sender, DataPointEvent e)
+    internal void HandleUpdateEvent(DataPointEvent e)
     {
       switch(e.Action)
       {
@@ -151,7 +151,7 @@ namespace EQLogParser
           aggregate.Total += dataPoint.Total;
           aggregate.RollingTotal += dataPoint.Total;
           aggregate.RollingHits += 1;
-          aggregate.RollingCritHits += (dataPoint.ModifiersMask > -1 && (dataPoint.ModifiersMask & LineModifiersParser.CRIT) != 0) ? (uint) 1 : 0;
+          aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint) 1 : 0;
           aggregate.BeginTime = firstTime;
           aggregate.CurrentTime = dataPoint.CurrentTime;
           lastTime = dataPoint.CurrentTime;
@@ -300,41 +300,6 @@ namespace EQLogParser
       needAccounting.Clear();
     }
 
-    private void Insert(DataPoint aggregate, Dictionary<string, ChartValues<DataPoint>> chartValues)
-    {
-      DataPoint newEntry = new DataPoint
-      {
-        Name = aggregate.Name,
-        CurrentTime = aggregate.CurrentTime,
-        Total = aggregate.Total
-      };
-
-      double totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
-      newEntry.VPS = (long) Math.Round(aggregate.RollingTotal / totalSeconds, 2);
-
-      if (aggregate.RollingHits > 0)
-      {
-        newEntry.Avg = (long) Math.Round(Convert.ToDecimal(aggregate.RollingTotal) / aggregate.RollingHits, 2);
-        newEntry.CritRate = Math.Round(Convert.ToDouble(aggregate.RollingCritHits) / aggregate.RollingHits * 100, 2);
-      }
-
-      if (!chartValues.TryGetValue(aggregate.Name, out ChartValues<DataPoint> playerValues))
-      {
-        playerValues = new ChartValues<DataPoint>();
-        chartValues[aggregate.Name] = playerValues;
-      }
-
-      DataPoint test;
-      if (playerValues.Count > 0 && (test = playerValues.Last()) != null && test.CurrentTime == newEntry.CurrentTime)
-      {
-        playerValues[playerValues.Count - 1] = newEntry;
-      }
-      else
-      {
-        playerValues.Add(newEntry);
-      }
-    }
-
     private void Reset()
     {
       if (lvcChart.Series != null)
@@ -436,6 +401,41 @@ namespace EQLogParser
             writer.Dispose();
           }
         }
+      }
+    }
+
+    private static void Insert(DataPoint aggregate, Dictionary<string, ChartValues<DataPoint>> chartValues)
+    {
+      DataPoint newEntry = new DataPoint
+      {
+        Name = aggregate.Name,
+        CurrentTime = aggregate.CurrentTime,
+        Total = aggregate.Total
+      };
+
+      double totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
+      newEntry.VPS = (long)Math.Round(aggregate.RollingTotal / totalSeconds, 2);
+
+      if (aggregate.RollingHits > 0)
+      {
+        newEntry.Avg = (long)Math.Round(Convert.ToDecimal(aggregate.RollingTotal) / aggregate.RollingHits, 2);
+        newEntry.CritRate = Math.Round(Convert.ToDouble(aggregate.RollingCritHits) / aggregate.RollingHits * 100, 2);
+      }
+
+      if (!chartValues.TryGetValue(aggregate.Name, out ChartValues<DataPoint> playerValues))
+      {
+        playerValues = new ChartValues<DataPoint>();
+        chartValues[aggregate.Name] = playerValues;
+      }
+
+      DataPoint test;
+      if (playerValues.Count > 0 && (test = playerValues.Last()) != null && test.CurrentTime == newEntry.CurrentTime)
+      {
+        playerValues[playerValues.Count - 1] = newEntry;
+      }
+      else
+      {
+        playerValues.Add(newEntry);
       }
     }
 

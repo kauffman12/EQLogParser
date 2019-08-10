@@ -16,7 +16,7 @@ namespace EQLogParser
 
     private enum ParseType { HASTAKEN, YOUHAVETAKEN, POINTSOF, UNKNOWN };
     private static readonly DateUtil DateUtil = new DateUtil();
-    private static readonly Regex CheckEye = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex CheckEyeRegex = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
 
     private static readonly Dictionary<string, string> HitMap = new Dictionary<string, string>()
@@ -195,14 +195,6 @@ namespace EQLogParser
         {
           string hit = withoutMods.Substring(hitStartIndex, hitEndIndex - hitStartIndex);
 
-          if (hit.Contains("frenz"))
-          {
-            if (true)
-            {
-
-            }
-          }
-
           bool additional;
           string subType = GetTypeFromHit(hit, out additional);
           if (subType != null)
@@ -366,12 +358,12 @@ namespace EQLogParser
       if (record != null)
       {
         // handle riposte separately
-        if (record.ModifiersMask > -1 && (record.ModifiersMask & LineModifiersParser.RIPOSTE) != 0)
+        if (LineModifiersParser.IsRiposte(record.ModifiersMask))
         {
           record.SubType = Labels.RIPOSTE;
         }
 
-        if (CheckEye.IsMatch(record.Defender) || record.Defender.EndsWith("chest", StringComparison.Ordinal) || record.Defender.EndsWith("satchel", StringComparison.Ordinal))
+        if (CheckEyeRegex.IsMatch(record.Defender) || record.Defender.EndsWith("chest", StringComparison.Ordinal) || record.Defender.EndsWith("satchel", StringComparison.Ordinal))
         {
           record = null;
         }
@@ -475,7 +467,7 @@ namespace EQLogParser
           DataManager.Instance.UpdateVerifiedPlayers(record.AttackerOwner);
           isAttackerPlayer = true;
         }
-        else if ((record.ModifiersMask & LineModifiersParser.CRIT) == 0 && (record.Type == Labels.DD || record.Type == Labels.DOT))
+        else if (LineModifiersParser.IsCrit(record.ModifiersMask) && (record.Type == Labels.DD || record.Type == Labels.DOT))
         {
           // only players can crit a spell
           DataManager.Instance.UpdateVerifiedPlayers(record.Attacker);

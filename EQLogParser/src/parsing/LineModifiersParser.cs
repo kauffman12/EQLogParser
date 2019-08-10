@@ -20,14 +20,24 @@ namespace EQLogParser
       { "Assassinate", 1 }, { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1 }, { "Headshot", 1 }
     };
 
-    public static int TWINCAST = 1;
-    public static int CRIT = 2;
-    public static int LUCKY = 4;
-    public static int RAMPAGE = 8;
-    public static int STRIKETHROUGH = 16;
-    public static int RIPOSTE = 32;
+    private static int TWINCAST = 1;
+    private static int CRIT = 2;
+    private static int LUCKY = 4;
+    private static int RAMPAGE = 8;
+    private static int STRIKETHROUGH = 16;
+    private static int RIPOSTE = 32;
 
     private static ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
+
+    internal static bool IsRiposte(int mask)
+    {
+      return mask > -1 && (mask & RIPOSTE) != 0 && (mask & STRIKETHROUGH) == 0;
+    }
+
+    internal static bool IsCrit(int mask)
+    {
+      return mask > -1 && (mask & CRIT) != 0;
+    }
 
     internal static void Parse(HitRecord record, Attempt playerStats, Attempt theHit = null)
     {
@@ -53,7 +63,8 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & RIPOSTE) != 0)
+        // A Strikethrough Riposte is the attacker attacking through a riposte from the defender
+        if (IsRiposte(record.ModifiersMask))
         {
           playerStats.RiposteHits++;
 

@@ -20,9 +20,24 @@
       <ComboBox Margin="0,0,0,0" x:Name="minFreqList" Height="24" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,0,0,0" x:Name="spellTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <Button Margin="4,0,4,0" Width="86" Height="24" Click="CopyBBCode_Click" Content="Copy BBCode"/>
     </StackPanel>
-    <datagrid:ThemedDataGrid Grid.Row="1" x:Name="dataGrid" Margin="0,0,0,0"  AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" />
+    <datagrid:ThemedDataGrid Grid.Row="1" x:Name="dataGrid" Margin="0,0,0,0"  AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" SelectionMode="Single">
+      <DataGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem IsEnabled="True" x:Name="copyBBCodeClick" Header="Copy BBCode Table" Click="CopyBBCodeClick"></MenuItem>
+          <Separator />
+          <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Data" Click="ReloadClick"></MenuItem>
+        </ContextMenu>
+      </DataGrid.ContextMenu>
+      <DataGrid.Columns>
+        <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Image Width="12" Height="12" MaxWidth="12" MaxHeight="12" PreviewMouseLeftButtonDown="RemoveSpellMouseDown" Source="{Binding Image}" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </datagrid:ThemedDataGrid>
   </Grid>
 </UserControl>
