@@ -11,11 +11,13 @@ namespace EQLogParser
     private List<T> temp = null;
     private readonly object QueueLock = new object();
     private readonly ProcessActionCallback callback;
-    private bool stopped = false;
-    private readonly int delayTime = 10;
+    private bool Stopped = false;
+    private readonly int DelayTime = 10;
+    private readonly string Name;
 
     public ActionProcessor(string name, ProcessActionCallback callback)
     {
+      Name = name;
       this.callback = callback;
       Task.Run((() => Process()));
     }
@@ -48,12 +50,12 @@ namespace EQLogParser
 
     public void Stop()
     {
-      stopped = true;
+      Stopped = true;
     }
 
     private void Process()
     {       
-      while(!stopped)
+      while(!Stopped)
       {
         bool needSleep = false;
 
@@ -72,16 +74,17 @@ namespace EQLogParser
 
         if (needSleep)
         {
-          Thread.Sleep(delayTime);
+          Thread.Sleep(DelayTime);
         }
         else if (temp != null)
         {
           foreach (var item in temp)
           {
-            if (stopped)
+            if (Stopped)
             {
               break;
             }
+
             callback(item);
           }
         }

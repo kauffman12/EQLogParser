@@ -39,7 +39,7 @@ namespace EQLogParser
       }
     }
 
-    private new void Display(List<PlayerStats> selectedStats = null)
+    private void Display()
     {
       if (running == false)
       {

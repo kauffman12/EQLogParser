@@ -723,7 +723,18 @@ namespace EQLogParser
       }
     }
 
-    private void SaveConfiguration(string fileName, bool updated, ConcurrentDictionary<string, string> dict)
+    private void CheckNonPlayerMap(string name)
+    {
+      bool removed = ActiveNonPlayerMap.TryRemove(name, out NonPlayer npc);
+      removed = LifetimeNonPlayerMap.TryRemove(name, out byte bnpc) || removed;
+
+      if (removed)
+      {
+        EventsRemovedNonPlayer(this, name);
+      }
+    }
+
+    private static void SaveConfiguration(string fileName, bool updated, ConcurrentDictionary<string, string> dict)
     {
       try
       {
@@ -755,18 +766,7 @@ namespace EQLogParser
       }
     }
 
-    private void CheckNonPlayerMap(string name)
-    {
-      bool removed = ActiveNonPlayerMap.TryRemove(name, out NonPlayer npc);
-      removed = LifetimeNonPlayerMap.TryRemove(name, out byte bnpc) || removed;
-
-      if (removed)
-      {
-        EventsRemovedNonPlayer(this, name);
-      }
-    }
-
-    private List<ActionBlock> SearchActions(List<ActionBlock> allActions, double beginTime, double endTime)
+    private static List<ActionBlock> SearchActions(List<ActionBlock> allActions, double beginTime, double endTime)
     {
       ActionBlock startBlock = new ActionBlock() { BeginTime = beginTime - 1 };
       ActionBlock endBlock = new ActionBlock() { BeginTime = endTime + 1 };
@@ -787,7 +787,7 @@ namespace EQLogParser
       return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionBlock>();
     }
 
-    private void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
+    private static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
     {
       if (blockList.LastOrDefault() is ActionBlock last && last.BeginTime == beginTime)
       {

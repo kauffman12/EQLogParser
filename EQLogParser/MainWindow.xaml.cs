@@ -37,7 +37,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.13";
+    private const string VERSION = "v1.5.15";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -256,7 +256,7 @@ namespace EQLogParser
       {
         if (window?.IsOpen == true)
         {
-          (window.Content as LineChart).HandleUpdateEvent(sender, e);
+          (window.Content as LineChart).HandleUpdateEvent(e);
         }
       });
     }
@@ -522,7 +522,7 @@ namespace EQLogParser
       }
     }
 
-    private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
+    private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       var table = sender as DamageSummary;
       var options = new DamageStatsOptions() { IsBaneEanbled = table.IsBaneEnabled(), IsPullerEnabled = table.IsPullerEnabled(), RequestChartData = true };
@@ -530,7 +530,7 @@ namespace EQLogParser
       UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 
-    private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
+    private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       var table = sender as HealingSummary;
       var options = new HealingStatsOptions() { IsAEHealingEanbled = table.IsAEHealingEnabled(), RequestChartData = true };
@@ -538,7 +538,7 @@ namespace EQLogParser
       UpdateParse(Labels.HEALPARSE, data.Selected);
     }
 
-    private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEvent data)
+    private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       var options = new TankingStatsOptions() { RequestChartData = true };
       TankingStatsManager.Instance.FireSelectionEvent(options, data.Selected);

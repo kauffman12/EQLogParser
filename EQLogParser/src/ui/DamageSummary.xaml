@@ -25,7 +25,7 @@
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"
       Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
-      RowDetailsVisibilityChanged="ChildrenGrid_RowDetailsVis" EnableRowVirtualization="False">
+      RowDetailsVisibilityChanged="ChildrenGridRowDetailsVis" EnableRowVirtualization="False">
       <DataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy To EQ" Click="CopyToEQ_Click"></MenuItem>
@@ -79,7 +79,7 @@
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <StackPanel Orientation="Horizontal">
-                <Image PreviewMouseLeftButtonDown="DataGridExpander_MouseDown" Loaded="DataGridExpander_Loaded" Margin="0,0,2,0" Width="15"></Image>
+                <Image PreviewMouseLeftButtonDown="DataGridExpanderMouseDown" Loaded="DataGridExpanderLoaded" Margin="0,0,2,0" Width="15"></Image>
                 <TextBlock Width="20" TextAlignment="Right" Text="{Binding Rank}"></TextBlock>
               </StackPanel>
             </DataTemplate>
@@ -104,7 +104,7 @@
       </DataGrid.Columns>
       <DataGrid.RowDetailsTemplate>
         <DataTemplate>
-          <datagrid:ThemedDataGrid x:Name="childrenDataGrid" IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ChildrenDataGrid_PrevMouseWheel" 
+          <datagrid:ThemedDataGrid x:Name="childrenDataGrid" IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ChildrenDataGridPrevMouseWheel" 
               HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
               EnableRowVirtualization="False" GridLinesVisibility="Vertical" AreRowDetailsFrozen="False" FrozenColumnCount="0">
             <DataGrid.Columns>
