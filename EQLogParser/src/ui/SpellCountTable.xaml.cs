@@ -305,6 +305,24 @@ namespace EQLogParser
 
     private void CreateImageClick(object sender, RoutedEventArgs e)
     {
+      // lame workaround to toggle scrollbar to fix UI
+      dataGrid.IsEnabled = false;
+      dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
+      dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
+
+      Task.Delay(10).ContinueWith((bleh) =>
+      {
+        Dispatcher.InvokeAsync(() =>
+        {
+          dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+          dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+          Task.Delay(10).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => CreateImage()), TaskScheduler.Default);
+        });
+      }, TaskScheduler.Default);
+    }
+
+    private void CreateImage()
+    {
       try
       {
         var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
@@ -335,6 +353,10 @@ namespace EQLogParser
       catch (NullReferenceException ex)
       {
         LOG.Error("Could not Copy Image", ex);
+      }
+      finally
+      {
+        dataGrid.IsEnabled = true;
       }
     }
 
