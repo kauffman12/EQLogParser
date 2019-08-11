@@ -4,6 +4,7 @@ using FontAwesome.WPF;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -37,7 +38,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.15";
+    private const string VERSION = "v1.5.16";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -296,6 +297,20 @@ namespace EQLogParser
     private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e)
     {
       playerParseTextWindow.State = DockingWindowState.AutoHide;
+    }
+
+    private void ViewErrorLog_Click(object sender, RoutedEventArgs e)
+    {
+      using (Process fileopener = new Process())
+      {
+        var appender = LOG.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
+        if (appender != null)
+        {
+          fileopener.StartInfo.FileName = "explorer";
+          fileopener.StartInfo.Arguments = "\"" + (appender as log4net.Appender.FileAppender).File + "\"";
+          fileopener.Start();
+        }
+      }
     }
 
     // Main Menu

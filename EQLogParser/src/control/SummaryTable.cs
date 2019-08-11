@@ -80,7 +80,7 @@ namespace EQLogParser
 
     protected void DataGridShowBreakdown2ByClass_Click(object sender, RoutedEventArgs e)
     {
-      MenuItem menuItem = (sender as MenuItem);
+      MenuItem menuItem = sender as MenuItem;
       ShowBreakdown2(GetPlayerStatsByClass(menuItem.Tag as string));
     }
 
@@ -130,7 +130,7 @@ namespace EQLogParser
 
     protected void ShowSpellCasts(List<PlayerStats> selected)
     {
-      if (selected.Count > 0)
+      if (selected?.Count > 0)
       {
         var spellTable = new SpellCountTable(CurrentStats?.ShortTitle ?? "");
         spellTable.ShowSpells(selected, CurrentStats);
