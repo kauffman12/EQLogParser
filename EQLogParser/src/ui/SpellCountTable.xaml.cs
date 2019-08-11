@@ -308,14 +308,13 @@ namespace EQLogParser
       try
       {
         var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        Rect bounds = VisualTreeHelper.GetDescendantBounds(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int)bounds.Width, (int)bounds.Height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int)dataGrid.ActualWidth, (int)dataGrid.ActualHeight, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
           VisualBrush vb = new VisualBrush(dataGrid);
-          ctx.DrawRectangle(vb, null, new Rect(new Point(), bounds.Size));
+          ctx.DrawRectangle(vb, null, new Rect(new Point(), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight)));
         }
 
         rtb.Render(dv);

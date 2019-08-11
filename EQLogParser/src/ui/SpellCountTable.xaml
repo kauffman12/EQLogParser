@@ -21,7 +21,7 @@
       <ComboBox Margin="0,0,0,0" x:Name="spellTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
     </StackPanel>
-    <datagrid:ThemedDataGrid Grid.Row="1" x:Name="dataGrid" Margin="0,0,0,0" AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" SelectionMode="Single" SelectionUnit="Cell">
+    <datagrid:ThemedDataGrid Grid.Row="1" x:Name="dataGrid" Margin="0,0,0,0" AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" SelectionMode="Single" SelectionUnit="Cell" HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False">
       <DataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyBBCodeClick" Header="Copy BBCode Table" Click="CopyBBCodeClick"></MenuItem>
