@@ -19,7 +19,7 @@ namespace EQLogParser
     {
       Name = name;
       this.callback = callback;
-      Task.Run((() => Process()));
+      Task.Run(() => Process());
     }
 
     public void Add(T data)

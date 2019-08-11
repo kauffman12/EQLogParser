@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace EQLogParser
@@ -112,7 +114,7 @@ namespace EQLogParser
                 {
                   Header = "",
                   Binding = new Binding("Spell"),
-                  CellStyle = Application.Current.Resources["SpellGridCellStyle"] as Style
+                  CellStyle = Application.Current.Resources["SpellGridNameCellStyle"] as Style
                 });
               });
 
@@ -155,7 +157,7 @@ namespace EQLogParser
                 Dispatcher.InvokeAsync(() =>
                 {
                   DataGridTextColumn col = new DataGridTextColumn() { Header = header, Binding = new Binding(colBinding) };
-                  col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
+                  col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
                   col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
                   dataGrid.Columns.Add(col);
                 });
@@ -168,7 +170,7 @@ namespace EQLogParser
               Dispatcher.InvokeAsync(() =>
               {
                 DataGridTextColumn col = new DataGridTextColumn() { Header = totalHeader, Binding = new Binding("Values[" + colCount + "]") };
-                col.CellStyle = Application.Current.Resources["RightAlignGridCellStyle"] as Style;
+                col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
                 col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
                 dataGrid.Columns.Add(col);
               });
@@ -301,6 +303,42 @@ namespace EQLogParser
       OptionsChanged();
     }
 
+    private void CreateImageClick(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
+        Rect bounds = VisualTreeHelper.GetDescendantBounds(dataGrid);
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int)bounds.Width, (int)bounds.Height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+
+        DrawingVisual dv = new DrawingVisual();
+        using (DrawingContext ctx = dv.RenderOpen())
+        {
+          VisualBrush vb = new VisualBrush(dataGrid);
+          ctx.DrawRectangle(vb, null, new Rect(new Point(), bounds.Size));
+        }
+
+        rtb.Render(dv);
+        Clipboard.SetImage(rtb);
+      }
+      catch(ExternalException ex)
+      {
+        LOG.Error("Could not Copy Image", ex);
+      }
+      catch (ThreadStateException ex)
+      {
+        LOG.Error("Could not Copy Image", ex);
+      }
+      catch (ArgumentNullException ex)
+      {
+        LOG.Error("Could not Copy Image", ex);
+      }
+      catch (NullReferenceException ex)
+      {
+        LOG.Error("Could not Copy Image", ex);
+      }
+    }
+
     private void ReloadClick(object sender, RoutedEventArgs e)
     {
       HiddenSpells.Clear();
@@ -349,15 +387,30 @@ namespace EQLogParser
 
     private void RemoveSpellMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-      Image image = sender as Image;
+      var cell = sender as DataGridCell;
 
       // Don't allow if the previous operation hasn't finished
       // this probably needs to be better...
-      if (!Running && image.DataContext is SpellCountRow spr)
+      if (!Running && cell.DataContext is SpellCountRow spr)
       {
         HiddenSpells[spr.Spell] = 1;
         SpellRowsView.Remove(spr);
         OptionsChanged();
+      }
+    }
+
+    private void GridSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+      var settingsLoc = settingsPanel.PointToScreen(new Point(0, 0));
+      var titleLoc = titlePanel.PointToScreen(new Point(0, 0));
+
+      if ((titleLoc.X + titlePanel.ActualWidth) > (settingsLoc.X + 10))
+      {
+        titlePanel.Visibility = Visibility.Hidden;
+      }
+      else
+      {
+        titlePanel.Visibility = Visibility.Visible;
       }
     }
   }

@@ -378,7 +378,12 @@
     <Style x:Key="CenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
       <Setter Property="HorizontalContentAlignment"  Value="Center"/>
     </Style>
-    <Style x:Key="SpellGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
+    <Style x:Key="SpellGridDataCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
+      <Setter Property="IsHitTestVisible" Value="False"/>
+      <Setter Property="TextBlock.TextAlignment" Value="Right" />
+    </Style>
+    <Style x:Key="SpellGridNameCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
+      <Setter Property="IsHitTestVisible" Value="False"/>
       <Style.Triggers>
         <DataTrigger Binding="{Binding IsReceived}" Value="True">
           <Setter Property="Foreground" Value="LightGreen" />

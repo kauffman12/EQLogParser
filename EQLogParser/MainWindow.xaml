@@ -29,7 +29,7 @@
       </tb:TaskbarIcon.TrayToolTip>
     </tb:TaskbarIcon>
     <Menu Grid.Row="0" Margin="0" Height="20" VerticalAlignment="Top" Grid.ColumnSpan="2">
-      <MenuItem Header="_File" Height="20" Width="35">
+      <MenuItem Header="_File" Height="20" Width="40">
         <MenuItem Header="_Archive Chat" Height="20" Click="MenuItemSelectArchiveChat_Click" ToolTip="Only Archive Chat from a Log File">
           <MenuItem.Icon>
             <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Database" Foreground="#5191c1" />
@@ -153,6 +153,13 @@
         <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindow_Click" Header="_Status" Height="20">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="fileProgessIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+          </MenuItem.Icon>
+        </MenuItem>
+      </MenuItem>
+      <MenuItem Header="_Tools" Height="20" Width="45">
+        <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLog_Click" Height="20">
+          <MenuItem.Icon>
+            <fa:ImageAwesome x:Name="viewErrorLogIcon" Visibility="Visible" Height="10" Width="10" HorizontalAlignment="Center" Icon="File"  Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
         </MenuItem>
       </MenuItem>
