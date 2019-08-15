@@ -312,7 +312,13 @@ namespace EQLogParser
     public string Spell { get; set; }
     public double[] Values { get; set; }
     public bool IsReceived { get; set; }
-    public BitmapImage Image { get; set; }
+    public string IconColor { get; set; }
+  }
+
+  public class SpellCountsSerialized
+  {
+    public List<string> PlayerNames { get; set; }
+    public SpellCountData TheSpellData { get; set; }
   }
 
   public class CombinedStats

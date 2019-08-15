@@ -1,6 +1,4 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using LiveCharts;
+﻿using LiveCharts;
 using LiveCharts.Wpf;
 using Microsoft.Win32;
 using System;
@@ -9,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -51,33 +50,22 @@ namespace EQLogParser
 
     private void SaveCSV_Click(object sender, RoutedEventArgs e)
     {
-      var records = new List<FreqTable>();
+      StringBuilder sb = new StringBuilder();
+      sb.Append("Hit Value,Frequency,Difference").AppendLine();
+
       for (int i = 0; i < YValues.Count; i++)
       {
-        FreqTable entry = new FreqTable();
-        entry.HitValue = XValues[i];
-        entry.Freq = YValues[i];
-        entry.Diff = XValuesDiff[i];
-        records.Add(entry);
+        sb.Append(XValues[i]).Append(",").Append(YValues[i]).Append(",").Append(XValuesDiff[i]).AppendLine();
       }
-
-      StringWriter writer = null;
-      CsvWriter csv = null;
 
       try
       {
-        writer = new StringWriter();
-        csv = new CsvWriter(writer);
-        csv.Configuration.RegisterClassMap<FreqTableMap>();
-        csv.WriteRecords(records);
-
         SaveFileDialog saveFileDialog = new SaveFileDialog();
         string filter = "CSV file (*.csv)|*.csv";
         saveFileDialog.Filter = filter;
-        bool? result = saveFileDialog.ShowDialog();
-        if (result == true)
+        if (saveFileDialog.ShowDialog().Value)
         {
-          File.WriteAllText(saveFileDialog.FileName, writer.ToString());
+          File.WriteAllText(saveFileDialog.FileName, sb.ToString());
         }
       }
       catch (IOException ex)
@@ -91,13 +79,6 @@ namespace EQLogParser
       catch (SecurityException se)
       {
         LOG.Error(se);
-      }
-      finally
-      {
-        if (writer != null)
-        {
-          writer.Dispose();
-        }
       }
     }
 
@@ -413,23 +394,5 @@ namespace EQLogParser
       public int DI { get; set; }
       public long Diff { get; set; }
     }
-
-    private class FreqTable
-    {
-      public long HitValue { get; set; }
-      public int Freq { get; set; }
-      public Nullable<long> Diff { get; set; }
-    }
-
-    private class FreqTableMap : ClassMap<FreqTable>
-    {
-      public FreqTableMap()
-      {
-        Map(m => m.HitValue).Name("Hit Value");
-        Map(m => m.Freq).Name("Frequency");
-        Map(m => m.Diff).Name("Difference");
-      }
-    }
   }
-
 }

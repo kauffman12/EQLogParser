@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -15,19 +16,73 @@
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold">This is a title</Label>
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="True" ToolTip="Include spell counts for spells that only have a message when the player uses the spell on themselves.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell counts for things that players have in common." VerticalContentAlignment="Center" Checked="SelfOnlyChange" Unchecked="SelfOnlyChange">Include Self Only Spells</CheckBox>
+      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="True" ToolTip="Include spell counts for spells that only have a message when the player uses the spell on themselves.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell counts for things that players have in common." VerticalContentAlignment="Center" Checked="SelfOnlyChange" Unchecked="SelfOnlyChange">Show Self Only Spells</CheckBox>
       <ComboBox Margin="0,0,0,0" x:Name="countTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,0,0,0" x:Name="minFreqList" Height="24" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,0,0,0" x:Name="spellTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
     </StackPanel>
-    <datagrid:ThemedDataGrid Grid.Row="1" x:Name="dataGrid" Margin="0,0,0,0" AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" SelectionMode="Single" SelectionUnit="Cell" ScrollViewer.CanContentScroll="True" HorizontalScrollBarVisibility="Disabled">
+    <datagrid:ThemedDataGrid Grid.Row="1" x:Name="dataGrid" Margin="0,0,0,0" AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" ScrollViewer.CanContentScroll="True" HorizontalScrollBarVisibility="Hidden" SelectionChanged="SelectionChanged">
       <DataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="True" x:Name="copyBBCodeClick" Header="Copy BBCode Table" Click="CopyBBCodeClick"></MenuItem>
-          <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Copy Image" Click="CreateImageClick"></MenuItem>
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Copy" Foreground="#5191c1" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyBBCodeClick" Header="BBCode Table" Click="CopyBBCodeClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV Table" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>            
+            <MenuItem IsEnabled="True" x:Name="copyGamparseClick" Header="Gamparse BBCode" Click="CopyGamparseClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Code" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
           <Separator />
-          <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Data" Click="ReloadClick"></MenuItem>
+          <MenuItem IsEnabled="True" x:Name="importClick" Header="Import Data (scf)" Click="ImportClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Upload" Foreground="#5191c1" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem IsEnabled="True" x:Name="exportClick" Header="Export Data (scf)" Click="ExportClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Download" Foreground="#5191c1" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
+          <MenuItem x:Name="selectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Square" Foreground="#5191c1" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="unselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#5191c1" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />          
+          <MenuItem IsEnabled="True" x:Name="removeRowClick" Header="Clear Selected Rows" Click="RemoveSelectedRowsClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Close" Foreground="#5191c1" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Counts" Click="ReloadClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Database" Foreground="#5191c1" />
+            </MenuItem.Icon>
+          </MenuItem>
         </ContextMenu>
       </DataGrid.ContextMenu>
       <DataGrid.Columns>
@@ -39,7 +94,7 @@
           </DataGridTemplateColumn.CellStyle>
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <Image Width="12" Height="12" MaxWidth="12" MaxHeight="12" Source="{Binding Image}" />
+              <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Close" Foreground="{Binding IconColor}"  />
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>

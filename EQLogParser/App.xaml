@@ -351,6 +351,12 @@
         </Setter.Value>
       </Setter>
     </Style>
+    
+    <!-- General -->
+    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Static themes:SharedResourceKeys.MenuItemStyleKey}}">
+      <Setter Property="ToolTipService.InitialShowDelay" Value="1500"/>
+      <Setter Property="ToolTipService.ShowDuration" Value="2500"/>
+    </Style>
 
     <!-- DataGrid Row/Column Colors and Alignment -->
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
@@ -379,11 +385,9 @@
       <Setter Property="HorizontalContentAlignment"  Value="Center"/>
     </Style>
     <Style x:Key="SpellGridDataCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="IsHitTestVisible" Value="False"/>
       <Setter Property="TextBlock.TextAlignment" Value="Right" />
     </Style>
     <Style x:Key="SpellGridNameCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="IsHitTestVisible" Value="False"/>
       <Style.Triggers>
         <DataTrigger Binding="{Binding IsReceived}" Value="True">
           <Setter Property="Foreground" Value="LightGreen" />
