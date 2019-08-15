@@ -362,8 +362,14 @@ namespace EQLogParser
         const int labelHeight = 16;
         const int margin = 4;
 
+        var rowHeight = SpellRowsView.Count > 0 ? (dataGrid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow).ActualHeight : 0;
+        var totalRowHeight = rowHeight * SpellRowsView.Count + rowHeight + 2; // add extra for header row and a little for the bottom border
+        var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth);
+        var realTableHeight = dataGrid.ActualHeight < totalRowHeight ? dataGrid.ActualHeight : totalRowHeight;
+        var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
+
         var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int) dataGrid.ActualWidth, (int) (dataGrid.ActualHeight + labelHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int) (realTableHeight + labelHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
