@@ -18,7 +18,7 @@
       <ComboBox Margin="0,0,0,0" x:Name="hitTypeList" Height="24" SelectionChanged="List_SelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="minFreqList" Height="24" SelectionChanged="List_SelectionChanged" />
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <Button Margin="4,0,4,0" Height="24" Width="75" Click="SaveCSV_Click" Content="Export CSV"/>
+      <Button Margin="4,0,4,0" Height="24" Width="75" Click="SaveCSV_Click" Content="Save CSV"/>
     </StackPanel>
     <lvc:CartesianChart Grid.Row="1" x:Name="lvcChart" Hoverable="False" MouseDoubleClick="Chart_DoubleClick" LegendLocation="None" DisableAnimations="True" SizeChanged="Chart_SizeChanged">
       <lvc:CartesianChart.AxisY>

@@ -1,11 +1,15 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -23,7 +27,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static readonly BitmapImage REMOVE_IMAGE = new BitmapImage(new Uri(@"pack://application:,,,/icons/delete-icon-8.png"));
+    private static string ICON_COLOR = "#5191c1";
     private static bool Running = false;
 
     private List<string> PlayerList;
@@ -32,7 +36,7 @@ namespace EQLogParser
     private DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
     private Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
     private List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
-    private List<string> CountTypes = new List<string>() { "Spells By Count", "Spells By Percent" };
+    private List<string> CountTypes = new List<string>() { "Show By Count", "Show By Percent" };
     private List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
     private List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
     private int CurrentCastType = 0;
@@ -87,6 +91,12 @@ namespace EQLogParser
         }
 
         TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
+
+        if (TheSpellCounts.PlayerCastCounts.Count > 0)
+        {
+          selectAll.IsEnabled = true;
+        }
+
         Display();
       }
     }
@@ -166,7 +176,7 @@ namespace EQLogParser
                 colCount++;
               }
 
-              string totalHeader = CurrentCountType == 0 ? "Total Count = " + totalCasts : "Percent of Total (" + totalCasts + ")";
+              string totalHeader = CurrentCountType == 0 ? "Totals = " + totalCasts : "Totals = 100";
               Dispatcher.InvokeAsync(() =>
               {
                 DataGridTextColumn col = new DataGridTextColumn() { Header = totalHeader, Binding = new Binding("Values[" + colCount + "]") };
@@ -182,8 +192,8 @@ namespace EQLogParser
 
                 row.Spell = spell;
                 row.Values = new double[sortedPlayers.Count + 1];
-                row.Image = REMOVE_IMAGE;
                 row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
+                row.IconColor = ICON_COLOR;
 
                 int i;
                 for (i = 0; i < sortedPlayers.Count; i++)
@@ -231,6 +241,7 @@ namespace EQLogParser
             {
               castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
               (Application.Current.MainWindow as MainWindow).Busy(false);
+              exportClick.IsEnabled = copyOptions.IsEnabled = removeRowClick.IsEnabled = SpellRowsView.Count > 0;
             });
 
             Running = false;
@@ -303,20 +314,43 @@ namespace EQLogParser
       OptionsChanged();
     }
 
+    private void SelectAllClick(object sender, RoutedEventArgs e)
+    {
+      Helpers.DataGridSelectAll(sender);
+    }
+
+    private void UnselectAllClick(object sender, RoutedEventArgs e)
+    {
+      Helpers.DataGridUnselectAll(sender);
+    }
+
+    private void SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      // adds a delay where a drag-select doesn't keep sending events
+
+      DataGrid callingDataGrid = sender as DataGrid;
+      selectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
+      unselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
+    }
+
     private void CreateImageClick(object sender, RoutedEventArgs e)
     {
       // lame workaround to toggle scrollbar to fix UI
       dataGrid.IsEnabled = false;
+      dataGrid.SelectedItems.Clear();
       dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
       dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
 
-      Task.Delay(10).ContinueWith((bleh) =>
+      Task.Delay(50).ContinueWith((bleh) =>
       {
         Dispatcher.InvokeAsync(() =>
         {
           dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-          dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
-          Task.Delay(10).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => CreateImage()), TaskScheduler.Default);
+          dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
+          SpellRowsView.ToList().ForEach(spr => spr.IconColor = "#252526");
+          dataGrid.Items.Refresh();
+
+          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => CreateImage()), TaskScheduler.Default);
         });
       }, TaskScheduler.Default);
     }
@@ -325,18 +359,27 @@ namespace EQLogParser
     {
       try
       {
+        const int labelHeight = 16;
+        const int margin = 4;
+
         var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int)dataGrid.ActualWidth, (int)dataGrid.ActualHeight, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int) dataGrid.ActualWidth, (int) (dataGrid.ActualHeight + labelHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
-          VisualBrush vb = new VisualBrush(dataGrid);
-          ctx.DrawRectangle(vb, null, new Rect(new Point(), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight)));
+          var brush = new VisualBrush(titleLabel);
+          ctx.DrawRectangle(brush, null, new Rect(new Point(4, margin / 2), new Size(titleLabel.ActualWidth, labelHeight)));
+  
+          brush = new VisualBrush(dataGrid);
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, labelHeight + margin), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight + SystemParameters.HorizontalScrollBarHeight)));
         }
 
         rtb.Render(dv);
         Clipboard.SetImage(rtb);
+
+        SpellRowsView.ToList().ForEach(spr => spr.IconColor = ICON_COLOR);
+        dataGrid.Items.Refresh();
       }
       catch(ExternalException ex)
       {
@@ -367,32 +410,165 @@ namespace EQLogParser
       OptionsChanged();
     }
 
-    private void CopyBBCodeClick(object sender, RoutedEventArgs e)
+    private void ImportClick(object sender, RoutedEventArgs e)
     {
       try
       {
-        List<string> header = new List<string>();
-        List<List<string>> data = new List<List<string>>();
-
-        header.Add("");
-        for (int i = 1; i < dataGrid.Columns.Count; i++)
+        // WPF doesn't have its own file chooser so use Win32 Version
+        OpenFileDialog dialog = new OpenFileDialog
         {
-          header.Add(dataGrid.Columns[i].Header as string);
-        }
+          // filter to txt files
+          DefaultExt = ".scf.gz",
+          Filter = "Spell Count File (*.scf.gz) | *.scf.gz"
+        };
 
-        foreach (var item in dataGrid.Items)
+        // show dialog and read result
+        if (dialog.ShowDialog().Value)
         {
-          var counts = item as SpellCountRow;
-          List<string> row = new List<string> { counts.Spell };
-          foreach (var value in counts.Values)
+          FileInfo gzipFileName = new FileInfo(dialog.FileName);
+
+          using (GZipStream decompressionStream = new GZipStream(gzipFileName.OpenRead(), CompressionMode.Decompress))
           {
-            row.Add(value.ToString(CultureInfo.CurrentCulture));
-          }
+            using (var reader = new StreamReader(decompressionStream))
+            {
+              string json = reader.ReadToEnd();
+              reader.Close();
 
-          data.Add(row);
+              var data = JsonConvert.DeserializeObject<SpellCountsSerialized>(json);
+
+              // copy data
+              PlayerList = PlayerList.Union(data.PlayerNames).ToList();
+
+              foreach (var player in data.TheSpellData.PlayerCastCounts.Keys)
+              {
+                TheSpellCounts.PlayerCastCounts[player] = data.TheSpellData.PlayerCastCounts[player];
+              }
+
+              foreach (var player in data.TheSpellData.PlayerReceivedCounts.Keys)
+              {
+                TheSpellCounts.PlayerReceivedCounts[player] = data.TheSpellData.PlayerReceivedCounts[player];
+              }
+
+              foreach (var spellId in data.TheSpellData.MaxCastCounts.Keys)
+              {
+                if (!TheSpellCounts.MaxCastCounts.ContainsKey(spellId) || TheSpellCounts.MaxCastCounts[spellId] < data.TheSpellData.MaxCastCounts[spellId])
+                {
+                  TheSpellCounts.MaxCastCounts[spellId] = data.TheSpellData.MaxCastCounts[spellId];
+                }
+              }
+
+              foreach (var spellId in data.TheSpellData.MaxReceivedCounts.Keys)
+              {
+                if (!TheSpellCounts.MaxReceivedCounts.ContainsKey(spellId) || TheSpellCounts.MaxReceivedCounts[spellId] < data.TheSpellData.MaxReceivedCounts[spellId])
+                {
+                  TheSpellCounts.MaxReceivedCounts[spellId] = data.TheSpellData.MaxReceivedCounts[spellId];
+                }
+              }
+
+              foreach (var spellData in data.TheSpellData.UniqueSpells.Keys)
+              {
+                if (!TheSpellCounts.UniqueSpells.ContainsKey(spellData))
+                {
+                  TheSpellCounts.UniqueSpells[spellData] = data.TheSpellData.UniqueSpells[spellData];
+                }
+              }
+
+              if (SpellRowsView.Count > 0)
+              {
+                SpellRowsView.Clear();
+              }
+
+              OptionsChanged();
+            }
+          }
+        }
+      }
+      catch (IOException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
+      }
+    }
+
+    private void ExportClick(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var data = new SpellCountsSerialized { PlayerNames = PlayerList, TheSpellData = TheSpellCounts };
+        var result = JsonConvert.SerializeObject(data);
+        SaveFileDialog saveFileDialog = new SaveFileDialog();
+        string filter = "Spell Count File (*.scf.gz)|*.scf.gz";
+        saveFileDialog.Filter = filter;
+        if (saveFileDialog.ShowDialog().Value)
+        {
+          FileInfo gzipFileName = new FileInfo(saveFileDialog.FileName);
+          using (FileStream gzipTargetAsStream = gzipFileName.Create())
+          {
+            using (GZipStream gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress))
+            {
+              using (var writer = new StreamWriter(gzipStream))
+              {
+                writer.Write(result);
+                writer.Close();
+              }
+            }
+          }
+        }
+      }
+      catch (IOException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
+      }
+    }
+
+
+    private Tuple<List<string>,List<List<string>>> BuildExportData()
+    {
+      List<string> header = new List<string>();
+      List<List<string>> data = new List<List<string>>();
+
+      header.Add("");
+      for (int i = 2; i < dataGrid.Columns.Count; i++)
+      {
+        header.Add(dataGrid.Columns[i].Header as string);
+      }
+
+      foreach (var item in dataGrid.Items)
+      {
+        var counts = item as SpellCountRow;
+        List<string> row = new List<string> { counts.Spell };
+        foreach (var value in counts.Values)
+        {
+          row.Add(value.ToString(CultureInfo.CurrentCulture));
         }
 
-        string result = TextFormatUtils.BuildBBCodeTable(header, data, titleLabel.Content as string);
+        data.Add(row);
+      }
+
+      return new Tuple<List<string>, List<List<string>>>(header, data);
+    }
+
+    private void CopyCsvClick(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var export = BuildExportData();
+        string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
@@ -403,6 +579,68 @@ namespace EQLogParser
       catch (ExternalException ex)
       {
         LOG.Error(ex);
+      }
+    }
+
+    private void CopyBBCodeClick(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var export = BuildExportData();
+        string result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
+        Clipboard.SetDataObject(result);
+      }
+      catch (ArgumentNullException ane)
+      {
+        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
+        LOG.Error(ane);
+      }
+      catch (ExternalException ex)
+      {
+        LOG.Error(ex);
+      }
+    }
+
+    private void CopyGamparseClick(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var export = BuildExportData();
+        string result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
+        Clipboard.SetDataObject(result);
+      }
+      catch (ArgumentNullException ane)
+      {
+        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
+        LOG.Error(ane);
+      }
+      catch (ExternalException ex)
+      {
+        LOG.Error(ex);
+      }
+    }
+
+    private void RemoveSelectedRowsClick(object sender, RoutedEventArgs e)
+    {
+      // Don't allow if the previous operation hasn't finished
+      // this probably needs to be better...
+      if (!Running)
+      {
+        var modified = false;
+        while (dataGrid.SelectedItems.Count > 0)
+        {
+          if (dataGrid.SelectedItem is SpellCountRow spr)
+          {
+            HiddenSpells[spr.Spell] = 1;
+            SpellRowsView.Remove(spr);
+            modified = true;
+          }
+        }
+
+        if (modified)
+        {
+          OptionsChanged();
+        }
       }
     }
 

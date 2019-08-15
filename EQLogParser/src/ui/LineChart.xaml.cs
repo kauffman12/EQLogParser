@@ -1,6 +1,4 @@
 ﻿using ActiproSoftware.Windows.Themes;
-using CsvHelper;
-using CsvHelper.Configuration;
 using LiveCharts;
 using LiveCharts.Configurations;
 using LiveCharts.Wpf;
@@ -11,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -329,57 +328,43 @@ namespace EQLogParser
     {
       if (LastSortedValues != null)
       {
-        var records = new List<LineChartTable>();
-        LastSortedValues.ForEach(sortedValue =>
-        {
-          foreach (var chartData in sortedValue)
-          {
-            LineChartTable entry = new LineChartTable
-            {
-              Name = chartData.Name,
-              Time = chartData.CurrentTime
-            };
-
-            if (CurrentConfig == CONFIG_AVG)
-            {
-              entry.Value = chartData.Avg;
-            }
-            else if (CurrentConfig == CONFIG_CRIT_RATE)
-            {
-              entry.Value = chartData.CritRate;
-            }
-            else if (CurrentConfig == CONFIG_TOTAL)
-            {
-              entry.Value = chartData.Total;
-            }
-            else if (CurrentConfig == CONFIG_VPS)
-            {
-              entry.Value = chartData.VPS;
-            }
-
-            records.Add(entry);
-          }
-        });
-
-        StringWriter writer = null;
-        CsvWriter csv = null;
-
         try
         {
-          writer = new StringWriter();
-          csv = new CsvWriter(writer);
+          StringBuilder sb = new StringBuilder();
+          sb.Append("Seconds,").Append(choicesList.SelectedValue as string).Append(",Name").AppendLine();
 
-          LineChartTableMap.Label = choicesList.SelectedValue as string;
-          csv.Configuration.RegisterClassMap<LineChartTableMap>();
-          csv.WriteRecords(records);
+          LastSortedValues.ForEach(sortedValue =>
+          {
+            foreach (var chartData in sortedValue)
+            {
+              double chartValue = 0;
+              if (CurrentConfig == CONFIG_AVG)
+              {
+                chartValue = chartData.Avg;
+              }
+              else if (CurrentConfig == CONFIG_CRIT_RATE)
+              {
+                chartValue = chartData.CritRate;
+              }
+              else if (CurrentConfig == CONFIG_TOTAL)
+              {
+                chartValue = chartData.Total;
+              }
+              else if (CurrentConfig == CONFIG_VPS)
+              {
+                chartValue = chartData.VPS;
+              }
+
+              sb.Append(chartData.CurrentTime).Append(",").Append(chartValue).Append(",").Append(chartData.Name).AppendLine();
+            }
+          });
 
           SaveFileDialog saveFileDialog = new SaveFileDialog();
           string filter = "CSV file (*.csv)|*.csv";
           saveFileDialog.Filter = filter;
-          bool? result = saveFileDialog.ShowDialog();
-          if (result == true)
+          if (saveFileDialog.ShowDialog().Value)
           {
-            File.WriteAllText(saveFileDialog.FileName, writer.ToString());
+            File.WriteAllText(saveFileDialog.FileName, sb.ToString());
           }
         }
         catch (IOException ex)
@@ -393,13 +378,6 @@ namespace EQLogParser
         catch (SecurityException se)
         {
           LOG.Error(se);
-        }
-        finally
-        {
-          if (writer != null)
-          {
-            writer.Dispose();
-          }
         }
       }
     }
@@ -494,24 +472,6 @@ namespace EQLogParser
       });
 
       return smoothed;
-    }
-
-    private class LineChartTable
-    {
-      public string Name { get; set; }
-      public double Time { get; set; }
-      public double Value { get; set; }     
-    }
-
-    private class LineChartTableMap : ClassMap<LineChartTable>
-    {
-      public static string Label = "Value";
-      public LineChartTableMap()
-      {
-        _ = Map(m => m.Time).Name("Seconds");
-        _ = Map(m => m.Value).Name(Label);
-        _ = Map(m => m.Name).Name("Name");
-      }
     }
   }
 }
