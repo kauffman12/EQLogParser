@@ -16,10 +16,11 @@ namespace EQLogParser
     private const string BB_TABLE_START = "[table]\r\n";
     private const string BB_TABLE_END = "[/table]\r\n";
     private const string BB_TITLE = "[b]{0}[/b]\r\n";
-    private const string CSV_CELL = "{0},";
+    private const string CSV_CELL = "\"{0}\"\t";
 
     private const string BB_GAMPARSE_SPELL_COUNT = "   --- {0} - {1}";
 
+    // Tab delimited CSV for copy/paste to excel
     internal static string BuildCsv(List<string> header, List<List<string>> data, string title = null)
     {
       StringBuilder sb = new StringBuilder();
