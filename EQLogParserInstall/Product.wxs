@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.5.18" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.5.22" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x86" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -96,11 +96,11 @@
       <Component Id="LiveCharts.Wpf.dll" Guid="DC2B7F21-1FF6-44F8-A496-2DACBBCA7AB4">
         <File Id="LiveCharts.Wpf.dll" Name="LiveCharts.Wpf.dll" Source="$(var.EQLogParser_TargetDir)LiveCharts.Wpf.dll" />
       </Component>
-      <Component Id="CsvHelper.dll" Guid="3D41FF8F-2D1B-4954-9925-FEE340AAC6A0">
-        <File Id="CsvHelper.dll" Name="CsvHelper.dll" Source="$(var.EQLogParser_TargetDir)CsvHelper.dll" />
-      </Component>
       <Component Id="WPFTextBoxAutoComplete.dll" Guid="2AE4D9AC-7BB6-4239-88B0-37E94A1B6944">
         <File Id="WPFTextBoxAutoComplete.dll" Name="WPFTextBoxAutoComplete.dll" Source="$(var.EQLogParser_TargetDir)WPFTextBoxAutoComplete.dll" />
+      </Component>
+      <Component Id="Newtonsoft.Json.dll" Guid="6D0CCBFE-C08A-492C-8583-800E5E35D846">
+        <File Id="Newtonsoft.Json.dll" Name="Newtonsoft.Json.dll" Source="$(var.EQLogParser_TargetDir)Newtonsoft.Json.dll" />
       </Component>
       <Component Id="Hardcodet.Wpf.TaskbarNotification.dll" Guid="98ACDE1E-0088-4EAF-90C4-955CF4464F04">
         <File Id="Hardcodet.Wpf.TaskbarNotification.dll" Name="Hardcodet.Wpf.TaskbarNotification.dll" Source="$(var.EQLogParser_TargetDir)Hardcodet.Wpf.TaskbarNotification.dll" />
