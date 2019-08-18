@@ -226,7 +226,7 @@ namespace EQLogParser
         }
         else
         {
-          NonPlayersViewSource.View.Filter = new Predicate<object>(item => ((NonPlayer) item).GroupID > -1);
+          NonPlayersViewSource.View.Filter = new Predicate<object>(item => ((NonPlayer)item).GroupID > -1);
         }
 
         DataManager.Instance.SetApplicationSetting("NpcShowInactivityBreaks", npcShowBreaks.IsChecked.Value.ToString(CultureInfo.CurrentCulture));

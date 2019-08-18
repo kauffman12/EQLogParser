@@ -150,7 +150,7 @@ namespace EQLogParser
       {
         PlayerSubStats stats = null;
 
-        switch(sub.Type)
+        switch (sub.Type)
         {
           case Labels.DOT:
             stats = dots;
@@ -189,7 +189,7 @@ namespace EQLogParser
         }
       });
 
-      foreach(var stats in new PlayerSubStats[] { dots, dds, procs, resisted })
+      foreach (var stats in new PlayerSubStats[] { dots, dds, procs, resisted })
       {
         StatsUtil.CalculateRates(stats, RaidStats, playerStats);
       }
@@ -231,7 +231,7 @@ namespace EQLogParser
     private List<PlayerSubStats> GetSubStats(string name)
     {
       List<PlayerSubStats> list = new List<PlayerSubStats>();
-      
+
       if (OtherDamage.ContainsKey(name))
       {
         list.AddRange(OtherDamage[name]);

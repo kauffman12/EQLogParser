@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800" Unloaded="Table_Unloaded" Loaded="Table_Loaded">
@@ -20,15 +21,38 @@
     <datagrid:ThemedDataGrid x:Name="npcDataGrid" Grid.Row="1" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
       <DataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem x:Name="npcMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPet_Click"/>
-          <MenuItem x:Name="npcMenuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayer_Click"/>
+          <MenuItem x:Name="npcMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPet_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="setPetIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Paw" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="npcMenuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayer_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="setPlayerIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="User" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator />
-          <MenuItem x:Name="npcMenuItemSelectFight" IsEnabled="False" Header="Select This Group" Click="SelectGroup_Click"/>
+          <MenuItem x:Name="npcMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAll_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Square" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="npcMenuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroup_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="selectFightIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="ObjectGroup" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="npcMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAll_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator />
-          <MenuItem x:Name="npcMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAll_Click"/>
-          <MenuItem x:Name="npcMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAll_Click"/>
-          <Separator />
-          <MenuItem x:Name="npcMenuItemClear" IsEnabled="False" Header="Clear" Click="Clear_Click"/>
+          <MenuItem x:Name="npcMenuItemClear" IsEnabled="False" Header="Clear All" Click="Clear_Click">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="clearAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Remove" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
         </ContextMenu>
       </DataGrid.ContextMenu>
       <DataGrid.Columns>

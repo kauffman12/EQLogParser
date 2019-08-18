@@ -45,7 +45,7 @@ namespace EQLogParser
         if (index < 0)
         {
           int criteriaIndex = -1;
-          for (int i=0; i<OtherCriteria.Count; i++)
+          for (int i = 0; i < OtherCriteria.Count; i++)
           {
             int lastIndex = line.IndexOf("'", Parsing.ACTIONINDEX, StringComparison.Ordinal);
             if (lastIndex > -1)
@@ -91,7 +91,7 @@ namespace EQLogParser
             int senderLen = criteriaIndex - Parsing.ACTIONINDEX;
             chatType = new ChatType { SenderIsYou = false, Sender = line.Substring(Parsing.ACTIONINDEX, senderLen), AfterSenderIndex = criteriaIndex, Line = line };
 
-            switch(index)
+            switch (index)
             {
               case 0:
                 chatType.Channel = ChatChannels.SAY;
@@ -148,7 +148,7 @@ namespace EQLogParser
         {
           int start, end;
           chatType = new ChatType { SenderIsYou = true, Sender = "You", AfterSenderIndex = Parsing.ACTIONINDEX + 4, Line = line };
-          switch(index)
+          switch (index)
           {
             case 0:
               chatType.Channel = ChatChannels.SAY;
@@ -197,7 +197,7 @@ namespace EQLogParser
               chatType.Channel = ChatChannels.SHOUT;
               break;
             case 5:
-              chatType.Channel = ChatChannels.OOC; 
+              chatType.Channel = ChatChannels.OOC;
               break;
             case 6:
               chatType.Channel = ChatChannels.AUCTION;

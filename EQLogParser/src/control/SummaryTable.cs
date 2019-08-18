@@ -47,57 +47,57 @@ namespace EQLogParser
       return TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
     }
 
-    protected void CopyToEQ_Click(object sender, RoutedEventArgs e)
+    protected void CopyToEQClick(object sender, RoutedEventArgs e)
     {
-      (Application.Current.MainWindow as MainWindow).CopyToEQ_Click();
+      (Application.Current.MainWindow as MainWindow).CopyToEQClick();
     }
 
-    protected void DataGridSelectAll_Click(object sender, RoutedEventArgs e)
+    protected void DataGridSelectAllClick(object sender, RoutedEventArgs e)
     {
       Helpers.DataGridSelectAll(sender);
     }
 
-    protected void DataGridUnselectAll_Click(object sender, RoutedEventArgs e)
+    protected void DataGridUnselectAllClick(object sender, RoutedEventArgs e)
     {
       Helpers.DataGridUnselectAll(sender);
     }
 
-    protected void DataGridShowBreakdown_Click(object sender, RoutedEventArgs e)
+    protected void DataGridShowBreakdownClick(object sender, RoutedEventArgs e)
     {
       ShowBreakdown(GetSelectedStats());
     }
 
-    protected void DataGridShowBreakdown2_Click(object sender, RoutedEventArgs e)
+    protected void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e)
     {
       ShowBreakdown2(GetSelectedStats());
     }
 
-    protected void DataGridShowBreakdownByClass_Click(object sender, RoutedEventArgs e)
+    protected void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
       ShowBreakdown(GetPlayerStatsByClass(menuItem.Tag as string));
     }
 
-    protected void DataGridShowBreakdown2ByClass_Click(object sender, RoutedEventArgs e)
+    protected void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = sender as MenuItem;
       ShowBreakdown2(GetPlayerStatsByClass(menuItem.Tag as string));
     }
 
-    protected void DataGridShowSpellCasts_Click(object sender, RoutedEventArgs e)
+    protected void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e)
     {
       ShowSpellCasts(GetSelectedStats());
     }
 
-    protected void DataGridSpellCastsByClass_Click(object sender, RoutedEventArgs e)
+    protected void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCasts(GetPlayerStatsByClass(menuItem.Tag as string));
+      ShowSpellCasts(GetPlayerStatsByClass(menuItem?.Tag as string));
     }
 
     protected List<PlayerStats> GetPlayerStatsByClass(string classString)
     {
-      SpellClass type = (SpellClass) Enum.Parse(typeof(SpellClass), classString);
+      SpellClass type = (SpellClass)Enum.Parse(typeof(SpellClass), classString);
       string className = DataManager.Instance.GetClassName(type);
 
       List<PlayerStats> selectedStats = new List<PlayerStats>();

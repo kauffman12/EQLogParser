@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d"
@@ -18,60 +19,77 @@
     <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
       <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
-    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="overlayOption" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OverlayOptionChanged" Unchecked="OverlayOptionChanged">Enable Overlay</CheckBox>
-      <CheckBox x:Name="pullerOption" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="PullerOptionChanged" Unchecked="PullerOptionChanged">Ignore Initial Pull</CheckBox>
-      <CheckBox x:Name="includeBane" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="IncludeBaneChanged" Unchecked="IncludeBaneChanged">Include Bane Damage</CheckBox>
-    </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"
-      Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGrid_SelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
+      Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGridSelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
       RowDetailsVisibilityChanged="ChildrenGridRowDetailsVis" EnableRowVirtualization="False">
       <DataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy To EQ" Click="CopyToEQ_Click"></MenuItem>
+          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy To EQ" Click="CopyToEQClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="copyDamageParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Compare Spell Counts">
-            <MenuItem Header="Selected" IsEnabled="False" Click="DataGridShowSpellCasts_Click"/>
-            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
-            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridSpellCastsByClass_Click"/>
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calculator" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+            <MenuItem Header="Selected" IsEnabled="False" Click="DataGridShowSpellCastsClick"/>
+            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
+            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
           </MenuItem>
-          <MenuItem x:Name="menuItemShowDamage" IsEnabled="False" Header="Damage Breakdown">
-            <MenuItem Header="Selected" IsEnabled="False" Click="DataGridShowBreakdown_Click"/>
-            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
-            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridShowBreakdownByClass_Click"/>
+          <MenuItem x:Name="menuItemShowBreakdown" IsEnabled="False" Header="Damage Breakdown">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showBreakdownIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Gavel" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+            <MenuItem Header="Selected" IsEnabled="False" Click="DataGridShowBreakdownClick"/>
+            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
+            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
           </MenuItem>
-          <MenuItem x:Name="menuItemShowHitFreq" IsEnabled="False" Header="Hit Frequency" Click="DataGridHitFreq_Click"/>
+          <MenuItem x:Name="menuItemShowHitFreq" IsEnabled="False" Header="Hit Frequency" Click="DataGridHitFreqClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showHitFreqIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="BarChart" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAll_Click"/>
-          <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAll_Click"/>
+          <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAllClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Square" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAllClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
         </ContextMenu>
       </DataGrid.ContextMenu>
       <DataGrid.Columns>
