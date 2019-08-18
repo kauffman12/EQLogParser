@@ -82,8 +82,6 @@ namespace EQLogParser
         ClassName = "",
         Name = string.Intern(name),
         Type = string.Intern(type),
-        CritFreqValues = new Dictionary<long, int>(),
-        NonCritFreqValues = new Dictionary<long, int>(),
         BeginTime = double.NaN,
         BeginTimes = new List<double>(),
         LastTimes = new List<double>(),
@@ -112,15 +110,15 @@ namespace EQLogParser
       }
       else if (total < 1000000)
       {
-        result = Math.Round((decimal) total / 1000, 2) + "K";
+        result = Math.Round((decimal)total / 1000, 2) + "K";
       }
       else if (total < 1000000000)
       {
-        result = Math.Round((decimal) total / 1000 / 1000, 2) + "M";
+        result = Math.Round((decimal)total / 1000 / 1000, 2) + "M";
       }
       else
       {
-        result = Math.Round((decimal) total / 1000 / 1000 / 1000, 2) + "B";
+        result = Math.Round((decimal)total / 1000 / 1000 / 1000, 2) + "B";
       }
 
       return result;
@@ -172,7 +170,7 @@ namespace EQLogParser
 
     internal static void UpdateStats(PlayerSubStats stats, HitRecord record, double beginTime)
     {
-      switch(record.Type)
+      switch (record.Type)
       {
         case Labels.BANE:
           stats.BaneHits++;
@@ -271,7 +269,7 @@ namespace EQLogParser
         if (superStats != null && superStats.Total > 0)
         {
           stats.Percent = Math.Round(superStats.Percent / 100 * (Convert.ToDouble(stats.Total) / superStats.Total) * 100, 2);
-          stats.SDPS = (long) Math.Round(stats.Total / superStats.TotalSeconds, 2);
+          stats.SDPS = (long)Math.Round(stats.Total / superStats.TotalSeconds, 2);
         }
         else if (superStats == null)
         {

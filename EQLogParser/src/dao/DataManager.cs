@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -233,6 +232,7 @@ namespace EQLogParser
         SaveConfiguration(PETMAP_FILE, PetMappingUpdated, PetToPlayerMap);
         PetMappingUpdated = false;
 
+        ApplicationSettings.TryRemove("IncludeAEHealing", out _); // not used anymore
         SaveConfiguration(SETTINGS_FILE, SettingsUpdated, ApplicationSettings);
         SettingsUpdated = false;
       }

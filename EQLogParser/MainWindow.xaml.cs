@@ -23,6 +23,13 @@ namespace EQLogParser
     // binding property
     public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
 
+    // global settings
+    internal static bool IsAoEHealingEnabled = true;
+    internal static bool IsBaneDamageEnabled = false;
+    internal static bool IsDamageOverlayEnabled = false;
+    internal static bool IsIgnoreIntialPullDamageEnabled = false;
+    internal static bool IsHideOverlayOtherPlayersEnabled = false;
+
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private enum LogOption { OPEN, MONITOR, ARCHIVE };
@@ -32,13 +39,13 @@ namespace EQLogParser
     private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
-    private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled); 
+    private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled);
     private static List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.24";
+    private const string VERSION = "v1.5.30";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -108,7 +115,7 @@ namespace EQLogParser
         DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
-          verifiedPetsWindow.Title = "Pets (" + VerifiedPetsView.Count + ")";
+          verifiedPetsWindow.Title = "Pet List (" + VerifiedPetsView.Count + ")";
         });
 
         // verified player table
@@ -116,7 +123,7 @@ namespace EQLogParser
         DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPlayersProperty);
-          verifiedPlayersWindow.Title = "Players (" + VerifiedPlayersProperty.Count + ")";
+          verifiedPlayersWindow.Title = "Player List (" + VerifiedPlayersProperty.Count + ")";
         });
 
         parseList.ItemsSource = AvailableParses;
@@ -147,10 +154,35 @@ namespace EQLogParser
         DockingThemeCatalogRegistrar.Register();
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
 
-        OpenDamageSummary();
-
         // application data state last
         DataManager.Instance.LoadState();
+
+        // Bane Damage
+        string value = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
+        IsBaneDamageEnabled = value != null && bool.TryParse(value, out bool bValue) && bValue;
+        enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // Damage Overlay
+        value = DataManager.Instance.GetApplicationSetting("IsDamageOverlayEnabled");
+        IsDamageOverlayEnabled = value != null && bool.TryParse(value, out bValue) && bValue;
+        enableDamageOverlayIcon.Visibility = IsDamageOverlayEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // Ignore Intitial Pull
+        value = DataManager.Instance.GetApplicationSetting("IngoreInitialPullDamage");
+        IsIgnoreIntialPullDamageEnabled = value != null && bool.TryParse(value, out bool bValue2) && bValue2;
+        enableIgnoreInitialPullDamageIcon.Visibility = IsIgnoreIntialPullDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // AoE healing
+        value = DataManager.Instance.GetApplicationSetting("IncludeAoEHealing");
+        IsAoEHealingEnabled = value == null || bool.TryParse(value, out bValue) && bValue;
+        enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // Hide other player names on overlay
+        value = DataManager.Instance.GetApplicationSetting("HideOverlayOtherPlayers");
+        IsHideOverlayOtherPlayersEnabled = value != null && bool.TryParse(value, out bValue2) && bValue2;
+        enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        OpenDamageSummary();
         LOG.Info("Initialized Components");
       }
       catch (Exception e)
@@ -163,6 +195,54 @@ namespace EQLogParser
         ThemeManager.EndUpdate();
       }
     }
+
+    internal void Busy(bool state)
+    {
+      BusyCount += state ? 1 : -1;
+      BusyCount = BusyCount < 0 ? 0 : BusyCount;
+      busyIcon.Visibility = BusyCount == 0 ? Visibility.Hidden : Visibility.Visible;
+    }
+
+    internal void CopyToEQClick(object sender = null, RoutedEventArgs e = null)
+    {
+      Clipboard.SetDataObject(playerParseTextBox.Text);
+    }
+
+    internal void OpenOverlay(bool configure = false, bool saveFirst = false)
+    {
+      if (saveFirst)
+      {
+        DataManager.Instance.SaveState();
+      }
+
+      Dispatcher.InvokeAsync(() =>
+      {
+        Overlay?.Close();
+        Overlay = new OverlayWindow(configure);
+        Overlay.Show();
+      });
+    }
+
+    internal void ResetOverlay()
+    {
+      Overlay?.Close();
+
+      if (IsDamageOverlayEnabled)
+      {
+        OpenOverlay();
+      }
+    }
+
+    internal void CloseOverlay()
+    {
+      Overlay?.Close();
+    }
+
+    internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
+    {
+      AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
+    }
+
 
     private void Instance_EventsUpdatePetMapping(object sender, PetMapping mapping)
     {
@@ -197,50 +277,9 @@ namespace EQLogParser
       (TankingChartWindow?.Content as LineChart)?.Clear();
     }
 
-    internal void Busy(bool state)
+    private void Window_Close(object sender, EventArgs e)
     {
-      BusyCount += state ? 1 : -1;
-      BusyCount = BusyCount < 0 ? 0 : BusyCount;
-      busyIcon.Visibility = BusyCount == 0 ? Visibility.Hidden : Visibility.Visible;
-    }
-
-    internal void CopyToEQ_Click(object sender = null, RoutedEventArgs e = null)
-    {
-      Clipboard.SetDataObject(playerParseTextBox.Text);
-    }
-
-    internal void OpenOverlay(bool configure = false, bool saveFirst = false)
-    {
-      if (saveFirst)
-      {
-        DataManager.Instance.SaveState();
-      }
-
-      Dispatcher.InvokeAsync(() =>
-      {
-        Overlay?.Close();
-        Overlay = new OverlayWindow(configure);
-        Overlay.Show();
-      });
-    }
-
-    internal void ResetOverlay()
-    {
-      Overlay?.Close();
-      if ((DamageWindow?.Content as DamageSummary)?.IsOverlayEnabled() == true)
-      {
-        OpenOverlay();
-      }
-    }
-
-    internal void CloseOverlay()
-    {
-      Overlay?.Close();
-    }
-
-    internal void AddDamageParse(CombinedStats combined, List<PlayerStats> selected)
-    {
-      AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected);
+      Close();
     }
 
     private void Window_Closed(object sender, EventArgs e)
@@ -248,10 +287,11 @@ namespace EQLogParser
       StopProcessing();
       taskBarIcon.Dispose();
       DataManager.Instance.SaveState();
+      CloseOverlay();
       Application.Current.Shutdown();
     }
 
-    private void HandleChartUpdateEvent(DocumentWindow window, object sender, DataPointEvent e)
+    private void HandleChartUpdateEvent(DocumentWindow window, object _, DataPointEvent e)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -271,15 +311,12 @@ namespace EQLogParser
       var damageOptions = new DamageStatsOptions() { Name = name, Npcs = filtered, RequestChartData = DamageChartWindow?.IsOpen == true };
       if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
       {
-        damageOptions.IsBaneEanbled = damageSummary.IsBaneEnabled();
-        damageOptions.IsPullerEnabled = damageSummary.IsPullerEnabled();
         damageOptions.RequestSummaryData = true;
       }
 
       var healingOptions = new HealingStatsOptions() { Name = name, Npcs = filtered, RequestChartData = HealingChartWindow?.IsOpen == true };
       if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
       {
-        healingOptions.IsAEHealingEanbled = healingSummary.IsAEHealingEnabled();
         healingOptions.RequestSummaryData = true;
       }
 
@@ -299,7 +336,7 @@ namespace EQLogParser
       playerParseTextWindow.State = DockingWindowState.AutoHide;
     }
 
-    private void ViewErrorLog_Click(object sender, RoutedEventArgs e)
+    private void ViewErrorLogClick(object sender, RoutedEventArgs e)
     {
       using (Process fileopener = new Process())
       {
@@ -313,8 +350,61 @@ namespace EQLogParser
       }
     }
 
+    private void ToggleHideOverlayOtherPlayersClick(object sender, RoutedEventArgs e)
+    {
+      IsHideOverlayOtherPlayersEnabled = !IsHideOverlayOtherPlayersEnabled;
+      DataManager.Instance.SetApplicationSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
+      enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
+    {
+      IsAoEHealingEnabled = !IsAoEHealingEnabled;
+      DataManager.Instance.SetApplicationSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
+      enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      var options = new HealingStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options));
+    }
+
+    private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
+    {
+      IsDamageOverlayEnabled = !IsDamageOverlayEnabled;
+      DataManager.Instance.SetApplicationSetting("IsDamageOverlayEnabled", IsDamageOverlayEnabled.ToString(CultureInfo.CurrentCulture));
+      enableDamageOverlayIcon.Visibility = IsDamageOverlayEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      if (IsDamageOverlayEnabled)
+      {
+        OpenOverlay(true, false);
+      }
+      else
+      {
+        CloseOverlay();
+      }
+    }
+
+    private void ToggleBaneDamageClick(object sender, RoutedEventArgs e)
+    {
+      IsBaneDamageEnabled = !IsBaneDamageEnabled;
+      DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", IsBaneDamageEnabled.ToString(CultureInfo.CurrentCulture));
+      enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      var options = new DamageStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
+    }
+
+    private void ToggleIgnoreInitialPullDamageClick(object sender, RoutedEventArgs e)
+    {
+      IsIgnoreIntialPullDamageEnabled = !IsIgnoreIntialPullDamageEnabled;
+      DataManager.Instance.SetApplicationSetting("IngoreInitialPullDamage", IsIgnoreIntialPullDamageEnabled.ToString(CultureInfo.CurrentCulture));
+      enableIgnoreInitialPullDamageIcon.Visibility = IsIgnoreIntialPullDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      var options = new DamageStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
+    }
+
     // Main Menu
-    private void MenuItemWindow_Click(object sender, RoutedEventArgs e)
+    private void MenuItemWindowClick(object sender, RoutedEventArgs e)
     {
       if (e.Source == damageChartMenuItem)
       {
@@ -392,16 +482,13 @@ namespace EQLogParser
       if (OpenChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
       {
         List<PlayerStats> selected = null;
-        bool isBaneEnabled = false;
-        bool isPullerEnabled = false;
+
         if (DamageWindow?.Content is DamageSummary summary)
         {
           selected = summary.GetSelectedStats();
-          isBaneEnabled = summary.IsBaneEnabled();
-          isPullerEnabled = summary.IsPullerEnabled();
         }
 
-        var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, IsPullerEnabled = isPullerEnabled, RequestChartData = true };
+        var options = new DamageStatsOptions() { RequestChartData = true };
         DamageStatsManager.Instance.FireUpdateEvent(options, selected);
       }
     }
@@ -411,14 +498,12 @@ namespace EQLogParser
       if (OpenChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
       {
         List<PlayerStats> selected = null;
-        bool isAEHealingEnabled = false;
         if (HealingWindow?.Content is HealingSummary summary)
         {
           selected = summary.GetSelectedStats();
-          isAEHealingEnabled = summary.IsAEHealingEnabled();
         }
 
-        var options = new HealingStatsOptions() { IsAEHealingEanbled = isAEHealingEnabled, RequestChartData = true };
+        var options = new HealingStatsOptions() { RequestChartData = true };
         HealingStatsManager.Instance.FireUpdateEvent(options, selected);
       }
     }
@@ -457,7 +542,7 @@ namespace EQLogParser
         if (DamageStatsManager.Instance.DamageGroups.Count > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var damageOptions = new DamageStatsOptions() { IsBaneEanbled = damageSummary.IsBaneEnabled(), IsPullerEnabled = damageSummary.IsPullerEnabled(), RequestSummaryData = true };
+          var damageOptions = new DamageStatsOptions() { RequestSummaryData = true };
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
         }
       }
@@ -487,7 +572,7 @@ namespace EQLogParser
         if (HealingStatsManager.Instance.HealingGroups.Count > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var healingOptions = new HealingStatsOptions() { IsAEHealingEanbled = healingSummary.IsAEHealingEnabled(), RequestSummaryData = true };
+          var healingOptions = new HealingStatsOptions() { RequestSummaryData = true };
           Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));
         }
       }
@@ -539,16 +624,14 @@ namespace EQLogParser
 
     private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var table = sender as DamageSummary;
-      var options = new DamageStatsOptions() { IsBaneEanbled = table.IsBaneEnabled(), IsPullerEnabled = table.IsPullerEnabled(), RequestChartData = true };
+      var options = new DamageStatsOptions() { RequestChartData = true };
       DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
       UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var table = sender as HealingSummary;
-      var options = new HealingStatsOptions() { IsAEHealingEanbled = table.IsAEHealingEnabled(), RequestChartData = true };
+      var options = new HealingStatsOptions() { RequestChartData = true };
       HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
       UpdateParse(Labels.HEALPARSE, data.Selected);
     }
@@ -586,19 +669,19 @@ namespace EQLogParser
     }
 
     // Main Menu Op File
-    private void MenuItemSelectMonitorLogFile_Click(object sender, RoutedEventArgs e)
+    private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e)
     {
       CurrentLogOption = LogOption.MONITOR;
       OpenLogFile();
     }
 
-    private void MenuItemSelectArchiveChat_Click(object sender, RoutedEventArgs e)
+    private void MenuItemSelectArchiveChatClick(object sender, RoutedEventArgs e)
     {
       CurrentLogOption = LogOption.ARCHIVE;
       OpenLogFile();
     }
 
-    private void MenuItemSelectLogFile_Click(object sender, RoutedEventArgs e)
+    private void MenuItemSelectLogFileClick(object sender, RoutedEventArgs e)
     {
       int lastMins = -1;
       if (sender is MenuItem item && !string.IsNullOrEmpty(item.Tag as string))
@@ -625,7 +708,7 @@ namespace EQLogParser
         if (EQLogReader != null)
         {
           Busy(true);
-          Overlay?.Close();
+          CloseOverlay();
 
           bytesReadTitle.Content = "Reading:";
           processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
@@ -651,7 +734,7 @@ namespace EQLogParser
             }
           }
 
-          if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100) || 
+          if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100) ||
           CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
           {
             if (npcWindow.IsOpen)
@@ -661,7 +744,7 @@ namespace EQLogParser
 
             DataManager.Instance.SaveState();
 
-            if ((DamageWindow?.Content as DamageSummary)?.IsOverlayEnabled() == true)
+            if (IsDamageOverlayEnabled)
             {
               OpenOverlay();
             }
@@ -690,7 +773,7 @@ namespace EQLogParser
       }
     }
 
-    private void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null)
+    private void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
     {
       Parses[type] = new ParseData() { Builder = builder, CombinedStats = combined, Selected = selected };
 
@@ -699,7 +782,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(() => AvailableParses.Add(type));
       }
 
-      TriggerParseUpdate(type);
+      TriggerParseUpdate(type, copy);
     }
 
     private void UpdateParse(string type, List<PlayerStats> selected)
@@ -711,7 +794,7 @@ namespace EQLogParser
       }
     }
 
-    private void TriggerParseUpdate(string type)
+    private void TriggerParseUpdate(string type, bool copy = false)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -722,6 +805,11 @@ namespace EQLogParser
         else
         {
           parseList.SelectedItem = type;
+        }
+
+        if (copy)
+        {
+          CopyToEQClick();
         }
       });
     }
@@ -818,7 +906,7 @@ namespace EQLogParser
           Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz",
         };
 
-          // show dialog and read result
+        // show dialog and read result
         var result = dialog.ShowDialog();
         if (result.Value)
         {

@@ -24,7 +24,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
     private readonly List<IAction> Resists = new List<IAction>();
     private List<NonPlayer> Selected;
-    private bool IsBaneAvailable = false;
     private string Title;
 
     internal DamageStatsManager()
@@ -125,9 +124,8 @@ namespace EQLogParser
       ComputeDamageStats(options);
     }
 
-    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, bool showBane, OverlayDamageStats overlayStats = null)
+    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, OverlayDamageStats overlayStats = null)
     {
-      PlayerStats raidStats;
       if (overlayStats == null)
       {
         overlayStats = new OverlayDamageStats
@@ -136,33 +134,33 @@ namespace EQLogParser
           AggregateStats = new Dictionary<string, PlayerStats>(),
           IndividualStats = new Dictionary<string, PlayerStats>(),
           UniqueNpcs = new Dictionary<string, byte>(),
-          RaidStats = raidStats = new PlayerStats()
+          RaidStats = new PlayerStats()
         };
 
-        raidStats.BeginTime = beginTime;
+        overlayStats.RaidStats.BeginTime = beginTime;
       }
       else
       {
-        raidStats = overlayStats.RaidStats;
+        overlayStats.RaidStats = overlayStats.RaidStats;
       }
 
-      if (beginTime - raidStats.LastTime > NpcDamageManager.NPC_DEATH_TIME)
+      if (beginTime - overlayStats.RaidStats.LastTime > NpcDamageManager.NPC_DEATH_TIME)
       {
-        raidStats.Total = 0;
-        raidStats.BeginTime = beginTime;
+        overlayStats.RaidStats.Total = 0;
+        overlayStats.RaidStats.BeginTime = beginTime;
         overlayStats.UniqueNpcs.Clear();
         overlayStats.TopLevelStats.Clear();
         overlayStats.AggregateStats.Clear();
         overlayStats.IndividualStats.Clear();
       }
 
-      raidStats.LastTime = beginTime;
-      raidStats.TotalSeconds = raidStats.LastTime - raidStats.BeginTime + 1;
+      overlayStats.RaidStats.LastTime = beginTime;
+      overlayStats.RaidStats.TotalSeconds = overlayStats.RaidStats.LastTime - overlayStats.RaidStats.BeginTime + 1;
 
-      if (!DataManager.Instance.IsProbablyNotAPlayer(record.Attacker) && (showBane || record.Type != Labels.BANE))
+      if (!DataManager.Instance.IsProbablyNotAPlayer(record.Attacker) && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
       {
         overlayStats.UniqueNpcs[record.Defender] = 1;
-        raidStats.Total += record.Total;
+        overlayStats.RaidStats.Total += record.Total;
 
         // see if there's a pet mapping, check this first
         string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
@@ -212,7 +210,7 @@ namespace EQLogParser
           aggregatePlayerStats.TotalSeconds = aggregatePlayerStats.LastTime - aggregatePlayerStats.BeginTime + 1;
         }
 
-        raidStats.DPS = (long) Math.Round(raidStats.Total / raidStats.TotalSeconds, 2);
+        overlayStats.RaidStats.DPS = (long)Math.Round(overlayStats.RaidStats.Total / overlayStats.RaidStats.TotalSeconds, 2);
 
         var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
         int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.PlayerName, StringComparison.Ordinal));
@@ -238,8 +236,10 @@ namespace EQLogParser
         }
 
         // only calculate the top few
-        Parallel.ForEach(overlayStats.StatsList, top => StatsUtil.UpdateCalculations(top, raidStats));
+        Parallel.ForEach(overlayStats.StatsList, top => StatsUtil.UpdateCalculations(top, overlayStats.RaidStats));
         overlayStats.TargetTitle = (overlayStats.UniqueNpcs.Count > 1 ? "Combined (" + overlayStats.UniqueNpcs.Count + "): " : "") + record.Defender;
+        overlayStats.TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, overlayStats.RaidStats.TotalSeconds);
+        overlayStats.TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(overlayStats.RaidStats.Total), " Damage ", StatsUtil.FormatTotals(overlayStats.RaidStats.DPS));
       }
 
       return overlayStats;
@@ -267,21 +267,15 @@ namespace EQLogParser
           results[stat.Name] = new List<HitFreqChartData>();
           foreach (string type in stat.SubStats.Keys)
           {
-            List<int> critFreqs = new List<int>();
-            List<int> nonCritFreqs = new List<int>();
             HitFreqChartData chartData = new HitFreqChartData() { HitType = type };
 
             // add crits
-            var critDamages = stat.SubStats[type].CritFreqValues.Keys.OrderBy(key => key).ToList();
-            critDamages.ForEach(damage => critFreqs.Add(stat.SubStats[type].CritFreqValues[damage]));
-            chartData.CritYValues = critFreqs;
-            chartData.CritXValues = critDamages;
+            chartData.CritXValues.AddRange(stat.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
+            chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stat.SubStats[type].CritFreqValues[damage]));
 
             // add non crits
-            var nonCritDamages = stat.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key).ToList();
-            nonCritDamages.ForEach(damage => nonCritFreqs.Add(stat.SubStats[type].NonCritFreqValues[damage]));
-            chartData.NonCritYValues = nonCritFreqs;
-            chartData.NonCritXValues = nonCritDamages;
+            chartData.NonCritXValues.AddRange(stat.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
+            chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stat.SubStats[type].NonCritFreqValues[damage]));
             results[stat.Name].Add(chartData);
           }
         });
@@ -296,11 +290,6 @@ namespace EQLogParser
 
       if (record != null && NpcNames.ContainsKey(record.Defender) && !DataManager.Instance.IsProbablyNotAPlayer(record.Attacker))
       {
-        if (record.Type == Labels.BANE)
-        {
-          IsBaneAvailable = true;
-        }
-
         valid = true;
       }
 
@@ -322,7 +311,7 @@ namespace EQLogParser
       if (options.RequestChartData)
       {
         // send update
-        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupCollection(DamageGroups, options.IsBaneEanbled) };
+        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupCollection(DamageGroups) };
         EventsUpdateDataPoint?.Invoke(DamageGroups, de);
       }
     }
@@ -336,8 +325,7 @@ namespace EQLogParser
         {
           Type = Labels.DAMAGEPARSE,
           State = "COMPLETED",
-          CombinedStats = combined,
-          IsBaneAvailable = IsBaneAvailable
+          CombinedStats = combined
         });
       }
     }
@@ -377,7 +365,6 @@ namespace EQLogParser
 
       // always start over
       RaidTotals.Total = 0;
-      IsBaneAvailable = false;
 
       try
       {
@@ -391,7 +378,7 @@ namespace EQLogParser
             Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
 
             int found = -1;
-            if (options.IsPullerEnabled)
+            if (MainWindow.IsIgnoreIntialPullDamageEnabled)
             {
               // ignore initial low activity time
               double previousDps = 0;
@@ -437,7 +424,7 @@ namespace EQLogParser
                 {
                   PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
 
-                  if (!options.IsBaneEanbled && record.Type == Labels.BANE)
+                  if (!MainWindow.IsBaneDamageEnabled && record.Type == Labels.BANE)
                   {
                     stats.BaneHits++;
 
@@ -490,7 +477,7 @@ namespace EQLogParser
             });
           });
 
-          RaidTotals.DPS = (long) Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
+          RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
 
           // add up resists
           Dictionary<string, uint> resistCounts = new Dictionary<string, uint>();

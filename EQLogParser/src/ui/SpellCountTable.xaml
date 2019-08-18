@@ -75,7 +75,7 @@
           <Separator />          
           <MenuItem IsEnabled="True" x:Name="removeRowClick" Header="Clear Selected Rows" Click="RemoveSelectedRowsClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Close" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Remove" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Counts" Click="ReloadClick">

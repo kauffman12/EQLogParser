@@ -8,14 +8,14 @@
         MinWidth="375"
         Topmost="True"
         Title="Configure Overlay Window"
-        Style="{StaticResource OverlayStyle}" Closing="Window_Closing" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False" Loaded="Window_Loaded">
+        Style="{StaticResource OverlayStyle}" Closing="WindowClosing" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False" Loaded="WindowLoaded">
   <Window.Background>
     <SolidColorBrush x:Name="windowBrush" Opacity="0.0" Color="Black" />
   </Window.Background>
-  <Canvas x:Name="overlayCanvas" SizeChanged="Panel_SizeChanged">
+  <Canvas x:Name="overlayCanvas" SizeChanged="PanelSizeChanged">
     <StackPanel x:Name="configPanel" Orientation="Horizontal">
       <TextBlock x:Name="fontSizeLabel" VerticalAlignment="Center" FontSize="12" Foreground="White">Position/Resize THIS Window, Set Font Size: </TextBlock>
-      <ComboBox x:Name="fontSizeSelection" SelectedIndex="3" FontSize="12" MaxHeight="25" Margin="5,0,0,0" SelectionChanged="FontSize_SelectionChanged" Background="#FF040000">
+      <ComboBox x:Name="fontSizeSelection" SelectedIndex="3" FontSize="12" MaxHeight="25" Margin="5,0,0,0" SelectionChanged="FontSizeSelectionChanged" Background="#FF040000">
         <ComboBoxItem>10</ComboBoxItem>
         <ComboBoxItem>11</ComboBoxItem>
         <ComboBoxItem>12</ComboBoxItem>
@@ -26,7 +26,7 @@
         <ComboBoxItem>17</ComboBoxItem>
         <ComboBoxItem>18</ComboBoxItem>
       </ComboBox>
-      <Button x:Name="saveButton" Margin="3,0,0,0" Width="70" MaxHeight="25" FontSize="12" Click="Save_Click">Save</Button>
+      <Button x:Name="saveButton" Margin="3,0,0,0" Width="70" MaxHeight="25" FontSize="12" Click="SaveClick">Save</Button>
     </StackPanel>
   </Canvas>
 </Window>

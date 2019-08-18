@@ -18,7 +18,10 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="Custom_Sorting" LoadingRow="Loading_Row">
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <ComboBox Margin="0,0,4,0" x:Name="choicesList" Height="24" SelectionChanged="ListSelectionChanged" />
+    </StackPanel>
+    <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="CustomSorting" LoadingRow="LoadingRow">
       <DataGrid.Columns>
         <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="150" Width="150*"/>
         <DataGridTextColumn Binding="{Binding Percent, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource PlayerTotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>

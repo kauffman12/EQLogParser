@@ -54,8 +54,8 @@ namespace EQLogParser
     }
 
     private void Process()
-    {       
-      while(!Stopped)
+    {
+      while (!Stopped)
       {
         bool needSleep = false;
 

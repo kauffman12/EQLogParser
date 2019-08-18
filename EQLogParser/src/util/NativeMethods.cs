@@ -82,7 +82,7 @@ namespace EQLogParser
 
     private static int IntPtrToInt32(IntPtr intPtr)
     {
-      return unchecked((int) intPtr.ToInt64());
+      return unchecked((int)intPtr.ToInt64());
     }
 
     [DllImport("kernel32.dll", EntryPoint = "SetLastError")]

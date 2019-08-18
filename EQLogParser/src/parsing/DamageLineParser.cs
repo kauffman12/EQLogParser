@@ -108,7 +108,7 @@ namespace EQLogParser
     private static void HandleSlain(string part, double currentTime, int optionalIndex)
     {
       string test = null;
-      if (part.Length > 16 && part.StartsWith("You have slain ", StringComparison.Ordinal) && part[part.Length-1] == '!')
+      if (part.Length > 16 && part.StartsWith("You have slain ", StringComparison.Ordinal) && part[part.Length - 1] == '!')
       {
         test = part.Substring(15, part.Length - 15 - 1);
       }
@@ -195,8 +195,7 @@ namespace EQLogParser
         {
           string hit = withoutMods.Substring(hitStartIndex, hitEndIndex - hitStartIndex);
 
-          bool additional;
-          string subType = GetTypeFromHit(hit, out additional);
+          string subType = GetTypeFromHit(hit, out bool additional);
           if (subType != null)
           {
             int hitLength = hit.Length + (additional ? 3 : 0);
@@ -354,7 +353,7 @@ namespace EQLogParser
     private static DamageRecord ValidateDamage(DamageRecord record, out bool isPlayerDamage)
     {
       isPlayerDamage = true;
-      
+
       if (record != null)
       {
         // handle riposte separately
@@ -411,7 +410,7 @@ namespace EQLogParser
                 DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Defender);
                 isPlayerDamage = false;
               }
-              else if(isDefenderProbablyNotAPlayer && isAttackerProbablyNotAPlayer)
+              else if (isDefenderProbablyNotAPlayer && isAttackerProbablyNotAPlayer)
               {
                 record = null;
               }
@@ -553,7 +552,7 @@ namespace EQLogParser
         else
         {
           int len = data[person].Length;
-          if (len > 2 && data[person][len-2] == '\'' && data[person][len-1] == 's')
+          if (len > 2 && data[person][len - 2] == '\'' && data[person][len - 1] == 's')
           {
             attacker = data[person].Substring(0, len - 2);
           }
@@ -656,8 +655,7 @@ namespace EQLogParser
         attacker = string.Join(" ", nameList);
       }
 
-      bool additional;
-      string type = GetTypeFromHit(data[hitIndex], out additional);
+      string type = GetTypeFromHit(data[hitIndex], out bool additional);
 
       if (additional)
       {
@@ -730,7 +728,7 @@ namespace EQLogParser
         {
           int len = data[i].Length;
           builder.Append(data[i]);
-          if ((len >= 1 && data[i][len-1] == '.') && !(len >= 3 && data[i][len - 2] == 'k' && data[i][len - 3] == 'R'))
+          if ((len >= 1 && data[i][len - 1] == '.') && !(len >= 3 && data[i][len - 2] == 'k' && data[i][len - 3] == 'R'))
           {
             builder.Remove(builder.Length - 1, 1);
             break;
@@ -844,7 +842,7 @@ namespace EQLogParser
       {
         type = char.ToUpper(type[0], CultureInfo.CurrentCulture) + type.Substring(1);
       }
-      
+
       return type;
     }
   }

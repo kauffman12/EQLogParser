@@ -14,9 +14,9 @@ namespace EQLogParser
     protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     protected DataGridTextColumn CurrentColumn = null;
 
-    protected void Custom_Sorting(object sender, DataGridSortingEventArgs e)
+    protected void CustomSorting(object sender, DataGridSortingEventArgs e)
     {
-      if (e.Column is DataGridTextColumn column)
+      if (e?.Column is DataGridTextColumn column)
       {
         // prevent the built-in sort from sorting
         e.Handled = true;
@@ -47,12 +47,12 @@ namespace EQLogParser
 
     protected object GetSortValue(PlayerSubStats sub)
     {
-      return sub.GetType().GetProperty(CurrentSortKey).GetValue(sub, null);
+      return sub?.GetType().GetProperty(CurrentSortKey).GetValue(sub, null);
     }
 
-    protected void Loading_Row(object sender, DataGridRowEventArgs e)
+    protected void LoadingRow(object sender, DataGridRowEventArgs e)
     {
-      if (e.Row.DataContext is PlayerStats)
+      if (e?.Row.DataContext is PlayerStats)
       {
         e.Row.Style = Application.Current.FindResource(DataGridResourceKeys.DataGridRowStyleKey) as Style;
       }

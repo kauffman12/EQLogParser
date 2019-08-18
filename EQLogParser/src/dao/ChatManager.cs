@@ -199,7 +199,7 @@ namespace EQLogParser
           ChatTypes = new List<ChatType>();
         }
 
-        for (int i=0; i<working.Count; i++)
+        for (int i = 0; i < working.Count; i++)
         {
           var chatType = working[i];
           var chatLine = CreateLine(dateUtil, chatType.Line);
@@ -210,7 +210,7 @@ namespace EQLogParser
           AddToArchive(year, month, day, chatLine, chatType, dateUtilSavedLines);
         }
 
-        lock(LockObject)
+        lock (LockObject)
         {
           if (ChatTypes.Count > 0)
           {
@@ -368,7 +368,7 @@ namespace EQLogParser
 
         if (channels.Count > 0)
         {
-          var list= string.Join(",", channels);
+          var list = string.Join(",", channels);
           var temp = keyvalue.Key + "|" + list;
           indexList.Add(temp);
         }
