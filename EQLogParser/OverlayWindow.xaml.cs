@@ -19,6 +19,8 @@ namespace EQLogParser
   public partial class OverlayWindow : Window
   {
     private static SolidColorBrush TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    private static SolidColorBrush UP_BRUSH = new SolidColorBrush(Colors.White);
+    private static SolidColorBrush DOWN_BRUSH = new SolidColorBrush(Colors.Red);
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
     private const double OPACITY = 0.45;
@@ -39,8 +41,11 @@ namespace EQLogParser
     private TextBlock TitleDamageBlock;
     private Rectangle TitleRectangle;
     private List<TextBlock> NameBlockList = new List<TextBlock>();
+    private List<StackPanel> DamagePanels = new List<StackPanel>();
     private List<TextBlock> DamageBlockList = new List<TextBlock>();
+    private List<ImageAwesome> DamageRateList = new List<ImageAwesome>();
     private List<Rectangle> RectangleList = new List<Rectangle>();
+    private Dictionary<int, double> PrevList = null;
 
     private List<Color> TitleColorList = new List<Color> { Color.FromRgb(50, 50, 50), Color.FromRgb(30, 30, 30), Color.FromRgb(10, 10, 10) };
     private List<List<Color>> ColorList = new List<List<Color>>()
@@ -69,7 +74,7 @@ namespace EQLogParser
         CreateRows();
         Title = "Overlay";
         MinHeight = 0;
-        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 3000) };
         UpdateTimer.Tick += UpdateTimerTick;
         AllowsTransparency = true;
         Style = null;
@@ -147,6 +152,8 @@ namespace EQLogParser
       {
         NameBlockList[i].Text = i + ". Example Player Name";
         DamageBlockList[i].Text = "[3s @50K] 50M";
+        DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
+        DamageRateList[i].Opacity = DATA_OPACITY;
       }
     }
 
@@ -170,6 +177,8 @@ namespace EQLogParser
         windowBrush.Opacity = 0.0;
         SetVisible(false);
         this.Height = 0;
+        Stats = null;
+        PrevList = null;
         UpdateTimer.Stop();
       } else if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
       {
@@ -182,10 +191,14 @@ namespace EQLogParser
 
           long total = 0;
           int goodRowCount = 0;
+          long me = 0;
+          var topList = new Dictionary<int, long>();
           for (int i = 0; i < MAX_ROWS; i++)
           {
             if (list.Count > i)
             {
+              DamageRateList[i].Opacity = 0.0;
+
               if (i == 0)
               {
                 total = list[i].Total;
@@ -197,7 +210,8 @@ namespace EQLogParser
                 RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
               }
 
-              if (MainWindow.IsHideOverlayOtherPlayersEnabled && !list[i].Name.Contains(DataManager.Instance.PlayerName))
+              var isMe = list[i].Name == DataManager.Instance.PlayerName;
+              if (MainWindow.IsHideOverlayOtherPlayersEnabled && !isMe)
               {
                 NameBlockList[i].Text = list[i].Rank + ". " + "Hidden Player";
               }
@@ -206,10 +220,53 @@ namespace EQLogParser
                 NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
               }
 
+              if (i <= 3 && !isMe && list[i].Total > 0)
+              {
+                topList[i] = list[i].Total;
+              }
+              else if (isMe)
+              {
+                me = list[i].Total;
+              }
+
               var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
               DamageBlockList[i].Text = damage;
               goodRowCount++;
             }
+          }
+
+          if (me > 0 && topList.Count > 0)
+          {
+            var updatedList = new Dictionary<int, double>();
+            foreach(int i in topList.Keys)
+            {
+              if (i != me)
+              {
+                var diff = topList[i] / (double) me;
+                updatedList[i] = diff;
+                if (PrevList != null && PrevList.ContainsKey(i))
+                {
+                  if (PrevList[i] > diff)
+                  {
+                    DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
+                    DamageRateList[i].Foreground = DOWN_BRUSH;
+                    DamageRateList[i].Opacity = DATA_OPACITY;
+                  }
+                  else if (PrevList[i] < diff)
+                  {
+                    DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
+                    DamageRateList[i].Foreground = UP_BRUSH;
+                    DamageRateList[i].Opacity = DATA_OPACITY;
+                  }
+                }
+              }
+            }
+
+            PrevList = updatedList;
+          }
+          else
+          {
+            PrevList = null;
           }
 
           var requested = (goodRowCount + 1) * CalculatedRowHeight;
@@ -249,15 +306,17 @@ namespace EQLogParser
     {
       if (visible)
       {
-        DamageBlockList[index].Height = CalculatedRowHeight;
+        DamagePanels[index].Height = CalculatedRowHeight;
         NameBlockList[index].Height = CalculatedRowHeight;
         RectangleList[index].Height = CalculatedRowHeight;
-        DamageBlockList[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
+        DamagePanels[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
         NameBlockList[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
         RectangleList[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
       }
 
       NameBlockList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+      DamagePanels[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+      DamageRateList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       DamageBlockList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       RectangleList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -290,11 +349,15 @@ namespace EQLogParser
         {
           SetSize(RectangleList[i], rowHeight, width);
           SetSize(NameBlockList[i], rowHeight, double.NaN);
+          SetSize(DamagePanels[i], rowHeight, double.NaN);
+          SetSize(DamageRateList[i], rowHeight, double.NaN);
           SetSize(DamageBlockList[i], rowHeight, double.NaN);
 
           double pos = rowHeight * (i + 1);
           RectangleList[i].SetValue(Canvas.TopProperty, pos);
           NameBlockList[i].SetValue(Canvas.TopProperty, pos);
+          DamagePanels[i].SetValue(Canvas.TopProperty, pos);
+          DamageRateList[i].SetValue(Canvas.TopProperty, pos);
           DamageBlockList[i].SetValue(Canvas.TopProperty, pos);
         }
       }
@@ -359,10 +422,20 @@ namespace EQLogParser
         NameBlockList.Add(nameBlock);
         overlayCanvas.Children.Add(nameBlock);
 
+        var stack = new StackPanel { Orientation = Orientation.Horizontal };
+        stack.SetValue(Panel.ZIndexProperty, 3);
+        stack.SetValue(Canvas.RightProperty, 5.0);
+        DamagePanels.Add(stack);
+
+        var damageRate = CreateImageAwesome();
+        DamageRateList.Add(damageRate);
+        stack.Children.Add(damageRate);
+
         var damageBlock = CreateTextBlock();
         damageBlock.SetValue(Canvas.RightProperty, 5.0);
         DamageBlockList.Add(damageBlock);
-        overlayCanvas.Children.Add(damageBlock);
+        stack.Children.Add(damageBlock);
+        overlayCanvas.Children.Add(stack);
 
         RowCount++;
       }
@@ -383,6 +456,10 @@ namespace EQLogParser
       for (int i = 0; i < MAX_ROWS; i++)
       {
         NameBlockList[i].FontSize = size;
+        DamageRateList[i].Height = size;
+        DamageRateList[i].Width = size;
+        DamageRateList[i].MaxHeight = size;
+        DamageRateList[i].MaxWidth = size;
         DamageBlockList[i].FontSize = size;
       }
     }
@@ -497,6 +574,17 @@ namespace EQLogParser
       textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
       textBlock.FontFamily = new FontFamily("Lucidia Console");
       return textBlock;
+    }
+
+    private static ImageAwesome CreateImageAwesome()
+    {
+      var image = new ImageAwesome();
+      image.Margin = new Thickness(0, 0, 2, 8);
+      image.SetValue(Panel.ZIndexProperty, 3);
+      image.Opacity = 0.0;
+      image.Foreground = UP_BRUSH;
+      image.Icon = FontAwesomeIcon.None;
+      return image;
     }
 
     private static void SetSize(FrameworkElement element, double height, double width)
