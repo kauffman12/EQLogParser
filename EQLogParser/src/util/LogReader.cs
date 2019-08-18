@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
@@ -44,7 +43,7 @@ namespace EQLogParser
           Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
           StreamReader reader;
           FileSize = fs.Length;
-         
+
           if (!isGzip) // fs.Length works and we can seek properly
           {
             reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);

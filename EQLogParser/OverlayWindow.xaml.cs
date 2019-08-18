@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FontAwesome.WPF;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -69,11 +70,12 @@ namespace EQLogParser
         Title = "Overlay";
         MinHeight = 0;
         UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-        UpdateTimer.Tick += UpdateTimer_Tick;
+        UpdateTimer.Tick += UpdateTimerTick;
         AllowsTransparency = true;
         Style = null;
         WindowStyle = WindowStyle.None;
         SetVisible(false);
+        ShowActivated = false;
       }
       else
       {
@@ -152,17 +154,24 @@ namespace EQLogParser
     {
       if (e.IsPlayerDamage)
       {
-        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, false, Stats);
-        if (!UpdateTimer.IsEnabled)
+        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
+        if (UpdateTimer != null && !UpdateTimer.IsEnabled)
         {
           UpdateTimer.Start();
         }
       }
     }
 
-    private void UpdateTimer_Tick(object sender, EventArgs e)
+    private void UpdateTimerTick(object sender, EventArgs e)
     {
-      if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
+
+      if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > NpcDamageManager.NPC_DEATH_TIME)
+      {
+        windowBrush.Opacity = 0.0;
+        SetVisible(false);
+        this.Height = 0;
+        UpdateTimer.Stop();
+      } else if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
       {
         var list = Stats.StatsList.Take(MAX_ROWS).ToList();
         if (list.Count > 0)
@@ -188,9 +197,14 @@ namespace EQLogParser
                 RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
               }
 
-              //var name = list[i].Name.Contains("Kazint") ? list[i].Name : "Uknown Player"; 
-              //NameBlockList[i].Text = list[i].Rank + ". " + name;
-              NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
+              if (MainWindow.IsHideOverlayOtherPlayersEnabled && !list[i].Name.Contains(DataManager.Instance.PlayerName))
+              {
+                NameBlockList[i].Text = list[i].Rank + ". " + "Hidden Player";
+              }
+              else
+              {
+                NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
+              }
 
               var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
               DamageBlockList[i].Text = damage;
@@ -229,14 +243,6 @@ namespace EQLogParser
           }
         }
       }
-
-      if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > NpcDamageManager.NPC_DEATH_TIME)
-      {
-        windowBrush.Opacity = 0.0;
-        SetVisible(false);
-        this.Height = 0;
-        UpdateTimer.Stop();
-      }
     }
 
     private void SetRowVisible(bool visible, int index)
@@ -262,7 +268,7 @@ namespace EQLogParser
 
       foreach (var child in overlayCanvas.Children)
       {
-        var element = (child as FrameworkElement);
+        var element = child as FrameworkElement;
         element.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       }
     }
@@ -320,8 +326,7 @@ namespace EQLogParser
       CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
       CopyButton.Click += (object sender, RoutedEventArgs e) =>
       {
-        (Application.Current.MainWindow as MainWindow)?.AddDamageParse(Stats, Stats.StatsList);
-        (Application.Current.MainWindow as MainWindow)?.CopyToEQ_Click(sender, e);
+        (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
       };
 
       RefreshButton = CreateButton();
@@ -329,7 +334,7 @@ namespace EQLogParser
       RefreshButton.Margin = new Thickness(4, 1, 0, 0);
       RefreshButton.Content = "\xE8BB";
       RefreshButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
-      RefreshButton.Click += (object sender, RoutedEventArgs e) => Stats = null;
+      RefreshButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.ResetOverlay();
 
       TitleBlock = CreateTextBlock();
       TitlePanel.Children.Add(TitleBlock);
@@ -382,12 +387,12 @@ namespace EQLogParser
       }
     }
 
-    private void Panel_SizeChanged(object sender, SizeChangedEventArgs e)
+    private void PanelSizeChanged(object sender, SizeChangedEventArgs e)
     {
       Resize(e.NewSize.Height, e.NewSize.Width);
     }
 
-    private void FontSize_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void FontSizeSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out int size))
       {
@@ -395,7 +400,7 @@ namespace EQLogParser
       }
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e)
+    private void SaveClick(object sender, RoutedEventArgs e)
     {
       if (!double.IsNaN(overlayCanvas.ActualHeight) && overlayCanvas.ActualHeight > 0)
       {
@@ -422,23 +427,25 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow)?.OpenOverlay(false, true);
     }
 
-    private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
       if (Active)
       {
         DamageLineParser.EventsDamageProcessed -= DamageLineParser_EventsDamageProcessed;
-        UpdateTimer.Stop();
+
+        if (UpdateTimer?.IsEnabled == true)
+        {
+          UpdateTimer.Stop();
+        }
       }
     }
 
-    void Window_Loaded(object sender, RoutedEventArgs e)
+    void WindowLoaded(object sender, RoutedEventArgs e)
     {
       WindowInteropHelper wndHelper = new WindowInteropHelper(this);
-
-      int exStyle = (int) NativeMethods.GetWindowLongPtr(wndHelper.Handle, (int) NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-
-      exStyle |= (int) NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
-      NativeMethods.SetWindowLong(wndHelper.Handle, (int) NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr) exStyle);
+      int exStyle = (int)NativeMethods.GetWindowLongPtr(wndHelper.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
+      NativeMethods.SetWindowLong(wndHelper.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
     }
 
     private static LinearGradientBrush CreateBrush(List<Color> colors)
@@ -468,6 +475,7 @@ namespace EQLogParser
       button.IsEnabled = true;
       return button;
     }
+
     private static Rectangle CreateRectangle(bool configure, List<Color> colors)
     {
       var rectangle = new Rectangle
@@ -480,6 +488,7 @@ namespace EQLogParser
       rectangle.Opacity = configure ? 1.0 : DATA_OPACITY;
       return rectangle;
     }
+
     private static TextBlock CreateTextBlock()
     {
       var textBlock = new TextBlock { Foreground = TEXT_BRUSH };

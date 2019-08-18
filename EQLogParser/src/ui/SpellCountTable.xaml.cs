@@ -254,7 +254,7 @@ namespace EQLogParser
       Dictionary<string, uint> uniqueSpellsMap, Dictionary<string, Dictionary<string, uint>> filteredPlayerMap, bool received, uint totalCasts)
     {
       var spellData = TheSpellCounts.UniqueSpells[id];
-      if ((CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.Beneficial) || (CurrentSpellType == 2 && !spellData.Beneficial)) 
+      if ((CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.Beneficial) || (CurrentSpellType == 2 && !spellData.Beneficial))
         && (!received || CurrentShowSelfOnly == true || spellData.LandsOnOther.Length > 0))
       {
         string name = spellData.SpellAbbrv;
@@ -369,14 +369,14 @@ namespace EQLogParser
         var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
 
         var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int) (realTableHeight + labelHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + labelHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
           var brush = new VisualBrush(titleLabel);
           ctx.DrawRectangle(brush, null, new Rect(new Point(4, margin / 2), new Size(titleLabel.ActualWidth, labelHeight)));
-  
+
           brush = new VisualBrush(dataGrid);
           ctx.DrawRectangle(brush, null, new Rect(new Point(0, labelHeight + margin), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight + SystemParameters.HorizontalScrollBarHeight)));
         }
@@ -387,7 +387,7 @@ namespace EQLogParser
         SpellRowsView.ToList().ForEach(spr => spr.IconColor = ICON_COLOR);
         dataGrid.Items.Refresh();
       }
-      catch(ExternalException ex)
+      catch (ExternalException ex)
       {
         LOG.Error("Could not Copy Image", ex);
       }
@@ -543,7 +543,7 @@ namespace EQLogParser
     }
 
 
-    private Tuple<List<string>,List<List<string>>> BuildExportData()
+    private Tuple<List<string>, List<List<string>>> BuildExportData()
     {
       List<string> header = new List<string>();
       List<List<string>> data = new List<List<string>>();

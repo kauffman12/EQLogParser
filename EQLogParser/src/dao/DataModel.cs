@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -144,8 +143,6 @@ namespace EQLogParser
   {
     public string Name { get; set; }
     public List<NonPlayer> Npcs { get; set; }
-    public bool IsPullerEnabled { get; set; }
-    public bool IsBaneEanbled { get; set; }
     public bool RequestChartData { get; set; }
     public bool RequestSummaryData { get; set; }
   }
@@ -154,7 +151,6 @@ namespace EQLogParser
   {
     public string Name { get; set; }
     public List<NonPlayer> Npcs { get; set; }
-    public bool IsAEHealingEanbled { get; set; }
     public bool RequestChartData { get; set; }
     public bool RequestSummaryData { get; set; }
   }
@@ -173,7 +169,6 @@ namespace EQLogParser
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }
     public bool IsBaneAvailable { get; set; }
-    public bool IsAEHealingAvailable { get; set; }
   }
 
   public class ChatLine : TimedAction
@@ -227,7 +222,7 @@ namespace EQLogParser
   public class Attempt : FullTimedAction
   {
     public uint Max { get; set; }
-    public uint BaneHits{ get; set; }
+    public uint BaneHits { get; set; }
     public uint Hits { get; set; }
     public uint Misses { get; set; }
     public uint CritHits { get; set; }
@@ -241,8 +236,8 @@ namespace EQLogParser
     public long Total { get; set; }
     public long TotalCrit { get; set; }
     public long TotalLucky { get; set; }
-    public Dictionary<long, int> CritFreqValues { get; set; }
-    public Dictionary<long, int> NonCritFreqValues { get; set; }
+    public Dictionary<long, int> CritFreqValues { get; } = new Dictionary<long, int>();
+    public Dictionary<long, int> NonCritFreqValues { get; } = new Dictionary<long, int>();
   }
 
   public class NonPlayer : FullTimedAction
@@ -251,7 +246,7 @@ namespace EQLogParser
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public int ID { get; set; }
-    public string CorrectMapKey {get; set;}
+    public string CorrectMapKey { get; set; }
     public int GroupID { get; set; }
   }
 
@@ -300,11 +295,11 @@ namespace EQLogParser
 
   public class SpellCountData
   {
-    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; set; }
-    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; set; }
-    public Dictionary<string, uint> MaxCastCounts { get; set; }
-    public Dictionary<string, uint> MaxReceivedCounts { get; set; }
-    public Dictionary<string, SpellData> UniqueSpells { get; set; }
+    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
+    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
+    public Dictionary<string, uint> MaxCastCounts { get; } = new Dictionary<string, uint>();
+    public Dictionary<string, uint> MaxReceivedCounts { get; } = new Dictionary<string, uint>();
+    public Dictionary<string, SpellData> UniqueSpells { get; } = new Dictionary<string, SpellData>();
   }
 
   public class SpellCountRow
@@ -360,10 +355,10 @@ namespace EQLogParser
   public class HitFreqChartData
   {
     public string HitType { get; set; }
-    public List<int> CritYValues { get; set; }
-    public List<long> CritXValues { get; set; }
-    public List<int> NonCritYValues { get; set; }
-    public List<long> NonCritXValues { get; set; }
+    public List<int> CritYValues { get; } = new List<int>();
+    public List<long> CritXValues { get; } = new List<long>();
+    public List<int> NonCritYValues { get; } = new List<int>();
+    public List<long> NonCritXValues { get; } = new List<long>();
   }
 
   public class StatsSummary

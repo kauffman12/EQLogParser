@@ -1,5 +1,4 @@
-﻿using System;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 
 namespace EQLogParser
@@ -33,7 +32,7 @@ namespace EQLogParser
 
     private void CloseOverlay_MouseClick(object sender, RoutedEventArgs e)
     {
-      (Application.Current.MainWindow as MainWindow).ResetOverlay();
+      (Current.MainWindow as MainWindow).ResetOverlay();
     }
 
     private void CloseDialog_MouseClick(object sender, RoutedEventArgs e)

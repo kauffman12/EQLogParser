@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -13,27 +12,14 @@ namespace EQLogParser
   /// </summary>
   public partial class HealingSummary : SummaryTable, IDisposable
   {
-    private bool Ready = false;
-
     public HealingSummary()
     {
       InitializeComponent();
       InitSummaryTable(title, dataGrid);
 
-      // AE healing
-      string value = DataManager.Instance.GetApplicationSetting("IncludeAEHealing");
-      includeAEHealing.IsChecked = value == null || bool.TryParse(value, out bool bValue) && bValue;
-
-      Ready = true;
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
     }
-
-    internal bool IsAEHealingEnabled()
-    {
-      return includeAEHealing.IsChecked.Value;
-    }
-
 
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
     {
@@ -62,7 +48,6 @@ namespace EQLogParser
             }
             else
             {
-              includeAEHealing.IsEnabled = e.IsAEHealingAvailable;
               title.Content = CurrentStats.FullTitle;
               dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
             }
@@ -80,7 +65,7 @@ namespace EQLogParser
       });
     }
 
-    protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    protected void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       FireSelectionChangedEvent(GetSelectedStats());
       UpdateDataGridMenuItems();
@@ -88,7 +73,7 @@ namespace EQLogParser
 
     protected override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected.Count > 0)
+      if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
         var healTable = new HealBreakdown(CurrentStats);
@@ -110,24 +95,8 @@ namespace EQLogParser
       }
       else
       {
-        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = 
+        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
           menuItemShowSpellCasts.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
-      }
-    }
-
-    private void IncludeAEHealingChanged(object sender, RoutedEventArgs e)
-    {
-      if (Ready)
-      {
-        bool isAEHealingEnabled = includeAEHealing.IsChecked.Value == true;
-        DataManager.Instance.SetApplicationSetting("IncludeAEHealing", isAEHealingEnabled.ToString());
-
-        if (CurrentStats != null && CurrentStats.RaidStats != null)
-        {
-          includeAEHealing.IsEnabled = false;
-          var options = new HealingStatsOptions() { IsAEHealingEanbled = isAEHealingEnabled, RequestChartData = true, RequestSummaryData = true };
-          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options));
-        }
       }
     }
 

@@ -183,7 +183,7 @@
                   <SolidColorBrush Color="#888" />
                 </Rectangle.Fill>
               </Rectangle>
-              <ContentPresenter x:Name="NormalText" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Margin="5,1,5,1">
+              <ContentPresenter x:Name="NormalText" HorizontalAlignment="{TemplateBinding HorizontalAlignment}" VerticalAlignment="{TemplateBinding VerticalAlignment}" Margin="5,1,5,1">
                 <TextElement.Foreground>
                   <SolidColorBrush Color="#ffffff" />
                 </TextElement.Foreground>

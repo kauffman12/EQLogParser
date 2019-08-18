@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -23,8 +21,6 @@ namespace EQLogParser
     // workaround for adjusting column withs of player datagrid
     private List<DataGrid> ChildGrids = new List<DataGrid>();
 
-    private bool Ready = false;
-
     public DamageSummary()
     {
       InitializeComponent();
@@ -36,39 +32,8 @@ namespace EQLogParser
         pd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
       }
 
-      // read bane and healing setting
-      string value = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
-      includeBane.IsChecked = value != null && bool.TryParse(value, out bool bValue) && bValue;
-
-      value = DataManager.Instance.GetApplicationSetting("IngoreInitialPullDamage");
-      pullerOption.IsChecked = value != null && bool.TryParse(value, out bool bValue2) && bValue2;
-
-      value = DataManager.Instance.GetApplicationSetting("IsDamageOverlayEnabled");
-      overlayOption.IsChecked = bool.TryParse(value, out bValue) && bValue;
-      if (overlayOption.IsChecked.Value)
-      {
-        (Application.Current.MainWindow as MainWindow)?.OpenOverlay();
-      }
-
-      Ready = true;
-
       DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
-    }
-
-    internal bool IsBaneEnabled()
-    {
-      return includeBane.IsChecked.Value;
-    }
-
-    internal bool IsPullerEnabled()
-    {
-      return pullerOption.IsChecked.Value;
-    }
-
-    internal bool IsOverlayEnabled()
-    {
-      return overlayOption.IsChecked.Value;
     }
 
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
@@ -83,7 +48,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        switch(e.State)
+        switch (e.State)
         {
           case "STARTED":
             (Application.Current.MainWindow as MainWindow).Busy(true);
@@ -100,7 +65,6 @@ namespace EQLogParser
             }
             else
             {
-              includeBane.IsEnabled = e.IsBaneAvailable;
               title.Content = CurrentStats.FullTitle;
               dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
             }
@@ -118,7 +82,7 @@ namespace EQLogParser
       });
     }
 
-    protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    protected void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       FireSelectionChangedEvent(GetSelectedStats());
       UpdateDataGridMenuItems();
@@ -126,7 +90,7 @@ namespace EQLogParser
 
     protected override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected.Count > 0)
+      if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
         var damageTable = new DamageBreakdown(CurrentStats);
@@ -141,7 +105,7 @@ namespace EQLogParser
       ChildGrids.ForEach(grid => grid.Columns[column.DisplayIndex].Width = column.ActualWidth);
     }
 
-    private void DataGridHitFreq_Click(object sender, RoutedEventArgs e)
+    private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid.SelectedItems.Count == 1)
       {
@@ -254,66 +218,16 @@ namespace EQLogParser
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        menuItemShowDamage.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
+        menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyDamageParseToEQClick.IsEnabled = true;
-        UpdateClassMenuItems(menuItemShowDamage, dataGrid, CurrentStats?.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
         UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
       }
       else
       {
-        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowDamage.IsEnabled =
+        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
           menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
-      }
-    }
-
-    private void IncludeBaneChanged(object sender, RoutedEventArgs e)
-    {
-      if (Ready)
-      {
-        bool isPullerEnabled = pullerOption.IsChecked.Value;
-        bool isBaneEnabled = includeBane.IsChecked.Value;
-        DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", isBaneEnabled.ToString(CultureInfo.CurrentCulture));
-
-        if (CurrentStats != null && CurrentStats.RaidStats != null)
-        {
-          includeBane.IsEnabled = false;
-          var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, IsPullerEnabled = isPullerEnabled, RequestChartData = true, RequestSummaryData = true };
-          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
-        }
-      }
-    }
-
-    private void PullerOptionChanged(object sender, RoutedEventArgs e)
-    {
-      if (Ready)
-      {
-        bool isBaneEnabled = includeBane.IsChecked.Value;
-        bool isPullerEnabled =  pullerOption.IsChecked.Value;
-        DataManager.Instance.SetApplicationSetting("IngoreInitialPullDamage", isPullerEnabled.ToString(CultureInfo.CurrentCulture));
-
-        if (CurrentStats != null && CurrentStats.RaidStats != null)
-        {
-          var options = new DamageStatsOptions() { IsBaneEanbled = isBaneEnabled, IsPullerEnabled = isPullerEnabled, RequestChartData = true, RequestSummaryData = true };
-          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
-        }
-      }
-    }
-
-    private void OverlayOptionChanged(object sender, RoutedEventArgs e)
-    {
-      if (Ready)
-      {
-        if (overlayOption.IsChecked.Value)
-        {
-          (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
-        }
-        else
-        {
-          (Application.Current.MainWindow as MainWindow)?.CloseOverlay();
-        }
-
-        DataManager.Instance.SetApplicationSetting("IsDamageOverlayEnabled", overlayOption.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
       }
     }
 

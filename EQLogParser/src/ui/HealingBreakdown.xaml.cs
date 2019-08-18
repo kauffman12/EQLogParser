@@ -16,7 +16,7 @@ namespace EQLogParser
   public partial class HealBreakdown : BreakdownTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static bool running = false;
+    private static bool Running = false;
     private bool CurrentShowSpellsChoice = true;
     List<PlayerStats> PlayerStats = null;
 
@@ -41,9 +41,9 @@ namespace EQLogParser
 
     private void Display()
     {
-      if (running == false)
+      if (Running == false)
       {
-        running = true;
+        Running = true;
         Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(true));
 
         Task.Delay(20).ContinueWith(task =>
@@ -77,20 +77,28 @@ namespace EQLogParser
               Dispatcher.InvokeAsync(() => CurrentColumn.SortDirection = CurrentSortDirection);
             }
           }
-          catch (Exception ex)
+          catch (ArgumentNullException ane)
           {
-            LOG.Error(ex);
+            LOG.Error(ane);
+          }
+          catch (NullReferenceException nre)
+          {
+            LOG.Error(nre);
+          }
+          catch (ArgumentOutOfRangeException aro)
+          {
+            LOG.Error(aro);
           }
           finally
           {
             Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(false));
-            running = false;
+            Running = false;
           }
         }, TaskScheduler.Default);
       }
     }
 
-    private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (PlayerStats != null)
       {

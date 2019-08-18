@@ -61,8 +61,8 @@ namespace EQLogParser
       // reverse regular tooltip
       //lvcChart.DataTooltip.Foreground = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
       //lvcChart.DataTooltip.Background = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
-      lvcChart.ChartLegend.Foreground = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
-      lvcChart.ChartLegend.Background = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
+      lvcChart.ChartLegend.Foreground = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
+      lvcChart.ChartLegend.Background = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
 
       CurrentConfig = CONFIG_VPS;
       choicesList.ItemsSource = choices;
@@ -78,7 +78,7 @@ namespace EQLogParser
 
     internal void HandleUpdateEvent(DataPointEvent e)
     {
-      switch(e.Action)
+      switch (e.Action)
       {
         case "CLEAR":
           Clear();
@@ -150,7 +150,7 @@ namespace EQLogParser
           aggregate.Total += dataPoint.Total;
           aggregate.RollingTotal += dataPoint.Total;
           aggregate.RollingHits += 1;
-          aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint) 1 : 0;
+          aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
           aggregate.BeginTime = firstTime;
           aggregate.CurrentTime = dataPoint.CurrentTime;
           lastTime = dataPoint.CurrentTime;
@@ -271,7 +271,7 @@ namespace EQLogParser
     private string GetLabelFormat(double value)
     {
       string dateTimeString;
-      DateTime dt = value > 0 ? new DateTime((long) (value * TimeSpan.FromSeconds(1).Ticks)) : new DateTime();
+      DateTime dt = value > 0 ? new DateTime((long)(value * TimeSpan.FromSeconds(1).Ticks)) : new DateTime();
       dateTimeString = dt.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
       return dateTimeString;
     }

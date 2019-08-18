@@ -5,23 +5,20 @@ namespace EQLogParser
 {
   public class DamageGroupCollection : RecordGroupCollection
   {
-    private bool ShowBane;
-
-    public DamageGroupCollection(List<List<ActionBlock>> recordGroups, bool showBane) : base(recordGroups)
+    public DamageGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
     {
-      ShowBane = showBane;
     }
 
     override protected bool IsValid(RecordWrapper wrapper)
     {
-      DamageRecord record = wrapper.Record as DamageRecord;
-      return DamageStatsManager.Instance.IsValidDamage(record) && (ShowBane || record.Type != Labels.BANE);
+      DamageRecord record = wrapper?.Record as DamageRecord;
+      return DamageStatsManager.Instance.IsValidDamage(record) && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled);
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
-      DamageRecord record = wrapper.Record as DamageRecord;
+      DamageRecord record = wrapper?.Record as DamageRecord;
 
       if (record != null)
       {
@@ -41,22 +38,20 @@ namespace EQLogParser
 
   public class HealGroupCollection : RecordGroupCollection
   {
-    private bool ShowAE;
-    public HealGroupCollection(List<List<ActionBlock>> recordGroups, bool showAE) : base(recordGroups)
+    public HealGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
     {
-      ShowAE = showAE;
     }
 
     override protected bool IsValid(RecordWrapper wrapper)
     {
-      HealRecord record = wrapper.Record as HealRecord;
-      return HealingStatsManager.Instance.IsValidHeal(record, ShowAE);
+      HealRecord record = wrapper?.Record as HealRecord;
+      return HealingStatsManager.Instance.IsValidHeal(record);
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
-      HealRecord record = wrapper.Record as HealRecord;
+      HealRecord record = wrapper?.Record as HealRecord;
 
       if (record != null)
       {
@@ -75,14 +70,14 @@ namespace EQLogParser
 
     override protected bool IsValid(RecordWrapper wrapper)
     {
-      DamageRecord record = wrapper.Record as DamageRecord;
+      DamageRecord record = wrapper?.Record as DamageRecord;
       return TankingStatsManager.Instance.IsValidDamage(record);
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
-      DamageRecord record = wrapper.Record as DamageRecord;
+      DamageRecord record = wrapper?.Record as DamageRecord;
 
       if (record != null)
       {

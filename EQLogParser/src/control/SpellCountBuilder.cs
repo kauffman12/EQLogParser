@@ -10,12 +10,7 @@ namespace EQLogParser
 
     internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
-      Dictionary<string, Dictionary<string, uint>> playerCastCounts = new Dictionary<string, Dictionary<string, uint>>();
-      Dictionary<string, Dictionary<string, uint>> playerReceivedCounts = new Dictionary<string, Dictionary<string, uint>>();
-      Dictionary<string, uint> maxCastCounts = new Dictionary<string, uint>();
-      Dictionary<string, uint> maxReceivedCounts = new Dictionary<string, uint>();
-      Dictionary<string, SpellData> spellMap = new Dictionary<string, SpellData>();
-
+      var result = new SpellCountData();
       var offsets = GetOffsetTimes(raidStats);
       var begins = offsets.Item1;
       var lasts = offsets.Item2;
@@ -36,24 +31,17 @@ namespace EQLogParser
         var spellData = DataManager.Instance.GetSpellByAbbrv(Helpers.AbbreviateSpellName(cast.Spell));
         if (spellData != null)
         {
-          UpdateMaps(spellData, cast.Caster, playerCastCounts, maxCastCounts, spellMap);
+          UpdateMaps(spellData, cast.Caster, result.PlayerCastCounts, result.MaxCastCounts, result.UniqueSpells);
         }
       }
 
       foreach (var action in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell).Receiver)))
       {
         ReceivedSpell received = action as ReceivedSpell;
-        UpdateMaps(received.SpellData, received.Receiver, playerReceivedCounts, maxReceivedCounts, spellMap);
+        UpdateMaps(received.SpellData, received.Receiver, result.PlayerReceivedCounts, result.MaxReceivedCounts, result.UniqueSpells);
       }
 
-      return new SpellCountData
-      {
-        PlayerCastCounts = playerCastCounts,
-        PlayerReceivedCounts = playerReceivedCounts,
-        MaxCastCounts = maxCastCounts,
-        MaxReceivedCounts = maxReceivedCounts,
-        UniqueSpells = spellMap
-      };
+      return result;
     }
 
     internal static List<string> GetPlayersCastingDuring(PlayerStats raidStats)

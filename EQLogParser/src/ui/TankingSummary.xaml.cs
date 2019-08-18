@@ -17,10 +17,11 @@ namespace EQLogParser
       InitSummaryTable(title, dataGrid);
 
       TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
     }
 
-    protected void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    protected void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       FireSelectionChangedEvent(GetSelectedStats());
       UpdateDataGridMenuItems();
@@ -28,7 +29,7 @@ namespace EQLogParser
 
     protected override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected.Count > 0)
+      if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
         var tankingTable = new TankingBreakdown(CurrentStats);
@@ -39,7 +40,7 @@ namespace EQLogParser
 
     protected override void ShowBreakdown2(List<PlayerStats> selected)
     {
-      if (selected.Count > 0)
+      if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
         var receivedHealingTable = new ReceivedHealingBreakdown(CurrentStats);
@@ -62,33 +63,48 @@ namespace EQLogParser
         switch (e.State)
         {
           case "STARTED":
-            (Application.Current.MainWindow as MainWindow).Busy(true);
-            title.Content = "Calculating Tanking DPS...";
-            dataGrid.ItemsSource = null;
+            if (e.Type == Labels.TANKPARSE)
+            {
+              (Application.Current.MainWindow as MainWindow).Busy(true);
+              title.Content = "Calculating Tanking DPS...";
+              dataGrid.ItemsSource = null;
+            }
             break;
           case "COMPLETED":
-            CurrentStats = e.CombinedStats as CombinedStats;
-
-            if (CurrentStats == null)
+            if (e.Type == Labels.TANKPARSE)
             {
-              title.Content = NODATA_TABLE_LABEL;
-            }
-            else
-            {
-              title.Content = CurrentStats.FullTitle;
+              CurrentStats = e.CombinedStats as CombinedStats;
 
-              HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
-              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
-            }
+              if (CurrentStats == null)
+              {
+                title.Content = NODATA_TABLE_LABEL;
+              }
+              else
+              {
+                title.Content = CurrentStats.FullTitle;
+                HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
+                dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
+              }
 
             (Application.Current.MainWindow as MainWindow).Busy(false);
-            UpdateDataGridMenuItems();
+              UpdateDataGridMenuItems();
+            }
+            else if (e.Type == Labels.HEALPARSE)
+            {
+              (Application.Current.MainWindow as MainWindow).Busy(true);
+              HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
+              dataGrid.Items?.Refresh();
+              (Application.Current.MainWindow as MainWindow).Busy(false);
+            }
             break;
           case "NONPC":
-            CurrentStats = null;
-            title.Content = DEFAULT_TABLE_LABEL;
-            (Application.Current.MainWindow as MainWindow).Busy(false);
-            UpdateDataGridMenuItems();
+            if (e.Type == Labels.TANKPARSE)
+            {
+              CurrentStats = null;
+              title.Content = DEFAULT_TABLE_LABEL;
+              (Application.Current.MainWindow as MainWindow).Busy(false);
+              UpdateDataGridMenuItems();
+            }
             break;
         }
       });
@@ -100,15 +116,15 @@ namespace EQLogParser
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        menuItemShowReceivedHealing.IsEnabled = menuItemShowTanking.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
+        menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         copyTankingParseToEQClick.IsEnabled = true;
-        UpdateClassMenuItems(menuItemShowReceivedHealing, dataGrid, CurrentStats?.UniqueClasses);
-        UpdateClassMenuItems(menuItemShowTanking, dataGrid, CurrentStats?.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowHealingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
+        UpdateClassMenuItems(menuItemShowTankingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
         UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
       }
       else
       {
-        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowReceivedHealing.IsEnabled = menuItemShowTanking.IsEnabled =
+        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
            menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled = false;
       }
     }
@@ -125,8 +141,9 @@ namespace EQLogParser
           // TODO: dispose managed state (managed objects).
         }
 
-        TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
+        TankingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
+        HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
+        DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
         disposedValue = true;
       }
     }
@@ -137,7 +154,7 @@ namespace EQLogParser
       // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
       Dispose(true);
       // TODO: uncomment the following line if the finalizer is overridden above.
-      // GC.SuppressFinalize(this);
+      GC.SuppressFinalize(this);
     }
     #endregion
   }

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace EQLogParser
 {
@@ -13,24 +14,30 @@ namespace EQLogParser
   public partial class ReceivedHealingBreakdown : BreakdownTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     private static bool Running = false;
+    private bool CurrentShowSpellsChoice = true;
+    List<PlayerStats> PlayerStats = null;
+
+    private List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healer" };
 
     public ReceivedHealingBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
       titleLabel.Content = currentStats.ShortTitle;
+      choicesList.ItemsSource = ChoicesList;
+      choicesList.SelectedIndex = 0;
     }
 
     public void Show(List<PlayerStats> selectedStats)
     {
       if (selectedStats != null)
       {
-        Display(selectedStats);
+        PlayerStats = selectedStats;
+        Display();
       }
     }
 
-    private new void Display(List<PlayerStats> selectedStats = null)
+    private new void Display()
     {
       if (Running == false)
       {
@@ -44,10 +51,10 @@ namespace EQLogParser
             ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
 
             // initial load
-            if (selectedStats != null)
+            if (PlayerStats != null)
             {
               List<PlayerStats> receivedHealing = new List<PlayerStats>();
-              selectedStats.ForEach(selected =>
+              PlayerStats.ForEach(selected =>
               {
                 if (selected.SubStats2 != null)
                 {
@@ -60,7 +67,16 @@ namespace EQLogParser
                 Dispatcher.InvokeAsync(() =>
                 {
                   list.Add(playerStat);
-                  SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
+
+                  // Spells are kept under SubStats2 and Healers under SubStats1. Both are children in the parent's SubStats2 as the 'receivedHealing' attribute
+                  if (CurrentShowSpellsChoice)
+                  {
+                    SortSubStats(playerStat.SubStats2.Values.ToList()).ForEach(subStat => list.Add(subStat));
+                  }
+                  else
+                  {
+                    SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
+                  }
                 });
               }
 
@@ -90,6 +106,15 @@ namespace EQLogParser
             Running = false;
           }
         }, TaskScheduler.Default);
+      }
+    }
+
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (PlayerStats != null)
+      {
+        CurrentShowSpellsChoice = choicesList.SelectedIndex == 0;
+        Display();
       }
     }
   }
