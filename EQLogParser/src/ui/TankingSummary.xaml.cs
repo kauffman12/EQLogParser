@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -83,7 +85,11 @@ namespace EQLogParser
               {
                 title.Content = CurrentStats.FullTitle;
                 HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
-                dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
+
+                var view = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
+                SetFilter(view);
+
+                dataGrid.ItemsSource = view;
               }
 
             (Application.Current.MainWindow as MainWindow).Busy(false);
@@ -127,6 +133,23 @@ namespace EQLogParser
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
            menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled = false;
       }
+    }
+
+    private void SetFilter(ICollectionView view)
+    {
+      if (view != null)
+      {
+        view.Filter = stats => showPets.IsChecked.Value || DataManager.Instance.CheckNameForPet(((PlayerStats)stats).Name) == false;
+
+        // chart event
+        Predicate<object> chartFilter = dataPoint => showPets.IsChecked.Value || DataManager.Instance.CheckNameForPet(((DataPoint)dataPoint).Name) == false;
+        TankingStatsManager.Instance.FireFilterEvent(new TankingStatsOptions() { RequestChartData = true }, chartFilter);
+      }
+    }
+
+    private void OptionsChanged(object sender, RoutedEventArgs e)
+    {
+      SetFilter(dataGrid?.ItemsSource as ICollectionView);
     }
 
     #region IDisposable Support

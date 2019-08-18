@@ -48,6 +48,7 @@ namespace EQLogParser
     Dictionary<string, ChartValues<DataPoint>> ChartValues = null;
     private CartesianMapper<DataPoint> CurrentConfig;
     private List<PlayerStats> LastSelected = null;
+    private Predicate<object> LastFilter = null;
     private List<ChartValues<DataPoint>> LastSortedValues = null;
 
     public LineChart(List<string> choices)
@@ -89,6 +90,9 @@ namespace EQLogParser
           break;
         case "SELECT":
           Plot(e.Selected);
+          break;
+        case "FILTER":
+          Plot(e.Filter);
           break;
       }
     }
@@ -171,15 +175,16 @@ namespace EQLogParser
       });
     }
 
-    private void Plot(Dictionary<string, ChartValues<DataPoint>> theValues, DateTime requestTime, List<PlayerStats> selected = null)
+    private void Plot(Dictionary<string, ChartValues<DataPoint>> theValues, DateTime requestTime, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
+      LastFilter = filter;
       LastSelected = selected;
 
       string label;
       List<ChartValues<DataPoint>> sortedValues;
       if (selected == null || selected.Count == 0)
       {
-        sortedValues = theValues.Values.OrderByDescending(values => values.Last().Total).Take(5).ToList();
+        sortedValues = theValues.Values.Where(values => filter == null || filter(values.First())).OrderByDescending(values => values.Last().Total).Take(5).ToList();
         label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : Labels.NODATA;
       }
       else
@@ -251,6 +256,18 @@ namespace EQLogParser
       });
     }
 
+    private void Plot(Predicate<object> filter)
+    {
+      if (ChartValues != null)
+      {
+        Plot(ChartValues, DateTime.Now, LastSelected, filter);
+      }
+      else
+      {
+        Reset();
+      }
+    }
+
     private void Plot(List<PlayerStats> selected)
     {
       if (ChartValues != null)
@@ -259,7 +276,7 @@ namespace EQLogParser
         // when toggling bane and selection is lost
         if (!(selected.Count == 0 && LastSelected == null))
         {
-          Plot(ChartValues, DateTime.Now, selected);
+          Plot(ChartValues, DateTime.Now, selected, LastFilter);
         }
       }
       else
@@ -310,21 +327,21 @@ namespace EQLogParser
       }
     }
 
-    private void Chart_DoubleClick(object sender, MouseButtonEventArgs e)
+    private void ChartDoubleClick(object sender, MouseButtonEventArgs e)
     {
       Helpers.ChartResetView(lvcChart);
     }
 
-    private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (ChartValues != null)
       {
         CurrentConfig = CHOICES[choicesList.SelectedIndex];
-        Plot(ChartValues, DateTime.Now, LastSelected);
+        Plot(ChartValues, DateTime.Now, LastSelected, LastFilter);
       }
     }
 
-    private void SaveCSV_Click(object sender, RoutedEventArgs e)
+    private void SaveCSVClick(object sender, RoutedEventArgs e)
     {
       if (LastSortedValues != null)
       {
@@ -333,7 +350,7 @@ namespace EQLogParser
           StringBuilder sb = new StringBuilder();
           sb.Append("Seconds,").Append(choicesList.SelectedValue as string).Append(",Name").AppendLine();
 
-          LastSortedValues.ForEach(sortedValue =>
+          LastSortedValues.Where(values => LastFilter == null || LastFilter(values.First())).ToList().ForEach(sortedValue =>
           {
             foreach (var chartData in sortedValue)
             {
