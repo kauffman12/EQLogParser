@@ -191,11 +191,6 @@
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="damageOptionsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Gavel" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="enableDamageOverlay" Header="Enable _Overlay" Click="ToggleDamageOverlayClick" Height="20">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
           <MenuItem x:Name="enableBaneDamage" Header="Include _Bane Damage" Click="ToggleBaneDamageClick" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableBaneDamageIcon" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
@@ -221,6 +216,11 @@
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="overlayOptionsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="List" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
+          <MenuItem x:Name="enableDamageOverlay" Header="Enable _Damage Overlay" Click="ToggleDamageOverlayClick" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <MenuItem x:Name="enableHideOverlayOtherPlayers" Header="_Hide Other Names" Click="ToggleHideOverlayOtherPlayersClick" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableHideOverlayOtherPlayersIcon" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
