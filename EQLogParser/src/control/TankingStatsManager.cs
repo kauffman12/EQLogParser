@@ -95,6 +95,16 @@ namespace EQLogParser
       ComputeTankingStats(options);
     }
 
+    internal void FireFilterEvent(TankingStatsOptions options, Predicate<object> filter)
+    {
+      if (options.RequestChartData)
+      {
+        // send update
+        DataPointEvent de = new DataPointEvent() { Action = "FILTER", Filter = filter };
+        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
+      }
+    }
+
     internal void FireSelectionEvent(TankingStatsOptions options, List<PlayerStats> selected)
     {
       if (options.RequestChartData)
@@ -262,7 +272,7 @@ namespace EQLogParser
 
       if (currentStats != null)
       {
-        if (selected != null)
+        if (selected?.Count > 0)
         {
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {

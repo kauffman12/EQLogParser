@@ -45,7 +45,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.30";
+    private const string VERSION = "v1.5.31";
     private const string SHARE_DPS_LABEL = "No Players Selected";
     private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
 
@@ -526,7 +526,10 @@ namespace EQLogParser
       }
       else
       {
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var damageSummary = new DamageSummary();
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
         damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
         DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
@@ -556,7 +559,10 @@ namespace EQLogParser
       }
       else
       {
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var healingSummary = new HealingSummary();
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
         healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
         HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         IconToWindow[healingSummaryIcon.Name] = HealingWindow;
@@ -586,7 +592,10 @@ namespace EQLogParser
       }
       else
       {
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var tankingSummary = new TankingSummary();
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
         tankingSummary.EventsSelectionChange += TankingSummary_SelectionChanged;
         TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
         IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
@@ -775,7 +784,12 @@ namespace EQLogParser
 
     private void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
     {
-      Parses[type] = new ParseData() { Builder = builder, CombinedStats = combined, Selected = selected };
+      Parses[type] = new ParseData() { Builder = builder, CombinedStats = combined };
+
+      if (selected != null)
+      {
+        Parses[type].Selected.AddRange(selected);
+      }
 
       if (!AvailableParses.Contains(type))
       {
@@ -789,7 +803,12 @@ namespace EQLogParser
     {
       if (Parses.ContainsKey(type))
       {
-        Parses[type].Selected = selected;
+        Parses[type].Selected.Clear();
+        if (selected != null)
+        {
+          Parses[type].Selected.AddRange(selected);
+        }
+
         TriggerParseUpdate(type);
       }
     }
@@ -818,9 +837,8 @@ namespace EQLogParser
     {
       if (Parses.ContainsKey(type))
       {
-        var selected = Parses[type].Selected;
         var combined = Parses[type].CombinedStats;
-        var summary = Parses[type].Builder?.BuildSummary(combined, selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
+        var summary = Parses[type].Builder?.BuildSummary(combined, Parses[type].Selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
         playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
         playerParseTextBox.SelectAll();
       }
@@ -1021,6 +1039,7 @@ namespace EQLogParser
 
     private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e)
     {
+      // This is where closing summary tables and line charts will get disposed
       (e.Window.Content as IDisposable)?.Dispose();
     }
 

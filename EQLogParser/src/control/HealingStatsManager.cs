@@ -366,7 +366,7 @@ namespace EQLogParser
 
       if (currentStats != null)
       {
-        if (selected != null)
+        if (selected?.Count > 0)
         {
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {
