@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -66,7 +67,7 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
+              dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
             }
 
             (Application.Current.MainWindow as MainWindow).Busy(false);

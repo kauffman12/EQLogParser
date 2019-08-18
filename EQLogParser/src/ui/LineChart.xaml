@@ -15,10 +15,10 @@
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,0,0" x:Name="choicesList" Height="24" MinWidth="60" SelectionChanged="List_SelectionChanged" />
-      <Button Margin="0,0,8,0" Padding="4,0,4,0" Height="24" Click="SaveCSV_Click" Content="Save CSV"/>
+      <ComboBox Margin="0,0,0,0" x:Name="choicesList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
+      <Button Margin="0,0,8,0" Padding="4,0,4,0" Height="24" Click="SaveCSVClick" Content="Save CSV"/>
     </StackPanel>
-    <lvc:CartesianChart x:Name="lvcChart" Grid.Row="1" Zoom="X" Pan="X" LegendLocation="Right" MouseDoubleClick="Chart_DoubleClick">
+    <lvc:CartesianChart x:Name="lvcChart" Grid.Row="1" Zoom="X" Pan="X" LegendLocation="Right" MouseDoubleClick="ChartDoubleClick">
       <lvc:CartesianChart.AxisY>
         <lvc:Axis MinValue="0"></lvc:Axis>
       </lvc:CartesianChart.AxisY>
