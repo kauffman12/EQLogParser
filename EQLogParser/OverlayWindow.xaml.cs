@@ -145,6 +145,7 @@ namespace EQLogParser
 
     private void LoadTestData()
     {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
       TitleBlock.Text = "Example NPC Name That is Kinda Long";
       TitleDamageBlock.Text = "[3s @250K] 250M";
 
@@ -155,6 +156,7 @@ namespace EQLogParser
         DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
         DamageRateList[i].Opacity = DATA_OPACITY;
       }
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
     }
 
     private void DamageLineParser_EventsDamageProcessed(object sender, DamageProcessedEvent e)
@@ -210,7 +212,8 @@ namespace EQLogParser
                 RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
               }
 
-              var isMe = list[i].Name == DataManager.Instance.PlayerName;
+              var isMe = list[i].Name.StartsWith(DataManager.Instance.PlayerName, StringComparison.OrdinalIgnoreCase) &&
+                (DataManager.Instance.PlayerName.Length >= list[i].Name.Length || list[i].Name[DataManager.Instance.PlayerName.Length] == ' ');
               if (MainWindow.IsHideOverlayOtherPlayersEnabled && !isMe)
               {
                 NameBlockList[i].Text = list[i].Rank + ". " + "Hidden Player";
@@ -578,12 +581,8 @@ namespace EQLogParser
 
     private static ImageAwesome CreateImageAwesome()
     {
-      var image = new ImageAwesome();
-      image.Margin = new Thickness(0, 0, 2, 8);
+      var image = new ImageAwesome { Margin = new Thickness(0, 0, 2, 8), Opacity = 0.0, Foreground = UP_BRUSH, Icon = FontAwesomeIcon.None };
       image.SetValue(Panel.ZIndexProperty, 3);
-      image.Opacity = 0.0;
-      image.Foreground = UP_BRUSH;
-      image.Icon = FontAwesomeIcon.None;
       return image;
     }
 

@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -12,10 +14,17 @@ namespace EQLogParser
   /// </summary>
   public partial class HealingSummary : SummaryTable, IDisposable
   {
+    private string CurrentClass = null;
+
     public HealingSummary()
     {
       InitializeComponent();
       InitSummaryTable(title, dataGrid);
+
+      var list = DataManager.Instance.GetClassList();
+      list.Insert(0, "All Classes");
+      classesList.ItemsSource = list;
+      classesList.SelectedIndex = 0;
 
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
@@ -49,7 +58,8 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              dataGrid.ItemsSource = new ObservableCollection<PlayerStats>(CurrentStats.StatsList);
+              var view = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
+              dataGrid.ItemsSource = SetFilter(view);
             }
 
             (Application.Current.MainWindow as MainWindow).Busy(false);
@@ -98,6 +108,37 @@ namespace EQLogParser
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
           menuItemShowSpellCasts.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
       }
+    }
+
+    private ICollectionView SetFilter(ICollectionView view)
+    {
+      if (view != null)
+      {
+        view.Filter = (stats) =>
+        {
+          string className = null;
+          if (stats is PlayerStats playerStats)
+          {
+            className = playerStats.ClassName;
+          }
+          else if (stats is DataPoint dataPoint)
+          {
+            className = DataManager.Instance.GetPlayerClass(dataPoint.Name);
+          }
+
+          return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
+        };
+
+        HealingStatsManager.Instance.FireFilterEvent(new HealingStatsOptions() { RequestChartData = true }, view.Filter);
+      }
+
+      return view;
+    }
+
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
+      SetFilter(dataGrid?.ItemsSource as ICollectionView);
     }
 
     #region IDisposable Support

@@ -481,15 +481,9 @@ namespace EQLogParser
     {
       if (OpenChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
       {
-        List<PlayerStats> selected = null;
-
-        if (DamageWindow?.Content is DamageSummary summary)
-        {
-          selected = summary.GetSelectedStats();
-        }
-
+        var summary = DamageWindow?.Content as DamageSummary;
         var options = new DamageStatsOptions() { RequestChartData = true };
-        DamageStatsManager.Instance.FireUpdateEvent(options, selected);
+        DamageStatsManager.Instance.FireUpdateEvent(options, summary.GetSelectedStats(), summary.GetFilter());
       }
     }
 
@@ -497,14 +491,9 @@ namespace EQLogParser
     {
       if (OpenChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
       {
-        List<PlayerStats> selected = null;
-        if (HealingWindow?.Content is HealingSummary summary)
-        {
-          selected = summary.GetSelectedStats();
-        }
-
+        var summary = HealingWindow?.Content as HealingSummary;
         var options = new HealingStatsOptions() { RequestChartData = true };
-        HealingStatsManager.Instance.FireUpdateEvent(options, selected);
+        HealingStatsManager.Instance.FireUpdateEvent(options, summary?.GetSelectedStats(), summary?.GetFilter());
       }
     }
 
@@ -512,9 +501,9 @@ namespace EQLogParser
     {
       if (OpenChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, out TankingChartWindow))
       {
-        List<PlayerStats> selected = (TankingWindow?.Content is TankingSummary summary) ? summary.GetSelectedStats() : null;
+        var summary = TankingWindow?.Content as TankingSummary; 
         var options = new TankingStatsOptions() { RequestChartData = true };
-        TankingStatsManager.Instance.FireUpdateEvent(options, selected);
+        TankingStatsManager.Instance.FireUpdateEvent(options, summary.GetSelectedStats(), summary.GetFilter());
       }
     }
 
@@ -625,7 +614,10 @@ namespace EQLogParser
       }
       else
       {
+#pragma warning disable CA2000 // Dispose objects before losing scope
         ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat Search", null, new ChatViewer());
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
         IconToWindow[chatIcon.Name] = ChatWindow;
         Helpers.OpenWindow(ChatWindow);
       }

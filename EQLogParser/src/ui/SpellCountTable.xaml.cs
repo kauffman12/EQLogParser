@@ -191,11 +191,11 @@ namespace EQLogParser
                 var row = (SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new SpellCountRow();
 
                 row.Spell = spell;
-                row.Values = new double[sortedPlayers.Count + 1];
                 row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
                 row.IconColor = ICON_COLOR;
 
                 int i;
+                double[] values = new double[sortedPlayers.Count + 1];
                 for (i = 0; i < sortedPlayers.Count; i++)
                 {
                   if (filteredPlayerMap.ContainsKey(sortedPlayers[i]))
@@ -204,21 +204,22 @@ namespace EQLogParser
                     {
                       if (CurrentCountType == 0)
                       {
-                        row.Values[i] = filteredPlayerMap[sortedPlayers[i]][spell];
+                        values[i] = filteredPlayerMap[sortedPlayers[i]][spell];
                       }
                       else
                       {
-                        row.Values[i] = Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2);
+                        values[i] = Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2);
                       }
                     }
                     else
                     {
-                      row.Values[i] = CurrentCountType == 0 ? 0 : 0.0;
+                      values[i] = CurrentCountType == 0 ? 0 : 0.0;
                     }
                   }
                 }
 
-                row.Values[i] = CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
+                values[i] = CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
+                row.Values.AddRange(values);
 
                 if ((SpellRowsView.Count <= existingIndex))
                 {
@@ -316,12 +317,12 @@ namespace EQLogParser
 
     private void SelectAllClick(object sender, RoutedEventArgs e)
     {
-      Helpers.DataGridSelectAll(sender);
+      Helpers.DataGridSelectAll(sender as FrameworkElement);
     }
 
     private void UnselectAllClick(object sender, RoutedEventArgs e)
     {
-      Helpers.DataGridUnselectAll(sender);
+      Helpers.DataGridUnselectAll(sender as FrameworkElement);
     }
 
     private void SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -507,7 +508,9 @@ namespace EQLogParser
     {
       try
       {
-        var data = new SpellCountsSerialized { PlayerNames = PlayerList, TheSpellData = TheSpellCounts };
+        var data = new SpellCountsSerialized { TheSpellData = TheSpellCounts };
+        data.PlayerNames.AddRange(PlayerList);
+
         var result = JsonConvert.SerializeObject(data);
         SaveFileDialog saveFileDialog = new SaveFileDialog();
         string filter = "Spell Count File (*.scf.gz)|*.scf.gz";
@@ -558,11 +561,7 @@ namespace EQLogParser
       {
         var counts = item as SpellCountRow;
         List<string> row = new List<string> { counts.Spell };
-        foreach (var value in counts.Values)
-        {
-          row.Add(value.ToString(CultureInfo.CurrentCulture));
-        }
-
+        counts.Values.ForEach(value => row.Add(value.ToString(CultureInfo.CurrentCulture)));
         data.Add(row);
       }
 
