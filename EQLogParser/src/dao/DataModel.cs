@@ -136,7 +136,7 @@ namespace EQLogParser
   {
     public string Action { get; set; }
     public RecordGroupCollection Iterator { get; set; }
-    public List<PlayerStats> Selected { get; set; }
+    public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
     public Predicate<object> Filter { get; set; }
   }
 
@@ -306,14 +306,14 @@ namespace EQLogParser
   public class SpellCountRow
   {
     public string Spell { get; set; }
-    public double[] Values { get; set; }
+    public List<double> Values { get; } = new List<double>();
     public bool IsReceived { get; set; }
     public string IconColor { get; set; }
   }
 
   public class SpellCountsSerialized
   {
-    public List<string> PlayerNames { get; set; }
+    public List<string> PlayerNames { get; } = new List<string>();
     public SpellCountData TheSpellData { get; set; }
   }
 
@@ -341,6 +341,7 @@ namespace EQLogParser
   public class DataPoint
   {
     public long Avg { get; set; }
+    public string ClassName { get; set; }
     public string Name { get; set; }
     public int ModifiersMask { get; set; }
     public long Total { get; set; }
@@ -394,15 +395,15 @@ namespace EQLogParser
     public double PercentOfRaid { get; set; }
     public uint Deaths { get; set; }
     public string ClassName { get; set; }
-    public List<double> BeginTimes { get; set; }
-    public List<double> LastTimes { get; set; }
-    public List<double> TimeDiffs { get; set; }
+    public List<double> BeginTimes { get; } = new List<double>();
+    public List<double> LastTimes { get; } = new List<double>();
+    public List<double> TimeDiffs { get; } = new List<double>();
   }
 
   public class PlayerStats : PlayerSubStats
   {
-    public Dictionary<string, PlayerSubStats> SubStats { get; set; }
-    public Dictionary<string, PlayerSubStats> SubStats2 { get; set; }
+    public Dictionary<string, PlayerSubStats> SubStats { get; } = new Dictionary<string, PlayerSubStats>();
+    public Dictionary<string, PlayerSubStats> SubStats2 { get; } = new Dictionary<string, PlayerSubStats>();
     public string OrigName { get; set; }
   }
 }

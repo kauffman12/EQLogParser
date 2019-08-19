@@ -21,6 +21,7 @@ namespace EQLogParser
 
     // workaround for adjusting column withs of player datagrid
     private List<DataGrid> ChildGrids = new List<DataGrid>();
+    private string CurrentClass = null;
 
     public DamageSummary()
     {
@@ -32,6 +33,11 @@ namespace EQLogParser
       {
         pd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
       }
+
+      var list = DataManager.Instance.GetClassList();
+      list.Insert(0, "All Classes");
+      classesList.ItemsSource = list;
+      classesList.SelectedIndex = 0;
 
       DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
@@ -67,7 +73,8 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
+              var view = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
+              dataGrid.ItemsSource = SetFilter(view);
             }
 
             (Application.Current.MainWindow as MainWindow).Busy(false);
@@ -230,6 +237,37 @@ namespace EQLogParser
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
           menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
       }
+    }
+
+    private ICollectionView SetFilter(ICollectionView view)
+    {
+      if (view != null)
+      {
+        view.Filter = (stats) =>
+        {
+          string className = null;
+          if (stats is PlayerStats playerStats)
+          {
+            className = playerStats.ClassName;
+          }
+          else if (stats is DataPoint dataPoint)
+          {
+            className = DataManager.Instance.GetPlayerClass(dataPoint.Name);
+          }
+
+          return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
+        };
+
+        DamageStatsManager.Instance.FireFilterEvent(new DamageStatsOptions() { RequestChartData = true }, view.Filter);
+      }
+
+      return view;
+    }
+
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
+      SetFilter(dataGrid?.ItemsSource as ICollectionView);
     }
 
     #region IDisposable Support

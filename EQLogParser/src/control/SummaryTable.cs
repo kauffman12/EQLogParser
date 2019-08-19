@@ -27,7 +27,7 @@ namespace EQLogParser
       dataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
     }
 
-    internal void UpdateClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
+    internal static void UpdateClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
     {
       foreach (var item in menu.Items)
       {
@@ -42,6 +42,11 @@ namespace EQLogParser
       TheDataGrid.ItemsSource = null;
     }
 
+    internal Predicate<object> GetFilter()
+    {
+      return (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
+    }
+
     internal List<PlayerStats> GetSelectedStats()
     {
       return TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
@@ -54,12 +59,12 @@ namespace EQLogParser
 
     protected void DataGridSelectAllClick(object sender, RoutedEventArgs e)
     {
-      Helpers.DataGridSelectAll(sender);
+      Helpers.DataGridSelectAll(sender as FrameworkElement);
     }
 
     protected void DataGridUnselectAllClick(object sender, RoutedEventArgs e)
     {
-      Helpers.DataGridUnselectAll(sender);
+      Helpers.DataGridUnselectAll(sender as FrameworkElement);
     }
 
     protected void DataGridShowBreakdownClick(object sender, RoutedEventArgs e)

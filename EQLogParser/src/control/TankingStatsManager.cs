@@ -97,32 +97,17 @@ namespace EQLogParser
 
     internal void FireFilterEvent(TankingStatsOptions options, Predicate<object> filter)
     {
-      if (options.RequestChartData)
-      {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = "FILTER", Filter = filter };
-        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
-      }
+      FireChartEvent(options, "FILTER", null, filter);
     }
 
     internal void FireSelectionEvent(TankingStatsOptions options, List<PlayerStats> selected)
     {
-      if (options.RequestChartData)
-      {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
-        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
-      }
+      FireChartEvent(options, "SELECT", selected);
     }
 
-    internal void FireUpdateEvent(TankingStatsOptions options, List<PlayerStats> selected = null)
+    internal void FireUpdateEvent(TankingStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      if (options.RequestChartData)
-      {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new TankGroupCollection(TankingGroups) };
-        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
-      }
+      FireChartEvent(options, "UPDATE", selected, filter);
     }
 
     private void FireCompletedEvent(TankingStatsOptions options, CombinedStats combined)
@@ -156,10 +141,21 @@ namespace EQLogParser
         EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.TANKPARSE, State = "NONPC" });
       }
 
+      FireChartEvent(options, "CLEAR");
+    }
+
+    private void FireChartEvent(TankingStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    {
       if (options.RequestChartData)
       {
         // send update
-        DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
+        DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups), Filter = filter };
+
+        if (selected != null)
+        {
+          de.Selected.AddRange(selected);
+        }
+
         EventsUpdateDataPoint?.Invoke(TankingGroups, de);
       }
     }

@@ -86,7 +86,7 @@ namespace EQLogParser
           break;
         case "UPDATE":
           Clear();
-          AddDataPoints(e.Iterator, e.Selected);
+          AddDataPoints(e.Iterator, e.Selected, e.Filter);
           break;
         case "SELECT":
           Plot(e.Selected);
@@ -109,7 +109,7 @@ namespace EQLogParser
       }, TaskScheduler.Default);
     }
 
-    private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null)
+    private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       DateTime newTaskTime = DateTime.Now;
 
@@ -171,7 +171,7 @@ namespace EQLogParser
         }
 
         UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
-        Plot(theValues, newTaskTime, selected);
+        Plot(theValues, newTaskTime, selected, filter);
       });
     }
 

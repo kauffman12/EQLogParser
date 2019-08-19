@@ -133,12 +133,12 @@ namespace EQLogParser
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
     {
-      Helpers.DataGridSelectAll(sender);
+      Helpers.DataGridSelectAll(sender as FrameworkElement);
     }
 
     private void UnselectAll_Click(object sender, RoutedEventArgs e)
     {
-      Helpers.DataGridUnselectAll(sender);
+      Helpers.DataGridUnselectAll(sender as FrameworkElement);
     }
 
     private void SetPet_Click(object sender, RoutedEventArgs e)
