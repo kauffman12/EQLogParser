@@ -532,20 +532,11 @@ namespace EQLogParser
       }
     }
 
-    private void ToFilter_GotFocus(object sender, RoutedEventArgs e)
-    {
-      Filter_GotFocus(toFilter, TO_FILTER_DEFAULT);
-    }
+    private void ToFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(toFilter, TO_FILTER_DEFAULT);
 
-    private void FromFilter_GotFocus(object sender, RoutedEventArgs e)
-    {
-      Filter_GotFocus(fromFilter, FROM_FILTER_DEFAULT);
-    }
+    private void FromFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(fromFilter, FROM_FILTER_DEFAULT);
 
-    private void TextFilter_GotFocus(object sender, RoutedEventArgs e)
-    {
-      Filter_GotFocus(textFilter, TEXT_FILTER_DEFAULT);
-    }
+    private void TextFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(textFilter, TEXT_FILTER_DEFAULT);
 
     private void Filter_LostFocus(TextBox filter, string text)
     {

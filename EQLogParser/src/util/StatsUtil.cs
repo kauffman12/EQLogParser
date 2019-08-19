@@ -47,11 +47,7 @@ namespace EQLogParser
         ClassName = string.Intern(className),
         OrigName = string.Intern(origName),
         Percent = 100, // until something says otherwise
-        SubStats = new Dictionary<string, PlayerSubStats>(),
-        BeginTime = double.NaN,
-        BeginTimes = new List<double>(),
-        LastTimes = new List<double>(),
-        TimeDiffs = new List<double>()
+        BeginTime = double.NaN
       };
     }
 
@@ -82,10 +78,7 @@ namespace EQLogParser
         ClassName = "",
         Name = string.Intern(name),
         Type = string.Intern(type),
-        BeginTime = double.NaN,
-        BeginTimes = new List<double>(),
-        LastTimes = new List<double>(),
-        TimeDiffs = new List<double>()
+        BeginTime = double.NaN
       };
     }
 
@@ -302,7 +295,7 @@ namespace EQLogParser
         Parallel.ForEach(playerStats.SubStats.Values, subStats => UpdateCalculations(subStats, raidTotals, resistCounts, playerStats));
 
         // optional stats
-        if (playerStats.SubStats2 != null)
+        if (playerStats.SubStats2.Count > 0)
         {
           Parallel.ForEach(playerStats.SubStats2.Values, subStats => UpdateCalculations(subStats, raidTotals, resistCounts, playerStats));
         }

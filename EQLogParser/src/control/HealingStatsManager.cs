@@ -126,11 +126,6 @@ namespace EQLogParser
                 StatsUtil.UpdateStats(subStats, record, block.BeginTime);
                 allStats[record.Healer + "-" + record.Healed] = subStats;
 
-                if (stats.SubStats2 == null)
-                {
-                  stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
-                }
-
                 var spellStatName = record.SubType ?? Labels.UNKSPELL;
                 PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, spellStatName, record.Type);
                 StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
@@ -165,7 +160,6 @@ namespace EQLogParser
           }
 
           var indStat = individualStats[stat.Name];
-          stat.SubStats2 = new Dictionary<string, PlayerSubStats>();
           stat.SubStats2.Add("receivedHealing", indStat);
           StatsUtil.UpdateCalculations(indStat, RaidTotals);
 
@@ -175,7 +169,22 @@ namespace EQLogParser
       });
     }
 
-    internal bool IsValidHeal(HealRecord record)
+    internal void FireSelectionEvent(HealingStatsOptions options, List<PlayerStats> selected)
+    {
+      FireChartEvent(options, "SELECT", selected);
+    }
+
+    internal void FireUpdateEvent(HealingStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    {
+      FireChartEvent(options, "UPDATE", selected, filter);
+    }
+
+    internal void FireFilterEvent(HealingStatsOptions options, Predicate<object> filter)
+    {
+      FireChartEvent(options, "FILTER", null, filter);
+    }
+
+    internal static bool IsValidHeal(HealRecord record)
     {
       bool valid = false;
 
@@ -194,26 +203,6 @@ namespace EQLogParser
       }
 
       return valid;
-    }
-
-    internal void FireSelectionEvent(HealingStatsOptions options, List<PlayerStats> selected)
-    {
-      if (options.RequestChartData)
-      {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
-        EventsUpdateDataPoint?.Invoke(HealingGroups, de);
-      }
-    }
-
-    internal void FireUpdateEvent(HealingStatsOptions options, List<PlayerStats> selected = null)
-    {
-      if (options.RequestChartData)
-      {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new HealGroupCollection(HealingGroups) };
-        EventsUpdateDataPoint?.Invoke(HealingGroups, de);
-      }
     }
 
     private void FireCompletedEvent(HealingStatsOptions options, CombinedStats combined)
@@ -247,10 +236,21 @@ namespace EQLogParser
         EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = "NONPC" });
       }
 
+      FireChartEvent(options, "CLEAR");
+    }
+
+    internal void FireChartEvent(HealingStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    {
       if (options.RequestChartData)
       {
         // send update
-        DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
+        DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new HealGroupCollection(HealingGroups), Filter = filter };
+
+        if (selected != null)
+        {
+          de.Selected.AddRange(selected);
+        }
+
         EventsUpdateDataPoint?.Invoke(HealingGroups, de);
       }
     }
@@ -297,11 +297,6 @@ namespace EQLogParser
                     allStats[stats.Name + "=" + spellStatName] = spellStats;
 
                     var healedStatName = record.Healed;
-                    if (stats.SubStats2 == null)
-                    {
-                      stats.SubStats2 = new Dictionary<string, PlayerSubStats>();
-                    }
-
                     PlayerSubStats healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
                     StatsUtil.UpdateStats(healedStats, record, block.BeginTime);
                     allStats[stats.Name + "=" + healedStatName] = healedStats;

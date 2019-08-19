@@ -22,7 +22,7 @@ namespace EQLogParser
       DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
     }
 
-    private NonPlayer Find(string defender, string type)
+    private static NonPlayer Find(string defender, string type)
     {
       NonPlayer npc;
 

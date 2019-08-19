@@ -13,10 +13,19 @@ namespace EQLogParser
   /// </summary>
   public partial class TankingSummary : SummaryTable, IDisposable
   {
+    private string CurrentClass = null;
+    private bool CurrentPetValue;
+
     public TankingSummary()
     {
       InitializeComponent();
       InitSummaryTable(title, dataGrid);
+
+      CurrentPetValue = showPets.IsChecked.Value;
+      var list = DataManager.Instance.GetClassList();
+      list.Insert(0, "All Classes");
+      classesList.ItemsSource = list;
+      classesList.SelectedIndex = 0;
 
       TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
@@ -87,9 +96,7 @@ namespace EQLogParser
                 HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
 
                 var view = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
-                SetFilter(view);
-
-                dataGrid.ItemsSource = view;
+                dataGrid.ItemsSource = SetFilter(view);
               }
 
             (Application.Current.MainWindow as MainWindow).Busy(false);
@@ -135,20 +142,54 @@ namespace EQLogParser
       }
     }
 
-    private void SetFilter(ICollectionView view)
+    private ICollectionView SetFilter(ICollectionView view)
     {
       if (view != null)
       {
-        view.Filter = stats => showPets.IsChecked.Value || DataManager.Instance.CheckNameForPet(((PlayerStats)stats).Name) == false;
+        view.Filter = (stats) =>
+        {
+          string className = null;
+          string name = null;
 
-        // chart event
-        Predicate<object> chartFilter = dataPoint => showPets.IsChecked.Value || DataManager.Instance.CheckNameForPet(((DataPoint)dataPoint).Name) == false;
-        TankingStatsManager.Instance.FireFilterEvent(new TankingStatsOptions() { RequestChartData = true }, chartFilter);
+          if (stats is PlayerStats playerStats)
+          {
+            name = playerStats.Name;
+            className = playerStats.ClassName;
+          } else if (stats is DataPoint dataPoint)
+          {
+            name = dataPoint.Name;
+            className = DataManager.Instance.GetPlayerClass(name);
+          }
+
+          var isPet = !string.IsNullOrEmpty(name) && DataManager.Instance.CheckNameForPet(name);
+          if (isPet && CurrentPetValue == false)
+          {
+            return false;
+          }
+
+          if (!string.IsNullOrEmpty(CurrentClass) && isPet)
+          {
+            return false;
+          }
+
+          return string.IsNullOrEmpty(CurrentClass) || (!string.IsNullOrEmpty(name) && CurrentClass == className);
+        };
+
+        TankingStatsManager.Instance.FireFilterEvent(new TankingStatsOptions() { RequestChartData = true }, view.Filter);
       }
+
+      return view;
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
+      CurrentPetValue = showPets.IsChecked.Value;
+      SetFilter(dataGrid?.ItemsSource as ICollectionView);
+    }
+
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
       SetFilter(dataGrid?.ItemsSource as ICollectionView);
     }
 

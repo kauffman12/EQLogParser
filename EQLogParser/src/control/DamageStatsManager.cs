@@ -298,22 +298,17 @@ namespace EQLogParser
 
     internal void FireSelectionEvent(DamageStatsOptions options, List<PlayerStats> selected)
     {
-      if (options.RequestChartData)
-      {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = "SELECT", Selected = selected };
-        EventsUpdateDataPoint?.Invoke(DamageGroups, de);
-      }
+      FireChartEvent(options, "SELECT", selected);
     }
 
-    internal void FireUpdateEvent(DamageStatsOptions options, List<PlayerStats> selected = null)
+    internal void FireUpdateEvent(DamageStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      if (options.RequestChartData)
-      {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = "UPDATE", Selected = selected, Iterator = new DamageGroupCollection(DamageGroups) };
-        EventsUpdateDataPoint?.Invoke(DamageGroups, de);
-      }
+      FireChartEvent(options, "UPDATE", selected, filter);
+    }
+
+    internal void FireFilterEvent(DamageStatsOptions options, Predicate<object> filter)
+    {
+      FireChartEvent(options, "FILTER", null, filter);
     }
 
     private void FireCompletedEvent(DamageStatsOptions options, CombinedStats combined)
@@ -347,10 +342,21 @@ namespace EQLogParser
         EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGEPARSE, State = "NONPC" });
       }
 
+      FireChartEvent(options, "CLEAR");
+    }
+
+    internal void FireChartEvent(DamageStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    {
       if (options.RequestChartData)
       {
         // send update
-        DataPointEvent de = new DataPointEvent() { Action = "CLEAR" };
+        DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new DamageGroupCollection(DamageGroups), Filter = filter };
+
+        if (selected != null)
+        {
+          de.Selected.AddRange(selected);
+        }
+
         EventsUpdateDataPoint?.Invoke(DamageGroups, de);
       }
     }

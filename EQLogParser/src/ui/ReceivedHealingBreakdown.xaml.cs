@@ -23,7 +23,7 @@ namespace EQLogParser
     public ReceivedHealingBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
-      titleLabel.Content = currentStats.ShortTitle;
+      titleLabel.Content = currentStats?.ShortTitle;
       choicesList.ItemsSource = ChoicesList;
       choicesList.SelectedIndex = 0;
     }
@@ -56,7 +56,7 @@ namespace EQLogParser
               List<PlayerStats> receivedHealing = new List<PlayerStats>();
               PlayerStats.ForEach(selected =>
               {
-                if (selected.SubStats2 != null)
+                if (selected.SubStats2.Count > 0)
                 {
                   receivedHealing.AddRange(selected.SubStats2.Values.Cast<PlayerStats>().ToList());
                 }

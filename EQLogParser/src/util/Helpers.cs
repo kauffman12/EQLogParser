@@ -4,13 +4,11 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -78,30 +76,6 @@ namespace EQLogParser
     }
   }
 
-  internal class ZeroConverter : IValueConverter
-  {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-      if (value.GetType() == typeof(double))
-      {
-        return System.Convert.ToDouble(value, CultureInfo.CurrentCulture) > 0 ? value.ToString() : "-";
-      }
-      return string.Empty;
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-      if (value is string)
-      {
-        if (!double.TryParse((string)value, out double decValue))
-        {
-          decValue = 0;
-        }
-        return decValue;
-      }
-      return 0;
-    }
-  }
   internal class ComboBoxItemTemplateSelector : DataTemplateSelector
   {
     public List<DataTemplate> SelectedItemTemplates { get; } = new List<DataTemplate>();
@@ -206,18 +180,20 @@ namespace EQLogParser
       theChart.AxisX[0].MaxValue = double.NaN;
     }
 
-    internal static void DataGridSelectAll(object sender)
+    internal static void DataGridSelectAll(FrameworkElement sender)
     {
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      callingDataGrid.SelectAll();
+      if (sender?.Parent is ContextMenu menu)
+      {
+        (menu.PlacementTarget as DataGrid)?.SelectAll();
+      }
     }
 
-    internal static void DataGridUnselectAll(object sender)
+    internal static void DataGridUnselectAll(FrameworkElement sender)
     {
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      callingDataGrid.UnselectAll();
+      if (sender?.Parent is ContextMenu menu)
+      {
+        (menu.PlacementTarget as DataGrid)?.UnselectAll();
+      }
     }
 
     internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
@@ -427,12 +403,12 @@ namespace EQLogParser
 
     public static void SetTripleClickSelectAll(DependencyObject element, bool value)
     {
-      element.SetValue(TripleClickSelectAllProperty, value);
+      element?.SetValue(TripleClickSelectAllProperty, value);
     }
 
     public static bool GetTripleClickSelectAll(DependencyObject element)
     {
-      return (bool)element.GetValue(TripleClickSelectAllProperty);
+      return (bool) element?.GetValue(TripleClickSelectAllProperty);
     }
   }
 }

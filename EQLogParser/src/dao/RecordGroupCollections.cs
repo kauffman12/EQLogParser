@@ -18,9 +18,8 @@ namespace EQLogParser
     override protected DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
-      DamageRecord record = wrapper?.Record as DamageRecord;
 
-      if (record != null)
+      if (wrapper?.Record is DamageRecord record)
       {
         string attacker = record.Attacker;
         string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
@@ -45,15 +44,14 @@ namespace EQLogParser
     override protected bool IsValid(RecordWrapper wrapper)
     {
       HealRecord record = wrapper?.Record as HealRecord;
-      return HealingStatsManager.Instance.IsValidHeal(record);
+      return HealingStatsManager.IsValidHeal(record);
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
-      HealRecord record = wrapper?.Record as HealRecord;
 
-      if (record != null)
+      if (wrapper?.Record is HealRecord record)
       {
         dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = record.Healer, CurrentTime = wrapper.BeginTime };
       }
@@ -77,9 +75,8 @@ namespace EQLogParser
     override protected DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
-      DamageRecord record = wrapper?.Record as DamageRecord;
 
-      if (record != null)
+      if (wrapper?.Record is DamageRecord record)
       {
         dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = record.Defender, CurrentTime = wrapper.BeginTime };
       }
@@ -90,8 +87,8 @@ namespace EQLogParser
 
   public abstract class RecordGroupCollection : IEnumerable<DataPoint>
   {
-    private static RecordWrapper StopWrapper = new RecordWrapper();
-    private List<List<ActionBlock>> RecordGroups;
+    private static readonly RecordWrapper StopWrapper = new RecordWrapper();
+    private readonly List<List<ActionBlock>> RecordGroups;
     private int CurrentGroup;
     private int CurrentBlock;
     private int CurrentRecord;

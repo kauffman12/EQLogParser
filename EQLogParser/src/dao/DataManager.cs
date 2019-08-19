@@ -482,6 +482,13 @@ namespace EQLogParser
       return npc;
     }
 
+    public List<string> GetClassList()
+    {
+      var list = ClassNames.Values.ToList();
+      list.Sort();
+      return list;
+    }
+
     public string GetClassName(SpellClass type)
     {
       string name = "";
