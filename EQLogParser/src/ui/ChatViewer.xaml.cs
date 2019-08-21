@@ -19,12 +19,6 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private const string END_DATE_DEFAULT = "End Date";
-    private const string START_DATE_DEFAULT = "Start Date";
-    private const string TEXT_FILTER_DEFAULT = "Message Search";
-    private const string FROM_FILTER_DEFAULT = "From";
-    private const string TO_FILTER_DEFAULT = "To";
-
     private static List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static List<ColorItem> ColorItems;
     private static bool Running = false;
@@ -59,12 +53,17 @@ namespace EQLogParser
       ColorItem DefaultForeground = new ColorItem { Name = "Default", Brush = new SolidColorBrush(Colors.White) };
 
       fontSize.ItemsSource = FontSizeList;
-      startDate.Text = START_DATE_DEFAULT;
-      endDate.Text = END_DATE_DEFAULT;
-      textFilter.Text = TEXT_FILTER_DEFAULT;
+      startDate.Text = Properties.Resources.CHAT_START_DATE;
+      endDate.Text = Properties.Resources.CHAT_END_DATE;
+      textFilter.Text = Properties.Resources.CHAT_TEXT_FILTER;
 
-      toFilter.DataContext = new AutoCompleteText() { Text = TO_FILTER_DEFAULT, Items = PlayerAutoCompleteList };
-      fromFilter.DataContext = new AutoCompleteText() { Text = FROM_FILTER_DEFAULT, Items = PlayerAutoCompleteList };
+      var context = new AutoCompleteText() { Text = Properties.Resources.CHAT_TO_FILTER };
+      context.Items.AddRange(PlayerAutoCompleteList);
+      toFilter.DataContext = context;
+
+      context = new AutoCompleteText() { Text = Properties.Resources.CHAT_FROM_FILTER };
+      context.Items.AddRange(PlayerAutoCompleteList);
+      fromFilter.DataContext = context;
 
       var fgList = new List<ColorItem>(ColorItems);
       fgList.Insert(0, DefaultForeground);
@@ -300,9 +299,9 @@ namespace EQLogParser
               players.ItemsSource = playerList;
 
               string player = DataManager.Instance.GetApplicationSetting("ChatSelectedPlayer");
-              if (player == null && DataManager.Instance.PlayerName != null && DataManager.Instance.ServerName != null)
+              if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(DataManager.Instance.GetPlayerName()) && !string.IsNullOrEmpty(DataManager.Instance.GetServerName()))
               {
-                player = DataManager.Instance.PlayerName + "." + DataManager.Instance.ServerName;
+                player = DataManager.Instance.GetPlayerName() + "." + DataManager.Instance.GetServerName();
               }
 
               players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
@@ -348,9 +347,9 @@ namespace EQLogParser
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         var channelList = GetSelectedChannels(out bool changed);
-        string text = (textFilter.Text.Length != 0 && textFilter.Text != TEXT_FILTER_DEFAULT) ? textFilter.Text : null;
-        string to = (toFilter.Text.Length != 0 && toFilter.Text != TO_FILTER_DEFAULT) ? toFilter.Text : null;
-        string from = (fromFilter.Text.Length != 0 && fromFilter.Text != FROM_FILTER_DEFAULT) ? fromFilter.Text : null;
+        string text = (textFilter.Text.Length != 0 && textFilter.Text != Properties.Resources.CHAT_TEXT_FILTER) ? textFilter.Text : null;
+        string to = (toFilter.Text.Length != 0 && toFilter.Text != Properties.Resources.CHAT_TO_FILTER) ? toFilter.Text : null;
+        string from = (fromFilter.Text.Length != 0 && fromFilter.Text != Properties.Resources.CHAT_FROM_FILTER) ? fromFilter.Text : null;
         double startDate = GetStartDate();
         double endDate = GetEndDate();
         if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
@@ -491,7 +490,7 @@ namespace EQLogParser
       {
         if (filter.DataContext is AutoCompleteText context && context.Items.Count > 0)
         {
-          context.Items = new List<string>();
+          context.Items.Clear();
           filter.DataContext = null;
           filter.DataContext = context;
         }
@@ -504,16 +503,16 @@ namespace EQLogParser
 
     private void ToFilter_KeyDown(object sender, KeyEventArgs e)
     {
-      Filter_KeyDown(toFilter, TO_FILTER_DEFAULT, e);
+      Filter_KeyDown(toFilter, Properties.Resources.CHAT_TO_FILTER, e);
     }
     private void FromFilter_KeyDown(object sender, KeyEventArgs e)
     {
-      Filter_KeyDown(fromFilter, FROM_FILTER_DEFAULT, e);
+      Filter_KeyDown(fromFilter, Properties.Resources.CHAT_FROM_FILTER, e);
     }
 
     private void TextFilter_KeyDown(object sender, KeyEventArgs e)
     {
-      Filter_KeyDown(textFilter, TEXT_FILTER_DEFAULT, e);
+      Filter_KeyDown(textFilter, Properties.Resources.CHAT_TEXT_FILTER, e);
     }
 
     private void Filter_GotFocus(TextBox filter, string text)
@@ -522,7 +521,8 @@ namespace EQLogParser
       {
         if (filter.DataContext is AutoCompleteText context)
         {
-          context.Items = PlayerAutoCompleteList;
+          context.Items.Clear();
+          context.Items.AddRange(PlayerAutoCompleteList);
           filter.DataContext = null;
           filter.DataContext = context;
         }
@@ -532,11 +532,11 @@ namespace EQLogParser
       }
     }
 
-    private void ToFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(toFilter, TO_FILTER_DEFAULT);
+    private void ToFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(toFilter, Properties.Resources.CHAT_TO_FILTER);
 
-    private void FromFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(fromFilter, FROM_FILTER_DEFAULT);
+    private void FromFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(fromFilter, Properties.Resources.CHAT_FROM_FILTER);
 
-    private void TextFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(textFilter, TEXT_FILTER_DEFAULT);
+    private void TextFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(textFilter, Properties.Resources.CHAT_TEXT_FILTER);
 
     private void Filter_LostFocus(TextBox filter, string text)
     {
@@ -544,7 +544,7 @@ namespace EQLogParser
       {
         if (filter.DataContext is AutoCompleteText context && context.Items.Count > 0)
         {
-          context.Items = new List<string>();
+          context.Items.Clear();
           filter.DataContext = null;
           filter.DataContext = context;
         }
@@ -556,17 +556,17 @@ namespace EQLogParser
 
     private void ToFilter_LostFocus(object sender, RoutedEventArgs e)
     {
-      Filter_LostFocus(toFilter, TO_FILTER_DEFAULT);
+      Filter_LostFocus(toFilter, Properties.Resources.CHAT_TO_FILTER);
     }
 
     private void FromFilter_LostFocus(object sender, RoutedEventArgs e)
     {
-      Filter_LostFocus(fromFilter, FROM_FILTER_DEFAULT);
+      Filter_LostFocus(fromFilter, Properties.Resources.CHAT_FROM_FILTER);
     }
 
     private void TextFilter_LostFocus(object sender, RoutedEventArgs e)
     {
-      Filter_LostFocus(textFilter, TEXT_FILTER_DEFAULT);
+      Filter_LostFocus(textFilter, Properties.Resources.CHAT_TEXT_FILTER);
     }
 
     private void Filter_TextChanged(object sender, TextChangedEventArgs e)
@@ -691,12 +691,12 @@ namespace EQLogParser
     {
       if (startDate == sender)
       {
-        startDate.Text = START_DATE_DEFAULT;
+        startDate.Text = Properties.Resources.CHAT_START_DATE;
         startDate.FontStyle = FontStyles.Italic;
       }
       else if (endDate == sender)
       {
-        endDate.Text = END_DATE_DEFAULT;
+        endDate.Text = Properties.Resources.CHAT_END_DATE;
         endDate.FontStyle = FontStyles.Italic;
       }
     }

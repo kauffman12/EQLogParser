@@ -36,7 +36,7 @@ namespace EQLogParser
       };
     }
 
-    internal void BuildTotalStats(HealingStatsOptions options)
+    internal void BuildTotalStats(GenerateStatsOptions options)
     {
       UpdatingGroups = true;
 
@@ -89,7 +89,7 @@ namespace EQLogParser
       }
     }
 
-    internal void RebuildTotalStats(HealingStatsOptions options)
+    internal void RebuildTotalStats(GenerateStatsOptions options)
     {
       FireNewStatsEvent(options);
       ComputeHealingStats(options);
@@ -126,7 +126,7 @@ namespace EQLogParser
                 StatsUtil.UpdateStats(subStats, record, block.BeginTime);
                 allStats[record.Healer + "-" + record.Healed] = subStats;
 
-                var spellStatName = record.SubType ?? Labels.UNKSPELL;
+                var spellStatName = record.SubType ?? Labels.SELFHEAL;
                 PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, spellStatName, record.Type);
                 StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
                 allStats[stats.Name + "=" + spellStatName] = spellStats;
@@ -169,17 +169,17 @@ namespace EQLogParser
       });
     }
 
-    internal void FireSelectionEvent(HealingStatsOptions options, List<PlayerStats> selected)
+    internal void FireSelectionEvent(GenerateStatsOptions options, List<PlayerStats> selected)
     {
       FireChartEvent(options, "SELECT", selected);
     }
 
-    internal void FireUpdateEvent(HealingStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    internal void FireUpdateEvent(GenerateStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       FireChartEvent(options, "UPDATE", selected, filter);
     }
 
-    internal void FireFilterEvent(HealingStatsOptions options, Predicate<object> filter)
+    internal void FireFilterEvent(GenerateStatsOptions options, Predicate<object> filter)
     {
       FireChartEvent(options, "FILTER", null, filter);
     }
@@ -205,7 +205,7 @@ namespace EQLogParser
       return valid;
     }
 
-    private void FireCompletedEvent(HealingStatsOptions options, CombinedStats combined)
+    private void FireCompletedEvent(GenerateStatsOptions options, CombinedStats combined)
     {
       if (options.RequestSummaryData)
       {
@@ -219,7 +219,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireNewStatsEvent(HealingStatsOptions options)
+    private void FireNewStatsEvent(GenerateStatsOptions options)
     {
       if (options.RequestSummaryData)
       {
@@ -228,7 +228,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireNoDataEvent(HealingStatsOptions options)
+    private void FireNoDataEvent(GenerateStatsOptions options)
     {
       if (options.RequestSummaryData)
       {
@@ -239,7 +239,7 @@ namespace EQLogParser
       FireChartEvent(options, "CLEAR");
     }
 
-    internal void FireChartEvent(HealingStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       if (options.RequestChartData)
       {
@@ -255,7 +255,7 @@ namespace EQLogParser
       }
     }
 
-    private void ComputeHealingStats(HealingStatsOptions options)
+    private void ComputeHealingStats(GenerateStatsOptions options)
     {
       if (RaidTotals != null)
       {
@@ -291,7 +291,7 @@ namespace EQLogParser
                     StatsUtil.UpdateStats(stats, record, block.BeginTime);
                     allStats[record.Healer] = stats;
 
-                    var spellStatName = record.SubType ?? Labels.UNKSPELL;
+                    var spellStatName = record.SubType ?? Labels.SELFHEAL;
                     PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
                     StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
                     allStats[stats.Name + "=" + spellStatName] = spellStats;
@@ -317,13 +317,12 @@ namespace EQLogParser
             combined = new CombinedStats
             {
               RaidStats = RaidTotals,
-              UniqueClasses = new Dictionary<string, byte>(),
-              StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList(),
               TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
               TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
               TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Heals ", StatsUtil.FormatTotals(RaidTotals.DPS))
             };
 
+            combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
             combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 

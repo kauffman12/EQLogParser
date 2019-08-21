@@ -169,7 +169,7 @@ namespace EQLogParser
 
     protected class RecordWrapper : TimedAction
     {
-      public IAction Record { get; set; }
+      internal IAction Record { get; set; }
     }
   }
 }

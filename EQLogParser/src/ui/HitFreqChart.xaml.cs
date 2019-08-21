@@ -48,7 +48,7 @@ namespace EQLogParser
       playerList.SelectedIndex = 0; // triggers event
     }
 
-    private void SaveCSV_Click(object sender, RoutedEventArgs e)
+    private void SaveCSVClick(object sender, RoutedEventArgs e)
     {
       StringBuilder sb = new StringBuilder();
       sb.Append("Hit Value,Frequency,Difference").AppendLine();
@@ -94,11 +94,7 @@ namespace EQLogParser
           {
             try
             {
-              string player = playerList.SelectedItem as string;
-              string type = hitTypeList.SelectedItem as string;
-              string critType = critTypeList.SelectedItem as string;
-
-              if (player != null && type != null && critType != null && player.Length > 0 && type.Length > 0 && critType.Length > 0)
+              if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type && critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
               {
                 DIMap = null;
                 var data = ChartData[player];
@@ -249,16 +245,19 @@ namespace EQLogParser
         }
 
         var series = new SeriesCollection();
-        var firstSeries = new ColumnSeries();
-        firstSeries.Values = yChartValues;
-        firstSeries.DataLabels = true;
-        firstSeries.LabelPoint = point => point.Y.ToString(CultureInfo.CurrentCulture);
-        firstSeries.FontSize = 14;
-        firstSeries.FontWeight = FontWeights.Bold;
-        firstSeries.Foreground = new SolidColorBrush(Colors.White);
-        firstSeries.MaxColumnWidth = 15;
-        firstSeries.ColumnPadding = 8;
-        firstSeries.ScalesXAt = 0;
+        var firstSeries = new ColumnSeries
+        {
+          Values = yChartValues,
+          DataLabels = true,
+          LabelPoint = point => point.Y.ToString(CultureInfo.CurrentCulture),
+          FontSize = 14,
+          FontWeight = FontWeights.Bold,
+          Foreground = new SolidColorBrush(Colors.White),
+          MaxColumnWidth = 15,
+          ColumnPadding = 8,
+          ScalesXAt = 0
+        };
+
         series.Add(firstSeries);
 
         lvcChart.DataTooltip = null;
@@ -296,32 +295,32 @@ namespace EQLogParser
       return result;
     }
 
-    private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       UserSelectionChanged();
     }
 
-    private void CritTypeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void CritTypeListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      string selectedCritType = critTypeList.SelectedItem as string;
-      if (selectedCritType != null)
+      if (critTypeList.SelectedItem is string selectedCritType)
       {
         UpdateSelectedHitTypes(selectedCritType == NON_CRIT_HITTYPE);
         UserSelectionChanged();
       }
     }
 
-    private void Chart_DoubleClick(object sender, MouseButtonEventArgs e)
+    private void ChartDoubleClick(object sender, MouseButtonEventArgs e)
     {
       Helpers.ChartResetView(lvcChart);
     }
 
-    private void PlayerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void PlayerListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      try
+      string selectedCritType = critTypeList?.SelectedItem as string;
+      string player = playerList?.SelectedItem as string;
+
+      if (ChartData.ContainsKey(player))
       {
-        string selectedCritType = critTypeList.SelectedItem as string;
-        string player = playerList.SelectedItem as string;
         var data = ChartData[player];
 
         bool canUseCrit = false;
@@ -339,51 +338,39 @@ namespace EQLogParser
 
         critTypeList.ItemsSource = playerCritTypes;
         critTypeList.SelectedIndex = playerCritTypes.Count == 1 ? 0 : canUseCrit ? 1 : 0;
-        UpdateSelectedHitTypes(critTypeList.SelectedItem as string == NON_CRIT_HITTYPE);
+        UpdateSelectedHitTypes(critTypeList?.SelectedItem as string == NON_CRIT_HITTYPE);
         UserSelectionChanged();
-      }
-      catch (Exception ex)
-      {
-        LOG.Error(ex);
       }
     }
 
     private void UpdateSelectedHitTypes(bool useNonCrit)
     {
-      try
+      string player = playerList?.SelectedItem as string;
+      if (!string.IsNullOrEmpty(player) && ChartData.ContainsKey(player))
       {
-        string player = playerList.SelectedItem as string;
-        if (!string.IsNullOrEmpty(player))
+        var data = ChartData[player];
+        List<string> hitTypes;
+
+        if (useNonCrit)
         {
-          var data = ChartData[player];
-          string selectedHitType = hitTypeList.SelectedItem as string;
-          List<string> hitTypes;
-
-          if (useNonCrit)
-          {
-            hitTypes = data.Where(d => d.NonCritYValues.Count > 0).Select(d => d.HitType).OrderBy(hitType => hitType).ToList();
-          }
-          else
-          {
-            hitTypes = data.Where(d => d.CritYValues.Count > 0).Select(d => d.HitType).OrderBy(hitType => hitType).ToList();
-          }
-
-          hitTypeList.ItemsSource = hitTypes;
-          hitTypeList.SelectedItem = (selectedHitType != null && hitTypes.Contains(selectedHitType)) ? selectedHitType : hitTypes[0];
+          hitTypes = data.Where(d => d.NonCritYValues.Count > 0).Select(d => d.HitType).OrderBy(hitType => hitType).ToList();
         }
-      }
-      catch (Exception ex)
-      {
-        LOG.Error(ex);
+        else
+        {
+          hitTypes = data.Where(d => d.CritYValues.Count > 0).Select(d => d.HitType).OrderBy(hitType => hitType).ToList();
+        }
+
+        hitTypeList.ItemsSource = hitTypes;
+        hitTypeList.SelectedItem = (hitTypeList?.SelectedItem is string selectedHitType && hitTypes.Contains(selectedHitType)) ? selectedHitType : hitTypes[0];
       }
     }
 
-    private void PageSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void PageSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       DisplayPage();
     }
 
-    private void Chart_SizeChanged(object sender, SizeChangedEventArgs e)
+    private void ChartSizeChanged(object sender, SizeChangedEventArgs e)
     {
       UpdatePageSize();
       DisplayPage();

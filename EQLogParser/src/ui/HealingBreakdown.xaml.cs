@@ -25,7 +25,7 @@ namespace EQLogParser
     public HealBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
-      titleLabel.Content = currentStats.ShortTitle;
+      titleLabel.Content = currentStats?.ShortTitle;
       choicesList.ItemsSource = ChoicesList;
       choicesList.SelectedIndex = 0;
     }

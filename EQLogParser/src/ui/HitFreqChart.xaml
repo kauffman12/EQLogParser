@@ -12,15 +12,15 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Slider x:Name="pageSlider" Margin="0,4,20,0" Width="266" ValueChanged="PageSlider_ValueChanged" SmallChange="1" LargeChange="10" />
-      <ComboBox Margin="0,0,0,0" x:Name="playerList" Height="24" SelectionChanged="PlayerList_SelectionChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="critTypeList" Height="24" SelectionChanged="CritTypeList_SelectionChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="hitTypeList" Height="24" SelectionChanged="List_SelectionChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="minFreqList" Height="24" SelectionChanged="List_SelectionChanged" />
+      <Slider x:Name="pageSlider" Margin="0,4,20,0" Width="266" ValueChanged="PageSliderValueChanged" SmallChange="1" LargeChange="10" />
+      <ComboBox Margin="0,0,0,0" x:Name="playerList" Height="24" SelectionChanged="PlayerListSelectionChanged" />
+      <ComboBox Margin="0,0,0,0" x:Name="critTypeList" Height="24" SelectionChanged="CritTypeListSelectionChanged" />
+      <ComboBox Margin="0,0,0,0" x:Name="hitTypeList" Height="24" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,4,0" x:Name="minFreqList" Height="24" SelectionChanged="ListSelectionChanged" />
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <Button Margin="4,0,4,0" Height="24" Width="75" Click="SaveCSV_Click" Content="Save CSV"/>
+      <Button Margin="4,0,4,0" Height="24" Width="75" Click="SaveCSVClick" Content="Save CSV" />
     </StackPanel>
-    <lvc:CartesianChart Grid.Row="1" x:Name="lvcChart" Hoverable="False" MouseDoubleClick="Chart_DoubleClick" LegendLocation="None" DisableAnimations="True" SizeChanged="Chart_SizeChanged">
+    <lvc:CartesianChart Grid.Row="1" x:Name="lvcChart" Hoverable="False" MouseDoubleClick="ChartDoubleClick" LegendLocation="None" DisableAnimations="True" SizeChanged="ChartSizeChanged">
       <lvc:CartesianChart.AxisY>
         <lvc:Axis Title="Frequency" MinValue="0" />
       </lvc:CartesianChart.AxisY>

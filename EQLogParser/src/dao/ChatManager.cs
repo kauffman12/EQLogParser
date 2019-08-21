@@ -173,7 +173,10 @@ namespace EQLogParser
         if (!Running)
         {
           Running = true;
-          new Timer(new TimerCallback(ArchiveChat)).Change(TIMEOUT, Timeout.Infinite);
+          using (var timer = new Timer(new TimerCallback(ArchiveChat)))
+          {
+            timer.Change(TIMEOUT, Timeout.Infinite);
+          }
         }
       }
     }
@@ -214,7 +217,10 @@ namespace EQLogParser
         {
           if (ChatTypes.Count > 0)
           {
-            new Timer(new TimerCallback(ArchiveChat)).Change(0, Timeout.Infinite);
+            using (var timer = new Timer(new TimerCallback(ArchiveChat)))
+            {
+              timer.Change(0, Timeout.Infinite);
+            }
           }
           else
           {

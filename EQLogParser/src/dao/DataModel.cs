@@ -26,6 +26,7 @@ namespace EQLogParser
     public const string RESIST = "Resisted Spells";
     public const string HOT = "HoT Tick";
     public const string HEAL = "Heal";
+    public const string SELFHEAL = "Melee Heal";
     public const string NODATA = "No Data Available";
     public const string UNASSIGNED = "Unknown Pet Owner";
     public const string UNKSPELL = "Unknown Spell";
@@ -61,7 +62,7 @@ namespace EQLogParser
     StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers);
   }
 
-  public interface IAction { }
+  internal interface IAction { }
 
   public class ColorItem
   {
@@ -72,7 +73,7 @@ namespace EQLogParser
   public class AutoCompleteText
   {
     public string Text { get; set; }
-    public List<string> Items { get; set; }
+    public List<string> Items { get; } = new List<string>();
   }
 
   public class ChannelDetails
@@ -112,7 +113,7 @@ namespace EQLogParser
 
   public class PlayerStatsSelectionChangedEventArgs : EventArgs
   {
-    public List<PlayerStats> Selected { get; set; }
+    public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
   }
 
   public class DamageProcessedEvent : TimedAction
@@ -140,26 +141,10 @@ namespace EQLogParser
     public Predicate<object> Filter { get; set; }
   }
 
-  public class DamageStatsOptions
+  public class GenerateStatsOptions
   {
     public string Name { get; set; }
-    public List<NonPlayer> Npcs { get; set; }
-    public bool RequestChartData { get; set; }
-    public bool RequestSummaryData { get; set; }
-  }
-
-  public class HealingStatsOptions
-  {
-    public string Name { get; set; }
-    public List<NonPlayer> Npcs { get; set; }
-    public bool RequestChartData { get; set; }
-    public bool RequestSummaryData { get; set; }
-  }
-
-  public class TankingStatsOptions
-  {
-    public string Name { get; set; }
-    public List<NonPlayer> Npcs { get; set; }
+    public List<NonPlayer> Npcs { get; } = new List<NonPlayer>();
     public bool RequestChartData { get; set; }
     public bool RequestSummaryData { get; set; }
   }
@@ -217,7 +202,7 @@ namespace EQLogParser
 
   public class ActionBlock : TimedAction
   {
-    public List<IAction> Actions { get; set; }
+    internal List<IAction> Actions { get; } = new List<IAction>();
   }
 
   public class Attempt : FullTimedAction
@@ -243,7 +228,7 @@ namespace EQLogParser
 
   public class NonPlayer : FullTimedAction
   {
-    public const string BREAK_TIME = "Break Time";
+    public const string BREAKTIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public int ID { get; set; }
@@ -324,18 +309,18 @@ namespace EQLogParser
     public string TotalTitle { get; set; }
     public string FullTitle { get; set; }
     public string ShortTitle { get; set; }
-    public List<PlayerStats> StatsList { get; set; }
+    public List<PlayerStats> StatsList { get; } = new List<PlayerStats>();
     public PlayerStats RaidStats { get; set; }
-    public Dictionary<string, byte> UniqueClasses { get; set; }
-    public Dictionary<string, List<PlayerStats>> Children { get; set; }
+    public Dictionary<string, byte> UniqueClasses { get; } = new Dictionary<string, byte>();
+    public Dictionary<string, List<PlayerStats>> Children { get; } = new Dictionary<string, List<PlayerStats>>();
   }
 
   public class OverlayDamageStats : CombinedStats
   {
-    public Dictionary<string, PlayerStats> TopLevelStats { get; set; }
-    public Dictionary<string, PlayerStats> AggregateStats { get; set; }
-    public Dictionary<string, PlayerStats> IndividualStats { get; set; }
-    public Dictionary<string, byte> UniqueNpcs { get; set; }
+    public Dictionary<string, PlayerStats> TopLevelStats { get; } = new Dictionary<string, PlayerStats>();
+    public Dictionary<string, PlayerStats> AggregateStats { get; } = new Dictionary<string, PlayerStats>();
+    public Dictionary<string, PlayerStats> IndividualStats { get; } = new Dictionary<string, PlayerStats>();
+    public Dictionary<string, byte> UniqueNpcs { get; } = new Dictionary<string, byte>();
   }
 
   public class DataPoint
