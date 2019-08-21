@@ -77,7 +77,7 @@ namespace EQLogParser
                   string receiver = line.Substring(index + 4, lastIndex - index - 4);
                   chatType = new ChatType { Channel = ChatChannels.TELL, Sender = sender, Receiver = receiver, Line = line, AfterSenderIndex = lastIndex };
 
-                  if (DataManager.Instance.PlayerName == sender)
+                  if (DataManager.Instance.GetPlayerName() == sender)
                   {
                     chatType.SenderIsYou = true;
                   }
@@ -206,9 +206,21 @@ namespace EQLogParser
 
         }
       }
-      catch (Exception ex)
+      catch (ArgumentNullException ne)
       {
-        LOG.Debug(ex);
+        LOG.Error(ne);
+      }
+      catch (NullReferenceException nr)
+      {
+        LOG.Error(nr);
+      }
+      catch (ArgumentOutOfRangeException aor)
+      {
+        LOG.Error(aor);
+      }
+      catch (ArgumentException ae)
+      {
+        LOG.Error(ae);
       }
 
       return chatType;

@@ -4,11 +4,11 @@ using System.Windows.Data;
 
 namespace EQLogParser
 {
-  internal class ZeroConverter : IValueConverter
+  public class ZeroConverter : IValueConverter
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      if (value.GetType() == typeof(double))
+      if (value?.GetType() == typeof(double))
       {
         return System.Convert.ToDouble(value, CultureInfo.CurrentCulture) > 0 ? value.ToString() : "-";
       }

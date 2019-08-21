@@ -434,60 +434,56 @@ namespace EQLogParser
         {
           FileInfo gzipFileName = new FileInfo(dialog.FileName);
 
-          using (GZipStream decompressionStream = new GZipStream(gzipFileName.OpenRead(), CompressionMode.Decompress))
+          GZipStream decompressionStream = new GZipStream(gzipFileName.OpenRead(), CompressionMode.Decompress);
+          var reader = new StreamReader(decompressionStream);
+          string json = reader?.ReadToEnd();
+          reader?.Close();
+
+          var data = JsonConvert.DeserializeObject<SpellCountsSerialized>(json);
+
+          // copy data
+          PlayerList = PlayerList.Union(data.PlayerNames).ToList();
+
+          foreach (var player in data.TheSpellData.PlayerCastCounts.Keys)
           {
-            using (var reader = new StreamReader(decompressionStream))
+            TheSpellCounts.PlayerCastCounts[player] = data.TheSpellData.PlayerCastCounts[player];
+          }
+
+          foreach (var player in data.TheSpellData.PlayerReceivedCounts.Keys)
+          {
+            TheSpellCounts.PlayerReceivedCounts[player] = data.TheSpellData.PlayerReceivedCounts[player];
+          }
+
+          foreach (var spellId in data.TheSpellData.MaxCastCounts.Keys)
+          {
+            if (!TheSpellCounts.MaxCastCounts.ContainsKey(spellId) || TheSpellCounts.MaxCastCounts[spellId] < data.TheSpellData.MaxCastCounts[spellId])
             {
-              string json = reader.ReadToEnd();
-              reader.Close();
-
-              var data = JsonConvert.DeserializeObject<SpellCountsSerialized>(json);
-
-              // copy data
-              PlayerList = PlayerList.Union(data.PlayerNames).ToList();
-
-              foreach (var player in data.TheSpellData.PlayerCastCounts.Keys)
-              {
-                TheSpellCounts.PlayerCastCounts[player] = data.TheSpellData.PlayerCastCounts[player];
-              }
-
-              foreach (var player in data.TheSpellData.PlayerReceivedCounts.Keys)
-              {
-                TheSpellCounts.PlayerReceivedCounts[player] = data.TheSpellData.PlayerReceivedCounts[player];
-              }
-
-              foreach (var spellId in data.TheSpellData.MaxCastCounts.Keys)
-              {
-                if (!TheSpellCounts.MaxCastCounts.ContainsKey(spellId) || TheSpellCounts.MaxCastCounts[spellId] < data.TheSpellData.MaxCastCounts[spellId])
-                {
-                  TheSpellCounts.MaxCastCounts[spellId] = data.TheSpellData.MaxCastCounts[spellId];
-                }
-              }
-
-              foreach (var spellId in data.TheSpellData.MaxReceivedCounts.Keys)
-              {
-                if (!TheSpellCounts.MaxReceivedCounts.ContainsKey(spellId) || TheSpellCounts.MaxReceivedCounts[spellId] < data.TheSpellData.MaxReceivedCounts[spellId])
-                {
-                  TheSpellCounts.MaxReceivedCounts[spellId] = data.TheSpellData.MaxReceivedCounts[spellId];
-                }
-              }
-
-              foreach (var spellData in data.TheSpellData.UniqueSpells.Keys)
-              {
-                if (!TheSpellCounts.UniqueSpells.ContainsKey(spellData))
-                {
-                  TheSpellCounts.UniqueSpells[spellData] = data.TheSpellData.UniqueSpells[spellData];
-                }
-              }
-
-              if (SpellRowsView.Count > 0)
-              {
-                SpellRowsView.Clear();
-              }
-
-              OptionsChanged();
+              TheSpellCounts.MaxCastCounts[spellId] = data.TheSpellData.MaxCastCounts[spellId];
             }
           }
+
+          foreach (var spellId in data.TheSpellData.MaxReceivedCounts.Keys)
+          {
+            if (!TheSpellCounts.MaxReceivedCounts.ContainsKey(spellId) || TheSpellCounts.MaxReceivedCounts[spellId] < data.TheSpellData.MaxReceivedCounts[spellId])
+            {
+              TheSpellCounts.MaxReceivedCounts[spellId] = data.TheSpellData.MaxReceivedCounts[spellId];
+            }
+          }
+
+          foreach (var spellData in data.TheSpellData.UniqueSpells.Keys)
+          {
+            if (!TheSpellCounts.UniqueSpells.ContainsKey(spellData))
+            {
+              TheSpellCounts.UniqueSpells[spellData] = data.TheSpellData.UniqueSpells[spellData];
+            }
+          }
+
+          if (SpellRowsView.Count > 0)
+          {
+            SpellRowsView.Clear();
+          }
+
+          OptionsChanged();
         }
       }
       catch (IOException ex)
@@ -518,17 +514,11 @@ namespace EQLogParser
         if (saveFileDialog.ShowDialog().Value)
         {
           FileInfo gzipFileName = new FileInfo(saveFileDialog.FileName);
-          using (FileStream gzipTargetAsStream = gzipFileName.Create())
-          {
-            using (GZipStream gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress))
-            {
-              using (var writer = new StreamWriter(gzipStream))
-              {
-                writer.Write(result);
-                writer.Close();
-              }
-            }
-          }
+          FileStream gzipTargetAsStream = gzipFileName.Create();
+          GZipStream gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
+          var writer = new StreamWriter(gzipStream);
+          writer?.Write(result);
+          writer?.Close();
         }
       }
       catch (IOException ex)

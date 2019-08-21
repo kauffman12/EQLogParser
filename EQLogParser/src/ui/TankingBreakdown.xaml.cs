@@ -21,7 +21,7 @@ namespace EQLogParser
     public TankingBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
-      RaidStats = currentStats.RaidStats;
+      RaidStats = currentStats?.RaidStats;
     }
 
     public void Show(List<PlayerStats> selectedStats)

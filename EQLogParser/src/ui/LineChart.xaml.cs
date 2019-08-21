@@ -293,29 +293,6 @@ namespace EQLogParser
       return dateTimeString;
     }
 
-    private void UpdateRemaining(Dictionary<string, ChartValues<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
-      double firstTime, double currentTime, string ignore = null)
-    {
-      foreach (var remaining in needAccounting.Values)
-      {
-        if (ignore != remaining.Name)
-        {
-          if (remaining.BeginTime != firstTime)
-          {
-            remaining.BeginTime = firstTime;
-            remaining.RollingTotal = 0;
-            remaining.RollingHits = 0;
-            remaining.RollingCritHits = 0;
-          }
-
-          remaining.CurrentTime = currentTime;
-          Insert(remaining, chartValues);
-        }
-      }
-
-      needAccounting.Clear();
-    }
-
     private void Reset()
     {
       if (lvcChart.Series != null)
@@ -397,6 +374,29 @@ namespace EQLogParser
           LOG.Error(se);
         }
       }
+    }
+
+    private static void UpdateRemaining(Dictionary<string, ChartValues<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
+      double firstTime, double currentTime, string ignore = null)
+    {
+      foreach (var remaining in needAccounting.Values)
+      {
+        if (ignore != remaining.Name)
+        {
+          if (remaining.BeginTime != firstTime)
+          {
+            remaining.BeginTime = firstTime;
+            remaining.RollingTotal = 0;
+            remaining.RollingHits = 0;
+            remaining.RollingCritHits = 0;
+          }
+
+          remaining.CurrentTime = currentTime;
+          Insert(remaining, chartValues);
+        }
+      }
+
+      needAccounting.Clear();
     }
 
     private static void Insert(DataPoint aggregate, Dictionary<string, ChartValues<DataPoint>> chartValues)

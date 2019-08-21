@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -32,13 +31,13 @@ namespace EQLogParser
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
     }
 
-    protected void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
+    internal void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       FireSelectionChangedEvent(GetSelectedStats());
       UpdateDataGridMenuItems();
     }
 
-    protected override void ShowBreakdown(List<PlayerStats> selected)
+    internal override void ShowBreakdown(List<PlayerStats> selected)
     {
       if (selected?.Count > 0)
       {
@@ -49,7 +48,7 @@ namespace EQLogParser
       }
     }
 
-    protected override void ShowBreakdown2(List<PlayerStats> selected)
+    internal override void ShowBreakdown2(List<PlayerStats> selected)
     {
       if (selected?.Count > 0)
       {
@@ -155,7 +154,8 @@ namespace EQLogParser
           {
             name = playerStats.Name;
             className = playerStats.ClassName;
-          } else if (stats is DataPoint dataPoint)
+          }
+          else if (stats is DataPoint dataPoint)
           {
             name = dataPoint.Name;
             className = DataManager.Instance.GetPlayerClass(name);
@@ -175,7 +175,7 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || (!string.IsNullOrEmpty(name) && CurrentClass == className);
         };
 
-        TankingStatsManager.Instance.FireFilterEvent(new TankingStatsOptions() { RequestChartData = true }, view.Filter);
+        TankingStatsManager.Instance.FireFilterEvent(new GenerateStatsOptions() { RequestChartData = true }, view.Filter);
       }
 
       return view;

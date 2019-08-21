@@ -45,9 +45,9 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.31";
-    private const string SHARE_DPS_LABEL = "No Players Selected";
-    private const string SHARE_DPS_TOO_BIG_LABEL = "Exceeded Copy/Paste Limit for EQ";
+    private const string VERSION = "v1.5.32";
+    private const string PLAYER_LIST_TITLE = "Player List ({0})";
+    private const string PETS_LIST_TITLE = "Pets List ({0})";
 
     private static long CastLineCount = 0;
     private static long DamageLineCount = 0;
@@ -115,7 +115,7 @@ namespace EQLogParser
         DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
-          verifiedPetsWindow.Title = "Pet List (" + VerifiedPetsView.Count + ")";
+          verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
         });
 
         // verified player table
@@ -123,7 +123,7 @@ namespace EQLogParser
         DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPlayersProperty);
-          verifiedPlayersWindow.Title = "Player List (" + VerifiedPlayersProperty.Count + ")";
+          verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
         });
 
         parseList.ItemsSource = AvailableParses;
@@ -153,9 +153,6 @@ namespace EQLogParser
         SharedThemeCatalogRegistrar.Register();
         DockingThemeCatalogRegistrar.Register();
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
-
-        // application data state last
-        DataManager.Instance.LoadState();
 
         // Bane Damage
         string value = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
@@ -243,7 +240,6 @@ namespace EQLogParser
       AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
     }
 
-
     private void Instance_EventsUpdatePetMapping(object sender, PetMapping mapping)
     {
       Dispatcher.InvokeAsync(() =>
@@ -267,7 +263,7 @@ namespace EQLogParser
       });
     }
 
-    private void Instance_EventsClearedActiveData(object sender, bool e)
+    private void Instance_EventsClearedActiveData(object sender, bool serverChanged)
     {
       (DamageWindow?.Content as DamageSummary)?.Clear();
       (HealingWindow?.Content as HealingSummary)?.Clear();
@@ -275,6 +271,15 @@ namespace EQLogParser
       (DamageChartWindow?.Content as LineChart)?.Clear();
       (HealingChartWindow?.Content as LineChart)?.Clear();
       (TankingChartWindow?.Content as LineChart)?.Clear();
+
+      if (serverChanged)
+      {
+        PetPlayersView.Clear();
+        VerifiedPetsView.Clear();
+        VerifiedPlayersProperty.Clear();
+        verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
+        verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
+      }
     }
 
     private void Window_Close(object sender, EventArgs e)
@@ -305,22 +310,25 @@ namespace EQLogParser
     private void ComputeStats()
     {
       var npcList = (npcWindow?.Content as NpcTable)?.GetSelectedItems();
-      var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID).ToList();
+      var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID);
       string name = filtered?.FirstOrDefault()?.Name;
 
-      var damageOptions = new DamageStatsOptions() { Name = name, Npcs = filtered, RequestChartData = DamageChartWindow?.IsOpen == true };
+      var damageOptions = new GenerateStatsOptions() { Name = name, RequestChartData = DamageChartWindow?.IsOpen == true };
+      damageOptions.Npcs.AddRange(filtered);
       if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
       {
         damageOptions.RequestSummaryData = true;
       }
 
-      var healingOptions = new HealingStatsOptions() { Name = name, Npcs = filtered, RequestChartData = HealingChartWindow?.IsOpen == true };
+      var healingOptions = new GenerateStatsOptions() { Name = name, RequestChartData = HealingChartWindow?.IsOpen == true };
+      healingOptions.Npcs.AddRange(filtered);
       if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
       {
         healingOptions.RequestSummaryData = true;
       }
 
-      var tankingOptions = new TankingStatsOptions() { Name = name, Npcs = filtered, RequestChartData = TankingChartWindow?.IsOpen == true };
+      var tankingOptions = new GenerateStatsOptions() { Name = name, RequestChartData = TankingChartWindow?.IsOpen == true };
+      tankingOptions.Npcs.AddRange(filtered);
       if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
       {
         tankingOptions.RequestSummaryData = true;
@@ -363,7 +371,7 @@ namespace EQLogParser
       DataManager.Instance.SetApplicationSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
 
-      var options = new HealingStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
       Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options));
     }
 
@@ -389,7 +397,7 @@ namespace EQLogParser
       DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", IsBaneDamageEnabled.ToString(CultureInfo.CurrentCulture));
       enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
-      var options = new DamageStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
     }
 
@@ -399,7 +407,7 @@ namespace EQLogParser
       DataManager.Instance.SetApplicationSetting("IngoreInitialPullDamage", IsIgnoreIntialPullDamageEnabled.ToString(CultureInfo.CurrentCulture));
       enableIgnoreInitialPullDamageIcon.Visibility = IsIgnoreIntialPullDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
-      var options = new DamageStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
     }
 
@@ -482,7 +490,7 @@ namespace EQLogParser
       if (OpenChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
       {
         var summary = DamageWindow?.Content as DamageSummary;
-        var options = new DamageStatsOptions() { RequestChartData = true };
+        var options = new GenerateStatsOptions() { RequestChartData = true };
         DamageStatsManager.Instance.FireUpdateEvent(options, summary.GetSelectedStats(), summary.GetFilter());
       }
     }
@@ -492,7 +500,7 @@ namespace EQLogParser
       if (OpenChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
       {
         var summary = HealingWindow?.Content as HealingSummary;
-        var options = new HealingStatsOptions() { RequestChartData = true };
+        var options = new GenerateStatsOptions() { RequestChartData = true };
         HealingStatsManager.Instance.FireUpdateEvent(options, summary?.GetSelectedStats(), summary?.GetFilter());
       }
     }
@@ -501,8 +509,8 @@ namespace EQLogParser
     {
       if (OpenChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, out TankingChartWindow))
       {
-        var summary = TankingWindow?.Content as TankingSummary; 
-        var options = new TankingStatsOptions() { RequestChartData = true };
+        var summary = TankingWindow?.Content as TankingSummary;
+        var options = new GenerateStatsOptions() { RequestChartData = true };
         TankingStatsManager.Instance.FireUpdateEvent(options, summary.GetSelectedStats(), summary.GetFilter());
       }
     }
@@ -534,7 +542,7 @@ namespace EQLogParser
         if (DamageStatsManager.Instance.DamageGroups.Count > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var damageOptions = new DamageStatsOptions() { RequestSummaryData = true };
+          var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true };
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
         }
       }
@@ -567,7 +575,7 @@ namespace EQLogParser
         if (HealingStatsManager.Instance.HealingGroups.Count > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var healingOptions = new HealingStatsOptions() { RequestSummaryData = true };
+          var healingOptions = new GenerateStatsOptions() { RequestSummaryData = true };
           Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));
         }
       }
@@ -600,7 +608,7 @@ namespace EQLogParser
         if (TankingStatsManager.Instance.TankingGroups.Count > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new TankingStatsOptions() { RequestSummaryData = true };
+          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
@@ -625,21 +633,21 @@ namespace EQLogParser
 
     private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var options = new DamageStatsOptions() { RequestChartData = true };
+      var options = new GenerateStatsOptions() { RequestChartData = true };
       DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
       UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var options = new HealingStatsOptions() { RequestChartData = true };
+      var options = new GenerateStatsOptions() { RequestChartData = true };
       HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
       UpdateParse(Labels.HEALPARSE, data.Selected);
     }
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var options = new TankingStatsOptions() { RequestChartData = true };
+      var options = new GenerateStatsOptions() { RequestChartData = true };
       TankingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
       UpdateParse(Labels.TANKPARSE, data.Selected);
     }
@@ -854,11 +862,11 @@ namespace EQLogParser
 
     private void PlayerParseTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == SHARE_DPS_LABEL)
+      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == Properties.Resources.SHARE_DPS_SELECTED)
       {
         copyToEQButton.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
-        sharePlayerParseLabel.Text = SHARE_DPS_LABEL;
+        sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_SELECTED;
         sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
         sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + "/" + 509;
         sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
@@ -867,13 +875,13 @@ namespace EQLogParser
       {
         copyToEQButton.IsEnabled = false;
         copyToEQButton.Foreground = LIGHTER_BRUSH;
-        sharePlayerParseLabel.Text = SHARE_DPS_TOO_BIG_LABEL;
+        sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_TOO_BIG;
         sharePlayerParseLabel.Foreground = WARNING_BRUSH;
         sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + "/" + 509;
         sharePlayerParseWarningLabel.Foreground = WARNING_BRUSH;
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
-      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != SHARE_DPS_LABEL)
+      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Properties.Resources.SHARE_DPS_SELECTED)
       {
         copyToEQButton.IsEnabled = true;
         copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
@@ -952,10 +960,8 @@ namespace EQLogParser
             }
           }
 
+          DataManager.Instance.LoadState(true, name, server);
           PlayerChatManager = new ChatManager(name + "." + server);
-          DataManager.Instance.SetPlayerName(name);
-          DataManager.Instance.SetServerName(server);
-          DataManager.Instance.Clear();
 
           NpcDamageManager.LastUpdateTime = double.NaN;
           progressWindow.IsOpen = true;

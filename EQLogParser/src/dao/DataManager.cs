@@ -20,14 +20,15 @@ namespace EQLogParser
     public event EventHandler<NonPlayer> EventsNewNonPlayer;
     public event EventHandler<bool> EventsClearedActiveData;
 
-    public string PlayerName { get; set; }
-    public string ServerName { get; set; }
+    private string PlayerName;
+    private string ServerName;
 
     public static string ARCHIVE_DIR;
     private static string CONFIG_DIR;
-    private static string PETMAP_FILE;
+    private static string PETMAP_DIR;
     private static string SETTINGS_FILE;
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
+    private const string PETMAP_FILE = "petmapping.txt";
 
     private bool PetMappingUpdated = false;
     private bool SettingsUpdated = false;
@@ -67,16 +68,6 @@ namespace EQLogParser
     private DataManager()
     {
       // static data first
-      VerifiedPlayers["himself"] = 1;
-      VerifiedPlayers["herself"] = 1;
-      VerifiedPlayers["itself"] = 1;
-      VerifiedPlayers["yourself"] = 1;
-      VerifiedPlayers["you"] = 1;
-      VerifiedPlayers["YOU"] = 1;
-      VerifiedPlayers["You"] = 1;
-      VerifiedPlayers["your"] = 1;
-      VerifiedPlayers["Your"] = 1;
-      VerifiedPlayers["YOUR"] = 1;
       OtherSelves["himself"] = 1;
       OtherSelves["herself"] = 1;
       OtherSelves["itself"] = 1;
@@ -105,8 +96,26 @@ namespace EQLogParser
       // needs to be during class initialization for some reason
       CONFIG_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\config");
       ARCHIVE_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\archive\");
-      PETMAP_FILE = CONFIG_DIR + @"\petmapping.txt";
+      PETMAP_DIR = CONFIG_DIR + @"\{0}\";
       SETTINGS_FILE = CONFIG_DIR + @"\settings.txt";
+
+      try
+      {
+        // Remove In the Future
+        var oldFile = CONFIG_DIR + @"\" + PETMAP_FILE;
+        if (File.Exists(oldFile))
+        {
+          File.Delete(oldFile);
+        }
+      }
+      catch (IOException)
+      {
+        // ignore
+      }
+      catch (UnauthorizedAccessException)
+      {
+        // ignore
+      }
 
       // create config dir if it doesn't exist
       Directory.CreateDirectory(CONFIG_DIR);
@@ -185,51 +194,91 @@ namespace EQLogParser
       });
     }
 
-    public void Clear()
-    {
-      ActiveNonPlayerMap.Clear();
-      LifetimeNonPlayerMap.Clear();
-      ProbablyNotAPlayer.Clear();
-      UnVerifiedPetOrPlayer.Clear();
-      AllSpellCastBlocks.Clear();
-      AllUniqueSpellCasts.Clear();
-      AllUniqueSpellsCache.Clear();
-      AllReceivedSpellBlocks.Clear();
-      AllResists.Clear();
-      PlayerAttackDamageBlocks.Clear();
-      PlayerDefendDamageBlocks.Clear();
-      AllHealBlocks.Clear();
-      PlayerDeaths.Clear();
-      EventsClearedActiveData(this, true);
-    }
-
-    public void LoadState()
+    public void LoadState(bool fullUpdate, string newPlayerName = null, string newServerName = null)
     {
       lock (this)
       {
-        // Pet settings
-        UpdateVerifiedPlayers(Labels.UNASSIGNED);
-        Helpers.ReadList(PETMAP_FILE).ForEach(line =>
-        {
-          string[] parts = line.Split('=');
-          if (parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
-          {
-            UpdatePetToPlayer(parts[0], parts[1]);
-            UpdateVerifiedPlayers(parts[1]);
-            UpdateVerifiedPets(parts[0]);
-          }
-        });
+        ActiveNonPlayerMap.Clear();
+        LifetimeNonPlayerMap.Clear();
+        ProbablyNotAPlayer.Clear();
+        UnVerifiedPetOrPlayer.Clear();
+        AllSpellCastBlocks.Clear();
+        AllUniqueSpellCasts.Clear();
+        AllUniqueSpellsCache.Clear();
+        AllReceivedSpellBlocks.Clear();
+        AllResists.Clear();
+        PlayerAttackDamageBlocks.Clear();
+        PlayerDefendDamageBlocks.Clear();
+        AllHealBlocks.Clear();
+        PlayerDeaths.Clear();
 
-        // dont count initial load
-        PetMappingUpdated = false;
+        var serverChanged = (newServerName != ServerName);
+        if (fullUpdate)
+        {
+          if (serverChanged)
+          {
+            SaveState(); // check if saves are pending
+            PetToPlayerMap.Clear();
+            VerifiedPlayers.Clear();
+            VerifiedPets.Clear();
+            PlayerToClass.Clear();
+
+            ServerName = newServerName;
+
+            // Load Pets
+            var fileName = string.Format(CultureInfo.CurrentCulture, PETMAP_DIR, ServerName) + PETMAP_FILE;
+            Helpers.ReadList(fileName).ForEach(line =>
+            {
+              string[] parts = line.Split('=');
+              if (parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
+              {
+                UpdatePetToPlayer(parts[0], parts[1]);
+                UpdateVerifiedPlayers(parts[1]);
+                UpdateVerifiedPets(parts[0]);
+              }
+            });
+
+            // dont count initial load
+            PetMappingUpdated = false;
+          }
+
+          PlayerReplacement["you"] = newPlayerName;
+          PlayerReplacement["You"] = newPlayerName;
+          PlayerReplacement["YOU"] = newPlayerName;
+          PlayerReplacement["your"] = newPlayerName;
+          PlayerReplacement["Your"] = newPlayerName;
+          PlayerReplacement["YOUR"] = newPlayerName;
+          PlayerReplacement["yourself"] = newPlayerName;
+          PlayerReplacement["Yourself"] = newPlayerName;
+          UpdateVerifiedPlayers(newPlayerName);
+          UpdateVerifiedPlayers(Labels.UNASSIGNED);
+          VerifiedPlayers["himself"] = 1;
+          VerifiedPlayers["herself"] = 1;
+          VerifiedPlayers["itself"] = 1;
+          VerifiedPlayers["yourself"] = 1;
+          VerifiedPlayers["you"] = 1;
+          VerifiedPlayers["YOU"] = 1;
+          VerifiedPlayers["You"] = 1;
+          VerifiedPlayers["your"] = 1;
+          VerifiedPlayers["Your"] = 1;
+          VerifiedPlayers["YOUR"] = 1;
+          PlayerName = newPlayerName;
+        }
+
+        EventsClearedActiveData(this, fullUpdate && serverChanged);
       }
     }
+
 
     public void SaveState()
     {
       lock (this)
       {
-        SaveConfiguration(PETMAP_FILE, PetMappingUpdated, PetToPlayerMap);
+        var petDir = string.Format(CultureInfo.CurrentCulture, PETMAP_DIR, ServerName);
+        Directory.CreateDirectory(petDir);
+
+        var filtered = PetToPlayerMap.Where(keypair => Helpers.IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
+        SaveConfiguration(petDir + PETMAP_FILE, PetMappingUpdated, filtered);
         PetMappingUpdated = false;
 
         ApplicationSettings.TryRemove("IncludeAEHealing", out _); // not used anymore
@@ -273,7 +322,7 @@ namespace EQLogParser
 
     public void AddNonPlayerMapBreak(string text)
     {
-      NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAK_TIME, Name = string.Intern(text) };
+      NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAKTIME, Name = string.Intern(text) };
       EventsNewNonPlayer(this, divider);
     }
 
@@ -358,23 +407,14 @@ namespace EQLogParser
       AddAction(AllReceivedSpellBlocks, received, beginTime);
     }
 
-    public void SetPlayerName(string name)
+    public string GetPlayerName()
     {
-      PlayerReplacement["you"] = name;
-      PlayerReplacement["You"] = name;
-      PlayerReplacement["YOU"] = name;
-      PlayerReplacement["your"] = name;
-      PlayerReplacement["Your"] = name;
-      PlayerReplacement["YOUR"] = name;
-      PlayerReplacement["yourself"] = name;
-      PlayerReplacement["Yourself"] = name;
-      UpdateVerifiedPlayers(name);
-      PlayerName = name;
+      return PlayerName;
     }
 
-    public void SetServerName(string server)
+    public string GetServerName()
     {
-      ServerName = server;
+      return ServerName;
     }
 
     public string ReplacePlayer(string name, string alternative, out bool replaced)
@@ -741,19 +781,16 @@ namespace EQLogParser
       }
     }
 
-    private static void SaveConfiguration(string fileName, bool updated, ConcurrentDictionary<string, string> dict)
+    private static void SaveConfiguration(string fileName, bool updated, IEnumerable<KeyValuePair<string, string>> enumeration)
     {
       try
       {
         if (updated)
         {
           List<string> lines = new List<string>();
-          foreach (var keypair in dict)
+          foreach (var keypair in enumeration)
           {
-            if (keypair.Value != Labels.UNASSIGNED)
-            {
-              lines.Add(keypair.Key + "=" + keypair.Value);
-            }
+            lines.Add(keypair.Key + "=" + keypair.Value);
           }
 
           File.WriteAllLines(fileName, lines);
@@ -802,7 +839,7 @@ namespace EQLogParser
       }
       else
       {
-        var newSegment = new ActionBlock() { Actions = new List<IAction>(), BeginTime = beginTime };
+        var newSegment = new ActionBlock() { BeginTime = beginTime };
         newSegment.Actions.Add(action);
         blockList.Add(newSegment);
       }

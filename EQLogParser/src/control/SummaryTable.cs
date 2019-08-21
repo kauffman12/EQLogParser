@@ -9,22 +9,29 @@ namespace EQLogParser
 {
   public class SummaryTable : UserControl
   {
-    protected const string DEFAULT_TABLE_LABEL = "No NPCs Selected";
-    protected const string NODATA_TABLE_LABEL = Labels.NODATA;
+    internal const string DEFAULT_TABLE_LABEL = "No NPCs Selected";
+    internal const string NODATA_TABLE_LABEL = Labels.NODATA;
 
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
-    protected DataGrid TheDataGrid;
-    protected Label TheTitle;
-    protected CombinedStats CurrentStats;
+    internal DataGrid TheDataGrid;
+    internal Label TheTitle;
+    internal CombinedStats CurrentStats;
 
-    protected void InitSummaryTable(Label title, DataGrid dataGrid)
+    internal void InitSummaryTable(Label title, DataGrid dataGrid)
     {
       TheDataGrid = dataGrid;
       TheTitle = title;
 
-      title.Content = DEFAULT_TABLE_LABEL;
-      dataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
+      if (title != null)
+      {
+        TheTitle.Content = DEFAULT_TABLE_LABEL;
+      }
+
+      if (TheDataGrid != null)
+      {
+        TheDataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
+      }
     }
 
     internal static void UpdateClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
@@ -52,55 +59,55 @@ namespace EQLogParser
       return TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
     }
 
-    protected void CopyToEQClick(object sender, RoutedEventArgs e)
+    internal void CopyToEQClick(object sender, RoutedEventArgs e)
     {
       (Application.Current.MainWindow as MainWindow).CopyToEQClick();
     }
 
-    protected void DataGridSelectAllClick(object sender, RoutedEventArgs e)
+    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e)
     {
       Helpers.DataGridSelectAll(sender as FrameworkElement);
     }
 
-    protected void DataGridUnselectAllClick(object sender, RoutedEventArgs e)
+    internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e)
     {
       Helpers.DataGridUnselectAll(sender as FrameworkElement);
     }
 
-    protected void DataGridShowBreakdownClick(object sender, RoutedEventArgs e)
+    internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e)
     {
       ShowBreakdown(GetSelectedStats());
     }
 
-    protected void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e)
+    internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e)
     {
       ShowBreakdown2(GetSelectedStats());
     }
 
-    protected void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e)
+    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowBreakdown(GetPlayerStatsByClass(menuItem.Tag as string));
+      ShowBreakdown(GetPlayerStatsByClass(menuItem?.Tag as string));
     }
 
-    protected void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e)
+    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = sender as MenuItem;
-      ShowBreakdown2(GetPlayerStatsByClass(menuItem.Tag as string));
+      ShowBreakdown2(GetPlayerStatsByClass(menuItem?.Tag as string));
     }
 
-    protected void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e)
+    internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e)
     {
       ShowSpellCasts(GetSelectedStats());
     }
 
-    protected void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e)
+    internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
       ShowSpellCasts(GetPlayerStatsByClass(menuItem?.Tag as string));
     }
 
-    protected List<PlayerStats> GetPlayerStatsByClass(string classString)
+    internal List<PlayerStats> GetPlayerStatsByClass(string classString)
     {
       SpellClass type = (SpellClass)Enum.Parse(typeof(SpellClass), classString);
       string className = DataManager.Instance.GetClassName(type);
@@ -118,22 +125,24 @@ namespace EQLogParser
       return selectedStats;
     }
 
-    protected void FireSelectionChangedEvent(List<PlayerStats> selected)
+    internal void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
-      EventsSelectionChange(this, new PlayerStatsSelectionChangedEventArgs() { Selected = selected });
+      var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
+      selectionChanged.Selected.AddRange(selected);
+      EventsSelectionChange(this, selectionChanged);
     }
 
-    protected virtual void ShowBreakdown(List<PlayerStats> selected)
-    {
-      // need to override this method
-    }
-
-    protected virtual void ShowBreakdown2(List<PlayerStats> selected)
+    internal virtual void ShowBreakdown(List<PlayerStats> selected)
     {
       // need to override this method
     }
 
-    protected void ShowSpellCasts(List<PlayerStats> selected)
+    internal virtual void ShowBreakdown2(List<PlayerStats> selected)
+    {
+      // need to override this method
+    }
+
+    internal void ShowSpellCasts(List<PlayerStats> selected)
     {
       if (selected?.Count > 0)
       {

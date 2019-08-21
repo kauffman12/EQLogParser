@@ -14,52 +14,6 @@ using System.Windows.Media;
 
 namespace EQLogParser
 {
-  internal class MultiMap<V>
-  {
-    private readonly Dictionary<string, HashSet<V>> _dictionary = new Dictionary<string, HashSet<V>>();
-
-    public void Add(string key, V value)
-    {
-      // Add a key.
-      if (_dictionary.TryGetValue(key, out HashSet<V> list))
-      {
-        list.Add(value);
-      }
-      else
-      {
-        list = new HashSet<V>
-        {
-          value
-        };
-
-        _dictionary[key] = list;
-      }
-    }
-
-    public bool ContainsKey(string key)
-    {
-      return _dictionary.ContainsKey(key);
-    }
-
-    public IEnumerable<string> Keys
-    {
-      get { return _dictionary.Keys; }
-    }
-
-    public HashSet<V> this[string key]
-    {
-      get
-      {
-        if (!_dictionary.TryGetValue(key, out HashSet<V> list))
-        {
-          list = new HashSet<V>();
-          _dictionary[key] = list;
-        }
-        return list;
-      }
-    }
-  }
-
   internal class TimedActionComparer : IComparer<TimedAction>
   {
     public int Compare(TimedAction x, TimedAction y)
@@ -76,7 +30,7 @@ namespace EQLogParser
     }
   }
 
-  internal class ComboBoxItemTemplateSelector : DataTemplateSelector
+  public class ComboBoxItemTemplateSelector : DataTemplateSelector
   {
     public List<DataTemplate> SelectedItemTemplates { get; } = new List<DataTemplate>();
     public List<DataTemplate> DropDownItemTemplates { get; } = new List<DataTemplate>();
@@ -408,7 +362,7 @@ namespace EQLogParser
 
     public static bool GetTripleClickSelectAll(DependencyObject element)
     {
-      return (bool) element?.GetValue(TripleClickSelectAllProperty);
+      return (bool)element?.GetValue(TripleClickSelectAllProperty);
     }
   }
 }

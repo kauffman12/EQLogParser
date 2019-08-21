@@ -40,7 +40,7 @@ namespace EQLogParser
       };
     }
 
-    internal void BuildTotalStats(DamageStatsOptions options)
+    internal void BuildTotalStats(GenerateStatsOptions options)
     {
       Selected = options.Npcs;
       Title = options.Name;
@@ -118,7 +118,7 @@ namespace EQLogParser
       }
     }
 
-    internal void RebuildTotalStats(DamageStatsOptions options)
+    internal void RebuildTotalStats(GenerateStatsOptions options)
     {
       FireNewStatsEvent(options);
       ComputeDamageStats(options);
@@ -130,10 +130,6 @@ namespace EQLogParser
       {
         overlayStats = new OverlayDamageStats
         {
-          TopLevelStats = new Dictionary<string, PlayerStats>(),
-          AggregateStats = new Dictionary<string, PlayerStats>(),
-          IndividualStats = new Dictionary<string, PlayerStats>(),
-          UniqueNpcs = new Dictionary<string, byte>(),
           RaidStats = new PlayerStats()
         };
 
@@ -213,20 +209,22 @@ namespace EQLogParser
         overlayStats.RaidStats.DPS = (long)Math.Round(overlayStats.RaidStats.Total / overlayStats.RaidStats.TotalSeconds, 2);
 
         var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
-        int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.PlayerName, StringComparison.Ordinal));
+        int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.GetPlayerName(), StringComparison.Ordinal));
 
         int renumber;
         if (found > 4)
         {
           var you = list[found];
           you.Rank = Convert.ToUInt16(found + 1);
-          overlayStats.StatsList = list.Take(4).ToList();
+          overlayStats.StatsList.Clear();
+          overlayStats.StatsList.AddRange(list.Take(4));
           overlayStats.StatsList.Add(you);
           renumber = overlayStats.StatsList.Count - 1;
         }
         else
         {
-          overlayStats.StatsList = list.Take(5).ToList();
+          overlayStats.StatsList.Clear();
+          overlayStats.StatsList.AddRange(list.Take(5));
           renumber = overlayStats.StatsList.Count;
         }
 
@@ -296,22 +294,22 @@ namespace EQLogParser
       return valid;
     }
 
-    internal void FireSelectionEvent(DamageStatsOptions options, List<PlayerStats> selected)
+    internal void FireSelectionEvent(GenerateStatsOptions options, List<PlayerStats> selected)
     {
       FireChartEvent(options, "SELECT", selected);
     }
 
-    internal void FireUpdateEvent(DamageStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    internal void FireUpdateEvent(GenerateStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       FireChartEvent(options, "UPDATE", selected, filter);
     }
 
-    internal void FireFilterEvent(DamageStatsOptions options, Predicate<object> filter)
+    internal void FireFilterEvent(GenerateStatsOptions options, Predicate<object> filter)
     {
       FireChartEvent(options, "FILTER", null, filter);
     }
 
-    private void FireCompletedEvent(DamageStatsOptions options, CombinedStats combined)
+    private void FireCompletedEvent(GenerateStatsOptions options, CombinedStats combined)
     {
       if (options.RequestSummaryData)
       {
@@ -325,7 +323,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireNewStatsEvent(DamageStatsOptions options)
+    private void FireNewStatsEvent(GenerateStatsOptions options)
     {
       if (options.RequestSummaryData)
       {
@@ -334,7 +332,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireNoDataEvent(DamageStatsOptions options)
+    private void FireNoDataEvent(GenerateStatsOptions options)
     {
       if (options.RequestSummaryData)
       {
@@ -345,7 +343,7 @@ namespace EQLogParser
       FireChartEvent(options, "CLEAR");
     }
 
-    internal void FireChartEvent(DamageStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       if (options.RequestChartData)
       {
@@ -361,7 +359,7 @@ namespace EQLogParser
       }
     }
 
-    private void ComputeDamageStats(DamageStatsOptions options)
+    private void ComputeDamageStats(GenerateStatsOptions options)
     {
       CombinedStats combined = null;
       ConcurrentDictionary<string, Dictionary<string, PlayerStats>> childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
@@ -535,14 +533,12 @@ namespace EQLogParser
           combined = new CombinedStats
           {
             RaidStats = RaidTotals,
-            UniqueClasses = new Dictionary<string, byte>(),
-            Children = new Dictionary<string, List<PlayerStats>>(),
-            StatsList = topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList(),
             TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
             TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
             TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Damage ", StatsUtil.FormatTotals(RaidTotals.DPS))
           };
 
+          combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
           combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
           combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 

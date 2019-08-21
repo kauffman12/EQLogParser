@@ -10,11 +10,11 @@ namespace EQLogParser
 {
   public abstract class BreakdownTable : UserControl
   {
-    protected string CurrentSortKey = "Total";
-    protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
-    protected DataGridTextColumn CurrentColumn = null;
+    internal string CurrentSortKey = "Total";
+    internal ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
+    internal DataGridTextColumn CurrentColumn = null;
 
-    protected void CustomSorting(object sender, DataGridSortingEventArgs e)
+    internal void CustomSorting(object sender, DataGridSortingEventArgs e)
     {
       if (e?.Column is DataGridTextColumn column)
       {

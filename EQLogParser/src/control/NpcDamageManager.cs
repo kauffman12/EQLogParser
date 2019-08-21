@@ -100,7 +100,7 @@ namespace EQLogParser
       };
     }
 
-    private string FormatTime(double seconds)
+    private static string FormatTime(double seconds)
     {
       TimeSpan diff = TimeSpan.FromSeconds(seconds);
       string result = "Inactivity > ";
