@@ -32,6 +32,7 @@ namespace EQLogParser
     private int RowCount = 0;
     private double CalculatedRowHeight = 0;
     private bool Active = false;
+    private bool ProcessDirection = false;
 
     private Button CopyButton;
     private Button RefreshButton;
@@ -74,7 +75,7 @@ namespace EQLogParser
         CreateRows();
         Title = "Overlay";
         MinHeight = 0;
-        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 3000) };
+        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
         UpdateTimer.Tick += UpdateTimerTick;
         AllowsTransparency = true;
         Style = null;
@@ -173,6 +174,9 @@ namespace EQLogParser
 
     private void UpdateTimerTick(object sender, EventArgs e)
     {
+      // people wanted shorter delays for damage updates but I don't want the indicator to change constantly
+      // so this limits it to 1/2 the current time value
+      ProcessDirection = !ProcessDirection;
 
       if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > NpcDamageManager.NPC_DEATH_TIME)
       {
@@ -182,7 +186,8 @@ namespace EQLogParser
         Stats = null;
         PrevList = null;
         UpdateTimer.Stop();
-      } else if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
+      }
+      else if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
       {
         var list = Stats.StatsList.Take(MAX_ROWS).ToList();
         if (list.Count > 0)
@@ -199,7 +204,10 @@ namespace EQLogParser
           {
             if (list.Count > i)
             {
-              DamageRateList[i].Opacity = 0.0;
+              if (ProcessDirection)
+              {
+                DamageRateList[i].Opacity = 0.0;
+              }
 
               if (i == 0)
               {
@@ -212,8 +220,9 @@ namespace EQLogParser
                 RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
               }
 
-              var isMe = list[i].Name.StartsWith(DataManager.Instance.PlayerName, StringComparison.OrdinalIgnoreCase) &&
-                (DataManager.Instance.PlayerName.Length >= list[i].Name.Length || list[i].Name[DataManager.Instance.PlayerName.Length] == ' ');
+              string playerName = DataManager.Instance.GetPlayerName();
+              var isMe = !string.IsNullOrEmpty(playerName) && list[i].Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
+                (playerName.Length >= list[i].Name.Length || list[i].Name[playerName.Length] == ' ');
               if (MainWindow.IsHideOverlayOtherPlayersEnabled && !isMe)
               {
                 NameBlockList[i].Text = list[i].Rank + ". " + "Hidden Player";
@@ -238,38 +247,41 @@ namespace EQLogParser
             }
           }
 
-          if (me > 0 && topList.Count > 0)
+          if (ProcessDirection)
           {
-            var updatedList = new Dictionary<int, double>();
-            foreach(int i in topList.Keys)
+            if (me > 0 && topList.Count > 0)
             {
-              if (i != me)
+              var updatedList = new Dictionary<int, double>();
+              foreach (int i in topList.Keys)
               {
-                var diff = topList[i] / (double) me;
-                updatedList[i] = diff;
-                if (PrevList != null && PrevList.ContainsKey(i))
+                if (i != me)
                 {
-                  if (PrevList[i] > diff)
+                  var diff = topList[i] / (double)me;
+                  updatedList[i] = diff;
+                  if (PrevList != null && PrevList.ContainsKey(i))
                   {
-                    DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
-                    DamageRateList[i].Foreground = DOWN_BRUSH;
-                    DamageRateList[i].Opacity = DATA_OPACITY;
-                  }
-                  else if (PrevList[i] < diff)
-                  {
-                    DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
-                    DamageRateList[i].Foreground = UP_BRUSH;
-                    DamageRateList[i].Opacity = DATA_OPACITY;
+                    if (PrevList[i] > diff)
+                    {
+                      DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
+                      DamageRateList[i].Foreground = DOWN_BRUSH;
+                      DamageRateList[i].Opacity = DATA_OPACITY;
+                    }
+                    else if (PrevList[i] < diff)
+                    {
+                      DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
+                      DamageRateList[i].Foreground = UP_BRUSH;
+                      DamageRateList[i].Opacity = DATA_OPACITY;
+                    }
                   }
                 }
               }
-            }
 
-            PrevList = updatedList;
-          }
-          else
-          {
-            PrevList = null;
+              PrevList = updatedList;
+            }
+            else
+            {
+              PrevList = null;
+            }
           }
 
           var requested = (goodRowCount + 1) * CalculatedRowHeight;

@@ -117,7 +117,7 @@ namespace EQLogParser
         test = part.Substring(0, optionalIndex - 9);
         if (test.Length == 4 && test[3] == ' ')
         {
-          test = DataManager.Instance.PlayerName;
+          test = DataManager.Instance.GetPlayerName();
         }
       }
 

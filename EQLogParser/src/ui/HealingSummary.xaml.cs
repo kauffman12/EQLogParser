@@ -1,7 +1,6 @@
 ﻿
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -75,13 +74,13 @@ namespace EQLogParser
       });
     }
 
-    protected void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
+    internal void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       FireSelectionChangedEvent(GetSelectedStats());
       UpdateDataGridMenuItems();
     }
 
-    protected override void ShowBreakdown(List<PlayerStats> selected)
+    internal override void ShowBreakdown(List<PlayerStats> selected)
     {
       if (selected?.Count > 0)
       {
@@ -129,7 +128,7 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
         };
 
-        HealingStatsManager.Instance.FireFilterEvent(new HealingStatsOptions() { RequestChartData = true }, view.Filter);
+        HealingStatsManager.Instance.FireFilterEvent(new GenerateStatsOptions() { RequestChartData = true }, view.Filter);
       }
 
       return view;

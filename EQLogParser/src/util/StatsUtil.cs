@@ -275,7 +275,7 @@ namespace EQLogParser
     {
       if (superStats != null)
       {
-        if (resistCounts != null && superStats.Name == DataManager.Instance.PlayerName && resistCounts.TryGetValue(stats.Name, out uint value))
+        if (resistCounts != null && superStats.Name == DataManager.Instance.GetPlayerName() && resistCounts.TryGetValue(stats.Name, out uint value))
         {
           stats.Resists = value;
         }

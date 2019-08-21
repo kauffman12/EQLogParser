@@ -36,7 +36,7 @@ namespace EQLogParser
     public DamageBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
-      titleLabel.Content = currentStats.ShortTitle;
+      titleLabel.Content = currentStats?.ShortTitle;
       RaidStats = currentStats.RaidStats;
       ChildStats = currentStats.Children;
     }

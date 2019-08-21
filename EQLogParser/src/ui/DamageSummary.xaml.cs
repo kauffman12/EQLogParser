@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -90,13 +89,13 @@ namespace EQLogParser
       });
     }
 
-    protected void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
+    internal void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       FireSelectionChangedEvent(GetSelectedStats());
       UpdateDataGridMenuItems();
     }
 
-    protected override void ShowBreakdown(List<PlayerStats> selected)
+    internal override void ShowBreakdown(List<PlayerStats> selected)
     {
       if (selected?.Count > 0)
       {
@@ -208,17 +207,17 @@ namespace EQLogParser
       }
     }
 
-    private void ShowColumn(int index, bool show)
+    private void SetPetClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.Columns[index].Visibility == Visibility.Hidden && show || dataGrid.Columns[index].Visibility == Visibility.Visible && !show)
+      ContextMenu menu = (sender as FrameworkElement)?.Parent as ContextMenu;
+      DataGrid callingDataGrid = menu?.PlacementTarget as DataGrid;
+      if (callingDataGrid.SelectedItem is PlayerStats stats)
       {
-        dataGrid.Columns[index].Visibility = show ? Visibility.Visible : Visibility.Hidden;
-        foreach (var grid in ChildGrids)
-        {
-          grid.Columns[index].Visibility = show ? Visibility.Visible : Visibility.Hidden;
-        }
+        DataManager.Instance.UpdateVerifiedPets(stats.OrigName);
+        DataManager.Instance.UpdatePetToPlayer(stats.OrigName, Labels.UNASSIGNED);
       }
     }
+
 
     private void UpdateDataGridMenuItems()
     {
@@ -226,7 +225,7 @@ namespace EQLogParser
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
+        menuItemSetAsPet.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyDamageParseToEQClick.IsEnabled = true;
         UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
@@ -235,7 +234,7 @@ namespace EQLogParser
       else
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
-          menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
+          menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
       }
     }
 
@@ -258,7 +257,7 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
         };
 
-        DamageStatsManager.Instance.FireFilterEvent(new DamageStatsOptions() { RequestChartData = true }, view.Filter);
+        DamageStatsManager.Instance.FireFilterEvent(new GenerateStatsOptions() { RequestChartData = true }, view.Filter);
       }
 
       return view;

@@ -36,7 +36,7 @@ namespace EQLogParser
       };
     }
 
-    internal void BuildTotalStats(TankingStatsOptions options)
+    internal void BuildTotalStats(GenerateStatsOptions options)
     {
       Selected = options.Npcs;
       Title = options.Name;
@@ -89,28 +89,28 @@ namespace EQLogParser
       }
     }
 
-    internal void RebuildTotalStats(TankingStatsOptions options)
+    internal void RebuildTotalStats(GenerateStatsOptions options)
     {
       FireNewStatsEvent(options);
       ComputeTankingStats(options);
     }
 
-    internal void FireFilterEvent(TankingStatsOptions options, Predicate<object> filter)
+    internal void FireFilterEvent(GenerateStatsOptions options, Predicate<object> filter)
     {
       FireChartEvent(options, "FILTER", null, filter);
     }
 
-    internal void FireSelectionEvent(TankingStatsOptions options, List<PlayerStats> selected)
+    internal void FireSelectionEvent(GenerateStatsOptions options, List<PlayerStats> selected)
     {
       FireChartEvent(options, "SELECT", selected);
     }
 
-    internal void FireUpdateEvent(TankingStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    internal void FireUpdateEvent(GenerateStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       FireChartEvent(options, "UPDATE", selected, filter);
     }
 
-    private void FireCompletedEvent(TankingStatsOptions options, CombinedStats combined)
+    private void FireCompletedEvent(GenerateStatsOptions options, CombinedStats combined)
     {
       if (options.RequestSummaryData)
       {
@@ -124,7 +124,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireNewStatsEvent(TankingStatsOptions options)
+    private void FireNewStatsEvent(GenerateStatsOptions options)
     {
       if (options.RequestSummaryData)
       {
@@ -133,7 +133,7 @@ namespace EQLogParser
       }
     }
 
-    private void FireNoDataEvent(TankingStatsOptions options)
+    private void FireNoDataEvent(GenerateStatsOptions options)
     {
       if (options.RequestSummaryData)
       {
@@ -144,7 +144,7 @@ namespace EQLogParser
       FireChartEvent(options, "CLEAR");
     }
 
-    private void FireChartEvent(TankingStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    private void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       if (options.RequestChartData)
       {
@@ -172,7 +172,7 @@ namespace EQLogParser
       return valid;
     }
 
-    private void ComputeTankingStats(TankingStatsOptions options)
+    private void ComputeTankingStats(GenerateStatsOptions options)
     {
       CombinedStats combined = null;
       Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
@@ -225,13 +225,12 @@ namespace EQLogParser
           combined = new CombinedStats
           {
             RaidStats = RaidTotals,
-            UniqueClasses = new Dictionary<string, byte>(),
-            StatsList = individualStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList(),
             TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
             TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
             TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Tanked ", StatsUtil.FormatTotals(RaidTotals.DPS))
           };
 
+          combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
           combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
           combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 

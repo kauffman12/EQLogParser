@@ -29,7 +29,6 @@ namespace EQLogParser
     private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(37, 37, 38));
     private static SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
-    private const string NPC_SEARCH_TEXT = "NPC Search";
 
     // NPC Search
     private static int CurrentNpcSearchIndex = 0;
@@ -49,7 +48,7 @@ namespace EQLogParser
 
       // npc search box
       npcSearchBox.FontStyle = FontStyles.Italic;
-      npcSearchBox.Text = NPC_SEARCH_TEXT;
+      npcSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
 
       npcMenuItemClear.IsEnabled = npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
       npcMenuItemSetPet.IsEnabled = npcMenuItemSetPlayer.IsEnabled = false;
@@ -128,7 +127,7 @@ namespace EQLogParser
 
     private void Clear_Click(object sender, RoutedEventArgs e)
     {
-      DataManager.Instance.Clear();
+      DataManager.Instance.LoadState(false);
     }
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
@@ -167,7 +166,7 @@ namespace EQLogParser
       // set header count
       e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
 
-      if (e.Row.Item is NonPlayer npc && npc.BeginTimeString == NonPlayer.BREAK_TIME)
+      if (e.Row.Item is NonPlayer npc && npc.BeginTimeString == NonPlayer.BREAKTIME)
       {
         if (e.Row.Background != BREAK_TIME_BRUSH)
         {
@@ -243,7 +242,7 @@ namespace EQLogParser
 
     private void NPCSearchBox_GotFocus(object sender, RoutedEventArgs e)
     {
-      if (npcSearchBox.Text == NPC_SEARCH_TEXT)
+      if (npcSearchBox.Text == Properties.Resources.NPC_SEARCH_TEXT)
       {
         npcSearchBox.Text = "";
         npcSearchBox.FontStyle = FontStyles.Normal;
@@ -254,7 +253,7 @@ namespace EQLogParser
     {
       if (npcSearchBox.Text.Length == 0)
       {
-        npcSearchBox.Text = NPC_SEARCH_TEXT;
+        npcSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
         npcSearchBox.FontStyle = FontStyles.Italic;
       }
     }
@@ -266,7 +265,7 @@ namespace EQLogParser
       {
         if (e.Key == Key.Escape)
         {
-          npcSearchBox.Text = NPC_SEARCH_TEXT;
+          npcSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
           npcSearchBox.FontStyle = FontStyles.Italic;
           if (CurrentSearchRow != null)
           {
