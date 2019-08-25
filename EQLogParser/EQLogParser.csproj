@@ -193,9 +193,7 @@
     <Compile Include="src\ui\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\util\ComboBoxItemTemplateSelector.cs" />
     <Compile Include="src\util\ConfigUtil.cs" />
-    <Compile Include="src\util\TextBoxBehavior.cs" />
     <Compile Include="src\util\TextFormatUtils.cs" />
     <Compile Include="src\util\DateUtil.cs" />
     <Compile Include="src\util\StatsUtil.cs" />
@@ -236,7 +234,7 @@
     <Compile Include="src\util\ActionProcessor.cs" />
     <Compile Include="src\util\Helpers.cs" />
     <Compile Include="src\util\NativeMethods.cs" />
-    <Compile Include="src\util\ZeroConverter.cs" />
+    <Compile Include="src\util\UserInterface.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
