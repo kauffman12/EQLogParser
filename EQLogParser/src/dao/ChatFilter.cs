@@ -96,7 +96,7 @@ namespace EQLogParser
           if (From == null || ("You".Equals(From, StringComparison.OrdinalIgnoreCase) && chatType.Sender == Player) ||
             (Player.Equals(From, StringComparison.OrdinalIgnoreCase) && chatType.Sender == "You") || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
           {
-            if (!DataManager.Instance.CheckNameForPet(chatType.Sender) && Helpers.IsPossiblePlayerNameWithServer(chatType.Sender))
+            if (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender))
             {
               if (Keyword != null)
               {
@@ -118,6 +118,26 @@ namespace EQLogParser
       }
 
       return passed;
+    }
+
+    internal static bool IsPossiblePlayerNameWithServer(string part, int stop = -1)
+    {
+      if (stop == -1)
+      {
+        stop = part.Length;
+      }
+
+      bool found = stop < 3 ? false : true;
+      for (int i = 0; found != false && i < stop; i++)
+      {
+        if (!char.IsLetter(part, i) && part[i] != '.')
+        {
+          found = false;
+          break;
+        }
+      }
+
+      return found;
     }
   }
 }

@@ -61,6 +61,33 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Berserker.
+        /// </summary>
+        internal static string BER {
+            get {
+                return ResourceManager.GetString("BER", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bard.
+        /// </summary>
+        internal static string BRD {
+            get {
+                return ResourceManager.GetString("BRD", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Beastlord.
+        /// </summary>
+        internal static string BST {
+            get {
+                return ResourceManager.GetString("BST", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to End Date.
         /// </summary>
         internal static string CHAT_END_DATE {
@@ -106,11 +133,92 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cleric.
+        /// </summary>
+        internal static string CLR {
+            get {
+                return ResourceManager.GetString("CLR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Druid.
+        /// </summary>
+        internal static string DRU {
+            get {
+                return ResourceManager.GetString("DRU", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Enchanter.
+        /// </summary>
+        internal static string ENC {
+            get {
+                return ResourceManager.GetString("ENC", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Magician.
+        /// </summary>
+        internal static string MAG {
+            get {
+                return ResourceManager.GetString("MAG", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Monk.
+        /// </summary>
+        internal static string MNK {
+            get {
+                return ResourceManager.GetString("MNK", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Necromancer.
+        /// </summary>
+        internal static string NEC {
+            get {
+                return ResourceManager.GetString("NEC", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to NPC Search.
         /// </summary>
         internal static string NPC_SEARCH_TEXT {
             get {
                 return ResourceManager.GetString("NPC_SEARCH_TEXT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Paladin.
+        /// </summary>
+        internal static string PAL {
+            get {
+                return ResourceManager.GetString("PAL", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Ranger.
+        /// </summary>
+        internal static string RNG {
+            get {
+                return ResourceManager.GetString("RNG", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rogue.
+        /// </summary>
+        internal static string ROG {
+            get {
+                return ResourceManager.GetString("ROG", resourceCulture);
             }
         }
         
@@ -129,6 +237,42 @@ namespace EQLogParser.Properties {
         internal static string SHARE_DPS_TOO_BIG {
             get {
                 return ResourceManager.GetString("SHARE_DPS_TOO_BIG", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Shadow Knight.
+        /// </summary>
+        internal static string SHD {
+            get {
+                return ResourceManager.GetString("SHD", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Shaman.
+        /// </summary>
+        internal static string SHM {
+            get {
+                return ResourceManager.GetString("SHM", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Warrior.
+        /// </summary>
+        internal static string WAR {
+            get {
+                return ResourceManager.GetString("WAR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Wizard.
+        /// </summary>
+        internal static string WIZ {
+            get {
+                return ResourceManager.GetString("WIZ", resourceCulture);
             }
         }
     }

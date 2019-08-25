@@ -110,7 +110,7 @@ namespace EQLogParser
     internal List<PlayerStats> GetPlayerStatsByClass(string classString)
     {
       SpellClass type = (SpellClass)Enum.Parse(typeof(SpellClass), classString);
-      string className = DataManager.Instance.GetClassName(type);
+      string className = DataManager.GetClassName(type);
 
       List<PlayerStats> selectedStats = new List<PlayerStats>();
       foreach (var item in TheDataGrid.Items)

@@ -117,6 +117,15 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="BER" xml:space="preserve">
+    <value>Berserker</value>
+  </data>
+  <data name="BRD" xml:space="preserve">
+    <value>Bard</value>
+  </data>
+  <data name="BST" xml:space="preserve">
+    <value>Beastlord</value>
+  </data>
   <data name="CHAT_END_DATE" xml:space="preserve">
     <value>End Date</value>
   </data>
@@ -132,13 +141,52 @@
   <data name="CHAT_TO_FILTER" xml:space="preserve">
     <value>To</value>
   </data>
+  <data name="CLR" xml:space="preserve">
+    <value>Cleric</value>
+  </data>
+  <data name="DRU" xml:space="preserve">
+    <value>Druid</value>
+  </data>
+  <data name="ENC" xml:space="preserve">
+    <value>Enchanter</value>
+  </data>
+  <data name="MAG" xml:space="preserve">
+    <value>Magician</value>
+  </data>
+  <data name="MNK" xml:space="preserve">
+    <value>Monk</value>
+  </data>
+  <data name="NEC" xml:space="preserve">
+    <value>Necromancer</value>
+  </data>
   <data name="NPC_SEARCH_TEXT" xml:space="preserve">
     <value>NPC Search</value>
+  </data>
+  <data name="PAL" xml:space="preserve">
+    <value>Paladin</value>
+  </data>
+  <data name="RNG" xml:space="preserve">
+    <value>Ranger</value>
+  </data>
+  <data name="ROG" xml:space="preserve">
+    <value>Rogue</value>
   </data>
   <data name="SHARE_DPS_SELECTED" xml:space="preserve">
     <value>No Players Selected</value>
   </data>
   <data name="SHARE_DPS_TOO_BIG" xml:space="preserve">
     <value>Exceeded Copy/Paste Limit for EQ</value>
+  </data>
+  <data name="SHD" xml:space="preserve">
+    <value>Shadow Knight</value>
+  </data>
+  <data name="SHM" xml:space="preserve">
+    <value>Shaman</value>
+  </data>
+  <data name="WAR" xml:space="preserve">
+    <value>Warrior</value>
+  </data>
+  <data name="WIZ" xml:space="preserve">
+    <value>Wizard</value>
   </data>
 </root>

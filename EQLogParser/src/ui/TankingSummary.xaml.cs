@@ -21,7 +21,7 @@ namespace EQLogParser
       InitSummaryTable(title, dataGrid);
 
       CurrentPetValue = showPets.IsChecked.Value;
-      var list = DataManager.Instance.GetClassList();
+      var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, "All Classes");
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
@@ -158,10 +158,10 @@ namespace EQLogParser
           else if (stats is DataPoint dataPoint)
           {
             name = dataPoint.Name;
-            className = DataManager.Instance.GetPlayerClass(name);
+            className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
-          var isPet = !string.IsNullOrEmpty(name) && DataManager.Instance.CheckNameForPet(name);
+          var isPet = !string.IsNullOrEmpty(name) && PlayerManager.Instance.IsVerifiedPet(name);
           if (isPet && CurrentPetValue == false)
           {
             return false;

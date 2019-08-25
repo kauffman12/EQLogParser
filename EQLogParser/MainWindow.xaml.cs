@@ -2,6 +2,7 @@
 using ActiproSoftware.Windows.Themes;
 using FontAwesome.WPF;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -45,7 +46,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.32";
+    private const string VERSION = "v1.5.40";
     private const string PLAYER_LIST_TITLE = "Player List ({0})";
     private const string PETS_LIST_TITLE = "Pets List ({0})";
 
@@ -71,7 +72,7 @@ namespace EQLogParser
 
     private ChatManager PlayerChatManager;
     private NpcDamageManager NpcDamageManager = new NpcDamageManager();
-    private Dictionary<string, ParseData> Parses = new Dictionary<string, ParseData>();
+    private ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
 
     Dictionary<string, DockingWindow> IconToWindow;
     private DocumentWindow ChatWindow = null;
@@ -108,11 +109,11 @@ namespace EQLogParser
 
         // pet -> players
         petMappingGrid.ItemsSource = PetPlayersView;
-        DataManager.Instance.EventsUpdatePetMapping += Instance_EventsUpdatePetMapping;
+        PlayerManager.Instance.EventsNewPetMapping += Instance_EventsNewPetMapping;
 
         // verified pets table
         verifiedPetsGrid.ItemsSource = VerifiedPetsView;
-        DataManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
+        PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
           verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
@@ -120,7 +121,7 @@ namespace EQLogParser
 
         // verified player table
         verifiedPlayersGrid.ItemsSource = VerifiedPlayersProperty;
-        DataManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
+        PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPlayersProperty);
           verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
@@ -134,7 +135,7 @@ namespace EQLogParser
         HealingLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
 
         HealingLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record, data.BeginTime);
-        DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.IsPlayerDamage, data.BeginTime);
+        DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.BeginTime);
         DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record, data.BeginTime);
 
         (npcWindow.Content as NpcTable).EventsSelectionChange += (sender, data) => ComputeStats();
@@ -155,27 +156,27 @@ namespace EQLogParser
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
 
         // Bane Damage
-        string value = DataManager.Instance.GetApplicationSetting("IncludeBaneDamage");
+        string value = ConfigUtil.GetApplicationSetting("IncludeBaneDamage");
         IsBaneDamageEnabled = value != null && bool.TryParse(value, out bool bValue) && bValue;
         enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Damage Overlay
-        value = DataManager.Instance.GetApplicationSetting("IsDamageOverlayEnabled");
+        value = ConfigUtil.GetApplicationSetting("IsDamageOverlayEnabled");
         IsDamageOverlayEnabled = value != null && bool.TryParse(value, out bValue) && bValue;
         enableDamageOverlayIcon.Visibility = IsDamageOverlayEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Ignore Intitial Pull
-        value = DataManager.Instance.GetApplicationSetting("IngoreInitialPullDamage");
+        value = ConfigUtil.GetApplicationSetting("IngoreInitialPullDamage");
         IsIgnoreIntialPullDamageEnabled = value != null && bool.TryParse(value, out bool bValue2) && bValue2;
         enableIgnoreInitialPullDamageIcon.Visibility = IsIgnoreIntialPullDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // AoE healing
-        value = DataManager.Instance.GetApplicationSetting("IncludeAoEHealing");
+        value = ConfigUtil.GetApplicationSetting("IncludeAoEHealing");
         IsAoEHealingEnabled = value == null || bool.TryParse(value, out bValue) && bValue;
         enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Hide other player names on overlay
-        value = DataManager.Instance.GetApplicationSetting("HideOverlayOtherPlayers");
+        value = ConfigUtil.GetApplicationSetting("HideOverlayOtherPlayers");
         IsHideOverlayOtherPlayersEnabled = value != null && bool.TryParse(value, out bValue2) && bValue2;
         enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
 
@@ -209,7 +210,7 @@ namespace EQLogParser
     {
       if (saveFirst)
       {
-        DataManager.Instance.SaveState();
+        ConfigUtil.Save();
       }
 
       Dispatcher.InvokeAsync(() =>
@@ -240,7 +241,7 @@ namespace EQLogParser
       AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
     }
 
-    private void Instance_EventsUpdatePetMapping(object sender, PetMapping mapping)
+    private void Instance_EventsNewPetMapping(object _, PetMapping mapping)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -263,7 +264,7 @@ namespace EQLogParser
       });
     }
 
-    private void Instance_EventsClearedActiveData(object sender, bool serverChanged)
+    private void Instance_EventsClearedActiveData(object _, bool _2)
     {
       (DamageWindow?.Content as DamageSummary)?.Clear();
       (HealingWindow?.Content as HealingSummary)?.Clear();
@@ -271,15 +272,6 @@ namespace EQLogParser
       (DamageChartWindow?.Content as LineChart)?.Clear();
       (HealingChartWindow?.Content as LineChart)?.Clear();
       (TankingChartWindow?.Content as LineChart)?.Clear();
-
-      if (serverChanged)
-      {
-        PetPlayersView.Clear();
-        VerifiedPetsView.Clear();
-        VerifiedPlayersProperty.Clear();
-        verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
-        verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
-      }
     }
 
     private void Window_Close(object sender, EventArgs e)
@@ -290,9 +282,11 @@ namespace EQLogParser
     private void Window_Closed(object sender, EventArgs e)
     {
       StopProcessing();
-      taskBarIcon.Dispose();
-      DataManager.Instance.SaveState();
       CloseOverlay();
+      taskBarIcon?.Dispose();
+      PlayerChatManager?.Dispose();
+      ConfigUtil.Save();
+      PlayerManager.Instance?.Save();
       Application.Current.Shutdown();
     }
 
@@ -361,14 +355,14 @@ namespace EQLogParser
     private void ToggleHideOverlayOtherPlayersClick(object sender, RoutedEventArgs e)
     {
       IsHideOverlayOtherPlayersEnabled = !IsHideOverlayOtherPlayersEnabled;
-      DataManager.Instance.SetApplicationSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
       enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
     {
       IsAoEHealingEnabled = !IsAoEHealingEnabled;
-      DataManager.Instance.SetApplicationSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
 
       var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
@@ -378,7 +372,7 @@ namespace EQLogParser
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
     {
       IsDamageOverlayEnabled = !IsDamageOverlayEnabled;
-      DataManager.Instance.SetApplicationSetting("IsDamageOverlayEnabled", IsDamageOverlayEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("IsDamageOverlayEnabled", IsDamageOverlayEnabled.ToString(CultureInfo.CurrentCulture));
       enableDamageOverlayIcon.Visibility = IsDamageOverlayEnabled ? Visibility.Visible : Visibility.Hidden;
 
       if (IsDamageOverlayEnabled)
@@ -394,7 +388,7 @@ namespace EQLogParser
     private void ToggleBaneDamageClick(object sender, RoutedEventArgs e)
     {
       IsBaneDamageEnabled = !IsBaneDamageEnabled;
-      DataManager.Instance.SetApplicationSetting("IncludeBaneDamage", IsBaneDamageEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("IncludeBaneDamage", IsBaneDamageEnabled.ToString(CultureInfo.CurrentCulture));
       enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
@@ -404,7 +398,7 @@ namespace EQLogParser
     private void ToggleIgnoreInitialPullDamageClick(object sender, RoutedEventArgs e)
     {
       IsIgnoreIntialPullDamageEnabled = !IsIgnoreIntialPullDamageEnabled;
-      DataManager.Instance.SetApplicationSetting("IngoreInitialPullDamage", IsIgnoreIntialPullDamageEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("IngoreInitialPullDamage", IsIgnoreIntialPullDamageEnabled.ToString(CultureInfo.CurrentCulture));
       enableIgnoreInitialPullDamageIcon.Visibility = IsIgnoreIntialPullDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
@@ -751,8 +745,6 @@ namespace EQLogParser
               (npcWindow.Content as NpcTable).SelectLastRow();
             }
 
-            DataManager.Instance.SaveState();
-
             if (IsDamageOverlayEnabled)
             {
               OpenOverlay();
@@ -906,7 +898,7 @@ namespace EQLogParser
       {
         if (comboBox.DataContext is PetMapping mapping && comboBox.SelectedItem is SortableName selected && selected.Name != mapping.Owner)
         {
-          DataManager.Instance.UpdatePetToPlayer(mapping.Pet, selected.Name);
+          PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selected.Name);
           petMappingGrid.CommitEdit();
         }
       }
@@ -960,8 +952,27 @@ namespace EQLogParser
             }
           }
 
-          DataManager.Instance.LoadState(true, name, server);
-          PlayerChatManager = new ChatManager(name + "." + server);
+          var changed = ConfigUtil.ServerName != server;
+          if (changed)
+          {
+            PetPlayersView.Clear();
+            VerifiedPetsView.Clear();
+            VerifiedPlayersProperty.Clear();
+            verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
+            verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
+            PlayerManager.Instance.Save();
+          }
+
+          ConfigUtil.ServerName = server;
+          ConfigUtil.PlayerName = name;
+
+          if (changed)
+          {
+            PlayerManager.Instance.Clear();
+          }
+
+          DataManager.Instance.Clear();
+          PlayerChatManager = new ChatManager();
 
           NpcDamageManager.LastUpdateTime = double.NaN;
           progressWindow.IsOpen = true;

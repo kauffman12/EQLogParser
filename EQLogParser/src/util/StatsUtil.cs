@@ -39,7 +39,7 @@ namespace EQLogParser
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
       origName = origName ?? name;
-      string className = DataManager.Instance.GetPlayerClass(origName);
+      string className = PlayerManager.Instance.GetPlayerClass(origName);
 
       return new PlayerStats()
       {
@@ -275,7 +275,7 @@ namespace EQLogParser
     {
       if (superStats != null)
       {
-        if (resistCounts != null && superStats.Name == DataManager.Instance.GetPlayerName() && resistCounts.TryGetValue(stats.Name, out uint value))
+        if (resistCounts != null && superStats.Name == ConfigUtil.PlayerName && resistCounts.TryGetValue(stats.Name, out uint value))
         {
           stats.Resists = value;
         }

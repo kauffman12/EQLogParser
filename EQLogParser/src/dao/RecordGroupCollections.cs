@@ -22,7 +22,7 @@ namespace EQLogParser
       if (wrapper?.Record is DamageRecord record)
       {
         string attacker = record.Attacker;
-        string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
+        string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
         if (pname != null || (!string.IsNullOrEmpty(record.AttackerOwner) && !string.IsNullOrEmpty((pname = record.AttackerOwner))))
         {
           attacker = pname;
