@@ -17,10 +17,11 @@ namespace EQLogParser
     private const string APP_DATA = @"%AppData%\EQLogParser";
     private const string PETMAP_FILE = "petmapping.txt";
     private const string PETMAP_PATH = @"\{0}";
+    private const string PLAYERS_FILE = "players.txt";
 
     private static string ArchiveDir;
     private static string ConfigDir;
-    private static string PetMapDir;
+    private static string ServerConfigDir;
     private static string SettingsFile;
     private static bool initDone = false;
     private static bool SettingsUpdated = false;
@@ -74,16 +75,33 @@ namespace EQLogParser
       Init();
 
       var petMapping = new ConcurrentDictionary<string, string>();
-      var fileName = string.Format(CultureInfo.CurrentCulture, PetMapDir, ServerName, PETMAP_FILE) + @"\" + PETMAP_FILE;
+      var fileName = string.Format(CultureInfo.CurrentCulture, ServerConfigDir, ServerName) + @"\" + PETMAP_FILE;
       LoadProperties(petMapping, ReadList(fileName));
       return petMapping;
+    }
+
+    internal static List<string> ReadPlayers()
+    {
+      Init();
+
+      var fileName = string.Format(CultureInfo.CurrentCulture, ServerConfigDir, ServerName) + @"\" + PLAYERS_FILE;
+      return ReadList(fileName);
+    }
+
+    internal static void SavePlayers(List<string> list)
+    {
+      Init();
+
+      var playerDir = string.Format(CultureInfo.CurrentCulture, ServerConfigDir, ServerName);
+      Directory.CreateDirectory(playerDir);
+      SaveList(playerDir + @"\" + PLAYERS_FILE, list);
     }
 
     internal static void SavePetMapping(IEnumerable<KeyValuePair<string, string>> enumeration)
     {
       Init();
 
-      var petDir = string.Format(CultureInfo.CurrentCulture, PetMapDir, ServerName);
+      var petDir = string.Format(CultureInfo.CurrentCulture, ServerConfigDir, ServerName);
       Directory.CreateDirectory(petDir);
       SaveProperties(petDir + @"\" + PETMAP_FILE, enumeration);
     }
@@ -106,7 +124,7 @@ namespace EQLogParser
         initDone = true;
         ArchiveDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\archive\");
         ConfigDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\config\");
-        PetMapDir = ConfigDir + PETMAP_PATH;
+        ServerConfigDir = ConfigDir + PETMAP_PATH;
         SettingsFile = ConfigDir + @"\settings.txt";
 
         // remove this in the future
