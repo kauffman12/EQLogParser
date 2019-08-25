@@ -4,37 +4,32 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security;
 
 namespace EQLogParser
 {
+  internal enum SpellClass
+  {
+    WAR = 1, CLR = 2, PAL = 4, RNG = 8, SHD = 16, DRU = 32, MNK = 64, BRD = 128, ROG = 256,
+    SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768
+  }
+
+  internal enum SpellTarget
+  {
+    LOS = 1, CASTERAE = 2, CASTERGROUP = 3, CASTERPB = 4, SINGLETARGET = 5, SELF = 6, TARGETAE = 8,
+    NEARBYPLAYERSAE = 40, DIRECTIONAE = 42, TARGETRINGAE = 45
+  }
+
   class DataManager
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    internal static DataManager Instance = new DataManager();
+    internal event EventHandler<string> EventsRemovedNonPlayer;
+    internal event EventHandler<NonPlayer> EventsNewNonPlayer;
+    internal event EventHandler<bool> EventsClearedActiveData;
 
-    public static DataManager Instance = new DataManager();
-    public event EventHandler<PetMapping> EventsUpdatePetMapping;
-    public event EventHandler<string> EventsNewVerifiedPet;
-    public event EventHandler<string> EventsNewVerifiedPlayer;
-    public event EventHandler<string> EventsRemovedNonPlayer;
-    public event EventHandler<NonPlayer> EventsNewNonPlayer;
-    public event EventHandler<bool> EventsClearedActiveData;
-
-    private string PlayerName;
-    private string ServerName;
-
-    public static string ARCHIVE_DIR;
-    private static string CONFIG_DIR;
-    private static string PETMAP_DIR;
-    private static string SETTINGS_FILE;
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
-    private const string PETMAP_FILE = "petmapping.txt";
+    private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
 
-    private bool PetMappingUpdated = false;
-    private bool SettingsUpdated = false;
-
-    private readonly List<ActionBlock> PlayerAttackDamageBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> PlayerDefendDamageBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> PlayerDamageBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
@@ -45,131 +40,41 @@ namespace EQLogParser
     private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
-    private readonly Dictionary<SpellClass, string> ClassNames = new Dictionary<SpellClass, string>();
     private readonly Dictionary<string, SpellData> SpellsNameDB = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, SpellClass> SpellsToClass = new Dictionary<string, SpellClass>();
-    private readonly Dictionary<string, byte> GameGeneratedPets = new Dictionary<string, byte>();
-    private readonly Dictionary<string, string> PlayerReplacement = new Dictionary<string, string>();
 
-    private readonly ConcurrentDictionary<string, string> ApplicationSettings = new ConcurrentDictionary<string, string>();
-    private readonly ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
     private readonly ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
     private readonly ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
-    private readonly ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
-    private readonly ConcurrentDictionary<string, byte> DefinitelyNotAPlayer = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, long> ProbablyNotAPlayer = new ConcurrentDictionary<string, long>();
-    private readonly ConcurrentDictionary<string, byte> UnVerifiedPetOrPlayer = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> OtherSelves = new ConcurrentDictionary<string, byte>();
 
     private DataManager()
     {
-      // static data first
-      OtherSelves["himself"] = 1;
-      OtherSelves["herself"] = 1;
-      OtherSelves["itself"] = 1;
-      OtherSelves["Himself"] = 1;
-      OtherSelves["Herself"] = 1;
-      OtherSelves["Itself"] = 1;
-      DefinitelyNotAPlayer["Unknown"] = 1;
-      DefinitelyNotAPlayer["unknown"] = 1;
-      ClassNames[SpellClass.WAR] = string.Intern("Warrior");
-      ClassNames[SpellClass.CLR] = string.Intern("Cleric");
-      ClassNames[SpellClass.PAL] = string.Intern("Paladin");
-      ClassNames[SpellClass.RNG] = string.Intern("Ranger");
-      ClassNames[SpellClass.SHD] = string.Intern("Shadow Knight");
-      ClassNames[SpellClass.DRU] = string.Intern("Druid");
-      ClassNames[SpellClass.MNK] = string.Intern("Monk");
-      ClassNames[SpellClass.BRD] = string.Intern("Bard");
-      ClassNames[SpellClass.ROG] = string.Intern("Rogue");
-      ClassNames[SpellClass.SHM] = string.Intern("Shaman");
-      ClassNames[SpellClass.NEC] = string.Intern("Necromancer");
-      ClassNames[SpellClass.WIZ] = string.Intern("Wizard");
-      ClassNames[SpellClass.MAG] = string.Intern("Magician");
-      ClassNames[SpellClass.ENC] = string.Intern("Enchanter");
-      ClassNames[SpellClass.BST] = string.Intern("Beastlord");
-      ClassNames[SpellClass.BER] = string.Intern("Berserker");
-
-      // needs to be during class initialization for some reason
-      CONFIG_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\config");
-      ARCHIVE_DIR = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser\archive\");
-      PETMAP_DIR = CONFIG_DIR + @"\{0}\";
-      SETTINGS_FILE = CONFIG_DIR + @"\settings.txt";
-
-      try
-      {
-        // Remove In the Future
-        var oldFile = CONFIG_DIR + @"\" + PETMAP_FILE;
-        if (File.Exists(oldFile))
-        {
-          File.Delete(oldFile);
-        }
-      }
-      catch (IOException)
-      {
-        // ignore
-      }
-      catch (UnauthorizedAccessException)
-      {
-        // ignore
-      }
-
-      // create config dir if it doesn't exist
-      Directory.CreateDirectory(CONFIG_DIR);
-
-      Helpers.ReadList(SETTINGS_FILE).ForEach(line =>
-      {
-        string[] parts = line.Split('=');
-        if (parts != null && parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
-        {
-          ApplicationSettings[parts[0]] = parts[1];
-        }
-      });
-
-      // Populate generated pets
-      Helpers.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
-
       DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
       var spellList = new List<SpellData>();
-      Helpers.ReadList(@"data\spells.txt").ForEach(line =>
+
+      ConfigUtil.ReadList(@"data\spells.txt").ForEach(line =>
       {
-        string[] data = line.Split('^');
-        int beneficial = int.Parse(data[2], CultureInfo.CurrentCulture);
-        byte target = byte.Parse(data[3], CultureInfo.CurrentCulture);
-        ushort classMask = ushort.Parse(data[4], CultureInfo.CurrentCulture);
-        SpellData spellData = new SpellData()
+        var spellData = TextFormatUtils.ParseCustomSpellData(line);
+        if (spellData != null)
         {
-          ID = string.Intern(data[0]),
-          Spell = string.Intern(data[1]),
-          SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
-          Beneficial = beneficial != 0,
-          Target = target,
-          ClassMask = classMask,
-          LandsOnYou = string.Intern(data[5]),
-          LandsOnOther = string.Intern(data[6]),
-          Damaging = byte.Parse(data[7], CultureInfo.CurrentCulture) == 1,
-          IsProc = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1
-        };
+          spellList.Add(spellData);
+          SpellsNameDB[spellData.Spell] = spellData;
+          SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
 
-        spellList.Add(spellData);
-        SpellsNameDB[spellData.Spell] = spellData;
-        SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+          if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
+          {
+            helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
+          }
+          else if (spellData.LandsOnOther.Length > 1)
+          {
+            helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
+          }
 
-        if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
-        {
-          helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
-        }
-        else if (spellData.LandsOnOther.Length > 1)
-        {
-          helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
-        }
-
-        if (spellData.LandsOnYou.Length > 0) // just do stuff in common
-        {
-          helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
+          if (spellData.LandsOnYou.Length > 0) // just do stuff in common
+          {
+            helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
+          }
         }
       });
 
@@ -192,186 +97,64 @@ namespace EQLogParser
           }
         }
       });
+
+      PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => CheckNonPlayerMap(name);
+      PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => CheckNonPlayerMap(name);
+      PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => CheckNonPlayerMap(name);
     }
 
-    public void LoadState(bool fullUpdate, string newPlayerName = null, string newServerName = null)
+    internal void Clear()
     {
       lock (this)
       {
         ActiveNonPlayerMap.Clear();
         LifetimeNonPlayerMap.Clear();
-        ProbablyNotAPlayer.Clear();
-        UnVerifiedPetOrPlayer.Clear();
         AllSpellCastBlocks.Clear();
         AllUniqueSpellCasts.Clear();
         AllUniqueSpellsCache.Clear();
         AllReceivedSpellBlocks.Clear();
         AllResists.Clear();
-        PlayerAttackDamageBlocks.Clear();
-        PlayerDefendDamageBlocks.Clear();
+        PlayerDamageBlocks.Clear();
         AllHealBlocks.Clear();
         PlayerDeaths.Clear();
-
-        var serverChanged = (newServerName != ServerName);
-        if (fullUpdate)
-        {
-          if (serverChanged)
-          {
-            SaveState(); // check if saves are pending
-            PetToPlayerMap.Clear();
-            VerifiedPlayers.Clear();
-            VerifiedPets.Clear();
-            PlayerToClass.Clear();
-
-            ServerName = newServerName;
-
-            // Load Pets
-            var fileName = string.Format(CultureInfo.CurrentCulture, PETMAP_DIR, ServerName) + PETMAP_FILE;
-            Helpers.ReadList(fileName).ForEach(line =>
-            {
-              string[] parts = line.Split('=');
-              if (parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
-              {
-                UpdatePetToPlayer(parts[0], parts[1]);
-                UpdateVerifiedPlayers(parts[1]);
-                UpdateVerifiedPets(parts[0]);
-              }
-            });
-
-            // dont count initial load
-            PetMappingUpdated = false;
-          }
-
-          PlayerReplacement["you"] = newPlayerName;
-          PlayerReplacement["You"] = newPlayerName;
-          PlayerReplacement["YOU"] = newPlayerName;
-          PlayerReplacement["your"] = newPlayerName;
-          PlayerReplacement["Your"] = newPlayerName;
-          PlayerReplacement["YOUR"] = newPlayerName;
-          PlayerReplacement["yourself"] = newPlayerName;
-          PlayerReplacement["Yourself"] = newPlayerName;
-          UpdateVerifiedPlayers(newPlayerName);
-          UpdateVerifiedPlayers(Labels.UNASSIGNED);
-          VerifiedPlayers["himself"] = 1;
-          VerifiedPlayers["herself"] = 1;
-          VerifiedPlayers["itself"] = 1;
-          VerifiedPlayers["yourself"] = 1;
-          VerifiedPlayers["you"] = 1;
-          VerifiedPlayers["YOU"] = 1;
-          VerifiedPlayers["You"] = 1;
-          VerifiedPlayers["your"] = 1;
-          VerifiedPlayers["Your"] = 1;
-          VerifiedPlayers["YOUR"] = 1;
-          PlayerName = newPlayerName;
-        }
-
-        EventsClearedActiveData(this, fullUpdate && serverChanged);
+        EventsClearedActiveData(this, true);
       }
     }
 
-
-    public void SaveState()
-    {
-      lock (this)
-      {
-        var petDir = string.Format(CultureInfo.CurrentCulture, PETMAP_DIR, ServerName);
-        Directory.CreateDirectory(petDir);
-
-        var filtered = PetToPlayerMap.Where(keypair => Helpers.IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
-        SaveConfiguration(petDir + PETMAP_FILE, PetMappingUpdated, filtered);
-        PetMappingUpdated = false;
-
-        ApplicationSettings.TryRemove("IncludeAEHealing", out _); // not used anymore
-        SaveConfiguration(SETTINGS_FILE, SettingsUpdated, ApplicationSettings);
-        SettingsUpdated = false;
-      }
-    }
-
-    public string GetApplicationSetting(string key)
-    {
-      ApplicationSettings.TryGetValue(key, out string setting);
-      return setting;
-    }
-
-    public void SetApplicationSetting(string key, string value)
-    {
-      if (value == null)
-      {
-        if (ApplicationSettings.TryRemove(key, out _))
-        {
-          SettingsUpdated = true;
-        }
-      }
-      else
-      {
-        if (ApplicationSettings.TryGetValue(key, out string existing))
-        {
-          if (existing != value)
-          {
-            ApplicationSettings[key] = value;
-            SettingsUpdated = true;
-          }
-        }
-        else
-        {
-          ApplicationSettings[key] = value;
-          SettingsUpdated = true;
-        }
-      }
-    }
-
-    public void AddNonPlayerMapBreak(string text)
+    internal void AddNonPlayerMapBreak(string text)
     {
       NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAKTIME, Name = string.Intern(text) };
       EventsNewNonPlayer(this, divider);
     }
 
-    public void AddPlayerDeath(string player, string npc, double beginTime)
+    internal void AddPlayerDeath(string player, string npc, double beginTime)
     {
       var newDeath = new PlayerDeath() { Player = string.Intern(player), Npc = string.Intern(npc) };
       AddAction(PlayerDeaths, newDeath, beginTime);
     }
 
-    public void AddDamageRecord(DamageRecord record, bool isPlayerDamage, double beginTime)
+    internal void AddDamageRecord(DamageRecord record, double beginTime)
     {
-      if (isPlayerDamage)
-      {
-        // ReplacePlayer is done in the line parser already
-        AddAction(PlayerAttackDamageBlocks, record, beginTime);
-      }
-      else
-      {
-        // ReplacePlayer is done in the line parser already
-        AddAction(PlayerDefendDamageBlocks, record, beginTime);
-      }
+      // ReplacePlayer is done in the line parser already
+      AddAction(PlayerDamageBlocks, record, beginTime);
     }
 
-    public void AddResistRecord(ResistRecord record, double beginTime)
+    internal void AddResistRecord(ResistRecord record, double beginTime)
     {
       // Resists are only seen by current player
       AddAction(AllResists, record, beginTime);
     }
 
-    public void AddHealRecord(HealRecord record, double beginTime)
+    internal void AddHealRecord(HealRecord record, double beginTime)
     {
-      record.Healer = ReplacePlayer(record.Healer, record.Healed, out _);
-      record.Healed = ReplacePlayer(record.Healed, record.Healer, out _);
-
+      record.Healer = PlayerManager.Instance.ReplacePlayer(record.Healer, record.Healed);
+      record.Healed = PlayerManager.Instance.ReplacePlayer(record.Healed, record.Healer);
       AddAction(AllHealBlocks, record, beginTime);
-
-      // can use heals to determine additional players
-      bool foundHealer = CheckNameForPlayer(record.Healer);
-      bool foundHealed = CheckNameForPlayer(record.Healed) || CheckNameForPet(record.Healed);
-
-      if (!foundHealer && foundHealed && Helpers.IsPossiblePlayerName(record.Healer, record.Healer.Length))
-      {
-        UpdateVerifiedPlayers(record.Healer);
-      }
     }
 
-    public void HandleSpellInterrupt(string player, string spell, double beginTime)
+    internal void HandleSpellInterrupt(string player, string spell, double beginTime)
     {
-      player = ReplacePlayer(player, player, out _);
+      player = PlayerManager.Instance.ReplacePlayer(player, player);
 
       for (int i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
       {
@@ -384,11 +167,11 @@ namespace EQLogParser
       }
     }
 
-    public void AddSpellCast(SpellCast cast, double beginTime)
+    internal void AddSpellCast(SpellCast cast, double beginTime)
     {
       if (SpellsNameDB.ContainsKey(cast.Spell))
       {
-        cast.Caster = ReplacePlayer(cast.Caster, cast.Receiver, out _);
+        cast.Caster = PlayerManager.Instance.ReplacePlayer(cast.Caster, cast.Receiver);
         AddAction(AllSpellCastBlocks, cast, beginTime);
 
         string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
@@ -397,106 +180,50 @@ namespace EQLogParser
           AllUniqueSpellCasts[abbrv] = 1;
         }
 
-        UpdatePlayerClassFromSpell(cast);
+        if (SpellsToClass.TryGetValue(cast.Spell, out SpellClass theClass))
+        {
+          PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
+        }
       }
     }
 
-    public void AddReceivedSpell(ReceivedSpell received, double beginTime)
+    internal void AddReceivedSpell(ReceivedSpell received, double beginTime)
     {
-      received.Receiver = ReplacePlayer(received.Receiver, received.Receiver, out _);
+      received.Receiver = PlayerManager.Instance.ReplacePlayer(received.Receiver, received.Receiver);
       AddAction(AllReceivedSpellBlocks, received, beginTime);
     }
 
-    public string GetPlayerName()
-    {
-      return PlayerName;
-    }
-
-    public string GetServerName()
-    {
-      return ServerName;
-    }
-
-    public string ReplacePlayer(string name, string alternative, out bool replaced)
-    {
-      replaced = false;
-      string result = name;
-
-      if (OtherSelves.ContainsKey(name))
-      {
-        result = alternative;
-      }
-      else
-      {
-        if (PlayerReplacement.TryGetValue(name, out string found))
-        {
-          replaced = true;
-          result = found;
-        }
-      }
-
-      return string.Intern(result);
-    }
-
-    public bool CheckNameForPet(string name)
-    {
-      bool isPet = VerifiedPets.ContainsKey(name);
-
-      if (!isPet && GameGeneratedPets.ContainsKey(name))
-      {
-        UpdateVerifiedPets(name);
-        isPet = true;
-
-        if (!PetToPlayerMap.ContainsKey(name))
-        {
-          UpdatePetToPlayer(name, Labels.UNASSIGNED);
-        }
-      }
-
-      return isPet;
-    }
-
-    public bool CheckNameForPlayer(string name)
-    {
-      return VerifiedPlayers.ContainsKey(name);
-    }
-
-    public List<ActionBlock> GetCastsDuring(double beginTime, double endTime)
+    internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllSpellCastBlocks, beginTime, endTime);
     }
 
-    public List<ActionBlock> GetAttackDamageDuring(double beginTime, double endTime)
+    internal List<ActionBlock> GetDamageDuring(double beginTime, double endTime)
     {
-      return SearchActions(PlayerAttackDamageBlocks, beginTime, endTime);
+      return SearchActions(PlayerDamageBlocks, beginTime, endTime);
     }
 
-    public List<ActionBlock> GetDefendDamageDuring(double beginTime, double endTime)
-    {
-      return SearchActions(PlayerDefendDamageBlocks, beginTime, endTime);
-    }
-
-    public List<ActionBlock> GetHealsDuring(double beginTime, double endTime)
+    internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllHealBlocks, beginTime, endTime);
     }
 
-    public List<ActionBlock> GetResistsDuring(double beginTime, double endTime)
+    internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllResists, beginTime, endTime);
     }
 
-    public List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime)
+    internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     }
 
-    public List<ActionBlock> GetPlayerDeathsDuring(double beginTime, double endTime)
+    internal List<ActionBlock> GetPlayerDeathsDuring(double beginTime, double endTime)
     {
       return SearchActions(PlayerDeaths, beginTime, endTime);
     }
 
-    public SpellData GetSpellByAbbrv(string abbrv)
+    internal SpellData GetSpellByAbbrv(string abbrv)
     {
       SpellData result = null;
       if (abbrv.Length > 0 && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv))
@@ -506,7 +233,7 @@ namespace EQLogParser
       return result;
     }
 
-    public SpellData GetSpellByName(string name)
+    internal SpellData GetSpellByName(string name)
     {
       SpellData result = null;
       if (name.Length > 0 && name != Labels.UNKSPELL && SpellsNameDB.ContainsKey(name))
@@ -516,46 +243,13 @@ namespace EQLogParser
       return result;
     }
 
-    public NonPlayer GetNonPlayer(string name)
+    internal NonPlayer GetNonPlayer(string name)
     {
       ActiveNonPlayerMap.TryGetValue(name, out NonPlayer npc);
       return npc;
     }
 
-    public List<string> GetClassList()
-    {
-      var list = ClassNames.Values.ToList();
-      list.Sort();
-      return list;
-    }
-
-    public string GetClassName(SpellClass type)
-    {
-      string name = "";
-      if (ClassNames.ContainsKey(type))
-      {
-        name = ClassNames[type];
-      }
-      return name;
-    }
-
-    public string GetPlayerClass(string name)
-    {
-      string className = "";
-      if (PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
-      {
-        className = ClassNames[counter.CurrentClass];
-      }
-      return className;
-    }
-
-    public string GetPlayerFromPet(string pet)
-    {
-      PetToPlayerMap.TryGetValue(pet, out string player);
-      return player;
-    }
-
-    public SpellData GetNonPosessiveLandsOnOther(string value, out List<SpellData> output)
+    internal SpellData GetNonPosessiveLandsOnOther(string value, out List<SpellData> output)
     {
       SpellData result = null;
       if (NonPosessiveLandsOnOthers.TryGetValue(value, out output))
@@ -565,7 +259,7 @@ namespace EQLogParser
       return result;
     }
 
-    public SpellData GetPosessiveLandsOnOther(string value, out List<SpellData> output)
+    internal SpellData GetPosessiveLandsOnOther(string value, out List<SpellData> output)
     {
       SpellData result = null;
       if (PosessiveLandsOnOthers.TryGetValue(value, out output))
@@ -575,7 +269,7 @@ namespace EQLogParser
       return result;
     }
 
-    public SpellData GetLandsOnYou(string value, out List<SpellData> output)
+    internal SpellData GetLandsOnYou(string value, out List<SpellData> output)
     {
       SpellData result = null;
       if (LandsOnYou.TryGetValue(value, out output))
@@ -634,25 +328,12 @@ namespace EQLogParser
       return result;
     }
 
-    public bool IsProbablyNotAPlayer(string name)
-    {
-      bool probably = DefinitelyNotAPlayer.ContainsKey(name);
-
-      if (!probably && !VerifiedPlayers.ContainsKey(name) && !VerifiedPets.ContainsKey(name) && !GameGeneratedPets.ContainsKey(name)
-        && ProbablyNotAPlayer.ContainsKey(name))
-      {
-        probably = ProbablyNotAPlayer[name] >= 5;
-      }
-
-      return probably;
-    }
-
-    public bool RemoveActiveNonPlayer(string name)
+    internal bool RemoveActiveNonPlayer(string name)
     {
       return ActiveNonPlayerMap.TryRemove(name, out _);
     }
 
-    public void UpdateIfNewNonPlayerMap(string name, NonPlayer npc)
+    internal void UpdateIfNewNonPlayerMap(string name, NonPlayer npc)
     {
       if (!LifetimeNonPlayerMap.ContainsKey(name))
       {
@@ -666,108 +347,9 @@ namespace EQLogParser
       }
     }
 
-    public void UpdatePlayerClassFromSpell(SpellCast cast)
+    internal static string GetClassName(SpellClass type)
     {
-      if (SpellsToClass.TryGetValue(cast.Spell, out SpellClass theClass))
-      {
-        if (!PlayerToClass.TryGetValue(cast.Caster, out SpellClassCounter counter))
-        {
-          PlayerToClass.TryAdd(cast.Caster, new SpellClassCounter() { ClassCounts = new ConcurrentDictionary<SpellClass, int>() });
-          counter = PlayerToClass[cast.Caster];
-        }
-
-        if (!counter.ClassCounts.ContainsKey(theClass))
-        {
-          counter.ClassCounts.TryAdd(theClass, 0);
-        }
-
-        lock (counter)
-        {
-          int value = ++counter.ClassCounts[theClass];
-          if (value > counter.CurrentMax)
-          {
-            counter.CurrentMax = value;
-            counter.CurrentClass = theClass;
-          }
-        }
-      }
-    }
-
-    public void UpdatePetToPlayer(string pet, string player)
-    {
-      if (!PetToPlayerMap.ContainsKey(pet) || PetToPlayerMap[pet] != player)
-      {
-        PetToPlayerMap[pet] = player;
-        EventsUpdatePetMapping(this, new PetMapping() { Pet = pet, Owner = player });
-        PetMappingUpdated = true;
-      }
-    }
-
-    public bool UpdateProbablyNotAPlayer(string name, bool addIfMissing = true)
-    {
-      bool updated = false;
-      if (!VerifiedPlayers.ContainsKey(name) && !VerifiedPets.ContainsKey(name) && !GameGeneratedPets.ContainsKey(name) &&
-        !UnVerifiedPetOrPlayer.ContainsKey(name))
-      {
-        if (!DefinitelyNotAPlayer.ContainsKey(name) && Helpers.IsPossiblePlayerName(name))
-        {
-          if (addIfMissing)
-          {
-            long value = 0;
-            if (ProbablyNotAPlayer.ContainsKey(name))
-            {
-              value = ProbablyNotAPlayer[name];
-            }
-
-            ProbablyNotAPlayer[name] = ++value;
-            updated = true;
-          }
-          else
-          {
-            updated = ProbablyNotAPlayer.ContainsKey(name);
-          }
-        }
-        else
-        {
-          DefinitelyNotAPlayer[name] = 1;
-          updated = true;
-        }
-      }
-      return updated;
-    }
-
-    public void UpdateUnVerifiedPetOrPlayer(string name)
-    {
-      // avoid checking to remove unless needed
-      if (!IsProbablyNotAPlayer(name) && UnVerifiedPetOrPlayer.TryAdd(name, 1))
-      {
-        // only need to check first time added
-        CheckNonPlayerMap(name);
-      }
-    }
-
-    public void UpdateVerifiedPets(string name)
-    {
-      if (VerifiedPets.TryAdd(name, 1))
-      {
-        UnVerifiedPetOrPlayer.TryRemove(name, out _);
-        ProbablyNotAPlayer.TryRemove(name, out _);
-
-        EventsNewVerifiedPet(this, name);
-        CheckNonPlayerMap(name);
-      }
-    }
-
-    public void UpdateVerifiedPlayers(string name)
-    {
-      if (VerifiedPlayers.TryAdd(name, 1))
-      {
-        UnVerifiedPetOrPlayer.TryRemove(name, out _);
-        ProbablyNotAPlayer.TryRemove(name, out _);
-
-        EventsNewVerifiedPlayer(this, name);
-        CheckNonPlayerMap(name);
-      }
+      return Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), type), CultureInfo.CurrentCulture);
     }
 
     private void CheckNonPlayerMap(string name)
@@ -781,47 +363,18 @@ namespace EQLogParser
       }
     }
 
-    private static void SaveConfiguration(string fileName, bool updated, IEnumerable<KeyValuePair<string, string>> enumeration)
-    {
-      try
-      {
-        if (updated)
-        {
-          List<string> lines = new List<string>();
-          foreach (var keypair in enumeration)
-          {
-            lines.Add(keypair.Key + "=" + keypair.Value);
-          }
-
-          File.WriteAllLines(fileName, lines);
-        }
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
-    }
-
     private static List<ActionBlock> SearchActions(List<ActionBlock> allActions, double beginTime, double endTime)
     {
       ActionBlock startBlock = new ActionBlock() { BeginTime = beginTime - 1 };
       ActionBlock endBlock = new ActionBlock() { BeginTime = endTime + 1 };
 
-      int startIndex = allActions.BinarySearch(startBlock, Helpers.TimedActionComparer);
+      int startIndex = allActions.BinarySearch(startBlock, TAComparer);
       if (startIndex < 0)
       {
         startIndex = Math.Abs(startIndex) - 1;
       }
 
-      int endIndex = allActions.BinarySearch(endBlock, Helpers.TimedActionComparer);
+      int endIndex = allActions.BinarySearch(endBlock, TAComparer);
       if (endIndex < 0)
       {
         endIndex = Math.Abs(endIndex) - 1;
@@ -845,13 +398,6 @@ namespace EQLogParser
       }
     }
 
-    private class SpellClassCounter
-    {
-      public int CurrentMax { get; set; }
-      public SpellClass CurrentClass { get; set; }
-      public ConcurrentDictionary<SpellClass, int> ClassCounts { get; set; }
-    }
-
     private class SpellAbbrvComparer : IEqualityComparer<SpellData>
     {
       public bool Equals(SpellData x, SpellData y)
@@ -862,6 +408,14 @@ namespace EQLogParser
       public int GetHashCode(SpellData obj)
       {
         return obj.SpellAbbrv.GetHashCode();
+      }
+    }
+
+    private class TimedActionComparer : IComparer<TimedAction>
+    {
+      public int Compare(TimedAction x, TimedAction y)
+      {
+        return x.BeginTime.CompareTo(y.BeginTime);
       }
     }
   }

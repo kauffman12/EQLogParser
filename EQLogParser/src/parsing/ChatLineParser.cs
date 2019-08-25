@@ -23,9 +23,9 @@ namespace EQLogParser
       var chatType = ParseChatType(line);
       if (chatType != null && chatType.SenderIsYou == false && chatType.Sender != null)
       {
-        if (chatType.Channel == ChatChannels.GUILD || chatType.Channel == ChatChannels.RAID || chatType.Channel == ChatChannels.GROUP)
+        if (chatType.Channel == ChatChannels.GUILD || chatType.Channel == ChatChannels.RAID || chatType.Channel == ChatChannels.FELLOWSHIP)
         {
-          DataManager.Instance.UpdateVerifiedPlayers(chatType.Sender);
+          PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender);
         }
       }
 
@@ -77,7 +77,7 @@ namespace EQLogParser
                   string receiver = line.Substring(index + 4, lastIndex - index - 4);
                   chatType = new ChatType { Channel = ChatChannels.TELL, Sender = sender, Receiver = receiver, Line = line, AfterSenderIndex = lastIndex };
 
-                  if (DataManager.Instance.GetPlayerName() == sender)
+                  if (ConfigUtil.PlayerName == sender)
                   {
                     chatType.SenderIsYou = true;
                   }

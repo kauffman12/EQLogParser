@@ -179,6 +179,7 @@
     <Compile Include="src\dao\ChatIterator.cs" />
     <Compile Include="src\dao\ChatManager.cs" />
     <Compile Include="src\control\HealingStatsManager.cs" />
+    <Compile Include="src\dao\PlayerManager.cs" />
     <Compile Include="src\parsing\PreLineParser.cs" />
     <Compile Include="src\ui\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>
@@ -192,6 +193,9 @@
     <Compile Include="src\ui\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\util\ComboBoxItemTemplateSelector.cs" />
+    <Compile Include="src\util\ConfigUtil.cs" />
+    <Compile Include="src\util\TextBoxBehavior.cs" />
     <Compile Include="src\util\TextFormatUtils.cs" />
     <Compile Include="src\util\DateUtil.cs" />
     <Compile Include="src\util\StatsUtil.cs" />
@@ -348,7 +352,6 @@
     <Content Include="data\petnames.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Resource Include="icons\delete-icon-8.png" />
     <Resource Include="EQLogParser.ico" />
   </ItemGroup>
   <ItemGroup>

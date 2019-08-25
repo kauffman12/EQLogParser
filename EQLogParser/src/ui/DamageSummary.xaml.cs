@@ -33,7 +33,7 @@ namespace EQLogParser
         pd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
       }
 
-      var list = DataManager.Instance.GetClassList();
+      var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, "All Classes");
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
@@ -213,8 +213,8 @@ namespace EQLogParser
       DataGrid callingDataGrid = menu?.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is PlayerStats stats)
       {
-        DataManager.Instance.UpdateVerifiedPets(stats.OrigName);
-        DataManager.Instance.UpdatePetToPlayer(stats.OrigName, Labels.UNASSIGNED);
+        PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
+        PlayerManager.Instance.AddPetToPlayer(stats.OrigName, Labels.UNASSIGNED);
       }
     }
 
@@ -251,7 +251,7 @@ namespace EQLogParser
           }
           else if (stats is DataPoint dataPoint)
           {
-            className = DataManager.Instance.GetPlayerClass(dataPoint.Name);
+            className = PlayerManager.Instance.GetPlayerClass(dataPoint.Name);
           }
 
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;

@@ -27,72 +27,81 @@ namespace EQLogParser
 
     internal TankingStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
+      lock(TankingGroups)
       {
-        TankingGroups.Clear();
-        RaidTotals = null;
-        Selected = null;
-        Title = "";
-      };
+        DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
+        {
+          TankingGroups.Clear();
+          RaidTotals = null;
+          Selected = null;
+          Title = "";
+        };
+      }
     }
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      Selected = options.Npcs;
-      Title = options.Name;
-
-      try
+      lock(TankingGroups)
       {
-        FireNewStatsEvent(options);
+        Selected = options.Npcs;
+        Title = options.Name;
 
-        RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
-        TankingGroups.Clear();
-        NpcNames.Clear();
-
-        Selected.ForEach(npc =>
+        try
         {
-          StatsUtil.UpdateTimeDiffs(RaidTotals, npc, TANK_OFFSET);
-          NpcNames[npc.Name] = 1;
-        });
+          FireNewStatsEvent(options);
 
-        RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
+          RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
+          TankingGroups.Clear();
+          NpcNames.Clear();
 
-        if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
-        {
-          for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
+          Selected.ForEach(npc =>
           {
-            TankingGroups.Add(DataManager.Instance.GetDefendDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
-          }
+            StatsUtil.UpdateTimeDiffs(RaidTotals, npc, TANK_OFFSET);
+            NpcNames[npc.Name] = 1;
+          });
 
-          ComputeTankingStats(options);
+          RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
+
+          if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
+          {
+            for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
+            {
+              TankingGroups.Add(DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
+            }
+
+            ComputeTankingStats(options);
+          }
+          else
+          {
+            FireNoDataEvent(options);
+          }
         }
-        else
+        catch (ArgumentNullException ne)
         {
-          FireNoDataEvent(options);
+          LOG.Error(ne);
         }
-      }
-      catch (ArgumentNullException ne)
-      {
-        LOG.Error(ne);
-      }
-      catch (NullReferenceException nr)
-      {
-        LOG.Error(nr);
-      }
-      catch (ArgumentOutOfRangeException aor)
-      {
-        LOG.Error(aor);
-      }
-      catch (ArgumentException ae)
-      {
-        LOG.Error(ae);
+        catch (NullReferenceException nr)
+        {
+          LOG.Error(nr);
+        }
+        catch (ArgumentOutOfRangeException aor)
+        {
+          LOG.Error(aor);
+        }
+        catch (ArgumentException ae)
+        {
+          LOG.Error(ae);
+        }
       }
     }
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      FireNewStatsEvent(options);
-      ComputeTankingStats(options);
+      if (TankingGroups.Count > 0)
+      {
+        FireNewStatsEvent(options);
+        ComputeTankingStats(options);
+      }
     }
 
     internal void FireFilterEvent(GenerateStatsOptions options, Predicate<object> filter)
@@ -146,17 +155,20 @@ namespace EQLogParser
 
     private void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      if (options.RequestChartData)
+      lock(TankingGroups)
       {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups), Filter = filter };
-
-        if (selected != null)
+        if (options.RequestChartData)
         {
-          de.Selected.AddRange(selected);
-        }
+          // send update
+          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups), Filter = filter };
 
-        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
+          if (selected != null)
+          {
+            de.Selected.AddRange(selected);
+          }
+
+          EventsUpdateDataPoint?.Invoke(TankingGroups, de);
+        }
       }
     }
 
@@ -164,7 +176,7 @@ namespace EQLogParser
     {
       bool valid = false;
 
-      if (record != null && NpcNames.ContainsKey(record.Attacker) && !DataManager.Instance.IsProbablyNotAPlayer(record.Defender))
+      if (record != null && NpcNames.ContainsKey(record.Attacker) && (PlayerManager.Instance.IsPetOrPlayer(record.Defender) || Helpers.IsPossiblePlayerName(record.Defender)))
       {
         valid = true;
       }
@@ -174,87 +186,93 @@ namespace EQLogParser
 
     private void ComputeTankingStats(GenerateStatsOptions options)
     {
-      CombinedStats combined = null;
-      Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
-
-      // always start over
-      RaidTotals.Total = 0;
-
-      try
+      lock(TankingGroups)
       {
-        FireUpdateEvent(options);
+        CombinedStats combined = null;
+        Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
-        if (options.RequestSummaryData)
+        if (RaidTotals != null)
         {
-          TankingGroups.ForEach(group =>
-          {
-            // keep track of time range as well as the players that have been updated
-            Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
+          // always start over
+          RaidTotals.Total = 0;
 
-            group.ForEach(block =>
+          try
+          {
+            FireUpdateEvent(options);
+
+            if (options.RequestSummaryData)
             {
-              block.Actions.ForEach(action =>
+              TankingGroups.ForEach(group =>
               {
-                DamageRecord record = action as DamageRecord;
+                // keep track of time range as well as the players that have been updated
+                Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
 
-                if (IsValidDamage(record))
+                group.ForEach(block =>
                 {
-                  RaidTotals.Total += record.Total;
-                  PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
+                  block.Actions.ForEach(action =>
+                  {
+                    DamageRecord record = action as DamageRecord;
 
-                  StatsUtil.UpdateStats(stats, record, block.BeginTime);
-                  allStats[record.Defender] = stats;
+                    if (IsValidDamage(record))
+                    {
+                      RaidTotals.Total += record.Total;
+                      PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
 
-                  PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
-                  UpdateSubStats(subStats, record, block.BeginTime);
-                  allStats[stats.Name + "=" + record.SubType] = subStats;
-                }
+                      StatsUtil.UpdateStats(stats, record, block.BeginTime);
+                      allStats[record.Defender] = stats;
+
+                      PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                      UpdateSubStats(subStats, record, block.BeginTime);
+                      allStats[stats.Name + "=" + record.SubType] = subStats;
+                    }
+                  });
+                });
+
+                Parallel.ForEach(allStats.Values, stats =>
+                {
+                  stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
+                  stats.BeginTime = double.NaN;
+                });
               });
-            });
 
-            Parallel.ForEach(allStats.Values, stats =>
-            {
-              stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
-              stats.BeginTime = double.NaN;
-            });
-          });
+              RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
+              Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, RaidTotals));
 
-          RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-          Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, RaidTotals));
+              combined = new CombinedStats
+              {
+                RaidStats = RaidTotals,
+                TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
+                TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
+                TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Tanked ", StatsUtil.FormatTotals(RaidTotals.DPS))
+              };
 
-          combined = new CombinedStats
-          {
-            RaidStats = RaidTotals,
-            TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
-            TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
-            TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Tanked ", StatsUtil.FormatTotals(RaidTotals.DPS))
-          };
+              combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
+              combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
+              combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
-          combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
-          combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
-          combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
-
-          for (int i = 0; i < combined.StatsList.Count; i++)
-          {
-            combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
-            combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
+              for (int i = 0; i < combined.StatsList.Count; i++)
+              {
+                combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
+                combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
+              }
+            }
           }
+          catch (ArgumentNullException ane)
+          {
+            LOG.Error(ane);
+          }
+          catch (NullReferenceException nre)
+          {
+            LOG.Error(nre);
+          }
+          catch (ArgumentOutOfRangeException aro)
+          {
+            LOG.Error(aro);
+          }
+
+          FireCompletedEvent(options, combined);
         }
       }
-      catch (ArgumentNullException ane)
-      {
-        LOG.Error(ane);
-      }
-      catch (NullReferenceException nre)
-      {
-        LOG.Error(nre);
-      }
-      catch (ArgumentOutOfRangeException aro)
-      {
-        LOG.Error(aro);
-      }
-
-      FireCompletedEvent(options, combined);
     }
 
 

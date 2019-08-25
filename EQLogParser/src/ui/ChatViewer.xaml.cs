@@ -69,11 +69,11 @@ namespace EQLogParser
       fgList.Insert(0, DefaultForeground);
       fontFgColor.ItemsSource = fgList;
 
-      string fgColor = DataManager.Instance.GetApplicationSetting("ChatFontFgColor");
+      string fgColor = ConfigUtil.GetApplicationSetting("ChatFontFgColor");
       fgColor = fgColor ?? "Default";
       fontFgColor.SelectedItem = fgList.Find(item => item.Name == fgColor);
 
-      string family = DataManager.Instance.GetApplicationSetting("ChatFontFamily");
+      string family = ConfigUtil.GetApplicationSetting("ChatFontFamily");
       if (family != null)
       {
         fontFamily.SelectedItem = new FontFamily(family);
@@ -83,7 +83,7 @@ namespace EQLogParser
         fontFamily.SelectedItem = chatBox.FontFamily;
       }
 
-      string size = DataManager.Instance.GetApplicationSetting("ChatFontSize");
+      string size = ConfigUtil.GetApplicationSetting("ChatFontSize");
       if (size != null && double.TryParse(size, out double dsize))
       {
         fontSize.SelectedItem = dsize;
@@ -267,19 +267,23 @@ namespace EQLogParser
       }
     }
 
-    private void LoadChannels(string player)
+    private void LoadChannels(string playerAndServer)
     {
       List<ChannelDetails> items = new List<ChannelDetails>();
       int selectedCount = 0;
-      ChatManager.GetChannels(player).ForEach(chan =>
+      ChatManager.GetChannels(playerAndServer).ForEach(chan =>
       {
         selectedCount += chan.IsChecked ? 1 : 0;
         items.Add(chan);
       });
 
-      items[0].SelectedText = selectedCount + " Selected Channels";
       channels.ItemsSource = items;
-      channels.SelectedItem = items[0];
+
+      if (items.Count > 0)
+      {
+        items[0].SelectedText = selectedCount + " Selected Channels";
+        channels.SelectedItem = items[0];
+      }
     }
 
     private void LoadPlayers(string updatedPlayer = null)
@@ -298,10 +302,10 @@ namespace EQLogParser
 
               players.ItemsSource = playerList;
 
-              string player = DataManager.Instance.GetApplicationSetting("ChatSelectedPlayer");
-              if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(DataManager.Instance.GetPlayerName()) && !string.IsNullOrEmpty(DataManager.Instance.GetServerName()))
+              string player = ConfigUtil.GetApplicationSetting("ChatSelectedPlayer");
+              if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
               {
-                player = DataManager.Instance.GetPlayerName() + "." + DataManager.Instance.GetServerName();
+                player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
               }
 
               players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
@@ -415,7 +419,7 @@ namespace EQLogParser
       {
         LoadChannels(players.SelectedItem as string);
         PlayerAutoCompleteList = ChatManager.GetPlayers(name);
-        DataManager.Instance.SetApplicationSetting("ChatSelectedPlayer", name);
+        ConfigUtil.SetApplicationSetting("ChatSelectedPlayer", name);
 
         if (Ready)
         {
@@ -461,7 +465,7 @@ namespace EQLogParser
         var item = fontFgColor.SelectedItem as ColorItem;
 
         chatBox.Foreground = item.Brush;
-        DataManager.Instance.SetApplicationSetting("ChatFontFgColor", item.Name);
+        ConfigUtil.SetApplicationSetting("ChatFontFgColor", item.Name);
       }
     }
 
@@ -470,7 +474,7 @@ namespace EQLogParser
       if (fontSize.SelectedItem != null)
       {
         chatBox.FontSize = (double)fontSize.SelectedItem;
-        DataManager.Instance.SetApplicationSetting("ChatFontSize", fontSize.SelectedItem.ToString());
+        ConfigUtil.SetApplicationSetting("ChatFontSize", fontSize.SelectedItem.ToString());
       }
     }
 
@@ -480,7 +484,7 @@ namespace EQLogParser
       {
         var family = fontFamily.SelectedItem as FontFamily;
         chatBox.FontFamily = family;
-        DataManager.Instance.SetApplicationSetting("ChatFontFamily", family.ToString());
+        ConfigUtil.SetApplicationSetting("ChatFontFamily", family.ToString());
       }
     }
 

@@ -4,18 +4,6 @@ using System.Windows.Media;
 
 namespace EQLogParser
 {
-  public enum SpellClass
-  {
-    WAR = 1, CLR = 2, PAL = 4, RNG = 8, SHD = 16, DRU = 32, MNK = 64, BRD = 128, ROG = 256,
-    SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768
-  }
-
-  public enum SpellTarget
-  {
-    LOS = 1, CASTERAE = 2, CASTERGROUP = 3, CASTERPB = 4, SINGLETARGET = 5, SELF = 6, TARGETAE = 8,
-    NEARBYPLAYERSAE = 40, DIRECTIONAE = 42, TARGETRINGAE = 45
-  }
-
   public static class Labels
   {
     public const string DD = "Direct Damage";
@@ -120,7 +108,6 @@ namespace EQLogParser
   {
     public DamageRecord Record { get; set; }
     public string TimeString { get; set; }
-    public bool IsPlayerDamage { get; set; }
   }
 
   public class HealProcessedEvent : TimedAction

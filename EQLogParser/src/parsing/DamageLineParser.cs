@@ -50,10 +50,10 @@ namespace EQLogParser
           var timeString = line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString, out double precise);
 
-          DamageRecord record = ParseDamage(actionPart, out bool isPlayerDamage);
+          DamageRecord record = ParseDamage(actionPart);
           if (record != null)
           {
-            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, IsPlayerDamage = isPlayerDamage, TimeString = timeString, BeginTime = currentTime };
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
             EventsDamageProcessed(record, e);
           }
         }
@@ -63,10 +63,10 @@ namespace EQLogParser
           var timeString = line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString, out double precise);
 
-          DamageRecord record = ParseMiss(actionPart, index, out bool isPlayerMiss);
+          DamageRecord record = ParseMiss(actionPart, index);
           if (record != null)
           {
-            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, IsPlayerDamage = isPlayerMiss, TimeString = timeString, BeginTime = currentTime };
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
             EventsDamageProcessed(record, e);
           }
         }
@@ -117,14 +117,14 @@ namespace EQLogParser
         test = part.Substring(0, optionalIndex - 9);
         if (test.Length == 4 && test[3] == ' ')
         {
-          test = DataManager.Instance.GetPlayerName();
+          test = ConfigUtil.PlayerName;
         }
       }
 
       // Gotcharms has been slain by an animated mephit!
       if (test != null && test.Length > 0)
       {
-        if (DataManager.Instance.CheckNameForPlayer(test) || DataManager.Instance.CheckNameForPet(test))
+        if (PlayerManager.Instance.IsVerifiedPlayer(test) || PlayerManager.Instance.IsVerifiedPet(test))
         {
           int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
           if (byIndex > -1)
@@ -152,7 +152,7 @@ namespace EQLogParser
       EventsResistProcessed(defender, e);
     }
 
-    private static DamageRecord ParseMiss(string actionPart, int index, out bool isPlayerMiss)
+    private static DamageRecord ParseMiss(string actionPart, int index)
     {
       // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but misses! (Strikethrough)
       // [Sat Aug 03 00:20:57 2019] You try to crush a Kar`Zok soldier, but miss! (Riposte Strikethrough)
@@ -225,10 +225,10 @@ namespace EQLogParser
         }
       }
 
-      return ValidateDamage(record, out isPlayerMiss);
+      return ValidateDamage(record);
     }
 
-    private static DamageRecord ParseDamage(string actionPart, out bool isPlayerDamage)
+    private static DamageRecord ParseDamage(string actionPart)
     {
       DamageRecord record = null;
       ParseType parseType = ParseType.UNKNOWN;
@@ -346,14 +346,11 @@ namespace EQLogParser
         record.ModifiersMask = LineModifiersParser.Parse(actionPart.Substring(modifiersIndex + 1, actionPart.Length - 1 - modifiersIndex - 1));
       }
 
-      record = ValidateDamage(record, out isPlayerDamage);
-      return record;
+      return ValidateDamage(record);
     }
 
-    private static DamageRecord ValidateDamage(DamageRecord record, out bool isPlayerDamage)
+    private static DamageRecord ValidateDamage(DamageRecord record)
     {
-      isPlayerDamage = true;
-
       if (record != null)
       {
         // handle riposte separately
@@ -369,117 +366,17 @@ namespace EQLogParser
         else
         {
           // Needed to replace 'You' and 'you', etc
-          record.Attacker = DataManager.Instance.ReplacePlayer(record.Attacker, record.Defender, out bool replaced);
-          record.Defender = DataManager.Instance.ReplacePlayer(record.Defender, record.Attacker, out _);
+          record.Attacker = PlayerManager.Instance.ReplacePlayer(record.Attacker, record.Defender);
+          record.Defender = PlayerManager.Instance.ReplacePlayer(record.Defender, record.Attacker);
 
-          if (record.Attacker == record.Defender)
+          if (Helpers.IsPossiblePlayerName(record.Attacker) && record.Attacker == record.Defender)
           {
             record = null;
-          }
-          else
-          {
-            CheckDamageRecordForPet(record, replaced, out bool isDefenderPet, out bool isAttackerPet);
-            CheckDamageRecordForPlayer(record, replaced, out bool isDefenderPlayer, out bool isAttackerPlayer);
-
-            if (isDefenderPlayer || isDefenderPet)
-            {
-              if (!isAttackerPlayer && !isAttackerPet)
-              {
-                DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker);
-              }
-
-              // main spot where attacker is not a player or pet
-              isPlayerDamage = false;
-            }
-
-            if ((isAttackerPlayer || isAttackerPet) && !isDefenderPlayer && !isDefenderPet)
-            {
-              DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender);
-            }
-            else if (!isAttackerPlayer && !isAttackerPet && !isDefenderPlayer && !isDefenderPet)
-            {
-              var isDefenderProbablyNotAPlayer = DataManager.Instance.UpdateProbablyNotAPlayer(record.Defender, false);
-              var isAttackerProbablyNotAPlayer = DataManager.Instance.UpdateProbablyNotAPlayer(record.Attacker, false);
-
-              if (isDefenderProbablyNotAPlayer && !isAttackerProbablyNotAPlayer)
-              {
-                DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Attacker);
-              }
-              else if (!isDefenderProbablyNotAPlayer && isAttackerProbablyNotAPlayer)
-              {
-                DataManager.Instance.UpdateUnVerifiedPetOrPlayer(record.Defender);
-                isPlayerDamage = false;
-              }
-              else if (isDefenderProbablyNotAPlayer && isAttackerProbablyNotAPlayer)
-              {
-                record = null;
-              }
-            }
           }
         }
       }
 
       return record;
-    }
-
-    private static void CheckDamageRecordForPet(DamageRecord record, bool replacedAttacker, out bool isDefenderPet, out bool isAttackerPet)
-    {
-      isAttackerPet = false;
-
-      if (!replacedAttacker)
-      {
-        if (!string.IsNullOrEmpty(record.AttackerOwner))
-        {
-          DataManager.Instance.UpdateVerifiedPets(record.Attacker);
-          isAttackerPet = true;
-        }
-        else
-        {
-          isAttackerPet = DataManager.Instance.CheckNameForPet(record.Attacker);
-
-          if (isAttackerPet)
-          {
-            record.AttackerOwner = Labels.UNASSIGNED;
-          }
-        }
-      }
-
-      if (!string.IsNullOrEmpty(record.DefenderOwner))
-      {
-        DataManager.Instance.UpdateVerifiedPets(record.Defender);
-        isDefenderPet = true;
-      }
-      else
-      {
-        isDefenderPet = DataManager.Instance.CheckNameForPet(record.Defender);
-      }
-    }
-
-    private static void CheckDamageRecordForPlayer(DamageRecord record, bool replacedAttacker, out bool isDefenderPlayer, out bool isAttackerPlayer)
-    {
-      isAttackerPlayer = false;
-
-      if (!replacedAttacker)
-      {
-        if (!string.IsNullOrEmpty(record.AttackerOwner))
-        {
-          DataManager.Instance.UpdateVerifiedPlayers(record.AttackerOwner);
-          isAttackerPlayer = true;
-        }
-        else if (LineModifiersParser.IsCrit(record.ModifiersMask) && (record.Type == Labels.DD || record.Type == Labels.DOT))
-        {
-          // only players can crit a spell
-          DataManager.Instance.UpdateVerifiedPlayers(record.Attacker);
-          isAttackerPlayer = true;
-        }
-
-        if (!string.IsNullOrEmpty(record.DefenderOwner))
-        {
-          DataManager.Instance.UpdateVerifiedPlayers(record.DefenderOwner);
-        }
-      }
-
-      isDefenderPlayer = string.IsNullOrEmpty(record.DefenderOwner) && DataManager.Instance.CheckNameForPlayer(record.Defender);
     }
 
     private static DamageRecord ParseDS(string[] data, int isAreIndex, int byIndex, int forIndex)
@@ -671,7 +568,7 @@ namespace EQLogParser
       // some new special cases
       if (!string.IsNullOrEmpty(spell) && spell.StartsWith("Elemental Conversion", StringComparison.Ordinal))
       {
-        DataManager.Instance.UpdateVerifiedPets(defender);
+        PlayerManager.Instance.AddVerifiedPet(defender);
       }
       else if (attacker != null && defender != null)
       {
