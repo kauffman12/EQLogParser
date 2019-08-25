@@ -26,6 +26,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
 
     private bool PetMappingUpdated = false;
+    private bool PlayersUpdated = false;
 
     private PlayerManager()
     {
@@ -79,6 +80,7 @@ namespace EQLogParser
       if (VerifiedPlayers.TryAdd(name, 1))
       {
         EventsNewVerifiedPlayer(this, name);
+        PlayersUpdated = true;
       }
     }
 
@@ -223,6 +225,9 @@ namespace EQLogParser
           AddVerifiedPet(keypair.Key);
           AddPetToPlayer(keypair.Key, keypair.Value);
         }
+
+        ConfigUtil.ReadPlayers().ForEach(player => AddVerifiedPlayer(player));
+        PetMappingUpdated = PlayersUpdated = false;
       }
     }
 
@@ -233,6 +238,12 @@ namespace EQLogParser
         var filtered = PetToPlayerMap.Where(keypair => Helpers.IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
         ConfigUtil.SavePetMapping(filtered);
         PetMappingUpdated = false;
+      }
+
+      if (PlayersUpdated)
+      {
+        ConfigUtil.SavePlayers(VerifiedPlayers.Keys.ToList());
+        PlayersUpdated = false;
       }
     }
 
