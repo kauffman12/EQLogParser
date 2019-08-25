@@ -30,98 +30,113 @@ namespace EQLogParser
     {
       DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
       {
-        DamageGroups.Clear();
-        RaidTotals = null;
-        PlayerHasPet.Clear();
-        PetToPlayer.Clear();
-        Resists.Clear();
-        Selected = null;
-        Title = "";
+        lock(DamageGroups)
+        {
+          DamageGroups.Clear();
+          RaidTotals = null;
+          PlayerHasPet.Clear();
+          PetToPlayer.Clear();
+          Resists.Clear();
+          Selected = null;
+          Title = "";
+        }
       };
     }
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      Selected = options.Npcs;
-      Title = options.Name;
-
-      try
+      lock(DamageGroups)
       {
-        FireNewStatsEvent(options);
+        Selected = options.Npcs;
+        Title = options.Name;
 
-        RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
-        DamageGroups.Clear();
-        NpcNames.Clear();
-        PlayerHasPet.Clear();
-        PetToPlayer.Clear();
-        Resists.Clear();
-
-        Selected.ForEach(npc =>
+        try
         {
-          StatsUtil.UpdateTimeDiffs(RaidTotals, npc);
-          NpcNames[npc.Name] = 1;
-        });
+          FireNewStatsEvent(options);
 
-        RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
+          RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
+          DamageGroups.Clear();
+          NpcNames.Clear();
+          PlayerHasPet.Clear();
+          PetToPlayer.Clear();
+          Resists.Clear();
 
-        if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
-        {
-          for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
+          Selected.ForEach(npc =>
           {
-            DamageGroups.Add(DataManager.Instance.GetAttackDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
-
-            var group = DataManager.Instance.GetResistsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
-            group.ForEach(block => Resists.AddRange(block.Actions));
-          }
-
-          Parallel.ForEach(DamageGroups, group =>
-          {
-            // look for pets that need to be combined first
-            Parallel.ForEach(group, block =>
-            {
-              block.Actions.ForEach(action =>
-              {
-                DamageRecord record = action as DamageRecord;
-                // see if there's a pet mapping, check this first
-                string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
-                if (pname != null || !string.IsNullOrEmpty((pname = record.AttackerOwner)))
-                {
-                  PlayerHasPet[pname] = 1;
-                  PetToPlayer[record.Attacker] = pname;
-                }
-              });
-            });
+            StatsUtil.UpdateTimeDiffs(RaidTotals, npc);
+            NpcNames[npc.Name] = 1;
           });
 
-          ComputeDamageStats(options);
+          RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
+
+          if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
+          {
+            for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
+            {
+              DamageGroups.Add(DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
+
+              var group = DataManager.Instance.GetResistsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
+              group.ForEach(block => Resists.AddRange(block.Actions));
+            }
+
+            PlayerManager.Instance.ResetHiyByPlayer();
+
+            // Pre-processing for pets and hit counts
+            Parallel.ForEach(DamageGroups, group =>
+            {
+              Parallel.ForEach(group, block =>
+              {
+                block.Actions.ForEach(action =>
+                {
+                  DamageRecord record = action as DamageRecord;
+
+                  // count how many times a valid player hit the defender
+                  PlayerManager.Instance.IncrementHitByPlayer(record.Attacker, record.Defender);
+
+                  // see if there's a pet mapping, check this first
+                  string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
+                  if (!string.IsNullOrEmpty(pname) || !string.IsNullOrEmpty(pname = record.AttackerOwner))
+                  {
+                    PlayerHasPet[pname] = 1;
+                    PetToPlayer[record.Attacker] = pname;
+                  }
+                });
+              });
+            });
+
+            ComputeDamageStats(options);
+          }
+          else
+          {
+            FireNoDataEvent(options);
+          }
         }
-        else
+        catch (ArgumentNullException ne)
         {
-          FireNoDataEvent(options);
+          LOG.Error(ne);
         }
-      }
-      catch (ArgumentNullException ne)
-      {
-        LOG.Error(ne);
-      }
-      catch (NullReferenceException nr)
-      {
-        LOG.Error(nr);
-      }
-      catch (ArgumentOutOfRangeException aor)
-      {
-        LOG.Error(aor);
-      }
-      catch (ArgumentException ae)
-      {
-        LOG.Error(ae);
+        catch (NullReferenceException nr)
+        {
+          LOG.Error(nr);
+        }
+        catch (ArgumentOutOfRangeException aor)
+        {
+          LOG.Error(aor);
+        }
+        catch (ArgumentException ae)
+        {
+          LOG.Error(ae);
+        }
       }
     }
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      FireNewStatsEvent(options);
-      ComputeDamageStats(options);
+      if (DamageGroups.Count > 0)
+      {
+        FireNewStatsEvent(options);
+        ComputeDamageStats(options);
+      }
     }
 
     internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, OverlayDamageStats overlayStats = null)
@@ -153,13 +168,13 @@ namespace EQLogParser
       overlayStats.RaidStats.LastTime = beginTime;
       overlayStats.RaidStats.TotalSeconds = overlayStats.RaidStats.LastTime - overlayStats.RaidStats.BeginTime + 1;
 
-      if (!DataManager.Instance.IsProbablyNotAPlayer(record.Attacker) && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
+      if ((PlayerManager.Instance.IsPetOrPlayer(record.Attacker) || PlayerManager.Instance.HasBeenHitByPlayers(record.Defender)) && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
       {
         overlayStats.UniqueNpcs[record.Defender] = 1;
         overlayStats.RaidStats.Total += record.Total;
 
         // see if there's a pet mapping, check this first
-        string pname = DataManager.Instance.GetPlayerFromPet(record.Attacker);
+        string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
         if (pname != null || !string.IsNullOrEmpty((pname = record.AttackerOwner)))
         {
           PlayerHasPet[pname] = 1;
@@ -209,7 +224,7 @@ namespace EQLogParser
         overlayStats.RaidStats.DPS = (long)Math.Round(overlayStats.RaidStats.Total / overlayStats.RaidStats.TotalSeconds, 2);
 
         var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
-        int found = list.FindIndex(stats => stats.Name.StartsWith(DataManager.Instance.GetPlayerName(), StringComparison.Ordinal));
+        int found = list.FindIndex(stats => stats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal));
 
         int renumber;
         if (found > 4)
@@ -284,14 +299,7 @@ namespace EQLogParser
 
     internal bool IsValidDamage(DamageRecord record)
     {
-      bool valid = false;
-
-      if (record != null && NpcNames.ContainsKey(record.Defender) && !DataManager.Instance.IsProbablyNotAPlayer(record.Attacker))
-      {
-        valid = true;
-      }
-
-      return valid;
+      return record != null && NpcNames.ContainsKey(record.Defender) && PlayerManager.Instance.IsValidDamage(record);
     }
 
     internal void FireSelectionEvent(GenerateStatsOptions options, List<PlayerStats> selected)
@@ -345,225 +353,234 @@ namespace EQLogParser
 
     internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      if (options.RequestChartData)
+      lock(DamageGroups)
       {
-        // send update
-        DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new DamageGroupCollection(DamageGroups), Filter = filter };
-
-        if (selected != null)
+        if (options.RequestChartData)
         {
-          de.Selected.AddRange(selected);
-        }
+          // send update
+          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new DamageGroupCollection(DamageGroups), Filter = filter };
 
-        EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+          if (selected != null)
+          {
+            de.Selected.AddRange(selected);
+          }
+
+          EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+        }
       }
     }
 
     private void ComputeDamageStats(GenerateStatsOptions options)
     {
-      CombinedStats combined = null;
-      ConcurrentDictionary<string, Dictionary<string, PlayerStats>> childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
-      ConcurrentDictionary<string, PlayerStats> topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
-      ConcurrentDictionary<string, PlayerStats> aggregateStats = new ConcurrentDictionary<string, PlayerStats>();
-      Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
-
-      // always start over
-      RaidTotals.Total = 0;
-
-      try
+      lock (DamageGroups)
       {
-        FireUpdateEvent(options);
-
-        if (options.RequestSummaryData)
+        if (RaidTotals != null)
         {
-          DamageGroups.ForEach(group =>
+          CombinedStats combined = null;
+          ConcurrentDictionary<string, Dictionary<string, PlayerStats>> childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
+          ConcurrentDictionary<string, PlayerStats> topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
+          ConcurrentDictionary<string, PlayerStats> aggregateStats = new ConcurrentDictionary<string, PlayerStats>();
+          Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
+
+          // always start over
+          RaidTotals.Total = 0;
+
+          try
           {
-            // keep track of time range as well as the players that have been updated
-            Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
+            FireUpdateEvent(options);
 
-            int found = -1;
-            if (MainWindow.IsIgnoreIntialPullDamageEnabled)
+            if (options.RequestSummaryData)
             {
-              // ignore initial low activity time
-              double previousDps = 0;
-              long rolling = 0;
-              for (int i = 0; group.Count >= 10 && i < 10; i++)
+              DamageGroups.ForEach(group =>
               {
-                if (previousDps == 0)
+                // keep track of time range as well as the players that have been updated
+                Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
+
+                int found = -1;
+                if (MainWindow.IsIgnoreIntialPullDamageEnabled)
                 {
-                  rolling = group[i].Actions.Sum(test => (test as DamageRecord).Total);
-                  previousDps = rolling / 1.0;
-                }
-                else
-                {
-                  double theTime = group[i].BeginTime - group[0].BeginTime + 1;
-                  if (theTime > 12.0)
+                  // ignore initial low activity time
+                  double previousDps = 0;
+                  long rolling = 0;
+                  for (int i = 0; group.Count >= 10 && i < 10; i++)
                   {
-                    break;
-                  }
-
-                  rolling += group[i].Actions.Sum(test => (test as DamageRecord).Total);
-                  double currentDps = rolling / (theTime);
-                  if (currentDps / previousDps > 1.75)
-                  {
-                    found = i - 1;
-                    break;
-                  }
-                  else
-                  {
-                    previousDps = currentDps;
-                  }
-                }
-              }
-            }
-
-            var goodGroups = found > -1 ? group.GetRange(found, group.Count - found) : group;
-
-            goodGroups.ForEach(block =>
-            {
-              block.Actions.ForEach(action =>
-              {
-                DamageRecord record = action as DamageRecord;
-                if (IsValidDamage(record))
-                {
-                  PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
-
-                  if (!MainWindow.IsBaneDamageEnabled && record.Type == Labels.BANE)
-                  {
-                    stats.BaneHits++;
-
-                    if (individualStats.TryGetValue(stats.OrigName + " +Pets", out PlayerStats temp))
+                    if (previousDps == 0)
                     {
-                      temp.BaneHits++;
-                    }
-                  }
-                  else
-                  {
-                    RaidTotals.Total += record.Total;
-                    StatsUtil.UpdateStats(stats, record, block.BeginTime);
-                    allStats[record.Attacker] = stats;
-
-                    if (!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerHasPet.ContainsKey(record.Attacker))
-                    {
-                      // not a pet
-                      topLevelStats[record.Attacker] = stats;
+                      rolling = group[i].Actions.Sum(test => (test as DamageRecord).Total);
+                      previousDps = rolling / 1.0;
                     }
                     else
                     {
-                      string origName = player ?? record.Attacker;
-                      string aggregateName = (player == Labels.UNASSIGNED) ? origName : origName + " +Pets";
-
-                      PlayerStats aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
-                      StatsUtil.UpdateStats(aggregatePlayerStats, record, block.BeginTime);
-                      allStats[aggregateName] = aggregatePlayerStats;
-                      topLevelStats[aggregateName] = aggregatePlayerStats;
-
-                      if (!childrenStats.TryGetValue(aggregateName, out Dictionary<string, PlayerStats> children))
+                      double theTime = group[i].BeginTime - group[0].BeginTime + 1;
+                      if (theTime > 12.0)
                       {
-                        childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
+                        break;
                       }
 
-                      childrenStats[aggregateName][stats.Name] = stats;
+                      rolling += group[i].Actions.Sum(test => (test as DamageRecord).Total);
+                      double currentDps = rolling / (theTime);
+                      if (currentDps / previousDps > 1.75)
+                      {
+                        found = i - 1;
+                        break;
+                      }
+                      else
+                      {
+                        previousDps = currentDps;
+                      }
                     }
+                  }
+                }
 
-                    PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
-                    UpdateSubStats(subStats, record, block.BeginTime);
-                    allStats[stats.Name + "=" + record.SubType] = subStats;
+                var goodGroups = found > -1 ? group.GetRange(found, group.Count - found) : group;
+
+                goodGroups.ForEach(block =>
+                {
+                  block.Actions.ForEach(action =>
+                  {
+                    DamageRecord record = action as DamageRecord;
+                    if (IsValidDamage(record))
+                    {
+                      PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
+
+                      if (!MainWindow.IsBaneDamageEnabled && record.Type == Labels.BANE)
+                      {
+                        stats.BaneHits++;
+
+                        if (individualStats.TryGetValue(stats.OrigName + " +Pets", out PlayerStats temp))
+                        {
+                          temp.BaneHits++;
+                        }
+                      }
+                      else
+                      {
+                        RaidTotals.Total += record.Total;
+                        StatsUtil.UpdateStats(stats, record, block.BeginTime);
+                        allStats[record.Attacker] = stats;
+
+                        if (!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerHasPet.ContainsKey(record.Attacker))
+                        {
+                          // not a pet
+                          topLevelStats[record.Attacker] = stats;
+                        }
+                        else
+                        {
+                          string origName = player ?? record.Attacker;
+                          string aggregateName = (player == Labels.UNASSIGNED) ? origName : origName + " +Pets";
+
+                          PlayerStats aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
+                          StatsUtil.UpdateStats(aggregatePlayerStats, record, block.BeginTime);
+                          allStats[aggregateName] = aggregatePlayerStats;
+                          topLevelStats[aggregateName] = aggregatePlayerStats;
+
+                          if (!childrenStats.TryGetValue(aggregateName, out Dictionary<string, PlayerStats> children))
+                          {
+                            childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
+                          }
+
+                          childrenStats[aggregateName][stats.Name] = stats;
+                        }
+
+                        PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                        UpdateSubStats(subStats, record, block.BeginTime);
+                        allStats[stats.Name + "=" + record.SubType] = subStats;
+                      }
+                    }
+                  });
+                });
+
+                Parallel.ForEach(allStats.Values, stats =>
+                {
+                  stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
+                  stats.BeginTime = double.NaN;
+                });
+              });
+
+              RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
+
+              // add up resists
+              Dictionary<string, uint> resistCounts = new Dictionary<string, uint>();
+              Parallel.ForEach(Resists, resist =>
+              {
+                ResistRecord record = resist as ResistRecord;
+                Helpers.StringUIntAddHelper.Add(resistCounts, record.Spell, 1);
+              });
+
+              // get death counts
+              ConcurrentDictionary<string, uint> deathCounts = StatsUtil.GetPlayerDeaths(RaidTotals);
+
+              Parallel.ForEach(individualStats.Values, stats =>
+              {
+                if (topLevelStats.TryGetValue(stats.Name, out PlayerStats topLevel))
+                {
+                  if (childrenStats.TryGetValue(stats.Name, out Dictionary<string, PlayerStats> children))
+                  {
+                    foreach (var child in children.Values)
+                    {
+                      StatsUtil.UpdateCalculations(child, RaidTotals, resistCounts);
+
+                      if (stats.Total > 0)
+                      {
+                        child.Percent = Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
+                      }
+
+                      if (deathCounts.TryGetValue(child.Name, out uint childDeaths))
+                      {
+                        child.Deaths = childDeaths;
+
+                        if (stats.Name.Contains(child.Name))
+                        {
+                          stats.Deaths = childDeaths;
+                        }
+                      }
+                    }
+                  }
+
+                  StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
+
+                  if (deathCounts.TryGetValue(stats.Name, out uint deaths))
+                  {
+                    stats.Deaths = deaths;
                   }
                 }
               });
-            });
 
-            Parallel.ForEach(allStats.Values, stats =>
-            {
-              stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
-              stats.BeginTime = double.NaN;
-            });
-          });
-
-          RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-
-          // add up resists
-          Dictionary<string, uint> resistCounts = new Dictionary<string, uint>();
-          Parallel.ForEach(Resists, resist =>
-          {
-            ResistRecord record = resist as ResistRecord;
-            Helpers.StringUIntAddHelper.Add(resistCounts, record.Spell, 1);
-          });
-
-          // get death counts
-          ConcurrentDictionary<string, uint> deathCounts = StatsUtil.GetPlayerDeaths(RaidTotals);
-
-          Parallel.ForEach(individualStats.Values, stats =>
-          {
-            if (topLevelStats.TryGetValue(stats.Name, out PlayerStats topLevel))
-            {
-              if (childrenStats.TryGetValue(stats.Name, out Dictionary<string, PlayerStats> children))
+              combined = new CombinedStats
               {
-                foreach (var child in children.Values)
+                RaidStats = RaidTotals,
+                TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
+                TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
+                TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Damage ", StatsUtil.FormatTotals(RaidTotals.DPS))
+              };
+
+              combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
+              combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
+              combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
+
+              for (int i = 0; i < combined.StatsList.Count; i++)
+              {
+                combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
+                combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
+
+                if (childrenStats.TryGetValue(combined.StatsList[i].Name, out Dictionary<string, PlayerStats> children))
                 {
-                  StatsUtil.UpdateCalculations(child, RaidTotals, resistCounts);
-
-                  if (stats.Total > 0)
-                  {
-                    child.Percent = Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
-                  }
-
-                  if (deathCounts.TryGetValue(child.Name, out uint childDeaths))
-                  {
-                    child.Deaths = childDeaths;
-
-                    if (stats.Name.Contains(child.Name))
-                    {
-                      stats.Deaths = childDeaths;
-                    }
-                  }
+                  combined.Children.Add(combined.StatsList[i].Name, children.Values.OrderByDescending(stats => stats.Total).ToList());
                 }
               }
-
-              StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
-
-              if (deathCounts.TryGetValue(stats.Name, out uint deaths))
-              {
-                stats.Deaths = deaths;
-              }
-            }
-          });
-
-          combined = new CombinedStats
-          {
-            RaidStats = RaidTotals,
-            TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
-            TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
-            TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Damage ", StatsUtil.FormatTotals(RaidTotals.DPS))
-          };
-
-          combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
-          combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
-          combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
-
-          for (int i = 0; i < combined.StatsList.Count; i++)
-          {
-            combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
-            combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
-
-            if (childrenStats.TryGetValue(combined.StatsList[i].Name, out Dictionary<string, PlayerStats> children))
-            {
-              combined.Children.Add(combined.StatsList[i].Name, children.Values.OrderByDescending(stats => stats.Total).ToList());
             }
           }
+          catch (ArgumentNullException anx)
+          {
+            LOG.Error(anx);
+          }
+          catch (AggregateException agx)
+          {
+            LOG.Error(agx);
+          }
+
+          FireCompletedEvent(options, combined);
         }
       }
-      catch (ArgumentNullException anx)
-      {
-        LOG.Error(anx);
-      }
-      catch (AggregateException agx)
-      {
-        LOG.Error(agx);
-      }
-
-      FireCompletedEvent(options, combined);
     }
 
     public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)

@@ -4,72 +4,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Security;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
 
 namespace EQLogParser
 {
-  internal class TimedActionComparer : IComparer<TimedAction>
-  {
-    public int Compare(TimedAction x, TimedAction y)
-    {
-      return x.BeginTime.CompareTo(y.BeginTime);
-    }
-  }
-
-  internal class ReverseTimedActionComparer : IComparer<TimedAction>
-  {
-    public int Compare(TimedAction x, TimedAction y)
-    {
-      return y.BeginTime.CompareTo(x.BeginTime);
-    }
-  }
-
-  public class ComboBoxItemTemplateSelector : DataTemplateSelector
-  {
-    public List<DataTemplate> SelectedItemTemplates { get; } = new List<DataTemplate>();
-    public List<DataTemplate> DropDownItemTemplates { get; } = new List<DataTemplate>();
-
-    public override DataTemplate SelectTemplate(object item, DependencyObject container)
-    {
-      return GetVisualParent<ComboBoxItem>(container) == null ? ChooseFrom(SelectedItemTemplates, item) : ChooseFrom(DropDownItemTemplates, item);
-    }
-
-    private static DataTemplate ChooseFrom(IEnumerable<DataTemplate> templates, object item)
-    {
-      DataTemplate result = null;
-
-      if (item != null)
-      {
-        var targetType = item.GetType();
-        result = templates.FirstOrDefault(t => (t.DataType as Type) == targetType);
-      }
-
-      return result;
-    }
-
-    private static T GetVisualParent<T>(DependencyObject child) where T : Visual
-    {
-      while (child != null && !(child is T))
-      {
-        child = VisualTreeHelper.GetParent(child);
-      }
-
-      return child as T;
-    }
-  }
-
   class Helpers
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    internal static TimedActionComparer TimedActionComparer = new TimedActionComparer();
-    internal static ReverseTimedActionComparer ReverseTimedActionComparer = new ReverseTimedActionComparer();
     internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     internal static DictionaryAddHelper<string, uint> StringUIntAddHelper = new DictionaryAddHelper<string, uint>();
@@ -180,53 +122,6 @@ namespace EQLogParser
       }
     }
 
-    internal static List<string> ReadList(string fileName)
-    {
-      List<string> result = new List<string>();
-
-      try
-      {
-        if (File.Exists(fileName))
-        {
-          result.AddRange(File.ReadAllLines(fileName));
-        }
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
-
-      return result;
-    }
-
-    internal static void SaveList(string fileName, List<string> list)
-    {
-      try
-      {
-        File.WriteAllLines(fileName, list);
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
-    }
-
     internal static DocumentWindow OpenNewTab(DockSite dockSite, string id, string title, object content, double width = 0, double height = 0)
     {
       var window = new DocumentWindow(dockSite, id, title, null, content);
@@ -252,26 +147,6 @@ namespace EQLogParser
       for (int i = 0; found != false && i < stop; i++)
       {
         if (!char.IsLetter(part, i))
-        {
-          found = false;
-          break;
-        }
-      }
-
-      return found;
-    }
-
-    internal static bool IsPossiblePlayerNameWithServer(string part, int stop = -1)
-    {
-      if (stop == -1)
-      {
-        stop = part.Length;
-      }
-
-      bool found = stop < 3 ? false : true;
-      for (int i = 0; found != false && i < stop; i++)
-      {
-        if (!char.IsLetter(part, i) && part[i] != '.')
         {
           found = false;
           break;
@@ -324,45 +199,6 @@ namespace EQLogParser
         temp += value;
         dict[key] = temp;
       }
-    }
-  }
-
-  public static class TextBoxBehavior
-  {
-    public static readonly DependencyProperty TripleClickSelectAllProperty = DependencyProperty.RegisterAttached("TripleClickSelectAll", typeof(bool), typeof(TextBoxBehavior), new PropertyMetadata(false, OnPropertyChanged));
-
-    private static void OnPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-      if (d is TextBox tb)
-      {
-        var enable = (bool)e.NewValue;
-        if (enable)
-        {
-          tb.PreviewMouseLeftButtonDown += OnTextBoxMouseDown;
-        }
-        else
-        {
-          tb.PreviewMouseLeftButtonDown -= OnTextBoxMouseDown;
-        }
-      }
-    }
-
-    private static void OnTextBoxMouseDown(object sender, MouseButtonEventArgs e)
-    {
-      if (e.ClickCount == 3)
-      {
-        ((TextBox)sender).SelectAll();
-      }
-    }
-
-    public static void SetTripleClickSelectAll(DependencyObject element, bool value)
-    {
-      element?.SetValue(TripleClickSelectAllProperty, value);
-    }
-
-    public static bool GetTripleClickSelectAll(DependencyObject element)
-    {
-      return (bool)element?.GetValue(TripleClickSelectAllProperty);
     }
   }
 }

@@ -20,7 +20,7 @@ namespace EQLogParser
       InitializeComponent();
       InitSummaryTable(title, dataGrid);
 
-      var list = DataManager.Instance.GetClassList();
+      var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, "All Classes");
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
@@ -122,7 +122,7 @@ namespace EQLogParser
           }
           else if (stats is DataPoint dataPoint)
           {
-            className = DataManager.Instance.GetPlayerClass(dataPoint.Name);
+            className = PlayerManager.Instance.GetPlayerClass(dataPoint.Name);
           }
 
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;

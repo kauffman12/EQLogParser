@@ -78,7 +78,7 @@ namespace EQLogParser
       };
 
       // read show breaks setting
-      string showBreaks = DataManager.Instance.GetApplicationSetting("NpcShowInactivityBreaks");
+      string showBreaks = ConfigUtil.GetApplicationSetting("NpcShowInactivityBreaks");
       npcShowBreaks.IsChecked = showBreaks == null || (bool.TryParse(showBreaks, out bool bValue) && bValue);
     }
 
@@ -127,7 +127,7 @@ namespace EQLogParser
 
     private void Clear_Click(object sender, RoutedEventArgs e)
     {
-      DataManager.Instance.LoadState(false);
+      DataManager.Instance.Clear();
     }
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
@@ -146,8 +146,8 @@ namespace EQLogParser
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
       if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
-        DataManager.Instance.UpdateVerifiedPets(npc.Name);
-        DataManager.Instance.UpdatePetToPlayer(npc.Name, Labels.UNASSIGNED);
+        PlayerManager.Instance.AddVerifiedPet(npc.Name);
+        PlayerManager.Instance.AddPetToPlayer(npc.Name, Labels.UNASSIGNED);
       }
     }
 
@@ -157,7 +157,7 @@ namespace EQLogParser
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
       if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
-        DataManager.Instance.UpdateVerifiedPlayers(npc.Name);
+        PlayerManager.Instance.AddVerifiedPlayer(npc.Name);
       }
     }
 
@@ -228,7 +228,7 @@ namespace EQLogParser
           NonPlayersViewSource.View.Filter = new Predicate<object>(item => ((NonPlayer)item).GroupID > -1);
         }
 
-        DataManager.Instance.SetApplicationSetting("NpcShowInactivityBreaks", npcShowBreaks.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetApplicationSetting("NpcShowInactivityBreaks", npcShowBreaks.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
       }
     }
 

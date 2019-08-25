@@ -94,7 +94,7 @@ namespace EQLogParser
 
             if (PlayerStats != null)
             {
-              var filtered = CurrentShowPets ? PlayerStats : PlayerStats.Where(playerStats => !DataManager.Instance.CheckNameForPet(playerStats.Name));
+              var filtered = CurrentShowPets ? PlayerStats : PlayerStats.Where(playerStats => !PlayerManager.Instance.IsVerifiedPet(playerStats.Name));
               foreach (var playerStat in SortSubStats(filtered.ToList()))
               {
                 Dispatcher.InvokeAsync(() =>

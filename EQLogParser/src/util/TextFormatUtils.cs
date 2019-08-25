@@ -30,8 +30,10 @@ namespace EQLogParser
         sb.Append('"').Append(title).Append('"').AppendLine();
       }
 
-      var list = new List<string>();
-      list.Add("Totals");
+      var list = new List<string>
+      {
+        "Totals"
+      };
 
       // header
       header.ForEach(item =>
@@ -130,6 +132,38 @@ namespace EQLogParser
       }
 
       return sb.ToString();
+    }
+
+    internal static SpellData ParseCustomSpellData(string line)
+    {
+      SpellData spellData = null;
+
+      if (!string.IsNullOrEmpty(line))
+      {
+        string[] data = line.Split('^');
+        if (data.Length >= 9)
+        {
+          int beneficial = int.Parse(data[2], CultureInfo.CurrentCulture);
+          byte target = byte.Parse(data[3], CultureInfo.CurrentCulture);
+          ushort classMask = ushort.Parse(data[4], CultureInfo.CurrentCulture);
+
+          spellData = new SpellData()
+          {
+            ID = string.Intern(data[0]),
+            Spell = string.Intern(data[1]),
+            SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
+            Beneficial = beneficial != 0,
+            Target = target,
+            ClassMask = classMask,
+            LandsOnYou = string.Intern(data[5]),
+            LandsOnOther = string.Intern(data[6]),
+            Damaging = byte.Parse(data[7], CultureInfo.CurrentCulture) == 1,
+            IsProc = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1
+          };
+        }
+      }
+
+      return spellData;
     }
   }
 }

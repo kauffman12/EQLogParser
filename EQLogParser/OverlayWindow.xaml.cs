@@ -62,10 +62,10 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      string width = DataManager.Instance.GetApplicationSetting("OverlayWidth");
-      string height = DataManager.Instance.GetApplicationSetting("OverlayHeight");
-      string top = DataManager.Instance.GetApplicationSetting("OverlayTop");
-      string left = DataManager.Instance.GetApplicationSetting("OverlayLeft");
+      string width = ConfigUtil.GetApplicationSetting("OverlayWidth");
+      string height = ConfigUtil.GetApplicationSetting("OverlayHeight");
+      string top = ConfigUtil.GetApplicationSetting("OverlayTop");
+      string left = ConfigUtil.GetApplicationSetting("OverlayLeft");
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
       bool offsetSize = configure || width == null || height == null || top == null || left == null;
@@ -117,7 +117,7 @@ namespace EQLogParser
         Left = offsetSize ? dvalue - margin.Left : dvalue;
       }
 
-      string value = DataManager.Instance.GetApplicationSetting("OverlayFontSize");
+      string value = ConfigUtil.GetApplicationSetting("OverlayFontSize");
       bool fontHasBeenSet = false;
       if (value != null && int.TryParse(value, out int ivalue) && ivalue >= 0 && ivalue <= 64)
       {
@@ -162,13 +162,10 @@ namespace EQLogParser
 
     private void DamageLineParser_EventsDamageProcessed(object sender, DamageProcessedEvent e)
     {
-      if (e.IsPlayerDamage)
+      Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
+      if (UpdateTimer != null && !UpdateTimer.IsEnabled)
       {
-        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
-        if (UpdateTimer != null && !UpdateTimer.IsEnabled)
-        {
-          UpdateTimer.Start();
-        }
+        UpdateTimer.Start();
       }
     }
 
@@ -220,7 +217,7 @@ namespace EQLogParser
                 RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
               }
 
-              string playerName = DataManager.Instance.GetPlayerName();
+              string playerName = ConfigUtil.PlayerName;
               var isMe = !string.IsNullOrEmpty(playerName) && list[i].Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
                 (playerName.Length >= list[i].Name.Length || list[i].Name[playerName.Length] == ' ');
               if (MainWindow.IsHideOverlayOtherPlayersEnabled && !isMe)
@@ -496,24 +493,24 @@ namespace EQLogParser
     {
       if (!double.IsNaN(overlayCanvas.ActualHeight) && overlayCanvas.ActualHeight > 0)
       {
-        DataManager.Instance.SetApplicationSetting("OverlayHeight", overlayCanvas.ActualHeight.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetApplicationSetting("OverlayHeight", overlayCanvas.ActualHeight.ToString(CultureInfo.CurrentCulture));
       }
 
       if (!double.IsNaN(overlayCanvas.ActualWidth) && overlayCanvas.ActualWidth > 0)
       {
-        DataManager.Instance.SetApplicationSetting("OverlayWidth", overlayCanvas.ActualWidth.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetApplicationSetting("OverlayWidth", overlayCanvas.ActualWidth.ToString(CultureInfo.CurrentCulture));
       }
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
       if (this.Top + margin.Top > 0 && (this.Left + margin.Left) > 0)
       {
-        DataManager.Instance.SetApplicationSetting("OverlayTop", (this.Top + margin.Top).ToString(CultureInfo.CurrentCulture));
-        DataManager.Instance.SetApplicationSetting("OverlayLeft", (this.Left + margin.Left).ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetApplicationSetting("OverlayTop", (this.Top + margin.Top).ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetApplicationSetting("OverlayLeft", (this.Left + margin.Left).ToString(CultureInfo.CurrentCulture));
       }
 
       if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out int size))
       {
-        DataManager.Instance.SetApplicationSetting("OverlayFontSize", size.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetApplicationSetting("OverlayFontSize", size.ToString(CultureInfo.CurrentCulture));
       }
 
       (Application.Current.MainWindow as MainWindow)?.OpenOverlay(false, true);

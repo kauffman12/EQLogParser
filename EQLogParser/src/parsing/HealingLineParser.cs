@@ -192,9 +192,9 @@ namespace EQLogParser
           int possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
           if (possessive > -1)
           {
-            if (DataManager.Instance.CheckNameForPlayer(healed.Substring(0, possessive)))
+            if (PlayerManager.Instance.IsVerifiedPlayer(healed.Substring(0, possessive)))
             {
-              DataManager.Instance.UpdateVerifiedPets(healed);
+              PlayerManager.Instance.AddVerifiedPet(healed);
             }
 
             // dont count swarm pets

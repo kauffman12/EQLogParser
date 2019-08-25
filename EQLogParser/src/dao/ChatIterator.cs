@@ -24,9 +24,9 @@ namespace EQLogParser
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
 
-    internal ChatIterator(string player, ChatFilter ChatFilter)
+    internal ChatIterator(string playerAndServer, ChatFilter ChatFilter)
     {
-      Home = DataManager.ARCHIVE_DIR + player;
+      Home = ConfigUtil.GetArchiveDir() + playerAndServer;
       CurrentChatFilter = ChatFilter;
 
       if (Directory.Exists(Home))

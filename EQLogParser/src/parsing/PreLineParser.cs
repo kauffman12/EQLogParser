@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace EQLogParser
 {
@@ -21,21 +22,27 @@ namespace EQLogParser
     private static bool CheckForPetLeader(ProcessLine pline)
     {
       bool found = false;
-      if (pline.ActionPart.Length >= 28 && pline.ActionPart.Length < 55)
+      if (pline.ActionPart.Length >= 28 && pline.ActionPart.Length < 75)
       {
         int index = pline.ActionPart.IndexOf(" says, 'My leader is ", StringComparison.Ordinal);
         if (index > -1)
         {
           string pet = pline.ActionPart.Substring(0, index);
-          if (!DataManager.Instance.CheckNameForPlayer(pet)) // thanks idiots for this
+          if (!PlayerManager.Instance.IsVerifiedPlayer(pet)) // thanks idiots for this
           {
             int period = pline.ActionPart.IndexOf(".", index + 24, StringComparison.Ordinal);
             if (period > -1)
             {
               string owner = pline.ActionPart.Substring(index + 21, period - index - 21);
-              DataManager.Instance.UpdateVerifiedPlayers(owner);
-              DataManager.Instance.UpdateVerifiedPets(pet);
-              DataManager.Instance.UpdatePetToPlayer(pet, owner);
+
+              if (!Helpers.IsPossiblePlayerName(pet) && (pet.StartsWith("A ", StringComparison.Ordinal) || pet.StartsWith("An ", StringComparison.Ordinal)))
+              {
+                pet = pet.ToLower(CultureInfo.CurrentCulture);
+              }
+
+              PlayerManager.Instance.AddVerifiedPlayer(owner);
+              PlayerManager.Instance.AddVerifiedPet(pet);
+              PlayerManager.Instance.AddPetToPlayer(pet, owner);
             }
           }
 
@@ -49,12 +56,12 @@ namespace EQLogParser
     {
       bool found = false;
 
-      int index = -1;
+      int index;
       if (pline.ActionPart.StartsWith("Targeted (", StringComparison.Ordinal))
       {
         if (pline.ActionPart.Length > 20 && pline.ActionPart[10] == 'P' && pline.ActionPart[11] == 'l') // Player
         {
-          DataManager.Instance.UpdateVerifiedPlayers(pline.ActionPart.Substring(19));
+          PlayerManager.Instance.AddVerifiedPlayer(pline.ActionPart.Substring(19));
           found = true;
         }
       }
@@ -62,14 +69,14 @@ namespace EQLogParser
         && (index + 9) == pline.ActionPart.Length && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
       {
         string test = pline.ActionPart.Substring(0, index);
-        DataManager.Instance.UpdateUnVerifiedPetOrPlayer(test);
+        PlayerManager.Instance.AddPetOrPlayerAction(test);
         found = true;
       }
       else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 35 && (index = pline.ActionPart.IndexOf(" joined the raid.", StringComparison.Ordinal)) > -1
         && (index + 17) == pline.ActionPart.Length && Helpers.IsPossiblePlayerName(pline.ActionPart, index))
       {
         string test = pline.ActionPart.Substring(0, index);
-        DataManager.Instance.UpdateVerifiedPlayers(test);
+        PlayerManager.Instance.AddVerifiedPlayer(test);
         found = true;
       }
 
