@@ -174,14 +174,7 @@ namespace EQLogParser
 
     internal bool IsValidDamage(DamageRecord record)
     {
-      bool valid = false;
-
-      if (record != null && NpcNames.ContainsKey(record.Attacker) && (PlayerManager.Instance.IsPetOrPlayer(record.Defender) || Helpers.IsPossiblePlayerName(record.Defender)))
-      {
-        valid = true;
-      }
-
-      return valid;
+      return record != null && NpcNames.ContainsKey(record.Attacker) && (Helpers.IsPossiblePlayerName(record.Defender) || PlayerManager.Instance.IsPetOrPlayer(record.Defender));
     }
 
     private void ComputeTankingStats(GenerateStatsOptions options)

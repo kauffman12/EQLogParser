@@ -42,7 +42,7 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
-      if (PlayerManager.Instance.IsValidAttacker(processed.Record))
+      if (PlayerManager.Instance.IsPlayerDamage(processed.Record))
       {
         if (!double.IsNaN(LastUpdateTime))
         {

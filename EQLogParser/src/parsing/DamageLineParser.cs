@@ -33,6 +33,11 @@ namespace EQLogParser
       { "frenzy", "frenzies" }, { "frenzies", "frenzies" },
     };
 
+    private static readonly List<string> ChestTypes = new List<string>()
+    {
+      " chest", " cache", " satchel", " treasure box"
+    };
+
     static DamageLineParser()
     {
       // add two way mapping
@@ -359,7 +364,7 @@ namespace EQLogParser
           record.SubType = Labels.RIPOSTE;
         }
 
-        if (CheckEyeRegex.IsMatch(record.Defender) || record.Defender.EndsWith("chest", StringComparison.Ordinal) || record.Defender.EndsWith("satchel", StringComparison.Ordinal))
+        if (CheckEyeRegex.IsMatch(record.Defender) || ChestTypes.FindIndex(type => record.Defender.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0)
         {
           record = null;
         }
@@ -369,7 +374,7 @@ namespace EQLogParser
           record.Attacker = PlayerManager.Instance.ReplacePlayer(record.Attacker, record.Defender);
           record.Defender = PlayerManager.Instance.ReplacePlayer(record.Defender, record.Attacker);
 
-          if (Helpers.IsPossiblePlayerName(record.Attacker) && record.Attacker == record.Defender)
+          if (record.Attacker == record.Defender)
           {
             record = null;
           }
@@ -654,10 +659,16 @@ namespace EQLogParser
         {
           if (IsPetOrMount(name, posessiveIndex + 3, out _))
           {
-            if (Helpers.IsPossiblePlayerName(name, posessiveIndex))
+            var verifiedPet = PlayerManager.Instance.IsVerifiedPet(name);
+            if (verifiedPet || Helpers.IsPossiblePlayerName(name, posessiveIndex))
             {
               owner = name.Substring(0, posessiveIndex);
               hasOwner = true;
+
+              if (!verifiedPet && PlayerManager.Instance.IsPetOrPlayer(owner))
+              {
+                PlayerManager.Instance.AddVerifiedPet(name);
+              }
             }
           }
         }
