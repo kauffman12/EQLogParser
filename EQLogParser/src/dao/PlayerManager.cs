@@ -8,18 +8,23 @@ namespace EQLogParser
 {
   class PlayerManager
   {
+    internal event EventHandler<string> EventsNewLikelyPlayer;
     internal event EventHandler<PetMapping> EventsNewPetMapping;
     internal event EventHandler<string> EventsNewTakenPetOrPlayerAction;
     internal event EventHandler<string> EventsNewVerifiedPet;
     internal event EventHandler<string> EventsNewVerifiedPlayer;
 
     internal static PlayerManager Instance = new PlayerManager();
+
+    // static data
     private readonly ConcurrentDictionary<SpellClass, string> ClassNames = new ConcurrentDictionary<SpellClass, string>();
     private readonly ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> SecondPerson = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> ThirdPerson = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, long> HitByPlayer = new ConcurrentDictionary<string, long>();
-    private readonly ConcurrentDictionary<string, string> PetToPlayerMap = new ConcurrentDictionary<string, string>();
+
+    private readonly ConcurrentDictionary<string, byte> LikelyPlayer = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, Dictionary<string, int>> LikelyPlayerStats = new ConcurrentDictionary<string, Dictionary<string, int>>();
+    private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
     private readonly ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
     private readonly ConcurrentDictionary<string, byte> TakenPetOrPlayerAction = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
@@ -53,9 +58,9 @@ namespace EQLogParser
 
     internal void AddPetToPlayer(string pet, string player)
     {
-      if (!PetToPlayerMap.ContainsKey(pet) || PetToPlayerMap[pet] != player)
+      if (!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player)
       {
-        PetToPlayerMap[pet] = player;
+        PetToPlayer[pet] = player;
         EventsNewPetMapping(this, new PetMapping() { Pet = pet, Owner = player });
         PetMappingUpdated = true;
       }
@@ -105,58 +110,34 @@ namespace EQLogParser
 
     internal string GetPlayerFromPet(string pet)
     {
-      PetToPlayerMap.TryGetValue(pet, out string player);
+      PetToPlayer.TryGetValue(pet, out string player);
       return player;
     }
 
-    internal void IncrementHitByPlayer(string player, string defender)
-    {
-      if (IsPetOrPlayer(player))
-      {
-        long newValue = HitByPlayer.TryGetValue(defender, out long value) ? value + 1 : 1;
-        HitByPlayer[defender] = newValue;
-      }
-    }
-
-    internal bool IsValidAttacker(DamageRecord record)
+    internal bool IsPlayerDamage(DamageRecord record)
     {
       bool valid = false;
       if (record != null)
       {
-        // attacker is player, defender isnt unless its a charmed NPC with the same name, and if its a pet it's not owned by a valid player
-        valid = IsPetOrPlayer(record.Attacker) && (!IsPetOrPlayer(record.Defender) || record.Attacker == record.Defender) && (string.IsNullOrEmpty(record.DefenderOwner) || !IsPetOrPlayer(record.DefenderOwner));
+        var isAttackerPlayer = IsPetOrPlayer(record.Attacker);
+        var isDefenderPlayer = IsPetOrPlayer(record.Defender);
+        var attackerCouldBePlayer = isAttackerPlayer || Helpers.IsPossiblePlayerName(record.Attacker);
+        var defenderCantBePlayer = !isDefenderPlayer && !(!string.IsNullOrEmpty(record.DefenderOwner) && IsLikelyPlayer(record.DefenderOwner)) && !Helpers.IsPossiblePlayerName(record.Defender);
+
+        valid = attackerCouldBePlayer && (defenderCantBePlayer || (record.Attacker == record.Defender && PetToPlayer.ContainsKey(record.Attacker)));
+
+        if (!isAttackerPlayer && attackerCouldBePlayer && !isDefenderPlayer && defenderCantBePlayer)
+        {
+          IncrementLikelyPlayer(record.Attacker, record.Defender);
+        }
       }
 
       return valid;
     }
 
-    internal bool IsValidDamage(DamageRecord record)
+    internal bool IsLikelyPlayer(string name)
     {
-      // players obviously valid
-      bool valid = IsVerifiedPlayer(record.Attacker);
-
-      if (!valid)
-      {
-        // if it at least looks like a pet or unknown player test their name
-        if (IsVerifiedPet(record.Attacker) || TakenPetOrPlayerAction.ContainsKey(record.Attacker))
-        {
-          if (!Helpers.IsPossiblePlayerName(record.Attacker))
-          {
-            // charmed pets seem to 'hit' instead of use their normal attack so allow this case
-            valid = record.Attacker != record.Defender || "hits".Equals(record.Type, StringComparison.OrdinalIgnoreCase);
-          }
-          else
-          {
-            valid = true;
-          }
-        }
-        else
-        {
-          valid = Helpers.IsPossiblePlayerName(record.Attacker);
-        }
-      }
-
-      return valid;
+      return IsVerifiedPlayer(name) || LikelyPlayer.ContainsKey(name);
     }
 
     internal bool IsVerifiedPet(string name)
@@ -179,12 +160,7 @@ namespace EQLogParser
 
     internal bool IsPetOrPlayer(string name)
     {
-      return IsVerifiedPlayer(name) || IsVerifiedPet(name) || TakenPetOrPlayerAction.ContainsKey(name);
-    }
-
-    internal bool HasBeenHitByPlayers(string name)
-    {
-      return HitByPlayer.TryGetValue(name, out long value) && value > 3;
+      return IsVerifiedPlayer(name) || IsVerifiedPet(name) || LikelyPlayer.ContainsKey(name) || TakenPetOrPlayerAction.ContainsKey(name);
     }
 
     internal string ReplacePlayer(string name, string alternative)
@@ -203,22 +179,19 @@ namespace EQLogParser
       return string.Intern(result);
     }
 
-    internal void ResetHiyByPlayer()
-    {
-      HitByPlayer.Clear();
-    }
-
     internal void Clear()
     {
       lock(this)
       {
-        PetToPlayerMap.Clear();
+        LikelyPlayer.Clear();
+        LikelyPlayerStats.Clear();
+        PetToPlayer.Clear();
         PlayerToClass.Clear();
         TakenPetOrPlayerAction.Clear();
         VerifiedPets.Clear();
         VerifiedPlayers.Clear();
-        VerifiedPlayers[ConfigUtil.PlayerName] = 1;
 
+        AddVerifiedPlayer(ConfigUtil.PlayerName);
         foreach (var keypair in ConfigUtil.ReadPetMapping())
         {
           AddVerifiedPlayer(keypair.Value);
@@ -235,7 +208,7 @@ namespace EQLogParser
     {
       if (PetMappingUpdated)
       {
-        var filtered = PetToPlayerMap.Where(keypair => Helpers.IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
+        var filtered = PetToPlayer.Where(keypair => Helpers.IsPossiblePlayerName(keypair.Key) && Helpers.IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
         ConfigUtil.SavePetMapping(filtered);
         PetMappingUpdated = false;
       }
@@ -253,20 +226,22 @@ namespace EQLogParser
       {
         lock(PlayerToClass)
         {
-          PlayerToClass.TryAdd(cast.Caster, new SpellClassCounter() { ClassCounts = new ConcurrentDictionary<SpellClass, int>() });
-          counter = PlayerToClass[cast.Caster];
+          counter = new SpellClassCounter() { ClassCounts = new Dictionary<SpellClass, int>() };
+          PlayerToClass.TryAdd(cast.Caster, counter);
         }
       }
 
       lock (counter)
       {
-        if (!counter.ClassCounts.ContainsKey(theClass))
+        int newValue = 1;
+        if (counter.ClassCounts.TryGetValue(theClass, out int value))
         {
-          counter.ClassCounts.TryAdd(theClass, 0);
+          newValue += value;
         }
 
-        int value = ++counter.ClassCounts[theClass];
-        if (value > counter.CurrentMax)
+        counter.ClassCounts[theClass] = newValue;
+
+        if (newValue > counter.CurrentMax)
         {
           counter.CurrentMax = value;
           counter.CurrentClass = theClass;
@@ -290,11 +265,47 @@ namespace EQLogParser
       }
     }
 
+    private void IncrementLikelyPlayer(string attacker, string defender)
+    {
+      if (!LikelyPlayerStats.TryGetValue(attacker, out Dictionary<string, int> defenders))
+      {
+        lock(LikelyPlayerStats)
+        {
+          defenders = new Dictionary<string, int>();
+          LikelyPlayerStats.TryAdd(attacker, defenders);
+        }
+      }
+
+      bool newLikelyPlayer = false;
+
+      lock(defenders)
+      {
+        int newValue = 1;
+        if (defenders.TryGetValue(defender, out int value))
+        {
+          newValue += value;
+        }
+
+        defenders[defender] = newValue;
+
+        if (newValue > 5 || defenders.Count > 1)
+        {
+          LikelyPlayer[attacker] = 1;
+          newLikelyPlayer = true;
+        }
+      }
+
+      if (newLikelyPlayer)
+      {
+        EventsNewLikelyPlayer(this, attacker);
+      }
+    }
+
     private class SpellClassCounter
     {
       internal int CurrentMax { get; set; }
       internal SpellClass CurrentClass { get; set; }
-      internal ConcurrentDictionary<SpellClass, int> ClassCounts { get; set; }
+      internal Dictionary<SpellClass, int> ClassCounts { get; set; }
     }
   }
 }

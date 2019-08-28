@@ -146,8 +146,11 @@ namespace EQLogParser
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
       if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
-        PlayerManager.Instance.AddVerifiedPet(npc.Name);
-        PlayerManager.Instance.AddPetToPlayer(npc.Name, Labels.UNASSIGNED);
+        Task.Delay(120).ContinueWith(_ =>
+        {
+          PlayerManager.Instance.AddVerifiedPet(npc.Name);
+          PlayerManager.Instance.AddPetToPlayer(npc.Name, Labels.UNASSIGNED);
+        }, TaskScheduler.Default);
       }
     }
 
@@ -157,7 +160,7 @@ namespace EQLogParser
       ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
       if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
-        PlayerManager.Instance.AddVerifiedPlayer(npc.Name);
+        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(npc.Name), TaskScheduler.Default);
       }
     }
 
@@ -196,7 +199,8 @@ namespace EQLogParser
       npcMenuItemClear.IsEnabled = callingDataGrid.Items.Count > 0;
 
       var selected = callingDataGrid.SelectedItem as NonPlayer;
-      npcMenuItemSetPet.IsEnabled = npcMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1;
+      npcMenuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1;
+      npcMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1 && Helpers.IsPossiblePlayerName(callingDataGrid.SelectedItem.ToString());
     }
 
     private void SelectGroup_Click(object sender, RoutedEventArgs e)

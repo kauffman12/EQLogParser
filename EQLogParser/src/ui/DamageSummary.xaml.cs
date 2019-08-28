@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -213,11 +214,13 @@ namespace EQLogParser
       DataGrid callingDataGrid = menu?.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is PlayerStats stats)
       {
-        PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
-        PlayerManager.Instance.AddPetToPlayer(stats.OrigName, Labels.UNASSIGNED);
+        Task.Delay(150).ContinueWith(_ =>
+        {
+          PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
+          PlayerManager.Instance.AddPetToPlayer(stats.OrigName, Labels.UNASSIGNED);
+        }, TaskScheduler.Default);
       }
     }
-
 
     private void UpdateDataGridMenuItems()
     {
