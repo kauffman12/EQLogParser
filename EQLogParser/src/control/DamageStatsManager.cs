@@ -79,8 +79,6 @@ namespace EQLogParser
               group.ForEach(block => Resists.AddRange(block.Actions));
             }
 
-            PlayerManager.Instance.ResetHiyByPlayer();
-
             // Pre-processing for pets and hit counts
             Parallel.ForEach(DamageGroups, group =>
             {
@@ -89,9 +87,6 @@ namespace EQLogParser
                 block.Actions.ForEach(action =>
                 {
                   DamageRecord record = action as DamageRecord;
-
-                  // count how many times a valid player hit the defender
-                  PlayerManager.Instance.IncrementHitByPlayer(record.Attacker, record.Defender);
 
                   // see if there's a pet mapping, check this first
                   string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
@@ -168,7 +163,7 @@ namespace EQLogParser
       overlayStats.RaidStats.LastTime = beginTime;
       overlayStats.RaidStats.TotalSeconds = overlayStats.RaidStats.LastTime - overlayStats.RaidStats.BeginTime + 1;
 
-      if ((PlayerManager.Instance.IsPetOrPlayer(record.Attacker) || PlayerManager.Instance.HasBeenHitByPlayers(record.Defender)) && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
+      if (IsValidDamage(record, true) && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
       {
         overlayStats.UniqueNpcs[record.Defender] = 1;
         overlayStats.RaidStats.Total += record.Total;
@@ -297,9 +292,18 @@ namespace EQLogParser
       return results;
     }
 
-    internal bool IsValidDamage(DamageRecord record)
+    internal bool IsValidDamage(DamageRecord record, bool activeNpcs = false)
     {
-      return record != null && NpcNames.ContainsKey(record.Defender) && PlayerManager.Instance.IsValidDamage(record);
+      bool isDefenderNpc = false;
+      bool isAttackerPossiblyPlayer = false;
+
+      if (record != null)
+      {
+        isDefenderNpc = (activeNpcs && DataManager.Instance.GetNonPlayer(record.Defender) != null) || NpcNames.ContainsKey(record.Defender);
+        isAttackerPossiblyPlayer = Helpers.IsPossiblePlayerName(record.Attacker) || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
+      }
+
+      return isDefenderNpc && isAttackerPossiblyPlayer;
     }
 
     internal void FireSelectionEvent(GenerateStatsOptions options, List<PlayerStats> selected)

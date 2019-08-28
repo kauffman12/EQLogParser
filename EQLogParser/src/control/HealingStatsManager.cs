@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -18,7 +17,7 @@ namespace EQLogParser
 
     internal List<List<ActionBlock>> HealingGroups = new List<List<ActionBlock>>();
 
-    private const int HEAL_OFFSET = 10; // additional # of seconds to count
+    private const int HEAL_OFFSET = 7; // additional # of seconds to count
 
     private PlayerStats RaidTotals;
     private List<NonPlayer> Selected;
@@ -159,7 +158,7 @@ namespace EQLogParser
             }
 
             var indStat = individualStats[stat.Name];
-            stat.SubStats2.Add("receivedHealing", indStat);
+            stat.SubStats2["receivedHealing"] = indStat;
             StatsUtil.UpdateCalculations(indStat, RaidTotals);
 
             indStat.SubStats.Values.ToList().ForEach(subStat => StatsUtil.UpdateCalculations(subStat, indStat));
@@ -188,8 +187,16 @@ namespace EQLogParser
     {
       bool valid = false;
 
-      if (record != null && (PlayerManager.Instance.IsPetOrPlayer(record.Healed) || Helpers.IsPossiblePlayerName(record.Healed)))
+      if (record != null && (Helpers.IsPossiblePlayerName(record.Healed) || PlayerManager.Instance.IsPetOrPlayer(record.Healed)))
       {
+        if (record.Healer.Equals("Foob") && record.Healed.Equals("Foob"))
+        {
+          if (true)
+          {
+
+          }
+        }
+
         valid = true;
         SpellData spellData;
         if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
