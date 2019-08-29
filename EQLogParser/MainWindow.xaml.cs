@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -107,16 +108,52 @@ namespace EQLogParser
         // Clear/Reset
         DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
 
-        // pet -> players
-        petMappingGrid.ItemsSource = PetPlayersView;
-        PlayerManager.Instance.EventsNewPetMapping += Instance_EventsNewPetMapping;
-
         // verified pets table
         verifiedPetsGrid.ItemsSource = VerifiedPetsView;
         PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
           verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
+        });
+
+        // pet -> players
+        petMappingGrid.ItemsSource = PetPlayersView;
+        PlayerManager.Instance.EventsNewPetMapping += (sender, mapping) =>
+        {
+          Dispatcher.InvokeAsync(() =>
+          {
+            var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
+            if (existing != null && existing.Owner != mapping.Owner)
+            {
+              existing.Owner = mapping.Owner;
+            }
+            else
+            {
+              PetPlayersView.Add(mapping);
+            }
+
+            petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
+          });
+
+          CheckComputeStats();
+        };
+
+        PlayerManager.Instance.EventsRemoveVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
+        {
+          var found = VerifiedPetsView.ToList().Find(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+          if (found != null)
+          {
+            VerifiedPetsView.Remove(found);
+            verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
+
+            var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+              PetPlayersView.Remove(existing);
+              petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
+            }
+            CheckComputeStats();
+          }
         });
 
         // verified player table
@@ -241,22 +278,10 @@ namespace EQLogParser
       AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
     }
 
-    private void Instance_EventsNewPetMapping(object _, PetMapping mapping)
+    private void CheckComputeStats()
     {
       Dispatcher.InvokeAsync(() =>
       {
-        var existing = PetPlayersView.FirstOrDefault(item => mapping.Pet == item.Pet);
-        if (existing != null && existing.Owner != mapping.Owner)
-        {
-          existing.Owner = mapping.Owner;
-        }
-        else
-        {
-          PetPlayersView.Add(mapping);
-        }
-
-        petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
-
         if ((npcWindow?.Content as NpcTable)?.GetSelectedItems()?.Count > 0)
         {
           ComputeStats();
@@ -1041,9 +1066,18 @@ namespace EQLogParser
       }
     }
 
-    private void NPCWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void NPCWindow_KeyDown(object sender, KeyEventArgs e)
     {
-      (npcWindow?.Content as NpcTable).NPCSearchBox_KeyDown(sender, e);
+      (npcWindow?.Content as NpcTable).NPCSearchBoxKeyDown(sender, e);
+    }
+
+    private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
+    {
+      var cell = sender as DataGridCell;
+      if (cell.DataContext is SortableName sortable)
+      {
+        PlayerManager.Instance.RemoveVerifiedPet(sortable.Name); 
+      }
     }
 
     private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e)

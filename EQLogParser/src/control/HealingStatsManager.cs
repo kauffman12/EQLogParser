@@ -189,14 +189,6 @@ namespace EQLogParser
 
       if (record != null && (Helpers.IsPossiblePlayerName(record.Healed) || PlayerManager.Instance.IsPetOrPlayer(record.Healed)))
       {
-        if (record.Healer.Equals("Foob") && record.Healed.Equals("Foob"))
-        {
-          if (true)
-          {
-
-          }
-        }
-
         valid = true;
         SpellData spellData;
         if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)

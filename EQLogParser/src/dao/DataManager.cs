@@ -45,8 +45,8 @@ namespace EQLogParser
     private readonly Dictionary<string, SpellClass> SpellsToClass = new Dictionary<string, SpellClass>();
 
     private readonly ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, NonPlayer> ActiveNonPlayerMap = new ConcurrentDictionary<string, NonPlayer>();
-    private readonly ConcurrentDictionary<string, byte> LifetimeNonPlayerMap = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, NonPlayer> ActiveNonPlayer = new ConcurrentDictionary<string, NonPlayer>();
+    private readonly ConcurrentDictionary<string, byte> LifetimeNonPlayer = new ConcurrentDictionary<string, byte>();
 
     private DataManager()
     {
@@ -98,18 +98,18 @@ namespace EQLogParser
         }
       });
 
-      PlayerManager.Instance.EventsNewLikelyPlayer += (sender, name) => CheckNonPlayerMap(name);
-      PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => CheckNonPlayerMap(name);
-      PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => CheckNonPlayerMap(name);
-      PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => CheckNonPlayerMap(name);
+      PlayerManager.Instance.EventsNewLikelyPlayer += (sender, name) => RemoveNonPlayer(name);
+      PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => RemoveNonPlayer(name);
+      PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => RemoveNonPlayer(name);
+      PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => RemoveNonPlayer(name);
     }
 
     internal void Clear()
     {
       lock (this)
       {
-        ActiveNonPlayerMap.Clear();
-        LifetimeNonPlayerMap.Clear();
+        ActiveNonPlayer.Clear();
+        LifetimeNonPlayer.Clear();
         AllSpellCastBlocks.Clear();
         AllUniqueSpellCasts.Clear();
         AllUniqueSpellsCache.Clear();
@@ -246,7 +246,7 @@ namespace EQLogParser
 
     internal NonPlayer GetNonPlayer(string name)
     {
-      ActiveNonPlayerMap.TryGetValue(name, out NonPlayer npc);
+      ActiveNonPlayer.TryGetValue(name, out NonPlayer npc);
       return npc;
     }
 
@@ -331,32 +331,27 @@ namespace EQLogParser
 
     internal bool RemoveActiveNonPlayer(string name)
     {
-      return ActiveNonPlayerMap.TryRemove(name, out _);
+      return ActiveNonPlayer.TryRemove(name, out _);
     }
 
     internal void UpdateIfNewNonPlayerMap(string name, NonPlayer npc)
     {
-      if (!LifetimeNonPlayerMap.ContainsKey(name))
+      if (!LifetimeNonPlayer.ContainsKey(name))
       {
-        LifetimeNonPlayerMap[name] = 1;
+        LifetimeNonPlayer[name] = 1;
       }
 
-      if (!ActiveNonPlayerMap.ContainsKey(name))
+      if (!ActiveNonPlayer.ContainsKey(name))
       {
-        ActiveNonPlayerMap[name] = npc;
+        ActiveNonPlayer[name] = npc;
         EventsNewNonPlayer(this, npc);
       }
     }
 
-    internal static string GetClassName(SpellClass type)
+    private void RemoveNonPlayer(string name)
     {
-      return Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), type), CultureInfo.CurrentCulture);
-    }
-
-    private void CheckNonPlayerMap(string name)
-    {
-      bool removed = ActiveNonPlayerMap.TryRemove(name, out NonPlayer npc);
-      removed = LifetimeNonPlayerMap.TryRemove(name, out byte bnpc) || removed;
+      bool removed = ActiveNonPlayer.TryRemove(name, out NonPlayer npc);
+      removed = LifetimeNonPlayer.TryRemove(name, out byte bnpc) || removed;
 
       if (removed)
       {

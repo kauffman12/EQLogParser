@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -208,29 +208,24 @@ namespace EQLogParser
       }
     }
 
-    private void SetPetClick(object sender, RoutedEventArgs e)
-    {
-      ContextMenu menu = (sender as FrameworkElement)?.Parent as ContextMenu;
-      DataGrid callingDataGrid = menu?.PlacementTarget as DataGrid;
-      if (callingDataGrid.SelectedItem is PlayerStats stats)
-      {
-        Task.Delay(150).ContinueWith(_ =>
-        {
-          PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
-          PlayerManager.Instance.AddPetToPlayer(stats.OrigName, Labels.UNASSIGNED);
-        }, TaskScheduler.Default);
-      }
-    }
-
     private void UpdateDataGridMenuItems()
     {
+      string selectedName = "Unknown";
+
       if (CurrentStats?.StatsList?.Count > 0)
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        menuItemSetAsPet.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
+        menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyDamageParseToEQClick.IsEnabled = true;
+
+        if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
+        {
+          menuItemSetAsPet.IsEnabled = !PlayerManager.Instance.IsVerifiedPet(playerStats.OrigName) && !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
+          selectedName = playerStats.OrigName;
+        }
+
         UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
         UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
       }
@@ -239,6 +234,8 @@ namespace EQLogParser
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
           menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
       }
+
+      menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);
     }
 
     private ICollectionView SetFilter(ICollectionView view)

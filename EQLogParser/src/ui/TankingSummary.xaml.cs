@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -124,12 +125,21 @@ namespace EQLogParser
 
     private void UpdateDataGridMenuItems()
     {
+      string selectedName = "Unknown";
+
       if (CurrentStats?.StatsList?.Count > 0)
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         copyTankingParseToEQClick.IsEnabled = true;
+
+        if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
+        {
+          menuItemSetAsPet.IsEnabled = !PlayerManager.Instance.IsVerifiedPet(playerStats.OrigName) && !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
+          selectedName = playerStats.OrigName;
+        }
+
         UpdateClassMenuItems(menuItemShowHealingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
         UpdateClassMenuItems(menuItemShowTankingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
         UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
@@ -137,8 +147,10 @@ namespace EQLogParser
       else
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
-           menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled = false;
+           menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled = false;
       }
+
+      menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);
     }
 
     private ICollectionView SetFilter(ICollectionView view)
@@ -161,7 +173,7 @@ namespace EQLogParser
             className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
-          var isPet = !string.IsNullOrEmpty(name) && PlayerManager.Instance.IsVerifiedPet(name);
+          var isPet = PlayerManager.Instance.IsVerifiedPet(name);
           if (isPet && CurrentPetValue == false)
           {
             return false;

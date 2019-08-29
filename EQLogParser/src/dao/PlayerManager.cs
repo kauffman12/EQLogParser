@@ -13,6 +13,8 @@ namespace EQLogParser
     internal event EventHandler<string> EventsNewTakenPetOrPlayerAction;
     internal event EventHandler<string> EventsNewVerifiedPet;
     internal event EventHandler<string> EventsNewVerifiedPlayer;
+    internal event EventHandler<string> EventsRemoveVerifiedPet;
+    internal event EventHandler<string> EventsRemoveVerifiedPlayer;
 
     internal static PlayerManager Instance = new PlayerManager();
 
@@ -96,11 +98,16 @@ namespace EQLogParser
       return list;
     }
 
+    internal static string GetClassName(SpellClass type)
+    {
+      return Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), type), CultureInfo.CurrentCulture);
+    }
+
     internal string GetPlayerClass(string name)
     {
       string className = "";
 
-      if (PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
       {
         className = ClassNames[counter.CurrentClass];
       }
@@ -110,7 +117,13 @@ namespace EQLogParser
 
     internal string GetPlayerFromPet(string pet)
     {
-      PetToPlayer.TryGetValue(pet, out string player);
+      string player = null;
+
+      if (!string.IsNullOrEmpty(pet))
+      {
+        PetToPlayer.TryGetValue(pet, out player);
+      }
+
       return player;
     }
 
@@ -122,11 +135,11 @@ namespace EQLogParser
         var isAttackerPlayer = IsPetOrPlayer(record.Attacker);
         var isDefenderPlayer = IsPetOrPlayer(record.Defender);
         var attackerCouldBePlayer = isAttackerPlayer || Helpers.IsPossiblePlayerName(record.Attacker);
-        var defenderCantBePlayer = !isDefenderPlayer && !(!string.IsNullOrEmpty(record.DefenderOwner) && IsLikelyPlayer(record.DefenderOwner)) && !Helpers.IsPossiblePlayerName(record.Defender);
+        var defenderProbablyNotPlayer = !isDefenderPlayer && !IsLikelyPlayer(record.DefenderOwner);
 
-        valid = attackerCouldBePlayer && (defenderCantBePlayer || (record.Attacker == record.Defender && PetToPlayer.ContainsKey(record.Attacker)));
+        valid = attackerCouldBePlayer && (defenderProbablyNotPlayer || (record.Attacker == record.Defender && PetToPlayer.ContainsKey(record.Attacker)));
 
-        if (!isAttackerPlayer && attackerCouldBePlayer && !isDefenderPlayer && defenderCantBePlayer)
+        if (!isAttackerPlayer && attackerCouldBePlayer && defenderProbablyNotPlayer && !Helpers.IsPossiblePlayerName(record.Defender))
         {
           IncrementLikelyPlayer(record.Attacker, record.Defender);
         }
@@ -137,17 +150,23 @@ namespace EQLogParser
 
     internal bool IsLikelyPlayer(string name)
     {
-      return IsVerifiedPlayer(name) || LikelyPlayer.ContainsKey(name);
+      return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || LikelyPlayer.ContainsKey(name));
     }
 
     internal bool IsVerifiedPet(string name)
     {
-      bool found = VerifiedPets.ContainsKey(name);
-      bool isGameGenerated = !found && GameGeneratedPets.ContainsKey(name);
+      bool found = false;
+      bool isGameGenerated = false;
 
-      if (isGameGenerated)
+      if (!string.IsNullOrEmpty(name))
       {
-        AddPetToPlayer(name, Labels.UNASSIGNED);
+        found = VerifiedPets.ContainsKey(name);
+        isGameGenerated = !found && GameGeneratedPets.ContainsKey(name);
+
+        if (isGameGenerated)
+        {
+          AddPetToPlayer(name, Labels.UNASSIGNED);
+        }
       }
 
       return found || isGameGenerated;
@@ -155,12 +174,33 @@ namespace EQLogParser
 
     internal bool IsVerifiedPlayer(string name)
     {
-      return name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name) || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name);
+      return !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name) || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
     }
 
     internal bool IsPetOrPlayer(string name)
     {
-      return IsVerifiedPlayer(name) || IsVerifiedPet(name) || LikelyPlayer.ContainsKey(name) || TakenPetOrPlayerAction.ContainsKey(name);
+      return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || LikelyPlayer.ContainsKey(name) || TakenPetOrPlayerAction.ContainsKey(name));
+    }
+
+    internal void RemoveVerifiedPet(string name)
+    {
+      if (!string.IsNullOrEmpty(name) && VerifiedPets.TryRemove(name, out _))
+      {
+        if (PetToPlayer.ContainsKey(name))
+        {
+          PetToPlayer.TryRemove(name, out _);
+        }
+
+        EventsRemoveVerifiedPet(this, name);
+      }
+    }
+
+    internal void RemoveVerifiedPlayer(string name)
+    {
+      if (!string.IsNullOrEmpty(name) && VerifiedPlayers.TryRemove(name, out _))
+      {
+        EventsRemoveVerifiedPlayer(this, name);
+      }
     }
 
     internal string ReplacePlayer(string name, string alternative)
