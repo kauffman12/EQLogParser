@@ -1,9 +1,10 @@
-﻿using ActiproSoftware.Windows.Controls.DataGrid;
-using ActiproSoftware.Windows.Controls.Docking;
+﻿using ActiproSoftware.Windows.Controls.Docking;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,8 +36,8 @@ namespace EQLogParser
     private static int CurrentNpcSearchDirection = 1;
     private static DataGridRow CurrentSearchRow = null;
 
-    private ObservableCollection<NonPlayer> NonPlayersView = new ObservableCollection<NonPlayer>();
-    private CollectionViewSource NonPlayersViewSource;
+    private ObservableCollection<NonPlayer> NonPlayers = new ObservableCollection<NonPlayer>();
+    private bool CurrentShowBreaks;
 
     private DispatcherTimer SelectionTimer;
     private DispatcherTimer SearchTextTimer;
@@ -53,8 +54,14 @@ namespace EQLogParser
       npcMenuItemClear.IsEnabled = npcMenuItemSelectAll.IsEnabled = npcMenuItemUnselectAll.IsEnabled = npcMenuItemSelectFight.IsEnabled = false;
       npcMenuItemSetPet.IsEnabled = npcMenuItemSetPlayer.IsEnabled = false;
 
-      NonPlayersViewSource = new CollectionViewSource() { Source = NonPlayersView };
-      npcDataGrid.ItemsSource = NonPlayersViewSource.View;
+      var view = CollectionViewSource.GetDefaultView(NonPlayers);
+      view.Filter = new Predicate<object>(item =>
+      {
+        var npcItem = (NonPlayer) item;
+        return CurrentShowBreaks ? npcItem.GroupID >= -1 : npcItem.GroupID > -1;
+      });
+
+      npcDataGrid.ItemsSource = view;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SelectionTimer.Tick += (sender, e) =>
@@ -73,13 +80,13 @@ namespace EQLogParser
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 350) };
       UpdateTimer.Tick += (sender, e) =>
       {
-        npcDataGrid.ScrollIntoView(NonPlayersView.Last());
+        npcDataGrid.ScrollIntoView(NonPlayers.Last());
         UpdateTimer.Stop();
       };
 
       // read show breaks setting
       string showBreaks = ConfigUtil.GetApplicationSetting("NpcShowInactivityBreaks");
-      npcShowBreaks.IsChecked = showBreaks == null || (bool.TryParse(showBreaks, out bool bValue) && bValue);
+      npcShowBreaks.IsChecked = CurrentShowBreaks = (showBreaks == null || (bool.TryParse(showBreaks, out bool bValue) && bValue));
     }
 
     public List<NonPlayer> GetSelectedItems()
@@ -96,54 +103,47 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        NonPlayersView.Add(npc);
+        NonPlayers.Add(npc);
         if ((Parent as ToolWindow).IsOpen && !npcDataGrid.IsMouseOver && !UpdateTimer.IsEnabled)
         {
           UpdateTimer.Start();
         }
-      },
-      DispatcherPriority.Background
-      );
+      }, DispatcherPriority.Background);
     }
 
     private void RemoveNonPlayer(string name)
     {
       Dispatcher.InvokeAsync(() =>
       {
-        int i = 0;
-        foreach (NonPlayer item in NonPlayersView.Reverse())
+        for (int i = NonPlayers.Count - 1; i >= 0; i--)
         {
-          i++;
-          if (name == item.Name)
+          if (NonPlayers[i].GroupID > -1 && !string.IsNullOrEmpty(NonPlayers[i].Name) && NonPlayers[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
           {
-            NonPlayersView.Remove(item);
-            npcDataGrid.Items.Refresh(); // re-numbers
+            NonPlayers.RemoveAt(i);
           }
         }
-      },
-        DispatcherPriority.Background
-      );
+      }, DispatcherPriority.Background);
     }
 
-    private void Clear_Click(object sender, RoutedEventArgs e)
+    private void ClearClick(object sender, RoutedEventArgs e)
     {
       DataManager.Instance.Clear();
     }
 
-    private void SelectAll_Click(object sender, RoutedEventArgs e)
+    private void SelectAllClick(object sender, RoutedEventArgs e)
     {
       Helpers.DataGridSelectAll(sender as FrameworkElement);
     }
 
-    private void UnselectAll_Click(object sender, RoutedEventArgs e)
+    private void UnselectAllClick(object sender, RoutedEventArgs e)
     {
       Helpers.DataGridUnselectAll(sender as FrameworkElement);
     }
 
-    private void SetPet_Click(object sender, RoutedEventArgs e)
+    private void SetPetClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
         Task.Delay(120).ContinueWith(_ =>
@@ -154,10 +154,10 @@ namespace EQLogParser
       }
     }
 
-    private void SetPlayer_Click(object sender, RoutedEventArgs e)
+    private void SetPlayerClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
         Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(npc.Name), TaskScheduler.Default);
@@ -193,23 +193,23 @@ namespace EQLogParser
       SelectionTimer.Stop();
       SelectionTimer.Start();
 
-      ThemedDataGrid callingDataGrid = sender as ThemedDataGrid;
+      DataGrid callingDataGrid = sender as DataGrid;
       npcMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
       npcMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
       npcMenuItemClear.IsEnabled = callingDataGrid.Items.Count > 0;
 
       var selected = callingDataGrid.SelectedItem as NonPlayer;
       npcMenuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1;
-      npcMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1 && Helpers.IsPossiblePlayerName(callingDataGrid.SelectedItem.ToString());
+      npcMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1 && Helpers.IsPossiblePlayerName((callingDataGrid.SelectedItem as NonPlayer)?.Name);
     }
 
-    private void SelectGroup_Click(object sender, RoutedEventArgs e)
+    private void SelectGroupClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      ThemedDataGrid callingDataGrid = menu.PlacementTarget as ThemedDataGrid;
+      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is NonPlayer npc && npc.GroupID > -1)
       {
-        Parallel.ForEach(NonPlayersView, (one) =>
+        Parallel.ForEach(NonPlayers, (one) =>
         {
           if (one.GroupID == npc.GroupID)
           {
@@ -219,20 +219,14 @@ namespace EQLogParser
       }
     }
 
-    private void ShowBreak_Change(object sender, RoutedEventArgs e)
+    private void ShowBreakChange(object sender, RoutedEventArgs e)
     {
-      if (NonPlayersView != null && NonPlayersViewSource != null)
+      if (npcDataGrid?.ItemsSource is ICollectionView view)
       {
-        if (npcShowBreaks.IsChecked.Value)
-        {
-          NonPlayersViewSource.View.Filter = null;
-        }
-        else
-        {
-          NonPlayersViewSource.View.Filter = new Predicate<object>(item => ((NonPlayer)item).GroupID > -1);
-        }
+        CurrentShowBreaks = npcShowBreaks.IsChecked.Value;
+        ConfigUtil.SetApplicationSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
 
-        ConfigUtil.SetApplicationSetting("NpcShowInactivityBreaks", npcShowBreaks.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        view.Refresh();
       }
     }
 
@@ -244,7 +238,7 @@ namespace EQLogParser
       }
     }
 
-    private void NPCSearchBox_GotFocus(object sender, RoutedEventArgs e)
+    private void NPCSearchBoxGotFocus(object sender, RoutedEventArgs e)
     {
       if (npcSearchBox.Text == Properties.Resources.NPC_SEARCH_TEXT)
       {
@@ -253,7 +247,7 @@ namespace EQLogParser
       }
     }
 
-    private void NPCSearchBox_LostFocus(object sender, RoutedEventArgs e)
+    private void NPCSearchBoxLostFocus(object sender, RoutedEventArgs e)
     {
       if (npcSearchBox.Text.Length == 0)
       {
@@ -263,7 +257,7 @@ namespace EQLogParser
     }
 
     // internal for workaround with event being lost
-    internal void NPCSearchBox_KeyDown(object sender, KeyEventArgs e)
+    internal void NPCSearchBoxKeyDown(object sender, KeyEventArgs e)
     {
       if (npcSearchBox.IsFocused)
       {
@@ -353,7 +347,7 @@ namespace EQLogParser
       }
     }
 
-    private void NPCSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void NPCSearchBoxTextChanged(object sender, TextChangedEventArgs e)
     {
       SearchTextTimer?.Stop();
 
@@ -365,7 +359,7 @@ namespace EQLogParser
 
     private void Instance_EventsCleardActiveData(object sender, bool cleared)
     {
-      NonPlayersView.Clear();
+      NonPlayers.Clear();
       CurrentSearchRow = null;
     }
 
@@ -379,14 +373,14 @@ namespace EQLogParser
       AddNonPlayer(npc);
     }
 
-    private void Table_Unloaded(object sender, RoutedEventArgs e)
+    private void TableUnloaded(object sender, RoutedEventArgs e)
     {
       DataManager.Instance.EventsClearedActiveData -= Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedNonPlayer -= Instance_EventsRemovedNonPlayer;
       DataManager.Instance.EventsNewNonPlayer -= Instance_EventsNewNonPlayer;
     }
 
-    private void Table_Loaded(object sender, RoutedEventArgs e)
+    private void TableLoaded(object sender, RoutedEventArgs e)
     {
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedNonPlayer += Instance_EventsRemovedNonPlayer;

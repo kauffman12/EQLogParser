@@ -45,6 +45,11 @@ namespace EQLogParser
     public const int ACTIONINDEX = 27;
   }
 
+  public static class TableColors
+  {
+    public const string REMOVEICON = "#5191c1";
+  }
+
   public interface ISummaryBuilder
   {
     StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers);

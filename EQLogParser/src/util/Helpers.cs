@@ -138,18 +138,23 @@ namespace EQLogParser
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1)
     {
-      if (stop == -1)
-      {
-        stop = part.Length;
-      }
+      bool found = false;
 
-      bool found = stop < 3 ? false : true;
-      for (int i = 0; found != false && i < stop; i++)
+      if (part != null)
       {
-        if (!char.IsLetter(part, i))
+        if (stop == -1)
         {
-          found = false;
-          break;
+          stop = part.Length;
+        }
+
+        found = stop < 3 ? false : true;
+        for (int i = 0; found != false && i < stop; i++)
+        {
+          if (!char.IsLetter(part, i))
+          {
+            found = false;
+            break;
+          }
         }
       }
 
