@@ -27,7 +27,6 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static string ICON_COLOR = "#5191c1";
     private static bool Running = false;
 
     private List<string> PlayerList;
@@ -192,7 +191,7 @@ namespace EQLogParser
 
                 row.Spell = spell;
                 row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
-                row.IconColor = ICON_COLOR;
+                row.IconColor = TableColors.REMOVEICON;
 
                 int i;
                 double[] values = new double[sortedPlayers.Count + 1];
@@ -385,7 +384,7 @@ namespace EQLogParser
         rtb.Render(dv);
         Clipboard.SetImage(rtb);
 
-        SpellRowsView.ToList().ForEach(spr => spr.IconColor = ICON_COLOR);
+        SpellRowsView.ToList().ForEach(spr => spr.IconColor = TableColors.REMOVEICON);
         dataGrid.Items.Refresh();
       }
       catch (ExternalException ex)

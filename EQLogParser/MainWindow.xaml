@@ -279,6 +279,18 @@
           <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Pet List" ContainerDockedSize="240,150">
             <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
               <DataGrid.Columns>
+                <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
+                  <DataGridTemplateColumn.CellStyle>
+                    <Style TargetType="DataGridCell">
+                      <EventSetter Event="PreviewMouseDown" Handler="RemovePetMouseDown"/>
+                    </Style>
+                  </DataGridTemplateColumn.CellStyle>
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Close" Foreground="#5191c1" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
               </DataGrid.Columns>
             </datagrid:ThemedDataGrid>

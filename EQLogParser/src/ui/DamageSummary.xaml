@@ -33,7 +33,7 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Change Player To Pet" Click="SetPetClick">
+          <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Set Unknown As Pet" Click="SetPetClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="setPetIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Paw" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>

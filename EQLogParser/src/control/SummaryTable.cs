@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -110,7 +111,7 @@ namespace EQLogParser
     internal List<PlayerStats> GetPlayerStatsByClass(string classString)
     {
       SpellClass type = (SpellClass)Enum.Parse(typeof(SpellClass), classString);
-      string className = DataManager.GetClassName(type);
+      string className = PlayerManager.GetClassName(type);
 
       List<PlayerStats> selectedStats = new List<PlayerStats>();
       foreach (var item in TheDataGrid.Items)
@@ -123,6 +124,20 @@ namespace EQLogParser
       }
 
       return selectedStats;
+    }
+
+    internal void SetPetClick(object sender, RoutedEventArgs e)
+    {
+      ContextMenu menu = (sender as FrameworkElement)?.Parent as ContextMenu;
+      DataGrid callingDataGrid = menu?.PlacementTarget as DataGrid;
+      if (callingDataGrid.SelectedItem is PlayerStats stats)
+      {
+        Task.Delay(150).ContinueWith(_ =>
+        {
+          PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
+          PlayerManager.Instance.AddPetToPlayer(stats.OrigName, Labels.UNASSIGNED);
+        }, TaskScheduler.Default);
+      }
     }
 
     internal void FireSelectionChangedEvent(List<PlayerStats> selected)

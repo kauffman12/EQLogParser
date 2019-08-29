@@ -22,19 +22,17 @@ namespace EQLogParser
       DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
     }
 
-    private static NonPlayer Find(string defender, string type)
+    private static NonPlayer Find(string defender)
     {
       NonPlayer npc;
 
-      if (type == Labels.DOT || type == Labels.DS)
+      if (char.IsUpper(defender[0]))
       {
-        // DoTs or DS will show upper case when they shouldn't because they start a sentence so try lower case first
         npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
       }
       else
       {
-        // DDs are correct but still need to deal with names saved by a DoT so try upper case second
-        npc = DataManager.Instance.GetNonPlayer(defender) ?? DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1));
+        npc = DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
       }
 
       return npc;
@@ -76,7 +74,7 @@ namespace EQLogParser
 
     private NonPlayer Get(DamageRecord record, double currentTime, string origTimeString)
     {
-      NonPlayer npc = Find(record.Defender, record.Type);
+      NonPlayer npc = Find(record.Defender);
 
       if (npc == null)
       {
