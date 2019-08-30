@@ -208,22 +208,29 @@ namespace EQLogParser
 
     internal static void MergeStats(PlayerSubStats to, PlayerSubStats from)
     {
-      to.BaneHits += from.BaneHits;
-      to.Misses += from.Misses;
-      to.MeleeAttempts += from.MeleeAttempts;
-      to.MeleeHits += from.MeleeHits;
-      to.Total += from.Total;
-      to.Hits += from.Hits;
-      to.Max = Math.Max(to.Max, from.Max);
-      to.Extra += from.Extra;
-      to.CritHits += from.CritHits;
-      to.LuckyHits += from.LuckyHits;
-      to.TwincastHits += from.TwincastHits;
-      to.StrikethroughHits += from.StrikethroughHits;
-      to.RiposteHits += from.RiposteHits;
-      to.RampageHits += from.RampageHits;
-      to.BeginTime = double.IsNaN(to.BeginTime) ? from.BeginTime : Math.Min(to.BeginTime, from.BeginTime);
-      to.LastTime = double.IsNaN(to.LastTime) ? from.LastTime : Math.Max(to.LastTime, from.LastTime);
+      if (to != null && from != null)
+      {
+        to.BaneHits += from.BaneHits;
+        to.Misses += from.Misses;
+        to.MeleeAttempts += from.MeleeAttempts;
+        to.MeleeHits += from.MeleeHits;
+        to.Total += from.Total;
+        to.TotalCrit += from.TotalCrit;
+        to.TotalLucky += from.TotalLucky;
+        to.Hits += from.Hits;
+        to.Max = Math.Max(to.Max, from.Max);
+        to.Extra += from.Extra;
+        to.CritHits += from.CritHits;
+        to.LuckyHits += from.LuckyHits;
+        to.TwincastHits += from.TwincastHits;
+        to.Resists += from.Resists;
+        to.StrikethroughHits += from.StrikethroughHits;
+        to.RiposteHits += from.RiposteHits;
+        to.RampageHits += from.RampageHits;
+        to.BeginTime = double.IsNaN(to.BeginTime) ? from.BeginTime : Math.Min(to.BeginTime, from.BeginTime);
+        to.LastTime = double.IsNaN(to.LastTime) ? from.LastTime : Math.Max(to.LastTime, from.LastTime);
+        to.TotalSeconds = Math.Max(to.TotalSeconds, from.TotalSeconds);
+      }
     }
 
     internal static void CalculateRates(PlayerSubStats stats, PlayerStats raidStats, PlayerStats superStats)
