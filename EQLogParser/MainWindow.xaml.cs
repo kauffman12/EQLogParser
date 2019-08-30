@@ -97,6 +97,9 @@ namespace EQLogParser
         // update titles
         Title = APP_NAME + " " + VERSION;
 
+        // upate helper
+        Helpers.SetDispatcher(Dispatcher);
+
         // used for setting menu icons based on open windows
         IconToWindow = new Dictionary<string, DockingWindow>()
         {

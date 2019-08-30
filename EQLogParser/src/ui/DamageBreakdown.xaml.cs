@@ -174,7 +174,7 @@ namespace EQLogParser
             break;
         }
 
-        MergeStats(stats, sub);
+        StatsUtil.MergeStats(stats, sub);
       });
 
       foreach (var stats in new PlayerSubStats[] { dots, dds, procs, resisted })
@@ -299,8 +299,8 @@ namespace EQLogParser
         if (list.Find(item => item.Name == stats.Name) is PlayerSubStats found)
         {
           var combined = new PlayerSubStats() { Name = found.Name };
-          MergeStats(combined, found);
-          MergeStats(combined, stats);
+          StatsUtil.MergeStats(combined, found);
+          StatsUtil.MergeStats(combined, stats);
           StatsUtil.CalculateRates(combined, RaidStats, playerStats);
           list.Remove(found);
           list.Add(combined);
@@ -310,23 +310,6 @@ namespace EQLogParser
           list.Add(stats);
         }
       });
-    }
-
-    private void MergeStats(PlayerSubStats stats, PlayerSubStats sub)
-    {
-      if (stats != null)
-      {
-        stats.Total += sub.Total;
-        stats.TotalCrit += sub.TotalCrit;
-        stats.TotalLucky += sub.TotalLucky;
-        stats.Hits += sub.Hits;
-        stats.Resists += sub.Resists;
-        stats.CritHits += sub.CritHits;
-        stats.LuckyHits += sub.LuckyHits;
-        stats.TwincastHits += sub.TwincastHits;
-        stats.Max = (sub.Max < stats.Max) ? stats.Max : sub.Max;
-        stats.TotalSeconds = Math.Max(stats.TotalSeconds, sub.TotalSeconds);
-      }
     }
 
     private void OptionsChange(object sender, RoutedEventArgs e)
