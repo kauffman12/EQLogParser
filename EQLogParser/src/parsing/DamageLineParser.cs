@@ -551,24 +551,6 @@ namespace EQLogParser
         // possible spell
         subType = ReadStringToPeriod(data, byIndex, builder);
       }
-      else if (!isNonMelee)
-      {
-        subType = GetTypeFromHit(data[hitIndex], out bool additional);
-        if (subType != null)
-        {
-          type = Labels.MELEE;
-
-          if (additional)
-          {
-            hitIndex++; // multi-word hit value
-          }
-        }
-      }
-
-      if (!string.IsNullOrEmpty(subType) && isNonMelee)
-      {
-        type = GetTypeFromSpell(subType, Labels.DD);
-      }
 
       // before hit
       nameList.Clear();
@@ -588,6 +570,26 @@ namespace EQLogParser
       {
         attacker = string.Join(" ", nameList);
       }
+
+      if (!isNonMelee)
+      {
+        subType = GetTypeFromHit(data[hitIndex], out bool additional);
+        if (subType != null)
+        {
+          type = Labels.MELEE;
+
+          if (additional)
+          {
+            hitIndex++; // multi-word hit value
+          }
+        }
+      }
+
+      if (!string.IsNullOrEmpty(subType) && isNonMelee)
+      {
+        type = GetTypeFromSpell(subType, Labels.DD);
+      }
+
 
       string defender = string.Join(" ", data, hitIndex + 1, forIndex - hitIndex - 1);
 
