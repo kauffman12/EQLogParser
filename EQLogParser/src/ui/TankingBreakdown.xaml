@@ -20,7 +20,7 @@
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="CustomSorting" LoadingRow="LoadingRow">
       <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="150" Width="150*"/>
+        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="160" Width="160*"/>
         <DataGridTextColumn Binding="{Binding Percent, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource PlayerTotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
         <DataGridTextColumn Binding="{Binding Total}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damaged" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90*"/>
         <DataGridTextColumn Binding="{Binding DPS}" HeaderStyle="{StaticResource DPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" CanUserReorder="False" MinWidth="65" Width="65*"/>

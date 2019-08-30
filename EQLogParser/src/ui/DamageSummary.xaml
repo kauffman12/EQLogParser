@@ -83,6 +83,11 @@
             <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
             <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
           </MenuItem>
+          <MenuItem x:Name="menuItemShowDamageLog" IsEnabled="False" Header="Damage Log" Click="DataGridDamageLogClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showDamageLogIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="File" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <MenuItem x:Name="menuItemShowHitFreq" IsEnabled="False" Header="Hit Frequency" Click="DataGridHitFreqClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showHitFreqIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="BarChart" Foreground="#FF4F9FE2" />

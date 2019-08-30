@@ -20,7 +20,7 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  public partial class MainWindow : Window
+  public partial class MainWindow : Window, IDisposable
   {
     // binding property
     public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
@@ -48,8 +48,8 @@ namespace EQLogParser
 
     private const string APP_NAME = "EQ Log Parser";
     private const string VERSION = "v1.5.40";
-    private const string PLAYER_LIST_TITLE = "Player List ({0})";
-    private const string PETS_LIST_TITLE = "Pets List ({0})";
+    private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
+    private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
     private static long CastLineCount = 0;
     private static long DamageLineCount = 0;
@@ -140,7 +140,7 @@ namespace EQLogParser
 
         PlayerManager.Instance.EventsRemoveVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          var found = VerifiedPetsView.ToList().Find(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+          var found = VerifiedPetsView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
           {
             VerifiedPetsView.Remove(found);
@@ -162,6 +162,24 @@ namespace EQLogParser
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPlayersProperty);
           verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
+        });
+
+        PlayerManager.Instance.EventsRemoveVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
+        {
+          var found = VerifiedPlayersProperty.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+          if (found != null)
+          {
+            VerifiedPlayersProperty.Remove(found);
+            verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
+
+            var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+              PetPlayersView.Remove(existing);
+              petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
+            }
+            CheckComputeStats();
+          }
         });
 
         parseList.ItemsSource = AvailableParses;
@@ -1076,7 +1094,16 @@ namespace EQLogParser
       var cell = sender as DataGridCell;
       if (cell.DataContext is SortableName sortable)
       {
-        PlayerManager.Instance.RemoveVerifiedPet(sortable.Name); 
+        PlayerManager.Instance.RemoveVerifiedPet(sortable.Name);
+      }
+    }
+
+    private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
+    {
+      var cell = sender as DataGridCell;
+      if (cell.DataContext is SortableName sortable)
+      {
+        PlayerManager.Instance.RemoveVerifiedPlayer(sortable.Name);
       }
     }
 
@@ -1113,5 +1140,33 @@ namespace EQLogParser
         Hide();
       }
     }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        if (disposing)
+        {
+          // TODO: dispose managed state (managed objects).
+          taskBarIcon?.Dispose();
+          PlayerChatManager?.Dispose();
+        }
+
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }

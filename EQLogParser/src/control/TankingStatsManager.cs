@@ -27,7 +27,7 @@ namespace EQLogParser
 
     internal TankingStatsManager()
     {
-      lock(TankingGroups)
+      lock (TankingGroups)
       {
         DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
         {
@@ -41,7 +41,7 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock(TankingGroups)
+      lock (TankingGroups)
       {
         Selected = options.Npcs;
         Title = options.Name;
@@ -155,7 +155,7 @@ namespace EQLogParser
 
     private void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      lock(TankingGroups)
+      lock (TankingGroups)
       {
         if (options.RequestChartData)
         {
@@ -179,7 +179,7 @@ namespace EQLogParser
 
     private void ComputeTankingStats(GenerateStatsOptions options)
     {
-      lock(TankingGroups)
+      lock (TankingGroups)
       {
         CombinedStats combined = null;
         Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();

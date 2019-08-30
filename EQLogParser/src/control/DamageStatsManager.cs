@@ -30,7 +30,7 @@ namespace EQLogParser
     {
       DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
       {
-        lock(DamageGroups)
+        lock (DamageGroups)
         {
           DamageGroups.Clear();
           RaidTotals = null;
@@ -45,7 +45,7 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock(DamageGroups)
+      lock (DamageGroups)
       {
         Selected = options.Npcs;
         Title = options.Name;
@@ -321,17 +321,20 @@ namespace EQLogParser
       FireChartEvent(options, "FILTER", null, filter);
     }
 
-    private void FireCompletedEvent(GenerateStatsOptions options, CombinedStats combined)
+    private void FireCompletedEvent(GenerateStatsOptions options, CombinedStats combined, List<List<ActionBlock>> groups)
     {
       if (options.RequestSummaryData)
       {
         // generating new stats
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent()
+        var genEvent = new StatsGenerationEvent()
         {
           Type = Labels.DAMAGEPARSE,
           State = "COMPLETED",
           CombinedStats = combined
-        });
+        };
+
+        genEvent.Groups.AddRange(groups);
+        EventsGenerationStatus?.Invoke(this, genEvent);
       }
     }
 
@@ -357,7 +360,7 @@ namespace EQLogParser
 
     internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      lock(DamageGroups)
+      lock (DamageGroups)
       {
         if (options.RequestChartData)
         {
@@ -487,7 +490,7 @@ namespace EQLogParser
 
                         PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
                         UpdateSubStats(subStats, record, block.BeginTime);
-                        allStats[stats.Name + "=" + record.SubType] = subStats;
+                        allStats[stats.Name + "=" + Helpers.CreateRecordKey(record.Type, record.SubType)] = subStats;
                       }
                     }
                   });
@@ -582,7 +585,7 @@ namespace EQLogParser
             LOG.Error(agx);
           }
 
-          FireCompletedEvent(options, combined);
+          FireCompletedEvent(options, combined, DamageGroups);
         }
       }
     }

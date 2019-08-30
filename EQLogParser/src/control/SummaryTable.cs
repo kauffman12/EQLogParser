@@ -18,6 +18,7 @@ namespace EQLogParser
     internal DataGrid TheDataGrid;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
+    internal List<List<ActionBlock>> CurrentGroups;
 
     internal void InitSummaryTable(Label title, DataGrid dataGrid)
     {

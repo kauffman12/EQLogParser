@@ -1,7 +1,6 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -57,7 +56,7 @@ namespace EQLogParser
       var view = CollectionViewSource.GetDefaultView(NonPlayers);
       view.Filter = new Predicate<object>(item =>
       {
-        var npcItem = (NonPlayer) item;
+        var npcItem = (NonPlayer)item;
         return CurrentShowBreaks ? npcItem.GroupID >= -1 : npcItem.GroupID > -1;
       });
 

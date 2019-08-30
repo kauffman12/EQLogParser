@@ -73,6 +73,7 @@ namespace EQLogParser
       {
         query = subStats.AsParallel().OrderByDescending(subStat => GetSortValue(subStat));
       }
+
       return query.ToList();
     }
   }

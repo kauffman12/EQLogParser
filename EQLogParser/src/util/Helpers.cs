@@ -136,6 +136,18 @@ namespace EQLogParser
       return window;
     }
 
+    internal static string CreateRecordKey(string type, string subType)
+    {
+      string key = subType;
+
+      if (type == Labels.DD || type == Labels.DOT)
+      {
+        key = type + "=" + key;
+      }
+
+      return key;
+    }
+
     internal static bool IsPossiblePlayerName(string part, int stop = -1)
     {
       bool found = false;

@@ -51,15 +51,16 @@ namespace EQLogParser
       };
     }
 
-    internal static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string key, string type)
+    internal static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string subType, string type)
     {
+      var key = Helpers.CreateRecordKey(type, subType);
       PlayerSubStats stats = null;
 
       lock (individualStats)
       {
         if (!individualStats.ContainsKey(key))
         {
-          stats = CreatePlayerSubStats(key, type);
+          stats = CreatePlayerSubStats(subType, type);
           individualStats[key] = stats;
         }
         else
