@@ -38,6 +38,12 @@ namespace EQLogParser
       " chest", " cache", " satchel", " treasure box"
     };
 
+    private static readonly Dictionary<string, byte> SpellTypesMap = new Dictionary<string, byte>()
+    {
+      { "fire", 1 }, { "cold", 1 }, { "poison", 1 }, { "magic", 1 }, { "disease", 1 }, { "unresistable", 1 },
+      { "chromatic", 1 }, { "physical", 1 }, { "corruption", 1 }, { "prismatic", 1 },
+    };
+
     static DamageLineParser()
     {
       // add two way mapping
@@ -313,6 +319,12 @@ namespace EQLogParser
             {
               parseType = ParseType.POINTSOF;
               pointsIndex = i;
+
+              int magicTypeIndex = ofIndex + 1;
+              if (magicTypeIndex < data.Length && SpellTypesMap.ContainsKey(data[magicTypeIndex]))
+              {
+                nonMelee = true;
+              }
             }
             break;
           default:
@@ -408,7 +420,7 @@ namespace EQLogParser
 
       if (attacker != null && defender != null)
       {
-        record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, null, Labels.DS);
+        record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, Labels.DS, Labels.DS);
       }
 
       return record;
@@ -530,12 +542,32 @@ namespace EQLogParser
     {
       DamageRecord record = null;
       uint damage = StatsUtil.ParseUInt(data[forIndex + 1]);
-      string spell = null;
+      string type = null;
+      string subType = null;
       string attacker = null;
 
       if (byIndex > 1)
       {
-        spell = ReadStringToPeriod(data, byIndex, builder);
+        // possible spell
+        subType = ReadStringToPeriod(data, byIndex, builder);
+      }
+      else if (!isNonMelee)
+      {
+        subType = GetTypeFromHit(data[hitIndex], out bool additional);
+        if (subType != null)
+        {
+          type = Labels.MELEE;
+
+          if (additional)
+          {
+            hitIndex++; // multi-word hit value
+          }
+        }
+      }
+
+      if (!string.IsNullOrEmpty(subType) && isNonMelee)
+      {
+        type = GetTypeFromSpell(subType, Labels.DD);
       }
 
       // before hit
@@ -557,13 +589,6 @@ namespace EQLogParser
         attacker = string.Join(" ", nameList);
       }
 
-      string type = GetTypeFromHit(data[hitIndex], out bool additional);
-
-      if (additional)
-      {
-        hitIndex++; // multi-word hit value
-      }
-
       string defender = string.Join(" ", data, hitIndex + 1, forIndex - hitIndex - 1);
 
       // check for pets
@@ -571,18 +596,13 @@ namespace EQLogParser
       HasOwner(defender, out string defenderOwner);
 
       // some new special cases
-      if (!string.IsNullOrEmpty(spell) && spell.StartsWith("Elemental Conversion", StringComparison.Ordinal))
+      if (!string.IsNullOrEmpty(subType) && subType.StartsWith("Elemental Conversion", StringComparison.Ordinal))
       {
         PlayerManager.Instance.AddVerifiedPet(defender);
       }
-      else if (attacker != null && defender != null)
+      else if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(defender))
       {
-        if ((isNonMelee || !string.IsNullOrEmpty(spell)) && type.StartsWith("hit", StringComparison.OrdinalIgnoreCase))
-        {
-          type = GetTypeFromSpell(spell, Labels.DD);
-        }
-
-        record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, spell, type);
+        record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, subType, type);
       }
 
       return record;
@@ -590,32 +610,36 @@ namespace EQLogParser
 
     private static DamageRecord BuildRecord(string attacker, string defender, uint damage, string attackerOwner, string defenderOwner, string subType, string type)
     {
-      if (attacker.EndsWith("'s corpse", StringComparison.Ordinal))
+      DamageRecord record = null;
+
+      if (!string.IsNullOrEmpty(type) && !string.IsNullOrEmpty(subType))
       {
-        attacker = attacker.Substring(0, attacker.Length - 9);
+        if (attacker.EndsWith("'s corpse", StringComparison.Ordinal))
+        {
+          attacker = attacker.Substring(0, attacker.Length - 9);
+        }
+
+        record = new DamageRecord()
+        {
+          Attacker = string.Intern(FixName(attacker)),
+          Defender = string.Intern(FixName(defender)),
+          Type = string.Intern(type),
+          SubType = string.Intern(subType),
+          Total = damage,
+          ModifiersMask = -1
+        };
+
+        if (attackerOwner != null)
+        {
+          record.AttackerOwner = string.Intern(attackerOwner);
+        }
+
+        if (defenderOwner != null)
+        {
+          record.DefenderOwner = string.Intern(defenderOwner);
+        }
       }
 
-      DamageRecord record = new DamageRecord()
-      {
-        Attacker = string.Intern(FixName(attacker)),
-        Defender = string.Intern(FixName(defender)),
-        Type = string.Intern(type),
-        Total = damage,
-        ModifiersMask = -1
-      };
-
-      if (attackerOwner != null)
-      {
-        record.AttackerOwner = string.Intern(attackerOwner);
-      }
-
-      if (defenderOwner != null)
-      {
-        record.DefenderOwner = string.Intern(defenderOwner);
-      }
-
-      // set sub type if spell is available
-      record.SubType = string.IsNullOrEmpty(subType) ? record.Type : string.Intern(subType);
       return record;
     }
 
@@ -698,14 +722,15 @@ namespace EQLogParser
 
     private static string GetTypeFromSpell(string name, string type)
     {
-      if (name == null || !SpellTypeCache.TryGetValue(name, out string result))
+      string key = Helpers.CreateRecordKey(type, name);
+      if (string.IsNullOrEmpty(key) || !SpellTypeCache.TryGetValue(key, out string result))
       {
-        if (name != null)
+        if (!string.IsNullOrEmpty(key))
         {
           string spellName = Helpers.AbbreviateSpellName(name);
           SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
           result = (data != null && data.IsProc) ? Labels.PROC : type;
-          SpellTypeCache[name] = result;
+          SpellTypeCache[key] = result;
         }
         else
         {

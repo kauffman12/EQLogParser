@@ -65,6 +65,7 @@ namespace EQLogParser
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats as CombinedStats;
+            CurrentGroups = e.Groups;
 
             if (CurrentStats == null)
             {
@@ -111,6 +112,18 @@ namespace EQLogParser
     {
       var column = sender as DataGridColumn;
       ChildGrids.ForEach(grid => grid.Columns[column.DisplayIndex].Width = column.ActualWidth);
+    }
+
+    private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems.Count == 1)
+      {
+        var log = new DamageLog(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        var main = Application.Current.MainWindow as MainWindow;
+        var window = Helpers.OpenNewTab(main.dockSite, "damageLog", "Damage Log", log, 400, 300);
+        window.CanFloat = true;
+        window.CanClose = true;
+      }
     }
 
     private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
@@ -217,7 +230,7 @@ namespace EQLogParser
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
-        menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
+        menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyDamageParseToEQClick.IsEnabled = true;
 
         if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
@@ -232,7 +245,7 @@ namespace EQLogParser
       else
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
-          menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
+         menuItemShowDamageLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
       }
 
       menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);

@@ -134,7 +134,7 @@
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="petsViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Paw" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Pet _List" Height="20">
+          <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Pet _List" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="verifiedPetsIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
@@ -154,7 +154,7 @@
               <fa:ImageAwesome x:Name="playerParseIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Player _List" Height="20">
+          <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Player _List" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="verifiedPlayersIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
@@ -269,14 +269,26 @@
       </docking:SplitContainer>
       <docking:DockSite.AutoHideRightContainers>
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Player List" ContainerDockedSize="240,150">
+          <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Player List" ContainerDockedSize="240,150">
             <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
               <DataGrid.Columns>
+                <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
+                  <DataGridTemplateColumn.CellStyle>
+                    <Style TargetType="DataGridCell">
+                      <EventSetter Event="PreviewMouseDown" Handler="RemovePlayerMouseDown"/>
+                    </Style>
+                  </DataGridTemplateColumn.CellStyle>
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Close" Foreground="#5191c1" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
               </DataGrid.Columns>
             </datagrid:ThemedDataGrid>
           </docking:ToolWindow>
-          <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Pet List" ContainerDockedSize="240,150">
+          <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Verified Pet List" ContainerDockedSize="240,150">
             <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
               <DataGrid.Columns>
                 <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">

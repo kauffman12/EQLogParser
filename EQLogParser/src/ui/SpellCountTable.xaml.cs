@@ -191,7 +191,7 @@ namespace EQLogParser
 
                 row.Spell = spell;
                 row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
-                row.IconColor = TableColors.REMOVEICON;
+                row.IconColor = TableColors.ACTIVEICON;
 
                 int i;
                 double[] values = new double[sortedPlayers.Count + 1];
@@ -347,7 +347,7 @@ namespace EQLogParser
         {
           dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
           dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          SpellRowsView.ToList().ForEach(spr => spr.IconColor = "#252526");
+          SpellRowsView.ToList().ForEach(spr => spr.IconColor = TableColors.EMPTYICON);
           dataGrid.Items.Refresh();
 
           Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => CreateImage()), TaskScheduler.Default);
@@ -384,7 +384,7 @@ namespace EQLogParser
         rtb.Render(dv);
         Clipboard.SetImage(rtb);
 
-        SpellRowsView.ToList().ForEach(spr => spr.IconColor = TableColors.REMOVEICON);
+        SpellRowsView.ToList().ForEach(spr => spr.IconColor = TableColors.ACTIVEICON);
         dataGrid.Items.Refresh();
       }
       catch (ExternalException ex)

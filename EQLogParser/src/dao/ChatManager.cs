@@ -133,11 +133,12 @@ namespace EQLogParser
         catch (IOException)
         {
           // wait for file to be freed
-          Thread.Sleep(2000);
+          Thread.Sleep(1000);
         }
         catch (InvalidDataException)
         {
-
+          LOG.Error("Could not open " + fileName + ", deleting and trying again");
+          ConfigUtil.RemoveFileIfExists(fileName);
         }
       }
 
@@ -504,10 +505,32 @@ namespace EQLogParser
       }
     }
 
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        if (disposing)
+        {
+          // TODO: dispose managed state (managed objects).
+          ArchiveTimer?.Dispose();
+          CurrentArchive?.Dispose();
+        }
+
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
     public void Dispose()
     {
-      ArchiveTimer?.Dispose();
-      CurrentArchive?.Dispose();
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
     }
+    #endregion
   }
 }

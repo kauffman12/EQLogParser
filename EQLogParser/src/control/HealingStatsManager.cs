@@ -39,7 +39,7 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock(HealingGroups)
+      lock (HealingGroups)
       {
         Selected = options.Npcs;
         Title = options.Name;
@@ -98,7 +98,7 @@ namespace EQLogParser
 
     internal void PopulateHealing(List<PlayerStats> playerStats)
     {
-      lock(HealingGroups)
+      lock (HealingGroups)
       {
         Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
         Dictionary<string, long> totals = new Dictionary<string, long>();
@@ -240,7 +240,7 @@ namespace EQLogParser
 
     internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      lock(HealingGroups)
+      lock (HealingGroups)
       {
         if (options.RequestChartData)
         {
@@ -259,7 +259,7 @@ namespace EQLogParser
 
     private void ComputeHealingStats(GenerateStatsOptions options)
     {
-      lock(HealingGroups)
+      lock (HealingGroups)
       {
         if (RaidTotals != null)
         {

@@ -199,6 +199,20 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name) && VerifiedPlayers.TryRemove(name, out _))
       {
+        string found = null;
+        foreach (var keypair in PetToPlayer)
+        {
+          if (keypair.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
+          {
+            found = keypair.Key;
+          }
+        }
+
+        if (!string.IsNullOrEmpty(found))
+        {
+          PetToPlayer.TryRemove(found, out _);
+        }
+
         EventsRemoveVerifiedPlayer(this, name);
       }
     }
@@ -221,7 +235,7 @@ namespace EQLogParser
 
     internal void Clear()
     {
-      lock(this)
+      lock (this)
       {
         LikelyPlayer.Clear();
         LikelyPlayerStats.Clear();
@@ -264,7 +278,7 @@ namespace EQLogParser
     {
       if (!PlayerToClass.TryGetValue(cast.Caster, out SpellClassCounter counter))
       {
-        lock(PlayerToClass)
+        lock (PlayerToClass)
         {
           counter = new SpellClassCounter() { ClassCounts = new Dictionary<SpellClass, int>() };
           PlayerToClass.TryAdd(cast.Caster, counter);
@@ -293,7 +307,7 @@ namespace EQLogParser
     {
       if (values.Length > 0)
       {
-        foreach(var value in values)
+        foreach (var value in values)
         {
           if (!string.IsNullOrEmpty(value) && value.Length >= 2)
           {
@@ -309,7 +323,7 @@ namespace EQLogParser
     {
       if (!LikelyPlayerStats.TryGetValue(attacker, out Dictionary<string, int> defenders))
       {
-        lock(LikelyPlayerStats)
+        lock (LikelyPlayerStats)
         {
           defenders = new Dictionary<string, int>();
           LikelyPlayerStats.TryAdd(attacker, defenders);
@@ -318,7 +332,7 @@ namespace EQLogParser
 
       bool newLikelyPlayer = false;
 
-      lock(defenders)
+      lock (defenders)
       {
         int newValue = 1;
         if (defenders.TryGetValue(defender, out int value))
