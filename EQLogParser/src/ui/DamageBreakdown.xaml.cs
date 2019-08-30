@@ -66,11 +66,11 @@ namespace EQLogParser
             if (selectedStats != null)
             {
               PlayerStats = new List<PlayerSubStats>();
-              foreach (var playerStat in selectedStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
+              foreach (var playerStats in selectedStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
               {
-                if (ChildStats.ContainsKey(playerStat.Name))
+                if (ChildStats.ContainsKey(playerStats.Name))
                 {
-                  foreach (var childStat in ChildStats[playerStat.Name])
+                  foreach (var childStat in ChildStats[playerStats.Name])
                   {
                     PlayerStats.Add(childStat);
                     BuildGroups(childStat, childStat.SubStats.Values.ToList());
@@ -86,8 +86,8 @@ namespace EQLogParser
                 }
                 else
                 {
-                  PlayerStats.Add(playerStat);
-                  BuildGroups(playerStat, playerStat.SubStats.Values.ToList());
+                  PlayerStats.Add(playerStats);
+                  BuildGroups(playerStats, playerStats.SubStats.Values.ToList());
                 }
               }
             }
@@ -95,12 +95,12 @@ namespace EQLogParser
             if (PlayerStats != null)
             {
               var filtered = CurrentShowPets ? PlayerStats : PlayerStats.Where(playerStats => !PlayerManager.Instance.IsVerifiedPet(playerStats.Name));
-              foreach (var playerStat in SortSubStats(filtered.ToList()))
+              foreach (var playerStats in SortSubStats(filtered.ToList()))
               {
                 Dispatcher.InvokeAsync(() =>
                 {
-                  list.Add(playerStat);
-                  var optionalList = GetSubStats(playerStat.Name);
+                  list.Add(playerStats);
+                  var optionalList = GetSubStats(playerStats as PlayerStats);
                   SortSubStats(optionalList).ForEach(subStat => list.Add(subStat));
                 });
               }
@@ -174,19 +174,7 @@ namespace EQLogParser
             break;
         }
 
-        if (stats != null)
-        {
-          stats.Total += sub.Total;
-          stats.TotalCrit += sub.TotalCrit;
-          stats.TotalLucky += sub.TotalLucky;
-          stats.Hits += sub.Hits;
-          stats.Resists += sub.Resists;
-          stats.CritHits += sub.CritHits;
-          stats.LuckyHits += sub.LuckyHits;
-          stats.TwincastHits += sub.TwincastHits;
-          stats.Max = (sub.Max < stats.Max) ? stats.Max : sub.Max;
-          stats.TotalSeconds = Math.Max(stats.TotalSeconds, sub.TotalSeconds);
-        }
+        MergeStats(stats, sub);
       });
 
       foreach (var stats in new PlayerSubStats[] { dots, dds, procs, resisted })
@@ -228,13 +216,14 @@ namespace EQLogParser
       });
     }
 
-    private List<PlayerSubStats> GetSubStats(string name)
+    private List<PlayerSubStats> GetSubStats(PlayerStats playerStats)
     {
+      var name = playerStats.Name;
       List<PlayerSubStats> list = new List<PlayerSubStats>();
 
       if (OtherDamage.ContainsKey(name))
       {
-        list.AddRange(OtherDamage[name]);
+        AddToList(playerStats, list, OtherDamage[name]);
       }
 
       if (GroupedDD.ContainsKey(name))
@@ -248,7 +237,7 @@ namespace EQLogParser
           }
           else
           {
-            list.AddRange(UnGroupedDD[name]);
+            AddToList(playerStats, list, UnGroupedDD[name]);
           }
         }
       }
@@ -264,7 +253,7 @@ namespace EQLogParser
           }
           else
           {
-            list.AddRange(UnGroupedDoT[name]);
+            AddToList(playerStats, list, UnGroupedDoT[name]);
           }
         }
       }
@@ -280,7 +269,7 @@ namespace EQLogParser
           }
           else
           {
-            list.AddRange(UnGroupedProcs[name]);
+            AddToList(playerStats, list, UnGroupedProcs[name]);
           }
         }
       }
@@ -295,13 +284,49 @@ namespace EQLogParser
           }
           else
           {
-            list.AddRange(UnGroupedResisted[name]);
+            AddToList(playerStats, list, UnGroupedResisted[name]);
           }
-
         }
       }
 
       return list;
+    }
+
+    private void AddToList(PlayerStats playerStats, List<PlayerSubStats> list, List<PlayerSubStats> additionalStats)
+    {
+      additionalStats.ForEach(stats =>
+      {
+        if (list.Find(item => item.Name == stats.Name) is PlayerSubStats found)
+        {
+          var combined = new PlayerSubStats() { Name = found.Name };
+          MergeStats(combined, found);
+          MergeStats(combined, stats);
+          StatsUtil.CalculateRates(combined, RaidStats, playerStats);
+          list.Remove(found);
+          list.Add(combined);
+        }
+        else
+        {
+          list.Add(stats);
+        }
+      });
+    }
+
+    private void MergeStats(PlayerSubStats stats, PlayerSubStats sub)
+    {
+      if (stats != null)
+      {
+        stats.Total += sub.Total;
+        stats.TotalCrit += sub.TotalCrit;
+        stats.TotalLucky += sub.TotalLucky;
+        stats.Hits += sub.Hits;
+        stats.Resists += sub.Resists;
+        stats.CritHits += sub.CritHits;
+        stats.LuckyHits += sub.LuckyHits;
+        stats.TwincastHits += sub.TwincastHits;
+        stats.Max = (sub.Max < stats.Max) ? stats.Max : sub.Max;
+        stats.TotalSeconds = Math.Max(stats.TotalSeconds, sub.TotalSeconds);
+      }
     }
 
     private void OptionsChange(object sender, RoutedEventArgs e)

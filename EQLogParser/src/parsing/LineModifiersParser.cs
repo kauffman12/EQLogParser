@@ -39,6 +39,16 @@ namespace EQLogParser
       return mask > -1 && (mask & CRIT) != 0;
     }
 
+    internal static bool IsLucky(int mask)
+    {
+      return mask > -1 && (mask & LUCKY) != 0;
+    }
+
+    internal static bool IsTwincast(int mask)
+    {
+      return mask > -1 && (mask & TWINCAST) != 0;
+    }
+
     internal static void Parse(HitRecord record, Attempt playerStats, Attempt theHit = null)
     {
       if (record.ModifiersMask > -1)

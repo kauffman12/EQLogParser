@@ -10,6 +10,12 @@ namespace EQLogParser
     private double LastDateTime;
     private double increment = 0.0;
 
+    internal static string FormatDate(double seconds)
+    {
+      var dateTime = new DateTime().AddSeconds(seconds);
+      return dateTime.ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+
     internal static double ToDouble(DateTime dateTime)
     {
       return dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;

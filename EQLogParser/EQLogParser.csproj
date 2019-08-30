@@ -184,6 +184,9 @@
     <Compile Include="src\ui\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\DamageLog.xaml.cs">
+      <DependentUpon>DamageLog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\ReceivedHealingBreakdown.xaml.cs">
       <DependentUpon>ReceivedHealingBreakdown.xaml</DependentUpon>
     </Compile>
@@ -255,6 +258,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\ChatViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\DamageLog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -184,6 +184,25 @@ namespace EQLogParser
       }
     }
 
+    internal static void RemoveFileIfExists(string fileName)
+    {
+      try
+      {
+        if (File.Exists(fileName))
+        {
+          File.Delete(fileName);
+        }
+      }
+      catch (IOException)
+      {
+        // ignore
+      }
+      catch (UnauthorizedAccessException)
+      {
+        // ignore
+      }
+    }
+
     private static void LoadProperties(ConcurrentDictionary<string, string> properties, List<string> list)
     {
       list.ForEach(line =>
@@ -219,25 +238,6 @@ namespace EQLogParser
       catch (SecurityException se)
       {
         LOG.Error(se);
-      }
-    }
-
-    private static void RemoveFileIfExists(string fileName)
-    {
-      try
-      {
-        if (File.Exists(fileName))
-        {
-          File.Delete(fileName);
-        }
-      }
-      catch (IOException)
-      {
-        // ignore
-      }
-      catch (UnauthorizedAccessException)
-      {
-        // ignore
       }
     }
   }
