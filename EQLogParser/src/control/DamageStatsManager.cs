@@ -275,7 +275,7 @@ namespace EQLogParser
           results[stat.Name] = new List<HitFreqChartData>();
           foreach (string type in stat.SubStats.Keys)
           {
-            HitFreqChartData chartData = new HitFreqChartData() { HitType = type };
+            HitFreqChartData chartData = new HitFreqChartData() { HitType = stat.SubStats[type].Name };
 
             // add crits
             chartData.CritXValues.AddRange(stat.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));

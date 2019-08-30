@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -16,6 +17,12 @@ namespace EQLogParser
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     internal static DictionaryAddHelper<string, uint> StringUIntAddHelper = new DictionaryAddHelper<string, uint>();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
+    private static Dispatcher MainDispatcher;
+
+    internal static void SetDispatcher(Dispatcher mainDispatcher)
+    {
+      MainDispatcher = mainDispatcher;
+    }
 
     internal static string AbbreviateSpellName(string spell)
     {
@@ -66,6 +73,11 @@ namespace EQLogParser
       }
 
       return string.Intern(result);
+    }
+
+    internal static void SetBusy(bool state)
+    {
+      MainDispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(state));
     }
 
     internal static void ChartResetView(CartesianChart theChart)
