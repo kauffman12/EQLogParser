@@ -181,19 +181,19 @@
     <Compile Include="src\control\HealingStatsManager.cs" />
     <Compile Include="src\dao\PlayerManager.cs" />
     <Compile Include="src\parsing\PreLineParser.cs" />
-    <Compile Include="src\ui\ChatViewer.xaml.cs">
+    <Compile Include="src\ui\common\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\DamageLog.xaml.cs">
-      <DependentUpon>DamageLog.xaml</DependentUpon>
+    <Compile Include="src\ui\common\HitLogViewer.xaml.cs">
+      <DependentUpon>HitLogViewer.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\ReceivedHealingBreakdown.xaml.cs">
+    <Compile Include="src\ui\breakdown\ReceivedHealingBreakdown.xaml.cs">
       <DependentUpon>ReceivedHealingBreakdown.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\TankingBreakdown.xaml.cs">
+    <Compile Include="src\ui\breakdown\TankingBreakdown.xaml.cs">
       <DependentUpon>TankingBreakdown.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\TankingSummary.xaml.cs">
+    <Compile Include="src\ui\summary\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\util\ConfigUtil.cs" />
@@ -210,28 +210,28 @@
     <Compile Include="src\parsing\LineModifiersParser.cs" />
     <Compile Include="src\parsing\ChatLineParser.cs" />
     <Compile Include="src\control\BreakdownTable.cs" />
-    <Compile Include="src\ui\DamageSummary.xaml.cs">
+    <Compile Include="src\ui\summary\DamageSummary.xaml.cs">
       <DependentUpon>DamageSummary.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\DamageBreakdown.xaml.cs">
+    <Compile Include="src\ui\breakdown\DamageBreakdown.xaml.cs">
       <DependentUpon>DamageBreakdown.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\HealingBreakdown.xaml.cs">
+    <Compile Include="src\ui\breakdown\HealingBreakdown.xaml.cs">
       <DependentUpon>HealingBreakdown.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\HealingSummary.xaml.cs">
+    <Compile Include="src\ui\summary\HealingSummary.xaml.cs">
       <DependentUpon>HealingSummary.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\LineChart.xaml.cs">
+    <Compile Include="src\ui\chart\LineChart.xaml.cs">
       <DependentUpon>LineChart.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\HitFreqChart.xaml.cs">
+    <Compile Include="src\ui\chart\HitFreqChart.xaml.cs">
       <DependentUpon>HitFreqChart.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\NpcTable.xaml.cs">
+    <Compile Include="src\ui\common\NpcTable.xaml.cs">
       <DependentUpon>NpcTable.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\SpellCountTable.xaml.cs">
+    <Compile Include="src\ui\common\SpellCountTable.xaml.cs">
       <DependentUpon>SpellCountTable.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\util\ActionProcessor.cs" />
@@ -257,55 +257,55 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\ChatViewer.xaml">
+    <Page Include="src\ui\common\ChatViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\DamageLog.xaml">
+    <Page Include="src\ui\common\HitLogViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\DamageSummary.xaml">
+    <Page Include="src\ui\summary\DamageSummary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\DamageBreakdown.xaml">
+    <Page Include="src\ui\breakdown\DamageBreakdown.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\HealingBreakdown.xaml">
+    <Page Include="src\ui\breakdown\HealingBreakdown.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\HealingSummary.xaml">
+    <Page Include="src\ui\summary\HealingSummary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\LineChart.xaml">
+    <Page Include="src\ui\chart\LineChart.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\HitFreqChart.xaml">
+    <Page Include="src\ui\chart\HitFreqChart.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\NpcTable.xaml">
+    <Page Include="src\ui\common\NpcTable.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\ReceivedHealingBreakdown.xaml">
+    <Page Include="src\ui\breakdown\ReceivedHealingBreakdown.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\SpellCountTable.xaml">
+    <Page Include="src\ui\common\SpellCountTable.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\TankingBreakdown.xaml">
+    <Page Include="src\ui\breakdown\TankingBreakdown.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\TankingSummary.xaml">
+    <Page Include="src\ui\summary\TankingSummary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
