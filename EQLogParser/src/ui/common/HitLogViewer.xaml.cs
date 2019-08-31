@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 
@@ -13,12 +14,12 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageLog.xaml
   /// </summary>
-  public partial class DamageLog : UserControl
+  public partial class HitLogViewer : UserControl
   {
     private readonly object CollectionLock = new object();
-    private ObservableCollection<DamageRecord> Records = new ObservableCollection<DamageRecord>();
+    private ObservableCollection<LogRow> Records = new ObservableCollection<LogRow>();
     private ObservableCollection<string> Actions = new ObservableCollection<string>();
-    private ObservableCollection<string> Defenders = new ObservableCollection<string>();
+    private ObservableCollection<string> Acted = new ObservableCollection<string>();
     private ObservableCollection<string> Types = new ObservableCollection<string>();
 
     private string CurrentDefenderFilter = null;
@@ -26,7 +27,7 @@ namespace EQLogParser
     private string CurrentTypeFilter = null;
     private bool CurrentShowPetsFilter = true;
 
-    public DamageLog(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups)
+    public HitLogViewer(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups)
     {
       InitializeComponent();
 
@@ -35,26 +36,44 @@ namespace EQLogParser
 
       view.Filter = new Predicate<object>(item =>
       {
-        var record = (RowWrapper)item;
+        var record = (LogRow)item;
         return (string.IsNullOrEmpty(CurrentTypeFilter) || CurrentTypeFilter == record.Type) &&
         (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) && 
-        (string.IsNullOrEmpty(CurrentDefenderFilter) || CurrentDefenderFilter == record.Defender) && 
+        (string.IsNullOrEmpty(CurrentDefenderFilter) || CurrentDefenderFilter == record.Acted) && 
         (CurrentShowPetsFilter || !record.IsPet);
       });
 
       BindingOperations.EnableCollectionSynchronization(Records, CollectionLock);
       BindingOperations.EnableCollectionSynchronization(Actions, CollectionLock);
-      BindingOperations.EnableCollectionSynchronization(Defenders, CollectionLock);
+      BindingOperations.EnableCollectionSynchronization(Acted, CollectionLock);
       BindingOperations.EnableCollectionSynchronization(Types, CollectionLock);
 
       Actions.Add("All Actions");
       Types.Add("All Types");
-      Defenders.Add("All Defenders");
+
+      var firstAction = groups?.First()?.First()?.Actions?.First();
+      if (firstAction is DamageRecord)
+      {
+        Acted.Add("All Defenders");
+        dataGrid.Columns[3].Header = "Damage";
+        dataGrid.Columns[8].Header = "Attacker";
+        dataGrid.Columns[9].Header = "Defender";
+        showPets.Visibility = Visibility.Visible;
+      }
+      else if (firstAction is HealRecord)
+      {
+        Acted.Add("All Healed Players");
+        dataGrid.Columns[3].Header = "Heal";
+        dataGrid.Columns[4].Visibility = Visibility.Visible;
+        dataGrid.Columns[8].Header = "Healer";
+        dataGrid.Columns[9].Header = "Healed";
+        showPets.Visibility = Visibility.Collapsed;
+      }
 
       actionList.ItemsSource = Actions;
       actionList.SelectedIndex = 0;
-      defenderList.ItemsSource = Defenders;
-      defenderList.SelectedIndex = 0;
+      actedList.ItemsSource = Acted;
+      actedList.SelectedIndex = 0;
       typeList.ItemsSource = Types;
       typeList.SelectedIndex = 0;
       dataGrid.ItemsSource = view;
@@ -74,37 +93,16 @@ namespace EQLogParser
             block.Actions.ForEach(action =>
             {
               var currentTime = block.BeginTime;
-
-              if (action is DamageRecord record && !string.IsNullOrEmpty(record.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && record.Type != Labels.MISS)
+              if (CreateRow(playerStats, action, block.BeginTime) is LogRow row)
               {
-                bool isPet = false;
-                if (record.Attacker.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase) ||
-                (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(record.Attacker), StringComparison.OrdinalIgnoreCase) ||
-                (!string.IsNullOrEmpty(record.AttackerOwner) && record.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
+                lock (CollectionLock)
                 {
-                  var wrapper = new RowWrapper()
-                  {
-                    Attacker = record.Attacker,
-                    Defender = record.Defender,
-                    Type = record.Type,
-                    SubType = record.SubType,
-                    Total = record.Total,
-                    CritColor = LineModifiersParser.IsCrit(record.ModifiersMask) ? TableColors.ACTIVEICON : TableColors.EMPTYICON,
-                    LuckyColor = LineModifiersParser.IsLucky(record.ModifiersMask) ? TableColors.ACTIVEICON : TableColors.EMPTYICON,
-                    TwincastColor = LineModifiersParser.IsTwincast(record.ModifiersMask) ? TableColors.ACTIVEICON : TableColors.EMPTYICON,
-                    Time = currentTime,
-                    IsPet = isPet
-                  };
-
-                  lock(CollectionLock)
-                  {
-                    Records.Add(wrapper);
-                  }
-
-                  PopulateOption(uniqueActions, record.SubType, Actions);
-                  PopulateOption(uniqueDefenders, record.Defender, Defenders);
-                  PopulateOption(uniqueTypes, record.Type, Types);
+                  Records.Add(row);
                 }
+
+                PopulateOption(uniqueActions, row.SubType, Actions);
+                PopulateOption(uniqueDefenders, row.Acted, Acted);
+                PopulateOption(uniqueTypes, row.Type, Types);
               }
             });
           });
@@ -114,7 +112,7 @@ namespace EQLogParser
         {
           actionList.IsEnabled = true;
           typeList.IsEnabled = true;
-          defenderList.IsEnabled = true;
+          actedList.IsEnabled = true;
           showPets.IsEnabled = true;
         });
 
@@ -154,7 +152,7 @@ namespace EQLogParser
     {
       if (dataGrid != null && Records.Count > 0)
       {
-        CurrentDefenderFilter = defenderList.SelectedIndex == 0 ? null : defenderList.SelectedItem as string;
+        CurrentDefenderFilter = actedList.SelectedIndex == 0 ? null : actedList.SelectedItem as string;
         CurrentActionFilter = actionList.SelectedIndex == 0 ? null : actionList.SelectedItem as string;
         CurrentTypeFilter = typeList.SelectedIndex == 0 ? null : typeList.SelectedItem as string;
         CurrentShowPetsFilter = showPets.IsChecked.Value;
@@ -168,12 +166,54 @@ namespace EQLogParser
       e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
     }
 
-    internal class RowWrapper : DamageRecord
+    private LogRow CreateRow(PlayerStats playerStats, IAction action, double currentTime)
     {
+      LogRow row = null;
+      if (action is DamageRecord damage && !string.IsNullOrEmpty(damage.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && damage.Type != Labels.MISS)
+      {
+        bool isPet = false;
+        if (damage.Attacker.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase) ||
+        (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(damage.Attacker), StringComparison.OrdinalIgnoreCase) ||
+        (!string.IsNullOrEmpty(damage.AttackerOwner) && damage.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
+        {
+          row = new LogRow() { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet };
+        }
+      }
+      else if (action is HealRecord heal && !string.IsNullOrEmpty(heal.Healer) && !string.IsNullOrEmpty(playerStats.OrigName))
+      {
+        if (heal.Healed.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
+        {
+          row = new LogRow() { Actor = heal.Healer, Acted = heal.Healed, IsPet = false };
+        }
+      }
+
+      if (row != null && action is HitRecord hit)
+      {
+        row.Type = hit.Type;
+        row.SubType = hit.SubType;
+        row.Total = hit.Total;
+        row.OverTotal = hit.OverTotal;
+        row.CritColor = LineModifiersParser.IsCrit(hit.ModifiersMask) ? TableColors.ACTIVEICON : TableColors.EMPTYICON;
+        row.LuckyColor = LineModifiersParser.IsLucky(hit.ModifiersMask) ? TableColors.ACTIVEICON : TableColors.EMPTYICON;
+        row.TwincastColor = LineModifiersParser.IsTwincast(hit.ModifiersMask) ? TableColors.ACTIVEICON : TableColors.EMPTYICON;
+        row.Time = currentTime;
+      }
+
+      return row;
+    }
+
+    internal class LogRow
+    {
+      public string Actor { get; set; }
+      public string Acted { get; set; }
       public string CritColor { get; set; }
       public string LuckyColor { get; set; }
+      public string SubType { get; set; }
+      public string Type { get; set; }
       public string TwincastColor { get; set; }
       public double Time { get; set; }
+      public uint Total { get; set; }
+      public uint OverTotal { get; set; }
       public bool IsPet { get; set; }
     }
   }

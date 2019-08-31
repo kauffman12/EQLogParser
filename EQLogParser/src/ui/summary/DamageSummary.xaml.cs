@@ -118,7 +118,7 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItems.Count == 1)
       {
-        var log = new DamageLog(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         var main = Application.Current.MainWindow as MainWindow;
         var window = Helpers.OpenNewTab(main.dockSite, "damageLog", "Damage Log", log, 400, 300);
         window.CanFloat = true;
