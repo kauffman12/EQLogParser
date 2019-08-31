@@ -204,17 +204,20 @@ namespace EQLogParser
       return valid;
     }
 
-    private void FireCompletedEvent(GenerateStatsOptions options, CombinedStats combined)
+    private void FireCompletedEvent(GenerateStatsOptions options, CombinedStats combined, List<List<ActionBlock>> groups)
     {
       if (options.RequestSummaryData)
       {
         // generating new stats
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent()
+        var genEvent = new StatsGenerationEvent()
         {
           Type = Labels.HEALPARSE,
           State = "COMPLETED",
           CombinedStats = combined
-        });
+        };
+
+        genEvent.Groups.AddRange(groups);
+        EventsGenerationStatus?.Invoke(this, genEvent);
       }
     }
 
@@ -350,7 +353,7 @@ namespace EQLogParser
             LOG.Error(aro);
           }
 
-          FireCompletedEvent(options, combined);
+          FireCompletedEvent(options, combined, HealingGroups);
         }
       }
     }

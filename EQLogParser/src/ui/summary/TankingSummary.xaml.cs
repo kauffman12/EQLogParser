@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -60,6 +61,18 @@ namespace EQLogParser
       }
     }
 
+    private void DataGridTankingLogClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems.Count == 1)
+      {
+        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
+        var main = Application.Current.MainWindow as MainWindow;
+        var window = Helpers.OpenNewTab(main.dockSite, "tankingLog", "Tanking Log", log, 400, 300);
+        window.CanFloat = true;
+        window.CanClose = true;
+      }
+    }
+
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
@@ -76,7 +89,7 @@ namespace EQLogParser
           case "STARTED":
             if (e.Type == Labels.TANKPARSE)
             {
-              (Application.Current.MainWindow as MainWindow).Busy(true);
+              Helpers.SetBusy(true);
               title.Content = "Calculating Tanking DPS...";
               dataGrid.ItemsSource = null;
             }
@@ -85,6 +98,7 @@ namespace EQLogParser
             if (e.Type == Labels.TANKPARSE)
             {
               CurrentStats = e.CombinedStats as CombinedStats;
+              CurrentGroups = e.Groups;
 
               if (CurrentStats == null)
               {
@@ -99,7 +113,7 @@ namespace EQLogParser
                 dataGrid.ItemsSource = SetFilter(view);
               }
 
-            (Application.Current.MainWindow as MainWindow).Busy(false);
+              Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
             }
             else if (e.Type == Labels.HEALPARSE)
@@ -107,7 +121,7 @@ namespace EQLogParser
               (Application.Current.MainWindow as MainWindow).Busy(true);
               HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
               dataGrid.Items?.Refresh();
-              (Application.Current.MainWindow as MainWindow).Busy(false);
+              Helpers.SetBusy(false);
             }
             break;
           case "NONPC":
@@ -115,7 +129,7 @@ namespace EQLogParser
             {
               CurrentStats = null;
               title.Content = DEFAULT_TABLE_LABEL;
-              (Application.Current.MainWindow as MainWindow).Busy(false);
+              Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
             }
             break;
@@ -132,6 +146,7 @@ namespace EQLogParser
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
+        menuItemShowTankingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyTankingParseToEQClick.IsEnabled = true;
 
         if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
@@ -147,7 +162,7 @@ namespace EQLogParser
       else
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
-           menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled = false;
+           menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled = false;
       }
 
       menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);
