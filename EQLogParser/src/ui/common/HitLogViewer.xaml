@@ -22,14 +22,14 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showPets" Visibility="Collapsed" IsChecked="True" IsEnabled="False" Margin="2,0,4,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
+      <Rectangle x:Name="divider" VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
       <ComboBox Margin="4,0,4,0" x:Name="typeList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="actionList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="actedList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="50" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True">
       <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="90" />
+        <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="100" />
         <DataGridTextColumn Binding="{Binding Type}" ClipboardContentBinding="{x:Null}" Header="Type" IsReadOnly="True" CanUserReorder="True" MinWidth="80"/>
         <DataGridTextColumn Binding="{Binding SubType}" ClipboardContentBinding="{x:Null}" Header="Action" IsReadOnly="True" CanUserReorder="True" MinWidth="80"/>
         <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="" IsReadOnly="True" MinWidth="90"/>

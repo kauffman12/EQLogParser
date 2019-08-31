@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -49,6 +50,7 @@ namespace EQLogParser
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats as CombinedStats;
+            CurrentGroups = e.Groups;
 
             if (CurrentStats == null)
             {
@@ -91,6 +93,18 @@ namespace EQLogParser
       }
     }
 
+    private void DataGridHealingLogClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems.Count == 1)
+      {
+        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        var main = Application.Current.MainWindow as MainWindow;
+        var window = Helpers.OpenNewTab(main.dockSite, "healingLog", "Healing Log", log, 400, 300);
+        window.CanFloat = true;
+        window.CanClose = true;
+      }
+    }
+
     private void UpdateDataGridMenuItems()
     {
       if (CurrentStats != null && CurrentStats.StatsList.Count > 0)
@@ -98,6 +112,7 @@ namespace EQLogParser
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
+        menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyHealParseToEQClick.IsEnabled = true;
         UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
         UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats.UniqueClasses);
@@ -105,7 +120,7 @@ namespace EQLogParser
       else
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
-          menuItemShowSpellCasts.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
+          menuItemShowHealingLog.IsEnabled = menuItemShowSpellCasts.IsEnabled = copyHealParseToEQClick.IsEnabled = false;
       }
     }
 

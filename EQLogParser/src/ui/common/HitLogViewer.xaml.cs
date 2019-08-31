@@ -27,7 +27,7 @@ namespace EQLogParser
     private string CurrentTypeFilter = null;
     private bool CurrentShowPetsFilter = true;
 
-    public HitLogViewer(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups)
+    public HitLogViewer(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups, bool defending = false)
     {
       InitializeComponent();
 
@@ -52,13 +52,25 @@ namespace EQLogParser
       Types.Add("All Types");
 
       var firstAction = groups?.First()?.First()?.Actions?.First();
-      if (firstAction is DamageRecord)
+      if (firstAction is DamageRecord && !defending)
       {
         Acted.Add("All Defenders");
         dataGrid.Columns[3].Header = "Damage";
         dataGrid.Columns[8].Header = "Attacker";
         dataGrid.Columns[9].Header = "Defender";
         showPets.Visibility = Visibility.Visible;
+      }
+      else if (firstAction is DamageRecord && defending)
+      {
+        Acted.Add("All Attackers");
+        dataGrid.Columns[3].Header = "Damage";
+        dataGrid.Columns[5].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[6].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[7].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[8].Header = "Defender";
+        dataGrid.Columns[9].Header = "Attacker";
+        showPets.Visibility = Visibility.Collapsed;
+        divider.Visibility = Visibility.Collapsed;
       }
       else if (firstAction is HealRecord)
       {
@@ -68,6 +80,7 @@ namespace EQLogParser
         dataGrid.Columns[8].Header = "Healer";
         dataGrid.Columns[9].Header = "Healed";
         showPets.Visibility = Visibility.Collapsed;
+        divider.Visibility = Visibility.Collapsed;
       }
 
       actionList.ItemsSource = Actions;
@@ -93,7 +106,7 @@ namespace EQLogParser
             block.Actions.ForEach(action =>
             {
               var currentTime = block.BeginTime;
-              if (CreateRow(playerStats, action, block.BeginTime) is LogRow row)
+              if (CreateRow(playerStats, action, block.BeginTime, defending) is LogRow row)
               {
                 lock (CollectionLock)
                 {
@@ -122,7 +135,7 @@ namespace EQLogParser
 
     private void PopulateOption(Dictionary<string, byte> cache, string value, ObservableCollection<string> list)
     {
-      if (!cache.ContainsKey(value))
+      if (!string.IsNullOrEmpty(value) && !cache.ContainsKey(value))
       {
         cache[value] = 1;
 
@@ -166,10 +179,10 @@ namespace EQLogParser
       e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
     }
 
-    private LogRow CreateRow(PlayerStats playerStats, IAction action, double currentTime)
+    private LogRow CreateRow(PlayerStats playerStats, IAction action, double currentTime, bool defending = false)
     {
       LogRow row = null;
-      if (action is DamageRecord damage && !string.IsNullOrEmpty(damage.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && damage.Type != Labels.MISS)
+      if (action is DamageRecord damage && !defending && !string.IsNullOrEmpty(damage.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && damage.Type != Labels.MISS)
       {
         bool isPet = false;
         if (damage.Attacker.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase) ||
@@ -179,9 +192,16 @@ namespace EQLogParser
           row = new LogRow() { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet };
         }
       }
+      else if (action is DamageRecord tanking && defending && !string.IsNullOrEmpty(tanking.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && tanking.Type != Labels.MISS)
+      {
+        if (tanking.Defender.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
+        {
+          row = new LogRow() { Actor = tanking.Defender, Acted = tanking.Attacker, IsPet = false };
+        }
+      }
       else if (action is HealRecord heal && !string.IsNullOrEmpty(heal.Healer) && !string.IsNullOrEmpty(playerStats.OrigName))
       {
-        if (heal.Healed.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
+        if (heal.Healer.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
         {
           row = new LogRow() { Actor = heal.Healer, Acted = heal.Healed, IsPet = false };
         }

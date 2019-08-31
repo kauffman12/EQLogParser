@@ -214,11 +214,8 @@ namespace EQLogParser
               ModifiersMask = -1
             };
 
-            if (spell != null)
-            {
-              record.SubType = string.Intern(spell);
-            }
-
+            record.SubType = string.IsNullOrEmpty(spell) ? Labels.SELFHEAL : string.Intern(spell);
+ 
             if (part[part.Length - 1] == ')')
             {
               // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
@@ -226,6 +223,10 @@ namespace EQLogParser
               if (firstParen > -1)
               {
                 record.ModifiersMask = LineModifiersParser.Parse(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
+                if (LineModifiersParser.IsTwincast(record.ModifiersMask))
+                {
+                  PlayerManager.Instance.AddVerifiedPlayer(record.Healer);
+                }
               }
             }
           }
