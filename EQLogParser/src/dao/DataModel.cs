@@ -13,7 +13,7 @@ namespace EQLogParser
     public const string PROC = "Proc";
     public const string RESIST = "Resisted Spells";
     public const string HOT = "HoT Tick";
-    public const string HEAL = "Heal";
+    public const string HEAL = "Direct Heal";
     public const string MELEE = "Melee";
     public const string SELFHEAL = "Melee Heal";
     public const string NODATA = "No Data Available";
@@ -48,7 +48,7 @@ namespace EQLogParser
 
   public static class TableColors
   {
-    public const string EMPTYICON = "#252526";
+    public const string EMPTYICON = "#00ffffff";
     public const string ACTIVEICON = "#5191c1";
   }
 
