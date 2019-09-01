@@ -66,7 +66,11 @@ namespace EQLogParser
           {
             for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
             {
-              TankingGroups.Add(DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
+              var damages = DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
+              if (damages.Count > 0)
+              {
+                TankingGroups.Add(damages);
+              }
             }
 
             ComputeTankingStats(options);

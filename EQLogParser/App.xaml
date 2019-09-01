@@ -1,6 +1,7 @@
 ﻿<Application x:Class="EQLogParser.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
              xmlns:local="clr-namespace:EQLogParser"
              StartupUri="MainWindow.xaml">
@@ -357,6 +358,25 @@
       <Setter Property="ToolTipService.InitialShowDelay" Value="1500"/>
       <Setter Property="ToolTipService.ShowDuration" Value="2500"/>
     </Style>
+    
+    <!-- LogRow Templates for check columns -->
+    <DataTemplate x:Key="NoDataTemplate">
+    </DataTemplate>
+    <DataTemplate x:Key="CheckTemplate">
+      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Check" Foreground="#73b15d" />
+    </DataTemplate>
+    <DataTemplate x:Key="CountTemplate">
+      <TextBlock Text="{Binding Count}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    </DataTemplate>
+    <DataTemplate x:Key="CritCountTemplate">
+      <TextBlock Text="{Binding CritCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    </DataTemplate>
+    <DataTemplate x:Key="LuckyCountTemplate">
+      <TextBlock Text="{Binding LuckyCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    </DataTemplate>
+    <DataTemplate x:Key="TwincastCountTemplate">
+      <TextBlock Text="{Binding TwincastCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    </DataTemplate>
 
     <!-- DataGrid Row/Column Colors and Alignment -->
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">

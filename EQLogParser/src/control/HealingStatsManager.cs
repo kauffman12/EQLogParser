@@ -58,7 +58,11 @@ namespace EQLogParser
           {
             for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
             {
-              HealingGroups.Add(DataManager.Instance.GetHealsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
+              var heals = DataManager.Instance.GetHealsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
+              if (heals.Count > 0)
+              {
+                HealingGroups.Add(heals);
+              }
             }
 
             ComputeHealingStats(options);
