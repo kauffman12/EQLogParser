@@ -21,8 +21,10 @@
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showPets" Visibility="Collapsed" IsChecked="True" IsEnabled="False" Margin="2,0,4,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
-      <Rectangle x:Name="divider" VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
+      <CheckBox x:Name="groupHits" Visibility="Visible" IsChecked="True" IsEnabled="True" Margin="2,0,4,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Group Hits By Second</CheckBox>
+      <Rectangle x:Name="spellDivider" VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
+      <CheckBox x:Name="showPets" Visibility="Collapsed" IsChecked="True" IsEnabled="False" Margin="4,0,4,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
+      <Rectangle x:Name="petDivider" VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
       <ComboBox Margin="4,0,4,0" x:Name="typeList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="actionList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="actedList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
@@ -34,26 +36,25 @@
         <DataGridTextColumn Binding="{Binding SubType}" ClipboardContentBinding="{x:Null}" Header="Action" IsReadOnly="True" CanUserReorder="True" MinWidth="80"/>
         <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="" IsReadOnly="True" MinWidth="90"/>
         <DataGridTextColumn Binding="{Binding OverTotal, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Over Healed" Visibility="Collapsed" IsReadOnly="True" MinWidth="90"/>
+        <DataGridTemplateColumn Header="Hits" IsReadOnly="True" CanUserReorder="True">
+          <DataGridTemplateColumn.CellTemplateSelector>
+            <local:CountCheckedTemplateSelector Header="Hits" />
+          </DataGridTemplateColumn.CellTemplateSelector>
+        </DataGridTemplateColumn>
         <DataGridTemplateColumn Header="Critical" IsReadOnly="True" CanUserReorder="True">
-          <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Check" Foreground="{Binding CritColor}" />
-            </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellTemplateSelector>
+            <local:CountCheckedTemplateSelector Header="Critical" />
+          </DataGridTemplateColumn.CellTemplateSelector>
         </DataGridTemplateColumn>
         <DataGridTemplateColumn Header="Lucky" IsReadOnly="True" CanUserReorder="True">
-          <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Check" Foreground="{Binding LuckyColor}" />
-            </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellTemplateSelector>
+            <local:CountCheckedTemplateSelector Header="Lucky" />
+          </DataGridTemplateColumn.CellTemplateSelector>
         </DataGridTemplateColumn>
         <DataGridTemplateColumn Header="Twincast" IsReadOnly="True" CanUserReorder="True">
-          <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Check" Foreground="{Binding TwincastColor}" />
-            </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellTemplateSelector>
+            <local:CountCheckedTemplateSelector Header="Twincast" />
+          </DataGridTemplateColumn.CellTemplateSelector>
         </DataGridTemplateColumn>
         <DataGridTextColumn Binding="{Binding Actor}" ClipboardContentBinding="{x:Null}" Header="" IsReadOnly="True" CanUserReorder="True" MinWidth="100" />
         <DataGridTextColumn Binding="{Binding Acted}" ClipboardContentBinding="{x:Null}" Header="" IsReadOnly="True" CanUserReorder="True" Width="180"/>

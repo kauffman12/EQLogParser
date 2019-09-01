@@ -73,7 +73,11 @@ namespace EQLogParser
           {
             for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
             {
-              DamageGroups.Add(DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]));
+              var damages = DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
+              if (damages.Count > 0)
+              {
+                DamageGroups.Add(damages);
+              }
 
               var group = DataManager.Instance.GetResistsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
               group.ForEach(block => Resists.AddRange(block.Actions));
