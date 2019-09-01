@@ -195,6 +195,23 @@ namespace EQLogParser
     public string DefenderOwner { get; set; }
   }
 
+  internal class HitLogRow
+  {
+    public string Actor { get; set; }
+    public string Acted { get; set; }
+    public uint Count { get; set; }
+    public uint CritCount { get; set; }
+    public uint LuckyCount { get; set; }
+    public string SubType { get; set; }
+    public string Type { get; set; }
+    public uint TwincastCount { get; set; }
+    public double Time { get; set; }
+    public uint Total { get; set; }
+    public uint OverTotal { get; set; }
+    public bool IsPet { get; set; }
+    public bool IsGroupingEnabled { get; set; }
+  }
+
   public class ActionBlock : TimedAction
   {
     internal List<IAction> Actions { get; } = new List<IAction>();
