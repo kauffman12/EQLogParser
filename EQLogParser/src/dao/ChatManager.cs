@@ -54,8 +54,8 @@ namespace EQLogParser
           Directory.CreateDirectory(PLAYER_DIR);
         }
 
-        GetSavedChannels(ConfigUtil.PlayerName).ForEach(channel => ChannelCache[channel] = 1);
-        GetPlayers(ConfigUtil.PlayerName).ForEach(channel => PlayerCache[channel] = 1);
+        GetSavedChannels(CurrentPlayer).ForEach(channel => ChannelCache[channel] = 1);
+        GetPlayers(CurrentPlayer).ForEach(channel => PlayerCache[channel] = 1);
       }
       catch (IOException ex)
       {
@@ -341,6 +341,7 @@ namespace EQLogParser
                   foreach (var channel in temp[1].Split(','))
                   {
                     ChannelIndex[temp[0]][channel] = 1;
+                    UpdateChannelCache(channel); // incase main cache is out of sync with archive
                   }
                 }
               }
@@ -402,12 +403,22 @@ namespace EQLogParser
         {
           channels[chatType.Channel] = 1;
           ChannelIndexUpdated = true;
-          AddChannel(chatType.Channel);
         }
+
+        UpdateChannelCache(chatType.Channel);
       }
 
       AddPlayer(chatType.Sender);
       AddPlayer(chatType.Receiver);
+    }
+
+    private void UpdateChannelCache(string channel)
+    {
+      if (!ChannelCache.ContainsKey(channel))
+      {
+        ChannelCache[channel] = 1;
+        ChannelCacheUpdated = true;
+      }
     }
 
     private void SaveCurrent(bool closeArchive)
@@ -455,15 +466,6 @@ namespace EQLogParser
         result = ConfigUtil.ReadList(fileName);
       }
       return result;
-    }
-
-    private void AddChannel(string channel)
-    {
-      if (!ChannelCache.ContainsKey(channel))
-      {
-        ChannelCache[channel] = 1;
-        ChannelCacheUpdated = true;
-      }
     }
 
     private void AddPlayer(string value)
