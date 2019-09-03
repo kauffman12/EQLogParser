@@ -66,10 +66,22 @@ namespace EQLogParser
           {
             for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
             {
+              var updatedDamages = new List<ActionBlock>();
               var damages = DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
-              if (damages.Count > 0)
+              damages.ForEach(damage =>
               {
-                TankingGroups.Add(damages);
+                var updatedDamage = new ActionBlock() { BeginTime = damage.BeginTime };
+                updatedDamage.Actions.AddRange(damage.Actions.AsParallel().Where(item => item is DamageRecord record && IsValidDamage(record)));
+
+                if (updatedDamage.Actions.Count > 0)
+                {
+                  updatedDamages.Add(updatedDamage);
+                }
+              });
+
+              if (updatedDamages.Count > 0)
+              {
+                TankingGroups.Add(updatedDamages);
               }
             }
 
@@ -181,7 +193,9 @@ namespace EQLogParser
 
     internal bool IsValidDamage(DamageRecord record)
     {
-      return record != null && NpcNames.ContainsKey(record.Attacker) && (Helpers.IsPossiblePlayerName(record.Defender) || PlayerManager.Instance.IsPetOrPlayer(record.Defender));
+      return record != null && 
+        record.Defender == record.Attacker && PlayerManager.Instance.IsVerifiedPlayer(record.Attacker) 
+        || (NpcNames.ContainsKey(record.Attacker) && (Helpers.IsPossiblePlayerName(record.Defender) || PlayerManager.Instance.IsPetOrPlayer(record.Defender)));
     }
 
     private void ComputeTankingStats(GenerateStatsOptions options)
@@ -211,9 +225,7 @@ namespace EQLogParser
                 {
                   block.Actions.ForEach(action =>
                   {
-                    DamageRecord record = action as DamageRecord;
-
-                    if (IsValidDamage(record))
+                    if (action is DamageRecord record)
                     {
                       RaidTotals.Total += record.Total;
                       PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);

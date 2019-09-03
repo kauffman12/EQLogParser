@@ -6,14 +6,14 @@ namespace EQLogParser
 {
   class ActionProcessor<T>
   {
-    public delegate void ProcessActionCallback(T data);
+    public delegate void ProcessActionCallback(string source, T data);
     private List<T> Queue = new List<T>();
     private List<T> temp = null;
     private readonly object QueueLock = new object();
     private readonly ProcessActionCallback callback;
     private bool Stopped = false;
     private readonly int DelayTime = 10;
-    private readonly string Name;
+    private string Name;
 
     public ActionProcessor(string name, ProcessActionCallback callback)
     {
@@ -85,7 +85,7 @@ namespace EQLogParser
               break;
             }
 
-            callback(item);
+            callback(Name, item);
           }
         }
       }

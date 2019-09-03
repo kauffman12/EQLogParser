@@ -22,8 +22,10 @@ namespace EQLogParser
       new KeyValuePair<string, byte>("Stand", 1), new KeyValuePair<string, byte>("MESSAGE", 1)
     });
 
-    public static void Process(string line)
+    public static void Process(string source, string line)
     {
+      bool handled = false;
+
       try
       {
         int index = -1;
@@ -85,6 +87,7 @@ namespace EQLogParser
             if (cast != null)
             {
               DataManager.Instance.AddSpellCast(cast, pline.CurrentTime);
+              handled = true;
             }
           }
         }
@@ -130,6 +133,7 @@ namespace EQLogParser
             string timeString = line.Substring(1, 24);
             double currentTime = DateUtil.ParseDate(timeString, out _);
             DataManager.Instance.HandleSpellInterrupt(player, spell, currentTime);
+            handled = true;
           }
         }
         else // lands on messages
@@ -142,6 +146,7 @@ namespace EQLogParser
             pline.TimeString = pline.Line.Substring(1, 24);
             pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
             HandlePosessiveLandsOnOther(pline);
+            handled = true;
           }
           else if (firstSpace > -1)
           {
@@ -156,6 +161,7 @@ namespace EQLogParser
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
                 HandleOtherLandsOnCases(pline);
+                handled = true;
               }
             }
           }
@@ -176,6 +182,11 @@ namespace EQLogParser
       catch (ArgumentException ae)
       {
         LOG.Error(ae);
+      }
+
+      if (!handled)
+      {
+        DataManager.Instance.AddUnhandledLine(source, line);
       }
 
       EventsLineProcessed(line, line);

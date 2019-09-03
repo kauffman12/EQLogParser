@@ -130,7 +130,7 @@ namespace EQLogParser
     internal bool IsPlayerDamage(DamageRecord record)
     {
       bool valid = false;
-      if (record != null)
+      if (record != null && record.Defender != record.Attacker)
       {
         var isAttackerPlayer = IsPetOrPlayer(record.Attacker);
         var isDefenderPlayer = IsPetOrPlayer(record.Defender);

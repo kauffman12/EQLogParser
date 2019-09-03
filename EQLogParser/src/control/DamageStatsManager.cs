@@ -73,35 +73,44 @@ namespace EQLogParser
           {
             for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
             {
+              var updatedDamages = new List<ActionBlock>();
               var damages = DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
-              if (damages.Count > 0)
+              damages.ForEach(damage =>
               {
-                DamageGroups.Add(damages);
+                var updatedDamage = new ActionBlock() { BeginTime = damage.BeginTime };
+                updatedDamage.Actions.AddRange(damage.Actions.AsParallel().Where(item =>
+                {
+                  bool valid = false;
+                  if (item is DamageRecord record && IsValidDamage(record))
+                  {
+                    valid = true;
+
+                    // see if there's a pet mapping, check this first
+                    string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
+                    if (!string.IsNullOrEmpty(pname) || !string.IsNullOrEmpty(pname = record.AttackerOwner))
+                    {
+                      PlayerHasPet[pname] = 1;
+                      PetToPlayer[record.Attacker] = pname;
+                    }
+                  }
+
+                  return valid;
+                }));
+
+                if (updatedDamage.Actions.Count > 0)
+                {
+                  updatedDamages.Add(updatedDamage);
+                }
+              });
+
+              if (updatedDamages.Count > 0)
+              {
+                DamageGroups.Add(updatedDamages);
               }
 
               var group = DataManager.Instance.GetResistsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
               group.ForEach(block => Resists.AddRange(block.Actions));
             }
-
-            // Pre-processing for pets and hit counts
-            Parallel.ForEach(DamageGroups, group =>
-            {
-              Parallel.ForEach(group, block =>
-              {
-                block.Actions.ForEach(action =>
-                {
-                  DamageRecord record = action as DamageRecord;
-
-                  // see if there's a pet mapping, check this first
-                  string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
-                  if (!string.IsNullOrEmpty(pname) || !string.IsNullOrEmpty(pname = record.AttackerOwner))
-                  {
-                    PlayerHasPet[pname] = 1;
-                    PetToPlayer[record.Attacker] = pname;
-                  }
-                });
-              });
-            });
 
             ComputeDamageStats(options);
           }
@@ -304,7 +313,7 @@ namespace EQLogParser
       if (record != null)
       {
         isDefenderNpc = (activeNpcs && DataManager.Instance.GetNonPlayer(record.Defender) != null) || NpcNames.ContainsKey(record.Defender);
-        isAttackerPossiblyPlayer = Helpers.IsPossiblePlayerName(record.Attacker) || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
+        isAttackerPossiblyPlayer = record.Defender != record.Attacker && (Helpers.IsPossiblePlayerName(record.Attacker) || PlayerManager.Instance.IsPetOrPlayer(record.Attacker));
       }
 
       return isDefenderNpc && isAttackerPossiblyPlayer;
@@ -449,8 +458,7 @@ namespace EQLogParser
                 {
                   block.Actions.ForEach(action =>
                   {
-                    DamageRecord record = action as DamageRecord;
-                    if (IsValidDamage(record))
+                    if (action is DamageRecord record)
                     {
                       PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
 
