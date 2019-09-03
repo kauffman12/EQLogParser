@@ -47,7 +47,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.43";
+    private const string VERSION = "v1.5.44";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -96,6 +96,8 @@ namespace EQLogParser
 
         // update titles
         Title = APP_NAME + " " + VERSION;
+
+        ConfigUtil.Debug = true;
 
         // upate helper
         Helpers.SetDispatcher(Dispatcher);
@@ -798,6 +800,11 @@ namespace EQLogParser
 
             Helpers.SpellAbbrvCache.Clear(); // only really needed during big parse
             LOG.Info("Finished Loading Log File");
+
+            if (DataManager.Instance.GetUnhandledLines() is List<string> lines && lines.Count > 0)
+            {
+              Clipboard.SetDataObject(string.Join("\n", lines));
+            }
           }
           else
           {
@@ -1043,8 +1050,7 @@ namespace EQLogParser
 
     private void FileLoadingCallback(string line, long position)
     {
-      int sleep = (int)((DamageProcessor.Size() + HealingProcessor.Size() + CastProcessor.Size()) / 5000);
-      if (sleep > 10)
+      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + CastProcessor.Size()) / 5000) is int sleep && sleep > 10)
       {
         Thread.Sleep(4 * (sleep - 10));
       }
@@ -1054,8 +1060,7 @@ namespace EQLogParser
       if (PreLineParser.NeedProcessing(line))
       {
         // avoid having other things parse chat by accident
-        var chatType = ChatLineParser.Process(line);
-        if (chatType != null)
+        if (ChatLineParser.Process(line) is ChatType chatType)
         {
           PlayerChatManager.Add(chatType);
         }

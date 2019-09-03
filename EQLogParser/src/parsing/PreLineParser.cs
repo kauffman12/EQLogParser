@@ -49,6 +49,7 @@ namespace EQLogParser
           found = true;
         }
       }
+
       return found;
     }
 
@@ -62,8 +63,9 @@ namespace EQLogParser
         if (pline.ActionPart.Length > 20 && pline.ActionPart[10] == 'P' && pline.ActionPart[11] == 'l') // Player
         {
           PlayerManager.Instance.AddVerifiedPlayer(pline.ActionPart.Substring(19));
-          found = true;
         }
+
+        found = true; // ignore anything that starts with Targeted
       }
       else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 27 && (index = pline.ActionPart.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
         && (index + 9) == pline.ActionPart.Length && Helpers.IsPossiblePlayerName(pline.ActionPart, index))

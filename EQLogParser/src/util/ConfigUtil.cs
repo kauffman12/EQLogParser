@@ -9,6 +9,7 @@ namespace EQLogParser
 {
   class ConfigUtil
   {
+    public static bool Debug = false;
     public static string PlayerName;
     public static string ServerName;
 

@@ -58,10 +58,22 @@ namespace EQLogParser
           {
             for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
             {
+              var updatedHeals = new List<ActionBlock>();
               var heals = DataManager.Instance.GetHealsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
-              if (heals.Count > 0)
+              heals.ForEach(heal =>
               {
-                HealingGroups.Add(heals);
+                var updatedHeal = new ActionBlock() { BeginTime = heal.BeginTime };
+                updatedHeal.Actions.AddRange(heal.Actions.AsParallel().Where(item => item is HealRecord record && IsValidHeal(record)));
+
+                if (updatedHeal.Actions.Count > 0)
+                {
+                  updatedHeals.Add(updatedHeal);
+                }
+              });
+
+              if (updatedHeals.Count > 0)
+              {
+                HealingGroups.Add(updatedHeals);
               }
             }
 
@@ -118,29 +130,26 @@ namespace EQLogParser
             {
               if (action is HealRecord record)
               {
-                if (IsValidHeal(record))
+                PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
+                StatsUtil.UpdateStats(stats, record, block.BeginTime);
+                allStats[record.Healed] = stats;
+
+                PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.Healer, record.Type);
+                StatsUtil.UpdateStats(subStats, record, block.BeginTime);
+                allStats[record.Healer + "-" + record.Healed] = subStats;
+
+                var spellStatName = record.SubType ?? Labels.SELFHEAL;
+                PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, spellStatName, record.Type);
+                StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
+                allStats[stats.Name + "=" + spellStatName] = spellStats;
+
+                long value = 0;
+                if (totals.ContainsKey(record.Healed))
                 {
-                  PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
-                  StatsUtil.UpdateStats(stats, record, block.BeginTime);
-                  allStats[record.Healed] = stats;
-
-                  PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.Healer, record.Type);
-                  StatsUtil.UpdateStats(subStats, record, block.BeginTime);
-                  allStats[record.Healer + "-" + record.Healed] = subStats;
-
-                  var spellStatName = record.SubType ?? Labels.SELFHEAL;
-                  PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, spellStatName, record.Type);
-                  StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
-                  allStats[stats.Name + "=" + spellStatName] = spellStats;
-
-                  long value = 0;
-                  if (totals.ContainsKey(record.Healed))
-                  {
-                    value = totals[record.Healed];
-                  }
-
-                  totals[record.Healed] = record.Total + value;
+                  value = totals[record.Healed];
                 }
+
+                totals[record.Healed] = record.Total + value;
               }
             });
           });
@@ -292,9 +301,7 @@ namespace EQLogParser
                 {
                   block.Actions.ForEach(action =>
                   {
-                    HealRecord record = action as HealRecord;
-
-                    if (IsValidHeal(record))
+                    if (action is HealRecord record)
                     {
                       RaidTotals.Total += record.Total;
                       PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
