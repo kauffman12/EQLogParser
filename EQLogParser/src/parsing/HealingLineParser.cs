@@ -10,8 +10,10 @@ namespace EQLogParser
 
     private static readonly DateUtil DateUtil = new DateUtil();
 
-    public static void Process(string line)
+    public static void Process(string source, string line)
     {
+      bool handled = false;
+
       try
       {
         int index;
@@ -27,6 +29,7 @@ namespace EQLogParser
           {
             HealProcessedEvent e = new HealProcessedEvent() { Record = record, BeginTime = pline.CurrentTime };
             EventsHealProcessed(record, e);
+            handled = true;
           }
         }
       }
@@ -45,6 +48,11 @@ namespace EQLogParser
       catch (ArgumentException ae)
       {
         LOG.Error(ae);
+      }
+
+      if (!handled)
+      {
+        DataManager.Instance.AddUnhandledLine(source, line);
       }
 
       EventsLineProcessed(line, line);

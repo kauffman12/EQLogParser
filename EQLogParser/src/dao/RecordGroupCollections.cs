@@ -12,7 +12,7 @@ namespace EQLogParser
     override protected bool IsValid(RecordWrapper wrapper)
     {
       DamageRecord record = wrapper?.Record as DamageRecord;
-      return DamageStatsManager.Instance.IsValidDamage(record) && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled);
+      return record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled;
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)
@@ -43,8 +43,7 @@ namespace EQLogParser
 
     override protected bool IsValid(RecordWrapper wrapper)
     {
-      HealRecord record = wrapper?.Record as HealRecord;
-      return HealingStatsManager.IsValidHeal(record);
+      return true; // validated when healing groups are initially built in the manager
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)
@@ -68,8 +67,7 @@ namespace EQLogParser
 
     override protected bool IsValid(RecordWrapper wrapper)
     {
-      DamageRecord record = wrapper?.Record as DamageRecord;
-      return TankingStatsManager.Instance.IsValidDamage(record);
+      return true; // validated when damage groups are initially built in the manager
     }
 
     override protected DataPoint Create(RecordWrapper wrapper)

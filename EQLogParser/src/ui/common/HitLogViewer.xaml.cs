@@ -115,8 +115,10 @@ namespace EQLogParser
           Dictionary<string, byte> uniqueActions = new Dictionary<string, byte>();
           Dictionary<string, byte> uniqueTypes = new Dictionary<string, byte>();
 
-          ObservableCollection<string> acted = new ObservableCollection<string>();
-          acted.Add(ActedOption);
+          ObservableCollection<string> acted = new ObservableCollection<string>
+          {
+            ActedOption
+          };
 
           lock (CollectionLock)
           {

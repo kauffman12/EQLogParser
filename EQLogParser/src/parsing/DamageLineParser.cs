@@ -50,8 +50,10 @@ namespace EQLogParser
       HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]);
     }
 
-    public static void Process(string line)
+    public static void Process(string source, string line)
     {
+      bool handled = false;
+
       try
       {
         int index;
@@ -66,6 +68,7 @@ namespace EQLogParser
           {
             DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
             EventsDamageProcessed(record, e);
+            handled = true;
           }
         }
         else if (line.Length >= 49 && (index = line.IndexOf(", but miss", Parsing.ACTIONINDEX + 22, StringComparison.Ordinal)) > -1)
@@ -79,6 +82,7 @@ namespace EQLogParser
           {
             DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
             EventsDamageProcessed(record, e);
+            handled = true;
           }
         }
         else if (line.Length > 30 && line.Length < 102 && (index = line.IndexOf(" slain ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
@@ -87,6 +91,7 @@ namespace EQLogParser
           var timeString = line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString, out double precise);
           HandleSlain(actionPart, currentTime, index - Parsing.ACTIONINDEX);
+          handled = true;
         }
         else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
@@ -94,6 +99,7 @@ namespace EQLogParser
           var timeString = line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString, out double precise);
           HandleResist(actionPart, currentTime, index - Parsing.ACTIONINDEX);
+          handled = true;
         }
       }
       catch (ArgumentNullException ne)
@@ -111,6 +117,11 @@ namespace EQLogParser
       catch (ArgumentException ae)
       {
         LOG.Error(ae);
+      }
+
+      if (!handled)
+      {
+        DataManager.Instance.AddUnhandledLine(source, line);
       }
 
       EventsLineProcessed(line, line);
@@ -385,11 +396,6 @@ namespace EQLogParser
           // Needed to replace 'You' and 'you', etc
           record.Attacker = PlayerManager.Instance.ReplacePlayer(record.Attacker, record.Defender);
           record.Defender = PlayerManager.Instance.ReplacePlayer(record.Defender, record.Attacker);
-
-          if (record.Attacker == record.Defender)
-          {
-            record = null;
-          }
         }
       }
 
@@ -440,7 +446,7 @@ namespace EQLogParser
 
       if (attacker != null && defender != null)
       {
-        record = BuildRecord(attacker, defender, damage, attackerOwner, null, spell, Labels.DD);
+        record = BuildRecord(attacker, defender, damage, attackerOwner, null, spell, GetTypeFromSpell(spell, Labels.DD));
       }
 
       return record;
