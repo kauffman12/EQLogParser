@@ -97,7 +97,7 @@ namespace EQLogParser
         // update titles
         Title = APP_NAME + " " + VERSION;
 
-        ConfigUtil.Debug = true;
+        ConfigUtil.Debug = false;
 
         // upate helper
         Helpers.SetDispatcher(Dispatcher);
