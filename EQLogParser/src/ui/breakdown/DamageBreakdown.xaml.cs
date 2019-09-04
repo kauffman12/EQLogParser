@@ -22,6 +22,7 @@ namespace EQLogParser
     private bool CurrentGroupProcsSetting = true;
     private bool CurrentGroupResistedSetting = true;
     private bool CurrentShowPets = true;
+    private static bool Running = false;
     private Dictionary<string, PlayerSubStats> GroupedDD = new Dictionary<string, PlayerSubStats>();
     private Dictionary<string, PlayerSubStats> GroupedDoT = new Dictionary<string, PlayerSubStats>();
     private Dictionary<string, PlayerSubStats> GroupedProcs = new Dictionary<string, PlayerSubStats>();
@@ -31,7 +32,6 @@ namespace EQLogParser
     private Dictionary<string, List<PlayerSubStats>> UnGroupedProcs = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> UnGroupedResisted = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
-    private static bool Running = false;
 
     public DamageBreakdown(CombinedStats currentStats)
     {
@@ -49,17 +49,18 @@ namespace EQLogParser
       }
     }
 
-    private new void Display(List<PlayerStats> selectedStats = null)
+    protected override void Display(List<PlayerStats> selectedStats = null)
     {
       if (Running == false && ChildStats != null && RaidStats != null)
       {
         Running = true;
-        Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(true));
+        groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = groupResisted.IsEnabled = showPets.IsEnabled = false;
 
-        Task.Delay(5).ContinueWith(task =>
+        Task.Delay(10).ContinueWith(task =>
         {
           try
           {
+            Helpers.SetBusy(true);
             ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
 
             // initial load
@@ -127,7 +128,8 @@ namespace EQLogParser
           }
           finally
           {
-            Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(false));
+            Helpers.SetBusy(false);
+            Dispatcher.InvokeAsync(() => groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = groupResisted.IsEnabled = showPets.IsEnabled = true);
             Running = false;
           }
         }, TaskScheduler.Default);

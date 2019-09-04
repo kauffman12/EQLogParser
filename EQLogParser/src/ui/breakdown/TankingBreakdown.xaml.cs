@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 
 namespace EQLogParser
 {
@@ -15,6 +14,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    List<PlayerStats> PlayerStats;
     private PlayerStats RaidStats;
     private static bool Running = false;
 
@@ -29,33 +29,30 @@ namespace EQLogParser
     {
       if (selectedStats != null)
       {
-        Display(selectedStats);
+        PlayerStats = selectedStats;
+        Display();
       }
     }
 
-    private new void Display(List<PlayerStats> selectedStats = null)
+    protected override void Display(List<PlayerStats> _ = null)
     {
       if (Running == false && RaidStats != null)
       {
         Running = true;
-        Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(true));
-
-        Task.Delay(5).ContinueWith(task =>
+        Task.Delay(10).ContinueWith(task =>
         {
           try
           {
-            ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
+            Helpers.SetBusy(true);
 
-            // initial load
-            if (selectedStats != null)
+            if (PlayerStats != null)
             {
-              foreach (var playerStat in selectedStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
+              ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
+
+              foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
               {
-                Dispatcher.InvokeAsync(() =>
-                {
-                  list.Add(playerStat);
-                  SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
-                });
+                list.Add(playerStat);
+                SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
               }
 
               Dispatcher.InvokeAsync(() => playerDamageDataGrid.ItemsSource = list);
@@ -80,7 +77,7 @@ namespace EQLogParser
           }
           finally
           {
-            Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(false));
+            Helpers.SetBusy(false);
             Running = false;
           }
         }, TaskScheduler.Default);

@@ -39,22 +39,23 @@ namespace EQLogParser
       }
     }
 
-    private void Display()
+    protected override void Display(List<PlayerStats> _ = null)
     {
-      if (Running == false)
+      if (Running == false && PlayerStats != null)
       {
         Running = true;
-        Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(true));
+        choicesList.IsEnabled = false;
 
-        Task.Delay(20).ContinueWith(task =>
+        Task.Delay(10).ContinueWith(task =>
         {
           try
           {
-            ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
+            Helpers.SetBusy(true);
 
-            // initial load
             if (PlayerStats != null)
             {
+              ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
+
               foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
               {
                 list.Add(playerStat);
@@ -68,13 +69,13 @@ namespace EQLogParser
                   SortSubStats(playerStat.SubStats2.Values.ToList()).ForEach(subStat => list.Add(subStat));
                 }
               }
-            }
 
-            Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list, DispatcherPriority.Background);
+              Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
 
-            if (CurrentColumn != null)
-            {
-              Dispatcher.InvokeAsync(() => CurrentColumn.SortDirection = CurrentSortDirection);
+              if (CurrentColumn != null)
+              {
+                Dispatcher.InvokeAsync(() => CurrentColumn.SortDirection = CurrentSortDirection);
+              }
             }
           }
           catch (ArgumentNullException ane)
@@ -91,7 +92,8 @@ namespace EQLogParser
           }
           finally
           {
-            Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(false));
+            Helpers.SetBusy(false);
+            Dispatcher.InvokeAsync(() => choicesList.IsEnabled = true);
             Running = false;
           }
         }, TaskScheduler.Default);
