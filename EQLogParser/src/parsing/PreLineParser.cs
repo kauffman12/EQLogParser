@@ -1,10 +1,36 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace EQLogParser
 {
   class PreLineParser
   {
+    private static readonly List<string> JunkList = new List<string>
+    {
+      "Right click on",
+      "Stand close to and right click on",
+      "GUILD MOTD",
+      "Beginning to memorize ",
+      "Welcome to EverQuest!",
+      "MESSAGE OF THE DAY",
+      "Autojoining channels",
+      "The Guildhall Portal has been aligned",
+      "The raid leader has",
+      ":", // emote
+      "Begone!", // teleports
+      "Fellowship MOTD:",
+      "The energy fades away as you leave the healing pool",
+      "The corpse is too far away to summon",
+      "The system is currently unable to grant your reward",
+      "Players in EverQuest",
+      "---------------------------",
+      "There is ",
+      "There are ",
+      "The item was successfully converted"
+    };
+
     private const int MIN_LINE_LENGTH = 33;
 
     internal static bool NeedProcessing(string line)
@@ -87,10 +113,7 @@ namespace EQLogParser
 
     private static bool CheckForJunk(ProcessLine pline)
     {
-      return pline.ActionPart.StartsWith("Right click on", StringComparison.OrdinalIgnoreCase) ||
-        pline.ActionPart.StartsWith("Stand close to and right click on", StringComparison.OrdinalIgnoreCase) ||
-        pline.ActionPart.StartsWith("GUILD MOTD", StringComparison.OrdinalIgnoreCase) ||
-        pline.ActionPart.StartsWith("Beginning to memorize ", StringComparison.OrdinalIgnoreCase);
+      return JunkList.Any(item => pline.ActionPart.StartsWith(item, StringComparison.OrdinalIgnoreCase));
     }
   }
 }

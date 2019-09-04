@@ -91,7 +91,8 @@ namespace EQLogParser
             }
           }
         }
-        else if (line.EndsWith(" spell is interrupted.", StringComparison.Ordinal))
+
+        if (!handled && line.EndsWith(" spell is interrupted.", StringComparison.Ordinal))
         {
           //[Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
           //[Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
@@ -136,7 +137,7 @@ namespace EQLogParser
             handled = true;
           }
         }
-        else // lands on messages
+        else if (!handled) // lands on messages
         {
           int firstSpace = line.IndexOf(" ", Parsing.ACTIONINDEX, StringComparison.Ordinal);
           if (firstSpace > -1 && line[firstSpace - 2] == '\'' && line[firstSpace - 1] == 's')
@@ -153,7 +154,7 @@ namespace EQLogParser
             string player = line.Substring(Parsing.ACTIONINDEX, firstSpace - Parsing.ACTIONINDEX);
             if (!IgnoreMap.ContainsKey(player))
             {
-              if (line.Length > firstSpace + 6)
+              if (line.Length > firstSpace + 4)
               {
                 ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
                 pline.OptionalIndex = firstSpace + 1 - Parsing.ACTIONINDEX;
