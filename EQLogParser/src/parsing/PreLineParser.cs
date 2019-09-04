@@ -13,7 +13,7 @@ namespace EQLogParser
       if (line != null && line.Length > MIN_LINE_LENGTH)
       {
         ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
-        valid = !(CheckForPlayersOrNPCs(pline) || CheckForPetLeader(pline));
+        valid = !(CheckForPlayersOrNPCs(pline) || CheckForPetLeader(pline) || CheckForJunk(pline));
       }
 
       return valid;
@@ -83,6 +83,14 @@ namespace EQLogParser
       }
 
       return found;
+    }
+
+    private static bool CheckForJunk(ProcessLine pline)
+    {
+      return pline.ActionPart.StartsWith("Right click on", StringComparison.OrdinalIgnoreCase) ||
+        pline.ActionPart.StartsWith("Stand close to and right click on", StringComparison.OrdinalIgnoreCase) ||
+        pline.ActionPart.StartsWith("GUILD MOTD", StringComparison.OrdinalIgnoreCase) ||
+        pline.ActionPart.StartsWith("Beginning to memorize ", StringComparison.OrdinalIgnoreCase);
     }
   }
 }
