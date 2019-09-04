@@ -37,23 +37,24 @@ namespace EQLogParser
       }
     }
 
-    private new void Display(List<PlayerStats> _ = null)
+    protected override void Display(List<PlayerStats> _ = null)
     {
       if (Running == false)
       {
         Running = true;
-        Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(true));
+        choicesList.IsEnabled = false;
 
-        Task.Delay(5).ContinueWith(task =>
+        Task.Delay(10).ContinueWith(task =>
         {
           try
           {
-            ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
+            Helpers.SetBusy(true);
 
-            // initial load
             if (PlayerStats != null)
             {
+              ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
               List<PlayerStats> receivedHealing = new List<PlayerStats>();
+
               PlayerStats.ForEach(selected =>
               {
                 if (selected.SubStats2.Count > 0)
@@ -102,7 +103,8 @@ namespace EQLogParser
           }
           finally
           {
-            Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(false));
+            Helpers.SetBusy(false);
+            Dispatcher.InvokeAsync(() => choicesList.IsEnabled = true);
             Running = false;
           }
         }, TaskScheduler.Default);
