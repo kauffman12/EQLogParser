@@ -7,8 +7,6 @@ namespace EQLogParser
   class CastLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    public static event EventHandler<string> EventsLineProcessed;
-
     private static readonly DateUtil DateUtil = new DateUtil();
 
     public static ConcurrentDictionary<string, byte> IgnoreMap = new ConcurrentDictionary<string, byte>(
@@ -189,8 +187,6 @@ namespace EQLogParser
       {
         DataManager.Instance.AddUnhandledLine(source, line);
       }
-
-      EventsLineProcessed(line, line);
     }
 
     private static void HandleOtherLandsOnCases(ProcessLine pline)

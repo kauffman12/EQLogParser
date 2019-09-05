@@ -8,7 +8,6 @@ namespace EQLogParser
   class MiscLineParser
   {
     public static event EventHandler<LootProcessedEvent> EventsLootProcessed;
-    public static event EventHandler<string> EventsLineProcessed;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
@@ -95,8 +94,6 @@ namespace EQLogParser
       {
         DataManager.Instance.AddUnhandledLine(source, line);
       }
-
-      EventsLineProcessed?.Invoke(line, line);
     }
 
     private static void ParseCurrency(string[] pieces, int startIndex, int toIndex, out string item, out uint count)

@@ -39,6 +39,9 @@ namespace EQLogParser
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
+      CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
+      CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
+
       DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
     }
@@ -239,8 +242,8 @@ namespace EQLogParser
           selectedName = playerStats.OrigName;
         }
 
-        UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
-        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
+        EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
+        EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
       }
       else
       {
