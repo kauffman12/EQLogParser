@@ -57,7 +57,7 @@ namespace EQLogParser
         uint value = 0;
         DataTemplate countTemplate = null;
 
-        switch(Header)
+        switch (Header)
         {
           case "Hits":
             value = row.Count;
@@ -94,7 +94,7 @@ namespace EQLogParser
       return template ?? base.SelectTemplate(item, container);
     }
   }
-  
+
   public static class TextBoxBehavior
   {
     public static readonly DependencyProperty TripleClickSelectAllProperty = DependencyProperty.RegisterAttached("TripleClickSelectAll", typeof(bool), typeof(TextBoxBehavior), new PropertyMetadata(false, OnPropertyChanged));

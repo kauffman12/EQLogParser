@@ -220,7 +220,7 @@ namespace EQLogParser
             };
 
             record.SubType = string.IsNullOrEmpty(spell) ? Labels.SELFHEAL : string.Intern(spell);
- 
+
             if (part[part.Length - 1] == ')')
             {
               // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
