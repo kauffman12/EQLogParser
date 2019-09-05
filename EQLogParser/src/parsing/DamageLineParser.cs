@@ -9,12 +9,13 @@ namespace EQLogParser
 {
   class DamageLineParser
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
     public static event EventHandler<ResistProcessedEvent> EventsResistProcessed;
     public static event EventHandler<string> EventsLineProcessed;
 
     private enum ParseType { HASTAKEN, YOUHAVETAKEN, POINTSOF, UNKNOWN };
+
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly Regex CheckEyeRegex = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();

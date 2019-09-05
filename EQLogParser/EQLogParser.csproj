@@ -180,6 +180,7 @@
     <Compile Include="src\dao\ChatManager.cs" />
     <Compile Include="src\control\HealingStatsManager.cs" />
     <Compile Include="src\dao\PlayerManager.cs" />
+    <Compile Include="src\parsing\MiscLineParser.cs" />
     <Compile Include="src\parsing\PreLineParser.cs" />
     <Compile Include="src\ui\common\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>

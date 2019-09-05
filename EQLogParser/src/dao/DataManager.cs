@@ -32,6 +32,7 @@ namespace EQLogParser
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllResists = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> PlayerDeaths = new List<ActionBlock>();
 
     private readonly Dictionary<string, SpellData> AllUniqueSpellsCache = new Dictionary<string, SpellData>();
@@ -116,8 +117,9 @@ namespace EQLogParser
         AllResists.Clear();
         PlayerDamageBlocks.Clear();
         AllHealBlocks.Clear();
+        AllLootBlocks.Clear();
         PlayerDeaths.Clear();
-        EventsClearedActiveData(this, true);
+        EventsClearedActiveData?.Invoke(this, true);
       }
     }
 
@@ -167,7 +169,7 @@ namespace EQLogParser
     internal void AddNonPlayerMapBreak(string text)
     {
       NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAKTIME, Name = string.Intern(text) };
-      EventsNewNonPlayer(this, divider);
+      EventsNewNonPlayer?.Invoke(this, divider);
     }
 
     internal void AddPlayerDeath(string player, string npc, double beginTime)
@@ -193,6 +195,11 @@ namespace EQLogParser
       record.Healer = PlayerManager.Instance.ReplacePlayer(record.Healer, record.Healed);
       record.Healed = PlayerManager.Instance.ReplacePlayer(record.Healed, record.Healer);
       AddAction(AllHealBlocks, record, beginTime);
+    }
+
+    internal void AddLootRecord(LootRecord record, double beginTime)
+    {
+      AddAction(AllLootBlocks, record, beginTime);
     }
 
     internal void HandleSpellInterrupt(string player, string spell, double beginTime)
@@ -386,7 +393,7 @@ namespace EQLogParser
       if (!ActiveNonPlayer.ContainsKey(name))
       {
         ActiveNonPlayer[name] = npc;
-        EventsNewNonPlayer(this, npc);
+        EventsNewNonPlayer?.Invoke(this, npc);
       }
     }
 
@@ -397,7 +404,7 @@ namespace EQLogParser
 
       if (removed)
       {
-        EventsRemovedNonPlayer(this, name);
+        EventsRemovedNonPlayer?.Invoke(this, name);
       }
     }
 

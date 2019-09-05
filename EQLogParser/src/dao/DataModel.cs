@@ -122,6 +122,11 @@ namespace EQLogParser
     public HealRecord Record { get; set; }
   }
 
+  public class LootProcessedEvent : TimedAction
+  {
+    public LootRecord Record { get; set; }
+  }
+
   public class ResistProcessedEvent : TimedAction
   {
     public ResistRecord Record { get; set; }
@@ -193,6 +198,13 @@ namespace EQLogParser
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
     public string DefenderOwner { get; set; }
+  }
+
+  public class LootRecord : IAction
+  {
+    public string Item { get; set; }
+    public uint Quantity { get; set; }
+    public string Player { get; set; }
   }
 
   internal class HitLogRow
