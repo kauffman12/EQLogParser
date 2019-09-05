@@ -28,7 +28,8 @@ namespace EQLogParser
       "---------------------------",
       "There is ",
       "There are ",
-      "The item was successfully converted"
+      "The item was successfully converted",
+      "The guild banner "
     };
 
     private const int MIN_LINE_LENGTH = 33;

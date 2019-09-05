@@ -93,11 +93,6 @@ namespace EQLogParser
       return npcDataGrid.SelectedItems.Cast<NonPlayer>().Where(item => !item.Name.Contains("Inactivity >")).ToList();
     }
 
-    public void SelectLastRow()
-    {
-      npcDataGrid.Items.MoveCurrentToLast();
-    }
-
     private void AddNonPlayer(NonPlayer npc)
     {
       Dispatcher.InvokeAsync(() =>
