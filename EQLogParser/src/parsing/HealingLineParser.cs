@@ -4,10 +4,10 @@ namespace EQLogParser
 {
   class HealingLineParser
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     public static event EventHandler<string> EventsLineProcessed;
     public static event EventHandler<HealProcessedEvent> EventsHealProcessed;
 
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
 
     public static void Process(string source, string line)

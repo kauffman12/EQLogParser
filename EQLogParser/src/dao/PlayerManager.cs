@@ -54,7 +54,7 @@ namespace EQLogParser
     {
       if (!IsVerifiedPlayer(name) && !IsVerifiedPet(name) && TakenPetOrPlayerAction.TryAdd(name, 1))
       {
-        EventsNewTakenPetOrPlayerAction(this, name);
+        EventsNewTakenPetOrPlayerAction?.Invoke(this, name);
       }
     }
 
@@ -63,7 +63,7 @@ namespace EQLogParser
       if (!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player)
       {
         PetToPlayer[pet] = player;
-        EventsNewPetMapping(this, new PetMapping() { Pet = pet, Owner = player });
+        EventsNewPetMapping?.Invoke(this, new PetMapping() { Pet = pet, Owner = player });
         PetMappingUpdated = true;
       }
     }
@@ -75,7 +75,7 @@ namespace EQLogParser
 
       if (VerifiedPets.TryAdd(name, 1))
       {
-        EventsNewVerifiedPet(this, name);
+        EventsNewVerifiedPet?.Invoke(this, name);
       }
     }
 
@@ -86,7 +86,7 @@ namespace EQLogParser
 
       if (VerifiedPlayers.TryAdd(name, 1))
       {
-        EventsNewVerifiedPlayer(this, name);
+        EventsNewVerifiedPlayer?.Invoke(this, name);
         PlayersUpdated = true;
       }
     }
@@ -191,7 +191,7 @@ namespace EQLogParser
           PetToPlayer.TryRemove(name, out _);
         }
 
-        EventsRemoveVerifiedPet(this, name);
+        EventsRemoveVerifiedPet?.Invoke(this, name);
       }
     }
 
@@ -213,7 +213,7 @@ namespace EQLogParser
           PetToPlayer.TryRemove(found, out _);
         }
 
-        EventsRemoveVerifiedPlayer(this, name);
+        EventsRemoveVerifiedPlayer?.Invoke(this, name);
       }
     }
 
@@ -351,7 +351,7 @@ namespace EQLogParser
 
       if (newLikelyPlayer)
       {
-        EventsNewLikelyPlayer(this, attacker);
+        EventsNewLikelyPlayer?.Invoke(this, attacker);
       }
     }
 

@@ -47,21 +47,24 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.44";
+    private const string VERSION = "v1.5.45";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
     private static long CastLineCount = 0;
     private static long DamageLineCount = 0;
     private static long HealLineCount = 0;
+    private static long MiscLineCount = 0;
     private static long CastLinesProcessed = 0;
     private static long DamageLinesProcessed = 0;
     private static long HealLinesProcessed = 0;
+    private static long MiscLinesProcessed = 0;
     private static long FilePosition = 0;
 
     private static ActionProcessor<string> CastProcessor = null;
     private static ActionProcessor<string> DamageProcessor = null;
     private static ActionProcessor<string> HealingProcessor = null;
+    private static ActionProcessor<string> MiscProcessor = null;
 
     // progress window
     private static DateTime StartLoadTime;
@@ -193,10 +196,12 @@ namespace EQLogParser
         CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
         DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
         HealingLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
+        MiscLineParser.EventsLineProcessed += (sender, data) => MiscLinesProcessed++;
 
         HealingLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record, data.BeginTime);
         DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.BeginTime);
         DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record, data.BeginTime);
+        MiscLineParser.EventsLootProcessed += (sender, data) => DataManager.Instance.AddLootRecord(data.Record, data.BeginTime);
 
         (npcWindow.Content as NpcTable).EventsSelectionChange += (sender, data) => ComputeStats();
 
@@ -767,6 +772,7 @@ namespace EQLogParser
           double castPercent = CastLineCount > 0 ? Math.Round((double)CastLinesProcessed / CastLineCount * 100, 1) : 100;
           double damagePercent = DamageLineCount > 0 ? Math.Round((double)DamageLinesProcessed / DamageLineCount * 100, 1) : 100;
           double healPercent = HealLineCount > 0 ? Math.Round((double)HealLinesProcessed / HealLineCount * 100, 1) : 100;
+          double miscPercent = MiscLineCount > 0 ? Math.Round((double)MiscLinesProcessed / MiscLineCount * 100, 1) : 100;
           bytesReadLabel.Content = filePercent + "%";
 
           if (EQLogReader.FileLoadComplete)
@@ -775,23 +781,18 @@ namespace EQLogParser
             {
               bytesReadTitle.Content = "Monitoring:";
               bytesReadLabel.Content = "Active";
-              bytesReadLabel.Foreground = GOOD_BRUSH;
             }
             else if (filePercent >= 100 && CurrentLogOption == LogOption.ARCHIVE)
             {
               bytesReadTitle.Content = "Archiving:";
               bytesReadLabel.Content = "Complete";
-              bytesReadLabel.Foreground = GOOD_BRUSH;
             }
           }
 
-          if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100) ||
-          CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
+          if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100 && miscPercent >= 100) ||
+            CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
           {
-            if (npcWindow.IsOpen)
-            {
-              (npcWindow.Content as NpcTable).SelectLastRow();
-            }
+            bytesReadLabel.Foreground = GOOD_BRUSH;
 
             if (IsDamageOverlayEnabled)
             {
@@ -977,6 +978,7 @@ namespace EQLogParser
           CastProcessor = new ActionProcessor<string>("CastProcessor", CastLineParser.Process);
           DamageProcessor = new ActionProcessor<string>("DamageProcessor", DamageLineParser.Process);
           HealingProcessor = new ActionProcessor<string>("HealProcessor", HealingLineParser.Process);
+          MiscProcessor = new ActionProcessor<string>("MiscProcessor", MiscLineParser.Process);
 
           bytesReadLabel.Foreground = BRIGHT_TEXT_BRUSH;
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
@@ -1050,7 +1052,7 @@ namespace EQLogParser
 
     private void FileLoadingCallback(string line, long position)
     {
-      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + CastProcessor.Size()) / 5000) is int sleep && sleep > 10)
+      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 5000) is int sleep && sleep > 10)
       {
         Thread.Sleep(4 * (sleep - 10));
       }
@@ -1072,6 +1074,8 @@ namespace EQLogParser
           DamageProcessor.Add(line);
           HealLineCount += 1;
           HealingProcessor.Add(line);
+          MiscLineCount += 1;
+          MiscProcessor.Add(line);
         }
       }
     }
@@ -1082,6 +1086,7 @@ namespace EQLogParser
       CastProcessor?.Stop();
       DamageProcessor?.Stop();
       HealingProcessor?.Stop();
+      MiscProcessor?.Stop();
     }
 
     private void WindowIcon_Loaded(object sender, RoutedEventArgs e)
