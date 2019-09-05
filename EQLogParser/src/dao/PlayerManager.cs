@@ -98,11 +98,6 @@ namespace EQLogParser
       return list;
     }
 
-    internal static string GetClassName(SpellClass type)
-    {
-      return Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), type), CultureInfo.CurrentCulture);
-    }
-
     internal string GetPlayerClass(string name)
     {
       string className = "";
@@ -146,11 +141,6 @@ namespace EQLogParser
       }
 
       return valid;
-    }
-
-    internal bool IsLikelyPlayer(string name)
-    {
-      return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || LikelyPlayer.ContainsKey(name));
     }
 
     internal bool IsVerifiedPet(string name)
@@ -353,6 +343,11 @@ namespace EQLogParser
       {
         EventsNewLikelyPlayer?.Invoke(this, attacker);
       }
+    }
+
+    private bool IsLikelyPlayer(string name)
+    {
+      return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || LikelyPlayer.ContainsKey(name));
     }
 
     private class SpellClassCounter

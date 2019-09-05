@@ -11,7 +11,6 @@ namespace EQLogParser
   {
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
     public static event EventHandler<ResistProcessedEvent> EventsResistProcessed;
-    public static event EventHandler<string> EventsLineProcessed;
 
     private enum ParseType { HASTAKEN, YOUHAVETAKEN, POINTSOF, UNKNOWN };
 
@@ -124,8 +123,6 @@ namespace EQLogParser
       {
         DataManager.Instance.AddUnhandledLine(source, line);
       }
-
-      EventsLineProcessed(line, line);
     }
 
     private static void HandleSlain(string part, double currentTime, int optionalIndex)

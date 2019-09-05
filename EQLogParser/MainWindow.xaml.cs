@@ -51,16 +51,7 @@ namespace EQLogParser
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
-    private static long CastLineCount = 0;
-    private static long DamageLineCount = 0;
-    private static long HealLineCount = 0;
-    private static long MiscLineCount = 0;
-    private static long CastLinesProcessed = 0;
-    private static long DamageLinesProcessed = 0;
-    private static long HealLinesProcessed = 0;
-    private static long MiscLinesProcessed = 0;
     private static long FilePosition = 0;
-
     private static ActionProcessor<string> CastProcessor = null;
     private static ActionProcessor<string> DamageProcessor = null;
     private static ActionProcessor<string> HealingProcessor = null;
@@ -192,11 +183,6 @@ namespace EQLogParser
 
         parseList.ItemsSource = AvailableParses;
         parseList.SelectedIndex = -1;
-
-        CastLineParser.EventsLineProcessed += (sender, data) => CastLinesProcessed++;
-        DamageLineParser.EventsLineProcessed += (sender, data) => DamageLinesProcessed++;
-        HealingLineParser.EventsLineProcessed += (sender, data) => HealLinesProcessed++;
-        MiscLineParser.EventsLineProcessed += (sender, data) => MiscLinesProcessed++;
 
         HealingLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record, data.BeginTime);
         DamageLineParser.EventsDamageProcessed += (sender, data) => DataManager.Instance.AddDamageRecord(data.Record, data.BeginTime);
@@ -769,10 +755,6 @@ namespace EQLogParser
           bytesReadTitle.Content = "Reading:";
           processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          double castPercent = CastLineCount > 0 ? Math.Round((double)CastLinesProcessed / CastLineCount * 100, 1) : 100;
-          double damagePercent = DamageLineCount > 0 ? Math.Round((double)DamageLinesProcessed / DamageLineCount * 100, 1) : 100;
-          double healPercent = HealLineCount > 0 ? Math.Round((double)HealLinesProcessed / HealLineCount * 100, 1) : 100;
-          double miscPercent = MiscLineCount > 0 ? Math.Round((double)MiscLinesProcessed / MiscLineCount * 100, 1) : 100;
           bytesReadLabel.Content = filePercent + "%";
 
           if (EQLogReader.FileLoadComplete)
@@ -789,7 +771,8 @@ namespace EQLogParser
             }
           }
 
-          if (((filePercent >= 100 && castPercent >= 100 && damagePercent >= 100 && healPercent >= 100 && miscPercent >= 100) ||
+          if (((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100 
+            && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) || 
             CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
           {
             bytesReadLabel.Foreground = GOOD_BRUSH;
@@ -983,7 +966,7 @@ namespace EQLogParser
           bytesReadLabel.Foreground = BRIGHT_TEXT_BRUSH;
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
           StartLoadTime = DateTime.Now;
-          CastLineCount = DamageLineCount = HealLineCount = CastLinesProcessed = DamageLinesProcessed = HealLinesProcessed = FilePosition = 0;
+          FilePosition = 0;
 
           string name = "Uknown";
           string server = "Uknown";
@@ -1068,13 +1051,9 @@ namespace EQLogParser
         }
         else if (CurrentLogOption != LogOption.ARCHIVE)
         {
-          CastLineCount += 1;
           CastProcessor.Add(line);
-          DamageLineCount += 1;
           DamageProcessor.Add(line);
-          HealLineCount += 1;
           HealingProcessor.Add(line);
-          MiscLineCount += 1;
           MiscProcessor.Add(line);
         }
       }

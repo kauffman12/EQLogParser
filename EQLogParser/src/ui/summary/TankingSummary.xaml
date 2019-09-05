@@ -43,67 +43,16 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calculator" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-            <MenuItem Header="Selected" IsEnabled="False" Click="DataGridShowSpellCastsClick"/>
-            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
-            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridSpellCastsByClassClick"/>
           </MenuItem>
           <MenuItem x:Name="menuItemShowHealingBreakdown" IsEnabled="False" Header="Received Healing Breakdown">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showHealingBreakdownIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Heart" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-            <MenuItem Header="Selected" IsEnabled="False" Click="DataGridShowBreakdown2Click"/>
-            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
-            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridShowBreakdown2ByClassClick"/>
           </MenuItem>
           <MenuItem x:Name="menuItemShowTankingBreakdown" IsEnabled="False" Header="Tanking Breakdown">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showTankingBreakdownIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Shield" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-            <MenuItem Header="Selected" IsEnabled="False" Click="DataGridShowBreakdownClick"/>
-            <MenuItem Tag="BRD" Header="Bard" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="BST" Header="Beastlord" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="BER" Header="Berserker" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="CLR" Header="Cleric" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="DRU" Header="Druid" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="ENC" Header="Enchanter" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="MAG" Header="Magician" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="MNK" Header="Monk" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="NEC" Header="Necromancer" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="PAL" Header="Paladin" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="RNG" Header="Ranger" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="ROG" Header="Rogue" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="SHM" Header="Shaman" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="SHD" Header="Shadow Knight" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="WAR" Header="Warrior" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
-            <MenuItem Tag="WIZ" Header="Wizard" IsEnabled="False" Click="DataGridShowBreakdownByClassClick"/>
           </MenuItem>
           <MenuItem x:Name="menuItemShowTankingLog" IsEnabled="False" Header="Tanking Log" Click="DataGridTankingLogClick">
             <MenuItem.Icon>

@@ -26,6 +26,9 @@ namespace EQLogParser
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
+      CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
+      CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
+
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
     }
@@ -114,8 +117,8 @@ namespace EQLogParser
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyHealParseToEQClick.IsEnabled = true;
-        UpdateClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
-        UpdateClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats.UniqueClasses);
+        EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
+        EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats.UniqueClasses);
       }
       else
       {
