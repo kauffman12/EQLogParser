@@ -47,8 +47,8 @@ namespace EQLogParser
       {
         var record = (HitLogRow)item;
         return (string.IsNullOrEmpty(CurrentTypeFilter) || CurrentTypeFilter == record.Type) &&
-        (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) && 
-        (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) && 
+        (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) &&
+        (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) &&
         (CurrentShowPetsFilter || !record.IsPet);
       });
 

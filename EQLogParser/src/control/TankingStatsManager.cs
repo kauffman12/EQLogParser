@@ -193,8 +193,8 @@ namespace EQLogParser
 
     internal bool IsValidDamage(DamageRecord record)
     {
-      return record != null && 
-        record.Defender == record.Attacker && PlayerManager.Instance.IsVerifiedPlayer(record.Attacker) 
+      return record != null &&
+        record.Defender == record.Attacker && PlayerManager.Instance.IsVerifiedPlayer(record.Attacker)
         || (NpcNames.ContainsKey(record.Attacker) && (Helpers.IsPossiblePlayerName(record.Defender) || PlayerManager.Instance.IsPetOrPlayer(record.Defender)));
     }
 

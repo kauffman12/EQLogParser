@@ -12,7 +12,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly List<string> Currency = new List<string> { "platinum", "gold", "silver", "copper" };
-    private static readonly Dictionary<char, uint> Rates = new Dictionary<char, uint>() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 }  };
+    private static readonly Dictionary<char, uint> Rates = new Dictionary<char, uint>() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
     private const string MasterLooterText = "The master looter, ";
     private const string YouReceiveText = "You receive ";
     private const string YourSplitText = " as your split ";
