@@ -36,19 +36,33 @@ namespace EQLogParser
       }
     }
 
-    internal static void UpdateClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
+    internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
     {
-      foreach (var item in menu.Items)
+      MenuItem selected = new MenuItem() { IsEnabled = false, Header = "Selected" };
+      selected.Click += new RoutedEventHandler(selectedHandler);
+      parent.Items.Add(selected);
+
+      PlayerManager.Instance.GetClassList().ForEach(name =>
       {
-        MenuItem menuItem = item as MenuItem;
-        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses != null && uniqueClasses.ContainsKey(menuItem.Header as string);
-      }
+        MenuItem item = new MenuItem() { IsEnabled = false, Header = name };
+        item.Click += new RoutedEventHandler(classHandler);
+        parent.Items.Add(item);
+      });
     }
 
     internal void Clear()
     {
       TheTitle.Content = DEFAULT_TABLE_LABEL;
       TheDataGrid.ItemsSource = null;
+    }
+
+    internal static void EnableClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
+    {
+      foreach (var item in menu.Items)
+      {
+        MenuItem menuItem = item as MenuItem;
+        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses != null && uniqueClasses.ContainsKey(menuItem.Header as string);
+      }
     }
 
     internal Predicate<object> GetFilter()
@@ -89,13 +103,13 @@ namespace EQLogParser
     internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowBreakdown(GetPlayerStatsByClass(menuItem?.Tag as string));
+      ShowBreakdown(GetPlayerStatsByClass(menuItem?.Header as string));
     }
 
     internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = sender as MenuItem;
-      ShowBreakdown2(GetPlayerStatsByClass(menuItem?.Tag as string));
+      ShowBreakdown2(GetPlayerStatsByClass(menuItem?.Header as string));
     }
 
     internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e)
@@ -106,14 +120,11 @@ namespace EQLogParser
     internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e)
     {
       MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCasts(GetPlayerStatsByClass(menuItem?.Tag as string));
+      ShowSpellCasts(GetPlayerStatsByClass(menuItem?.Header as string));
     }
 
-    internal List<PlayerStats> GetPlayerStatsByClass(string classString)
+    internal List<PlayerStats> GetPlayerStatsByClass(string className)
     {
-      SpellClass type = (SpellClass)Enum.Parse(typeof(SpellClass), classString);
-      string className = PlayerManager.GetClassName(type);
-
       List<PlayerStats> selectedStats = new List<PlayerStats>();
       foreach (var item in TheDataGrid.Items)
       {

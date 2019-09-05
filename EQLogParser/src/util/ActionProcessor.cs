@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +15,8 @@ namespace EQLogParser
     private bool Stopped = false;
     private readonly int DelayTime = 10;
     private string Name;
+    private long LinesAdded = 0;
+    private long LinesProcessed = 0;
 
     public ActionProcessor(string name, ProcessActionCallback callback)
     {
@@ -27,14 +30,7 @@ namespace EQLogParser
       lock (QueueLock)
       {
         Queue.Add(data);
-      }
-    }
-
-    public void Add(List<T> list)
-    {
-      lock (QueueLock)
-      {
-        Queue.AddRange(list);
+        LinesAdded++;
       }
     }
 
@@ -51,6 +47,11 @@ namespace EQLogParser
     public void Stop()
     {
       Stopped = true;
+    }
+
+    public double GetPercentComplete()
+    {
+      return LinesAdded > 0 ? Math.Round((double)LinesProcessed / LinesAdded * 100, 1) : 100.0;
     }
 
     private void Process()
@@ -86,6 +87,7 @@ namespace EQLogParser
             }
 
             callback(Name, item);
+            LinesProcessed++;
           }
         }
       }

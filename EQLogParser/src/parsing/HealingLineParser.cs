@@ -4,7 +4,6 @@ namespace EQLogParser
 {
   class HealingLineParser
   {
-    public static event EventHandler<string> EventsLineProcessed;
     public static event EventHandler<HealProcessedEvent> EventsHealProcessed;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -54,8 +53,6 @@ namespace EQLogParser
       {
         DataManager.Instance.AddUnhandledLine(source, line);
       }
-
-      EventsLineProcessed(line, line);
     }
 
     private static HealRecord HandleHealed(ProcessLine pline)
