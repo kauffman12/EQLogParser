@@ -67,7 +67,7 @@ namespace EQLogParser
           if (record != null)
           {
             DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
-            EventsDamageProcessed(record, e);
+            EventsDamageProcessed?.Invoke(record, e);
             handled = true;
           }
         }
@@ -81,7 +81,7 @@ namespace EQLogParser
           if (record != null)
           {
             DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
-            EventsDamageProcessed(record, e);
+            EventsDamageProcessed?.Invoke(record, e);
             handled = true;
           }
         }
@@ -169,7 +169,7 @@ namespace EQLogParser
 
       ResistRecord record = new ResistRecord() { Spell = spell };
       ResistProcessedEvent e = new ResistProcessedEvent() { Record = record, BeginTime = currentTime };
-      EventsResistProcessed(defender, e);
+      EventsResistProcessed?.Invoke(defender, e);
     }
 
     private static DamageRecord ParseMiss(string actionPart, int index)

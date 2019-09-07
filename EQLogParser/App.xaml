@@ -362,8 +362,14 @@
     <!-- LogRow Templates for check columns -->
     <DataTemplate x:Key="NoDataTemplate">
     </DataTemplate>
+    <DataTemplate x:Key="QuantityTemplate">
+      <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center"></TextBlock>
+    </DataTemplate>
     <DataTemplate x:Key="CheckTemplate">
       <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Check" Foreground="#73b15d" />
+    </DataTemplate>
+    <DataTemplate x:Key="CurrencyTemplate">
+      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Money" Foreground="#73b15d" />
     </DataTemplate>
     <DataTemplate x:Key="CountTemplate">
       <TextBlock Text="{Binding Count}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>

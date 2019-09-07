@@ -11,7 +11,7 @@ namespace EQLogParser
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
-    private static readonly List<string> Currency = new List<string> { "platinum", "gold", "silver", "copper" };
+    private static readonly List<string> Currency = new List<string> { "Platinum", "Gold", "Silver", "Copper" };
     private static readonly Dictionary<char, uint> Rates = new Dictionary<char, uint>() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
     private const string MasterLooterText = "The master looter, ";
     private const string YouReceiveText = "You receive ";
@@ -27,7 +27,9 @@ namespace EQLogParser
         {
           string name = null;
           string item = null;
+          string npc = null;
           uint count = 0;
+          bool isCurrency = false;
 
           if (line[Parsing.ACTIONINDEX] == '-' && line[Parsing.ACTIONINDEX + 1] == '-')
           {
@@ -39,6 +41,12 @@ namespace EQLogParser
               {
                 count = pieces[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(pieces[3]);
                 item = string.Join(" ", pieces, 4, fromIndex - 4);
+
+                if (Array.FindLastIndex(pieces, piece => piece.EndsWith(".--", StringComparison.Ordinal)) is int endIndex && endIndex > fromIndex)
+                {
+                  var tmp = string.Join(" ", pieces, fromIndex + 1, endIndex - fromIndex);
+                  npc = tmp.Replace(".--", "").Replace("'s corpse", "");
+                }
               }
             }
           }
@@ -51,6 +59,7 @@ namespace EQLogParser
               if (pieces[1] == "looted" && Array.FindIndex(pieces, piece => piece == "from") is int fromIndex && fromIndex > 3)
               {
                 ParseCurrency(pieces, 2, fromIndex, out item, out count);
+                isCurrency = true;
               }
             }
           }
@@ -61,13 +70,14 @@ namespace EQLogParser
             if (line.Substring(Parsing.ACTIONINDEX + YouReceiveText.Length).Split(' ') is string[] pieces && pieces.Length >= 2 && Array.FindIndex(pieces, end => end == "as") is int splitIndex && splitIndex > -1)
             {
               ParseCurrency(pieces, 0, splitIndex, out item, out count);
+              isCurrency = true;
             }
           }
 
           if (count > 0 && !string.IsNullOrEmpty(item) && !string.IsNullOrEmpty(name))
           {
             double currentTime = DateUtil.ParseDate(line.Substring(1, 24), out double precise);
-            LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count };
+            LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = isCurrency, Npc = npc };
             EventsLootProcessed?.Invoke(record, new LootProcessedEvent() { Record = record, BeginTime = currentTime });
             handled = true;
           }
@@ -111,9 +121,9 @@ namespace EQLogParser
           continue;
         }
 
-        if (StatsUtil.ParseUInt(pieces[i]) is uint value && Currency.Any(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)))
+        if (StatsUtil.ParseUInt(pieces[i]) is uint value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is string type)
         {
-          tmp.Add(pieces[i] + pieces[i + 1][0]);
+          tmp.Add(pieces[i] + " " + type);
           count += value * Rates[pieces[i + 1][0]];
         }
         else
