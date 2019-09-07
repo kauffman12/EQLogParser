@@ -273,6 +273,11 @@ namespace EQLogParser
       return SearchActions(PlayerDeaths, beginTime, endTime);
     }
 
+    internal List<ActionBlock> GetAllLoot()
+    {
+      return AllLootBlocks.ToList();
+    }
+
     internal SpellData GetSpellByAbbrv(string abbrv)
     {
       SpellData result = null;

@@ -534,7 +534,6 @@ namespace EQLogParser
       }
     }
 
-
     private Tuple<List<string>, List<List<string>>> BuildExportData()
     {
       List<string> header = new List<string>();
@@ -562,7 +561,7 @@ namespace EQLogParser
       try
       {
         var export = BuildExportData();
-        string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, titleLabel.Content as string);
+        string result = TextFormatUtils.BuildSpellCountCsv(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)

@@ -77,6 +77,7 @@ namespace EQLogParser
     private DocumentWindow DamageChartWindow = null;
     private DocumentWindow HealingChartWindow = null;
     private DocumentWindow TankingChartWindow = null;
+    private DocumentWindow LootWindow = null;
 
     private LogReader EQLogReader = null;
     private OverlayWindow Overlay = null;
@@ -475,6 +476,10 @@ namespace EQLogParser
       {
         OpenChat();
       }
+      else if (e.Source == playerLootMenuItem)
+      {
+        OpenLootList();
+      }
       else
       {
         if ((sender as MenuItem)?.Icon is ImageAwesome icon && IconToWindow.ContainsKey(icon.Name))
@@ -656,11 +661,25 @@ namespace EQLogParser
       else
       {
 #pragma warning disable CA2000 // Dispose objects before losing scope
-        ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat Search", null, new ChatViewer());
+        ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat Archive", null, new ChatViewer());
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
         IconToWindow[chatIcon.Name] = ChatWindow;
         Helpers.OpenWindow(ChatWindow);
+      }
+    }
+
+    private void OpenLootList()
+    {
+      if (LootWindow?.IsOpen == true)
+      {
+        LootWindow.Close();
+      }
+      else
+      {
+        LootWindow = new DocumentWindow(dockSite, "lootWindow", "Loot Log", null, new LootViewer());
+        IconToWindow[playerLootIcon.Name] = LootWindow;
+        Helpers.OpenWindow(LootWindow);
       }
     }
 

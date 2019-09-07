@@ -220,7 +220,7 @@ namespace EQLogParser
         result = ConfigUtil.PlayerName;
       }
 
-      return string.Intern(result);
+      return result;
     }
 
     internal void Clear()

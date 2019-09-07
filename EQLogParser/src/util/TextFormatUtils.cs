@@ -21,7 +21,7 @@ namespace EQLogParser
     private const string BB_GAMPARSE_SPELL_COUNT = "   --- {0} - {1}";
 
     // Tab delimited CSV for copy/paste to excel
-    internal static string BuildCsv(List<string> header, List<List<string>> data, string title = null)
+    internal static string BuildSpellCountCsv(List<string> header, List<List<string>> data, string title = null)
     {
       StringBuilder sb = new StringBuilder();
 
@@ -51,6 +51,29 @@ namespace EQLogParser
       // print totals
       sb.AppendLine();
       list.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_CELL, item.Trim()));
+      sb.AppendLine();
+
+      // data
+      data.ForEach(row =>
+      {
+        row.ToList().ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_CELL, item));
+        sb.AppendLine();
+      });
+
+      return sb.ToString();
+    }
+
+    internal static string BuildCsv(List<string> header, List<List<string>> data, string title = null)
+    {
+      StringBuilder sb = new StringBuilder();
+
+      if (title != null)
+      {
+        sb.Append('"').Append(title).Append('"').AppendLine();
+      }
+
+      // header
+      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_CELL, item));
       sb.AppendLine();
 
       // data
