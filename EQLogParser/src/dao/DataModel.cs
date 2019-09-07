@@ -205,23 +205,26 @@ namespace EQLogParser
     public string Item { get; set; }
     public uint Quantity { get; set; }
     public string Player { get; set; }
+    public string Npc { get; set; }
+    public bool IsCurrency { get; set; }
   }
 
-  internal class HitLogRow
+  internal class HitLogRow : HitRecord
   {
     public string Actor { get; set; }
     public string Acted { get; set; }
     public uint Count { get; set; }
     public uint CritCount { get; set; }
     public uint LuckyCount { get; set; }
-    public string SubType { get; set; }
-    public string Type { get; set; }
     public uint TwincastCount { get; set; }
     public double Time { get; set; }
-    public uint Total { get; set; }
-    public uint OverTotal { get; set; }
     public bool IsPet { get; set; }
     public bool IsGroupingEnabled { get; set; }
+  }
+
+  internal class LootRow : LootRecord
+  {
+    public double Time { get; set; }
   }
 
   public class ActionBlock : TimedAction
