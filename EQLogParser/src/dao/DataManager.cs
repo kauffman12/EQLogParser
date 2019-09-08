@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace EQLogParser
@@ -60,7 +61,16 @@ namespace EQLogParser
         {
           spellList.Add(spellData);
           SpellsNameDB[spellData.Spell] = spellData;
-          SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+
+          if (!SpellsAbbrvDB.ContainsKey(spellData.SpellAbbrv))
+          {
+            SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+          }
+          else if (string.Compare(SpellsAbbrvDB[spellData.SpellAbbrv].Spell, spellData.Spell, true, CultureInfo.CurrentCulture) < 0)
+          {
+            // try to keep the newest version
+            SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+          }
 
           if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
           {
