@@ -192,18 +192,20 @@ namespace EQLogParser
     private static void HandleOtherLandsOnCases(ProcessLine pline)
     {
       string player = pline.OptionalData;
-      string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
 
+      string landsOnMessage = pline.ActionPart;
       // some abilities like staunch show a lands on message followed by a heal. so search based on first sentence
-      if (!string.IsNullOrEmpty(matchOn) && matchOn.IndexOf('.', pline.OptionalIndex) is int period && period > -1)
+      if (!string.IsNullOrEmpty(landsOnMessage) && landsOnMessage.IndexOf('.', pline.OptionalIndex) is int period && period > -1)
       {
-        matchOn = matchOn.Substring(0, period + 1);
+        landsOnMessage = landsOnMessage.Substring(0, period + 1);
       }
+
+      string matchOn = landsOnMessage.Substring(pline.OptionalIndex);
 
       SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(matchOn, out _);
       if (result == null)
       {
-        matchOn = pline.ActionPart;
+        matchOn = landsOnMessage;
         result = DataManager.Instance.GetLandsOnYou(matchOn, out _);
         if (result != null)
         {
