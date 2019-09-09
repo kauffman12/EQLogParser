@@ -20,6 +20,8 @@ namespace EQLogParser
 
   class DataManager
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     internal static DataManager Instance = new DataManager();
     internal event EventHandler<string> EventsRemovedNonPlayer;
     internal event EventHandler<NonPlayer> EventsNewNonPlayer;
@@ -56,35 +58,42 @@ namespace EQLogParser
 
       ConfigUtil.ReadList(@"data\spells.txt").ForEach(line =>
       {
-        var spellData = TextFormatUtils.ParseCustomSpellData(line);
-        if (spellData != null)
+        try
         {
-          spellList.Add(spellData);
-          SpellsNameDB[spellData.Spell] = spellData;
+          var spellData = TextFormatUtils.ParseCustomSpellData(line);
+          if (spellData != null)
+          {
+            spellList.Add(spellData);
+            SpellsNameDB[spellData.Spell] = spellData;
 
-          if (!SpellsAbbrvDB.ContainsKey(spellData.SpellAbbrv))
-          {
-            SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
-          }
-          else if (string.Compare(SpellsAbbrvDB[spellData.SpellAbbrv].Spell, spellData.Spell, true, CultureInfo.CurrentCulture) < 0)
-          {
-            // try to keep the newest version
-            SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
-          }
+            if (!SpellsAbbrvDB.ContainsKey(spellData.SpellAbbrv))
+            {
+              SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+            }
+            else if (string.Compare(SpellsAbbrvDB[spellData.SpellAbbrv].Spell, spellData.Spell, true, CultureInfo.CurrentCulture) < 0)
+            {
+              // try to keep the newest version
+              SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+            }
 
-          if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
-          {
-            helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
-          }
-          else if (spellData.LandsOnOther.Length > 1)
-          {
-            helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
-          }
+            if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
+            {
+              helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
+            }
+            else if (spellData.LandsOnOther.Length > 1)
+            {
+              helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
+            }
 
-          if (spellData.LandsOnYou.Length > 0) // just do stuff in common
-          {
-            helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
+            if (spellData.LandsOnYou.Length > 0) // just do stuff in common
+            {
+              helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
+            }
           }
+        }
+        catch (OverflowException ex)
+        {
+          LOG.Error("Error reading spell data", ex);
         }
       });
 
@@ -372,7 +381,7 @@ namespace EQLogParser
               var data = distinct.First();
               foreach (var spell in distinct.Skip(1))
               {
-                if (spell.Beneficial != data.Beneficial || spell.ClassMask != data.ClassMask || spell.Target != data.Target ||
+                if (spell.IsBeneficial != data.IsBeneficial || spell.ClassMask != data.ClassMask || spell.Target != data.Target ||
                   spell.Damaging != data.Damaging)
                 {
                   found = false;

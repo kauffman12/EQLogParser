@@ -1,5 +1,4 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -164,24 +163,26 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(line))
       {
         string[] data = line.Split('^');
-        if (data.Length >= 9)
+        if (data.Length >= 10)
         {
-          int beneficial = int.Parse(data[2], CultureInfo.CurrentCulture);
-          byte target = byte.Parse(data[3], CultureInfo.CurrentCulture);
-          ushort classMask = ushort.Parse(data[4], CultureInfo.CurrentCulture);
+          uint maxTicks = uint.Parse(data[2], CultureInfo.CurrentCulture);
+          int beneficial = int.Parse(data[3], CultureInfo.CurrentCulture);
+          byte target = byte.Parse(data[4], CultureInfo.CurrentCulture);
+          ushort classMask = ushort.Parse(data[5], CultureInfo.CurrentCulture);
 
           spellData = new SpellData()
           {
             ID = string.Intern(data[0]),
             Spell = string.Intern(data[1]),
             SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
-            Beneficial = beneficial != 0,
+            IsLongDuration = maxTicks > 3 && maxTicks < 120,
+            IsBeneficial = beneficial != 0,
             Target = target,
             ClassMask = classMask,
-            LandsOnYou = string.Intern(data[5]),
-            LandsOnOther = string.Intern(data[6]),
-            Damaging = byte.Parse(data[7], CultureInfo.CurrentCulture) == 1,
-            IsProc = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1
+            LandsOnYou = string.Intern(data[6]),
+            LandsOnOther = string.Intern(data[7]),
+            Damaging = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1,
+            IsProc = byte.Parse(data[9], CultureInfo.CurrentCulture) == 1
           };
         }
       }

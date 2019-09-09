@@ -36,10 +36,10 @@ namespace EQLogParser
 
     private enum LogOption { OPEN, MONITOR, ARCHIVE };
 
-    private static SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
-    private static SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
-    private static SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
-    private static SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
+    private static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
+    private static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    private static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
+    private static readonly SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled);
     private static List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
@@ -47,7 +47,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.45";
+    private const string VERSION = "v1.5.46";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -92,7 +92,7 @@ namespace EQLogParser
         // update titles
         Title = APP_NAME + " " + VERSION;
 
-        ConfigUtil.Debug = false;
+        ConfigUtil.Debug = false;     
 
         // upate helper
         Helpers.SetDispatcher(Dispatcher);
@@ -336,7 +336,7 @@ namespace EQLogParser
       {
         if (window?.IsOpen == true)
         {
-          (window.Content as LineChart).HandleUpdateEvent(e);
+          (window.Content as LineChart)?.HandleUpdateEvent(e);
         }
       });
     }
@@ -489,7 +489,7 @@ namespace EQLogParser
       }
     }
 
-    private bool OpenChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title, List<string> choices, out DocumentWindow newWindow)
+    private bool OpenLineChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title, List<string> choices, out DocumentWindow newWindow)
     {
       bool updated = false;
       newWindow = window;
@@ -525,7 +525,7 @@ namespace EQLogParser
 
     private void OpenDamageChart()
     {
-      if (OpenChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
+      if (OpenLineChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
       {
         var summary = DamageWindow?.Content as DamageSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
@@ -535,7 +535,7 @@ namespace EQLogParser
 
     private void OpenHealingChart()
     {
-      if (OpenChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
+      if (OpenLineChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
       {
         var summary = HealingWindow?.Content as HealingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
@@ -545,7 +545,7 @@ namespace EQLogParser
 
     private void OpenTankingChart()
     {
-      if (OpenChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, out TankingChartWindow))
+      if (OpenLineChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, out TankingChartWindow))
       {
         var summary = TankingWindow?.Content as TankingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
