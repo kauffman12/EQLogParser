@@ -193,6 +193,13 @@ namespace EQLogParser
     {
       string player = pline.OptionalData;
       string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
+
+      // some abilities like staunch show a lands on message followed by a heal. so search based on first sentence
+      if (!string.IsNullOrEmpty(matchOn) && matchOn.IndexOf('.', pline.OptionalIndex) is int period && period > -1)
+      {
+        matchOn = matchOn.Substring(0, period + 1);
+      }
+
       SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(matchOn, out _);
       if (result == null)
       {
