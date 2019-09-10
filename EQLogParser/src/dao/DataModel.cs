@@ -17,9 +17,9 @@ namespace EQLogParser
     public const string MELEE = "Melee";
     public const string SELFHEAL = "Melee Heal";
     public const string NODATA = "No Data Available";
-    public const string UNASSIGNED = "Unknown Pet Owner";
-    public const string UNKSPELL = "Unknown Spell";
-    public const string UNKPLAYER = "Unknown Player";
+    public const string UNASSIGNED = "Unk Pet Owner";
+    public const string UNKSPELL = "Unk Spell";
+    public const string UNKPLAYER = "Unk Player";
     public const string RAID = "Totals";
     public const string RIPOSTE = "Riposte";
     public const string HEALPARSE = "Healing";
@@ -54,7 +54,7 @@ namespace EQLogParser
 
   public interface ISummaryBuilder
   {
-    StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers);
+    StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial);
   }
 
   internal interface IAction { }
@@ -274,10 +274,16 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
-  public class PlayerDeath : IAction
+  public class PlayerDeath : TimedAction
   {
     public string Player { get; set; }
     public string Npc { get; set; }
+  }
+
+  public class SpecialSpell : TimedAction
+  {
+    public string Code { get; set; }
+    public string Player { get; set; }
   }
 
   public class ReceivedSpell : IAction
@@ -406,7 +412,7 @@ namespace EQLogParser
     public double ResistRate { get; set; }
     public double Percent { get; set; }
     public double PercentOfRaid { get; set; }
-    public uint Deaths { get; set; }
+    public string Special { get; set; }
     public string ClassName { get; set; }
     public List<double> BeginTimes { get; } = new List<double>();
     public List<double> LastTimes { get; } = new List<double>();

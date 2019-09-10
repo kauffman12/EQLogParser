@@ -9,13 +9,15 @@
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
         Icon="EQLogParser.ico"
-        Title="" Closed="Window_Closed" TextOptions.TextFormattingMode="Display" StateChanged="Window_StateChanged">
-  <Window.Resources>
-  </Window.Resources>
+        Title="" 
+        Closed="Window_Closed" 
+        TextOptions.TextFormattingMode="Display" 
+        StateChanged="Window_StateChanged"
+        Width="1500">
   <Grid>
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="259*"/>
-      <ColumnDefinition Width="1125*"/>
+      <ColumnDefinition Width="200"/>
+      <ColumnDefinition Width="1200*"/>
     </Grid.ColumnDefinitions>
     <Grid.RowDefinitions>
       <RowDefinition Height="20" />
@@ -361,7 +363,8 @@
                 </Grid.RowDefinitions>
                 <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
                   <ComboBox Margin="0,0,15,0" x:Name="parseList" IsEnabled="True" Height="24" SelectionChanged="ParseList_SelectionChanged" />
-                  <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Total</CheckBox>
+                  <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Raid Total</CheckBox>
+                  <CheckBox x:Name="playerParseTextDoSpecials" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Specials</CheckBox>
                   <CheckBox x:Name="playerParseTextDoRank" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Rank Players</CheckBox>
                 </StackPanel>
                 <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerParseTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="#c2c2c0" BorderThickness="0" FontSize="14" MouseEnter="PlayerParseText_MouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerParseTextBox_TextChanged"/>

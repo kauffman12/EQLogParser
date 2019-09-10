@@ -23,6 +23,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static DataManager Instance = new DataManager();
+    internal event EventHandler<NonPlayer> EventsNewInactiveNonPlayer;
     internal event EventHandler<string> EventsRemovedNonPlayer;
     internal event EventHandler<NonPlayer> EventsNewNonPlayer;
     internal event EventHandler<bool> EventsClearedActiveData;
@@ -30,13 +31,13 @@ namespace EQLogParser
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
 
-    private readonly List<ActionBlock> PlayerDamageBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllDamageBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllResists = new List<ActionBlock>();
     private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> PlayerDeaths = new List<ActionBlock>();
+    private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
 
     private readonly Dictionary<string, SpellData> AllUniqueSpellsCache = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
@@ -134,10 +135,10 @@ namespace EQLogParser
         AllUniqueSpellsCache.Clear();
         AllReceivedSpellBlocks.Clear();
         AllResists.Clear();
-        PlayerDamageBlocks.Clear();
+        AllDamageBlocks.Clear();
         AllHealBlocks.Clear();
         AllLootBlocks.Clear();
-        PlayerDeaths.Clear();
+        AllSpecialActions.Clear();
         EventsClearedActiveData?.Invoke(this, true);
       }
     }
@@ -191,16 +192,21 @@ namespace EQLogParser
       EventsNewNonPlayer?.Invoke(this, divider);
     }
 
-    internal void AddPlayerDeath(string player, string npc, double beginTime)
+    internal void AddSpecial(TimedAction action)
     {
-      var newDeath = new PlayerDeath() { Player = string.Intern(player), Npc = string.Intern(npc) };
-      AddAction(PlayerDeaths, newDeath, beginTime);
+      if (action is PlayerDeath || action is SpecialSpell)
+      {
+        lock (AllSpecialActions)
+        {
+          AllSpecialActions.Add(action);
+        }
+      }
     }
 
     internal void AddDamageRecord(DamageRecord record, double beginTime)
     {
       // ReplacePlayer is done in the line parser already
-      AddAction(PlayerDamageBlocks, record, beginTime);
+      AddAction(AllDamageBlocks, record, beginTime);
     }
 
     internal void AddResistRecord(ResistRecord record, double beginTime)
@@ -223,8 +229,6 @@ namespace EQLogParser
 
     internal void HandleSpellInterrupt(string player, string spell, double beginTime)
     {
-      player = PlayerManager.Instance.ReplacePlayer(player, player);
-
       for (int i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
       {
         int index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => ((SpellCast)action).Spell == spell && ((SpellCast)action).Caster == player);
@@ -240,7 +244,6 @@ namespace EQLogParser
     {
       if (SpellsNameDB.ContainsKey(cast.Spell))
       {
-        cast.Caster = PlayerManager.Instance.ReplacePlayer(cast.Caster, cast.Receiver);
         AddAction(AllSpellCastBlocks, cast, beginTime);
 
         string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
@@ -258,7 +261,6 @@ namespace EQLogParser
 
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime)
     {
-      received.Receiver = PlayerManager.Instance.ReplacePlayer(received.Receiver, received.Receiver);
       AddAction(AllReceivedSpellBlocks, received, beginTime);
     }
 
@@ -269,7 +271,7 @@ namespace EQLogParser
 
     internal List<ActionBlock> GetDamageDuring(double beginTime, double endTime)
     {
-      return SearchActions(PlayerDamageBlocks, beginTime, endTime);
+      return SearchActions(AllDamageBlocks, beginTime, endTime);
     }
 
     internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime)
@@ -287,9 +289,28 @@ namespace EQLogParser
       return SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     }
 
-    internal List<ActionBlock> GetPlayerDeathsDuring(double beginTime, double endTime)
+    internal List<TimedAction> GetSpecialsDuring(double beginTime, double endTime)
     {
-      return SearchActions(PlayerDeaths, beginTime, endTime);
+      var result = new List<TimedAction>();
+
+      List<TimedAction> sorted = null;
+      lock (AllSpecialActions)
+      {
+        sorted = AllSpecialActions.AsParallel().OrderBy(timed => timed.BeginTime).ToList();
+      }
+ 
+      if (sorted != null)
+      {
+        int start = sorted.FindIndex(timed => timed.BeginTime >= beginTime);
+        int end = sorted.FindLastIndex(timed => timed.BeginTime <= endTime);
+
+        if (start > -1 && end > -1 && end > start)
+        {
+          result = sorted.GetRange(start, end - start + 1);
+        }
+      }
+
+      return result;
     }
 
     internal List<ActionBlock> GetAllLoot()
@@ -404,7 +425,14 @@ namespace EQLogParser
 
     internal bool RemoveActiveNonPlayer(string name)
     {
-      return ActiveNonPlayer.TryRemove(name, out _);
+      bool removed = ActiveNonPlayer.TryRemove(name, out NonPlayer non);
+
+      if (removed)
+      {
+        EventsNewInactiveNonPlayer?.Invoke(this, non);
+      }
+
+      return removed;
     }
 
     internal void UpdateIfNewNonPlayerMap(string name, NonPlayer npc)

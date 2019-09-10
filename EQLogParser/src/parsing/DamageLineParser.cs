@@ -44,6 +44,11 @@ namespace EQLogParser
       { "chromatic", 1 }, { "physical", 1 }, { "corruption", 1 }, { "prismatic", 1 },
     };
 
+    private static readonly Dictionary<string, string> SpecialCodes = new Dictionary<string, string>()
+    {
+      { "Mana Burn", "M" }, { "Harm Touch", "H" }, { "Life Burn", "L" }
+    };
+
     static DamageLineParser()
     {
       // add two way mapping
@@ -68,6 +73,15 @@ namespace EQLogParser
           {
             DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
             EventsDamageProcessed?.Invoke(record, e);
+
+            if (record.Type == Labels.DD)
+            {
+              if (SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) && record.SubType.Contains(special)) is string key && !string.IsNullOrEmpty(key))
+              {
+                DataManager.Instance.AddSpecial(new SpecialSpell() { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
+              }
+            }
+
             handled = true;
           }
         }
@@ -144,14 +158,19 @@ namespace EQLogParser
       // Gotcharms has been slain by an animated mephit!
       if (test != null && test.Length > 0)
       {
-        if (PlayerManager.Instance.IsVerifiedPlayer(test) || PlayerManager.Instance.IsVerifiedPet(test))
+        if ((PlayerManager.Instance.IsVerifiedPlayer(test) is bool isPlayer && isPlayer) || PlayerManager.Instance.IsVerifiedPet(test))
         {
-          int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
-          if (byIndex > -1)
+          if (isPlayer)
           {
-            int len = part.Length - byIndex - 4 - 1;
-            string npc = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
-            DataManager.Instance.AddPlayerDeath(test, npc, currentTime);
+            int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
+            if (byIndex > -1)
+            {
+              int len = part.Length - byIndex - 4 - 1;
+              string npc = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
+
+              var death = new PlayerDeath() { Player = string.Intern(test), Npc = string.Intern(npc), BeginTime = currentTime };
+              DataManager.Instance.AddSpecial(death);
+            }
           }
         }
         else if (!DataManager.Instance.RemoveActiveNonPlayer(test) && char.IsUpper(test[0]))
