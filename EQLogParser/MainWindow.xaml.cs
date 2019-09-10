@@ -886,7 +886,8 @@ namespace EQLogParser
       if (Parses.ContainsKey(type))
       {
         var combined = Parses[type].CombinedStats;
-        var summary = Parses[type].Builder?.BuildSummary(combined, Parses[type].Selected, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value);
+        var summary = Parses[type].Builder?.BuildSummary(combined, Parses[type].Selected, playerParseTextDoTotals.IsChecked.Value,
+          playerParseTextDoRank.IsChecked.Value, playerParseTextDoSpecials.IsChecked.Value);
         playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
         playerParseTextBox.SelectAll();
       }

@@ -60,7 +60,7 @@ namespace EQLogParser
 
     internal void AddPetToPlayer(string pet, string player)
     {
-      if (!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player)
+      if ((!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player) && !IsVerifiedPlayer(pet))
       {
         PetToPlayer[pet] = player;
         EventsNewPetMapping?.Invoke(this, new PetMapping() { Pet = pet, Owner = player });

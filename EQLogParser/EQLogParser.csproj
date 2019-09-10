@@ -182,6 +182,9 @@
     <Compile Include="src\dao\PlayerManager.cs" />
     <Compile Include="src\parsing\MiscLineParser.cs" />
     <Compile Include="src\parsing\PreLineParser.cs" />
+    <Compile Include="src\ui\chart\GanttChart.xaml.cs">
+      <DependentUpon>GanttChart.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\common\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>
     </Compile>
@@ -260,6 +263,10 @@
     <Page Include="OverlayWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\chart\GanttChart.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="src\ui\common\ChatViewer.xaml">
       <SubType>Designer</SubType>

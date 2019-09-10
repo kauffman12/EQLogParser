@@ -163,7 +163,7 @@ namespace EQLogParser
         overlayStats.RaidStats = overlayStats.RaidStats;
       }
 
-      if (beginTime - overlayStats.RaidStats.LastTime > NpcDamageManager.NPC_DEATH_TIME)
+      if (overlayStats.UniqueNpcs.Count == 0 || (beginTime - overlayStats.RaidStats.LastTime > NpcDamageManager.NPC_DEATH_TIME))
       {
         overlayStats.RaidStats.Total = 0;
         overlayStats.RaidStats.BeginTime = beginTime;
@@ -525,8 +525,8 @@ namespace EQLogParser
                 Helpers.StringUIntAddHelper.Add(resistCounts, record.Spell, 1);
               });
 
-              // get death counts
-              ConcurrentDictionary<string, uint> deathCounts = StatsUtil.GetPlayerDeaths(RaidTotals);
+              // get special field
+              var specials = StatsUtil.GetSpecials(RaidTotals);
 
               Parallel.ForEach(individualStats.Values, stats =>
               {
@@ -543,23 +543,18 @@ namespace EQLogParser
                         child.Percent = Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                       }
 
-                      if (deathCounts.TryGetValue(child.Name, out uint childDeaths))
+                      if (specials.TryGetValue(child.Name, out string special1))
                       {
-                        child.Deaths = childDeaths;
-
-                        if (stats.Name.Contains(child.Name))
-                        {
-                          stats.Deaths = childDeaths;
-                        }
+                        child.Special = special1;
                       }
                     }
                   }
 
                   StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
 
-                  if (deathCounts.TryGetValue(stats.Name, out uint deaths))
+                  if (specials.TryGetValue(stats.OrigName, out string special2))
                   {
-                    stats.Deaths = deaths;
+                    stats.Special = special2;
                   }
                 }
               });
@@ -602,7 +597,7 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
+    public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial)
     {
       List<string> list = new List<string>();
 
@@ -618,7 +613,15 @@ namespace EQLogParser
             string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
             string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS));
             string timeFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, stats.TotalSeconds);
-            list.Add(playerFormat + damageFormat + " " + timeFormat);
+
+            var dps = playerFormat + damageFormat + " " + timeFormat;
+
+            if (showSpecial && !string.IsNullOrEmpty(stats.Special))
+            {
+              dps = string.Format(CultureInfo.CurrentCulture, StatsUtil.SPECIAL_FORMAT, dps, stats.Special);
+            }
+
+            list.Add(dps);
           }
         }
 
