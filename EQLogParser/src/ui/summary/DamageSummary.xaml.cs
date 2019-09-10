@@ -117,6 +117,15 @@ namespace EQLogParser
       ChildGrids.ForEach(grid => grid.Columns[column.DisplayIndex].Width = column.ActualWidth);
     }
 
+    private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
+    {
+      var timeline = new GanttChart(CurrentGroups);
+      var main = Application.Current.MainWindow as MainWindow;
+      var window = Helpers.OpenNewTab(main.dockSite, "adpsTimeline", "ADPS Timeline", timeline, 400, 300);
+      window.CanFloat = true;
+      window.CanClose = true;
+    }
+
     private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid.SelectedItems.Count == 1)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace EQLogParser
 {
@@ -9,16 +10,20 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
 
-    public static ConcurrentDictionary<string, byte> IgnoreMap = new ConcurrentDictionary<string, byte>(
-      new List<KeyValuePair<string, byte>>
+    private static readonly Dictionary<string, byte> IgnoreMap = new Dictionary<string, byte>()
     {
-      new KeyValuePair<string, byte>("Players", 1), new KeyValuePair<string, byte>("GUILD", 1),
-      new KeyValuePair<string, byte>("Autojoining", 1), new KeyValuePair<string, byte>("Welcome", 1),
-      new KeyValuePair<string, byte>("There", 1), new KeyValuePair<string, byte>("The", 1),
-      new KeyValuePair<string, byte>("Fellowship", 1), new KeyValuePair<string, byte>("Targeted", 1),
-      new KeyValuePair<string, byte>("Right", 1), new KeyValuePair<string, byte>("Beginning", 1),
-      new KeyValuePair<string, byte>("Stand", 1), new KeyValuePair<string, byte>("MESSAGE", 1)
-    });
+      { "Players", 1 }, { "There", 1}, { "The", 1 }, { "Targeted", 1 }, { "Right", 1 }, { "Stand" , 1}
+    };
+
+    private static readonly Dictionary<string, string> SpecialCodes = new Dictionary<string, string>()
+    {
+      { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }, { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }
+    };
+
+    private static readonly Dictionary<string, string> SpecialBrokenCodes = new Dictionary<string, string>()
+    {
+      { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
+    };
 
     public static void Process(string source, string line)
     {
@@ -45,6 +50,12 @@ namespace EQLogParser
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
                 cast = HandleSpellCast(pline, line.Substring(Parsing.ACTIONINDEX, index - Parsing.ACTIONINDEX));
+
+                if (cast != null)
+                {
+                  // For some reason Glyphs don't show up for current player
+                  CheckForSpecial(SpecialBrokenCodes, cast.Spell, cast.Caster, pline.CurrentTime);
+                }
               }
             }
             else
@@ -105,7 +116,7 @@ namespace EQLogParser
 
           if (line.IndexOf("Your", Parsing.ACTIONINDEX, 4, StringComparison.Ordinal) > -1)
           {
-            player = "You";
+            player = ConfigUtil.PlayerName;
             len = end - Parsing.ACTIONINDEX - 5;
             if (len > 0)
             {
@@ -206,10 +217,11 @@ namespace EQLogParser
       if (result == null)
       {
         matchOn = landsOnMessage;
+
         result = DataManager.Instance.GetLandsOnYou(matchOn, out _);
         if (result != null)
         {
-          player = "You";
+          player = ConfigUtil.PlayerName;
         }
       }
 
@@ -217,6 +229,7 @@ namespace EQLogParser
       {
         var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), SpellData = result };
         DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
+        CheckForSpecial(SpecialCodes, result.Spell, newSpell.Receiver, pline.CurrentTime);
       }
     }
 
@@ -228,6 +241,7 @@ namespace EQLogParser
       {
         var newSpell = new ReceivedSpell() { Receiver = string.Intern(pline.ActionPart.Substring(0, pline.OptionalIndex - 3)), SpellData = result };
         DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
+        CheckForSpecial(SpecialCodes, result.Spell, newSpell.Receiver, pline.CurrentTime);
       }
     }
 
@@ -256,7 +270,7 @@ namespace EQLogParser
           {
             cast = new SpellCast()
             {
-              Caster = string.Intern(caster),
+              Caster = ConfigUtil.PlayerName,
               Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1))
             };
           }
@@ -264,6 +278,14 @@ namespace EQLogParser
       }
 
       return cast;
+    }
+
+    private static void CheckForSpecial(Dictionary<string, string> codes, string spellName, string player, double currentTime)
+    {
+      if (codes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(spellName) && spellName.Contains(special)) is string key && !string.IsNullOrEmpty(key))
+      {
+        DataManager.Instance.AddSpecial(new SpecialSpell() { Code = codes[key], Player = player, BeginTime = currentTime });
+      }
     }
   }
 }

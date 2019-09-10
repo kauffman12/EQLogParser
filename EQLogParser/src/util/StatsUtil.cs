@@ -14,7 +14,8 @@ namespace EQLogParser
     internal const string TOTAL_ONLY_FORMAT = "{0}";
     internal const string PLAYER_FORMAT = "{0} = ";
     internal const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
-    internal const int DEATH_TIME_OFFSET = 10; // seconds forward
+    internal const string SPECIAL_FORMAT = "{0} {{{1}}}";
+    internal const int SPECIAL_OFFSET = 15;
 
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
@@ -310,26 +311,49 @@ namespace EQLogParser
       }
     }
 
-    internal static ConcurrentDictionary<string, uint> GetPlayerDeaths(PlayerStats raidStats)
+    internal static ConcurrentDictionary<string, string> GetSpecials(PlayerStats raidStats)
     {
-      Dictionary<string, uint> deathCounts = new Dictionary<string, uint>();
+      ConcurrentDictionary<string, string> playerSpecials = new ConcurrentDictionary<string, string>();
 
       if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
       {
-        double beginTime = raidStats.BeginTimes.First();
-        double endTime = raidStats.LastTimes.Last() + DEATH_TIME_OFFSET;
-
-        Parallel.ForEach(DataManager.Instance.GetPlayerDeathsDuring(beginTime, endTime), block =>
+        for (int i = 0; i < raidStats.BeginTimes.Count && i < raidStats.LastTimes.Count; i++)
         {
-          block.Actions.ForEach(action =>
+          double beginTime = raidStats.BeginTimes[i] - SPECIAL_OFFSET;
+          double endTime = raidStats.LastTimes[i];
+
+          DataManager.Instance.GetSpecialsDuring(beginTime, endTime).ForEach(action =>
           {
-            PlayerDeath death = action as PlayerDeath;
-            Helpers.StringUIntAddHelper.Add(deathCounts, death.Player, 1);
+            string code = null;
+            string player = null;
+
+            if (action is PlayerDeath death)
+            {
+              player = death.Player;
+              code = "X";
+            }
+            else if (action is SpecialSpell spell)
+            {
+              player = spell.Player;
+              code = spell.Code;
+            }
+
+            if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(code))
+            {
+              if (playerSpecials.TryGetValue(player, out string special))
+              {
+                playerSpecials[player] = special + code;
+              }
+              else
+              {
+                playerSpecials[player] = code;
+              }
+            }
           });
-        });
+        }
       }
 
-      return new ConcurrentDictionary<string, uint>(deathCounts);
+      return playerSpecials;
     }
   }
 

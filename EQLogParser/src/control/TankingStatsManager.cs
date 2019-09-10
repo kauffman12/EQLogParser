@@ -288,7 +288,7 @@ namespace EQLogParser
     }
 
 
-    public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers)
+    public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _)
     {
       List<string> list = new List<string>();
 

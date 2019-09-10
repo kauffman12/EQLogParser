@@ -18,6 +18,8 @@ namespace EQLogParser
   /// </summary>
   public partial class OverlayWindow : Window
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     private static SolidColorBrush TEXT_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush UP_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush DOWN_BRUSH = new SolidColorBrush(Colors.Red);
@@ -140,7 +142,14 @@ namespace EQLogParser
       if (!offsetSize)
       {
         DamageLineParser.EventsDamageProcessed += DamageLineParser_EventsDamageProcessed;
+        DataManager.Instance.EventsNewInactiveNonPlayer += Instance_EventsNewInactiveNonPlayer;
         Active = true;
+      }
+      else
+      {
+        // remove when configuring
+        DamageLineParser.EventsDamageProcessed -= DamageLineParser_EventsDamageProcessed;
+        DataManager.Instance.EventsNewInactiveNonPlayer -= Instance_EventsNewInactiveNonPlayer;
       }
     }
 
@@ -166,6 +175,14 @@ namespace EQLogParser
       if (UpdateTimer != null && !UpdateTimer.IsEnabled)
       {
         UpdateTimer.Start();
+      }
+    }
+
+    private void Instance_EventsNewInactiveNonPlayer(object sender, NonPlayer e)
+    {
+      if (Stats != null && Stats.UniqueNpcs.ContainsKey(e.Name))
+      {
+        Stats.UniqueNpcs.Remove(e.Name);
       }
     }
 
@@ -521,6 +538,7 @@ namespace EQLogParser
       if (Active)
       {
         DamageLineParser.EventsDamageProcessed -= DamageLineParser_EventsDamageProcessed;
+        DataManager.Instance.EventsNewInactiveNonPlayer -= Instance_EventsNewInactiveNonPlayer;
 
         if (UpdateTimer?.IsEnabled == true)
         {
