@@ -119,7 +119,7 @@ namespace EQLogParser
 
     private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
     {
-      var timeline = new GanttChart(CurrentGroups);
+      var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
       var main = Application.Current.MainWindow as MainWindow;
       var window = Helpers.OpenNewTab(main.dockSite, "adpsTimeline", "ADPS Timeline", timeline, 400, 300);
       window.CanFloat = true;
