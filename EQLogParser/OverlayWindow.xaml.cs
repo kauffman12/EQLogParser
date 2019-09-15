@@ -111,12 +111,20 @@ namespace EQLogParser
 
       if (top != null && double.TryParse(top, out dvalue) && !double.IsNaN(dvalue))
       {
-        Top = offsetSize ? dvalue - margin.Top : dvalue;
+        var test = offsetSize ? dvalue - margin.Top : dvalue;
+        if (test >= SystemParameters.VirtualScreenTop && test < SystemParameters.VirtualScreenHeight)
+        {
+          Top = test;
+        }
       }
 
       if (left != null && double.TryParse(left, out dvalue) && !double.IsNaN(dvalue))
       {
-        Left = offsetSize ? dvalue - margin.Left : dvalue;
+        var test = offsetSize ? dvalue - margin.Left : dvalue;
+        if (test >= SystemParameters.VirtualScreenLeft && test < SystemParameters.VirtualScreenWidth)
+        {
+          Left = test;
+        }
       }
 
       string value = ConfigUtil.GetApplicationSetting("OverlayFontSize");
@@ -188,6 +196,8 @@ namespace EQLogParser
 
     private void UpdateTimerTick(object sender, EventArgs e)
     {
+      Topmost = true; // possible workaround
+
       // people wanted shorter delays for damage updates but I don't want the indicator to change constantly
       // so this limits it to 1/2 the current time value
       ProcessDirection = !ProcessDirection;
@@ -519,10 +529,10 @@ namespace EQLogParser
       }
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
-      if (this.Top + margin.Top > 0 && (this.Left + margin.Left) > 0)
+      if (Top + margin.Top >= SystemParameters.VirtualScreenTop && (Left + margin.Left) >= SystemParameters.VirtualScreenLeft)
       {
-        ConfigUtil.SetApplicationSetting("OverlayTop", (this.Top + margin.Top).ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetApplicationSetting("OverlayLeft", (this.Left + margin.Left).ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetApplicationSetting("OverlayTop", (Top + margin.Top).ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetApplicationSetting("OverlayLeft", (Left + margin.Left).ToString(CultureInfo.CurrentCulture));
       }
 
       if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out int size))

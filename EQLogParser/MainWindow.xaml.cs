@@ -47,7 +47,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.46";
+    private const string VERSION = "v1.5.47";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -529,7 +529,7 @@ namespace EQLogParser
       {
         var summary = DamageWindow?.Content as DamageSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
-        DamageStatsManager.Instance.FireUpdateEvent(options, summary.GetSelectedStats(), summary.GetFilter());
+        DamageStatsManager.Instance.FireUpdateEvent(options, summary?.GetSelectedStats(), summary?.GetFilter());
       }
     }
 
@@ -549,7 +549,7 @@ namespace EQLogParser
       {
         var summary = TankingWindow?.Content as TankingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
-        TankingStatsManager.Instance.FireUpdateEvent(options, summary.GetSelectedStats(), summary.GetFilter());
+        TankingStatsManager.Instance.FireUpdateEvent(options, summary?.GetSelectedStats(), summary?.GetFilter());
       }
     }
 
