@@ -1,113 +1,58 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Controls;
-using LiveCharts;
-using LiveCharts.Defaults;
-using LiveCharts.Wpf;
+using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for GanttExample.xaml
-  /// </summary>
-  public partial class GanttChart : UserControl, INotifyPropertyChanged
+  public partial class GanttChart : UserControl
   {
-    private double _from;
-    private double _to;
-    private readonly ChartValues<GanttPoint> _values;
+
+    private readonly Dictionary<string, byte> ValidAdps = new Dictionary<string, byte>()
+    {
+      { "Auspice of the Hunter", 1 },
+      { "Fierce Eye", 1 },
+      { "Illusions of Grandeur", 1 },
+      { "Spirit of Vesagran", 1 },
+      { "Third Spire of Enchantment", 1 }
+    };
 
     public GanttChart(List<List<ActionBlock>> groups)
     {
       InitializeComponent();
       var now = DateTime.Now;
 
-      var res = DataManager.Instance.GetReceivedSpellsDuring(groups.First().First().BeginTime, groups.Last().Last().BeginTime);
+      var received = DataManager.Instance.GetReceivedSpellsDuring(groups.First().First().BeginTime, groups.Last().Last().BeginTime);
 
-      var test = new List<IAction>();
-      res.ForEach(group =>
+      var blocks = new List<ActionBlock>();
+      received.ForEach(group =>
       {
-        var actions = group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == "Bleve" && 
-          spell.SpellData.IsLongDuration && spell.SpellData.IsBeneficial && !string.IsNullOrEmpty(spell.SpellData.LandsOnOther));
-        test.AddRange(actions);
+        var block = new ActionBlock() { BeginTime = group.BeginTime };
+        foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == "Kazint" && ValidAdps.ContainsKey(spell.SpellData.SpellAbbrv)))
+        {
+          block.Actions.Add(action);
+        }
+
+        if (block.Actions.Count > 0)
+        {
+          blocks.Add(block);
+        }
       });
 
-      lvcChart.Hoverable = false;
-      lvcChart.DisableAnimations = true;
-      lvcChart.DataTooltip = null;
-
-      _values = new ChartValues<GanttPoint>
-            {
-                new GanttPoint(now.AddSeconds(30).Ticks, now.AddSeconds(60).Ticks),
-                new GanttPoint(now.AddSeconds(30).Ticks, now.AddSeconds(60).Ticks),
-                new GanttPoint(now.AddSeconds(30).Ticks, now.AddSeconds(120).Ticks),
-                new GanttPoint(now.AddSeconds(30).Ticks, now.AddSeconds(120).Ticks),
-                new GanttPoint(now.AddSeconds(30).Ticks, now.AddSeconds(230).Ticks),
-            };
-
-      Series = new SeriesCollection
-            {
-                new RowSeries
-                {
-                    Values = _values,
-                    LabelsPosition = BarLabelPosition.Parallel,
-                    DataLabels = true
-                }
-            };
-
-      Formatter = value => new DateTime((long)value).ToString("hh:mm:ss");
-
-      var labels = new List<string>();
-      labels.Add("Killaas");
-      labels.Add("Killaas");
-      labels.Add("Bard");
-      labels.Add("Bard");
-      labels.Add("Kuvani");
-
-      Labels = labels.ToArray();
-
-      ResetZoomOnClick(null, null);
-
-      DataContext = this;
     }
 
-    public SeriesCollection Series { get; set; }
-    public Func<double, string> Formatter { get; set; }
-    public string[] Labels { get; set; }
-
-    public double From
+    private void AddGridRow()
     {
-      get { return _from; }
-      set
+      var row = new Rectangle()
       {
-        _from = value;
-        OnPropertyChanged(nameof(From));
-      }
-    }
+        Height = 40,
+        Stroke = new SolidColorBrush(Colors.White),
+        StrokeThickness = 0.5
+      };
 
-    public double To
-    {
-      get { return _to; }
-      set
-      {
-        _to = value;
-        OnPropertyChanged(nameof(To));
-      }
-    }
-
-    private void ResetZoomOnClick(object sender, RoutedEventArgs e)
-    {
-      From = _values.First().StartPoint;
-      To = _values.Last().EndPoint;
-    }
-
-    public event PropertyChangedEventHandler PropertyChanged;
-
-    protected virtual void OnPropertyChanged(string propertyName = null)
-    {
-      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+      content.Children.Add(row);
     }
   }
 }
