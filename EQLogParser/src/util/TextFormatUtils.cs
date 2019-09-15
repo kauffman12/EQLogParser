@@ -145,7 +145,7 @@ namespace EQLogParser
 
         data.OrderBy(row => row[0]).ToList().ForEach(row =>
         {
-          if (!string.IsNullOrEmpty(row[pair.Value]) && row[pair.Value] != "0")
+          if (!string.IsNullOrEmpty(row[pair.Value]) && (row[pair.Value] != "0"))
           {
             sb.AppendFormat(CultureInfo.CurrentCulture, BB_GAMPARSE_SPELL_COUNT, row[0], row[pair.Value]);
             sb.AppendLine();
@@ -163,26 +163,44 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(line))
       {
         string[] data = line.Split('^');
-        if (data.Length >= 10)
+        if (data.Length >= 11)
         {
-          uint maxTicks = uint.Parse(data[2], CultureInfo.CurrentCulture);
+          int maxTicks = int.Parse(data[2], CultureInfo.CurrentCulture);
           int beneficial = int.Parse(data[3], CultureInfo.CurrentCulture);
-          byte target = byte.Parse(data[4], CultureInfo.CurrentCulture);
-          ushort classMask = ushort.Parse(data[5], CultureInfo.CurrentCulture);
+          int durationExtendable = int.Parse(data[4], CultureInfo.CurrentCulture);
+          byte target = byte.Parse(data[5], CultureInfo.CurrentCulture);
+          ushort classMask = ushort.Parse(data[6], CultureInfo.CurrentCulture);
+
+          // apply enhancement AA (need to make this per class)
+          int duration = durationExtendable == 0 ? maxTicks * 2 : maxTicks;
+
+          // convert to seconds
+          duration = duration * 6;
+
+          // deal with too big or too small values
+          // all adps we care about is in the range of a few minutes
+          if (duration > ushort.MaxValue)
+          {
+            duration = ushort.MaxValue;
+          }
+          else if (duration < 0)
+          {
+            duration = 0;
+          }
 
           spellData = new SpellData()
           {
             ID = string.Intern(data[0]),
             Spell = string.Intern(data[1]),
             SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
-            IsLongDuration = maxTicks > 3 && maxTicks < 120,
+            Duration = (ushort) duration,
             IsBeneficial = beneficial != 0,
             Target = target,
             ClassMask = classMask,
-            LandsOnYou = string.Intern(data[6]),
-            LandsOnOther = string.Intern(data[7]),
-            Damaging = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1,
-            IsProc = byte.Parse(data[9], CultureInfo.CurrentCulture) == 1
+            LandsOnYou = string.Intern(data[7]),
+            LandsOnOther = string.Intern(data[8]),
+            Damaging = byte.Parse(data[9], CultureInfo.CurrentCulture) == 1,
+            IsProc = byte.Parse(data[10], CultureInfo.CurrentCulture) == 1
           };
         }
       }

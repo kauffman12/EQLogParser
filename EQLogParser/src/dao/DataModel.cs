@@ -303,7 +303,7 @@ namespace EQLogParser
     public string ID { get; set; }
     public string Spell { get; set; }
     public string SpellAbbrv { get; set; }
-    public bool IsLongDuration { get; set; }
+    public ushort Duration { get; set; }
     public bool IsBeneficial { get; set; }
     public byte Target { get; set; }
     public ushort ClassMask { get; set; }

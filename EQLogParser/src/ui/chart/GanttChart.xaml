@@ -3,26 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
-  <Grid>
-    <Grid.Resources>
-      <DataTemplate x:Key="GanttLabelTemplate">
-        <TextBlock>test</TextBlock>
-      </DataTemplate>
-    </Grid.Resources>
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"></RowDefinition>
-      <RowDefinition Height="*"></RowDefinition>
-    </Grid.RowDefinitions>
-    <lvc:CartesianChart x:Name="lvcChart" Grid.Row="1" Series="{Binding Series}" Zoom="X">
-      <lvc:CartesianChart.AxisX>
-        <lvc:Axis LabelFormatter="{Binding Formatter}"></lvc:Axis>
-      </lvc:CartesianChart.AxisX>
-      <lvc:CartesianChart.AxisY>
-        <lvc:Axis Labels="{Binding Labels}"></lvc:Axis>
-      </lvc:CartesianChart.AxisY>
-    </lvc:CartesianChart>
-  </Grid>
-</UserControl>
+  <Grid>    <Grid.RowDefinitions>      <RowDefinition Height="30"></RowDefinition>      <RowDefinition Height="300*"></RowDefinition>    </Grid.RowDefinitions>    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>    </StackPanel>    <Grid x:Name="content" Grid.Row="1">      <Grid.RowDefinitions>
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>      <Rectangle Grid.Row="0" Stroke="White" StrokeThickness="0.5" Height="40" VerticalAlignment="Top" Margin="0,0,0,0"/>      <Rectangle Grid.Row="0" Stroke="White" StrokeThickness="0.5" Height="40" VerticalAlignment="Top" Margin="0,41,0,0"/>      <Rectangle Grid.Row="0" Stroke="White" StrokeThickness="0.5" Height="40" VerticalAlignment="Top" Margin="0,82,0,0"/>      <Rectangle Grid.Row="0" Stroke="White" StrokeThickness="0.5" Height="40" VerticalAlignment="Top" Margin="0,123,0,0"/>      <Rectangle Grid.Row="0" Stroke="White" StrokeThickness="0.5" Height="40" VerticalAlignment="Top" Margin="0,164,0,0"/>      <Rectangle Grid.Row="0" Stroke="White" StrokeThickness="0.5" Height="40" VerticalAlignment="Top" Fill="Blue" Width="120" HorizontalAlignment="Left" Margin="80,41,0,0" />    </Grid>    </Grid></UserControl>
