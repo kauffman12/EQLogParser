@@ -39,11 +39,13 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
+          <!--
           <MenuItem x:Name="menuItemShowAdpsTimeline" IsEnabled="True" Header="ADPS Timeline" Click="DataGridAdpsTimelineClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showAdpsTimelineIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="ClockOutline" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
+          -->
           <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Compare Spell Counts">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calculator" Foreground="#FF4F9FE2" />
