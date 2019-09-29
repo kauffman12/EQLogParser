@@ -23,6 +23,7 @@ namespace EQLogParser
 
     private string ActedOption = "Unknown";
     private List<List<ActionBlock>> CurrentGroups;
+    private Dictionary<string, double> LastSeenCache = new Dictionary<string, double>();
     private bool Defending;
     private PlayerStats PlayerStats;
 
@@ -125,6 +126,7 @@ namespace EQLogParser
             Records.Clear();
           }
 
+          LastSeenCache.Clear();
           CurrentGroups?.ForEach(group =>
           {
             group.ForEach(block =>
@@ -286,6 +288,19 @@ namespace EQLogParser
         row.LuckyCount += (uint)(LineModifiersParser.IsLucky(hit.ModifiersMask) ? 1 : 0);
         row.TwincastCount += (uint)(LineModifiersParser.IsTwincast(hit.ModifiersMask) ? 1 : 0);
         row.Count++;
+
+        row.TimeSince = "-";
+        if (LastSeenCache.TryGetValue(row.SubType, out double lastTime)) // 1 day
+        {
+          var diff = row.Time - lastTime;
+          if (diff > 0 && diff < 3600)
+          {
+            TimeSpan t = TimeSpan.FromSeconds(diff);
+            row.TimeSince = string.Format(CultureInfo.CurrentCulture, "{0:D2}m {1:D2}s", t.Minutes, t.Seconds);
+          }
+        }
+
+        LastSeenCache[row.SubType] = row.Time;
       }
 
       return row;
