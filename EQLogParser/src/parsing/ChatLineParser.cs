@@ -41,7 +41,7 @@ namespace EQLogParser
         int count;
         int max = Math.Min(16, line.Length - Parsing.ACTIONINDEX);
         int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, Parsing.ACTIONINDEX, max, StringComparison.Ordinal) > -1);
-
+       
         if (index < 0)
         {
           int criteriaIndex = -1;
@@ -135,7 +135,8 @@ namespace EQLogParser
                 chatType.Channel = ChatChannels.AUCTION;
                 break;
               case 5:
-                if (line.IndexOf(" told you,", criteriaIndex, 10, StringComparison.Ordinal) > -1)
+                // check if it's an old cross server tell and not an NPC
+                if (line.IndexOf(" told you,", criteriaIndex, 10, StringComparison.Ordinal) > -1 && chatType.Sender.IndexOf(".", StringComparison.Ordinal) > -1)
                 {
                   chatType.Channel = ChatChannels.TELL;
                   chatType.Receiver = "You";
@@ -203,7 +204,6 @@ namespace EQLogParser
               chatType.Channel = ChatChannels.AUCTION;
               break;
           }
-
         }
       }
       catch (ArgumentNullException ne)

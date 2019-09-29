@@ -47,7 +47,7 @@ namespace EQLogParser
     private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.47";
+    private const string VERSION = "v1.5.49";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -65,7 +65,7 @@ namespace EQLogParser
     private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
     private ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
 
-    private ChatManager PlayerChatManager;
+    private ChatManager PlayerChatManager = null;
     private NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
 
@@ -232,6 +232,7 @@ namespace EQLogParser
         IsHideOverlayOtherPlayersEnabled = value != null && bool.TryParse(value, out bValue2) && bValue2;
         enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
 
+        UpdateDeleteChatMenu();
         OpenDamageSummary();
         LOG.Info("Initialized Components");
       }
@@ -291,6 +292,37 @@ namespace EQLogParser
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
       AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
+    }
+
+    private void UpdateDeleteChatMenu()
+    {
+      deleteChat.Items.Clear();
+      ChatManager.GetArchivedPlayers().ForEach(player =>
+      {
+        MenuItem item = new MenuItem() { IsEnabled = true, Header = player };
+        deleteChat.Items.Add(item);
+
+        item.Click += (object sender, RoutedEventArgs e) =>
+        {
+          if (MessageBox.Show("Clear all chat for " + player + ", are you sure?", "Clear Chat Archive", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+          {
+            if (ChatManager.DeleteArchivedPlayer(player))
+            {
+              if (PlayerChatManager != null && PlayerChatManager.GetCurrentPlayer().Equals(player, StringComparison.Ordinal))
+              {
+                PlayerChatManager.Reset();
+              }
+              else
+              {
+                deleteChat.Items.Remove(item);
+                deleteChat.IsEnabled = deleteChat.Items.Count > 0;
+              }
+            }
+          }
+        };
+      });
+
+      deleteChat.IsEnabled = deleteChat.Items.Count > 0;
     }
 
     private void CheckComputeStats()

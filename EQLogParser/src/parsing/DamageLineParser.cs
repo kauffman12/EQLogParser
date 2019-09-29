@@ -66,7 +66,7 @@ namespace EQLogParser
         {
           var actionPart = line.Substring(Parsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString, out double precise);
+          var currentTime = DateUtil.ParseDate(timeString);
 
           DamageRecord record = ParseDamage(actionPart);
           if (record != null)
@@ -89,7 +89,7 @@ namespace EQLogParser
         {
           var actionPart = line.Substring(Parsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString, out double precise);
+          var currentTime = DateUtil.ParseDate(timeString);
 
           DamageRecord record = ParseMiss(actionPart, index);
           if (record != null)
@@ -103,7 +103,7 @@ namespace EQLogParser
         {
           var actionPart = line.Substring(Parsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString, out double precise);
+          var currentTime = DateUtil.ParseDate(timeString);
           HandleSlain(actionPart, currentTime, index - Parsing.ACTIONINDEX);
           handled = true;
         }
@@ -111,7 +111,7 @@ namespace EQLogParser
         {
           var actionPart = line.Substring(Parsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString, out double precise);
+          var currentTime = DateUtil.ParseDate(timeString);
           HandleResist(actionPart, currentTime, index - Parsing.ACTIONINDEX);
           handled = true;
         }
