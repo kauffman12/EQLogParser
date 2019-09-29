@@ -220,6 +220,7 @@ namespace EQLogParser
     public double Time { get; set; }
     public bool IsPet { get; set; }
     public bool IsGroupingEnabled { get; set; }
+    public string TimeSince { get; set; }
   }
 
   internal class LootRow : LootRecord
