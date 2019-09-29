@@ -48,7 +48,7 @@ namespace EQLogParser
                 pline.OptionalData = "you" + test;
                 pline.OptionalIndex = 3;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
                 cast = HandleSpellCast(pline, line.Substring(Parsing.ACTIONINDEX, index - Parsing.ACTIONINDEX));
 
                 if (cast != null)
@@ -88,7 +88,7 @@ namespace EQLogParser
                 pline.OptionalData = test;
                 pline.OptionalIndex = spellIndex;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
                 cast = HandleSpellCast(pline, line.Substring(Parsing.ACTIONINDEX, index - Parsing.ACTIONINDEX));
               }
             }
@@ -107,7 +107,7 @@ namespace EQLogParser
           //[Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
           ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX), OptionalIndex = line.Length - 22 };
           pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out _);
+          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
 
           string player = null;
           string spell = null;
@@ -141,7 +141,7 @@ namespace EQLogParser
           if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(spell))
           {
             string timeString = line.Substring(1, 24);
-            double currentTime = DateUtil.ParseDate(timeString, out _);
+            double currentTime = DateUtil.ParseDate(timeString);
             DataManager.Instance.HandleSpellInterrupt(player, spell, currentTime);
             handled = true;
           }
@@ -154,7 +154,7 @@ namespace EQLogParser
             ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
             pline.OptionalIndex = firstSpace + 1 - Parsing.ACTIONINDEX;
             pline.TimeString = pline.Line.Substring(1, 24);
-            pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
+            pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
             HandlePosessiveLandsOnOther(pline);
             handled = true;
           }
@@ -169,7 +169,7 @@ namespace EQLogParser
                 pline.OptionalIndex = firstSpace + 1 - Parsing.ACTIONINDEX;
                 pline.OptionalData = player;
                 pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString, out double precise);
+                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
                 HandleOtherLandsOnCases(pline);
                 handled = true;
               }

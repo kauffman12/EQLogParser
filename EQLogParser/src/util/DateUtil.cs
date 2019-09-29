@@ -37,7 +37,7 @@ namespace EQLogParser
       bool found = false;
       if (line.Length > 24)
       {
-        double dateTime = ParseDate(line.Substring(1, 24), out double precise);
+        double dateTime = ParseDate(line.Substring(1, 24));
         if (!double.IsNaN(dateTime))
         {
           TimeSpan diff = TimeSpan.FromSeconds(now - dateTime);
@@ -47,7 +47,18 @@ namespace EQLogParser
       return found;
     }
 
-    internal double ParseDate(string timeString, out double precise)
+    internal double ParseDate(string timeString)
+    {
+      return ParseDate(timeString, out double _);
+    }
+
+    internal double ParsePreciseDate(string timeString)
+    {
+      ParseDate(timeString, out double precise);
+      return precise;
+    }
+
+    private double ParseDate(string timeString, out double precise)
     {
       double result = double.NaN;
 

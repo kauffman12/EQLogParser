@@ -236,6 +236,11 @@
         </MenuItem>
       </MenuItem>
       <MenuItem Header="_Tools" Height="20" Width="45">
+        <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="20">
+          <MenuItem.Icon>
+            <fa:ImageAwesome x:Name="deleteChatIcon" Visibility="Visible" Height="10" Width="10" HorizontalAlignment="Center" Icon="Close"  Foreground="#FF4F9FE2" />
+          </MenuItem.Icon>
+        </MenuItem>
         <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLogClick" Height="20">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="viewErrorLogIcon" Visibility="Visible" Height="10" Width="10" HorizontalAlignment="Center" Icon="File"  Foreground="#FF4F9FE2" />

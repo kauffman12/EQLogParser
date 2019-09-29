@@ -11,8 +11,8 @@ namespace EQLogParser
     private readonly string From;
     private readonly double StartDate = 0;
     private readonly double EndDate = 0;
-    private readonly DateUtil DateUtil = new DateUtil();
     private readonly Dictionary<string, byte> ValidChannels = null;
+    private readonly DateUtil DateUtil = new DateUtil();
 
     internal ChatFilter(string player, List<string> channels = null, double startDate = 0,
       double endDate = 0, string to = null, string from = null, string keyword = null)
@@ -69,19 +69,10 @@ namespace EQLogParser
 
     internal bool PastLiveFilter(ChatType chatType)
     {
-      bool pass = false;
-      string timeString = chatType.Line.Substring(1, 24);
-      if (timeString != null)
-      {
-        double time = DateUtil.ParseDate(timeString, out double _);
-        if (!double.IsNaN(time))
-        {
-          double endOfDay = EndDate + 86400;
-          pass = (StartDate == 0 || time >= StartDate) && (EndDate == 0 || time < endOfDay) && PassFilter(chatType);
-        }
-      }
-
-      return pass;
+      double endOfDay = EndDate + 86400;
+      var timeString = chatType.Line.Substring(1, 24);
+      var time = DateUtil.ParseDate(timeString);
+      return (StartDate == 0 || time >= StartDate) && (EndDate == 0 || time < endOfDay) && PassFilter(chatType);
     }
 
     internal bool PassFilter(ChatType chatType)

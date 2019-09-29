@@ -77,7 +77,7 @@ namespace EQLogParser
           if (count > 0 && !string.IsNullOrEmpty(item) && !string.IsNullOrEmpty(name))
           {
             PlayerManager.Instance.AddVerifiedPlayer(name);
-            double currentTime = DateUtil.ParseDate(line.Substring(1, 24), out double precise);
+            double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
             LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = isCurrency, Npc = npc };
             EventsLootProcessed?.Invoke(record, new LootProcessedEvent() { Record = record, BeginTime = currentTime });
             handled = true;
