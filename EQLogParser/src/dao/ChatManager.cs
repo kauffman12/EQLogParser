@@ -67,6 +67,59 @@ namespace EQLogParser
       }
     }
 
+    internal string GetCurrentPlayer()
+    {
+      return CurrentPlayer;
+    }
+
+    internal void Reset()
+    {
+      try
+      {
+        PlayerCache.Clear();
+        ChannelCache.Clear();
+
+        if (!Directory.Exists(PLAYER_DIR))
+        {
+          // create config dir if it doesn't exist
+          Directory.CreateDirectory(PLAYER_DIR);
+        }
+      }
+      catch (IOException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+    }
+
+    internal static bool DeleteArchivedPlayer(string player)
+    {
+      bool deleted = false;
+
+      var dir = ConfigUtil.GetArchiveDir() + @"/" + player;
+      if (Directory.Exists(dir))
+      {
+        try
+        {
+          Directory.Delete(dir, true);
+          deleted = true;
+        }
+        catch (IOException ex)
+        {
+          LOG.Error(ex);
+        }
+        catch (UnauthorizedAccessException uax)
+        {
+          LOG.Error(uax);
+        }
+      }
+
+      return deleted;
+    }
+
     internal static List<string> GetArchivedPlayers()
     {
       var result = new List<string>();
@@ -237,7 +290,8 @@ namespace EQLogParser
 
             if (PlayerCacheUpdated)
             {
-              ConfigUtil.SaveList(PLAYER_DIR + @"\players.txt", PlayerCache.Keys.OrderBy(player => player).ToList());
+              ConfigUtil.SaveList(PLAYER_DIR + @"\players.txt", PlayerCache.Keys.OrderBy(player => player)
+                .Where(player => !PlayerManager.Instance.IsVerifiedPet(player)).ToList());
               PlayerCacheUpdated = false;
             }
 
@@ -489,9 +543,10 @@ namespace EQLogParser
     private static ChatLine CreateLine(DateUtil dateUtil, string line)
     {
       string dateString = line.Substring(1, 24);
-      dateUtil.ParseDate(dateString, out double precise);
+      double precise = dateUtil.ParsePreciseDate(dateString);
       return new ChatLine { Line = line, BeginTime = precise };
     }
+
     private static string GetFileName(string year, string month)
     {
       string folder = PLAYER_DIR + @"\" + year;

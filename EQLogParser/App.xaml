@@ -513,30 +513,5 @@
         </Setter.Value>
       </Setter>
     </Style>
-    <Style x:Key="DialogStyle" TargetType="{x:Type Window}">
-      <Setter Property="WindowChrome.WindowChrome">
-        <Setter.Value>
-          <WindowChrome GlassFrameThickness="0 0 0 0" />
-        </Setter.Value>
-      </Setter>
-      <Setter Property="Foreground">
-        <Setter.Value>
-          <SolidColorBrush>#c2c2c0</SolidColorBrush>
-        </Setter.Value>
-      </Setter>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="{x:Type Window}">
-            <Grid Background="#FF252526">
-              <Border Background="#2D2D30" Margin="{Binding Source={x:Static SystemParameters.WindowNonClientFrameThickness}}">
-                <ContentPresenter Content="{TemplateBinding Content}" />
-              </Border>
-              <TextBlock Foreground="LightGray" MaxHeight="16" Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Title}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="20,6,0,0"/>
-              <Button Name="CloseButton" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF252526" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,20,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" Click="CloseDialog_MouseClick" FontSize="13" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
-            </Grid>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
   </Application.Resources>
 </Application>

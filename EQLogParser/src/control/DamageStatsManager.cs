@@ -183,7 +183,7 @@ namespace EQLogParser
 
         // see if there's a pet mapping, check this first
         string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
-        if (pname != null || !string.IsNullOrEmpty((pname = record.AttackerOwner)))
+        if (pname != null || !string.IsNullOrEmpty(pname = record.AttackerOwner))
         {
           PlayerHasPet[pname] = 1;
           PetToPlayer[record.Attacker] = pname;
