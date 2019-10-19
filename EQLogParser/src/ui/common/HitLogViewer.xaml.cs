@@ -61,30 +61,30 @@ namespace EQLogParser
       if (firstAction is DamageRecord && !defending)
       {
         ActedOption = "All Defenders";
-        dataGrid.Columns[3].Header = "Damage";
-        dataGrid.Columns[9].Header = "Attacker";
-        dataGrid.Columns[10].Header = "Defender";
+        dataGrid.Columns[4].Header = "Damage";
+        dataGrid.Columns[10].Header = "Attacker";
+        dataGrid.Columns[11].Header = "Defender";
         showPets.Visibility = Visibility.Visible;
       }
       else if (firstAction is DamageRecord && defending)
       {
         ActedOption = "All Attackers";
-        dataGrid.Columns[3].Header = "Damage";
-        dataGrid.Columns[6].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[4].Header = "Damage";
         dataGrid.Columns[7].Visibility = Visibility.Collapsed;
         dataGrid.Columns[8].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[9].Header = "Defender";
-        dataGrid.Columns[10].Header = "Attacker";
+        dataGrid.Columns[9].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[10].Header = "Defender";
+        dataGrid.Columns[11].Header = "Attacker";
         showPets.Visibility = Visibility.Collapsed;
         petDivider.Visibility = Visibility.Collapsed;
       }
       else if (firstAction is HealRecord)
       {
         ActedOption = "All Healed Players";
-        dataGrid.Columns[3].Header = "Heal";
-        dataGrid.Columns[4].Visibility = Visibility.Visible;
-        dataGrid.Columns[9].Header = "Healer";
-        dataGrid.Columns[10].Header = "Healed";
+        dataGrid.Columns[4].Header = "Heal";
+        dataGrid.Columns[5].Visibility = Visibility.Visible;
+        dataGrid.Columns[10].Header = "Healer";
+        dataGrid.Columns[11].Header = "Healed";
         showPets.Visibility = Visibility.Collapsed;
         petDivider.Visibility = Visibility.Collapsed;
       }
@@ -106,7 +106,7 @@ namespace EQLogParser
       if (init || actionList.IsEnabled)
       {
         actionList.IsEnabled = typeList.IsEnabled = actedList.IsEnabled = showPets.IsEnabled = groupHits.IsEnabled = false;
-        dataGrid.Columns[5].Visibility = CurrentGroupSpellCastsFilter ? Visibility.Visible : Visibility.Collapsed;
+        dataGrid.Columns[6].Visibility = CurrentGroupSpellCastsFilter ? Visibility.Visible : Visibility.Collapsed;
 
         Task.Delay(125).ContinueWith(task =>
         {
@@ -239,21 +239,21 @@ namespace EQLogParser
         (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(damage.Attacker), StringComparison.OrdinalIgnoreCase) ||
         (!string.IsNullOrEmpty(damage.AttackerOwner) && damage.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
         {
-          row = new HitLogRow() { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet };
+          row = new HitLogRow() { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
         }
       }
       else if (action is DamageRecord tanking && defending && !string.IsNullOrEmpty(tanking.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && tanking.Type != Labels.MISS)
       {
         if (tanking.Defender.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
         {
-          row = new HitLogRow() { Actor = tanking.Defender, Acted = tanking.Attacker, IsPet = false };
+          row = new HitLogRow() { Actor = tanking.Defender, Acted = tanking.Attacker, IsPet = false, TimeSince = "-" };
         }
       }
       else if (action is HealRecord heal && !string.IsNullOrEmpty(heal.Healer) && !string.IsNullOrEmpty(playerStats.OrigName))
       {
         if (heal.Healer.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
         {
-          row = new HitLogRow() { Actor = heal.Healer, Acted = heal.Healed, IsPet = false };
+          row = new HitLogRow() { Actor = heal.Healer, Acted = heal.Healed, IsPet = false, TimeSince = "-" };
         }
       }
 
@@ -289,14 +289,13 @@ namespace EQLogParser
         row.TwincastCount += (uint)(LineModifiersParser.IsTwincast(hit.ModifiersMask) ? 1 : 0);
         row.Count++;
 
-        row.TimeSince = "-";
         if (LastSeenCache.TryGetValue(row.SubType, out double lastTime)) // 1 day
         {
           var diff = row.Time - lastTime;
           if (diff > 0 && diff < 3600)
           {
             TimeSpan t = TimeSpan.FromSeconds(diff);
-            row.TimeSince = string.Format(CultureInfo.CurrentCulture, "{0:D2}m {1:D2}s", t.Minutes, t.Seconds);
+            row.TimeSince = string.Format(CultureInfo.CurrentCulture, "{0:D2}:{1:D2}", t.Minutes, t.Seconds);
           }
         }
 

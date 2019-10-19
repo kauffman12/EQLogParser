@@ -427,6 +427,9 @@
       <Setter Property="TextBlock.TextAlignment" Value="Right" />
       <Setter Property="Foreground" Value="Black" />
     </Style>
+    <Style x:Key="CenterAlignGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
+      <Setter Property="TextBlock.TextAlignment" Value="Center" />
+    </Style>
     <Style x:Key="LeftAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
       <Setter Property="TextBlock.TextAlignment" Value="Left" />
       <Setter Property="Foreground" Value="Black" />

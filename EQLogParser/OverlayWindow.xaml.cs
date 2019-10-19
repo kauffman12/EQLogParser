@@ -18,9 +18,12 @@ namespace EQLogParser
   /// </summary>
   public partial class OverlayWindow : Window
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     private static SolidColorBrush TEXT_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush UP_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush DOWN_BRUSH = new SolidColorBrush(Colors.Red);
+    private static object StatsLock = new object();
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
     private const double OPACITY = 0.45;
@@ -177,164 +180,182 @@ namespace EQLogParser
 
     private void DamageLineParser_EventsDamageProcessed(object sender, DamageProcessedEvent e)
     {
-      Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
-      if (UpdateTimer != null && !UpdateTimer.IsEnabled)
+      lock(StatsLock)
       {
-        UpdateTimer.Start();
+        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
+        if (UpdateTimer != null && !UpdateTimer.IsEnabled)
+        {
+          UpdateTimer.Start();
+        }
       }
     }
 
     private void Instance_EventsNewInactiveNonPlayer(object sender, NonPlayer e)
     {
-      if (Stats != null && Stats.UniqueNpcs.ContainsKey(e.Name))
+      lock(StatsLock)
       {
-        Stats.UniqueNpcs.Remove(e.Name);
+        if (Stats != null && Stats.UniqueNpcs.ContainsKey(e.Name))
+        {
+          Stats.UniqueNpcs.Remove(e.Name);
+        }
       }
     }
 
     private void UpdateTimerTick(object sender, EventArgs e)
     {
-      Topmost = true; // possible workaround
-
-      // people wanted shorter delays for damage updates but I don't want the indicator to change constantly
-      // so this limits it to 1/2 the current time value
-      ProcessDirection = !ProcessDirection;
-
-      if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > NpcDamageManager.NPC_DEATH_TIME)
+      lock(StatsLock)
       {
-        windowBrush.Opacity = 0.0;
-        SetVisible(false);
-        this.Height = 0;
-        Stats = null;
-        PrevList = null;
-        UpdateTimer.Stop();
-      }
-      else if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
-      {
-        var list = Stats.StatsList.Take(MAX_ROWS).ToList();
-        if (list.Count > 0)
+        try
         {
-          TitleBlock.Text = Stats.TargetTitle;
-          TitleDamageBlock.Text = StatsUtil.FormatTotals(Stats.RaidStats.Total) + " [" + Stats.RaidStats.TotalSeconds + "s @" +
-            StatsUtil.FormatTotals(Stats.RaidStats.DPS) + "]";
+          Topmost = true; // possible workaround
 
-          long total = 0;
-          int goodRowCount = 0;
-          long me = 0;
-          var topList = new Dictionary<int, long>();
-          for (int i = 0; i < MAX_ROWS; i++)
+          // people wanted shorter delays for damage updates but I don't want the indicator to change constantly
+          // so this limits it to 1/2 the current time value
+          ProcessDirection = !ProcessDirection;
+
+          if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > NpcDamageManager.NPC_DEATH_TIME)
           {
-            if (list.Count > i)
-            {
-              if (ProcessDirection)
-              {
-                DamageRateList[i].Opacity = 0.0;
-              }
-
-              if (i == 0)
-              {
-                total = list[i].Total;
-                RectangleList[i].Width = this.Width;
-              }
-              else
-              {
-                RectangleList[i].Visibility = Visibility.Hidden; // maybe it calculates width better
-                RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
-              }
-
-              string playerName = ConfigUtil.PlayerName;
-              var isMe = !string.IsNullOrEmpty(playerName) && list[i].Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
-                (playerName.Length >= list[i].Name.Length || list[i].Name[playerName.Length] == ' ');
-              if (MainWindow.IsHideOverlayOtherPlayersEnabled && !isMe)
-              {
-                NameBlockList[i].Text = list[i].Rank + ". " + "Hidden Player";
-              }
-              else
-              {
-                NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
-              }
-
-              if (i <= 3 && !isMe && list[i].Total > 0)
-              {
-                topList[i] = list[i].Total;
-              }
-              else if (isMe)
-              {
-                me = list[i].Total;
-              }
-
-              var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
-              DamageBlockList[i].Text = damage;
-              goodRowCount++;
-            }
+            windowBrush.Opacity = 0.0;
+            SetVisible(false);
+            this.Height = 0;
+            Stats = null;
+            PrevList = null;
+            UpdateTimer.Stop();
           }
-
-          if (ProcessDirection)
+          else if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
           {
-            if (me > 0 && topList.Count > 0)
+            var list = Stats.StatsList.Take(MAX_ROWS).ToList();
+            if (list.Count > 0)
             {
-              var updatedList = new Dictionary<int, double>();
-              foreach (int i in topList.Keys)
+              TitleBlock.Text = Stats.TargetTitle;
+              TitleDamageBlock.Text = StatsUtil.FormatTotals(Stats.RaidStats.Total) + " [" + Stats.RaidStats.TotalSeconds + "s @" +
+                StatsUtil.FormatTotals(Stats.RaidStats.DPS) + "]";
+
+              long total = 0;
+              int goodRowCount = 0;
+              long me = 0;
+              var topList = new Dictionary<int, long>();
+              for (int i = 0; i < MAX_ROWS; i++)
               {
-                if (i != me)
+                if (list.Count > i)
                 {
-                  var diff = topList[i] / (double)me;
-                  updatedList[i] = diff;
-                  if (PrevList != null && PrevList.ContainsKey(i))
+                  if (ProcessDirection)
                   {
-                    if (PrevList[i] > diff)
-                    {
-                      DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
-                      DamageRateList[i].Foreground = DOWN_BRUSH;
-                      DamageRateList[i].Opacity = DATA_OPACITY;
-                    }
-                    else if (PrevList[i] < diff)
-                    {
-                      DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
-                      DamageRateList[i].Foreground = UP_BRUSH;
-                      DamageRateList[i].Opacity = DATA_OPACITY;
-                    }
+                    DamageRateList[i].Opacity = 0.0;
                   }
+
+                  if (i == 0)
+                  {
+                    total = list[i].Total;
+                    RectangleList[i].Width = this.Width;
+                  }
+                  else
+                  {
+                    RectangleList[i].Visibility = Visibility.Hidden; // maybe it calculates width better
+                    RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
+                  }
+
+                  string playerName = ConfigUtil.PlayerName;
+                  var isMe = !string.IsNullOrEmpty(playerName) && list[i].Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
+                    (playerName.Length >= list[i].Name.Length || list[i].Name[playerName.Length] == ' ');
+                  if (MainWindow.IsHideOverlayOtherPlayersEnabled && !isMe)
+                  {
+                    NameBlockList[i].Text = list[i].Rank + ". " + "Hidden Player";
+                  }
+                  else
+                  {
+                    NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
+                  }
+
+                  if (i <= 3 && !isMe && list[i].Total > 0)
+                  {
+                    topList[i] = list[i].Total;
+                  }
+                  else if (isMe)
+                  {
+                    me = list[i].Total;
+                  }
+
+                  var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
+                  DamageBlockList[i].Text = damage;
+                  goodRowCount++;
                 }
               }
 
-              PrevList = updatedList;
+              if (ProcessDirection)
+              {
+                if (me > 0 && topList.Count > 0)
+                {
+                  var updatedList = new Dictionary<int, double>();
+                  foreach (int i in topList.Keys)
+                  {
+                    if (i != me)
+                    {
+                      var diff = topList[i] / (double)me;
+                      updatedList[i] = diff;
+                      if (PrevList != null && PrevList.ContainsKey(i))
+                      {
+                        if (PrevList[i] > diff)
+                        {
+                          DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
+                          DamageRateList[i].Foreground = DOWN_BRUSH;
+                          DamageRateList[i].Opacity = DATA_OPACITY;
+                        }
+                        else if (PrevList[i] < diff)
+                        {
+                          DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
+                          DamageRateList[i].Foreground = UP_BRUSH;
+                          DamageRateList[i].Opacity = DATA_OPACITY;
+                        }
+                      }
+                    }
+                  }
+
+                  PrevList = updatedList;
+                }
+                else
+                {
+                  PrevList = null;
+                }
+              }
+
+              var requested = (goodRowCount + 1) * CalculatedRowHeight;
+              if (this.ActualHeight != requested)
+              {
+                this.Height = requested;
+              }
+
+              if (overlayCanvas.Visibility != Visibility.Visible)
+              {
+                overlayCanvas.Visibility = Visibility.Hidden;
+                TitlePanel.Visibility = Visibility.Hidden;
+                TitleRectangle.Visibility = Visibility.Hidden;
+                TitleBlock.Visibility = Visibility.Hidden;
+                TitleDamageBlock.Visibility = Visibility.Hidden;
+                TitlePanel.Height = CalculatedRowHeight;
+                TitleRectangle.Height = CalculatedRowHeight;
+                TitleDamageBlock.Height = CalculatedRowHeight;
+                TitleBlock.Height = CalculatedRowHeight;
+                overlayCanvas.Visibility = Visibility.Visible;
+                TitlePanel.Visibility = Visibility.Visible;
+                TitleRectangle.Visibility = Visibility.Visible;
+                TitleBlock.Visibility = Visibility.Visible;
+                TitleDamageBlock.Visibility = Visibility.Visible;
+                windowBrush.Opacity = OPACITY;
+              }
+
+              for (int i = 0; i < MAX_ROWS; i++)
+              {
+                SetRowVisible(i < goodRowCount, i);
+              }
             }
-            else
-            {
-              PrevList = null;
-            }
           }
-
-          var requested = (goodRowCount + 1) * CalculatedRowHeight;
-          if (this.ActualHeight != requested)
-          {
-            this.Height = requested;
-          }
-
-          if (overlayCanvas.Visibility != Visibility.Visible)
-          {
-            overlayCanvas.Visibility = Visibility.Hidden;
-            TitlePanel.Visibility = Visibility.Hidden;
-            TitleRectangle.Visibility = Visibility.Hidden;
-            TitleBlock.Visibility = Visibility.Hidden;
-            TitleDamageBlock.Visibility = Visibility.Hidden;
-            TitlePanel.Height = CalculatedRowHeight;
-            TitleRectangle.Height = CalculatedRowHeight;
-            TitleDamageBlock.Height = CalculatedRowHeight;
-            TitleBlock.Height = CalculatedRowHeight;
-            overlayCanvas.Visibility = Visibility.Visible;
-            TitlePanel.Visibility = Visibility.Visible;
-            TitleRectangle.Visibility = Visibility.Visible;
-            TitleBlock.Visibility = Visibility.Visible;
-            TitleDamageBlock.Visibility = Visibility.Visible;
-            windowBrush.Opacity = OPACITY;
-          }
-
-          for (int i = 0; i < MAX_ROWS; i++)
-          {
-            SetRowVisible(i < goodRowCount, i);
-          }
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
+        {
+          LOG.Error("Overlay Error", ex);
         }
       }
     }
@@ -426,7 +447,10 @@ namespace EQLogParser
       CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
       CopyButton.Click += (object sender, RoutedEventArgs e) =>
       {
-        (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
+        lock (Stats)
+        {
+          (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
+        }
       };
 
       RefreshButton = CreateButton();
