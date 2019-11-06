@@ -15,6 +15,14 @@ namespace EQLogParser
 
       try
       {
+        if (line.Contains("Your ward heals you as it ") || line.Contains("is soothed by Brell's Soothing Wave."))
+        {
+          if (true)
+          {
+
+          }
+        }
+
         int index;
         if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
@@ -59,7 +67,6 @@ namespace EQLogParser
     {
       // [Sun Feb 24 21:00:58 2019] Foob's promised interposition is fulfilled Foob healed himself for 44238 hit points by Promised Interposition Heal V. (Lucky Critical)
       // [Sun Feb 24 21:01:01 2019] Rowanoak is soothed by Brell's Soothing Wave. Farzi healed Rowanoak for 524 hit points by Brell's Sacred Soothing Wave.
-
       // [Sun Feb 24 21:00:52 2019] Kuvani healed Tolzol over time for 11000 hit points by Spirit of the Wood XXXIV.
       // [Sun Feb 24 21:00:52 2019] Kuvani healed Foob over time for 9409 (11000) hit points by Spirit of the Wood XXXIV.
       // [Sun Feb 24 21:00:58 2019] Fllint healed Foob for 11820 hit points by Blessing of the Ancients III.
@@ -69,6 +76,7 @@ namespace EQLogParser
       // [Mon Feb 18 21:21:12 2019] Nylenne has been healed over time for 8211 hit points by Roar of the Lion 6.
       // [Mon Feb 18 21:20:39 2019] You have been healed over time for 1063 (8211) hit points by Roar of the Lion 6.
       // [Mon Feb 18 21:17:35 2019] Snowzz healed Malkatar over time for 8211 hit points by Roar of the Lion 6.
+      // [Wed Nov 06 14:19:54 2019] Your ward heals you as it breaks! You healed Niktaza for 8970 (86306) hit points by Healing Ward. (Critical)
 
       HealRecord record = null;
       string part = pline.ActionPart;
@@ -90,7 +98,7 @@ namespace EQLogParser
         {
           done = true;
         }
-        else if (previous - 1 >= 0 && test[previous - 1] == '.' || previous - 9 > 0 && test.IndexOf("fulfilled", previous - 9, StringComparison.Ordinal) > -1)
+        else if (previous - 1 >= 0 && (test[previous - 1] == '.' || test[previous - 1] == '!') || previous - 9 > 0 && test.IndexOf("fulfilled", previous - 9, StringComparison.Ordinal) > -1)
         {
           healer = test.Substring(previous + 1);
         }

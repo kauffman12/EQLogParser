@@ -62,7 +62,7 @@ namespace EQLogParser
 
       npcDataGrid.ItemsSource = view;
 
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1250) };
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 850) };
       SelectionTimer.Tick += (sender, e) =>
       {
         SelectionTimer.Stop();
