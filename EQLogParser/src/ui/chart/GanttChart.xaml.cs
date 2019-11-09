@@ -10,7 +10,7 @@ namespace EQLogParser
 {
   public partial class GanttChart : UserControl
   {
-    private static SolidColorBrush GridBrush = new SolidColorBrush(Colors.White);
+    private static readonly SolidColorBrush GridBrush = new SolidColorBrush(Colors.White);
     private const double ADPS_OFFSET = 15;
     private const int RowHeight = 30;
     private const int TimeLines = 50;
@@ -36,8 +36,8 @@ namespace EQLogParser
       { "Quick Time", "Quick Time" }
     };
 
-    private List<Rectangle> TimeLineList = new List<Rectangle>();
-    private List<AdpsEntry> AdpsEntries = new List<AdpsEntry>();
+    private readonly List<Rectangle> TimeLineList = new List<Rectangle>();
+    private readonly List<AdpsEntry> AdpsEntries = new List<AdpsEntry>();
 
     public GanttChart(CombinedStats currentStats, PlayerStats selected, List<List<ActionBlock>> groups)
     {

@@ -62,9 +62,9 @@ namespace EQLogParser
       try
       {
         int index;
-        if (line.Length >= 40 && line.IndexOf(" damage", Parsing.ACTIONINDEX + 13, StringComparison.Ordinal) > -1)
+        if (line.Length >= 40 && line.IndexOf(" damage", LineParsing.ACTIONINDEX + 13, StringComparison.Ordinal) > -1)
         {
-          var actionPart = line.Substring(Parsing.ACTIONINDEX);
+          var actionPart = line.Substring(LineParsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString);
 
@@ -85,9 +85,9 @@ namespace EQLogParser
             handled = true;
           }
         }
-        else if (line.Length >= 49 && (index = line.IndexOf(", but miss", Parsing.ACTIONINDEX + 22, StringComparison.Ordinal)) > -1)
+        else if (line.Length >= 49 && (index = line.IndexOf(", but miss", LineParsing.ACTIONINDEX + 22, StringComparison.Ordinal)) > -1)
         {
-          var actionPart = line.Substring(Parsing.ACTIONINDEX);
+          var actionPart = line.Substring(LineParsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString);
 
@@ -99,20 +99,20 @@ namespace EQLogParser
             handled = true;
           }
         }
-        else if (line.Length > 30 && line.Length < 102 && (index = line.IndexOf(" slain ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
+        else if (line.Length > 30 && line.Length < 102 && (index = line.IndexOf(" slain ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          var actionPart = line.Substring(Parsing.ACTIONINDEX);
+          var actionPart = line.Substring(LineParsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString);
-          HandleSlain(actionPart, currentTime, index - Parsing.ACTIONINDEX);
+          HandleSlain(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
           handled = true;
         }
-        else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", Parsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
+        else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          var actionPart = line.Substring(Parsing.ACTIONINDEX);
+          var actionPart = line.Substring(LineParsing.ACTIONINDEX);
           var timeString = line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString);
-          HandleResist(actionPart, currentTime, index - Parsing.ACTIONINDEX);
+          HandleResist(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
           handled = true;
         }
       }
@@ -211,7 +211,7 @@ namespace EQLogParser
 
       int tryStartIndex;
       int hitStartIndex = -1;
-      int missesIndex = index - Parsing.ACTIONINDEX;
+      int missesIndex = index - LineParsing.ACTIONINDEX;
 
       if (withoutMods[0] == 'Y' && withoutMods[1] == 'o' && withoutMods[2] == 'u')
       {

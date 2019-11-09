@@ -83,6 +83,12 @@
           </MenuItem>
          </MenuItem>
         <Separator/>
+        <MenuItem Header="_Save Summary (html)" Height="20" Click="MenuItemExportHTMLClick" ToolTip="Save Open Summary Tables As HTML">
+          <MenuItem.Icon>
+            <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Save"  Foreground="#5191c1" />
+          </MenuItem.Icon>
+        </MenuItem>
+        <Separator/>
         <MenuItem Header="E_xit" Height="20" Click="Window_Close" InputGestureText="Alt+F4"/>
       </MenuItem>
       <MenuItem Header="_View" Height="20" Width="40">

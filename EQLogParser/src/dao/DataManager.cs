@@ -147,7 +147,7 @@ namespace EQLogParser
     {
       if (ConfigUtil.Debug)
       {
-        var actionPart = line.Substring(Parsing.ACTIONINDEX);
+        var actionPart = line.Substring(LineParsing.ACTIONINDEX);
 
         lock (UnHandledLines)
         {

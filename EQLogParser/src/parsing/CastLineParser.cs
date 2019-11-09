@@ -32,24 +32,24 @@ namespace EQLogParser
       try
       {
         int index = -1;
-        if (line.Length > 44 && (index = line.IndexOf(" begin", Parsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1)
+        if (line.Length > 44 && (index = line.IndexOf(" begin", LineParsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1)
         {
           SpellCast cast = null;
           ProcessLine pline = null;
-          int firstSpace = line.IndexOf(" ", Parsing.ACTIONINDEX, StringComparison.Ordinal);
+          int firstSpace = line.IndexOf(" ", LineParsing.ACTIONINDEX, StringComparison.Ordinal);
           if (firstSpace > -1 && firstSpace == index)
           {
-            if (firstSpace == (Parsing.ACTIONINDEX + 3) && line.Substring(Parsing.ACTIONINDEX, 3) == "You")
+            if (firstSpace == (LineParsing.ACTIONINDEX + 3) && line.Substring(LineParsing.ACTIONINDEX, 3) == "You")
             {
               var test = line.Substring(index + 7, 4);
               if (test == "cast" || test == "sing")
               {
-                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
+                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
                 pline.OptionalData = "you" + test;
                 pline.OptionalIndex = 3;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-                cast = HandleSpellCast(pline, line.Substring(Parsing.ACTIONINDEX, index - Parsing.ACTIONINDEX));
+                cast = HandleSpellCast(pline, line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX));
 
                 if (cast != null)
                 {
@@ -67,29 +67,29 @@ namespace EQLogParser
               var test = line.Substring(index + 8, 7);
               if (test == "casting" || test == "singing")
               {
-                spellIndex = firstSpace - Parsing.ACTIONINDEX + 16;
+                spellIndex = firstSpace - LineParsing.ACTIONINDEX + 16;
               }
               else
               {
                 test = line.Substring(index + 11, 4);
                 if (test == "cast")
                 {
-                  spellIndex = firstSpace - Parsing.ACTIONINDEX + 26;
+                  spellIndex = firstSpace - LineParsing.ACTIONINDEX + 26;
                 }
                 else if (test == "sing")
                 {
-                  spellIndex = firstSpace - Parsing.ACTIONINDEX + 25;
+                  spellIndex = firstSpace - LineParsing.ACTIONINDEX + 25;
                 }
               }
 
               if (spellIndex > -1)
               {
-                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
+                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
                 pline.OptionalData = test;
                 pline.OptionalIndex = spellIndex;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-                cast = HandleSpellCast(pline, line.Substring(Parsing.ACTIONINDEX, index - Parsing.ACTIONINDEX));
+                cast = HandleSpellCast(pline, line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX));
               }
             }
 
@@ -105,7 +105,7 @@ namespace EQLogParser
         {
           //[Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
           //[Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX), OptionalIndex = line.Length - 22 };
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX), OptionalIndex = line.Length - 22 };
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
 
@@ -114,21 +114,21 @@ namespace EQLogParser
           int end = line.Length - 22;
           int len;
 
-          if (line.IndexOf("Your", Parsing.ACTIONINDEX, 4, StringComparison.Ordinal) > -1)
+          if (line.IndexOf("Your", LineParsing.ACTIONINDEX, 4, StringComparison.Ordinal) > -1)
           {
             player = ConfigUtil.PlayerName;
-            len = end - Parsing.ACTIONINDEX - 5;
+            len = end - LineParsing.ACTIONINDEX - 5;
             if (len > 0)
             {
-              spell = line.Substring(Parsing.ACTIONINDEX + 5, len);
+              spell = line.Substring(LineParsing.ACTIONINDEX + 5, len);
             }
           }
           else
           {
-            int possessive = line.IndexOf("'s ", Parsing.ACTIONINDEX, StringComparison.Ordinal);
+            int possessive = line.IndexOf("'s ", LineParsing.ACTIONINDEX, StringComparison.Ordinal);
             if (possessive > -1)
             {
-              player = line.Substring(Parsing.ACTIONINDEX, possessive - Parsing.ACTIONINDEX);
+              player = line.Substring(LineParsing.ACTIONINDEX, possessive - LineParsing.ACTIONINDEX);
 
               len = end - possessive - 3;
               if (len > 0)
@@ -148,11 +148,11 @@ namespace EQLogParser
         }
         else if (!handled) // lands on messages
         {
-          int firstSpace = line.IndexOf(" ", Parsing.ACTIONINDEX, StringComparison.Ordinal);
+          int firstSpace = line.IndexOf(" ", LineParsing.ACTIONINDEX, StringComparison.Ordinal);
           if (firstSpace > -1 && line[firstSpace - 2] == '\'' && line[firstSpace - 1] == 's')
           {
-            ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
-            pline.OptionalIndex = firstSpace + 1 - Parsing.ACTIONINDEX;
+            ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
+            pline.OptionalIndex = firstSpace + 1 - LineParsing.ACTIONINDEX;
             pline.TimeString = pline.Line.Substring(1, 24);
             pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
             HandlePosessiveLandsOnOther(pline);
@@ -160,13 +160,13 @@ namespace EQLogParser
           }
           else if (firstSpace > -1)
           {
-            string player = line.Substring(Parsing.ACTIONINDEX, firstSpace - Parsing.ACTIONINDEX);
+            string player = line.Substring(LineParsing.ACTIONINDEX, firstSpace - LineParsing.ACTIONINDEX);
             if (!IgnoreMap.ContainsKey(player))
             {
               if (line.Length > firstSpace + 4)
               {
-                ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
-                pline.OptionalIndex = firstSpace + 1 - Parsing.ACTIONINDEX;
+                ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
+                pline.OptionalIndex = firstSpace + 1 - LineParsing.ACTIONINDEX;
                 pline.OptionalData = player;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
