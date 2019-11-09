@@ -1,0 +1,11 @@
+
+    <table class="data-table" id="{{- tableid -}}">
+      <thead>
+        <tr>{%- for column in columns -%}<th>{{ column }}</th>{%- endfor -%}</tr>
+      </thead>
+      <tbody>
+      {%- for row in rows -%}
+        {% if row.ischild %}<tr class="pet-row">{% else %}<tr>{% endif %}<td>{%- if row.haschild -%}<div class="expand-image">{%- else -%}<div>{% endif -%}</div></div>{{ row.rank }}</td>{%- for data in row.data -%}<td>{{- data -}}</td>{%- endfor %}</tr>
+      {%- endfor -%}
+      </tbody>
+    </table>

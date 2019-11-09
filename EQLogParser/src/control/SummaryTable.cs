@@ -70,6 +70,53 @@ namespace EQLogParser
       return (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
     }
 
+    internal List<string[]> GetHeaders()
+    {
+      return TheDataGrid.Columns.Select(column =>
+      {
+        string binding = "";
+        string title = "";
+        if (column is DataGridTextColumn textColumn && textColumn.Binding is System.Windows.Data.Binding theBinding)
+        {
+          title = textColumn.Header as string;
+          binding = theBinding.Path.Path;
+        }
+
+        return new string[] { binding, title };
+      }).ToList();
+    }
+
+    internal List<PlayerStats> GetPlayerStats()
+    {
+      var results = new List<PlayerStats>();
+      if (TheDataGrid.ItemsSource != null)
+      {
+        foreach (var item in TheDataGrid.ItemsSource as ICollectionView)
+        {
+          if (item is PlayerStats stats)
+          {
+            results.Add(stats);
+            if (CurrentStats.Children.ContainsKey(stats.Name))
+            {
+              results.AddRange(CurrentStats.Children[stats.Name]);
+            }
+          }
+        }
+      }
+
+      return results;
+    }
+
+    internal string GetTargetTitle()
+    {
+      return CurrentStats?.TargetTitle ?? GetTitle();
+    }
+
+    internal string GetTitle()
+    {
+      return TheTitle.Content as string;
+    }
+
     internal List<PlayerStats> GetSelectedStats()
     {
       return TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();

@@ -160,6 +160,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Can Not Save Summary Data.
+        /// </summary>
+        internal static string FILEMENU_EXPORT_SUMMARY {
+            get {
+                return ResourceManager.GetString("FILEMENU_EXPORT_SUMMARY", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Magician.
         /// </summary>
         internal static string MAG {

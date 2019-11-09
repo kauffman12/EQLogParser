@@ -31,9 +31,9 @@ namespace EQLogParser
           uint count = 0;
           bool isCurrency = false;
 
-          if (line[Parsing.ACTIONINDEX] == '-' && line[Parsing.ACTIONINDEX + 1] == '-')
+          if (line[LineParsing.ACTIONINDEX] == '-' && line[LineParsing.ACTIONINDEX + 1] == '-')
           {
-            if (line.Substring(Parsing.ACTIONINDEX + 2).Split(' ') is string[] pieces && pieces.Length >= 7)
+            if (line.Substring(LineParsing.ACTIONINDEX + 2).Split(' ') is string[] pieces && pieces.Length >= 7)
             {
               name = pieces[0] == "You" ? ConfigUtil.PlayerName : pieces[0];
 
@@ -50,9 +50,9 @@ namespace EQLogParser
               }
             }
           }
-          else if (line.Substring(Parsing.ACTIONINDEX, MasterLooterText.Length) == MasterLooterText)
+          else if (line.Substring(LineParsing.ACTIONINDEX, MasterLooterText.Length) == MasterLooterText)
           {
-            if (line.Substring(Parsing.ACTIONINDEX + MasterLooterText.Length).Split(' ') is string[] pieces && pieces.Length >= 7)
+            if (line.Substring(LineParsing.ACTIONINDEX + MasterLooterText.Length).Split(' ') is string[] pieces && pieces.Length >= 7)
             {
               name = pieces[0].Substring(0, pieces[0].Length - 1);
 
@@ -63,11 +63,11 @@ namespace EQLogParser
               }
             }
           }
-          else if (line.Substring(Parsing.ACTIONINDEX, YouReceiveText.Length) == YouReceiveText && line.IndexOf(YourSplitText, Parsing.ACTIONINDEX + 15, StringComparison.Ordinal) > -1)
+          else if (line.Substring(LineParsing.ACTIONINDEX, YouReceiveText.Length) == YouReceiveText && line.IndexOf(YourSplitText, LineParsing.ACTIONINDEX + 15, StringComparison.Ordinal) > -1)
           {
             name = ConfigUtil.PlayerName;
 
-            if (line.Substring(Parsing.ACTIONINDEX + YouReceiveText.Length).Split(' ') is string[] pieces && pieces.Length >= 2 && Array.FindIndex(pieces, end => end == "as") is int splitIndex && splitIndex > -1)
+            if (line.Substring(LineParsing.ACTIONINDEX + YouReceiveText.Length).Split(' ') is string[] pieces && pieces.Length >= 2 && Array.FindIndex(pieces, end => end == "as") is int splitIndex && splitIndex > -1)
             {
               ParseCurrency(pieces, 0, splitIndex, out item, out count);
               isCurrency = true;

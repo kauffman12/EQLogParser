@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,12 +43,12 @@ namespace EQLogParser
     private static readonly SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled);
-    private static List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
-    private static List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
-    private static List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
+    private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
+    private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
+    private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.5.51";
+    private const string VERSION = "v1.6.0";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -61,15 +62,14 @@ namespace EQLogParser
     private static DateTime StartLoadTime;
     private static LogOption CurrentLogOption;
 
-    private ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
-    private ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
-    private ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
+    private readonly ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
+    private readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
+    private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
 
     private ChatManager PlayerChatManager = null;
-    private NpcDamageManager NpcDamageManager = new NpcDamageManager();
-    private ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
-
-    Dictionary<string, DockingWindow> IconToWindow;
+    private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
+    private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
+    private readonly Dictionary<string, DockingWindow> IconToWindow;
     private DocumentWindow ChatWindow = null;
     private DocumentWindow DamageWindow = null;
     private DocumentWindow HealingWindow = null;
@@ -408,6 +408,34 @@ namespace EQLogParser
     private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e)
     {
       playerParseTextWindow.State = DockingWindowState.AutoHide;
+    }
+
+    private void MenuItemExportHTMLClick(object sender, RoutedEventArgs e)
+    {
+      var tables = new Dictionary<string, SummaryTable>();
+      if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
+      {
+        tables.Add(DamageWindow.Title, damageSummary);
+      }
+
+      if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
+      {
+        tables.Add(HealingWindow.Title, healingSummary);
+      }
+
+      if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
+      {
+        tables.Add(TankingWindow.Title, tankingSummary);
+      }
+
+      if (tables.Count > 0)
+      {
+        TextFormatUtils.ExportAsHTML(tables);
+      }
+      else
+      {
+        _ = MessageBox.Show("Nothing to Save. Display a Summary View and Try Again.", Properties.Resources.FILEMENU_EXPORT_SUMMARY, MessageBoxButton.OK, MessageBoxImage.Exclamation);
+      }
     }
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e)

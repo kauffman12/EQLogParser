@@ -1,12 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Security;
 using System.Text;
 
 namespace EQLogParser
 {
   class TextFormatUtils
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     private const string BB_CELL_HEADER = "  [td]{0}    [/td]";
     private const string BB_CELL_BODY = "[td][right]{0}   [/right][/td]";
     private const string BB_CELL_FIRST = "[td]{0}[/td]";
@@ -175,7 +181,7 @@ namespace EQLogParser
           int duration = durationExtendable == 0 ? maxTicks * 2 : maxTicks;
 
           // convert to seconds
-          duration = duration * 6;
+          duration *= 6;
 
           // deal with too big or too small values
           // all adps we care about is in the range of a few minutes
@@ -193,7 +199,7 @@ namespace EQLogParser
             ID = string.Intern(data[0]),
             Spell = string.Intern(data[1]),
             SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
-            Duration = (ushort) duration,
+            Duration = (ushort)duration,
             IsBeneficial = beneficial != 0,
             Target = target,
             ClassMask = classMask,
@@ -206,6 +212,92 @@ namespace EQLogParser
       }
 
       return spellData;
+    }
+
+    internal static void ExportAsHTML(Dictionary<string, SummaryTable> tables)
+    {
+      try
+      {
+        SaveFileDialog saveFileDialog = new SaveFileDialog();
+        string filter = "EQLogParser Summary (*.html)|*.html";
+        saveFileDialog.Filter = filter;
+        
+        var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " " + tables.Values.First().GetTargetTitle();     
+        saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+
+        if (saveFileDialog.ShowDialog().Value)
+        {
+          var headerTemplate = DotLiquid.Template.Parse(File.ReadAllText(@"data\html\header.html"));
+          var tableKeys = tables.Keys.OrderBy(key => key);
+          var tablechoices = new List<object>();
+
+          foreach (var key in tableKeys)
+          {
+            tablechoices.Add(new { type = key, title = tables[key].GetTitle() });
+          }
+
+          var headerValue = headerTemplate.Render(DotLiquid.Hash.FromAnonymousObject(new { tablechoices }));
+          File.WriteAllText(saveFileDialog.FileName, headerValue);
+          headerValue = null;
+          headerTemplate = null;
+
+          var contentTemplate = DotLiquid.Template.Parse(File.ReadAllText(@"data\html\content.html"));
+          foreach (var key in tableKeys)
+          {
+            var headers = tables[key].GetHeaders();
+            var playerStats = tables[key].GetPlayerStats();
+
+            var columns = headers.Select(header => header[1]).ToList();
+            var rows = new List<object>();
+            foreach (var stats in playerStats)
+            {
+              var data = new List<object>();
+              foreach (var column in headers.Skip(1))
+              {
+                var value = stats.GetType().GetProperty(column[0]).GetValue(stats, null);
+                if (column[1].Contains("%") && value is double doubleValue && doubleValue == 0)
+                {
+                  value = "-";
+                }
+
+                data.Add(value);
+              }
+
+              var row = new
+              {
+                rank = stats.Rank == 0 ? "" : stats.Rank.ToString(CultureInfo.CurrentCulture),
+                ischild = stats.Rank == 0,
+                haschild = stats.Name.Contains(" +Pets"),
+                data
+              };
+
+              rows.Add(row);
+            }
+
+            var content = contentTemplate.Render(DotLiquid.Hash.FromAnonymousObject(new { columns, rows, tableid = key }));
+            File.AppendAllText(saveFileDialog.FileName, content);
+          }
+
+          var footer = File.ReadAllText(@"data\html\footer.html");
+          File.AppendAllText(saveFileDialog.FileName, footer);
+        }
+      }
+      catch (IOException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
+      }
+      catch (ArgumentNullException ane)
+      {
+        LOG.Error(ane);
+      }
     }
   }
 }

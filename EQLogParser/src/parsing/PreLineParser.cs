@@ -39,7 +39,7 @@ namespace EQLogParser
       bool valid = false;
       if (line != null && line.Length > MIN_LINE_LENGTH)
       {
-        ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(Parsing.ACTIONINDEX) };
+        ProcessLine pline = new ProcessLine { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
         valid = !(CheckForPlayersOrNPCs(pline) || CheckForPetLeader(pline) || CheckForJunk(pline));
       }
 

@@ -41,7 +41,7 @@ namespace EQLogParser
     public const string OOC = "OOC";
   }
 
-  public static class Parsing
+  public static class LineParsing
   {
     public const int ACTIONINDEX = 27;
   }
