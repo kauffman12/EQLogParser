@@ -150,6 +150,9 @@
   <data name="ENC" xml:space="preserve">
     <value>Enchanter</value>
   </data>
+  <data name="FILEMENU_EXPORT_SUMMARY" xml:space="preserve">
+    <value>Can Not Save Summary Data</value>
+  </data>
   <data name="MAG" xml:space="preserve">
     <value>Magician</value>
   </data>

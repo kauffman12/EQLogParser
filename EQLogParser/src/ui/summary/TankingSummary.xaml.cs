@@ -120,7 +120,7 @@ namespace EQLogParser
               Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
             }
-            else if (e.Type == Labels.HEALPARSE)
+            else if (e.Type == Labels.HEALPARSE && CurrentStats != null)
             {
               (Application.Current.MainWindow as MainWindow).Busy(true);
               HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);

@@ -10,6 +10,11 @@ namespace EQLogParser
     private double LastDateTime;
     private double increment = 0.0;
 
+    internal static string GetCurrentDate(string format)
+    {
+      return DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
+    }
+
     internal static string FormatSimpleDate(double seconds)
     {
       var dateTime = new DateTime().AddSeconds(seconds);
