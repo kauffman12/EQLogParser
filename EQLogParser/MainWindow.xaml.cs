@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.6.0";
+    private const string VERSION = "v1.6.1";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -233,7 +232,49 @@ namespace EQLogParser
         enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
 
         UpdateDeleteChatMenu();
-        OpenDamageSummary();
+
+        // Show Tanking Summary at startup
+        value = ConfigUtil.GetApplicationSetting("ShowTankingSummaryAtStartup");
+        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
+        {
+          OpenTankingSummary();
+        }
+
+        // Show Healing Summary at startup
+        value = ConfigUtil.GetApplicationSetting("ShowHealingSummaryAtStartup");
+        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
+        {
+          OpenHealingSummary();
+        }
+
+        // Show Healing Summary at startup
+        value = ConfigUtil.GetApplicationSetting("ShowDamageSummaryAtStartup");
+        if (value == null || (bool.TryParse(value, out bValue2) && bValue2))
+        {
+          OpenDamageSummary();
+        }
+
+        // Show Tanking Summary at startup
+        value = ConfigUtil.GetApplicationSetting("ShowTankingChartAtStartup");
+        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
+        {
+          OpenTankingChart();
+        }
+
+        // Show Healing Summary at startup
+        value = ConfigUtil.GetApplicationSetting("ShowHealingChartAtStartup");
+        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
+        {
+          OpenHealingChart();
+        }
+
+        // Show Healing Summary at startup
+        value = ConfigUtil.GetApplicationSetting("ShowDamageChartAtStartup");
+        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
+        {
+          OpenDamageChart();
+        }
+
         LOG.Info("Initialized Components");
       }
       catch (Exception e)
@@ -353,6 +394,13 @@ namespace EQLogParser
 
     private void Window_Closed(object sender, EventArgs e)
     {
+      ConfigUtil.SetApplicationSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowHealingSummaryAtStartup", (HealingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowTankingSummaryAtStartup", (TankingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowDamageChartAtStartup", (DamageChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowHealingChartAtStartup", (HealingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowTankingChartAtStartup", (TankingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+
       StopProcessing();
       CloseOverlay();
       taskBarIcon?.Dispose();
