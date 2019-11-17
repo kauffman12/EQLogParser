@@ -308,6 +308,7 @@ namespace EQLogParser
     public bool IsBeneficial { get; set; }
     public byte Target { get; set; }
     public ushort ClassMask { get; set; }
+    public ushort Level { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
     public bool Damaging { get; set; }
