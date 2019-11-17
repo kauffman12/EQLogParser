@@ -171,11 +171,11 @@ namespace EQLogParser
         string[] data = line.Split('^');
         if (data.Length >= 11)
         {
-          int maxTicks = int.Parse(data[2], CultureInfo.CurrentCulture);
-          int beneficial = int.Parse(data[3], CultureInfo.CurrentCulture);
-          int durationExtendable = int.Parse(data[4], CultureInfo.CurrentCulture);
-          byte target = byte.Parse(data[5], CultureInfo.CurrentCulture);
-          ushort classMask = ushort.Parse(data[6], CultureInfo.CurrentCulture);
+          int maxTicks = int.Parse(data[3], CultureInfo.CurrentCulture);
+          int beneficial = int.Parse(data[4], CultureInfo.CurrentCulture);
+          int durationExtendable = int.Parse(data[5], CultureInfo.CurrentCulture);
+          byte target = byte.Parse(data[6], CultureInfo.CurrentCulture);
+          ushort classMask = ushort.Parse(data[7], CultureInfo.CurrentCulture);
 
           // apply enhancement AA (need to make this per class)
           int duration = durationExtendable == 0 ? maxTicks * 2 : maxTicks;
@@ -199,14 +199,15 @@ namespace EQLogParser
             ID = string.Intern(data[0]),
             Spell = string.Intern(data[1]),
             SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
+            Level = ushort.Parse(data[2], CultureInfo.CurrentCulture),
             Duration = (ushort)duration,
             IsBeneficial = beneficial != 0,
             Target = target,
             ClassMask = classMask,
-            LandsOnYou = string.Intern(data[7]),
-            LandsOnOther = string.Intern(data[8]),
-            Damaging = byte.Parse(data[9], CultureInfo.CurrentCulture) == 1,
-            IsProc = byte.Parse(data[10], CultureInfo.CurrentCulture) == 1
+            LandsOnYou = string.Intern(data[8]),
+            LandsOnOther = string.Intern(data[9]),
+            Damaging = byte.Parse(data[10], CultureInfo.CurrentCulture) == 1,
+            IsProc = byte.Parse(data[11], CultureInfo.CurrentCulture) == 1
           };
         }
       }

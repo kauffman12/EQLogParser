@@ -102,8 +102,9 @@ namespace EQLogParser
       var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
       spellList.ForEach(spell =>
       {
-        // exact match meaning class-only spell
-        if (classEnums.Contains((SpellClass)spell.ClassMask))
+        // exact match meaning class-only spell that are of certain target types
+        var tgt = (SpellTarget)spell.Target;
+        if ((tgt == SpellTarget.SELF || (spell.Level <= 250 && (tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS))) && classEnums.Contains((SpellClass)spell.ClassMask))
         {
           // these need to be unique and keep track if a conflict is found
           if (SpellsToClass.ContainsKey(spell.Spell))
