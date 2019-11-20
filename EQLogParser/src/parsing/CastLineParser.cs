@@ -32,7 +32,10 @@ namespace EQLogParser
       try
       {
         int index = -1;
-        if (line.Length > 44 && (index = line.IndexOf(" begin", LineParsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1)
+        bool isSpell = line.Length > 44 && (index = line.IndexOf(" begin", LineParsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1;
+        bool isActivate = !isSpell && line.Length > 44 && (index = line.IndexOf(" activate", LineParsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1;
+
+        if (isSpell || isActivate)
         {
           SpellCast cast = null;
           ProcessLine pline = null;
@@ -41,8 +44,8 @@ namespace EQLogParser
           {
             if (firstSpace == (LineParsing.ACTIONINDEX + 3) && line.Substring(LineParsing.ACTIONINDEX, 3) == "You")
             {
-              var test = line.Substring(index + 7, 4);
-              if (test == "cast" || test == "sing")
+              var test = isActivate ? line[index + 9] == ' ' ? "activate" : "" : line.Substring(index + 7, 4);
+              if (test == "cast" || test == "sing" || test == "activate")
               {
                 pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
                 pline.OptionalData = "you" + test;
@@ -51,7 +54,7 @@ namespace EQLogParser
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
                 cast = HandleSpellCast(pline, line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX));
 
-                if (cast != null)
+                if (cast != null && isSpell)
                 {
                   // For some reason Glyphs don't show up for current player
                   CheckForSpecial(SpecialBrokenCodes, cast.Spell, cast.Caster, pline.CurrentTime);
@@ -64,10 +67,14 @@ namespace EQLogParser
               // [Thu Apr 18 01:46:06 2019] Incogitable begins casting Dizzying Wheel Rk. II.
 
               int spellIndex = -1;
-              var test = line.Substring(index + 8, 7);
+              var test = isActivate ? line[index + 9] == 's' ? "activates" : "" :  line.Substring(index + 8, 7);
               if (test == "casting" || test == "singing")
               {
                 spellIndex = firstSpace - LineParsing.ACTIONINDEX + 16;
+              }
+              else if (test == "activates")
+              {
+                spellIndex = firstSpace - LineParsing.ACTIONINDEX + 11;
               }
               else
               {
@@ -251,6 +258,7 @@ namespace EQLogParser
 
       switch (pline.OptionalData)
       {
+        case "activates":
         case "casting":
         case "singing":
         case "cast":
@@ -272,6 +280,16 @@ namespace EQLogParser
             {
               Caster = ConfigUtil.PlayerName,
               Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1))
+            };
+          }
+          break;
+        case "youactivate":
+          if (pline.ActionPart.Length > pline.OptionalIndex + 10)
+          {
+            cast = new SpellCast()
+            {
+              Caster = ConfigUtil.PlayerName,
+              Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex + 10, pline.ActionPart.Length - pline.OptionalIndex - 10 - 1))
             };
           }
           break;
