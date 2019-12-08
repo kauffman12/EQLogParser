@@ -81,28 +81,30 @@ namespace EQLogParser
 
       if (ValidChannels == null || (chatType.Channel != null && ValidChannels.ContainsKey(chatType.Channel)))
       {
-        if (To == null || ("You".Equals(To, StringComparison.OrdinalIgnoreCase) && chatType.Receiver == Player) ||
-          (Player.Equals(To, StringComparison.OrdinalIgnoreCase) && chatType.Receiver == "You") || (chatType.Receiver != null && chatType.Receiver.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1))
+        string receiver = chatType.Receiver == "You" ? Player : chatType.Receiver;
+        string sender = chatType.Sender == "You" ? Player : chatType.Sender;
+        bool receiverIsTo = receiver != null && To != null && receiver.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1;
+        bool senderIsFrom = sender != null && From != null && sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
+        bool receiverIsFrom = receiver != null && From != null && receiver.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
+        bool senderIsTo = sender != null && To != null && sender.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1;
+
+        if (((To == null || receiverIsTo) && (From == null || senderIsFrom)) || (senderIsTo && receiverIsFrom))
         {
-          if (From == null || ("You".Equals(From, StringComparison.OrdinalIgnoreCase) && chatType.Sender == Player) ||
-            (Player.Equals(From, StringComparison.OrdinalIgnoreCase) && chatType.Sender == "You") || (chatType.Sender != null && chatType.Sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1))
+          if (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender))
           {
-            if (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender))
+            if (Keyword != null)
             {
-              if (Keyword != null)
-              {
-                int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
-                int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
-                if (foundIndex > -1)
-                {
-                  passed = true;
-                  chatType.KeywordStart = foundIndex;
-                }
-              }
-              else
+              int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
+              int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
+              if (foundIndex > -1)
               {
                 passed = true;
+                chatType.KeywordStart = foundIndex;
               }
+            }
+            else
+            {
+              passed = true;
             }
           }
         }
