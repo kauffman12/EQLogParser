@@ -159,7 +159,7 @@ namespace EQLogParser
               int colCount = 0;
               foreach (string name in sortedPlayers)
               {
-                string colBinding = "Values[" + colCount + "]"; // dont use colCount directory since it will change during Dispatch
+                string colBinding = "Values[" + colCount + "]"; // dont use colCount directly since it will change during Dispatch
                 double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
                 string header = name + " = " + ((CurrentCountType == 0) ? total.ToString(CultureInfo.CurrentCulture) : Math.Round(total / totalCasts * 100, 2).ToString(CultureInfo.CurrentCulture));
 
@@ -218,6 +218,8 @@ namespace EQLogParser
                 }
 
                 values[i] = CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
+
+                row.Values.Clear();
                 row.Values.AddRange(values);
 
                 if ((SpellRowsView.Count <= existingIndex))
