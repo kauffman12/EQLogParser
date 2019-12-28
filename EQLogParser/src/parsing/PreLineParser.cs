@@ -108,6 +108,12 @@ namespace EQLogParser
         PlayerManager.Instance.AddVerifiedPlayer(test);
         found = true;
       }
+      else if (pline.ActionPart.Length > 10 && pline.ActionPart.Length < 60 && (index = pline.ActionPart.IndexOf(" has joined the group.", StringComparison.Ordinal)) > -1)
+      {
+        string test = pline.ActionPart.Substring(0, index);
+        PlayerManager.Instance.AddPetOrPlayerAction(test);
+        found = true;
+      }
 
       return found;
     }
