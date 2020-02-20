@@ -31,6 +31,7 @@ namespace EQLogParser
     internal static bool IsDamageOverlayEnabled = false;
     internal static bool IsIgnoreIntialPullDamageEnabled = false;
     internal static bool IsHideOverlayOtherPlayersEnabled = false;
+    internal static bool IsHideOnMinimizeEnabled = false;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -47,7 +48,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.6.8";
+    private const string VERSION = "v1.6.10";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -189,7 +190,7 @@ namespace EQLogParser
         DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record, data.BeginTime);
         MiscLineParser.EventsLootProcessed += (sender, data) => DataManager.Instance.AddLootRecord(data.Record, data.BeginTime);
 
-        (npcWindow.Content as NpcTable).EventsSelectionChange += (sender, data) => ComputeStats();
+        (npcWindow.Content as FightTable).EventsSelectionChange += (sender, data) => ComputeStats();
 
         DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
         HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
@@ -274,6 +275,10 @@ namespace EQLogParser
         {
           OpenDamageChart();
         }
+
+        // Hide window when minimized
+        value = ConfigUtil.GetApplicationSetting("HideWindowOnMinimize");
+        IsHideOnMinimizeEnabled = value != null && bool.TryParse(value, out bValue2) && bValue2;
 
         LOG.Info("Initialized Components");
       }
@@ -370,7 +375,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if ((npcWindow?.Content as NpcTable)?.GetSelectedItems()?.Count > 0)
+        if ((npcWindow?.Content as FightTable)?.GetSelectedItems()?.Count > 0)
         {
           ComputeStats();
         }
@@ -423,7 +428,7 @@ namespace EQLogParser
 
     private void ComputeStats()
     {
-      var npcList = (npcWindow?.Content as NpcTable)?.GetSelectedItems();
+      var npcList = (npcWindow?.Content as FightTable)?.GetSelectedItems();
       var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID);
       string name = filtered?.FirstOrDefault()?.Name;
 
@@ -505,6 +510,13 @@ namespace EQLogParser
       IsHideOverlayOtherPlayersEnabled = !IsHideOverlayOtherPlayersEnabled;
       ConfigUtil.SetApplicationSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
       enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
+    {
+      IsHideOnMinimizeEnabled = !IsHideOnMinimizeEnabled;
+      ConfigUtil.SetApplicationSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled.ToString(CultureInfo.CurrentCulture));
+      enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
@@ -1140,7 +1152,7 @@ namespace EQLogParser
           DataManager.Instance.Clear();
           PlayerChatManager = new ChatManager();
 
-          NpcDamageManager.LastUpdateTime = double.NaN;
+          NpcDamageManager.ResetTime();
           progressWindow.IsOpen = true;
           EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
@@ -1206,7 +1218,7 @@ namespace EQLogParser
 
     private void NPCWindow_KeyDown(object sender, KeyEventArgs e)
     {
-      (npcWindow?.Content as NpcTable).NPCSearchBoxKeyDown(sender, e);
+      (npcWindow?.Content as FightTable).FightSearchBoxKeyDown(sender, e);
     }
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
@@ -1254,7 +1266,7 @@ namespace EQLogParser
       {
         ShowInTaskbar = true;
       }
-      else
+      else if (IsHideOnMinimizeEnabled)
       {
         ShowInTaskbar = false;
         Hide();

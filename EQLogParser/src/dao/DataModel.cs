@@ -143,7 +143,7 @@ namespace EQLogParser
   public class GenerateStatsOptions
   {
     public string Name { get; set; }
-    public List<NonPlayer> Npcs { get; } = new List<NonPlayer>();
+    public List<Fight> Npcs { get; } = new List<Fight>();
     public bool RequestChartData { get; set; }
     public bool RequestSummaryData { get; set; }
   }
@@ -254,12 +254,13 @@ namespace EQLogParser
     public Dictionary<long, int> NonCritFreqValues { get; } = new Dictionary<long, int>();
   }
 
-  public class NonPlayer : FullTimedAction
+  public class Fight : FullTimedAction
   {
     public const string BREAKTIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public int ID { get; set; }
+    public bool IsNpc { get; set; } = false;
     public string CorrectMapKey { get; set; }
     public int GroupID { get; set; }
   }

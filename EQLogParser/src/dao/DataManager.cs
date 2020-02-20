@@ -23,9 +23,10 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static DataManager Instance = new DataManager();
-    internal event EventHandler<NonPlayer> EventsNewInactiveNonPlayer;
-    internal event EventHandler<string> EventsRemovedNonPlayer;
-    internal event EventHandler<NonPlayer> EventsNewNonPlayer;
+    internal event EventHandler<Fight> EventsNewInactiveFight;
+    internal event EventHandler<string> EventsRemovedFight;
+    internal event EventHandler<Fight> EventsNewFight;
+    internal event EventHandler<Fight> EventsRefreshFights;
     internal event EventHandler<bool> EventsClearedActiveData;
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
@@ -39,6 +40,7 @@ namespace EQLogParser
     private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
     private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
 
+    private readonly Dictionary<string, byte> AllNpcs = new Dictionary<string, byte>();
     private readonly Dictionary<string, SpellData> AllUniqueSpellsCache = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
@@ -48,8 +50,8 @@ namespace EQLogParser
     private readonly Dictionary<string, SpellClass> SpellsToClass = new Dictionary<string, SpellClass>();
 
     private readonly ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, NonPlayer> ActiveNonPlayer = new ConcurrentDictionary<string, NonPlayer>();
-    private readonly ConcurrentDictionary<string, byte> LifetimeNonPlayer = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
+    private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
     private readonly Dictionary<string, Dictionary<string, byte>> UnHandledLines = new Dictionary<string, Dictionary<string, byte>>();
 
     private DataManager()
@@ -119,18 +121,20 @@ namespace EQLogParser
         }
       });
 
-      PlayerManager.Instance.EventsNewLikelyPlayer += (sender, name) => RemoveNonPlayer(name);
-      PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => RemoveNonPlayer(name);
-      PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => RemoveNonPlayer(name);
-      PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => RemoveNonPlayer(name);
+      // load NPCs
+      ConfigUtil.ReadList(@"data\npcs.txt").ForEach(line => AllNpcs[line.Trim()] = 1);
+
+      PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => RemoveFight(name);
+      PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => RemoveFight(name);
+      PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => RemoveFight(name);
     }
 
     internal void Clear()
     {
       lock (this)
       {
-        ActiveNonPlayer.Clear();
-        LifetimeNonPlayer.Clear();
+        ActiveFights.Clear();
+        LifetimeFights.Clear();
         AllSpellCastBlocks.Clear();
         AllUniqueSpellCasts.Clear();
         AllUniqueSpellsCache.Clear();
@@ -185,12 +189,6 @@ namespace EQLogParser
       }
 
       return list;
-    }
-
-    internal void AddNonPlayerMapBreak(string text)
-    {
-      NonPlayer divider = new NonPlayer() { GroupID = -1, BeginTimeString = NonPlayer.BREAKTIME, Name = string.Intern(text) };
-      EventsNewNonPlayer?.Invoke(this, divider);
     }
 
     internal void AddSpecial(TimedAction action)
@@ -339,9 +337,9 @@ namespace EQLogParser
       return result;
     }
 
-    internal NonPlayer GetNonPlayer(string name)
+    internal Fight GetFight(string name)
     {
-      ActiveNonPlayer.TryGetValue(name, out NonPlayer npc);
+      ActiveFights.TryGetValue(name, out Fight npc);
       return npc;
     }
 
@@ -373,6 +371,16 @@ namespace EQLogParser
         result = FindByLandsOn(value, output);
       }
       return result;
+    }
+
+    internal bool IsKnownNpc(string npc)
+    {
+      bool found = false;
+      if (!string.IsNullOrEmpty(npc))
+      {
+        found = AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
+      }
+      return found; 
     }
 
     private SpellData FindByLandsOn(string value, List<SpellData> output)
@@ -424,40 +432,44 @@ namespace EQLogParser
       return result;
     }
 
-    internal bool RemoveActiveNonPlayer(string name)
+    internal bool RemoveActiveFight(string name)
     {
-      bool removed = ActiveNonPlayer.TryRemove(name, out NonPlayer non);
+      bool removed = ActiveFights.TryRemove(name, out Fight fight);
 
       if (removed)
       {
-        EventsNewInactiveNonPlayer?.Invoke(this, non);
+        EventsNewInactiveFight?.Invoke(this, fight);
       }
 
       return removed;
     }
 
-    internal void UpdateIfNewNonPlayerMap(string name, NonPlayer npc)
+    internal void UpdateIfNewFightMap(string name, Fight fight, bool changed)
     {
-      if (!LifetimeNonPlayer.ContainsKey(name))
+      if (!LifetimeFights.ContainsKey(name))
       {
-        LifetimeNonPlayer[name] = 1;
+        LifetimeFights[name] = 1;
       }
 
-      if (!ActiveNonPlayer.ContainsKey(name))
+      if (!ActiveFights.ContainsKey(name))
       {
-        ActiveNonPlayer[name] = npc;
-        EventsNewNonPlayer?.Invoke(this, npc);
+        ActiveFights[name] = fight;
+        EventsNewFight?.Invoke(this, fight);
+      }
+      else if (changed)
+      {
+        EventsRefreshFights?.Invoke(this, fight);
       }
     }
 
-    private void RemoveNonPlayer(string name)
+    private void RemoveFight(string name)
     {
-      bool removed = ActiveNonPlayer.TryRemove(name, out NonPlayer npc);
-      removed = LifetimeNonPlayer.TryRemove(name, out byte bnpc) || removed;
+      bool removed = ActiveFights.TryRemove(name, out Fight npc);
+      removed = LifetimeFights.TryRemove(name, out byte bnpc) || removed;
 
       if (removed)
       {
-        EventsRemovedNonPlayer?.Invoke(this, name);
+        EventsRemovedFight?.Invoke(this, name);
       }
     }
 

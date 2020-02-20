@@ -8,7 +8,6 @@ namespace EQLogParser
 {
   class PlayerManager
   {
-    internal event EventHandler<string> EventsNewLikelyPlayer;
     internal event EventHandler<PetMapping> EventsNewPetMapping;
     internal event EventHandler<string> EventsNewTakenPetOrPlayerAction;
     internal event EventHandler<string> EventsNewVerifiedPet;
@@ -23,9 +22,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> SecondPerson = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> ThirdPerson = new ConcurrentDictionary<string, byte>();
-
-    private readonly ConcurrentDictionary<string, byte> LikelyPlayer = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, Dictionary<string, int>> LikelyPlayerStats = new ConcurrentDictionary<string, Dictionary<string, int>>();
     private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
     private readonly ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
     private readonly ConcurrentDictionary<string, byte> TakenPetOrPlayerAction = new ConcurrentDictionary<string, byte>();
@@ -121,28 +117,7 @@ namespace EQLogParser
 
       return player;
     }
-
-    internal bool IsPlayerDamage(DamageRecord record)
-    {
-      bool valid = false;
-      if (record != null && record.Defender != record.Attacker)
-      {
-        var isAttackerPlayer = IsPetOrPlayer(record.Attacker);
-        var isDefenderPlayer = IsPetOrPlayer(record.Defender);
-        var attackerCouldBePlayer = isAttackerPlayer || Helpers.IsPossiblePlayerName(record.Attacker);
-        var defenderProbablyNotPlayer = !isDefenderPlayer && !IsLikelyPlayer(record.DefenderOwner);
-
-        valid = attackerCouldBePlayer && (defenderProbablyNotPlayer || (record.Attacker == record.Defender && PetToPlayer.ContainsKey(record.Attacker)));
-
-        if (!isAttackerPlayer && attackerCouldBePlayer && defenderProbablyNotPlayer && !Helpers.IsPossiblePlayerName(record.Defender))
-        {
-          IncrementLikelyPlayer(record.Attacker, record.Defender);
-        }
-      }
-
-      return valid;
-    }
-
+    
     internal bool IsVerifiedPet(string name)
     {
       bool found = false;
@@ -169,7 +144,7 @@ namespace EQLogParser
 
     internal bool IsPetOrPlayer(string name)
     {
-      return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || LikelyPlayer.ContainsKey(name) || TakenPetOrPlayerAction.ContainsKey(name));
+      return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || TakenPetOrPlayerAction.ContainsKey(name));
     }
 
     internal void RemoveVerifiedPet(string name)
@@ -227,8 +202,6 @@ namespace EQLogParser
     {
       lock (this)
       {
-        LikelyPlayer.Clear();
-        LikelyPlayerStats.Clear();
         PetToPlayer.Clear();
         PlayerToClass.Clear();
         TakenPetOrPlayerAction.Clear();
@@ -307,47 +280,6 @@ namespace EQLogParser
           }
         }
       }
-    }
-
-    private void IncrementLikelyPlayer(string attacker, string defender)
-    {
-      if (!LikelyPlayerStats.TryGetValue(attacker, out Dictionary<string, int> defenders))
-      {
-        lock (LikelyPlayerStats)
-        {
-          defenders = new Dictionary<string, int>();
-          LikelyPlayerStats.TryAdd(attacker, defenders);
-        }
-      }
-
-      bool newLikelyPlayer = false;
-
-      lock (defenders)
-      {
-        int newValue = 1;
-        if (defenders.TryGetValue(defender, out int value))
-        {
-          newValue += value;
-        }
-
-        defenders[defender] = newValue;
-
-        if (newValue > 5 || defenders.Count > 1)
-        {
-          LikelyPlayer[attacker] = 1;
-          newLikelyPlayer = true;
-        }
-      }
-
-      if (newLikelyPlayer)
-      {
-        EventsNewLikelyPlayer?.Invoke(this, attacker);
-      }
-    }
-
-    private bool IsLikelyPlayer(string name)
-    {
-      return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || LikelyPlayer.ContainsKey(name));
     }
 
     private class SpellClassCounter

@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -15,7 +14,7 @@ namespace EQLogParser
     internal const string PLAYER_FORMAT = "{0} = ";
     internal const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
     internal const string SPECIAL_FORMAT = "{0} {{{1}}}";
-    internal const int SPECIAL_OFFSET = 15;
+    internal const int SPECIAL_OFFSET = 20;
 
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
@@ -323,6 +322,8 @@ namespace EQLogParser
     {
       ConcurrentDictionary<string, string> playerSpecials = new ConcurrentDictionary<string, string>();
 
+      ConcurrentDictionary<object, bool> temp = new ConcurrentDictionary<object, bool>();
+
       if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
       {
         for (int i = 0; i < raidStats.BeginTimes.Count && i < raidStats.LastTimes.Count; i++)
@@ -332,30 +333,35 @@ namespace EQLogParser
 
           DataManager.Instance.GetSpecialsDuring(beginTime, endTime).ForEach(action =>
           {
-            string code = null;
-            string player = null;
+            if (!temp.ContainsKey(action))
+            {
+              string code = null;
+              string player = null;
 
-            if (action is PlayerDeath death)
-            {
-              player = death.Player;
-              code = "X";
-            }
-            else if (action is SpecialSpell spell)
-            {
-              player = spell.Player;
-              code = spell.Code;
-            }
+              if (action is PlayerDeath death)
+              {
+                player = death.Player;
+                code = "X";
+              }
+              else if (action is SpecialSpell spell)
+              {
+                player = spell.Player;
+                code = spell.Code;
+              }
 
-            if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(code))
-            {
-              if (playerSpecials.TryGetValue(player, out string special))
+              if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(code))
               {
-                playerSpecials[player] = special + code;
+                if (playerSpecials.TryGetValue(player, out string special))
+                {
+                  playerSpecials[player] = special + code;
+                }
+                else
+                {
+                  playerSpecials[player] = code;
+                }
               }
-              else
-              {
-                playerSpecials[player] = code;
-              }
+
+              temp.TryAdd(action, true);
             }
           });
         }

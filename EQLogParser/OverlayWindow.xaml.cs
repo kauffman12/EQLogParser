@@ -151,14 +151,14 @@ namespace EQLogParser
       if (!offsetSize)
       {
         DamageLineParser.EventsDamageProcessed += DamageLineParser_EventsDamageProcessed;
-        DataManager.Instance.EventsNewInactiveNonPlayer += Instance_EventsNewInactiveNonPlayer;
+        DataManager.Instance.EventsNewInactiveFight += Instance_EventsNewInactiveFight;
         Active = true;
       }
       else
       {
         // remove when configuring
         DamageLineParser.EventsDamageProcessed -= DamageLineParser_EventsDamageProcessed;
-        DataManager.Instance.EventsNewInactiveNonPlayer -= Instance_EventsNewInactiveNonPlayer;
+        DataManager.Instance.EventsNewInactiveFight -= Instance_EventsNewInactiveFight;
       }
     }
 
@@ -190,7 +190,7 @@ namespace EQLogParser
       }
     }
 
-    private void Instance_EventsNewInactiveNonPlayer(object sender, NonPlayer e)
+    private void Instance_EventsNewInactiveFight(object sender, Fight e)
     {
       lock(StatsLock)
       {
@@ -570,7 +570,7 @@ namespace EQLogParser
       if (Active)
       {
         DamageLineParser.EventsDamageProcessed -= DamageLineParser_EventsDamageProcessed;
-        DataManager.Instance.EventsNewInactiveNonPlayer -= Instance_EventsNewInactiveNonPlayer;
+        DataManager.Instance.EventsNewInactiveFight -= Instance_EventsNewInactiveFight;
 
         if (UpdateTimer?.IsEnabled == true)
         {

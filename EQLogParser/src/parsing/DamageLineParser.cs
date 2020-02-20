@@ -173,9 +173,9 @@ namespace EQLogParser
             }
           }
         }
-        else if (!DataManager.Instance.RemoveActiveNonPlayer(test) && char.IsUpper(test[0]))
+        else if (!DataManager.Instance.RemoveActiveFight(test) && char.IsUpper(test[0]))
         {
-          DataManager.Instance.RemoveActiveNonPlayer(char.ToLower(test[0], CultureInfo.CurrentCulture) + test.Substring(1));
+          DataManager.Instance.RemoveActiveFight(char.ToLower(test[0], CultureInfo.CurrentCulture) + test.Substring(1));
         }
       }
     }
@@ -404,7 +404,8 @@ namespace EQLogParser
           record.SubType = Labels.RIPOSTE;
         }
 
-        if (CheckEyeRegex.IsMatch(record.Defender) || ChestTypes.FindIndex(type => record.Defender.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0)
+        if (record.Defender.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || CheckEyeRegex.IsMatch(record.Defender) || 
+          ChestTypes.FindIndex(type => record.Defender.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0)
         {
           record = null;
         }
