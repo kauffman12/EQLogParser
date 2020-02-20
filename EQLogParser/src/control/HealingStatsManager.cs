@@ -20,7 +20,7 @@ namespace EQLogParser
     private const int HEAL_OFFSET = 7; // additional # of seconds to count
 
     private PlayerStats RaidTotals;
-    private List<NonPlayer> Selected;
+    private List<Fight> Selected;
     private string Title;
 
     internal HealingStatsManager()

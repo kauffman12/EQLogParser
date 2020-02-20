@@ -13,6 +13,7 @@ namespace EQLogParser
 {
   class Helpers
   {
+    internal static ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
     internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     internal static DictionaryAddHelper<string, uint> StringUIntAddHelper = new DictionaryAddHelper<string, uint>();
@@ -166,19 +167,29 @@ namespace EQLogParser
 
       if (part != null)
       {
-        if (stop == -1)
+        string key = part + "-" + stop;
+        if (PossiblePlayerCache.TryGetValue(key, out bool value))
         {
-          stop = part.Length;
+          found = value;
         }
-
-        found = stop < 3 ? false : true;
-        for (int i = 0; found != false && i < stop; i++)
+        else
         {
-          if (!char.IsLetter(part, i))
+          if (stop == -1)
           {
-            found = false;
-            break;
+            stop = part.Length;
           }
+
+          found = stop < 3 ? false : true;
+          for (int i = 0; found != false && i < stop; i++)
+          {
+            if (!char.IsLetter(part, i))
+            {
+              found = false;
+              break;
+            }
+          }
+
+          PossiblePlayerCache.TryAdd(key, found);
         }
       }
 

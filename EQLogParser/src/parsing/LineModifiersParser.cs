@@ -17,7 +17,7 @@ namespace EQLogParser
 
     private static Dictionary<string, byte> CRIT_MODIFIERS = new Dictionary<string, byte>()
     {
-      { "Assassinate", 1 }, { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1 }, { "Headshot", 1 }
+      { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1 }
     };
 
     private static int TWINCAST = 1;

@@ -242,8 +242,8 @@
     <Compile Include="src\ui\chart\HitFreqChart.xaml.cs">
       <DependentUpon>HitFreqChart.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\common\NpcTable.xaml.cs">
-      <DependentUpon>NpcTable.xaml</DependentUpon>
+    <Compile Include="src\ui\common\FightTable.xaml.cs">
+      <DependentUpon>FightTable.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\common\SpellCountTable.xaml.cs">
       <DependentUpon>SpellCountTable.xaml</DependentUpon>
@@ -311,7 +311,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\common\NpcTable.xaml">
+    <Page Include="src\ui\common\FightTable.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -382,6 +382,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="data\html\header.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="data\npcs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="data\petnames.txt">
