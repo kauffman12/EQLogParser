@@ -23,7 +23,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> PlayerHasPet = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
     private readonly List<IAction> Resists = new List<IAction>();
-    private List<NonPlayer> Selected;
+    private List<Fight> Selected;
     private string Title;
 
     internal DamageStatsManager()
@@ -312,8 +312,8 @@ namespace EQLogParser
 
       if (record != null)
       {
-        isDefenderNpc = (activeNpcs && DataManager.Instance.GetNonPlayer(record.Defender) != null) || NpcNames.ContainsKey(record.Defender);
-        isAttackerPossiblyPlayer = record.Defender != record.Attacker && (Helpers.IsPossiblePlayerName(record.Attacker) || PlayerManager.Instance.IsPetOrPlayer(record.Attacker));
+        isDefenderNpc = (activeNpcs && DataManager.Instance.GetFight(record.Defender) != null) || NpcNames.ContainsKey(record.Defender);
+        isAttackerPossiblyPlayer = record.Defender != record.Attacker;
       }
 
       return isDefenderNpc && isAttackerPossiblyPlayer;

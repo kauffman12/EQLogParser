@@ -240,6 +240,16 @@
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
+        <MenuItem x:Name="preferences" Header="_Preferences" Height="20">
+          <MenuItem.Icon>
+            <fa:ImageAwesome x:Name="preferencesIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Cog" Foreground="#FF4F9FE2" />
+          </MenuItem.Icon>
+          <MenuItem x:Name="hideOnMinimize" Header="_Hide When Minimized" Click="ToggleHideOnMinimizeClick" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </MenuItem>
       </MenuItem>
       <MenuItem Header="_Tools" Height="20" Width="45">
         <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="20">
@@ -260,7 +270,7 @@
         <docking:SplitContainer Orientation="Vertical">
           <docking:ToolWindowContainer>
             <docking:ToolWindow x:Name="npcWindow" Title="NPCs" ContainerAutoHideSize="320, 400" ContainerDockedSize="320,400">
-              <local:NpcTable />
+              <local:FightTable />
             </docking:ToolWindow>
           </docking:ToolWindowContainer>
           <docking:ToolWindowContainer>

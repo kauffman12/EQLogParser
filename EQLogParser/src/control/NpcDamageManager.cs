@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Globalization;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 {
   class NpcDamageManager
   {
-    internal const int NPC_DEATH_TIME = 25;
-    internal double LastUpdateTime { get; set; }
+    internal const int NPC_DEATH_TIME = 24;
+    internal double LastUpdateTime = double.NaN;
 
     private int CurrentNpcID = 0;
     private int CurrentGroupID = 0;
@@ -23,17 +22,22 @@ namespace EQLogParser
       DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
     }
 
-    private static NonPlayer Find(string defender)
+    internal void ResetTime()
     {
-      NonPlayer npc;
+      LastUpdateTime = double.NaN;
+    }
+
+    private static Fight Find(string defender)
+    {
+      Fight npc;
 
       if (char.IsUpper(defender[0]))
       {
-        npc = DataManager.Instance.GetNonPlayer(char.ToLower(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
+        npc = DataManager.Instance.GetFight(char.ToLower(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetFight(defender);
       }
       else
       {
-        npc = DataManager.Instance.GetNonPlayer(char.ToUpper(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetNonPlayer(defender);
+        npc = DataManager.Instance.GetFight(char.ToUpper(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetFight(defender);
       }
 
       return npc;
@@ -41,7 +45,7 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
-      if (PlayerManager.Instance.IsPlayerDamage(processed.Record))
+      if (processed.Record.Attacker != processed.Record.Defender && processed.Record.Total > 0)
       {
         if (!double.IsNaN(LastUpdateTime))
         {
@@ -49,33 +53,35 @@ namespace EQLogParser
           if (seconds > 60)
           {
             CurrentGroupID++;
-            DataManager.Instance.AddNonPlayerMapBreak(FormatTime(seconds));
           }
         }
 
-        AddOrUpdateNpc(processed.Record, processed.BeginTime, processed.TimeString.Substring(4, 15));
+        AddOrUpdateFight(processed.Record, processed.BeginTime, processed.TimeString.Substring(4, 15));
       }
     }
 
-    private void AddOrUpdateNpc(DamageRecord record, double currentTime, string origTimeString)
+    private void AddOrUpdateFight(DamageRecord record, double currentTime, string origTimeString)
     {
-      NonPlayer npc = Get(record, currentTime, origTimeString);
+      Fight fight = Get(record, currentTime, origTimeString);
 
       // assume npc has been killed and create new entry
-      if (currentTime - npc.LastTime > NPC_DEATH_TIME)
+      if (currentTime - fight.LastTime > NPC_DEATH_TIME)
       {
-        DataManager.Instance.RemoveActiveNonPlayer(npc.CorrectMapKey);
-        npc = Get(record, currentTime, origTimeString);
+        DataManager.Instance.RemoveActiveFight(fight.CorrectMapKey);
+        fight = Get(record, currentTime, origTimeString);
       }
 
-      npc.LastTime = currentTime;
+      var previous = fight.IsNpc;
+      fight.IsNpc = fight.IsNpc || IsDefenderNpc(record);
+      fight.LastTime = currentTime;
       LastUpdateTime = currentTime;
-      DataManager.Instance.UpdateIfNewNonPlayerMap(npc.CorrectMapKey, npc);
+
+      DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, previous != fight.IsNpc);
     }
 
-    private NonPlayer Get(DamageRecord record, double currentTime, string origTimeString)
+    private Fight Get(DamageRecord record, double currentTime, string origTimeString)
     {
-      NonPlayer npc = Find(record.Defender);
+      Fight npc = Find(record.Defender);
 
       if (npc == null)
       {
@@ -85,9 +91,9 @@ namespace EQLogParser
       return npc;
     }
 
-    private NonPlayer Create(string defender, double currentTime, string origTimeString)
+    private Fight Create(string defender, double currentTime, string origTimeString)
     {
-      return new NonPlayer()
+      return new Fight()
       {
         Name = string.Intern(defender),
         BeginTimeString = string.Intern(origTimeString),
@@ -99,25 +105,25 @@ namespace EQLogParser
       };
     }
 
-    private static string FormatTime(double seconds)
+    private static bool IsDefenderNpc(DamageRecord record)
     {
-      TimeSpan diff = TimeSpan.FromSeconds(seconds);
-      string result = "Inactivity > ";
+      bool valid = false;
 
-      if (diff.Days >= 1)
+      var isDefenderNpc = record.Defender.StartsWith("Combat Dummy", StringComparison.OrdinalIgnoreCase) || DataManager.Instance.IsKnownNpc(record.Defender);
+      var isAttackerNpc = record.Attacker.StartsWith("Combat Dummy", StringComparison.OrdinalIgnoreCase) || DataManager.Instance.IsKnownNpc(record.Attacker);
+      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
+
+      if (isDefenderNpc && !isAttackerNpc)
       {
-        result += diff.Days + " days";
+        valid = isAttackerPlayer || Helpers.IsPossiblePlayerName(record.Attacker);
       }
-      else if (diff.Hours >= 1)
+      else if (!isDefenderNpc && !isAttackerNpc)
       {
-        result += diff.Hours + " hours";
-      }
-      else
-      {
-        result += diff.Minutes + " minutes";
+        var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayer(record.Defender);
+        valid = (isAttackerPlayer || !Helpers.IsPossiblePlayerName(record.Attacker)) && !isDefenderPlayer;
       }
 
-      return result;
+      return valid;
     }
   }
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.6.8" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.6.10" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x86" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -119,6 +119,9 @@
       <Component Id="spells.txt" Guid="2FC00676-7C5D-4075-9BC7-2C49C977732B">
         <File Id="spells.txt" Name="spells.txt" Source="$(var.EQLogParser_TargetDir)\data\spells.txt" />
       </Component>
+      <Component Id="npcs.txt" Guid="46C8209D-FDBA-4948-AB7C-699AFD8CDE8A">
+        <File Id="npcs.txt" Name="npcs.txt" Source="$(var.EQLogParser_TargetDir)\data\npcs.txt" />
+      </Component>      
     </ComponentGroup>
     <ComponentGroup Id="ProductHtmlDataComponents" Directory="HTMLDATAFOLDER">
       <Component Id="content.html" Guid="689B76E0-571D-4F27-B909-B18ABF902346">
