@@ -1,9 +1,12 @@
 ﻿using FontAwesome.WPF;
+using Gma.System.MouseKeyHook;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -26,13 +29,12 @@ namespace EQLogParser
     private static object StatsLock = new object();
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
-    private const double OPACITY = 0.45;
-    private const double DATA_OPACITY = 0.85;
+    private const double OPACITY = 0.40;
+    private const double DATA_OPACITY = 0.80;
 
     private OverlayDamageStats Stats = null;
     private DispatcherTimer UpdateTimer;
     private double LastUpdate = 0;
-    private int RowCount = 0;
     private double CalculatedRowHeight = 0;
     private bool Active = false;
     private bool ProcessDirection = false;
@@ -50,6 +52,7 @@ namespace EQLogParser
     private List<ImageAwesome> DamageRateList = new List<ImageAwesome>();
     private List<Rectangle> RectangleList = new List<Rectangle>();
     private Dictionary<int, double> PrevList = null;
+    private IKeyboardMouseEvents GlobalHook;
 
     private List<Color> TitleColorList = new List<Color> { Color.FromRgb(50, 50, 50), Color.FromRgb(30, 30, 30), Color.FromRgb(10, 10, 10) };
     private List<List<Color>> ColorList = new List<List<Color>>()
@@ -470,7 +473,6 @@ namespace EQLogParser
       TitleDamageBlock = CreateTextBlock();
       TitleDamageBlock.SetValue(Canvas.RightProperty, 5.0);
       overlayCanvas.Children.Add(TitleDamageBlock);
-      RowCount++;
 
       for (int i = 0; i < MAX_ROWS; i++)
       {
@@ -497,8 +499,6 @@ namespace EQLogParser
         DamageBlockList.Add(damageBlock);
         stack.Children.Add(damageBlock);
         overlayCanvas.Children.Add(stack);
-
-        RowCount++;
       }
     }
 
@@ -577,14 +577,45 @@ namespace EQLogParser
           UpdateTimer.Stop();
         }
       }
+
+      GlobalHook.MouseDownExt -= GlobalHook_MouseDownExt;
+      GlobalHook.Dispose();
     }
 
-    void WindowLoaded(object sender, RoutedEventArgs e)
+    protected override void OnSourceInitialized(EventArgs e)
     {
-      WindowInteropHelper wndHelper = new WindowInteropHelper(this);
-      int exStyle = (int)NativeMethods.GetWindowLongPtr(wndHelper.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
-      NativeMethods.SetWindowLong(wndHelper.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+      base.OnSourceInitialized(e);
+
+      var source = (HwndSource)PresentationSource.FromVisual(this);
+      int exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
+      NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+
+      // Setting WS_EX_TRANSPARENT makes it impossible to click on controls so need to listen to global mouse events
+      // and do the hit test ourselves
+      GlobalHook = Hook.GlobalEvents();
+      GlobalHook.MouseDownExt += GlobalHook_MouseDownExt;
+    }
+
+    private void GlobalHook_MouseDownExt(object sender, MouseEventExtArgs e)
+    {
+      if (e.Button == System.Windows.Forms.MouseButtons.Left && e.IsMouseButtonDown)
+      {
+        var screenPoint = new Point(e.X, e.Y);
+        TestInvokeButton(RefreshButton, screenPoint);
+        TestInvokeButton(CopyButton, screenPoint);
+        TestInvokeButton(SettingsButton, screenPoint);
+      }
+    }
+
+    private void TestInvokeButton(Button button, Point screenPoint)
+    {
+      if (button.Visibility == Visibility.Visible && VisualTreeHelper.HitTest(button, button.PointFromScreen(screenPoint)) != null)
+      {
+        ButtonAutomationPeer peer = new ButtonAutomationPeer(button);
+        IInvokeProvider invokeProv = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
+        invokeProv.Invoke();
+      }
     }
 
     private static LinearGradientBrush CreateBrush(List<Color> colors)

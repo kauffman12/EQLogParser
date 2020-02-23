@@ -12,6 +12,7 @@ namespace EQLogParser
     {
       // ...
       WS_EX_TOOLWINDOW = 0x00000080,
+      WS_EX_TRANSPARENT = 0x00000020
       // ...
     }
 
@@ -46,11 +47,11 @@ namespace EQLogParser
 
     internal static IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
     {
-      int error = 0;
       IntPtr result = IntPtr.Zero;
       // Win32 SetWindowLong doesn't clear error on success
       SetLastError(0);
 
+      int error;
       if (IntPtr.Size == 4)
       {
         // use SetWindowLong
@@ -87,7 +88,6 @@ namespace EQLogParser
 
     [DllImport("kernel32.dll", EntryPoint = "SetLastError")]
     internal static extern void SetLastError(int dwErrorCode);
-
     #endregion
   }
 }
