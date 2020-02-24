@@ -108,9 +108,14 @@ namespace EQLogParser
       fightShowBreaks.IsChecked = CurrentShowBreaks = (showBreaks == null || (bool.TryParse(showBreaks, out bool bValue) && bValue));
     }
 
-    public List<Fight> GetSelectedItems()
+    public ParallelQuery<Fight> GetSelectedItems()
     {
-      return fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.IsNpc == true && item.GroupID > -1).ToList();
+      return fightDataGrid.SelectedItems.Cast<Fight>().AsParallel().Where(item => item.IsNpc == true && item.GroupID > -1);
+    }
+
+    public bool HasSelected()
+    {
+      return fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.IsNpc == true && item.GroupID > -1) != null;
     }
 
     private void AddFight(Fight fight)
@@ -238,14 +243,15 @@ namespace EQLogParser
       DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is Fight npc && npc.GroupID > -1)
       {
-        Parallel.ForEach(Fights, (one) =>
+        foreach (var one in Fights)
         {
           if (one.GroupID == npc.GroupID && one.IsNpc)
           {
             Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one), DispatcherPriority.Background);
           }
-        });
+        }
       }
+
     }
 
     private void ShowBreakChange(object sender, RoutedEventArgs e)

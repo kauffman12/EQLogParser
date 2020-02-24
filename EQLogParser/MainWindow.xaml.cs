@@ -48,7 +48,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.6.12";
+    private const string VERSION = "v1.6.13";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -375,7 +375,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if ((npcWindow?.Content as FightTable)?.GetSelectedItems()?.Count > 0)
+        if ((npcWindow?.Content as FightTable)?.HasSelected() == true)
         {
           ComputeStats();
         }
@@ -428,8 +428,7 @@ namespace EQLogParser
 
     private void ComputeStats()
     {
-      var npcList = (npcWindow?.Content as FightTable)?.GetSelectedItems();
-      var filtered = npcList?.AsParallel().Where(npc => npc.GroupID != -1).OrderBy(npc => npc.ID);
+      var filtered = (npcWindow?.Content as FightTable)?.GetSelectedItems().OrderBy(npc => npc.ID);
       string name = filtered?.FirstOrDefault()?.Name;
 
       var damageOptions = new GenerateStatsOptions() { Name = name, RequestChartData = DamageChartWindow?.IsOpen == true };
