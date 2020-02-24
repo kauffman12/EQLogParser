@@ -6,6 +6,7 @@ namespace EQLogParser
   class NpcDamageManager
   {
     internal const int NPC_DEATH_TIME = 24;
+    internal const int GROUP_TIMEOUT = 120;
     internal double LastUpdateTime = double.NaN;
 
     private int CurrentNpcID = 0;
@@ -50,7 +51,7 @@ namespace EQLogParser
         if (!double.IsNaN(LastUpdateTime))
         {
           var seconds = processed.BeginTime - LastUpdateTime;
-          if (seconds > 60)
+          if (seconds >= GROUP_TIMEOUT)
           {
             CurrentGroupID++;
           }
