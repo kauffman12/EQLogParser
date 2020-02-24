@@ -110,7 +110,7 @@ namespace EQLogParser
 
     public List<Fight> GetSelectedItems()
     {
-      return fightDataGrid.SelectedItems.Cast<Fight>().Where(item => !item.Name.Contains("Inactivity >")).ToList();
+      return fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.IsNpc == true && item.GroupID > -1).ToList();
     }
 
     private void AddFight(Fight fight)
@@ -240,7 +240,7 @@ namespace EQLogParser
       {
         Parallel.ForEach(Fights, (one) =>
         {
-          if (one.GroupID == npc.GroupID)
+          if (one.GroupID == npc.GroupID && one.IsNpc)
           {
             Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one), DispatcherPriority.Background);
           }
@@ -438,7 +438,7 @@ namespace EQLogParser
         if (index > 0 && Fights[index - 1].GroupID == -1 && Fights[index - 1].LastTime != fight.BeginTime)
         {
           double seconds = fight.BeginTime - Fights[index - 1].BeginTime;
-          if (seconds < 120)
+          if (seconds < NpcDamageManager.GROUP_TIMEOUT)
           {
             Fights.RemoveAt(index - 1);
           }
@@ -451,7 +451,7 @@ namespace EQLogParser
         else if ((index + 1) < Fights.Count && Fights[index + 1].GroupID == -1 && Fights[index + 1].BeginTime != fight.LastTime)
         {
           double seconds = Fights[index + 1].LastTime - fight.BeginTime;
-          if (seconds < 120)
+          if (seconds < NpcDamageManager.GROUP_TIMEOUT)
           {
             Fights.RemoveAt(index + 1);
           }
