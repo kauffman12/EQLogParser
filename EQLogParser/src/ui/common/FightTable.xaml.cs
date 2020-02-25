@@ -60,7 +60,7 @@ namespace EQLogParser
       view.Filter = new Predicate<object>(item =>
       {
         var fightItem = (Fight)item;
-        return (CurrentShowBreaks ? fightItem.GroupID >= -1 : fightItem.GroupID > -1) && (fightItem.GroupID == -1 || fightItem.IsNpc == true);
+        return CurrentShowBreaks ? fightItem.GroupID >= -1 : fightItem.GroupID > -1;
       });
 
       fightDataGrid.ItemsSource = view;
@@ -90,7 +90,7 @@ namespace EQLogParser
             NeedRefresh = false;
           }
 
-          var last = Fights.LastOrDefault(fight => fight.IsNpc);
+          var last = Fights.LastOrDefault(fight => fight.GroupID > -1);
 
           if (last != null)
           {
@@ -110,19 +110,19 @@ namespace EQLogParser
 
     public ParallelQuery<Fight> GetSelectedItems()
     {
-      return fightDataGrid.SelectedItems.Cast<Fight>().AsParallel().Where(item => item.IsNpc == true && item.GroupID > -1);
+      return fightDataGrid.SelectedItems.Cast<Fight>().AsParallel().Where(item => item.GroupID > -1);
     }
 
     public bool HasSelected()
     {
-      return fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.IsNpc == true && item.GroupID > -1) != null;
+      return fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.GroupID > -1) != null;
     }
 
     private void AddFight(Fight fight)
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (LastNpc != null && fight.IsNpc)
+        if (LastNpc != null)
         {
           double seconds = fight.BeginTime - LastNpc.LastTime;
           if (seconds >= 120)
@@ -134,7 +134,7 @@ namespace EQLogParser
 
         Fights.Add(fight);
 
-        if (fight.IsNpc)
+        if (fight.GroupID > -1)
         {
           LastNpc = fight;
         }
@@ -150,12 +150,13 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        foreach (var fight in Fights.Where(fight => fight.GroupID > -1 && fight.IsNpc && !string.IsNullOrEmpty(fight.Name) && fight.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        for (int i = Fights.Count - 1; i >= 0; i--)
         {
-          fight.IsNpc = false;
+          if (Fights[i].GroupID > -1 && !string.IsNullOrEmpty(Fights[i].Name) && Fights[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+          {
+            Fights.RemoveAt(i);
+          }
         }
-
-        (fightDataGrid.ItemsSource as ICollectionView).Refresh();
       }, DispatcherPriority.Background);
     }
 
@@ -245,7 +246,7 @@ namespace EQLogParser
       {
         foreach (var one in Fights)
         {
-          if (one.GroupID == npc.GroupID && one.IsNpc)
+          if (one.GroupID == npc.GroupID)
           {
             Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one), DispatcherPriority.Background);
           }
@@ -430,52 +431,11 @@ namespace EQLogParser
       AddFight(fight);
     }
 
-    private void Instance_EventsRefreshFights(object sender, Fight fight)
-    {
-      if (NeedRefresh == false)
-      {
-        NeedRefresh = true;
-      }
-
-      Dispatcher.InvokeAsync(() =>
-      {
-        int index = Fights.IndexOf(fight);
-
-        if (index > 0 && Fights[index - 1].GroupID == -1 && Fights[index - 1].LastTime != fight.BeginTime)
-        {
-          double seconds = fight.BeginTime - Fights[index - 1].BeginTime;
-          if (seconds < NpcDamageManager.GROUP_TIMEOUT)
-          {
-            Fights.RemoveAt(index - 1);
-          }
-          else
-          {
-            Fights[index - 1].LastTime = fight.BeginTime;
-            Fights[index - 1].Name = string.Intern(FormatTime(seconds));
-          }
-        }
-        else if ((index + 1) < Fights.Count && Fights[index + 1].GroupID == -1 && Fights[index + 1].BeginTime != fight.LastTime)
-        {
-          double seconds = Fights[index + 1].LastTime - fight.BeginTime;
-          if (seconds < NpcDamageManager.GROUP_TIMEOUT)
-          {
-            Fights.RemoveAt(index + 1);
-          }
-          else
-          {
-            Fights[index + 1].BeginTime = fight.LastTime;
-            Fights[index + 1].Name = string.Intern(FormatTime(seconds));
-          }
-        }
-      }, DispatcherPriority.Background);
-    }
-
     private void TableUnloaded(object sender, RoutedEventArgs e)
     {
       DataManager.Instance.EventsClearedActiveData -= Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight -= Instance_EventsRemovedFight;
       DataManager.Instance.EventsNewFight -= Instance_EventsNewFight;
-      DataManager.Instance.EventsRefreshFights -= Instance_EventsRefreshFights;
     }
 
     private void TableLoaded(object sender, RoutedEventArgs e)
@@ -483,7 +443,6 @@ namespace EQLogParser
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
       DataManager.Instance.EventsNewFight += Instance_EventsNewFight;
-      DataManager.Instance.EventsRefreshFights += Instance_EventsRefreshFights;
     }
   }
 }

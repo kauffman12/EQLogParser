@@ -26,13 +26,11 @@ namespace EQLogParser
     internal event EventHandler<Fight> EventsNewInactiveFight;
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
-    internal event EventHandler<Fight> EventsRefreshFights;
     internal event EventHandler<bool> EventsClearedActiveData;
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
 
-    private readonly List<ActionBlock> AllDamageBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
@@ -140,7 +138,6 @@ namespace EQLogParser
         AllUniqueSpellsCache.Clear();
         AllReceivedSpellBlocks.Clear();
         AllResists.Clear();
-        AllDamageBlocks.Clear();
         AllHealBlocks.Clear();
         AllLootBlocks.Clear();
         AllSpecialActions.Clear();
@@ -202,28 +199,22 @@ namespace EQLogParser
       }
     }
 
-    internal void AddDamageRecord(DamageRecord record, double beginTime)
-    {
-      // ReplacePlayer is done in the line parser already
-      AddAction(AllDamageBlocks, record, beginTime);
-    }
-
     internal void AddResistRecord(ResistRecord record, double beginTime)
     {
       // Resists are only seen by current player
-      AddAction(AllResists, record, beginTime);
+      Helpers.AddAction(AllResists, record, beginTime);
     }
 
     internal void AddHealRecord(HealRecord record, double beginTime)
     {
       record.Healer = PlayerManager.Instance.ReplacePlayer(record.Healer, record.Healed);
       record.Healed = PlayerManager.Instance.ReplacePlayer(record.Healed, record.Healer);
-      AddAction(AllHealBlocks, record, beginTime);
+      Helpers.AddAction(AllHealBlocks, record, beginTime);
     }
 
     internal void AddLootRecord(LootRecord record, double beginTime)
     {
-      AddAction(AllLootBlocks, record, beginTime);
+      Helpers.AddAction(AllLootBlocks, record, beginTime);
     }
 
     internal void HandleSpellInterrupt(string player, string spell, double beginTime)
@@ -243,7 +234,7 @@ namespace EQLogParser
     {
       if (SpellsNameDB.ContainsKey(cast.Spell))
       {
-        AddAction(AllSpellCastBlocks, cast, beginTime);
+        Helpers.AddAction(AllSpellCastBlocks, cast, beginTime);
 
         string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
         if (abbrv != null)
@@ -260,17 +251,12 @@ namespace EQLogParser
 
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime)
     {
-      AddAction(AllReceivedSpellBlocks, received, beginTime);
+      Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
     }
 
     internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime)
     {
       return SearchActions(AllSpellCastBlocks, beginTime, endTime);
-    }
-
-    internal List<ActionBlock> GetDamageDuring(double beginTime, double endTime)
-    {
-      return SearchActions(AllDamageBlocks, beginTime, endTime);
     }
 
     internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime)
@@ -444,7 +430,7 @@ namespace EQLogParser
       return removed;
     }
 
-    internal void UpdateIfNewFightMap(string name, Fight fight, bool changed)
+    internal void UpdateIfNewFightMap(string name, Fight fight)
     {
       if (!LifetimeFights.ContainsKey(name))
       {
@@ -455,10 +441,6 @@ namespace EQLogParser
       {
         ActiveFights[name] = fight;
         EventsNewFight?.Invoke(this, fight);
-      }
-      else if (changed)
-      {
-        EventsRefreshFights?.Invoke(this, fight);
       }
     }
 
@@ -492,20 +474,6 @@ namespace EQLogParser
 
       int last = endIndex - startIndex;
       return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionBlock>();
-    }
-
-    private static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
-    {
-      if (blockList.LastOrDefault() is ActionBlock last && last.BeginTime == beginTime)
-      {
-        last.Actions.Add(action);
-      }
-      else
-      {
-        var newSegment = new ActionBlock() { BeginTime = beginTime };
-        newSegment.Actions.Add(action);
-        blockList.Add(newSegment);
-      }
     }
 
     private class SpellAbbrvComparer : IEqualityComparer<SpellData>

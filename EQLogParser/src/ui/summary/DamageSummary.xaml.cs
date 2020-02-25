@@ -90,6 +90,12 @@ namespace EQLogParser
             (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
+          case "NODATA":
+            CurrentStats = null;
+            title.Content = NODATA_TABLE_LABEL;
+            (Application.Current.MainWindow as MainWindow).Busy(false);
+            UpdateDataGridMenuItems();
+            break;
         }
       });
     }
