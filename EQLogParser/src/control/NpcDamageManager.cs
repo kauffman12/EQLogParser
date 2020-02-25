@@ -116,7 +116,7 @@ namespace EQLogParser
       bool valid = false;
       defender = false;
 
-      if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase) && record.Total > 0)
+      if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))
       {
         var isDefenderNpc = record.Defender.StartsWith("Combat Dummy", StringComparison.OrdinalIgnoreCase) || DataManager.Instance.IsKnownNpc(record.Defender);
         var isAttackerNpc = record.Attacker.StartsWith("Combat Dummy", StringComparison.OrdinalIgnoreCase) || DataManager.Instance.IsKnownNpc(record.Attacker);
