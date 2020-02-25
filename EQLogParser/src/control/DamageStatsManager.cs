@@ -17,7 +17,6 @@ namespace EQLogParser
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
     internal List<List<ActionBlock>> DamageGroups = new List<List<ActionBlock>>();
-    internal Dictionary<string, byte> NpcNames = new Dictionary<string, byte>();
 
     private PlayerStats RaidTotals;
     private readonly ConcurrentDictionary<string, byte> PlayerHasPet = new ConcurrentDictionary<string, byte>();
@@ -56,67 +55,65 @@ namespace EQLogParser
 
           RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
           DamageGroups.Clear();
-          NpcNames.Clear();
           PlayerHasPet.Clear();
           PetToPlayer.Clear();
           Resists.Clear();
 
-          Selected.ForEach(npc =>
+          var damages = new List<DamageRecord>();
+          Selected.ForEach(fight =>
           {
-            StatsUtil.UpdateTimeDiffs(RaidTotals, npc);
-            NpcNames[npc.Name] = 1;
+            StatsUtil.UpdateTimeDiffs(RaidTotals, fight);
+            damages.AddRange(fight.DamageRecords);
           });
 
-          RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
-
-          if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
+          if (damages.Count > 0)
           {
-            for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
+            RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
+
+            var damageBlock = new List<ActionBlock>();
+            var timeIndex = 0;
+            foreach (var damage in damages.OrderBy(damage => damage.BeginTime))
             {
-              var updatedDamages = new List<ActionBlock>();
-              var damages = DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
-              damages.ForEach(damage =>
+              if (damage.BeginTime > RaidTotals.LastTimes[timeIndex])
               {
-                var updatedDamage = new ActionBlock() { BeginTime = damage.BeginTime };
-                updatedDamage.Actions.AddRange(damage.Actions.AsParallel().Where(item =>
+                timeIndex++;
+
+                if (damageBlock.Count > 0)
                 {
-                  bool valid = false;
-                  if (item is DamageRecord record && IsValidDamage(record))
-                  {
-                    valid = true;
-
-                    // see if there's a pet mapping, check this first
-                    string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
-                    if (!string.IsNullOrEmpty(pname) || !string.IsNullOrEmpty(pname = record.AttackerOwner))
-                    {
-                      PlayerHasPet[pname] = 1;
-                      PetToPlayer[record.Attacker] = pname;
-                    }
-                  }
-
-                  return valid;
-                }));
-
-                if (updatedDamage.Actions.Count > 0)
-                {
-                  updatedDamages.Add(updatedDamage);
+                  DamageGroups.Add(damageBlock);
                 }
-              });
 
-              if (updatedDamages.Count > 0)
-              {
-                DamageGroups.Add(updatedDamages);
+                damageBlock = new List<ActionBlock>();
               }
 
+              // see if there's a pet mapping, check this first
+              string pname = PlayerManager.Instance.GetPlayerFromPet(damage.Attacker);
+              if (!string.IsNullOrEmpty(pname) || !string.IsNullOrEmpty(pname = damage.AttackerOwner))
+              {
+                PlayerHasPet[pname] = 1;
+                PetToPlayer[damage.Attacker] = pname;
+              }
+
+              Helpers.AddAction(damageBlock, damage, damage.BeginTime);
+            }
+
+            DamageGroups.Add(damageBlock);
+
+            for (int i=0; i<RaidTotals.BeginTimes.Count && i<RaidTotals.LastTimes.Count; i++)
+            {
               var group = DataManager.Instance.GetResistsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
               group.ForEach(block => Resists.AddRange(block.Actions));
             }
 
             ComputeDamageStats(options);
           }
+          else if (Selected == null || Selected.Count == 0)
+          {
+            FireNoDataEvent(options, "NONPC");
+          }
           else
           {
-            FireNoDataEvent(options);
+            FireNoDataEvent(options, "NODATA");
           }
         }
         catch (ArgumentNullException ne)
@@ -147,8 +144,10 @@ namespace EQLogParser
       }
     }
 
-    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, OverlayDamageStats overlayStats = null)
+    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, OverlayDamageStats overlayStats = null)
     {
+      double beginTime = record.BeginTime;
+
       if (overlayStats == null)
       {
         overlayStats = new OverlayDamageStats
@@ -176,7 +175,7 @@ namespace EQLogParser
       overlayStats.RaidStats.LastTime = beginTime;
       overlayStats.RaidStats.TotalSeconds = overlayStats.RaidStats.LastTime - overlayStats.RaidStats.BeginTime + 1;
 
-      if (IsValidDamage(record, true) && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
+      if (record != null && DataManager.Instance.GetFight(record.Defender) != null && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
       {
         overlayStats.UniqueNpcs[record.Defender] = 1;
         overlayStats.RaidStats.Total += record.Total;
@@ -305,20 +304,6 @@ namespace EQLogParser
       return results;
     }
 
-    internal bool IsValidDamage(DamageRecord record, bool activeNpcs = false)
-    {
-      bool isDefenderNpc = false;
-      bool isAttackerPossiblyPlayer = false;
-
-      if (record != null)
-      {
-        isDefenderNpc = (activeNpcs && DataManager.Instance.GetFight(record.Defender) != null) || NpcNames.ContainsKey(record.Defender);
-        isAttackerPossiblyPlayer = record.Defender != record.Attacker;
-      }
-
-      return isDefenderNpc && isAttackerPossiblyPlayer;
-    }
-
     internal void FireSelectionEvent(GenerateStatsOptions options, List<PlayerStats> selected)
     {
       FireChartEvent(options, "SELECT", selected);
@@ -360,12 +345,12 @@ namespace EQLogParser
       }
     }
 
-    private void FireNoDataEvent(GenerateStatsOptions options)
+    private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       if (options.RequestSummaryData)
       {
         // nothing to do
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGEPARSE, State = "NONPC" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.DAMAGEPARSE, State = state });
       }
 
       FireChartEvent(options, "CLEAR");

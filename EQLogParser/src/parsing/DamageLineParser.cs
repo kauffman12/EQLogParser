@@ -71,7 +71,8 @@ namespace EQLogParser
           DamageRecord record = ParseDamage(actionPart);
           if (record != null)
           {
-            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
+            record.BeginTime = currentTime;
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString };
             EventsDamageProcessed?.Invoke(record, e);
 
             if (record.Type == Labels.DD)
@@ -94,7 +95,8 @@ namespace EQLogParser
           DamageRecord record = ParseMiss(actionPart, index);
           if (record != null)
           {
-            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, TimeString = timeString, BeginTime = currentTime };
+            record.BeginTime = currentTime;
+            DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString };
             EventsDamageProcessed?.Invoke(record, e);
             handled = true;
           }

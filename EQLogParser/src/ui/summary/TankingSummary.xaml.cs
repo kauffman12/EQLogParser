@@ -137,6 +137,15 @@ namespace EQLogParser
               UpdateDataGridMenuItems();
             }
             break;
+          case "NODATA":
+            if (e.Type == Labels.TANKPARSE)
+            {
+              CurrentStats = null;
+              title.Content = NODATA_TABLE_LABEL;
+              Helpers.SetBusy(false);
+              UpdateDataGridMenuItems();
+            }
+            break;
         }
       });
     }

@@ -76,6 +76,20 @@ namespace EQLogParser
       return string.Intern(result);
     }
 
+    public static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
+    {
+      if (blockList.LastOrDefault() is ActionBlock last && last.BeginTime == beginTime)
+      {
+        last.Actions.Add(action);
+      }
+      else
+      {
+        var newSegment = new ActionBlock() { BeginTime = beginTime };
+        newSegment.Actions.Add(action);
+        blockList.Add(newSegment);
+      }
+    }
+
     internal static void SetBusy(bool state)
     {
       MainDispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(state));
