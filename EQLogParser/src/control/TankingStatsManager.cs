@@ -16,10 +16,7 @@ namespace EQLogParser
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
-    internal Dictionary<string, byte> NpcNames = new Dictionary<string, byte>();
     internal List<List<ActionBlock>> TankingGroups = new List<List<ActionBlock>>();
-
-    private const int TANK_OFFSET = 10; // additional # of seconds to count
 
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
@@ -52,44 +49,47 @@ namespace EQLogParser
 
           RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
           TankingGroups.Clear();
-          NpcNames.Clear();
 
-          Selected.ForEach(npc =>
+          var damages = new List<DamageRecord>();
+          Selected.ForEach(fight =>
           {
-            StatsUtil.UpdateTimeDiffs(RaidTotals, npc, TANK_OFFSET);
-            NpcNames[npc.Name] = 1;
+            StatsUtil.UpdateTimeDiffs(RaidTotals, fight);
+            damages.AddRange(fight.TankingRecords);
           });
 
-          RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
-
-          if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
+          if (damages.Count > 0)
           {
-            for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
+            RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
+
+            var damageBlock = new List<ActionBlock>();
+            var timeIndex = 0;
+            foreach (var damage in damages.OrderBy(damage => damage.BeginTime))
             {
-              var updatedDamages = new List<ActionBlock>();
-              var damages = DataManager.Instance.GetDamageDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
-              damages.ForEach(damage =>
+              if (damage.BeginTime > RaidTotals.LastTimes[timeIndex])
               {
-                var updatedDamage = new ActionBlock() { BeginTime = damage.BeginTime };
-                updatedDamage.Actions.AddRange(damage.Actions.AsParallel().Where(item => item is DamageRecord record && IsValidDamage(record)));
+                timeIndex++;
 
-                if (updatedDamage.Actions.Count > 0)
+                if (damageBlock.Count > 0)
                 {
-                  updatedDamages.Add(updatedDamage);
+                  TankingGroups.Add(damageBlock);
                 }
-              });
 
-              if (updatedDamages.Count > 0)
-              {
-                TankingGroups.Add(updatedDamages);
+                damageBlock = new List<ActionBlock>();
               }
+
+              Helpers.AddAction(damageBlock, damage, damage.BeginTime);
             }
 
+            TankingGroups.Add(damageBlock);
             ComputeTankingStats(options);
+          }
+          else if (Selected == null || Selected.Count == 0)
+          {
+            FireNoDataEvent(options, "NONPC");
           }
           else
           {
-            FireNoDataEvent(options);
+            FireNoDataEvent(options, "NODATA");
           }
         }
         catch (ArgumentNullException ne)
@@ -161,12 +161,12 @@ namespace EQLogParser
       }
     }
 
-    private void FireNoDataEvent(GenerateStatsOptions options)
+    private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       if (options.RequestSummaryData)
       {
         // nothing to do
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.TANKPARSE, State = "NONPC" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.TANKPARSE, State = state });
       }
 
       FireChartEvent(options, "CLEAR");
@@ -189,13 +189,6 @@ namespace EQLogParser
           EventsUpdateDataPoint?.Invoke(TankingGroups, de);
         }
       }
-    }
-
-    internal bool IsValidDamage(DamageRecord record)
-    {
-      return record != null &&
-        record.Defender == record.Attacker && PlayerManager.Instance.IsVerifiedPlayer(record.Attacker)
-        || (NpcNames.ContainsKey(record.Attacker) && (Helpers.IsPossiblePlayerName(record.Defender) || PlayerManager.Instance.IsPetOrPlayer(record.Defender)));
     }
 
     private void ComputeTankingStats(GenerateStatsOptions options)

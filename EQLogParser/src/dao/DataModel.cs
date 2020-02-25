@@ -111,10 +111,10 @@ namespace EQLogParser
     public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
   }
 
-  public class DamageProcessedEvent : TimedAction
+  public class DamageProcessedEvent
   {
     public DamageRecord Record { get; set; }
-    public string TimeString { get; set; }
+    public string OrigTimeString { get; set; }
   }
 
   public class HealProcessedEvent : TimedAction
@@ -198,6 +198,7 @@ namespace EQLogParser
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
     public string DefenderOwner { get; set; }
+    public double BeginTime { get; set; }
   }
 
   public class LootRecord : IAction
@@ -260,9 +261,10 @@ namespace EQLogParser
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public int ID { get; set; }
-    public bool IsNpc { get; set; } = false;
     public string CorrectMapKey { get; set; }
     public int GroupID { get; set; }
+    public List<DamageRecord> DamageRecords { get; } = new List<DamageRecord>();
+    public List<DamageRecord> TankingRecords { get; } = new List<DamageRecord>();
   }
 
   public class PetMapping
