@@ -63,7 +63,7 @@ namespace EQLogParser
               heals.ForEach(heal =>
               {
                 var updatedHeal = new ActionBlock() { BeginTime = heal.BeginTime };
-                updatedHeal.Actions.AddRange(heal.Actions.AsParallel().Where(item => item is HealRecord record && IsValidHeal(record)));
+                updatedHeal.Actions.AddRange(heal.Actions.Where(item => item is HealRecord record && IsValidHeal(record)));
 
                 if (updatedHeal.Actions.Count > 0)
                 {
@@ -99,6 +99,10 @@ namespace EQLogParser
         catch (ArgumentException ae)
         {
           LOG.Error(ae);
+        }
+        catch (OutOfMemoryException oem)
+        {
+          LOG.Error(oem);
         }
       }
     }
@@ -154,13 +158,14 @@ namespace EQLogParser
             });
           });
 
-          Parallel.ForEach(allStats.Values, stats =>
+          foreach(var stats in allStats.Values)
           {
             stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
             stats.BeginTime = double.NaN;
-          });
+          }
         });
 
+        
         Parallel.ForEach(playerStats, stat =>
         {
           if (individualStats.ContainsKey(stat.Name))
@@ -322,11 +327,11 @@ namespace EQLogParser
                   });
                 });
 
-                Parallel.ForEach(allStats.Values, stats =>
+                foreach(var stats in allStats.Values)
                 {
                   stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
                   stats.BeginTime = double.NaN;
-                });
+                }
               });
 
               RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);

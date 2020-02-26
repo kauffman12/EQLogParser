@@ -185,7 +185,7 @@ namespace EQLogParser
     {
       lock(StatsLock)
       {
-        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, Stats);
+        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
         if (UpdateTimer != null && !UpdateTimer.IsEnabled)
         {
           UpdateTimer.Start();

@@ -108,9 +108,9 @@ namespace EQLogParser
       fightShowBreaks.IsChecked = CurrentShowBreaks = (showBreaks == null || (bool.TryParse(showBreaks, out bool bValue) && bValue));
     }
 
-    public ParallelQuery<Fight> GetSelectedItems()
+    public IEnumerable<Fight> GetSelectedItems()
     {
-      return fightDataGrid.SelectedItems.Cast<Fight>().AsParallel().Where(item => item.GroupID > -1);
+      return fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.GroupID > -1);
     }
 
     public bool HasSelected()
@@ -143,7 +143,7 @@ namespace EQLogParser
         {
           NeedScroll = true;
         }
-      }, DispatcherPriority.Background);
+      }, DispatcherPriority.DataBind);
     }
 
     private void RemoveFight(string name)
@@ -157,7 +157,7 @@ namespace EQLogParser
             Fights.RemoveAt(i);
           }
         }
-      }, DispatcherPriority.Background);
+      }, DispatcherPriority.DataBind);
     }
 
     private void ClearClick(object sender, RoutedEventArgs e)
@@ -248,11 +248,10 @@ namespace EQLogParser
         {
           if (one.GroupID == npc.GroupID)
           {
-            Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one), DispatcherPriority.Background);
+            Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one), DispatcherPriority.Normal);
           }
         }
       }
-
     }
 
     private void ShowBreakChange(object sender, RoutedEventArgs e)
