@@ -50,37 +50,40 @@ namespace EQLogParser
           RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
           TankingGroups.Clear();
 
-          var damages = new List<DamageRecord>();
+          var damageBlocks = new List<ActionBlock>();
           Selected.ForEach(fight =>
           {
             StatsUtil.UpdateTimeDiffs(RaidTotals, fight);
-            damages.AddRange(fight.TankingRecords);
+            damageBlocks.AddRange(fight.TankingBlocks);
           });
 
-          if (damages.Count > 0)
+          damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
+
+          if (damageBlocks.Count > 0)
           {
             RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
 
-            var damageBlock = new List<ActionBlock>();
+            var newBlock = new List<ActionBlock>();
             var timeIndex = 0;
-            foreach (var damage in damages.OrderBy(damage => damage.BeginTime))
+
+            damageBlocks.ForEach(block =>
             {
-              if (damage.BeginTime > RaidTotals.LastTimes[timeIndex])
+              if (block.BeginTime > RaidTotals.LastTimes[timeIndex])
               {
                 timeIndex++;
 
-                if (damageBlock.Count > 0)
+                if (newBlock.Count > 0)
                 {
-                  TankingGroups.Add(damageBlock);
+                  TankingGroups.Add(newBlock);
                 }
 
-                damageBlock = new List<ActionBlock>();
+                newBlock = new List<ActionBlock>();
               }
 
-              Helpers.AddAction(damageBlock, damage, damage.BeginTime);
-            }
+              newBlock.Add(block);
+            });
 
-            TankingGroups.Add(damageBlock);
+            TankingGroups.Add(newBlock);
             ComputeTankingStats(options);
           }
           else if (Selected == null || Selected.Count == 0)
@@ -107,6 +110,10 @@ namespace EQLogParser
         catch (ArgumentException ae)
         {
           LOG.Error(ae);
+        }
+        catch (OutOfMemoryException oem)
+        {
+          LOG.Error(oem);
         }
       }
     }
@@ -233,11 +240,11 @@ namespace EQLogParser
                   });
                 });
 
-                Parallel.ForEach(allStats.Values, stats =>
+                foreach(var stats in allStats.Values)
                 {
                   stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
                   stats.BeginTime = double.NaN;
-                });
+                }
               });
 
               RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);

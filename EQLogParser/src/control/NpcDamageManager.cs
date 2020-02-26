@@ -50,7 +50,7 @@ namespace EQLogParser
       {
         if (!double.IsNaN(LastUpdateTime))
         {
-          var seconds = processed.Record.BeginTime - LastUpdateTime;
+          var seconds = processed.BeginTime - LastUpdateTime;
           if (seconds >= GROUP_TIMEOUT)
           {
             CurrentGroupID++;
@@ -59,26 +59,26 @@ namespace EQLogParser
 
         string origTimeString = processed.OrigTimeString.Substring(4, 15);
 
-        Fight fight = Get(processed.Record, processed.Record.BeginTime, origTimeString, defender);
+        Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
 
         // assume npc has been killed and create new entry
-        if (processed.Record.BeginTime - fight.LastTime > NPC_DEATH_TIME)
+        if (processed.BeginTime - fight.LastTime > NPC_DEATH_TIME)
         {
           DataManager.Instance.RemoveActiveFight(fight.CorrectMapKey);
-          fight = Get(processed.Record, processed.Record.BeginTime, origTimeString, defender);
+          fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
         }
 
         if (defender)
         {
-          fight.DamageRecords.Add(processed.Record);
+          Helpers.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
         }
         else
         {
-          fight.TankingRecords.Add(processed.Record);
+          Helpers.AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
         }
 
-        fight.LastTime = processed.Record.BeginTime;
-        LastUpdateTime = processed.Record.BeginTime;
+        fight.LastTime = processed.BeginTime;
+        LastUpdateTime = processed.BeginTime;
 
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight);
       }

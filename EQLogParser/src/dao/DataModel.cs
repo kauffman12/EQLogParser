@@ -115,6 +115,7 @@ namespace EQLogParser
   {
     public DamageRecord Record { get; set; }
     public string OrigTimeString { get; set; }
+    public double BeginTime { get; set; }
   }
 
   public class HealProcessedEvent : TimedAction
@@ -198,7 +199,6 @@ namespace EQLogParser
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
     public string DefenderOwner { get; set; }
-    public double BeginTime { get; set; }
   }
 
   public class LootRecord : IAction
@@ -263,8 +263,8 @@ namespace EQLogParser
     public int ID { get; set; }
     public string CorrectMapKey { get; set; }
     public int GroupID { get; set; }
-    public List<DamageRecord> DamageRecords { get; } = new List<DamageRecord>();
-    public List<DamageRecord> TankingRecords { get; } = new List<DamageRecord>();
+    public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
+    public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
   }
 
   public class PetMapping

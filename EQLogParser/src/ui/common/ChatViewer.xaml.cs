@@ -132,7 +132,7 @@ namespace EQLogParser
 
                   FirstChat = chatType;
                 }
-              }, DispatcherPriority.Background);
+              }, DispatcherPriority.DataBind);
             }
 
             Dispatcher.Invoke(() =>
@@ -160,7 +160,7 @@ namespace EQLogParser
           {
             LoadChannels(player);
           }
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.DataBind);
     }
 
     private void ChatManager_EventsUpdatePlayer(object sender, string player)
@@ -318,7 +318,7 @@ namespace EQLogParser
               RefreshTimer.Start();
             }
           }
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.DataBind);
     }
 
     private List<string> GetSelectedChannels(out bool changed)

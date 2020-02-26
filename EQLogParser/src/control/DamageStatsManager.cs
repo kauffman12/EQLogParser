@@ -59,45 +59,52 @@ namespace EQLogParser
           PetToPlayer.Clear();
           Resists.Clear();
 
-          var damages = new List<DamageRecord>();
+          var damageBlocks = new List<ActionBlock>();
           Selected.ForEach(fight =>
           {
             StatsUtil.UpdateTimeDiffs(RaidTotals, fight);
-            damages.AddRange(fight.DamageRecords);
+            damageBlocks.AddRange(fight.DamageBlocks);
           });
 
-          if (damages.Count > 0)
+          damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
+
+          if (damageBlocks.Count > 0)
           {
             RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
 
-            var damageBlock = new List<ActionBlock>();
+            var newBlock = new List<ActionBlock>();
             var timeIndex = 0;
-            foreach (var damage in damages.OrderBy(damage => damage.BeginTime))
+
+            damageBlocks.ForEach(block =>
             {
-              if (damage.BeginTime > RaidTotals.LastTimes[timeIndex])
+              if (block.BeginTime > RaidTotals.LastTimes[timeIndex])
               {
                 timeIndex++;
 
-                if (damageBlock.Count > 0)
+                if (newBlock.Count > 0)
                 {
-                  DamageGroups.Add(damageBlock);
+                  DamageGroups.Add(newBlock);
                 }
 
-                damageBlock = new List<ActionBlock>();
+                newBlock = new List<ActionBlock>();
               }
 
-              // see if there's a pet mapping, check this first
-              string pname = PlayerManager.Instance.GetPlayerFromPet(damage.Attacker);
-              if (!string.IsNullOrEmpty(pname) || !string.IsNullOrEmpty(pname = damage.AttackerOwner))
+              newBlock.Add(block);
+
+              block.Actions.ForEach(action =>
               {
-                PlayerHasPet[pname] = 1;
-                PetToPlayer[damage.Attacker] = pname;
-              }
+                DamageRecord damage = action as DamageRecord;
+                // see if there's a pet mapping, check this first
+                string pname = PlayerManager.Instance.GetPlayerFromPet(damage.Attacker);
+                if (!string.IsNullOrEmpty(pname) || !string.IsNullOrEmpty(pname = damage.AttackerOwner))
+                {
+                  PlayerHasPet[pname] = 1;
+                  PetToPlayer[damage.Attacker] = pname;
+                }
+              });
+            });
 
-              Helpers.AddAction(damageBlock, damage, damage.BeginTime);
-            }
-
-            DamageGroups.Add(damageBlock);
+            DamageGroups.Add(newBlock);
 
             for (int i=0; i<RaidTotals.BeginTimes.Count && i<RaidTotals.LastTimes.Count; i++)
             {
@@ -132,6 +139,10 @@ namespace EQLogParser
         {
           LOG.Error(ae);
         }
+        catch(OutOfMemoryException oem)
+        {
+          LOG.Error(oem);
+        }
       }
     }
 
@@ -144,10 +155,8 @@ namespace EQLogParser
       }
     }
 
-    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, OverlayDamageStats overlayStats = null)
+    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, OverlayDamageStats overlayStats = null)
     {
-      double beginTime = record.BeginTime;
-
       if (overlayStats == null)
       {
         overlayStats = new OverlayDamageStats
@@ -230,7 +239,7 @@ namespace EQLogParser
 
         overlayStats.RaidStats.DPS = (long)Math.Round(overlayStats.RaidStats.Total / overlayStats.RaidStats.TotalSeconds, 2);
 
-        var list = overlayStats.TopLevelStats.Values.AsParallel().OrderByDescending(item => item.Total).ToList();
+        var list = overlayStats.TopLevelStats.Values.OrderByDescending(item => item.Total).ToList();
         int found = list.FindIndex(stats => stats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal));
 
         int renumber;
@@ -493,18 +502,19 @@ namespace EQLogParser
                   });
                 });
 
-                Parallel.ForEach(allStats.Values, stats =>
+                foreach(var stats in allStats.Values)
                 {
                   stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
                   stats.BeginTime = double.NaN;
-                });
+                }
               });
 
               RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
 
               // add up resists
               Dictionary<string, uint> resistCounts = new Dictionary<string, uint>();
-              Parallel.ForEach(Resists, resist =>
+
+              Resists.ForEach(resist =>
               {
                 ResistRecord record = resist as ResistRecord;
                 Helpers.StringUIntAddHelper.Add(resistCounts, record.Spell, 1);
