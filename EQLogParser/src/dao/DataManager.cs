@@ -281,9 +281,9 @@ namespace EQLogParser
       List<TimedAction> sorted = null;
       lock (AllSpecialActions)
       {
-        sorted = AllSpecialActions.AsParallel().OrderBy(timed => timed.BeginTime).ToList();
+        sorted = AllSpecialActions.OrderBy(timed => timed.BeginTime).ToList();
       }
- 
+
       if (sorted != null)
       {
         int start = sorted.FindIndex(timed => timed.BeginTime >= beginTime);
