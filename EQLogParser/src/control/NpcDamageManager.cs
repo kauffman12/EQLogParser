@@ -71,6 +71,7 @@ namespace EQLogParser
         if (defender)
         {
           Helpers.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
+          fight.Total += processed.Record.Total;
         }
         else
         {

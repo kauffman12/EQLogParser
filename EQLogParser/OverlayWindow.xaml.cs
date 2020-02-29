@@ -444,7 +444,7 @@ namespace EQLogParser
       SettingsButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
 
       CopyButton = CreateButton();
-      CopyButton.ToolTip = new ToolTip { Content = "Copy To EQ" };
+      CopyButton.ToolTip = new ToolTip { Content = "Copy Parse" };
       CopyButton.Margin = new Thickness(4, 1, 0, 0);
       CopyButton.Content = "\xE8C8";
       CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;

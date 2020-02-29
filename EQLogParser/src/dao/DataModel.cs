@@ -263,6 +263,7 @@ namespace EQLogParser
     public int ID { get; set; }
     public string CorrectMapKey { get; set; }
     public int GroupID { get; set; }
+    public long Total { get; set; }
     public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
   }

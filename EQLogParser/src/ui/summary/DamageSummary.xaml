@@ -27,7 +27,7 @@
       RowDetailsVisibilityChanged="ChildrenGridRowDetailsVis" EnableRowVirtualization="False">
       <DataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy To EQ" Click="CopyToEQClick">
+          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="copyDamageParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>

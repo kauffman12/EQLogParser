@@ -26,6 +26,7 @@ namespace EQLogParser
     internal event EventHandler<Fight> EventsNewInactiveFight;
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
+    internal event EventHandler<Fight> EventsRefreshFight;
     internal event EventHandler<bool> EventsClearedActiveData;
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
@@ -441,6 +442,10 @@ namespace EQLogParser
       {
         ActiveFights[name] = fight;
         EventsNewFight?.Invoke(this, fight);
+      }
+      else
+      {
+        EventsRefreshFight?.Invoke(this, fight);
       }
     }
 
