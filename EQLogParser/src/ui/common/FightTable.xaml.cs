@@ -82,13 +82,14 @@ namespace EQLogParser
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       UpdateTimer.Tick += (sender, e) =>
       {
+        // get state so it can't be modified outside this thread
+        var currentNeedRefresh = NeedRefresh;
+
         if (NeedScroll)
         {
-          if (NeedRefresh)
-          {
-            (fightDataGrid.ItemsSource as ICollectionView).Refresh();
-            NeedRefresh = false;
-          }
+          (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+          currentNeedRefresh = false;
+          NeedRefresh = false;
 
           var last = Fights.LastOrDefault(fight => fight.GroupID > -1);
 
@@ -99,13 +100,24 @@ namespace EQLogParser
 
           NeedScroll = false;
         }
+
+        if (currentNeedRefresh)
+        {
+          (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+          NeedRefresh = false;
+        }
       };
 
       UpdateTimer.Start();
 
+      // read show hp setting
+      string showHitPoints = ConfigUtil.GetApplicationSetting("NpcShowHitPoints");
+      fightShowHitPoints.IsChecked = bool.TryParse(showHitPoints, out bool bValue) && bValue;
+      fightDataGrid.Columns[1].Visibility = bValue ? Visibility.Visible : Visibility.Hidden;
+
       // read show breaks setting
       string showBreaks = ConfigUtil.GetApplicationSetting("NpcShowInactivityBreaks");
-      fightShowBreaks.IsChecked = CurrentShowBreaks = (showBreaks == null || (bool.TryParse(showBreaks, out bool bValue) && bValue));
+      fightShowBreaks.IsChecked = CurrentShowBreaks = (showBreaks == null || (bool.TryParse(showBreaks, out bValue) && bValue));
     }
 
     public IEnumerable<Fight> GetSelectedItems()
@@ -262,6 +274,16 @@ namespace EQLogParser
         ConfigUtil.SetApplicationSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
 
         view.Refresh();
+      }
+    }
+
+    private void ShowHitPointsChange(object sender, RoutedEventArgs e)
+    {
+      if (fightDataGrid != null)
+      {
+        var show = fightDataGrid.Columns[1].Visibility == Visibility.Hidden;
+        fightDataGrid.Columns[1].Visibility = show ? Visibility.Visible : Visibility.Hidden;
+        ConfigUtil.SetApplicationSetting("NpcShowHitPoints", show.ToString(CultureInfo.CurrentCulture));
       }
     }
 
@@ -430,11 +452,17 @@ namespace EQLogParser
       AddFight(fight);
     }
 
+    private void Instance_EventsRefreshFight(object sender, Fight fight)
+    {
+      NeedRefresh = true;
+    }
+
     private void TableUnloaded(object sender, RoutedEventArgs e)
     {
       DataManager.Instance.EventsClearedActiveData -= Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight -= Instance_EventsRemovedFight;
       DataManager.Instance.EventsNewFight -= Instance_EventsNewFight;
+      DataManager.Instance.EventsRefreshFight -= Instance_EventsRefreshFight;
     }
 
     private void TableLoaded(object sender, RoutedEventArgs e)
@@ -442,6 +470,7 @@ namespace EQLogParser
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
       DataManager.Instance.EventsNewFight += Instance_EventsNewFight;
+      DataManager.Instance.EventsRefreshFight += Instance_EventsRefreshFight;
     }
   }
 }

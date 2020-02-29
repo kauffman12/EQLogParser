@@ -25,7 +25,7 @@
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" SelectionChanged="DataGridSelectionChanged" EnableRowVirtualization="True">
       <DataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Copy To EQ" Click="CopyToEQClick">
+          <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Copy Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="copyHealParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>

@@ -81,6 +81,11 @@ namespace EQLogParser
               dataGrid.ItemsSource = SetFilter(view);
             }
 
+            if (!MainWindow.IsBaneDamageEnabled)
+            {
+              title.Content += " (Not Including Banes)";
+            }
+
             (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;

@@ -157,7 +157,7 @@
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="playersViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="User" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Parse Settings" Click="MenuItemWindowClick" Height="20">
+          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Parse Preview" Click="MenuItemWindowClick" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerParseIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
@@ -360,7 +360,7 @@
       </docking:DockSite.AutoHideRightContainers>
       <docking:DockSite.AutoHideBottomContainers>
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" Title="Parse Settings" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
+          <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" Title="Preview Parse" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
             <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="100" />
@@ -374,7 +374,7 @@
                 <TextBlock x:Name="sharePlayerParseLabel" Grid.Row="0" TextWrapping="Wrap" FontSize="14" Margin="10,2,0,0" Foreground="#c2c2c0" >No Players Selected</TextBlock>
                 <StackPanel Grid.Row="1" Orientation="Vertical">
                   <TextBlock x:Name="sharePlayerParseWarningLabel" TextWrapping="Wrap" FontSize="10" Margin="12,0,0,4" Foreground="LightGreen" FontStyle="Italic" Height="12" Visibility="Hidden">0 / 509</TextBlock>
-                  <Button x:Name="copyToEQButton" Width="80" Height="24" Margin="10,4,10,0" Content="Copy to EQ" IsEnabled="False" Foreground="#FF5A5A5A" BorderBrush="{x:Null}" Click="CopyToEQClick"/>
+                  <Button x:Name="copyToEQButton" Width="80" Height="24" Margin="10,4,10,0" Content="Copy Parse" IsEnabled="False" Foreground="#FF5A5A5A" BorderBrush="{x:Null}" Click="CopyToEQClick"/>
                 </StackPanel>
               </Grid>
               <Grid Grid.Column="1">
