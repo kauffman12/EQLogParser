@@ -88,19 +88,23 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        switch (e.State)
+        if (e.Type == Labels.HEALPARSE && CurrentStats != null)
         {
-          case "STARTED":
-            if (e.Type == Labels.TANKPARSE)
-            {
+          (Application.Current.MainWindow as MainWindow).Busy(true);
+          HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
+          dataGrid.Items?.Refresh();
+          Helpers.SetBusy(false);
+        }
+        else if (e.Type == Labels.TANKPARSE)
+        {
+          switch (e.State)
+          {
+            case "STARTED":
               Helpers.SetBusy(true);
               title.Content = "Calculating Tanking DPS...";
               dataGrid.ItemsSource = null;
-            }
-            break;
-          case "COMPLETED":
-            if (e.Type == Labels.TANKPARSE)
-            {
+              break;
+            case "COMPLETED":
               CurrentStats = e.CombinedStats as CombinedStats;
               CurrentGroups = e.Groups;
 
@@ -119,33 +123,20 @@ namespace EQLogParser
 
               Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
-            }
-            else if (e.Type == Labels.HEALPARSE && CurrentStats != null)
-            {
-              (Application.Current.MainWindow as MainWindow).Busy(true);
-              HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
-              dataGrid.Items?.Refresh();
-              Helpers.SetBusy(false);
-            }
-            break;
-          case "NONPC":
-            if (e.Type == Labels.TANKPARSE)
-            {
+              break;
+            case "NONPC":
               CurrentStats = null;
               title.Content = DEFAULT_TABLE_LABEL;
               Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
-            }
-            break;
-          case "NODATA":
-            if (e.Type == Labels.TANKPARSE)
-            {
+              break;
+            case "NODATA":
               CurrentStats = null;
               title.Content = NODATA_TABLE_LABEL;
               Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
-            }
-            break;
+              break;
+          }
         }
       });
     }

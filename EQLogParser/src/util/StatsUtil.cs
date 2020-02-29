@@ -94,7 +94,7 @@ namespace EQLogParser
       return result;
     }
 
-    internal static string FormatTotals(long total)
+    internal static string FormatTotals(long total, int roundTo = 2)
     {
       string result;
 
@@ -104,15 +104,15 @@ namespace EQLogParser
       }
       else if (total < 1000000)
       {
-        result = Math.Round((decimal)total / 1000, 2) + "K";
+        result = Math.Round((decimal)total / 1000, roundTo) + "K";
       }
       else if (total < 1000000000)
       {
-        result = Math.Round((decimal)total / 1000 / 1000, 2) + "M";
+        result = Math.Round((decimal)total / 1000 / 1000, roundTo) + "M";
       }
       else
       {
-        result = Math.Round((decimal)total / 1000 / 1000 / 1000, 2) + "B";
+        result = Math.Round((decimal)total / 1000 / 1000 / 1000, roundTo) + "B";
       }
 
       return result;
