@@ -122,11 +122,6 @@ namespace EQLogParser
       return TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
     }
 
-    internal void CopyToEQClick(object sender, RoutedEventArgs e)
-    {
-      (Application.Current.MainWindow as MainWindow).CopyToEQClick();
-    }
-
     internal void DataGridSelectAllClick(object sender, RoutedEventArgs e)
     {
       Helpers.DataGridSelectAll(sender as FrameworkElement);
@@ -203,6 +198,7 @@ namespace EQLogParser
     {
       var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
       selectionChanged.Selected.AddRange(selected);
+      selectionChanged.CurrentStats = CurrentStats;
       EventsSelectionChange(this, selectionChanged);
     }
 

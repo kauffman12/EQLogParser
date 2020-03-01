@@ -90,14 +90,9 @@ namespace EQLogParser
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
-            CurrentStats = null;
-            title.Content = DEFAULT_TABLE_LABEL;
-            (Application.Current.MainWindow as MainWindow).Busy(false);
-            UpdateDataGridMenuItems();
-            break;
           case "NODATA":
             CurrentStats = null;
-            title.Content = NODATA_TABLE_LABEL;
+            title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
             (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
@@ -297,6 +292,11 @@ namespace EQLogParser
       }
 
       return view;
+    }
+
+    private void CopyToEQClick(object sender, RoutedEventArgs e)
+    {
+      (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.DAMAGEPARSE);
     }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)

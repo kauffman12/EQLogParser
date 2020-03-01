@@ -22,6 +22,7 @@ namespace EQLogParser
     public const string UNKPLAYER = "Unk Player";
     public const string RAID = "Totals";
     public const string RIPOSTE = "Riposte";
+    public const string RECEIVEDHEALPARSE = "Received Healing";
     public const string HEALPARSE = "Healing";
     public const string TANKPARSE = "Tanking";
     public const string DAMAGEPARSE = "Damage";
@@ -54,7 +55,7 @@ namespace EQLogParser
 
   public interface ISummaryBuilder
   {
-    StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial);
+    StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial);
   }
 
   internal interface IAction { }
@@ -109,6 +110,7 @@ namespace EQLogParser
   public class PlayerStatsSelectionChangedEventArgs : EventArgs
   {
     public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
+    public CombinedStats CurrentStats { get; set; }
   }
 
   public class DamageProcessedEvent
