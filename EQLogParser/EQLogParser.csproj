@@ -207,6 +207,9 @@
     <Compile Include="src\ui\common\LootViewer.xaml.cs">
       <DependentUpon>LootViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\common\ParsePreview.xaml.cs">
+      <DependentUpon>ParsePreview.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\summary\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
@@ -284,6 +287,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\common\LootViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\common\ParsePreview.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

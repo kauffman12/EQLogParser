@@ -2,7 +2,6 @@
 using ActiproSoftware.Windows.Themes;
 using FontAwesome.WPF;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -32,16 +31,14 @@ namespace EQLogParser
     internal static bool IsIgnoreIntialPullDamageEnabled = false;
     internal static bool IsHideOverlayOtherPlayersEnabled = false;
     internal static bool IsHideOnMinimizeEnabled = false;
+    internal static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
+    internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    internal static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
+    internal static readonly SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private enum LogOption { OPEN, MONITOR, ARCHIVE };
-
-    private static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
-    private static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
-    private static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
-    private static readonly SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
-
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
@@ -64,11 +61,9 @@ namespace EQLogParser
 
     private readonly ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
-    private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
 
     private ChatManager PlayerChatManager = null;
     private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
-    private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
     private readonly Dictionary<string, DockingWindow> IconToWindow;
     private DocumentWindow ChatWindow = null;
     private DocumentWindow DamageWindow = null;
@@ -182,9 +177,6 @@ namespace EQLogParser
           }
         });
 
-        parseList.ItemsSource = AvailableParses;
-        parseList.SelectedIndex = -1;
-
         HealingLineParser.EventsHealProcessed += (sender, data) => DataManager.Instance.AddHealRecord(data.Record, data.BeginTime);
         DamageLineParser.EventsResistProcessed += (sender, data) => DataManager.Instance.AddResistRecord(data.Record, data.BeginTime);
         MiscLineParser.EventsLootProcessed += (sender, data) => DataManager.Instance.AddLootRecord(data.Record, data.BeginTime);
@@ -194,10 +186,6 @@ namespace EQLogParser
         DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
         HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
         TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(TankingChartWindow, sender, data);
-
-        DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-        HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-        TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -299,9 +287,9 @@ namespace EQLogParser
       busyIcon.Visibility = BusyCount == 0 ? Visibility.Hidden : Visibility.Visible;
     }
 
-    internal void CopyToEQClick(object sender = null, RoutedEventArgs e = null)
+    internal void CopyToEQClick(string type)
     {
-      Clipboard.SetDataObject(playerParseTextBox.Text);
+      (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
     }
 
     internal void OpenOverlay(bool configure = false, bool saveFirst = false)
@@ -336,7 +324,7 @@ namespace EQLogParser
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
-      AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
+      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
     }
 
     private void UpdateDeleteChatMenu()
@@ -524,7 +512,7 @@ namespace EQLogParser
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
 
       var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
-      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options));
+      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options, true));
     }
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
@@ -805,21 +793,40 @@ namespace EQLogParser
     {
       var options = new GenerateStatsOptions() { RequestChartData = true };
       DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-      UpdateParse(Labels.DAMAGEPARSE, data.Selected);
+      (playerParseTextWindow.Content as ParsePreview)?.UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       var options = new GenerateStatsOptions() { RequestChartData = true };
       HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-      UpdateParse(Labels.HEALPARSE, data.Selected);
+      (playerParseTextWindow.Content as ParsePreview)?.UpdateParse(Labels.HEALPARSE, data.Selected);
     }
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       var options = new GenerateStatsOptions() { RequestChartData = true };
       TankingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-      UpdateParse(Labels.TANKPARSE, data.Selected);
+
+      var preview = playerParseTextWindow.Content as ParsePreview;
+
+      // change the update order based on whats displayed
+      if (preview.parseList.SelectedItem?.ToString() == Labels.RECEIVEDHEALPARSE)
+      {
+        preview?.UpdateParse(Labels.TANKPARSE, data.Selected);
+        if (data.Selected?.Count == 1 && (data.Selected[0] as PlayerStats).SubStats2?.ContainsKey("receivedHealing") == true)
+        {
+          preview?.AddParse(Labels.RECEIVEDHEALPARSE, TankingStatsManager.Instance, data.CurrentStats, data.Selected);
+        }
+      }
+      else
+      {
+        if (data.Selected?.Count == 1 && (data.Selected[0] as PlayerStats).SubStats2?.ContainsKey("receivedHealing") == true)
+        {
+          preview?.AddParse(Labels.RECEIVEDHEALPARSE, TankingStatsManager.Instance, data.CurrentStats, data.Selected);
+        }
+        preview?.UpdateParse(Labels.TANKPARSE, data.Selected);
+      }
     }
 
     private void RepositionCharts(DocumentWindow window)
@@ -870,14 +877,6 @@ namespace EQLogParser
 
       CurrentLogOption = LogOption.OPEN;
       OpenLogFile(lastMins);
-    }
-
-    private void PlayerParseText_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-      if (!playerParseTextBox.IsFocused)
-      {
-        playerParseTextBox.Focus();
-      }
     }
 
     private void UpdateLoadingProgress()
@@ -935,136 +934,6 @@ namespace EQLogParser
           Busy(false);
         }
       });
-    }
-
-    private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
-    {
-      switch (e.State)
-      {
-        case "COMPLETED":
-        case "NONPC":
-          AddParse(e.Type, sender as ISummaryBuilder, e.CombinedStats);
-          break;
-      }
-    }
-
-    private void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
-    {
-      Parses[type] = new ParseData() { Builder = builder, CombinedStats = combined };
-
-      if (selected != null)
-      {
-        Parses[type].Selected.AddRange(selected);
-      }
-
-      if (!AvailableParses.Contains(type))
-      {
-        Dispatcher.InvokeAsync(() => AvailableParses.Add(type));
-      }
-
-      TriggerParseUpdate(type, copy);
-    }
-
-    private void UpdateParse(string type, List<PlayerStats> selected)
-    {
-      if (Parses.ContainsKey(type))
-      {
-        Parses[type].Selected.Clear();
-        if (selected != null)
-        {
-          Parses[type].Selected.AddRange(selected);
-        }
-
-        TriggerParseUpdate(type);
-      }
-    }
-
-    private void TriggerParseUpdate(string type, bool copy = false)
-    {
-      Dispatcher.InvokeAsync(() =>
-      {
-        if (parseList.SelectedItem?.ToString() == type)
-        {
-          SetParseTextByType(type);
-        }
-        else
-        {
-          parseList.SelectedItem = type;
-        }
-
-        if (copy)
-        {
-          CopyToEQClick();
-        }
-      });
-    }
-
-    private void SetParseTextByType(string type)
-    {
-      if (Parses.ContainsKey(type))
-      {
-        var combined = Parses[type].CombinedStats;
-        var summary = Parses[type].Builder?.BuildSummary(combined, Parses[type].Selected, playerParseTextDoTotals.IsChecked.Value,
-          playerParseTextDoRank.IsChecked.Value, playerParseTextDoSpecials.IsChecked.Value);
-        playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
-        playerParseTextBox.SelectAll();
-      }
-    }
-
-    private void ParseList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (parseList.SelectedIndex > -1)
-      {
-        SetParseTextByType(parseList.SelectedItem as string);
-      }
-    }
-
-    private void PlayerParseTextCheckChange(object sender, RoutedEventArgs e)
-    {
-      if (parseList.SelectedIndex > -1)
-      {
-        SetParseTextByType(parseList.SelectedItem as string);
-      }
-    }
-
-    private void PlayerParseTextBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == Properties.Resources.SHARE_DPS_SELECTED)
-      {
-        copyToEQButton.IsEnabled = false;
-        copyToEQButton.Foreground = LIGHTER_BRUSH;
-        sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_SELECTED;
-        sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
-        sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + "/" + 509;
-        sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
-      }
-      else if (playerParseTextBox.Text.Length > 509)
-      {
-        copyToEQButton.IsEnabled = false;
-        copyToEQButton.Foreground = LIGHTER_BRUSH;
-        sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_TOO_BIG;
-        sharePlayerParseLabel.Foreground = WARNING_BRUSH;
-        sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + "/" + 509;
-        sharePlayerParseWarningLabel.Foreground = WARNING_BRUSH;
-        sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
-      }
-      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Properties.Resources.SHARE_DPS_SELECTED)
-      {
-        copyToEQButton.IsEnabled = true;
-        copyToEQButton.Foreground = BRIGHT_TEXT_BRUSH;
-
-        if (parseList.SelectedItem != null && Parses.TryGetValue(parseList.SelectedItem as string, out ParseData data))
-        {
-          var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
-          string players = count == 1 ? "Player" : "Players";
-          sharePlayerParseLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0} {1} Selected", count, players);
-        }
-
-        sharePlayerParseLabel.Foreground = BRIGHT_TEXT_BRUSH;
-        sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + " / " + 509;
-        sharePlayerParseWarningLabel.Foreground = GOOD_BRUSH;
-        sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
-      }
     }
 
     private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)

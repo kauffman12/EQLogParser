@@ -32,6 +32,11 @@
               <fa:ImageAwesome x:Name="copyTankingParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem IsEnabled="False" x:Name="copyReceivedHealingParseToEQClick" Header="Copy Received Healing Parse" Click="CopyReceivedHealingToEQClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="copyReceivedHealingParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Set Unknown As Pet" Click="SetPetClick">
             <MenuItem.Icon>
