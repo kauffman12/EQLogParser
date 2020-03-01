@@ -157,7 +157,7 @@
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="playersViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="User" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Parse Preview" Click="MenuItemWindowClick" Height="20">
+          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerParseIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
@@ -361,36 +361,7 @@
       <docking:DockSite.AutoHideBottomContainers>
         <docking:ToolWindowContainer>
           <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" Title="Preview Parse" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="100" />
-                <ColumnDefinition Width="400*" />
-              </Grid.ColumnDefinitions>
-              <Grid Grid.Column="0">
-                <Grid.RowDefinitions>
-                  <RowDefinition Height="47*" />
-                  <RowDefinition Height="50" />
-                </Grid.RowDefinitions>
-                <TextBlock x:Name="sharePlayerParseLabel" Grid.Row="0" TextWrapping="Wrap" FontSize="14" Margin="10,2,0,0" Foreground="#c2c2c0" >No Players Selected</TextBlock>
-                <StackPanel Grid.Row="1" Orientation="Vertical">
-                  <TextBlock x:Name="sharePlayerParseWarningLabel" TextWrapping="Wrap" FontSize="10" Margin="12,0,0,4" Foreground="LightGreen" FontStyle="Italic" Height="12" Visibility="Hidden">0 / 509</TextBlock>
-                  <Button x:Name="copyToEQButton" Width="80" Height="24" Margin="10,4,10,0" Content="Copy Parse" IsEnabled="False" Foreground="#FF5A5A5A" BorderBrush="{x:Null}" Click="CopyToEQClick"/>
-                </StackPanel>
-              </Grid>
-              <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                  <RowDefinition Height="30" />
-                  <RowDefinition Height="50*" />
-                </Grid.RowDefinitions>
-                <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
-                  <ComboBox Margin="0,0,15,0" x:Name="parseList" IsEnabled="True" Height="24" SelectionChanged="ParseList_SelectionChanged" />
-                  <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Raid Total</CheckBox>
-                  <CheckBox x:Name="playerParseTextDoSpecials" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Specials</CheckBox>
-                  <CheckBox x:Name="playerParseTextDoRank" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Rank Players</CheckBox>
-                </StackPanel>
-                <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerParseTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF383838" Foreground="#c2c2c0" BorderThickness="0" FontSize="14" MouseEnter="PlayerParseText_MouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerParseTextBox_TextChanged"/>
-              </Grid>
-            </Grid>
+            <local:ParsePreview />
           </docking:ToolWindow>
         </docking:ToolWindowContainer>
       </docking:DockSite.AutoHideBottomContainers>

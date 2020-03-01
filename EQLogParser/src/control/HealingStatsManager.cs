@@ -79,9 +79,13 @@ namespace EQLogParser
 
             ComputeHealingStats(options);
           }
+          else if (Selected == null || Selected.Count == 0)
+          {
+            FireNoDataEvent(options, "NONPC");
+          }
           else
           {
-            FireNoDataEvent(options);
+            FireNoDataEvent(options, "NODATA");
           }
         }
         catch (ArgumentNullException ne)
@@ -107,19 +111,26 @@ namespace EQLogParser
       }
     }
 
-    internal void RebuildTotalStats(GenerateStatsOptions options)
+    internal void RebuildTotalStats(GenerateStatsOptions options, bool updatedAoEOption = false)
     {
-      if (HealingGroups.Count > 0)
+      if (updatedAoEOption)
+      {
+        var newOptions = new GenerateStatsOptions() { Name = Title, RequestChartData = options.RequestChartData, RequestSummaryData = options.RequestSummaryData };
+        newOptions.Npcs.AddRange(Selected);
+        BuildTotalStats(newOptions);
+      }
+      else if (HealingGroups.Count > 0)
       {
         FireNewStatsEvent(options);
         ComputeHealingStats(options);
       }
     }
 
-    internal void PopulateHealing(List<PlayerStats> playerStats)
+    internal void PopulateHealing(CombinedStats combined)
     {
       lock (HealingGroups)
       {
+        List<PlayerStats> playerStats = combined.StatsList;
         Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
         Dictionary<string, long> totals = new Dictionary<string, long>();
 
@@ -248,12 +259,12 @@ namespace EQLogParser
       }
     }
 
-    private void FireNoDataEvent(GenerateStatsOptions options)
+    private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       if (options.RequestSummaryData)
       {
         // nothing to do
-        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = "NONPC" });
+        EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = state });
       }
 
       FireChartEvent(options, "CLEAR");
@@ -374,14 +385,14 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _)
     {
       List<string> list = new List<string>();
 
       string title = "";
       string details = "";
 
-      if (currentStats != null)
+      if (currentStats != null && type == Labels.HEALPARSE)
       {
         if (selected?.Count > 0)
         {

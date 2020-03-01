@@ -288,7 +288,7 @@ namespace EQLogParser
     }
 
 
-    public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _)
     {
       List<string> list = new List<string>();
 
@@ -297,18 +297,41 @@ namespace EQLogParser
 
       if (currentStats != null)
       {
-        if (selected?.Count > 0)
+        if (type == Labels.TANKPARSE)
         {
-          foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+          if (selected?.Count > 0)
           {
-            string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-            list.Add(playerFormat + damageFormat + " ");
+            foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+            {
+              string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
+              string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              list.Add(playerFormat + damageFormat + " ");
+            }
+          }
+
+          details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
+          title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+        }
+        else if (type == Labels.RECEIVEDHEALPARSE)
+        {
+          if (selected?.Count == 1 && (selected[0] as PlayerStats).SubStats2.TryGetValue("receivedHealing", out PlayerSubStats subStats) && subStats is PlayerStats receivedHealing)
+          {
+            int rank = 1;
+            long totals = 0;
+            foreach (var stats in receivedHealing.SubStats.Values.OrderByDescending(stats => stats.Total).Take(10))
+            {
+              string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
+              string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              list.Add(playerFormat + damageFormat + " ");
+              totals += stats.Total;
+            }
+
+            var hps = (long)Math.Round(totals / currentStats.RaidStats.TotalSeconds, 2);
+            string totalTitle = showTotals ? (selected[0].Name + " Received " + StatsUtil.FormatTotals(totals) + " Healing") : (selected[0].Name + " Received Healing");
+            details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
+            title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, totalTitle);
           }
         }
-
-        details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-        title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details, };

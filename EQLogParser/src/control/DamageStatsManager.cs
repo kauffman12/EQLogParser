@@ -592,14 +592,14 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial)
     {
       List<string> list = new List<string>();
 
       string title = "";
       string details = "";
 
-      if (currentStats != null)
+      if (currentStats != null && type == Labels.DAMAGEPARSE)
       {
         if (selected?.Count > 0)
         {

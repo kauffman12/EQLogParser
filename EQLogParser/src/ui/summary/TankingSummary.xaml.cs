@@ -91,7 +91,7 @@ namespace EQLogParser
         if (e.Type == Labels.HEALPARSE && CurrentStats != null)
         {
           (Application.Current.MainWindow as MainWindow).Busy(true);
-          HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
+          HealingStatsManager.Instance.PopulateHealing(CurrentStats);
           dataGrid.Items?.Refresh();
           Helpers.SetBusy(false);
         }
@@ -115,7 +115,7 @@ namespace EQLogParser
               else
               {
                 title.Content = CurrentStats.FullTitle;
-                HealingStatsManager.Instance.PopulateHealing(CurrentStats.StatsList);
+                HealingStatsManager.Instance.PopulateHealing(CurrentStats);
 
                 var view = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
                 dataGrid.ItemsSource = SetFilter(view);
@@ -125,14 +125,9 @@ namespace EQLogParser
               UpdateDataGridMenuItems();
               break;
             case "NONPC":
-              CurrentStats = null;
-              title.Content = DEFAULT_TABLE_LABEL;
-              Helpers.SetBusy(false);
-              UpdateDataGridMenuItems();
-              break;
             case "NODATA":
               CurrentStats = null;
-              title.Content = NODATA_TABLE_LABEL;
+              title.Content = e.State == "NOPNC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
               Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
               break;
@@ -152,6 +147,7 @@ namespace EQLogParser
         menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowTankingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyTankingParseToEQClick.IsEnabled = true;
+        copyReceivedHealingParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats2?.ContainsKey("receivedHealing") == true;
 
         if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
         {
@@ -166,7 +162,8 @@ namespace EQLogParser
       else
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
-           menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled = false;
+           menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
+           copyReceivedHealingParseToEQClick.IsEnabled = false;
       }
 
       menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);
@@ -216,6 +213,16 @@ namespace EQLogParser
     {
       CurrentPetValue = showPets.IsChecked.Value;
       SetFilter(dataGrid?.ItemsSource as ICollectionView);
+    }
+
+    private void CopyToEQClick(object sender, RoutedEventArgs e)
+    {
+      (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TANKPARSE);
+    }
+
+    private void CopyReceivedHealingToEQClick(object sender, RoutedEventArgs e)
+    {
+      (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.RECEIVEDHEALPARSE);
     }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
