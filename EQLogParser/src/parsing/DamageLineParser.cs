@@ -18,6 +18,8 @@ namespace EQLogParser
     private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly Regex CheckEyeRegex = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
+    private static readonly List<string> SlainQueue = new List<string>();
+    private static double SlainTime = double.NaN;
 
     private static readonly Dictionary<string, string> HitMap = new Dictionary<string, string>()
     {
@@ -61,13 +63,28 @@ namespace EQLogParser
 
       try
       {
+        var actionPart = line.Substring(LineParsing.ACTIONINDEX);
+        var timeString = line.Substring(1, 24);
+        var currentTime = DateUtil.ParseDate(timeString);
+        
+        // handle Slain queue
+        if (!double.IsNaN(SlainTime) && currentTime > SlainTime)
+        {
+          SlainQueue.ForEach(slain =>
+          {
+            if (!DataManager.Instance.RemoveActiveFight(slain) && char.IsUpper(slain[0]))
+            {
+              DataManager.Instance.RemoveActiveFight(char.ToLower(slain[0], CultureInfo.CurrentCulture) + slain.Substring(1));
+            }
+          });
+
+          SlainQueue.Clear();
+          SlainTime = double.NaN;
+        }
+
         int index;
         if (line.Length >= 40 && line.IndexOf(" damage", LineParsing.ACTIONINDEX + 13, StringComparison.Ordinal) > -1)
         {
-          var actionPart = line.Substring(LineParsing.ACTIONINDEX);
-          var timeString = line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString);
-
           DamageRecord record = ParseDamage(actionPart);
           if (record != null)
           {
@@ -87,10 +104,6 @@ namespace EQLogParser
         }
         else if (line.Length >= 49 && (index = line.IndexOf(", but miss", LineParsing.ACTIONINDEX + 22, StringComparison.Ordinal)) > -1)
         {
-          var actionPart = line.Substring(LineParsing.ACTIONINDEX);
-          var timeString = line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString);
-
           DamageRecord record = ParseMiss(actionPart, index);
           if (record != null)
           {
@@ -101,17 +114,11 @@ namespace EQLogParser
         }
         else if (line.Length > 30 && line.Length < 102 && (index = line.IndexOf(" slain ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          var actionPart = line.Substring(LineParsing.ACTIONINDEX);
-          var timeString = line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString);
           HandleSlain(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
           handled = true;
         }
         else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          var actionPart = line.Substring(LineParsing.ACTIONINDEX);
-          var timeString = line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString);
           HandleResist(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
           handled = true;
         }
@@ -173,9 +180,10 @@ namespace EQLogParser
             }
           }
         }
-        else if (!DataManager.Instance.RemoveActiveFight(test) && char.IsUpper(test[0]))
+        else if (!SlainQueue.Contains(test))
         {
-          DataManager.Instance.RemoveActiveFight(char.ToLower(test[0], CultureInfo.CurrentCulture) + test.Substring(1));
+          SlainQueue.Add(test);
+          SlainTime = currentTime;
         }
       }
     }
