@@ -4,8 +4,6 @@ namespace EQLogParser
 {
   class HealingLineParser
   {
-    public static event EventHandler<HealProcessedEvent> EventsHealProcessed;
-
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
 
@@ -15,14 +13,6 @@ namespace EQLogParser
 
       try
       {
-        if (line.Contains("Your ward heals you as it ") || line.Contains("is soothed by Brell's Soothing Wave."))
-        {
-          if (true)
-          {
-
-          }
-        }
-
         int index;
         if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
@@ -34,8 +24,7 @@ namespace EQLogParser
           HealRecord record = HandleHealed(pline);
           if (record != null)
           {
-            HealProcessedEvent e = new HealProcessedEvent() { Record = record, BeginTime = pline.CurrentTime };
-            EventsHealProcessed(record, e);
+            DataManager.Instance.AddHealRecord(record, pline.CurrentTime);
             handled = true;
           }
         }

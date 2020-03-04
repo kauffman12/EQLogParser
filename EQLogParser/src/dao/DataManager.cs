@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -32,10 +33,11 @@ namespace EQLogParser
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
 
+    private readonly List<ActionBlock> AllDeathBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllResists = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllResistBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
     private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
 
@@ -128,23 +130,25 @@ namespace EQLogParser
       PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => RemoveFight(name);
     }
 
-    internal void Clear()
-    {
-      lock (this)
-      {
-        ActiveFights.Clear();
-        LifetimeFights.Clear();
-        AllSpellCastBlocks.Clear();
-        AllUniqueSpellCasts.Clear();
-        AllUniqueSpellsCache.Clear();
-        AllReceivedSpellBlocks.Clear();
-        AllResists.Clear();
-        AllHealBlocks.Clear();
-        AllLootBlocks.Clear();
-        AllSpecialActions.Clear();
-        EventsClearedActiveData?.Invoke(this, true);
-      }
-    }
+    internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
+
+    internal void AddLootRecord(LootRecord record, double beginTime) => Helpers.AddAction(AllLootBlocks, record, beginTime);
+
+    internal void AddResistRecord(ResistRecord record, double beginTime) => Helpers.AddAction(AllResistBlocks, record, beginTime);
+
+    internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
+
+    internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
+
+    internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
+
+    internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
+
+    internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
+
+    internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
+
+    internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
 
     internal void AddUnhandledLine(string source, string line)
     {
@@ -163,6 +167,29 @@ namespace EQLogParser
           cache[actionPart] = 1;
         }
       }
+    }
+
+    internal Fight GetFight(string name)
+    {
+      Fight result;
+      if (char.IsUpper(name[0]))
+      {
+        if (!ActiveFights.TryGetValue(name, out result))
+        {
+          var lower = char.ToLower(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
+          ActiveFights.TryGetValue(lower, out result);
+        }
+      }
+      else
+      {
+        if (!ActiveFights.TryGetValue(name, out result))
+        {
+          var upper = char.ToUpper(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
+          ActiveFights.TryGetValue(upper, out result);
+        }
+      }
+
+      return result;
     }
 
     internal List<string> GetUnhandledLines()
@@ -191,19 +218,10 @@ namespace EQLogParser
 
     internal void AddSpecial(TimedAction action)
     {
-      if (action is PlayerDeath || action is SpecialSpell)
+      lock (AllSpecialActions)
       {
-        lock (AllSpecialActions)
-        {
-          AllSpecialActions.Add(action);
-        }
+        AllSpecialActions.Add(action);
       }
-    }
-
-    internal void AddResistRecord(ResistRecord record, double beginTime)
-    {
-      // Resists are only seen by current player
-      Helpers.AddAction(AllResists, record, beginTime);
     }
 
     internal void AddHealRecord(HealRecord record, double beginTime)
@@ -211,11 +229,6 @@ namespace EQLogParser
       record.Healer = PlayerManager.Instance.ReplacePlayer(record.Healer, record.Healed);
       record.Healed = PlayerManager.Instance.ReplacePlayer(record.Healed, record.Healer);
       Helpers.AddAction(AllHealBlocks, record, beginTime);
-    }
-
-    internal void AddLootRecord(LootRecord record, double beginTime)
-    {
-      Helpers.AddAction(AllLootBlocks, record, beginTime);
     }
 
     internal void HandleSpellInterrupt(string player, string spell, double beginTime)
@@ -250,58 +263,14 @@ namespace EQLogParser
       }
     }
 
-    internal void AddReceivedSpell(ReceivedSpell received, double beginTime)
+    internal List<TimedAction> GetSpecials()
     {
-      Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
-    }
-
-    internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime)
-    {
-      return SearchActions(AllSpellCastBlocks, beginTime, endTime);
-    }
-
-    internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime)
-    {
-      return SearchActions(AllHealBlocks, beginTime, endTime);
-    }
-
-    internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime)
-    {
-      return SearchActions(AllResists, beginTime, endTime);
-    }
-
-    internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime)
-    {
-      return SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
-    }
-
-    internal List<TimedAction> GetSpecialsDuring(double beginTime, double endTime)
-    {
-      var result = new List<TimedAction>();
-
-      List<TimedAction> sorted = null;
-      lock (AllSpecialActions)
+      List<TimedAction> sorted;
+      lock(AllSpecialActions)
       {
-        sorted = AllSpecialActions.OrderBy(timed => timed.BeginTime).ToList();
+        sorted = AllSpecialActions.OrderBy(special => special.BeginTime).ToList();
       }
-
-      if (sorted != null)
-      {
-        int start = sorted.FindIndex(timed => timed.BeginTime >= beginTime);
-        int end = sorted.FindLastIndex(timed => timed.BeginTime <= endTime);
-
-        if (start > -1 && end > -1 && end > start)
-        {
-          result = sorted.GetRange(start, end - start + 1);
-        }
-      }
-
-      return result;
-    }
-
-    internal List<ActionBlock> GetAllLoot()
-    {
-      return AllLootBlocks.ToList();
+      return sorted;
     }
 
     internal SpellData GetSpellByAbbrv(string abbrv)
@@ -322,12 +291,6 @@ namespace EQLogParser
         result = SpellsNameDB[name];
       }
       return result;
-    }
-
-    internal Fight GetFight(string name)
-    {
-      ActiveFights.TryGetValue(name, out Fight npc);
-      return npc;
     }
 
     internal SpellData GetNonPosessiveLandsOnOther(string value, out List<SpellData> output)
@@ -446,6 +409,25 @@ namespace EQLogParser
       else
       {
         EventsRefreshFight?.Invoke(this, fight);
+      }
+    }
+
+    internal void Clear()
+    {
+      lock (this)
+      {
+        ActiveFights.Clear();
+        LifetimeFights.Clear();
+        AllDeathBlocks.Clear();
+        AllSpellCastBlocks.Clear();
+        AllUniqueSpellCasts.Clear();
+        AllUniqueSpellsCache.Clear();
+        AllReceivedSpellBlocks.Clear();
+        AllResistBlocks.Clear();
+        AllHealBlocks.Clear();
+        AllLootBlocks.Clear();
+        AllSpecialActions.Clear();
+        EventsClearedActiveData?.Invoke(this, true);
       }
     }
 

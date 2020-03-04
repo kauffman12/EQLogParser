@@ -10,7 +10,6 @@ namespace EQLogParser
   class DamageLineParser
   {
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
-    public static event EventHandler<ResistProcessedEvent> EventsResistProcessed;
 
     private enum ParseType { HASTAKEN, YOUHAVETAKEN, POINTSOF, UNKNOWN };
 
@@ -119,7 +118,13 @@ namespace EQLogParser
         }
         else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
-          HandleResist(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
+          var optionalIndex = index - LineParsing.ACTIONINDEX;
+
+          // [Mon Feb 11 20:00:28 2019] An inferno flare resisted your Frostreave Strike III!
+          string defender = actionPart.Substring(0, optionalIndex);
+          string spell = actionPart.Substring(optionalIndex + 15, actionPart.Length - optionalIndex - 15 - 1);
+
+          DataManager.Instance.AddResistRecord(new ResistRecord() { Spell = spell }, currentTime);
           handled = true;
         }
       }
@@ -165,38 +170,21 @@ namespace EQLogParser
       // Gotcharms has been slain by an animated mephit!
       if (test != null && test.Length > 0)
       {
-        if ((PlayerManager.Instance.IsVerifiedPlayer(test) is bool isPlayer && isPlayer) || PlayerManager.Instance.IsVerifiedPet(test))
-        {
-          if (isPlayer)
-          {
-            int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
-            if (byIndex > -1)
-            {
-              int len = part.Length - byIndex - 4 - 1;
-              string npc = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
-
-              var death = new PlayerDeath() { Player = string.Intern(test), Npc = string.Intern(npc), BeginTime = currentTime };
-              DataManager.Instance.AddSpecial(death);
-            }
-          }
-        }
-        else if (!SlainQueue.Contains(test))
+        if (!SlainQueue.Contains(test) && DataManager.Instance.GetFight(test) != null)
         {
           SlainQueue.Add(test);
           SlainTime = currentTime;
         }
+
+        int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
+        if (byIndex > -1)
+        {
+          int len = part.Length - byIndex - 4 - 1;
+          string killer = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
+          var death = new DeathRecord() { Killed = string.Intern(test), Killer = string.Intern(killer) };
+          DataManager.Instance.AddDeathRecord(death, currentTime);
+        }
       }
-    }
-
-    private static void HandleResist(string part, double currentTime, int optionalIndex)
-    {
-      // [Mon Feb 11 20:00:28 2019] An inferno flare resisted your Frostreave Strike III!
-      string defender = part.Substring(0, optionalIndex);
-      string spell = part.Substring(optionalIndex + 15, part.Length - optionalIndex - 15 - 1);
-
-      ResistRecord record = new ResistRecord() { Spell = spell };
-      ResistProcessedEvent e = new ResistProcessedEvent() { Record = record, BeginTime = currentTime };
-      EventsResistProcessed?.Invoke(defender, e);
     }
 
     private static DamageRecord ParseMiss(string actionPart, int index)

@@ -120,21 +120,6 @@ namespace EQLogParser
     public double BeginTime { get; set; }
   }
 
-  public class HealProcessedEvent : TimedAction
-  {
-    public HealRecord Record { get; set; }
-  }
-
-  public class LootProcessedEvent : TimedAction
-  {
-    public LootRecord Record { get; set; }
-  }
-
-  public class ResistProcessedEvent : TimedAction
-  {
-    public ResistRecord Record { get; set; }
-  }
-
   public class DataPointEvent
   {
     public string Action { get; set; }
@@ -281,10 +266,10 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
-  public class PlayerDeath : TimedAction
+  public class DeathRecord : TimedAction
   {
-    public string Player { get; set; }
-    public string Npc { get; set; }
+    public string Killed { get; set; }
+    public string Killer { get; set; }
   }
 
   public class SpecialSpell : TimedAction

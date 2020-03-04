@@ -28,22 +28,6 @@ namespace EQLogParser
       LastUpdateTime = double.NaN;
     }
 
-    private static Fight Find(string defender)
-    {
-      Fight npc;
-
-      if (char.IsUpper(defender[0]))
-      {
-        npc = DataManager.Instance.GetFight(char.ToLower(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetFight(defender);
-      }
-      else
-      {
-        npc = DataManager.Instance.GetFight(char.ToUpper(defender[0], CultureInfo.CurrentCulture) + defender.Substring(1)) ?? DataManager.Instance.GetFight(defender);
-      }
-
-      return npc;
-    }
-
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
       if (IsValidAttack(processed.Record, out bool defender))
@@ -89,7 +73,7 @@ namespace EQLogParser
     {
       string npc = defender ? record.Defender : record.Attacker;
 
-      Fight fight = Find(npc);
+      Fight fight = DataManager.Instance.GetFight(npc);
       if (fight == null)
       {
         fight = Create(npc, currentTime, origTimeString);

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -321,8 +322,9 @@ namespace EQLogParser
     internal static ConcurrentDictionary<string, string> GetSpecials(PlayerStats raidStats)
     {
       ConcurrentDictionary<string, string> playerSpecials = new ConcurrentDictionary<string, string>();
-
       ConcurrentDictionary<object, bool> temp = new ConcurrentDictionary<object, bool>();
+      var allSpecials = DataManager.Instance.GetSpecials();
+      int specialStart = 0;
 
       if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
       {
@@ -330,20 +332,42 @@ namespace EQLogParser
         {
           double beginTime = raidStats.BeginTimes[i] - SPECIAL_OFFSET;
           double endTime = raidStats.LastTimes[i];
+          var actions = new List<IAction>();
 
-          DataManager.Instance.GetSpecialsDuring(beginTime, endTime).ForEach(action =>
+          if (specialStart > -1 && specialStart < allSpecials.Count)
+          {
+            specialStart = allSpecials.FindIndex(specialStart, special => special.BeginTime >= beginTime);
+            if (specialStart > -1)
+            {
+              for (int j = specialStart; j < allSpecials.Count; j++)
+              {
+                if (allSpecials[j].BeginTime >= beginTime && allSpecials[j].BeginTime <= endTime)
+                {
+                  specialStart = j;
+                  actions.Add(allSpecials[j]);
+                }
+              }
+            }
+          }
+
+          foreach (var deaths in DataManager.Instance.GetDeathsDuring(beginTime, endTime).Select(block => block.Actions))
+          {
+            actions.AddRange(deaths);
+          }
+
+          actions.ForEach(action =>
           {
             if (!temp.ContainsKey(action))
             {
               string code = null;
               string player = null;
 
-              if (action is PlayerDeath death)
+              if (action is DeathRecord death && PlayerManager.Instance.IsVerifiedPlayer(death.Killed))
               {
-                player = death.Player;
+                player = death.Killed;
                 code = "X";
               }
-              else if (action is SpecialSpell spell)
+              if (action is SpecialSpell spell)
               {
                 player = spell.Player;
                 code = spell.Code;

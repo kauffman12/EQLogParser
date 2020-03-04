@@ -15,14 +15,19 @@ namespace EQLogParser
       { "Players", 1 }, { "There", 1}, { "The", 1 }, { "Targeted", 1 }, { "Right", 1 }, { "Stand" , 1}
     };
 
-    private static readonly Dictionary<string, string> SpecialCodes = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> SpecialLandsOnCodes = new Dictionary<string, string>()
     {
       { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }, { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }
     };
 
-    private static readonly Dictionary<string, string> SpecialBrokenCodes = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> SpecialYouCodes = new Dictionary<string, string>()
     {
       { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
+    };
+
+    private static readonly Dictionary<string, string> SpecialOtherCodes = new Dictionary<string, string>()
+    {
+      { "Staunch Recovery", "6" }
     };
 
     public static void Process(string source, string line)
@@ -34,6 +39,7 @@ namespace EQLogParser
         int index = -1;
         bool isSpell = line.Length > 44 && (index = line.IndexOf(" begin", LineParsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1;
         bool isActivate = !isSpell && line.Length > 44 && (index = line.IndexOf(" activate", LineParsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1;
+        bool isYou = false;
 
         if (isSpell || isActivate)
         {
@@ -47,18 +53,13 @@ namespace EQLogParser
               var test = isActivate ? line[index + 9] == ' ' ? "activate" : "" : line.Substring(index + 7, 4);
               if (test == "cast" || test == "sing" || test == "activate")
               {
+                isYou = true;
                 pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
                 pline.OptionalData = "you" + test;
                 pline.OptionalIndex = 3;
                 pline.TimeString = pline.Line.Substring(1, 24);
                 pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
                 cast = HandleSpellCast(pline, line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX));
-
-                if (cast != null && isSpell)
-                {
-                  // For some reason Glyphs don't show up for current player
-                  CheckForSpecial(SpecialBrokenCodes, cast.Spell, cast.Caster, pline.CurrentTime);
-                }
               }
             }
             else
@@ -102,6 +103,17 @@ namespace EQLogParser
 
             if (cast != null)
             {
+              if (isSpell && isYou)
+              {
+                // For some reason Glyphs don't show up for current player
+                CheckForSpecial(SpecialYouCodes, cast.Spell, cast.Caster, pline.CurrentTime);
+              }
+              else if (isSpell && !isYou)
+              {
+                // Some spells only show up as casting
+                CheckForSpecial(SpecialOtherCodes, cast.Spell, cast.Caster, pline.CurrentTime);
+              }
+
               DataManager.Instance.AddSpellCast(cast, pline.CurrentTime);
               handled = true;
             }
@@ -236,7 +248,7 @@ namespace EQLogParser
       {
         var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), SpellData = result };
         DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
-        CheckForSpecial(SpecialCodes, result.Spell, newSpell.Receiver, pline.CurrentTime);
+        CheckForSpecial(SpecialLandsOnCodes, result.Spell, newSpell.Receiver, pline.CurrentTime);
       }
     }
 
@@ -248,7 +260,7 @@ namespace EQLogParser
       {
         var newSpell = new ReceivedSpell() { Receiver = string.Intern(pline.ActionPart.Substring(0, pline.OptionalIndex - 3)), SpellData = result };
         DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
-        CheckForSpecial(SpecialCodes, result.Spell, newSpell.Receiver, pline.CurrentTime);
+        CheckForSpecial(SpecialLandsOnCodes, result.Spell, newSpell.Receiver, pline.CurrentTime);
       }
     }
 
