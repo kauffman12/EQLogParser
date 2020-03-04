@@ -7,8 +7,6 @@ namespace EQLogParser
 {
   class MiscLineParser
   {
-    public static event EventHandler<LootProcessedEvent> EventsLootProcessed;
-
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly List<string> Currency = new List<string> { "Platinum", "Gold", "Silver", "Copper" };
@@ -79,7 +77,7 @@ namespace EQLogParser
             PlayerManager.Instance.AddVerifiedPlayer(name);
             double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
             LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = isCurrency, Npc = npc };
-            EventsLootProcessed?.Invoke(record, new LootProcessedEvent() { Record = record, BeginTime = currentTime });
+            DataManager.Instance.AddLootRecord(record, currentTime);
             handled = true;
           }
         }
