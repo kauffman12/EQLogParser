@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -93,6 +94,16 @@ namespace EQLogParser
     internal static void SetBusy(bool state)
     {
       MainDispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(state));
+    }
+
+    internal static string ToLower(string name)
+    {
+      return char.ToLower(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
+    }
+
+    internal static string ToUpper(string name)
+    {
+      return char.ToUpper(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
     }
 
     internal static void ChartResetView(CartesianChart theChart)

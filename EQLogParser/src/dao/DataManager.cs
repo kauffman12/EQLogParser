@@ -33,6 +33,7 @@ namespace EQLogParser
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
 
+    private readonly List<ActionBlock> AllMiscBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllDeathBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
@@ -134,6 +135,8 @@ namespace EQLogParser
 
     internal void AddLootRecord(LootRecord record, double beginTime) => Helpers.AddAction(AllLootBlocks, record, beginTime);
 
+    internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
+
     internal void AddResistRecord(ResistRecord record, double beginTime) => Helpers.AddAction(AllResistBlocks, record, beginTime);
 
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
@@ -145,6 +148,8 @@ namespace EQLogParser
     internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
 
     internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
+
+    internal List<ActionBlock> GetMiscDuring(double beginTime, double endTime) => SearchActions(AllMiscBlocks, beginTime, endTime);
 
     internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
 
@@ -171,21 +176,40 @@ namespace EQLogParser
 
     internal Fight GetFight(string name)
     {
-      Fight result;
-      if (char.IsUpper(name[0]))
+      Fight result = null;
+      if (!string.IsNullOrEmpty(name))
       {
-        if (!ActiveFights.TryGetValue(name, out result))
+        if (char.IsUpper(name[0]))
         {
-          var lower = char.ToLower(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
-          ActiveFights.TryGetValue(lower, out result);
+          if (!ActiveFights.TryGetValue(name, out result))
+          {
+            ActiveFights.TryGetValue(Helpers.ToLower(name), out result);
+          }
+        }
+        else
+        {
+          if (!ActiveFights.TryGetValue(name, out result))
+          {
+            ActiveFights.TryGetValue(Helpers.ToUpper(name), out result);
+          }
         }
       }
-      else
+
+      return result;
+    }
+
+    internal bool IsLifetimeNpc(string name)
+    {
+      bool result = false;
+      if (!string.IsNullOrEmpty(name))
       {
-        if (!ActiveFights.TryGetValue(name, out result))
+        if (char.IsUpper(name[0]))
         {
-          var upper = char.ToUpper(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
-          ActiveFights.TryGetValue(upper, out result);
+          result = LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(Helpers.ToLower(name));
+        }
+        else
+        {
+          result = LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(Helpers.ToUpper(name));
         }
       }
 
@@ -291,6 +315,12 @@ namespace EQLogParser
         result = SpellsNameDB[name];
       }
       return result;
+    }
+
+    internal bool IsPlayerSpell(string name)
+    {
+      var spellData = GetSpellByName(name);
+      return spellData?.ClassMask > 0;
     }
 
     internal SpellData GetNonPosessiveLandsOnOther(string value, out List<SpellData> output)
@@ -419,6 +449,7 @@ namespace EQLogParser
         ActiveFights.Clear();
         LifetimeFights.Clear();
         AllDeathBlocks.Clear();
+        AllMiscBlocks.Clear();
         AllSpellCastBlocks.Clear();
         AllUniqueSpellCasts.Clear();
         AllUniqueSpellsCache.Clear();
