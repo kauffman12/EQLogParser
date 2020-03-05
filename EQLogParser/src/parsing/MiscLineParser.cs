@@ -14,6 +14,8 @@ namespace EQLogParser
     private const string MasterLooterText = "The master looter, ";
     private const string YouReceiveText = "You receive ";
     private const string YourSplitText = " as your split ";
+    private const string BrokeMezText = "has been awakened by";
+    private const string ZoneText = "You have entered";
 
     public static void Process(string source, string line)
     {
@@ -21,64 +23,93 @@ namespace EQLogParser
 
       try
       {
-        if (line.Length >= 47)
+        if (line.Length >= 45)
         {
-          string name = null;
-          string item = null;
-          string npc = null;
-          uint count = 0;
-          bool isCurrency = false;
-
-          if (line[LineParsing.ACTIONINDEX] == '-' && line[LineParsing.ACTIONINDEX + 1] == '-')
+          // look for mez break
+          int index;
+          if ((index = line.IndexOf(BrokeMezText)) > -1)
           {
-            if (line.Substring(LineParsing.ACTIONINDEX + 2).Split(' ') is string[] pieces && pieces.Length >= 7)
+            int start = index + BrokeMezText.Length + 1;
+            string breaker = line.Substring(start, line.Length - (start + 1));
+            string awakened = line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX - 1);
+            if (!string.IsNullOrEmpty(breaker) && !string.IsNullOrEmpty(awakened))
             {
-              name = pieces[0] == "You" ? ConfigUtil.PlayerName : pieces[0];
+              double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
+              DataManager.Instance.AddMiscRecord(new MezBreakRecord() { Breaker = breaker, Awakened = awakened }, currentTime);
+              handled = true;
+            }
+          }
+          else if(line.Substring(LineParsing.ACTIONINDEX, ZoneText.Length) == ZoneText)
+          {
+            string zone = line.Substring(LineParsing.ACTIONINDEX + ZoneText.Length + 1);
+            if (!zone.StartsWith("an area"))
+            {
+              double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
+              zone = zone.TrimEnd('.');
+              DataManager.Instance.AddMiscRecord(new ZoneRecord() { Zone = zone }, currentTime);
+              handled = true;
+            }
+          }
+          else
+          {
+            // Handle Loot messages
+            string name = null;
+            string item = null;
+            string npc = null;
+            uint count = 0;
+            bool isCurrency = false;
 
-              if (pieces[2] == "looted" && Array.FindIndex(pieces, piece => piece == "from") is int fromIndex && fromIndex > 4)
+            if (line[LineParsing.ACTIONINDEX] == '-' && line[LineParsing.ACTIONINDEX + 1] == '-')
+            {
+              if (line.Substring(LineParsing.ACTIONINDEX + 2).Split(' ') is string[] pieces && pieces.Length >= 7)
               {
-                count = pieces[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(pieces[3]);
-                item = string.Join(" ", pieces, 4, fromIndex - 4);
+                name = pieces[0] == "You" ? ConfigUtil.PlayerName : pieces[0];
 
-                if (Array.FindLastIndex(pieces, piece => piece.EndsWith(".--", StringComparison.Ordinal)) is int endIndex && endIndex > fromIndex)
+                if (pieces[2] == "looted" && Array.FindIndex(pieces, piece => piece == "from") is int fromIndex && fromIndex > 4)
                 {
-                  var tmp = string.Join(" ", pieces, fromIndex + 1, endIndex - fromIndex);
-                  npc = tmp.Replace(".--", "").Replace("'s corpse", "");
+                  count = pieces[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(pieces[3]);
+                  item = string.Join(" ", pieces, 4, fromIndex - 4);
+
+                  if (Array.FindLastIndex(pieces, piece => piece.EndsWith(".--", StringComparison.Ordinal)) is int endIndex && endIndex > fromIndex)
+                  {
+                    var tmp = string.Join(" ", pieces, fromIndex + 1, endIndex - fromIndex);
+                    npc = tmp.Replace(".--", "").Replace("'s corpse", "");
+                  }
                 }
               }
             }
-          }
-          else if (line.Substring(LineParsing.ACTIONINDEX, MasterLooterText.Length) == MasterLooterText)
-          {
-            if (line.Substring(LineParsing.ACTIONINDEX + MasterLooterText.Length).Split(' ') is string[] pieces && pieces.Length >= 7)
+            else if (line.Length >= 47 && line.Substring(LineParsing.ACTIONINDEX, MasterLooterText.Length) == MasterLooterText)
             {
-              name = pieces[0].Substring(0, pieces[0].Length - 1);
-
-              if (pieces[1] == "looted" && Array.FindIndex(pieces, piece => piece == "from") is int fromIndex && fromIndex > 3)
+              if (line.Substring(LineParsing.ACTIONINDEX + MasterLooterText.Length).Split(' ') is string[] pieces && pieces.Length >= 7)
               {
-                ParseCurrency(pieces, 2, fromIndex, out item, out count);
+                name = pieces[0].Substring(0, pieces[0].Length - 1);
+
+                if (pieces[1] == "looted" && Array.FindIndex(pieces, piece => piece == "from") is int fromIndex && fromIndex > 3)
+                {
+                  ParseCurrency(pieces, 2, fromIndex, out item, out count);
+                  isCurrency = true;
+                }
+              }
+            }
+            else if (line.Substring(LineParsing.ACTIONINDEX, YouReceiveText.Length) == YouReceiveText && line.IndexOf(YourSplitText, LineParsing.ACTIONINDEX + 15, StringComparison.Ordinal) > -1)
+            {
+              name = ConfigUtil.PlayerName;
+
+              if (line.Substring(LineParsing.ACTIONINDEX + YouReceiveText.Length).Split(' ') is string[] pieces && pieces.Length >= 2 && Array.FindIndex(pieces, end => end == "as") is int splitIndex && splitIndex > -1)
+              {
+                ParseCurrency(pieces, 0, splitIndex, out item, out count);
                 isCurrency = true;
               }
             }
-          }
-          else if (line.Substring(LineParsing.ACTIONINDEX, YouReceiveText.Length) == YouReceiveText && line.IndexOf(YourSplitText, LineParsing.ACTIONINDEX + 15, StringComparison.Ordinal) > -1)
-          {
-            name = ConfigUtil.PlayerName;
 
-            if (line.Substring(LineParsing.ACTIONINDEX + YouReceiveText.Length).Split(' ') is string[] pieces && pieces.Length >= 2 && Array.FindIndex(pieces, end => end == "as") is int splitIndex && splitIndex > -1)
+            if (count > 0 && !string.IsNullOrEmpty(item) && !string.IsNullOrEmpty(name))
             {
-              ParseCurrency(pieces, 0, splitIndex, out item, out count);
-              isCurrency = true;
+              PlayerManager.Instance.AddVerifiedPlayer(name);
+              double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
+              LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = isCurrency, Npc = npc };
+              DataManager.Instance.AddLootRecord(record, currentTime);
+              handled = true;
             }
-          }
-
-          if (count > 0 && !string.IsNullOrEmpty(item) && !string.IsNullOrEmpty(name))
-          {
-            PlayerManager.Instance.AddVerifiedPlayer(name);
-            double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
-            LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = isCurrency, Npc = npc };
-            DataManager.Instance.AddLootRecord(record, currentTime);
-            handled = true;
           }
         }
       }

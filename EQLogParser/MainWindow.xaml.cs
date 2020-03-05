@@ -72,6 +72,7 @@ namespace EQLogParser
     private DocumentWindow DamageChartWindow = null;
     private DocumentWindow HealingChartWindow = null;
     private DocumentWindow TankingChartWindow = null;
+    private DocumentWindow EventWindow = null;
     private DocumentWindow LootWindow = null;
 
     private LogReader EQLogReader = null;
@@ -577,6 +578,10 @@ namespace EQLogParser
       {
         OpenChat();
       }
+      else if (e.Source == eventMenuItem)
+      {
+        OpenEventViewer();
+      }
       else if (e.Source == playerLootMenuItem)
       {
         OpenLootList();
@@ -767,6 +772,20 @@ namespace EQLogParser
 
         IconToWindow[chatIcon.Name] = ChatWindow;
         Helpers.OpenWindow(ChatWindow);
+      }
+    }
+
+    private void OpenEventViewer()
+    {
+      if (EventWindow?.IsOpen == true)
+      {
+        EventWindow.Close();
+      }
+      else
+      {
+        EventWindow = new DocumentWindow(dockSite, "eventWindow", "Event Log", null, new EventViewer());
+        IconToWindow[eventIcon.Name] = EventWindow;
+        Helpers.OpenWindow(EventWindow);
       }
     }
 
@@ -970,7 +989,7 @@ namespace EQLogParser
           StartLoadTime = DateTime.Now;
           FilePosition = 0;
 
-          string name = "Uknown";
+          string name = "You";
           string server = "Uknown";
           if (dialog.FileName.Length > 0)
           {

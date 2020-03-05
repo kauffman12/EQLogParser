@@ -147,6 +147,11 @@ namespace EQLogParser
       return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || TakenPetOrPlayerAction.ContainsKey(name));
     }
 
+    internal bool IsPetOrPlayerOrSpell(string name)
+    {
+      return IsPetOrPlayer(name) || DataManager.Instance.IsPlayerSpell(name);
+    }
+
     internal void RemoveVerifiedPet(string name)
     {
       if (!string.IsNullOrEmpty(name) && VerifiedPets.TryRemove(name, out _))

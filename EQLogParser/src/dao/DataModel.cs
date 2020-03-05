@@ -197,6 +197,23 @@ namespace EQLogParser
     public bool IsCurrency { get; set; }
   }
 
+  public class DeathRecord : IAction
+  {
+    public string Killed { get; set; }
+    public string Killer { get; set; }
+  }
+
+  public class MezBreakRecord : IAction
+  {
+    public string Breaker { get; set; }
+    public string Awakened { get; set; }
+  }
+
+  public class ZoneRecord : IAction
+  {
+    public string Zone { get; set; }
+  }
+
   internal class HitLogRow : HitRecord
   {
     public string Actor { get; set; }
@@ -209,6 +226,14 @@ namespace EQLogParser
     public bool IsPet { get; set; }
     public bool IsGroupingEnabled { get; set; }
     public string TimeSince { get; set; }
+  }
+
+  internal class EventRow
+  {
+    public double Time { get; set; }
+    public string Actor { get; set; }
+    public string Target { get; set; }
+    public string Event { get; set; }
   }
 
   internal class LootRow : LootRecord
@@ -264,12 +289,6 @@ namespace EQLogParser
   public class SortableName
   {
     public string Name { get; set; }
-  }
-
-  public class DeathRecord : TimedAction
-  {
-    public string Killed { get; set; }
-    public string Killer { get; set; }
   }
 
   public class SpecialSpell : TimedAction
