@@ -23,6 +23,7 @@
       <Button Margin="0,0,4,0" Height="24" Width="25" PreviewMouseLeftButtonUp="RefreshMouseClick">
         <fa:ImageAwesome Height="14" Width="14" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Refresh" ToolTip="Refresh Results" Foreground="#5191c1"/>
       </Button>
+      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
       <ComboBox Margin="0,0,4,0" x:Name="playersList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="itemsList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="optionsList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
@@ -43,7 +44,7 @@
         </ContextMenu>
         </DataGrid.ContextMenu>
         <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="100" />
+        <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="92" Width="92" />
         <DataGridTextColumn Binding="{Binding Player}" ClipboardContentBinding="{x:Null}" Header="Player" IsReadOnly="True" CanUserReorder="True" Width="90"/>
         <DataGridTextColumn Binding="{Binding Item}" ClipboardContentBinding="{x:Null}" Header="Item" IsReadOnly="True" CanUserReorder="True" Width="270"/>
         <DataGridTemplateColumn Header="Quantity" IsReadOnly="True" SortMemberPath="Quantity" CanUserReorder="True">

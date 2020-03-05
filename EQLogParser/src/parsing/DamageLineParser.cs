@@ -154,9 +154,11 @@ namespace EQLogParser
     private static void HandleSlain(string part, double currentTime, int optionalIndex)
     {
       string test = null;
+      string killer = null;
       if (part.Length > 16 && part.StartsWith("You have slain ", StringComparison.Ordinal) && part[part.Length - 1] == '!')
       {
         test = part.Substring(15, part.Length - 15 - 1);
+        killer = ConfigUtil.PlayerName;
       }
       else if (optionalIndex > 9)
       {
@@ -176,11 +178,22 @@ namespace EQLogParser
           SlainTime = currentTime;
         }
 
-        int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
-        if (byIndex > -1)
+        if (!InIgnoreList(test))
         {
-          int len = part.Length - byIndex - 4 - 1;
-          string killer = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
+          if (killer != ConfigUtil.PlayerName)
+          {
+            int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
+            if (byIndex > -1)
+            {
+              int len = part.Length - byIndex - 4 - 1;
+              killer = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
+              if (string.IsNullOrEmpty(killer))
+              {
+                killer = "!";
+              }
+            }
+          }
+
           var death = new DeathRecord() { Killed = string.Intern(test), Killer = string.Intern(killer) };
           DataManager.Instance.AddDeathRecord(death, currentTime);
         }
@@ -400,8 +413,7 @@ namespace EQLogParser
           record.SubType = Labels.RIPOSTE;
         }
 
-        if (record.Defender.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || CheckEyeRegex.IsMatch(record.Defender) || 
-          ChestTypes.FindIndex(type => record.Defender.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0)
+        if (InIgnoreList(record.Defender))
         {
           record = null;
         }
@@ -737,6 +749,12 @@ namespace EQLogParser
       }
 
       return result;
+    }
+
+    private static bool InIgnoreList(string name)
+    {
+      return name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || CheckEyeRegex.IsMatch(name) ||
+          ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
     }
 
     private static string GetTypeFromSpell(string name, string type)

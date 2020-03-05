@@ -4465,6 +4465,7 @@ a foundry slave
 a foundry worker 
 a foyer guardian
 a fractured magmite
+a fractured reflection
 a fractured regrua
 a fragile barrier
 a fragile tyro
