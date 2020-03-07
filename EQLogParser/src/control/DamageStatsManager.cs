@@ -171,7 +171,7 @@ namespace EQLogParser
         overlayStats.RaidStats = overlayStats.RaidStats;
       }
 
-      if (overlayStats.UniqueNpcs.Count == 0 || (beginTime - overlayStats.RaidStats.LastTime > NpcDamageManager.NPC_DEATH_TIME))
+      if (overlayStats.UniqueNpcs.Count == 0 || (beginTime - overlayStats.RaidStats.LastTime > DataManager.FIGHT_TIMEOUT))
       {
         overlayStats.RaidStats.Total = 0;
         overlayStats.RaidStats.BeginTime = beginTime;
@@ -184,7 +184,7 @@ namespace EQLogParser
       overlayStats.RaidStats.LastTime = beginTime;
       overlayStats.RaidStats.TotalSeconds = overlayStats.RaidStats.LastTime - overlayStats.RaidStats.BeginTime + 1;
 
-      if (record != null && DataManager.Instance.GetFight(record.Defender) != null && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
+      if (record != null && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
       {
         overlayStats.UniqueNpcs[record.Defender] = 1;
         overlayStats.RaidStats.Total += record.Total;

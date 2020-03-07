@@ -131,11 +131,11 @@ namespace EQLogParser
             playerData[dataPoint.Name] = aggregate;
           }
 
-          if (double.IsNaN(firstTime) || diff > NpcDamageManager.NPC_DEATH_TIME)
+          if (double.IsNaN(firstTime) || diff > DataManager.FIGHT_TIMEOUT)
           {
             firstTime = dataPoint.CurrentTime;
 
-            if (diff > NpcDamageManager.NPC_DEATH_TIME)
+            if (diff > DataManager.FIGHT_TIMEOUT)
             {
               UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
               foreach (var value in playerData.Values)

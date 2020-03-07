@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Globalization;
 
 namespace EQLogParser
 {
   class NpcDamageManager
   {
-    internal const int NPC_DEATH_TIME = 24;
+    public static event EventHandler<DamageProcessedEvent> EventsPlayerAttackProcessed;
+
     internal const int GROUP_TIMEOUT = 120;
     internal double LastUpdateTime = double.NaN;
 
@@ -30,7 +30,7 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
-      if (IsValidAttack(processed.Record, out bool defender))
+      if (IsValidAttack(processed.Record, processed.BeginTime, out bool defender))
       {
         if (!double.IsNaN(LastUpdateTime))
         {
@@ -44,13 +44,6 @@ namespace EQLogParser
         string origTimeString = processed.OrigTimeString.Substring(4, 15);
 
         Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
-
-        // assume npc has been killed and create new entry
-        if (processed.BeginTime - fight.LastTime > NPC_DEATH_TIME)
-        {
-          DataManager.Instance.RemoveActiveFight(fight.CorrectMapKey);
-          fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
-        }
 
         if (defender)
         {
@@ -66,6 +59,11 @@ namespace EQLogParser
         LastUpdateTime = processed.BeginTime;
 
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight);
+
+        if (defender)
+        {
+          EventsPlayerAttackProcessed?.Invoke(processed.Record, processed);
+        }
       }
     }
 
@@ -73,7 +71,7 @@ namespace EQLogParser
     {
       string npc = defender ? record.Defender : record.Attacker;
 
-      Fight fight = DataManager.Instance.GetFight(npc);
+      Fight fight = DataManager.Instance.GetFight(npc, currentTime);
       if (fight == null)
       {
         fight = Create(npc, currentTime, origTimeString);
@@ -96,7 +94,7 @@ namespace EQLogParser
       };
     }
 
-    private static bool IsValidAttack(DamageRecord record, out bool defender)
+    private static bool IsValidAttack(DamageRecord record, double currentTime, out bool defender)
     {
       bool valid = false;
       defender = false;
@@ -121,6 +119,12 @@ namespace EQLogParser
         {
           var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayer(record.Defender);
           valid = (isAttackerPlayer || !Helpers.IsPossiblePlayerName(record.Attacker)) && !isDefenderPlayer;
+          defender = true;
+        }
+        else if (isDefenderNpc && isAttackerNpc && DataManager.Instance.GetFight(record.Defender, currentTime) != null
+          && DataManager.Instance.GetFight(record.Attacker, currentTime) == null)
+        {
+          valid = true;
           defender = true;
         }
       }
