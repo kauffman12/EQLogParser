@@ -153,14 +153,14 @@ namespace EQLogParser
 
       if (!offsetSize)
       {
-        DamageLineParser.EventsDamageProcessed += DamageLineParser_EventsDamageProcessed;
+        NpcDamageManager.EventsPlayerAttackProcessed += NpcDamageManager_EventsPlayerAttackProcessed;
         DataManager.Instance.EventsNewInactiveFight += Instance_EventsNewInactiveFight;
         Active = true;
       }
       else
       {
         // remove when configuring
-        DamageLineParser.EventsDamageProcessed -= DamageLineParser_EventsDamageProcessed;
+        NpcDamageManager.EventsPlayerAttackProcessed -= NpcDamageManager_EventsPlayerAttackProcessed;
         DataManager.Instance.EventsNewInactiveFight -= Instance_EventsNewInactiveFight;
       }
     }
@@ -181,9 +181,9 @@ namespace EQLogParser
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
     }
 
-    private void DamageLineParser_EventsDamageProcessed(object sender, DamageProcessedEvent e)
+    private void NpcDamageManager_EventsPlayerAttackProcessed(object sender, DamageProcessedEvent e)
     {
-      lock(StatsLock)
+      lock (StatsLock)
       {
         Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
         if (UpdateTimer != null && !UpdateTimer.IsEnabled)
@@ -216,7 +216,7 @@ namespace EQLogParser
           // so this limits it to 1/2 the current time value
           ProcessDirection = !ProcessDirection;
 
-          if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > NpcDamageManager.NPC_DEATH_TIME)
+          if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > DataManager.FIGHT_TIMEOUT)
           {
             windowBrush.Opacity = 0.0;
             SetVisible(false);
@@ -569,7 +569,7 @@ namespace EQLogParser
     {
       if (Active)
       {
-        DamageLineParser.EventsDamageProcessed -= DamageLineParser_EventsDamageProcessed;
+        NpcDamageManager.EventsPlayerAttackProcessed -= NpcDamageManager_EventsPlayerAttackProcessed;
         DataManager.Instance.EventsNewInactiveFight -= Instance_EventsNewInactiveFight;
 
         if (UpdateTimer?.IsEnabled == true)

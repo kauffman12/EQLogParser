@@ -30,6 +30,7 @@ namespace EQLogParser
     internal event EventHandler<Fight> EventsRefreshFight;
     internal event EventHandler<bool> EventsClearedActiveData;
 
+    internal const int FIGHT_TIMEOUT = 24;
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
 
@@ -174,7 +175,7 @@ namespace EQLogParser
       }
     }
 
-    internal Fight GetFight(string name)
+    internal Fight GetFight(string name, double currentTime)
     {
       Fight result = null;
       if (!string.IsNullOrEmpty(name))
@@ -193,6 +194,13 @@ namespace EQLogParser
             ActiveFights.TryGetValue(Helpers.ToUpper(name), out result);
           }
         }
+      }
+
+      // assume npc has been killed and create new entry
+      if (result != null && (currentTime - result.LastTime) > FIGHT_TIMEOUT)
+      {
+        RemoveActiveFight(result.CorrectMapKey);
+        result = null;
       }
 
       return result;
