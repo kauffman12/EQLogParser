@@ -248,7 +248,7 @@ namespace EQLogParser
       {
         var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), SpellData = result };
         DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
-        CheckForSpecial(SpecialLandsOnCodes, result.Spell, newSpell.Receiver, pline.CurrentTime);
+        CheckForSpecial(SpecialLandsOnCodes, result.Name, newSpell.Receiver, pline.CurrentTime);
       }
     }
 
@@ -260,7 +260,7 @@ namespace EQLogParser
       {
         var newSpell = new ReceivedSpell() { Receiver = string.Intern(pline.ActionPart.Substring(0, pline.OptionalIndex - 3)), SpellData = result };
         DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
-        CheckForSpecial(SpecialLandsOnCodes, result.Spell, newSpell.Receiver, pline.CurrentTime);
+        CheckForSpecial(SpecialLandsOnCodes, result.Name, newSpell.Receiver, pline.CurrentTime);
       }
     }
 

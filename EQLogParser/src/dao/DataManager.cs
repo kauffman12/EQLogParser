@@ -70,16 +70,16 @@ namespace EQLogParser
           if (spellData != null)
           {
             spellList.Add(spellData);
-            SpellsNameDB[spellData.Spell] = spellData;
+            SpellsNameDB[spellData.Name] = spellData;
 
-            if (!SpellsAbbrvDB.ContainsKey(spellData.SpellAbbrv))
+            if (!SpellsAbbrvDB.ContainsKey(spellData.NameAbbrv))
             {
-              SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+              SpellsAbbrvDB[spellData.NameAbbrv] = spellData;
             }
-            else if (string.Compare(SpellsAbbrvDB[spellData.SpellAbbrv].Spell, spellData.Spell, true, CultureInfo.CurrentCulture) < 0)
+            else if (string.Compare(SpellsAbbrvDB[spellData.NameAbbrv].Name, spellData.Name, true, CultureInfo.CurrentCulture) < 0)
             {
               // try to keep the newest version
-              SpellsAbbrvDB[spellData.SpellAbbrv] = spellData;
+              SpellsAbbrvDB[spellData.NameAbbrv] = spellData;
             }
 
             if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
@@ -112,14 +112,14 @@ namespace EQLogParser
         if ((tgt == SpellTarget.SELF || (spell.Level <= 250 && (tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS))) && classEnums.Contains((SpellClass)spell.ClassMask))
         {
           // these need to be unique and keep track if a conflict is found
-          if (SpellsToClass.ContainsKey(spell.Spell))
+          if (SpellsToClass.ContainsKey(spell.Name))
           {
-            SpellsToClass.Remove(spell.Spell);
-            keepOut[spell.Spell] = 1;
+            SpellsToClass.Remove(spell.Name);
+            keepOut[spell.Name] = 1;
           }
-          else if (!keepOut.ContainsKey(spell.Spell))
+          else if (!keepOut.ContainsKey(spell.Name))
           {
-            SpellsToClass[spell.Spell] = (SpellClass)spell.ClassMask;
+            SpellsToClass[spell.Name] = (SpellClass)spell.ClassMask;
           }
         }
       });
@@ -281,12 +281,7 @@ namespace EQLogParser
       if (SpellsNameDB.ContainsKey(cast.Spell))
       {
         Helpers.AddAction(AllSpellCastBlocks, cast, beginTime);
-
-        string abbrv = Helpers.AbbreviateSpellName(cast.Spell);
-        if (abbrv != null)
-        {
-          AllUniqueSpellCasts[abbrv] = 1;
-        }
+        AllUniqueSpellCasts[cast.Spell] = 1;
 
         if (SpellsToClass.TryGetValue(cast.Spell, out SpellClass theClass))
         {
@@ -382,7 +377,7 @@ namespace EQLogParser
       {
         if (!AllUniqueSpellsCache.TryGetValue(value, out result))
         {
-          result = output.Find(spellData => AllUniqueSpellCasts.ContainsKey(spellData.SpellAbbrv));
+          result = output.Find(spellData => AllUniqueSpellCasts.ContainsKey(spellData.Name));
           if (result == null)
           {
             // one more thing, if all the abbrviations look the same then we know the spell
@@ -506,12 +501,12 @@ namespace EQLogParser
     {
       public bool Equals(SpellData x, SpellData y)
       {
-        return x.SpellAbbrv == y.SpellAbbrv;
+        return x.NameAbbrv == y.NameAbbrv;
       }
 
       public int GetHashCode(SpellData obj)
       {
-        return obj.SpellAbbrv.GetHashCode();
+        return obj.NameAbbrv.GetHashCode();
       }
     }
 

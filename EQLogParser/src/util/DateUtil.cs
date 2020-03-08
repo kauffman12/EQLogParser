@@ -21,6 +21,12 @@ namespace EQLogParser
       return dateTime.ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
     }
 
+    internal static string FormatSimpleTime(double seconds)
+    {
+      var dateTime = new DateTime().AddSeconds(seconds);
+      return dateTime.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+
     internal static double ParseSimpleDate(string timeString)
     {
       double result = 0;

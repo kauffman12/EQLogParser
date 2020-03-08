@@ -13,12 +13,39 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
-    <ScrollViewer Grid.Row="1" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-      <Grid x:Name="content">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+
+    <Grid Grid.Row="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="25"></RowDefinition>
+        <RowDefinition Height="*"></RowDefinition>
+      </Grid.RowDefinitions>
+      <ScrollViewer x:Name="headerScroller" Grid.Row="0" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Hidden">
+        <Grid x:Name="contentHeader" Grid.Row="0" Background="#FF252526">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+        </Grid>
+      </ScrollViewer>
+      <Grid Grid.Row="1" Background="#FF252526">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="190" MaxWidth="190" MinWidth="190" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <ScrollViewer x:Name="labelsScroller" Grid.Column="0" CanContentScroll="True" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+          <Grid x:Name="contentLabels">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+          </Grid>
+        </ScrollViewer>
+        <ScrollViewer Grid.Column="1" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" ScrollChanged="ContentScrollViewChanged">
+          <Grid x:Name="content">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+          </Grid>
+        </ScrollViewer>
       </Grid>
-    </ScrollViewer>
+    </Grid>
   </Grid>
 </UserControl>
