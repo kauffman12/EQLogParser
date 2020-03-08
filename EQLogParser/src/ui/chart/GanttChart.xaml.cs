@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,16 +11,21 @@ namespace EQLogParser
   public partial class GanttChart : UserControl
   {
     private static readonly SolidColorBrush GridBrush = new SolidColorBrush(Colors.White);
-    private const double ADPS_OFFSET = 90;
+    private static readonly SolidColorBrush BlockColorBrush = new SolidColorBrush(Color.FromRgb(94, 137, 202));
+
+    private const double BUFFS_OFFSET = 90;
     private const int ROW_HEIGHT = 20;
-    private const int NAME_OFFSET = 200;
+    private const int LABELS_WIDTH = 180;
+
+    private List<Rectangle> Dividers = new List<Rectangle>();
+    private List<TextBlock> Headers = new List<TextBlock>();
 
     public GanttChart(CombinedStats currentStats, PlayerStats selected, List<List<ActionBlock>> groups)
     {
       InitializeComponent();
 
       var spellRanges = new Dictionary<string, List<TimeRange>>();
-      var startTime = groups.Min(group => group.First().BeginTime) - ADPS_OFFSET;
+      var startTime = groups.Min(group => group.First().BeginTime) - BUFFS_OFFSET;
       var endTime = groups.Max(group => group.Last().BeginTime) + 1;
       var length = endTime - startTime;
 
@@ -30,16 +36,19 @@ namespace EQLogParser
 
       DataManager.Instance.GetReceivedSpellsDuring(startTime, endTime).ForEach(group =>
       {
-        foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == selected.OrigName && spell.SpellData.IsAdps))
+        foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == selected.OrigName && 
+          spell.SpellData.IsAdps && (spell.SpellData.MaxHits > 0 || spell.SpellData.Duration <= 1800)))
         {
           if (action is ReceivedSpell spell)
           {
-            if (!spellRanges.TryGetValue(spell.SpellData.Spell, out List<TimeRange> ranges))
+            var spellName = spell.SpellData.NameAbbrv;
+
+            if (!spellRanges.TryGetValue(spellName, out List<TimeRange> ranges))
             {
               ranges = new List<TimeRange>();
               var duration = getDuration(spell.SpellData, endTime, group.BeginTime);
               ranges.Add(new TimeRange() { BeginSeconds = (int)(group.BeginTime - startTime), Duration = duration });
-              spellRanges[spell.SpellData.Spell] = ranges;
+              spellRanges[spellName] = ranges;
             }
             else
             {
@@ -59,91 +68,27 @@ namespace EQLogParser
         }
       });
 
-      var divider90 = new Rectangle()
-      {
-        Stroke = GridBrush,
-        StrokeThickness = 0.3,
-        Width = 0.3,
-        HorizontalAlignment = HorizontalAlignment.Left,
-        VerticalAlignment = VerticalAlignment.Top,
-        Margin = new Thickness(NAME_OFFSET, ROW_HEIGHT, 0, 0)
-      };
-
-      var dividerStart = new Rectangle()
-      {
-        Stroke = GridBrush,
-        StrokeThickness = 0.3,
-        Width = 0.3,
-        HorizontalAlignment = HorizontalAlignment.Left,
-        VerticalAlignment = VerticalAlignment.Top,
-        Margin = new Thickness(NAME_OFFSET + ADPS_OFFSET, ROW_HEIGHT, 0, 0)
-      };
-
-      var dividerEnd = new Rectangle()
-      {
-        Stroke = GridBrush,
-        StrokeThickness = 0.3,
-        Width = 0.3,
-        HorizontalAlignment = HorizontalAlignment.Left,
-        VerticalAlignment = VerticalAlignment.Top,
-        Margin = new Thickness(NAME_OFFSET + length, ROW_HEIGHT, 0, 0)
-      };
-
-      content.Children.Add(divider90);
-      content.Children.Add(dividerStart);
-      content.Children.Add(dividerEnd);
-
-      var preText = new TextBlock()
-      {
-        Foreground = GridBrush,
-        HorizontalAlignment = HorizontalAlignment.Left,
-        VerticalAlignment = VerticalAlignment.Top,
-        Text = "Buffs (-90s)",
-        Width = 80,
-        FontSize = 12,
-        Margin = new Thickness(NAME_OFFSET - 22, 0, 0, 0)
-      };
-
-      var startText = new TextBlock()
-      {
-        Foreground = GridBrush,
-        HorizontalAlignment = HorizontalAlignment.Left,
-        VerticalAlignment = VerticalAlignment.Top,
-        Text = "Start (0s)",
-        Width = 80,
-        FontSize = 12,
-        Margin = new Thickness(NAME_OFFSET + ADPS_OFFSET - 20, 0, 0, 0)
-      };
-
-      var endText = new TextBlock()
-      {
-        Foreground = GridBrush,
-        HorizontalAlignment = HorizontalAlignment.Left,
-        VerticalAlignment = VerticalAlignment.Top,
-        Text = "Finish (" + (length - ADPS_OFFSET) + "s)",
-        Width = 80,
-        FontSize = 12,
-        Margin = new Thickness(NAME_OFFSET + length - 25, 0, 0, 0)
-      };
-
-      preText.SetValue(Panel.ZIndexProperty, 10);
-      startText.SetValue(Panel.ZIndexProperty, 10);
-      endText.SetValue(Panel.ZIndexProperty, 10);
-      content.Children.Add(preText);
-      content.Children.Add(startText);
-      content.Children.Add(endText);
-
-      int row = 1;
+      int row = 0;
       foreach (var key in spellRanges.Keys.OrderBy(key => key))
       {
         int hPos = ROW_HEIGHT * row;
-        divider90.Height = hPos;
-        dividerStart.Height = hPos;
-        dividerEnd.Height = hPos;
         AddGridRow(hPos, key);
-
         spellRanges[key].ForEach(range => AddAdpsBlock(hPos, range.BeginSeconds, range.Duration, key));
         row++;
+      }
+
+      int finalHeight = ROW_HEIGHT * row;
+      createHeaderLabel(0, "Buffs (T-90)", 20);
+      createHeaderLabel(BUFFS_OFFSET, DateUtil.FormatSimpleTime(startTime), 10);
+      createDivider(finalHeight, BUFFS_OFFSET);
+      createDivider(finalHeight, length);
+
+      int minutes = 1;
+      for (int more = (int) (BUFFS_OFFSET + 60); more < length; more += 60)
+      {
+        createHeaderLabel(more, minutes + "m", 0);
+        createDivider(finalHeight, more);
+        minutes++;
       }
     }
 
@@ -158,9 +103,11 @@ namespace EQLogParser
           Height = ROW_HEIGHT / 2.5,
           HorizontalAlignment = HorizontalAlignment.Left,
           VerticalAlignment = VerticalAlignment.Top,
-          Fill = new SolidColorBrush(Color.FromRgb(38, 96, 183)),
+          Fill = BlockColorBrush,
           Width = length,
-          Margin = new Thickness(start + NAME_OFFSET, hPos + (ROW_HEIGHT / 3), 0, 0),
+          Margin = new Thickness(start, hPos + (ROW_HEIGHT / 3), 0, 0),
+          RadiusX = 2,
+          RadiusY = 2
         };
 
         block.SetValue(Panel.ZIndexProperty, 10);
@@ -170,16 +117,11 @@ namespace EQLogParser
 
     private void AddGridRow(int hPos, string name)
     {
-      var row = new Rectangle()
-      {
-        Height = ROW_HEIGHT,
-        Stroke = GridBrush,
-        StrokeThickness = 0.2,
-        VerticalAlignment = VerticalAlignment.Top,
-        Margin = new Thickness(0, hPos, 0, 0)
-      };
+      var labelsRow = createRowBlock(hPos);
+      var contentRow = createRowBlock(hPos);
 
-      content.Children.Add(row);
+      contentLabels.Children.Add(labelsRow);
+      content.Children.Add(contentRow);
 
       var textBlock = new TextBlock()
       {
@@ -187,19 +129,86 @@ namespace EQLogParser
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
         Text = name, // get short name
-        Width = NAME_OFFSET,
+        Width = LABELS_WIDTH,
         FontSize = 12,
         Margin = new Thickness(5, hPos + 2, 0, 0)
       };
 
       textBlock.SetValue(Panel.ZIndexProperty, 10);
-      content.Children.Add(textBlock);
+      contentLabels.Children.Add(textBlock);
+    }
+
+    private void createHeaderLabel(double left, string text, int offset)
+    {
+      var textBlock = new TextBlock()
+      {
+        Foreground = GridBrush,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Center,
+        Text = text,
+        Width = 80,
+        FontSize = 12,
+        Margin = new Thickness(LABELS_WIDTH + left - offset, 0, 0, 0)
+      };
+
+      Headers.Add(textBlock);
+      textBlock.SetValue(Panel.ZIndexProperty, 10);
+      contentHeader.Children.Add(textBlock);
+    }
+
+    private void createDivider(int hPos, double left)
+    {
+      var rectangle = new Rectangle()
+      {
+        Stroke = GridBrush,
+        StrokeThickness = 0.3,
+        Height = hPos,
+        Width = 0.3,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(left, 0, 0, 0)
+      };
+
+      Dividers.Add(rectangle);
+      content.Children.Add(rectangle);
+    }
+
+    private Rectangle createRowBlock(int hPos)
+    {
+      return new Rectangle()
+      {
+        Height = ROW_HEIGHT,
+        Stroke = GridBrush,
+        StrokeThickness = 0.2,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(0, hPos, 0, 0)
+      };
     }
 
     private int getDuration(SpellData spell, double endTime, double currentTime)
     {
-      var duration = spell.MaxHits == 1 ? 6 : spell.Duration;
-      duration = duration > 0 ? duration : 6;
+      int duration = spell.Duration > 0 ? spell.Duration : 6;
+
+      if (spell.MaxHits > 0)
+      {
+        if (spell.MaxHits == 1)
+        {
+          duration = duration > 6 ? 6 : duration;
+        }
+        else if (spell.MaxHits <= 3)
+        {
+          duration = duration > 12 ? 12 : duration;
+        }
+        else if (spell.MaxHits == 4)
+        {
+          duration = duration > 18 ? 18 : duration;
+        }
+        else
+        {
+          var guess = (spell.MaxHits / 5) * 18;
+          duration = duration > guess ? guess : duration;
+        }
+      }
 
       if (currentTime + duration > endTime)
       {
@@ -207,6 +216,45 @@ namespace EQLogParser
       }
 
       return duration;
+    }
+
+    private void ContentScrollViewChanged(object sender, ScrollChangedEventArgs e)
+    {
+      if (sender is ScrollViewer scroller)
+      {
+        if (scroller.ComputedHorizontalScrollBarVisibility != labelsScroller.ComputedHorizontalScrollBarVisibility)
+        {
+          labelsScroller.HorizontalScrollBarVisibility = scroller.ComputedHorizontalScrollBarVisibility == Visibility.Visible ? ScrollBarVisibility.Visible : ScrollBarVisibility.Hidden;
+        }
+
+        if (labelsScroller.VerticalOffset != e.VerticalOffset)
+        {
+          labelsScroller.ScrollToVerticalOffset(e.VerticalOffset);
+        }
+
+        if (headerScroller.HorizontalOffset != e.HorizontalOffset)
+        {
+          headerScroller.ScrollToHorizontalOffset(e.HorizontalOffset);
+        }
+
+        Headers.ForEach(header =>
+        {
+          if (header.Margin.Left + (header.ActualWidth / 2) < (e.HorizontalOffset + 10 + LABELS_WIDTH))
+          {
+            if (header.Visibility != Visibility.Hidden)
+            {
+              header.Visibility = Visibility.Hidden;
+            }
+          }
+          else
+          {
+            if (header.Visibility != Visibility.Visible)
+            {
+              header.Visibility = Visibility.Visible;
+            }
+          }
+        });
+      }
     }
 
     private class TimeRange
