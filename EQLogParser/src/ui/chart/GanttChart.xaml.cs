@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,190 +10,209 @@ namespace EQLogParser
   public partial class GanttChart : UserControl
   {
     private static readonly SolidColorBrush GridBrush = new SolidColorBrush(Colors.White);
-    private const double ADPS_OFFSET = 15;
-    private const int RowHeight = 30;
-    private const int TimeLines = 50;
-    private int Row = 0;
-
-    private readonly Dictionary<string, string> ValidAdps = new Dictionary<string, string>()
-    {
-      { "Arcane Fury", "Arcane Fury" },
-      { "Auspice of the Hunter", "Auspice" },
-      { "Beguiler's Synergy", "S" },
-      { "Chromatic Haze", "C" },
-      { "Gift of Chromatic Haze", "G" },
-      { "Glyph of Destruction", "Glyph of Destruction" },
-      { "Fierce Eye", "Fierce Eye" },
-      { "Group Spirit of the Black Wolf", "Black Wolf" },
-      { "Second Spire of Arcanum", "Wiz 2nd Spire" },
-      { "Spirit of the Black Wolf", "Block Wolf" },
-      { "Illusions of Grandeur", "Illusions of Grandeur" },
-      { "Spirit of Vesagran", "Spirit of Vesagran" },
-      { "Third Spire of Enchantment", "Enc 3rd Spire" },
-      { "Focused Paragon of Spirit", "Paragon" },
-      { "Paragon of Spirit", "Paragon" },
-      { "Quick Time", "Quick Time" }
-    };
-
-    private readonly List<Rectangle> TimeLineList = new List<Rectangle>();
-    private readonly List<AdpsEntry> AdpsEntries = new List<AdpsEntry>();
+    private const double ADPS_OFFSET = 90;
+    private const int ROW_HEIGHT = 20;
+    private const int NAME_OFFSET = 200;
 
     public GanttChart(CombinedStats currentStats, PlayerStats selected, List<List<ActionBlock>> groups)
     {
       InitializeComponent();
-      titleLabel.Content = currentStats?.ShortTitle;
 
-      var startTime = groups.First().First().BeginTime - ADPS_OFFSET;
-      var received = DataManager.Instance.GetReceivedSpellsDuring(startTime, groups.Last().Last().BeginTime);
+      var spellRanges = new Dictionary<string, List<TimeRange>>();
+      var startTime = groups.Min(group => group.First().BeginTime) - ADPS_OFFSET;
+      var endTime = groups.Max(group => group.Last().BeginTime) + 1;
+      var length = endTime - startTime;
 
-      var blocks = new List<ActionBlock>();
-      received.ForEach(group =>
+      if (selected != null && !string.IsNullOrEmpty(selected.OrigName))
       {
-        var block = new ActionBlock() { BeginTime = group.BeginTime };
-        foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == selected.OrigName && ValidAdps.ContainsKey(spell.SpellData.SpellAbbrv)))
-        {
-          block.Actions.Add(action);
-        }
+        titleLabel.Content = selected.OrigName + "'s ADPS | " + currentStats?.ShortTitle;
+      }
 
-        if (block.Actions.Count > 0)
-        {
-          blocks.Add(block);
-        }
-      });
-
-      AddTimeLines();
-
-      blocks.ForEach(block =>
+      DataManager.Instance.GetReceivedSpellsDuring(startTime, endTime).ForEach(group =>
       {
-        block.Actions.ForEach(action =>
+        foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == selected.OrigName && spell.SpellData.IsAdps))
         {
           if (action is ReceivedSpell spell)
           {
-            int start = (int)(block.BeginTime - startTime);
-            int row = FindAvailableRow(start, spell.SpellData.Duration);
-            AddAdpsBlock(row, start, spell.SpellData.Duration, spell.SpellData.SpellAbbrv);
+            if (!spellRanges.TryGetValue(spell.SpellData.Spell, out List<TimeRange> ranges))
+            {
+              ranges = new List<TimeRange>();
+              var duration = getDuration(spell.SpellData, endTime, group.BeginTime);
+              ranges.Add(new TimeRange() { BeginSeconds = (int)(group.BeginTime - startTime), Duration = duration });
+              spellRanges[spell.SpellData.Spell] = ranges;
+            }
+            else
+            {
+              var last = ranges.Last();
+              var offsetSeconds = (int) (group.BeginTime - startTime);
+              if (offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+              {
+                last.Duration = getDuration(spell.SpellData, endTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
+              }
+              else
+              {
+                var duration = getDuration(spell.SpellData, endTime, group.BeginTime);
+                ranges.Add(new TimeRange() { BeginSeconds = (int)(group.BeginTime - startTime), Duration = duration });
+              }
+            }
           }
-        });
-      });
-    }
-
-    private int FindAvailableRow(int start, int duration)
-    {
-      var overlap = AdpsEntries.FindAll(entry =>
-      {
-        int end = start + duration;
-        double entryStart = entry.Block.Margin.Left;
-        double entryEnd = entryStart + entry.Block.Width;
-        return (start >= entryStart && start <= entryEnd) || (end >= entryStart && end <= entryEnd);
-      }).OrderBy(entry => entry.Row).ToList();
-
-      int row;
-      for (row = 0; row < overlap.Count; row++)
-      {
-        if (row != overlap[row].Row)
-        {
-          break;
         }
-      }
+      });
 
-      return row;
+      var divider90 = new Rectangle()
+      {
+        Stroke = GridBrush,
+        StrokeThickness = 0.3,
+        Width = 0.3,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(NAME_OFFSET, ROW_HEIGHT, 0, 0)
+      };
+
+      var dividerStart = new Rectangle()
+      {
+        Stroke = GridBrush,
+        StrokeThickness = 0.3,
+        Width = 0.3,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(NAME_OFFSET + ADPS_OFFSET, ROW_HEIGHT, 0, 0)
+      };
+
+      var dividerEnd = new Rectangle()
+      {
+        Stroke = GridBrush,
+        StrokeThickness = 0.3,
+        Width = 0.3,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(NAME_OFFSET + length, ROW_HEIGHT, 0, 0)
+      };
+
+      content.Children.Add(divider90);
+      content.Children.Add(dividerStart);
+      content.Children.Add(dividerEnd);
+
+      var preText = new TextBlock()
+      {
+        Foreground = GridBrush,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Text = "Buffs (-90s)",
+        Width = 80,
+        FontSize = 12,
+        Margin = new Thickness(NAME_OFFSET - 22, 0, 0, 0)
+      };
+
+      var startText = new TextBlock()
+      {
+        Foreground = GridBrush,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Text = "Start (0s)",
+        Width = 80,
+        FontSize = 12,
+        Margin = new Thickness(NAME_OFFSET + ADPS_OFFSET - 20, 0, 0, 0)
+      };
+
+      var endText = new TextBlock()
+      {
+        Foreground = GridBrush,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Text = "Finish (" + (length - ADPS_OFFSET) + "s)",
+        Width = 80,
+        FontSize = 12,
+        Margin = new Thickness(NAME_OFFSET + length - 25, 0, 0, 0)
+      };
+
+      preText.SetValue(Panel.ZIndexProperty, 10);
+      startText.SetValue(Panel.ZIndexProperty, 10);
+      endText.SetValue(Panel.ZIndexProperty, 10);
+      content.Children.Add(preText);
+      content.Children.Add(startText);
+      content.Children.Add(endText);
+
+      int row = 1;
+      foreach (var key in spellRanges.Keys.OrderBy(key => key))
+      {
+        int hPos = ROW_HEIGHT * row;
+        divider90.Height = hPos;
+        dividerStart.Height = hPos;
+        dividerEnd.Height = hPos;
+        AddGridRow(hPos, key);
+
+        spellRanges[key].ForEach(range => AddAdpsBlock(hPos, range.BeginSeconds, range.Duration, key));
+        row++;
+      }
     }
 
-    private void AddGridRow()
+    private void AddAdpsBlock(int hPos, int start, int length, string name)
     {
-      int hPos = RowHeight * Row + Row;
+      if (length > 0)
+      {
+        var block = new Rectangle()
+        {
+          Stroke = GridBrush,
+          StrokeThickness = 0.2,
+          Height = ROW_HEIGHT / 2.5,
+          HorizontalAlignment = HorizontalAlignment.Left,
+          VerticalAlignment = VerticalAlignment.Top,
+          Fill = new SolidColorBrush(Color.FromRgb(38, 96, 183)),
+          Width = length,
+          Margin = new Thickness(start + NAME_OFFSET, hPos + (ROW_HEIGHT / 3), 0, 0),
+        };
 
+        block.SetValue(Panel.ZIndexProperty, 10);
+        content.Children.Add(block);
+      }
+    }
+
+    private void AddGridRow(int hPos, string name)
+    {
       var row = new Rectangle()
       {
-        Height = RowHeight,
+        Height = ROW_HEIGHT,
         Stroke = GridBrush,
-        StrokeThickness = 0.5,
+        StrokeThickness = 0.2,
         VerticalAlignment = VerticalAlignment.Top,
         Margin = new Thickness(0, hPos, 0, 0)
       };
 
       content.Children.Add(row);
-      Row++;
 
-      UpdateTimeLinesHeight();
-    }
-
-    private void AddTimeLines()
-    {
-      for (int i = 0; i < TimeLines; i++)
+      var textBlock = new TextBlock()
       {
-        var col = i == 0 ? ADPS_OFFSET : ADPS_OFFSET + 60 * i;
+        Foreground = GridBrush,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Text = name, // get short name
+        Width = NAME_OFFSET,
+        FontSize = 12,
+        Margin = new Thickness(5, hPos + 2, 0, 0)
+      };
 
-        var line = new Rectangle()
-        {
-          Stroke = GridBrush,
-          StrokeThickness = 0.5,
-          Width = 0.5,
-          HorizontalAlignment = HorizontalAlignment.Left,
-          VerticalAlignment = VerticalAlignment.Top,
-          Margin = new Thickness(col, 0, 0, 0)
-        };
-
-        TimeLineList.Add(line);
-        content.Children.Add(line);
-      }
+      textBlock.SetValue(Panel.ZIndexProperty, 10);
+      content.Children.Add(textBlock);
     }
 
-    private void AddAdpsBlock(int row, int start, int length, string name)
+    private int getDuration(SpellData spell, double endTime, double currentTime)
     {
-      if (length > 0)
+      var duration = spell.MaxHits == 1 ? 6 : spell.Duration;
+      duration = duration > 0 ? duration : 6;
+
+      if (currentTime + duration > endTime)
       {
-        int hPos = RowHeight * row + row;
-
-        while (Row <= row)
-        {
-          AddGridRow();
-        }
-
-        var block = new Rectangle()
-        {
-          Stroke = GridBrush,
-          StrokeThickness = 0.5,
-          Height = RowHeight,
-          HorizontalAlignment = HorizontalAlignment.Left,
-          VerticalAlignment = VerticalAlignment.Top,
-          Fill = new SolidColorBrush(Color.FromRgb(38, 96, 183)),
-          Width = length,
-          Margin = new Thickness(start, hPos, 0, 0),
-        };
-
-        block.SetValue(Panel.ZIndexProperty, 10);
-
-        var textStart = length > 18 ? start + 5 : start + 2;
-        var textWidth = length > 18 ? length - 5 : length;
-        var textBlock = new TextBlock()
-        {
-          Foreground = GridBrush,
-          HorizontalAlignment = HorizontalAlignment.Left,
-          VerticalAlignment = VerticalAlignment.Top,
-          Text = ValidAdps[name], // get short name
-          Width = textWidth,
-          FontSize = 12,
-          Margin = new Thickness(textStart, hPos + 10, 0, 0)
-        };
-
-        textBlock.SetValue(Panel.ZIndexProperty, 10);
-
-        content.Children.Add(block);
-        content.Children.Add(textBlock);
-        AdpsEntries.Add(new AdpsEntry() { Block = block, Row = row });
+        duration = (int) (duration - (currentTime + duration - endTime));
       }
+
+      return duration;
     }
 
-    private void UpdateTimeLinesHeight()
+    private class TimeRange
     {
-      TimeLineList.ForEach(line => line.Height = Row * RowHeight + Row);
-    }
-
-    private class AdpsEntry
-    {
-      public Rectangle Block { get; set; }
-      public int Row { get; set; }
+      public int BeginSeconds { get; set; }
+      public int Duration { get; set; }
     }
   }
 }

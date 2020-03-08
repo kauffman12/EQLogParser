@@ -60,7 +60,7 @@ namespace EQLogParser
       view.Filter = new Predicate<object>(item =>
       {
         var fightItem = (Fight)item;
-        return CurrentShowBreaks ? fightItem.GroupID >= -1 : fightItem.GroupID > -1;
+        return CurrentShowBreaks ? fightItem.GroupId >= -1 : fightItem.GroupId > -1;
       });
 
       fightDataGrid.ItemsSource = view;
@@ -91,7 +91,7 @@ namespace EQLogParser
           currentNeedRefresh = false;
           NeedRefresh = false;
 
-          var last = Fights.LastOrDefault(fight => fight.GroupID > -1);
+          var last = Fights.LastOrDefault(fight => fight.GroupId > -1);
 
           if (last != null)
           {
@@ -122,12 +122,12 @@ namespace EQLogParser
 
     public IEnumerable<Fight> GetSelectedItems()
     {
-      return fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.GroupID > -1);
+      return fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.GroupId > -1);
     }
 
     public bool HasSelected()
     {
-      return fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.GroupID > -1) != null;
+      return fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.GroupId > -1) != null;
     }
 
     private void AddFight(Fight fight)
@@ -136,17 +136,17 @@ namespace EQLogParser
       {
         if (LastNpc != null)
         {
-          double seconds = fight.BeginTime - LastNpc.LastTime;
-          if (seconds >= 120)
+          if (fight.GroupId > LastNpc.GroupId)
           {
-            Fight divider = new Fight() { LastTime = fight.BeginTime, BeginTime = LastNpc.LastTime, GroupID = -1, BeginTimeString = Fight.BREAKTIME, Name = string.Intern(FormatTime(seconds)) };
+            var seconds = fight.BeginTime - LastNpc.LastTime;
+            Fight divider = new Fight() { LastTime = fight.BeginTime, BeginTime = LastNpc.LastTime, GroupId = -1, BeginTimeString = Fight.BREAKTIME, Name = string.Intern(FormatTime(seconds)) };
             Fights.Add(divider);
           }
         }
 
         Fights.Add(fight);
 
-        if (fight.GroupID > -1)
+        if (fight.GroupId > -1)
         {
           LastNpc = fight;
         }
@@ -164,7 +164,7 @@ namespace EQLogParser
       {
         for (int i = Fights.Count - 1; i >= 0; i--)
         {
-          if (Fights[i].GroupID > -1 && !string.IsNullOrEmpty(Fights[i].Name) && Fights[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+          if (Fights[i].GroupId > -1 && !string.IsNullOrEmpty(Fights[i].Name) && Fights[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
           {
             Fights.RemoveAt(i);
           }
@@ -191,7 +191,7 @@ namespace EQLogParser
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      if (callingDataGrid.SelectedItem is Fight npc && npc.GroupID > -1)
+      if (callingDataGrid.SelectedItem is Fight npc && npc.GroupId > -1)
       {
         Task.Delay(120).ContinueWith(_ =>
         {
@@ -205,7 +205,7 @@ namespace EQLogParser
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      if (callingDataGrid.SelectedItem is Fight npc && npc.GroupID > -1)
+      if (callingDataGrid.SelectedItem is Fight npc && npc.GroupId > -1)
       {
         Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(npc.Name), TaskScheduler.Default);
       }
@@ -246,19 +246,19 @@ namespace EQLogParser
       fightMenuItemClear.IsEnabled = callingDataGrid.Items.Count > 0;
 
       var selected = callingDataGrid.SelectedItem as Fight;
-      fightMenuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1;
-      fightMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupID != -1 && Helpers.IsPossiblePlayerName((callingDataGrid.SelectedItem as Fight)?.Name);
+      fightMenuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupId != -1;
+      fightMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupId != -1 && Helpers.IsPossiblePlayerName((callingDataGrid.SelectedItem as Fight)?.Name);
     }
 
     private void SelectGroupClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      if (callingDataGrid.SelectedItem is Fight npc && npc.GroupID > -1)
+      if (callingDataGrid.SelectedItem is Fight npc && npc.GroupId > -1)
       {
         foreach (var one in Fights)
         {
-          if (one.GroupID == npc.GroupID)
+          if (one.GroupId == npc.GroupId)
           {
             Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one), DispatcherPriority.Normal);
           }
@@ -421,11 +421,27 @@ namespace EQLogParser
 
       if (diff.Days >= 1)
       {
-        result += diff.Days + " days";
+        switch(diff.Days)
+        {
+          case 1:
+            result += diff.Days + " day";
+            break;
+          default:
+            result += diff.Days + " days";
+            break;
+        }
       }
       else if (diff.Hours >= 1)
       {
-        result += diff.Hours + " hours";
+        switch(diff.Hours)
+        {
+          case 1:
+            result += diff.Hours + " hour";
+            break;
+          default:
+            result += diff.Hours + " hours";
+            break;
+        }
       }
       else
       {
