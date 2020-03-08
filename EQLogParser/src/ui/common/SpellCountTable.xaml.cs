@@ -77,18 +77,7 @@ namespace EQLogParser
 
       if (selectedStats != null && raidStats != null)
       {
-        PlayerList = new List<string>();
-        foreach (var stats in selectedStats)
-        {
-          string name = stats.Name;
-          if (childStats != null && childStats.ContainsKey(stats.Name) && childStats[stats.Name].Count > 1)
-          {
-            name = childStats[stats.Name].First().Name;
-          }
-
-          PlayerList.Add(name);
-        }
-
+        PlayerList = selectedStats.Select(stats => stats.OrigName).ToList();
         TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
 
         if (TheSpellCounts.PlayerCastCounts.Count > 0)
@@ -257,7 +246,7 @@ namespace EQLogParser
     {
       var spellData = TheSpellCounts.UniqueSpells[id];
       if ((CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.IsBeneficial) || (CurrentSpellType == 2 && !spellData.IsBeneficial))
-        && (!received || CurrentShowSelfOnly == true || spellData.LandsOnOther.Length > 0))
+        && (!received || CurrentShowSelfOnly == true || !string.IsNullOrEmpty(spellData.LandsOnOther)))
       {
         string name = spellData.SpellAbbrv;
 

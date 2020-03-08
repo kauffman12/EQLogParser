@@ -22,6 +22,7 @@ namespace EQLogParser
     // workaround for adjusting column withs of player datagrid
     private List<DataGrid> ChildGrids = new List<DataGrid>();
     private string CurrentClass = null;
+    private int CurrentGroupCount = 0;
 
     public DamageSummary()
     {
@@ -69,6 +70,7 @@ namespace EQLogParser
           case "COMPLETED":
             CurrentStats = e.CombinedStats as CombinedStats;
             CurrentGroups = e.Groups;
+            CurrentGroupCount = e.UniqueGroupCount;
 
             if (CurrentStats == null)
             {
@@ -249,6 +251,7 @@ namespace EQLogParser
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
+        menuItemShowAdpsTimeline.IsEnabled = dataGrid.SelectedItems.Count == 1 && CurrentGroupCount == 1;
         copyDamageParseToEQClick.IsEnabled = true;
 
         if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
@@ -262,8 +265,9 @@ namespace EQLogParser
       }
       else
       {
-        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled =
-         menuItemShowDamageLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled = false;
+        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowDamageLog.IsEnabled =
+          menuItemSetAsPet.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
+          menuItemShowAdpsTimeline.IsEnabled = false;
       }
 
       menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);
