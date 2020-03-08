@@ -142,7 +142,7 @@ namespace EQLogParser
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }
     public List<List<ActionBlock>> Groups { get; } = new List<List<ActionBlock>>();
-    public bool IsBaneAvailable { get; set; }
+    public int UniqueGroupCount { get; set; }
   }
 
   public class ChatLine : TimedAction
@@ -272,9 +272,9 @@ namespace EQLogParser
     public const string BREAKTIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
-    public int ID { get; set; }
+    public int Id { get; set; }
     public string CorrectMapKey { get; set; }
-    public int GroupID { get; set; }
+    public int GroupId { get; set; }
     public long Total { get; set; }
     public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
@@ -315,6 +315,7 @@ namespace EQLogParser
     public string Spell { get; set; }
     public string SpellAbbrv { get; set; }
     public ushort Duration { get; set; }
+    public ushort MaxHits { get; set; }
     public bool IsBeneficial { get; set; }
     public byte Target { get; set; }
     public ushort ClassMask { get; set; }
@@ -323,6 +324,7 @@ namespace EQLogParser
     public string LandsOnOther { get; set; }
     public bool Damaging { get; set; }
     public bool IsProc { get; set; }
+    public bool IsAdps { get; set; }
   }
 
   public class SpellCountData

@@ -88,8 +88,8 @@ namespace EQLogParser
         BeginTimeString = string.Intern(origTimeString),
         BeginTime = currentTime,
         LastTime = currentTime,
-        ID = CurrentNpcID++,
-        GroupID = CurrentGroupID,
+        Id = CurrentNpcID++,
+        GroupId = CurrentGroupID,
         CorrectMapKey = string.Intern(defender)
       };
     }

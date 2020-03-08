@@ -17,6 +17,7 @@ namespace EQLogParser
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
     internal List<List<ActionBlock>> DamageGroups = new List<List<ActionBlock>>();
+    internal Dictionary<int, byte> DamageGroupIds = new Dictionary<int, byte>();
 
     private PlayerStats RaidTotals;
     private readonly ConcurrentDictionary<string, byte> PlayerHasPet = new ConcurrentDictionary<string, byte>();
@@ -55,6 +56,7 @@ namespace EQLogParser
 
           RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
           DamageGroups.Clear();
+          DamageGroupIds.Clear();
           PlayerHasPet.Clear();
           PetToPlayer.Clear();
           Resists.Clear();
@@ -64,6 +66,11 @@ namespace EQLogParser
           {
             StatsUtil.UpdateTimeDiffs(RaidTotals, fight);
             damageBlocks.AddRange(fight.DamageBlocks);
+
+            if (fight.GroupId > -1)
+            {
+              DamageGroupIds[fight.GroupId] = 1;
+            }
           });
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
@@ -341,6 +348,7 @@ namespace EQLogParser
         };
 
         genEvent.Groups.AddRange(groups);
+        genEvent.UniqueGroupCount = DamageGroupIds.Count;
         EventsGenerationStatus?.Invoke(this, genEvent);
       }
     }
