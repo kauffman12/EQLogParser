@@ -248,7 +248,7 @@ namespace EQLogParser
       if ((CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.IsBeneficial) || (CurrentSpellType == 2 && !spellData.IsBeneficial))
         && (!received || CurrentShowSelfOnly == true || !string.IsNullOrEmpty(spellData.LandsOnOther)))
       {
-        string name = spellData.SpellAbbrv;
+        string name = spellData.NameAbbrv;
 
         if (received)
         {

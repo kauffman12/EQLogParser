@@ -176,9 +176,10 @@ namespace EQLogParser
           int durationExtendable = int.Parse(data[5], CultureInfo.CurrentCulture);
           byte target = byte.Parse(data[7], CultureInfo.CurrentCulture);
           ushort classMask = ushort.Parse(data[8], CultureInfo.CurrentCulture);
+          bool isSkill = byte.Parse(data[13], CultureInfo.CurrentCulture) == 1;
 
           // apply enhancement AA (need to make this per class)
-          int duration = durationExtendable == 0 ? maxTicks * 2 : maxTicks;
+          int duration = (durationExtendable == 0 && !isSkill && maxTicks > 1) ? maxTicks * 2 : maxTicks;
 
           // convert to seconds
           duration *= 6;
@@ -197,8 +198,8 @@ namespace EQLogParser
           spellData = new SpellData()
           {
             ID = string.Intern(data[0]),
-            Spell = string.Intern(data[1]),
-            SpellAbbrv = Helpers.AbbreviateSpellName(data[1]),
+            Name = string.Intern(data[1]),
+            NameAbbrv = Helpers.AbbreviateSpellName(data[1]),
             Level = ushort.Parse(data[2], CultureInfo.CurrentCulture),
             Duration = (ushort)duration,
             IsBeneficial = beneficial != 0,
@@ -209,7 +210,7 @@ namespace EQLogParser
             LandsOnOther = string.Intern(data[10]),
             Damaging = byte.Parse(data[11], CultureInfo.CurrentCulture) == 1,
             IsProc = byte.Parse(data[12], CultureInfo.CurrentCulture) == 1,
-            IsAdps = byte.Parse(data[13], CultureInfo.CurrentCulture) == 1
+            IsAdps = byte.Parse(data[14], CultureInfo.CurrentCulture) == 1
           };
         }
       }

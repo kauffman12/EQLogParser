@@ -312,8 +312,8 @@ namespace EQLogParser
   public class SpellData
   {
     public string ID { get; set; }
-    public string Spell { get; set; }
-    public string SpellAbbrv { get; set; }
+    public string Name { get; set; }
+    public string NameAbbrv { get; set; }
     public ushort Duration { get; set; }
     public ushort MaxHits { get; set; }
     public bool IsBeneficial { get; set; }
