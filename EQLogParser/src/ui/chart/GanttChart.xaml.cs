@@ -36,6 +36,7 @@ namespace EQLogParser
 
       DataManager.Instance.GetReceivedSpellsDuring(startTime, endTime).ForEach(group =>
       {
+        var player = selected.OrigName;
         foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == selected.OrigName && 
           spell.SpellData.IsAdps && (spell.SpellData.MaxHits > 0 || spell.SpellData.Duration <= 1800)))
         {
@@ -254,6 +255,14 @@ namespace EQLogParser
             }
           }
         });
+      }
+    }
+
+    private void LabelsScrollViewChanged(object sender, ScrollChangedEventArgs e)
+    {
+      if (contentScroller.VerticalOffset != e.VerticalOffset)
+      {
+        contentScroller.ScrollToVerticalOffset(e.VerticalOffset);
       }
     }
 

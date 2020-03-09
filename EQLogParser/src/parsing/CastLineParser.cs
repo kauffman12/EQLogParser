@@ -77,15 +77,17 @@ namespace EQLogParser
               {
                 spellIndex = firstSpace - LineParsing.ACTIONINDEX + 11;
               }
-              else
+              else if (line.Length >= index + 22)
               {
-                test = line.Substring(index + 11, 4);
-                if (test == "cast")
+                test = line.Substring(index + 11, 11);
+                if (test == "cast a spel")
                 {
+                  test = "cast";
                   spellIndex = firstSpace - LineParsing.ACTIONINDEX + 26;
                 }
-                else if (test == "sing")
+                else if (test == "sing a song")
                 {
+                  test = "sing";
                   spellIndex = firstSpace - LineParsing.ACTIONINDEX + 25;
                 }
               }
