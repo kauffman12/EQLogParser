@@ -404,7 +404,7 @@ namespace EQLogParser
 
               if (found)
               {
-                result = distinct.Last();
+                result = distinct.OrderBy(spell => spell.ID).Last();
               }
             }
           }

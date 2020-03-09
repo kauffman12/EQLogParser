@@ -31,14 +31,14 @@
           <ColumnDefinition Width="190" MaxWidth="190" MinWidth="190" />
           <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <ScrollViewer x:Name="labelsScroller" Grid.Column="0" CanContentScroll="True" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+        <ScrollViewer x:Name="labelsScroller" Grid.Column="0" CanContentScroll="True" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" ScrollChanged="LabelsScrollViewChanged">
           <Grid x:Name="contentLabels">
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
           </Grid>
         </ScrollViewer>
-        <ScrollViewer Grid.Column="1" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" ScrollChanged="ContentScrollViewChanged">
+        <ScrollViewer x:Name="contentScroller" Grid.Column="1" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" ScrollChanged="ContentScrollViewChanged">
           <Grid x:Name="content">
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
