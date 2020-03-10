@@ -10,9 +10,9 @@
         Style="{StaticResource StandardStyle}"
         Icon="EQLogParser.ico"
         Title="" 
-        Closed="Window_Closed" 
-        TextOptions.TextFormattingMode="Display" 
-        StateChanged="Window_StateChanged"
+        Closed="WindowClosed" 
+        TextOptions.TextFormattingMode="Display"
+        StateChanged="WindowStateChanged"
         Width="1500">
   <Grid>
     <Grid.ColumnDefinitions>
@@ -89,7 +89,7 @@
           </MenuItem.Icon>
         </MenuItem>
         <Separator/>
-        <MenuItem Header="E_xit" Height="20" Click="Window_Close" InputGestureText="Alt+F4"/>
+        <MenuItem Header="E_xit" Height="20" Click="WindowClose" InputGestureText="Alt+F4"/>
       </MenuItem>
       <MenuItem Header="_View" Height="20" Width="40">
         <MenuItem x:Name="damageView" Header="_Damage" Height="20">
