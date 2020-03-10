@@ -1,12 +1,9 @@
 ﻿using FontAwesome.WPF;
-using Gma.System.MouseKeyHook;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
-using System.Windows.Automation.Peers;
-using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -52,7 +49,6 @@ namespace EQLogParser
     private List<ImageAwesome> DamageRateList = new List<ImageAwesome>();
     private List<Rectangle> RectangleList = new List<Rectangle>();
     private Dictionary<int, double> PrevList = null;
-    private IKeyboardMouseEvents GlobalHook;
 
     private List<Color> TitleColorList = new List<Color> { Color.FromRgb(50, 50, 50), Color.FromRgb(30, 30, 30), Color.FromRgb(10, 10, 10) };
     private List<List<Color>> ColorList = new List<List<Color>>()
@@ -577,45 +573,15 @@ namespace EQLogParser
           UpdateTimer.Stop();
         }
       }
-
-      GlobalHook.MouseDownExt -= GlobalHook_MouseDownExt;
-      GlobalHook.Dispose();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
       base.OnSourceInitialized(e);
-
       var source = (HwndSource)PresentationSource.FromVisual(this);
       int exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
+      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW; // | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
       NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
-
-      // Setting WS_EX_TRANSPARENT makes it impossible to click on controls so need to listen to global mouse events
-      // and do the hit test ourselves
-      GlobalHook = Hook.GlobalEvents();
-      GlobalHook.MouseDownExt += GlobalHook_MouseDownExt;
-    }
-
-    private void GlobalHook_MouseDownExt(object sender, MouseEventExtArgs e)
-    {
-      if (e.Button == System.Windows.Forms.MouseButtons.Left && e.IsMouseButtonDown)
-      {
-        var screenPoint = new Point(e.X, e.Y);
-        TestInvokeButton(RefreshButton, screenPoint);
-        TestInvokeButton(CopyButton, screenPoint);
-        TestInvokeButton(SettingsButton, screenPoint);
-      }
-    }
-
-    private void TestInvokeButton(Button button, Point screenPoint)
-    {
-      if (button.Visibility == Visibility.Visible && VisualTreeHelper.HitTest(button, button.PointFromScreen(screenPoint)) != null)
-      {
-        ButtonAutomationPeer peer = new ButtonAutomationPeer(button);
-        IInvokeProvider invokeProv = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
-        invokeProv.Invoke();
-      }
     }
 
     private static LinearGradientBrush CreateBrush(List<Color> colors)
