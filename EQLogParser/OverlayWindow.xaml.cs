@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
@@ -20,7 +21,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static SolidColorBrush TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    public static SolidColorBrush TEXT_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush UP_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush DOWN_BRUSH = new SolidColorBrush(Colors.Red);
     private static object StatsLock = new object();
@@ -36,9 +37,7 @@ namespace EQLogParser
     private bool Active = false;
     private bool ProcessDirection = false;
 
-    private Button CopyButton;
-    private Button RefreshButton;
-    private Button SettingsButton;
+    private Popup ButtonPopup;
     private StackPanel TitlePanel;
     private TextBlock TitleBlock;
     private TextBlock TitleDamageBlock;
@@ -129,14 +128,15 @@ namespace EQLogParser
 
       string value = ConfigUtil.GetApplicationSetting("OverlayFontSize");
       bool fontHasBeenSet = false;
-      if (value != null && int.TryParse(value, out int ivalue) && ivalue >= 0 && ivalue <= 64)
+      int currentFontSize = DEFAULT_TEXT_FONT_SIZE;
+      if (value != null && int.TryParse(value, out currentFontSize) && currentFontSize >= 0 && currentFontSize <= 64)
       {
         foreach (var item in fontSizeSelection.Items)
         {
           if ((item as ComboBoxItem).Content as string == value)
           {
             fontSizeSelection.SelectedItem = item;
-            SetFont(ivalue);
+            SetFont(currentFontSize);
             fontHasBeenSet = true;
           }
         }
@@ -144,7 +144,7 @@ namespace EQLogParser
 
       if (!fontHasBeenSet)
       {
-        SetFont(DEFAULT_TEXT_FONT_SIZE);
+        SetFont(currentFontSize);
       }
 
       if (!offsetSize)
@@ -158,6 +158,51 @@ namespace EQLogParser
         // remove when configuring
         NpcDamageManager.EventsPlayerAttackProcessed -= NpcDamageManager_EventsPlayerAttackProcessed;
         DataManager.Instance.EventsNewInactiveFight -= Instance_EventsNewInactiveFight;
+      }
+
+      if (!configure)
+      {
+        var settingsButton = CreateButton();
+        settingsButton.ToolTip = new ToolTip { Content = "Change Settings" };
+        settingsButton.Margin = new Thickness(8, 1, 0, 0);
+        settingsButton.Content = "\xE713";
+        settingsButton.FontSize = currentFontSize - 1;
+        settingsButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
+
+        var copyButton = CreateButton();
+        copyButton.ToolTip = new ToolTip { Content = "Copy Parse" };
+        copyButton.Margin = new Thickness(4, 1, 0, 0);
+        copyButton.Content = "\xE8C8";
+        copyButton.FontSize = currentFontSize - 1;
+        copyButton.Click += (object sender, RoutedEventArgs e) =>
+        {
+          lock (Stats)
+          {
+            (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
+          }
+        };
+
+        var refreshButton = CreateButton();
+        refreshButton.ToolTip = new ToolTip { Content = "Cancel Current Parse" };
+        refreshButton.Margin = new Thickness(4, 1, 0, 0);
+        refreshButton.Content = "\xE8BB";
+        refreshButton.FontSize = currentFontSize - 2;
+        refreshButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.ResetOverlay();
+
+        ButtonPopup = new Popup();
+        StackPanel btns = new StackPanel { Orientation = Orientation.Horizontal };
+        btns.Children.Add(settingsButton);
+        btns.Children.Add(copyButton);
+        btns.Children.Add(refreshButton);
+        ButtonPopup.Child = btns;
+        ButtonPopup.Height = currentFontSize + 2;
+        ButtonPopup.Width = 80;
+        ButtonPopup.AllowsTransparency = true;
+        ButtonPopup.Opacity = 0.3;
+        ButtonPopup.HorizontalOffset = Width / 2.1;
+        ButtonPopup.VerticalOffset = 2;
+        ButtonPopup.Placement = PlacementMode.RelativePoint;
+        ButtonPopup.PlacementTarget = this;
       }
     }
 
@@ -215,6 +260,7 @@ namespace EQLogParser
           if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > DataManager.FIGHT_TIMEOUT)
           {
             windowBrush.Opacity = 0.0;
+            ButtonPopup.IsOpen = false;
             SetVisible(false);
             this.Height = 0;
             Stats = null;
@@ -341,6 +387,7 @@ namespace EQLogParser
                 TitleBlock.Visibility = Visibility.Visible;
                 TitleDamageBlock.Visibility = Visibility.Visible;
                 windowBrush.Opacity = OPACITY;
+                ButtonPopup.IsOpen = true;
               }
 
               for (int i = 0; i < MAX_ROWS; i++)
@@ -432,38 +479,8 @@ namespace EQLogParser
       TitlePanel.SetValue(Canvas.LeftProperty, 5.0);
       TitlePanel.SetValue(Panel.ZIndexProperty, 2);
 
-      SettingsButton = CreateButton();
-      SettingsButton.ToolTip = new ToolTip { Content = "Change Settings" };
-      SettingsButton.Margin = new Thickness(8, 1, 0, 0);
-      SettingsButton.Content = "\xE713";
-      SettingsButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
-      SettingsButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
-
-      CopyButton = CreateButton();
-      CopyButton.ToolTip = new ToolTip { Content = "Copy Parse" };
-      CopyButton.Margin = new Thickness(4, 1, 0, 0);
-      CopyButton.Content = "\xE8C8";
-      CopyButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
-      CopyButton.Click += (object sender, RoutedEventArgs e) =>
-      {
-        lock (Stats)
-        {
-          (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
-        }
-      };
-
-      RefreshButton = CreateButton();
-      RefreshButton.ToolTip = new ToolTip { Content = "Cancel Current Parse" };
-      RefreshButton.Margin = new Thickness(4, 1, 0, 0);
-      RefreshButton.Content = "\xE8BB";
-      RefreshButton.Visibility = configure ? Visibility.Collapsed : Visibility.Visible;
-      RefreshButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.ResetOverlay();
-
       TitleBlock = CreateTextBlock();
       TitlePanel.Children.Add(TitleBlock);
-      TitlePanel.Children.Add(SettingsButton);
-      TitlePanel.Children.Add(CopyButton);
-      TitlePanel.Children.Add(RefreshButton);
       overlayCanvas.Children.Add(TitlePanel);
 
       TitleDamageBlock = CreateTextBlock();
@@ -506,9 +523,6 @@ namespace EQLogParser
 
       TitleBlock.FontSize = size;
       TitleDamageBlock.FontSize = size;
-      SettingsButton.FontSize = size - 1;
-      CopyButton.FontSize = size - 1;
-      RefreshButton.FontSize = size - 2;
 
       for (int i = 0; i < MAX_ROWS; i++)
       {
@@ -567,6 +581,7 @@ namespace EQLogParser
       {
         NpcDamageManager.EventsPlayerAttackProcessed -= NpcDamageManager_EventsPlayerAttackProcessed;
         DataManager.Instance.EventsNewInactiveFight -= Instance_EventsNewInactiveFight;
+        ButtonPopup.IsOpen = false;
 
         if (UpdateTimer?.IsEnabled == true)
         {
@@ -580,7 +595,7 @@ namespace EQLogParser
       base.OnSourceInitialized(e);
       var source = (HwndSource)PresentationSource.FromVisual(this);
       int exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW; // | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
+      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
       NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
     }
 
@@ -632,6 +647,7 @@ namespace EQLogParser
       textBlock.UseLayoutRounding = true;
       textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
       textBlock.FontFamily = new FontFamily("Lucidia Console");
+      textBlock.Margin = new Thickness() { Top = 2 };
       return textBlock;
     }
 
