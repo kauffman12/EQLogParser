@@ -45,7 +45,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.6.32";
+    private const string VERSION = "v1.6.33";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -373,29 +373,6 @@ namespace EQLogParser
       (DamageChartWindow?.Content as LineChart)?.Clear();
       (HealingChartWindow?.Content as LineChart)?.Clear();
       (TankingChartWindow?.Content as LineChart)?.Clear();
-    }
-
-    private void Window_Close(object sender, EventArgs e)
-    {
-      Close();
-    }
-
-    private void Window_Closed(object sender, EventArgs e)
-    {
-      ConfigUtil.SetApplicationSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowHealingSummaryAtStartup", (HealingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowTankingSummaryAtStartup", (TankingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowDamageChartAtStartup", (DamageChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowHealingChartAtStartup", (HealingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowTankingChartAtStartup", (TankingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-
-      StopProcessing();
-      CloseOverlay();
-      taskBarIcon?.Dispose();
-      PlayerChatManager?.Dispose();
-      ConfigUtil.Save();
-      PlayerManager.Instance?.Save();
-      Application.Current.Shutdown();
     }
 
     private void HandleChartUpdateEvent(DocumentWindow window, object _, DataPointEvent e)
@@ -1141,7 +1118,7 @@ namespace EQLogParser
       }
     }
 
-    private void Window_StateChanged(object sender, EventArgs e)
+    private void WindowStateChanged(object sender, EventArgs e)
     {
       if (WindowState != WindowState.Minimized)
       {
@@ -1152,6 +1129,29 @@ namespace EQLogParser
         ShowInTaskbar = false;
         Hide();
       }
+    }
+
+    private void WindowClose(object sender, EventArgs e)
+    {
+      Close();
+    }
+
+    private void WindowClosed(object sender, EventArgs e)
+    {
+      ConfigUtil.SetApplicationSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowHealingSummaryAtStartup", (HealingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowTankingSummaryAtStartup", (TankingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowDamageChartAtStartup", (DamageChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowHealingChartAtStartup", (HealingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetApplicationSetting("ShowTankingChartAtStartup", (TankingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+
+      StopProcessing();
+      CloseOverlay();
+      taskBarIcon?.Dispose();
+      PlayerChatManager?.Dispose();
+      ConfigUtil.Save();
+      PlayerManager.Instance?.Save();
+      Application.Current.Shutdown();
     }
 
     #region IDisposable Support
