@@ -127,7 +127,7 @@ namespace EQLogParser
 
     private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
     {
-      var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+      var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups);
       var main = Application.Current.MainWindow as MainWindow;
       var window = Helpers.OpenNewTab(main.dockSite, "adpsTimeline", "ADPS Timeline", timeline, 400, 300);
       window.CanFloat = true;
@@ -251,7 +251,7 @@ namespace EQLogParser
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
-        menuItemShowAdpsTimeline.IsEnabled = dataGrid.SelectedItems.Count == 1 && CurrentGroupCount == 1;
+        menuItemShowAdpsTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
         copyDamageParseToEQClick.IsEnabled = true;
 
         if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
