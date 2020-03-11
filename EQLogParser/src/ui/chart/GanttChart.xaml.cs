@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 
 namespace EQLogParser
@@ -11,115 +11,136 @@ namespace EQLogParser
   public partial class GanttChart : UserControl
   {
     private static readonly SolidColorBrush GridBrush = new SolidColorBrush(Colors.White);
-    private static readonly SolidColorBrush BlockColorBrush = new SolidColorBrush(Color.FromRgb(94, 137, 202));
+
+    private static readonly List<Brush> BlockBrushes = new List<Brush>()
+    {
+      new SolidColorBrush(Color.FromRgb(73, 151, 217)),
+      new SolidColorBrush(Color.FromRgb(205, 205, 205))
+    };
 
     private const double BUFFS_OFFSET = 90;
-    private const int ROW_HEIGHT = 20;
+    private const int ROW_HEIGHT = 24;
     private const int LABELS_WIDTH = 180;
 
+    private Dictionary<string, List<TimeRange>> SpellRanges = new Dictionary<string, List<TimeRange>>();
     private List<Rectangle> Dividers = new List<Rectangle>();
     private List<TextBlock> Headers = new List<TextBlock>();
+    private Dictionary<string, byte> SelfOnly = new Dictionary<string, byte>();
+    private List<PlayerStats> Selected;
+    private bool CurrentShowSelfOnly = false;
+    private double StartTime;
+    private double EndTime;
+    private double Length;
 
-    public GanttChart(CombinedStats currentStats, PlayerStats selected, List<List<ActionBlock>> groups)
+    public GanttChart(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups)
     {
       InitializeComponent();
 
-      var spellRanges = new Dictionary<string, List<TimeRange>>();
-      var startTime = groups.Min(group => group.First().BeginTime) - BUFFS_OFFSET;
-      var endTime = groups.Max(group => group.Last().BeginTime) + 1;
-      var length = endTime - startTime;
+      Selected = selected;
+      StartTime = groups.Min(group => group.First().BeginTime) - BUFFS_OFFSET;
+      EndTime = groups.Max(group => group.Last().BeginTime) + 1;
+      Length = EndTime - StartTime;
 
-      if (selected != null && !string.IsNullOrEmpty(selected.OrigName))
+      switch (Selected.Count)
       {
-        titleLabel.Content = selected.OrigName + "'s ADPS | " + currentStats?.ShortTitle;
+        case 1:
+          titleLabel1.Content = Selected[0].OrigName + "'s ADPS | " + currentStats?.ShortTitle;
+          break;
+        case 2:
+          titleLabel1.Content = Selected[0].OrigName + " vs ";
+          titleLabel2.Content = Selected[1].OrigName + "'s ";
+          titleLabel3.Content = "ADPS | " + currentStats?.ShortTitle;
+          break;
       }
 
-      DataManager.Instance.GetReceivedSpellsDuring(startTime, endTime).ForEach(group =>
+      for (int i = 0; i < Selected.Count; i++)
       {
-        var player = selected.OrigName;
-        foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == selected.OrigName && 
-          spell.SpellData.IsAdps && (spell.SpellData.MaxHits > 0 || spell.SpellData.Duration <= 1800)))
+        DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime).ForEach(group =>
         {
-          if (action is ReceivedSpell spell)
-          {
-            var spellName = spell.SpellData.NameAbbrv;
+          var player = Selected[i].OrigName;
 
-            if (!spellRanges.TryGetValue(spellName, out List<TimeRange> ranges))
+          foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == player &&
+            spell.SpellData.IsAdps && (spell.SpellData.MaxHits > 0 || spell.SpellData.Duration <= 1800)))
+          {
+            if (action is ReceivedSpell spell)
             {
-              ranges = new List<TimeRange>();
-              var duration = getDuration(spell.SpellData, endTime, group.BeginTime);
-              ranges.Add(new TimeRange() { BeginSeconds = (int)(group.BeginTime - startTime), Duration = duration });
-              spellRanges[spellName] = ranges;
-            }
-            else
-            {
-              var last = ranges.Last();
-              var offsetSeconds = (int) (group.BeginTime - startTime);
-              if (offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+              var spellName = spell.SpellData.NameAbbrv;
+              
+              if (string.IsNullOrEmpty(spell.SpellData.LandsOnOther))
               {
-                last.Duration = getDuration(spell.SpellData, endTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
+                SelfOnly[spellName] = 1;
+              }
+
+              if (!SpellRanges.TryGetValue(spellName, out List<TimeRange> ranges))
+              {
+                ranges = new List<TimeRange>();
+                var duration = GetDuration(spell.SpellData, EndTime, group.BeginTime);
+                ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
+                SpellRanges[spellName] = ranges;
               }
               else
               {
-                var duration = getDuration(spell.SpellData, endTime, group.BeginTime);
-                ranges.Add(new TimeRange() { BeginSeconds = (int)(group.BeginTime - startTime), Duration = duration });
+                var last = ranges.LastOrDefault(range => range.BlockBrush == BlockBrushes[i]);
+                var offsetSeconds = (int)(group.BeginTime - StartTime);
+                if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+                {
+                  last.Duration = GetDuration(spell.SpellData, EndTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
+                }
+                else
+                {
+                  var duration = GetDuration(spell.SpellData, EndTime, group.BeginTime);
+                  ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
+                }
               }
             }
           }
-        }
-      });
+        });
+      }
+
+      addHeaderLabel(0, "Buffs (T-90)", 20);
+      addHeaderLabel(BUFFS_OFFSET, DateUtil.FormatSimpleTime(StartTime), 10);
+
+      int minutes = 1;
+      for (int more = (int)(BUFFS_OFFSET + 60); more < Length; more += 60)
+      {
+        addHeaderLabel(more, minutes + "m", 0);
+        minutes++;
+      }
+
+      Display();
+    }
+
+    private void Display()
+    {
+      content.Children.Clear();
+      contentLabels.Children.Clear();
 
       int row = 0;
-      foreach (var key in spellRanges.Keys.OrderBy(key => key))
+      foreach (var key in SpellRanges.Keys.OrderBy(key => key))
       {
-        int hPos = ROW_HEIGHT * row;
-        AddGridRow(hPos, key);
-        spellRanges[key].ForEach(range => AddAdpsBlock(hPos, range.BeginSeconds, range.Duration, key));
-        row++;
+        if (CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
+        {
+          int hPos = ROW_HEIGHT * row;
+          AddGridRow(hPos, key);
+          SpellRanges[key].ForEach(range => content.Children.Add(CreateAdpsBlock(hPos, range.BeginSeconds, range.Duration, range.BlockBrush, Selected.Count)));
+          row++;
+        }
       }
 
       int finalHeight = ROW_HEIGHT * row;
-      createHeaderLabel(0, "Buffs (T-90)", 20);
-      createHeaderLabel(BUFFS_OFFSET, DateUtil.FormatSimpleTime(startTime), 10);
-      createDivider(finalHeight, BUFFS_OFFSET);
-      createDivider(finalHeight, length);
+      AddDivider(finalHeight, BUFFS_OFFSET);
+      AddDivider(finalHeight, Length);
 
-      int minutes = 1;
-      for (int more = (int) (BUFFS_OFFSET + 60); more < length; more += 60)
+      for (int more = (int)(BUFFS_OFFSET + 60); more < Length; more += 60)
       {
-        createHeaderLabel(more, minutes + "m", 0);
-        createDivider(finalHeight, more);
-        minutes++;
-      }
-    }
-
-    private void AddAdpsBlock(int hPos, int start, int length, string name)
-    {
-      if (length > 0)
-      {
-        var block = new Rectangle()
-        {
-          Stroke = GridBrush,
-          StrokeThickness = 0.2,
-          Height = ROW_HEIGHT / 2.5,
-          HorizontalAlignment = HorizontalAlignment.Left,
-          VerticalAlignment = VerticalAlignment.Top,
-          Fill = BlockColorBrush,
-          Width = length,
-          Margin = new Thickness(start, hPos + (ROW_HEIGHT / 3), 0, 0),
-          RadiusX = 2,
-          RadiusY = 2
-        };
-
-        block.SetValue(Panel.ZIndexProperty, 10);
-        content.Children.Add(block);
+        AddDivider(finalHeight, more);
       }
     }
 
     private void AddGridRow(int hPos, string name)
     {
-      var labelsRow = createRowBlock(hPos);
-      var contentRow = createRowBlock(hPos);
+      var labelsRow = CreateRowBlock(hPos);
+      var contentRow = CreateRowBlock(hPos);
 
       contentLabels.Children.Add(labelsRow);
       content.Children.Add(contentRow);
@@ -129,17 +150,17 @@ namespace EQLogParser
         Foreground = GridBrush,
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
-        Text = name, // get short name
+        Text = name,
         Width = LABELS_WIDTH,
         FontSize = 12,
-        Margin = new Thickness(5, hPos + 2, 0, 0)
+        Margin = new Thickness(5, hPos + 4, 0, 0)
       };
 
       textBlock.SetValue(Panel.ZIndexProperty, 10);
       contentLabels.Children.Add(textBlock);
     }
 
-    private void createHeaderLabel(double left, string text, int offset)
+    private void addHeaderLabel(double left, string text, int offset)
     {
       var textBlock = new TextBlock()
       {
@@ -157,7 +178,7 @@ namespace EQLogParser
       contentHeader.Children.Add(textBlock);
     }
 
-    private void createDivider(int hPos, double left)
+    private void AddDivider(int hPos, double left)
     {
       var rectangle = new Rectangle()
       {
@@ -174,7 +195,32 @@ namespace EQLogParser
       content.Children.Add(rectangle);
     }
 
-    private Rectangle createRowBlock(int hPos)
+    private Rectangle CreateAdpsBlock(int hPos, int start, int length, Brush blockBrush, int count)
+    {
+      var offset = count == 1 ? 0 : blockBrush == BlockBrushes[0] ? -3 : 3;
+      var zIndex = blockBrush == BlockBrushes[0] ? 11 : 10;
+
+      var block = new Rectangle()
+      {
+        Stroke = GridBrush,
+        StrokeThickness = 0.2,
+        Height = ROW_HEIGHT / 3,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Fill = blockBrush,
+        Opacity = 1.0,
+        Width = length,
+        Margin = new Thickness(start, hPos + (ROW_HEIGHT / 3) + offset, 0, 0),
+        Effect = new DropShadowEffect() { ShadowDepth = 2, Direction = 240, BlurRadius = 0.5, Opacity = 0.5 },
+        RadiusX = 2,
+        RadiusY = 2
+      };
+
+      block.SetValue(Panel.ZIndexProperty, zIndex);
+      return block;
+    }
+
+    private Rectangle CreateRowBlock(int hPos)
     {
       return new Rectangle()
       {
@@ -186,7 +232,7 @@ namespace EQLogParser
       };
     }
 
-    private int getDuration(SpellData spell, double endTime, double currentTime)
+    private int GetDuration(SpellData spell, double endTime, double currentTime)
     {
       int duration = spell.Duration > 0 ? spell.Duration : 6;
 
@@ -213,7 +259,7 @@ namespace EQLogParser
 
       if (currentTime + duration > endTime)
       {
-        duration = (int) (duration - (currentTime + duration - endTime));
+        duration = (int)(duration - (currentTime + duration - endTime));
       }
 
       return duration;
@@ -266,10 +312,22 @@ namespace EQLogParser
       }
     }
 
+    private void SelfOnlyChange(object sender, RoutedEventArgs e)
+    {
+      CurrentShowSelfOnly = showSelfOnly.IsChecked.Value;
+
+      // when the UI is ready basically
+      if (Selected != null)
+      {
+        Display();
+      }
+    }
+
     private class TimeRange
     {
       public int BeginSeconds { get; set; }
       public int Duration { get; set; }
+      public Brush BlockBrush { get; set; }
     }
   }
 }
