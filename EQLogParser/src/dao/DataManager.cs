@@ -103,6 +103,34 @@ namespace EQLogParser
         }
       });
 
+      // sort by duration for the timeline to pick better options
+      foreach (var key in NonPosessiveLandsOnOthers.Keys)
+      {
+        NonPosessiveLandsOnOthers[key].Sort((a, b) =>
+        {
+          int result = b.Duration.CompareTo(a.Duration);
+          return result != 0 ? result : b.ID.CompareTo(a.ID);
+        });
+      }
+
+      foreach (var key in PosessiveLandsOnOthers.Keys)
+      {
+        PosessiveLandsOnOthers[key].Sort((a, b) =>
+        {
+          int result = b.Duration.CompareTo(a.Duration);
+          return result != 0 ? result : b.ID.CompareTo(a.ID);
+        });
+      }
+
+      foreach (var key in LandsOnYou.Keys)
+      {
+        LandsOnYou[key].Sort((a, b) =>
+        {
+          int result = b.Duration.CompareTo(a.Duration);
+          return result != 0 ? result : b.ID.CompareTo(a.ID);
+        });
+      }
+
       Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
       spellList.ForEach(spell =>
@@ -404,7 +432,7 @@ namespace EQLogParser
 
               if (found)
               {
-                result = distinct.OrderBy(spell => spell.ID).Last();
+                result = data;
               }
             }
           }
