@@ -106,6 +106,18 @@ namespace EQLogParser
       return className;
     }
 
+    internal SpellClass GetPlayerClassEnum(string name)
+    {
+      SpellClass spellClass = 0;
+
+      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+      {
+        spellClass = counter.CurrentClass;
+      }
+
+      return spellClass;
+    }
+
     internal string GetPlayerFromPet(string pet)
     {
       string player = null;

@@ -84,11 +84,13 @@ namespace EQLogParser
 
             if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
             {
-              helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther.Substring(3), spellData);
+              spellData.LandsOnOther = spellData.LandsOnOther.Substring(3);
+              helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther, spellData);
             }
             else if (spellData.LandsOnOther.Length > 1)
             {
-              helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther.Substring(1), spellData);
+              spellData.LandsOnOther = spellData.LandsOnOther.Substring(1);
+              helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther, spellData);
             }
 
             if (spellData.LandsOnYou.Length > 0) // just do stuff in common
@@ -354,6 +356,30 @@ namespace EQLogParser
       return spellData?.ClassMask > 0;
     }
 
+    internal bool CheckForSpellAmbiguity(SpellData spellData, SpellClass spellClass, out SpellData replaced)
+    {
+      replaced = null;
+
+      if (spellData.Target == 6 && spellData.Level != 255 && spellClass != 0 && (spellData.ClassMask & (int)spellClass) == 0)
+      {
+        List<SpellData> list;
+        if (GetNonPosessiveLandsOnOther(spellData.LandsOnOther, out list) != null)
+        {
+          replaced = list.FirstOrDefault(data => (data.ClassMask & (int)spellClass) != 0);
+        }
+        else if (GetPosessiveLandsOnOther(spellData.LandsOnOther, out list) != null)
+        {
+          replaced = list.FirstOrDefault(data => (data.ClassMask & (int)spellClass) != 0);
+        }
+        else if (GetLandsOnYou(spellData.LandsOnYou, out list) != null)
+        {
+          replaced = list.FirstOrDefault(data => (data.ClassMask & (int)spellClass) != 0);
+        }
+      }
+
+      return replaced != null;
+    }
+
     internal SpellData GetNonPosessiveLandsOnOther(string value, out List<SpellData> output)
     {
       SpellData result = null;
@@ -422,8 +448,7 @@ namespace EQLogParser
               var data = distinct.First();
               foreach (var spell in distinct.Skip(1))
               {
-                if (spell.IsBeneficial != data.IsBeneficial || spell.ClassMask != data.ClassMask || spell.Target != data.Target ||
-                  spell.Damaging != data.Damaging)
+                if (spell.IsBeneficial != data.IsBeneficial || (spell.ClassMask != 0 && data.ClassMask != 0 && (spell.ClassMask & data.ClassMask) == 0) || spell.Damaging != data.Damaging)
                 {
                   found = false;
                   break;
