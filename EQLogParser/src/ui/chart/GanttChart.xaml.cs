@@ -55,18 +55,26 @@ namespace EQLogParser
 
       for (int i = 0; i < Selected.Count; i++)
       {
+        var player = Selected[i].OrigName;
+        var spellClass = PlayerManager.Instance.GetPlayerClassEnum(player);
+
         DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime).ForEach(group =>
         {
-          var player = Selected[i].OrigName;
-
           foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == player &&
             spell.SpellData.IsAdps && (spell.SpellData.MaxHits > 0 || spell.SpellData.Duration <= 1800)))
           {
-            if (action is ReceivedSpell spell)
+            if (action is ReceivedSpell received)
             {
-              var spellName = spell.SpellData.NameAbbrv;
-              
-              if (string.IsNullOrEmpty(spell.SpellData.LandsOnOther))
+              var spellData = received.SpellData;
+
+              if (DataManager.Instance.CheckForSpellAmbiguity(spellData, spellClass, out SpellData replaced))
+              {
+                spellData = replaced;
+              }
+
+              var spellName = spellData.NameAbbrv;
+
+              if (string.IsNullOrEmpty(spellData.LandsOnOther))
               {
                 SelfOnly[spellName] = 1;
               }
@@ -74,7 +82,7 @@ namespace EQLogParser
               if (!SpellRanges.TryGetValue(spellName, out List<TimeRange> ranges))
               {
                 ranges = new List<TimeRange>();
-                var duration = GetDuration(spell.SpellData, EndTime, group.BeginTime);
+                var duration = GetDuration(spellData, EndTime, group.BeginTime);
                 ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
                 SpellRanges[spellName] = ranges;
               }
@@ -84,11 +92,11 @@ namespace EQLogParser
                 var offsetSeconds = (int)(group.BeginTime - StartTime);
                 if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
                 {
-                  last.Duration = GetDuration(spell.SpellData, EndTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
+                  last.Duration = GetDuration(spellData, EndTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
                 }
                 else
                 {
-                  var duration = GetDuration(spell.SpellData, EndTime, group.BeginTime);
+                  var duration = GetDuration(spellData, EndTime, group.BeginTime);
                   ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
                 }
               }
