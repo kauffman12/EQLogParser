@@ -38,7 +38,16 @@ namespace EQLogParser
       foreach (var action in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell).Receiver)))
       {
         ReceivedSpell received = action as ReceivedSpell;
-        UpdateMaps(received.SpellData, received.Receiver, result.PlayerReceivedCounts, result.MaxReceivedCounts, result.UniqueSpells);
+
+        var spellData = received.SpellData;
+        var spellClass = PlayerManager.Instance.GetPlayerClassEnum(received.Receiver);
+
+        if (DataManager.Instance.CheckForSpellAmbiguity(spellData, spellClass, out SpellData replaced))
+        {
+          spellData = replaced;
+        }
+
+        UpdateMaps(spellData, received.Receiver, result.PlayerReceivedCounts, result.MaxReceivedCounts, result.UniqueSpells);
       }
 
       return result;
