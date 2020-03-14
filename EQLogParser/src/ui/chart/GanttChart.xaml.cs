@@ -21,13 +21,17 @@ namespace EQLogParser
     private const double BUFFS_OFFSET = 90;
     private const int ROW_HEIGHT = 24;
     private const int LABELS_WIDTH = 180;
+    private const ushort CASTER_ADPS = 1;
+    private const ushort MELEE_ADPS = 2;
 
-    private Dictionary<string, List<TimeRange>> SpellRanges = new Dictionary<string, List<TimeRange>>();
+    private Dictionary<string, SpellRange> SpellRanges = new Dictionary<string, SpellRange>();
     private List<Rectangle> Dividers = new List<Rectangle>();
     private List<TextBlock> Headers = new List<TextBlock>();
     private Dictionary<string, byte> SelfOnly = new Dictionary<string, byte>();
     private List<PlayerStats> Selected;
     private bool CurrentShowSelfOnly = false;
+    private bool CurrentShowCasterAdps = true;
+    private bool CurrentShowMeleeAdps = true;
     private double StartTime;
     private double EndTime;
     private double Length;
@@ -61,49 +65,49 @@ namespace EQLogParser
         DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime).ForEach(group =>
         {
           foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == player &&
-            spell.SpellData.IsAdps && (spell.SpellData.MaxHits > 0 || spell.SpellData.Duration <= 1800)))
+            spell.SpellData.Adps > 0 && (spell.SpellData.MaxHits > 0 || spell.SpellData.Duration <= 1800)))
           {
-            if (action is ReceivedSpell received)
+            var received = action as ReceivedSpell;
+            var spellData = received.SpellData;
+
+            if (DataManager.Instance.CheckForSpellAmbiguity(spellData, spellClass, out SpellData replaced))
             {
-              var spellData = received.SpellData;
+              spellData = replaced;
+            }
 
-              if (DataManager.Instance.CheckForSpellAmbiguity(spellData, spellClass, out SpellData replaced))
+            var spellName = spellData.NameAbbrv;
+
+            if (string.IsNullOrEmpty(spellData.LandsOnOther))
+            {
+              SelfOnly[spellName] = 1;
+            }
+
+            if (!SpellRanges.TryGetValue(spellName, out SpellRange spellRange))
+            {
+              spellRange = new SpellRange() { Adps = spellData.Adps };
+              var duration = GetDuration(spellData, EndTime, group.BeginTime);
+              spellRange.Ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
+              SpellRanges[spellName] = spellRange;
+            }
+            else
+            {
+              var last = spellRange.Ranges.LastOrDefault(range => range.BlockBrush == BlockBrushes[i]);
+              var offsetSeconds = (int)(group.BeginTime - StartTime);
+              if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
               {
-                spellData = replaced;
-              }
-
-              var spellName = spellData.NameAbbrv;
-
-              if (string.IsNullOrEmpty(spellData.LandsOnOther))
-              {
-                SelfOnly[spellName] = 1;
-              }
-
-              if (!SpellRanges.TryGetValue(spellName, out List<TimeRange> ranges))
-              {
-                ranges = new List<TimeRange>();
-                var duration = GetDuration(spellData, EndTime, group.BeginTime);
-                ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
-                SpellRanges[spellName] = ranges;
+                last.Duration = GetDuration(spellData, EndTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
               }
               else
               {
-                var last = ranges.LastOrDefault(range => range.BlockBrush == BlockBrushes[i]);
-                var offsetSeconds = (int)(group.BeginTime - StartTime);
-                if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
-                {
-                  last.Duration = GetDuration(spellData, EndTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
-                }
-                else
-                {
-                  var duration = GetDuration(spellData, EndTime, group.BeginTime);
-                  ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
-                }
+                var duration = GetDuration(spellData, EndTime, group.BeginTime);
+                spellRange.Ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
               }
             }
           }
         });
       }
+
+      showSelfOnly.IsEnabled = showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = SpellRanges.Count > 0;
 
       addHeaderLabel(0, "Buffs (T-90)", 20);
       addHeaderLabel(BUFFS_OFFSET, DateUtil.FormatSimpleTime(StartTime), 10);
@@ -126,11 +130,14 @@ namespace EQLogParser
       int row = 0;
       foreach (var key in SpellRanges.Keys.OrderBy(key => key))
       {
-        if (CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
+        var spellRange = SpellRanges[key];
+        if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key)) 
+          && (CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS)
+          || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)))
         {
           int hPos = ROW_HEIGHT * row;
           AddGridRow(hPos, key);
-          SpellRanges[key].ForEach(range => content.Children.Add(CreateAdpsBlock(hPos, range.BeginSeconds, range.Duration, range.BlockBrush, Selected.Count)));
+          spellRange.Ranges.ForEach(range => content.Children.Add(CreateAdpsBlock(hPos, range.BeginSeconds, range.Duration, range.BlockBrush, Selected.Count)));
           row++;
         }
       }
@@ -320,15 +327,23 @@ namespace EQLogParser
       }
     }
 
-    private void SelfOnlyChange(object sender, RoutedEventArgs e)
+    private void OptionsChange(object sender, RoutedEventArgs e)
     {
-      CurrentShowSelfOnly = showSelfOnly.IsChecked.Value;
+      CurrentShowSelfOnly = showSelfOnly?.IsChecked.Value == true;
+      CurrentShowCasterAdps = showCasterAdps?.IsChecked.Value == true;
+      CurrentShowMeleeAdps = showMeleeAdps?.IsChecked.Value == true;
 
       // when the UI is ready basically
       if (Selected != null)
       {
         Display();
       }
+    }
+
+    private class SpellRange
+    {
+      public List<TimeRange> Ranges { get; set; } = new List<TimeRange>();
+      public ushort Adps { get; set; }
     }
 
     private class TimeRange

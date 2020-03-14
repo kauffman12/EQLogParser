@@ -324,7 +324,7 @@ namespace EQLogParser
     public string LandsOnOther { get; set; }
     public bool Damaging { get; set; }
     public bool IsProc { get; set; }
-    public bool IsAdps { get; set; }
+    public ushort Adps { get; set; }
   }
 
   public class SpellCountData
