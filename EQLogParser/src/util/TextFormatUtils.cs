@@ -202,7 +202,7 @@ namespace EQLogParser
             LandsOnOther = string.Intern(data[9]),
             Damaging = byte.Parse(data[10], CultureInfo.CurrentCulture) == 1,
             IsProc = byte.Parse(data[11], CultureInfo.CurrentCulture) == 1,
-            IsAdps = byte.Parse(data[13], CultureInfo.CurrentCulture) == 1
+            Adps = ushort.Parse(data[13], CultureInfo.CurrentCulture)
           };
         }
       }

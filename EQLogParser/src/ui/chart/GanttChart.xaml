@@ -16,7 +16,9 @@
       <Label x:Name="titleLabel3" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold" Padding="0,5,5,5"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="True" ToolTip="Include spell counts for spells that only have a message when the player uses the spell on themselves.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell counts for things that players have in common." VerticalContentAlignment="Center" Checked="SelfOnlyChange" Unchecked="SelfOnlyChange">Include Spells Only You See</CheckBox>
+      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" ToolTip="Include spell counts for spells that only have a message when the player uses the spell on themselves.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell counts for things that players have in common." VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Spells Only You See</CheckBox>
+      <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
+      <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
     </StackPanel>
     <Grid Grid.Row="1">
       <Grid.RowDefinitions>
