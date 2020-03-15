@@ -88,11 +88,25 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (e.Type == Labels.HEALPARSE && CurrentStats != null)
+        if (e.Type == Labels.HEALPARSE && e.State == "COMPLETED")
         {
           (Application.Current.MainWindow as MainWindow).Busy(true);
-          HealingStatsManager.Instance.PopulateHealing(CurrentStats);
-          dataGrid.Items?.Refresh();
+
+          if (CurrentStats != null)
+          {
+            HealingStatsManager.Instance.PopulateHealing(CurrentStats);
+            dataGrid.Items?.Refresh();
+
+            if (!MainWindow.IsAoEHealingEnabled)
+            {
+              title.Content = CurrentStats.FullTitle + " (Not Including AE Healing)";
+            }
+            else
+            {
+              title.Content = CurrentStats.FullTitle;
+            }
+          }
+
           Helpers.SetBusy(false);
         }
         else if (e.Type == Labels.TANKPARSE)
@@ -116,9 +130,13 @@ namespace EQLogParser
               {
                 title.Content = CurrentStats.FullTitle;
                 HealingStatsManager.Instance.PopulateHealing(CurrentStats);
-
                 var view = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
                 dataGrid.ItemsSource = SetFilter(view);
+              }
+
+              if (!MainWindow.IsAoEHealingEnabled)
+              {
+                title.Content += " (Not Including AE Healing)";
               }
 
               Helpers.SetBusy(false);
@@ -127,7 +145,7 @@ namespace EQLogParser
             case "NONPC":
             case "NODATA":
               CurrentStats = null;
-              title.Content = e.State == "NOPNC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
+              title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
               Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
               break;

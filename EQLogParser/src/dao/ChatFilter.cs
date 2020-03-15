@@ -70,8 +70,7 @@ namespace EQLogParser
     internal bool PastLiveFilter(ChatType chatType)
     {
       double endOfDay = EndDate + 86400;
-      var timeString = chatType.Line.Substring(1, 24);
-      var time = DateUtil.ParseDate(timeString);
+      var time = DateUtil.ParseDate(chatType.Line.Substring(1, 24));
       return (StartDate == 0 || time >= StartDate) && (EndDate == 0 || time < endOfDay) && PassFilter(chatType);
     }
 

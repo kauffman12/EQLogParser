@@ -214,6 +214,12 @@ namespace EQLogParser
     public string Zone { get; set; }
   }
 
+  public class LineData
+  {
+    public string Line { get; set; }
+    public string Action { get; set; }
+  }
+
   internal class HitLogRow : HitRecord
   {
     public string Actor { get; set; }

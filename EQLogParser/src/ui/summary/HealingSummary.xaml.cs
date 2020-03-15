@@ -66,6 +66,11 @@ namespace EQLogParser
               dataGrid.ItemsSource = SetFilter(view);
             }
 
+            if (!MainWindow.IsAoEHealingEnabled)
+            {
+              title.Content += " (Not Including AE Healing)";
+            }
+
             (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
