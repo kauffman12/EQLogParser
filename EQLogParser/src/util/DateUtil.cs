@@ -58,6 +58,11 @@ namespace EQLogParser
       return found;
     }
 
+    internal double ParseLogDate(string line)
+    {
+      return ParseDate(line.Substring(1, 24));
+    }
+
     internal double ParseDate(string timeString)
     {
       return ParseDate(timeString, out double _);

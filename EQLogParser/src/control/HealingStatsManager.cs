@@ -113,16 +113,19 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options, bool updatedAoEOption = false)
     {
-      if (updatedAoEOption)
+      if (HealingGroups.Count > 0)
       {
-        var newOptions = new GenerateStatsOptions() { Name = Title, RequestChartData = options.RequestChartData, RequestSummaryData = options.RequestSummaryData };
-        newOptions.Npcs.AddRange(Selected);
-        BuildTotalStats(newOptions);
-      }
-      else if (HealingGroups.Count > 0)
-      {
-        FireNewStatsEvent(options);
-        ComputeHealingStats(options);
+        if (updatedAoEOption)
+        {
+          var newOptions = new GenerateStatsOptions() { Name = Title, RequestChartData = options.RequestChartData, RequestSummaryData = options.RequestSummaryData };
+          newOptions.Npcs.AddRange(Selected);
+          BuildTotalStats(newOptions);
+        }
+        else
+        {
+          FireNewStatsEvent(options);
+          ComputeHealingStats(options);
+        }
       }
     }
 

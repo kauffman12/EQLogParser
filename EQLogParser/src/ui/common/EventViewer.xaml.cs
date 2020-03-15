@@ -18,7 +18,7 @@ namespace EQLogParser
   {
     private static bool Running = false;
     private static object CollectionLock = new object();
-    private static string ZONE_EVENT = "Entered Zone";
+    private static string ZONE_EVENT = "Entered Area";
     private static string KILLSHOT_EVENT = "Kill Shot";
     private static string PLAYERSLAIN_EVENT = "Player Slain";
     private static string PLAYERKILL_EVENT = "Player Killing";
@@ -134,7 +134,11 @@ namespace EQLogParser
     {
       (dataGrid.ItemsSource as ICollectionView)?.Refresh();
       titleLabel.Content = dataGrid.Items.Count == 0 ? "No Events Found" : dataGrid.Items.Count + " Events Found";
-      showMezBreaks.IsEnabled = showEnterZone.IsEnabled = showKillShots.IsEnabled = showPlayerKillsPlayer.IsEnabled = showPlayerSlain.IsEnabled = enable;
+
+      if (showMezBreaks.IsEnabled != enable)
+      {
+        showMezBreaks.IsEnabled = showEnterZone.IsEnabled = showKillShots.IsEnabled = showPlayerKillsPlayer.IsEnabled = showPlayerSlain.IsEnabled = enable;
+      }
     }
 
     private void LoadingRow(object sender, DataGridRowEventArgs e)
@@ -148,12 +152,15 @@ namespace EQLogParser
 
     private void OptionsChange(object sender, RoutedEventArgs e)
     {
-      CurrentShowMezBreaks = showMezBreaks?.IsChecked == true;
-      CurrentShowEnterZone = showEnterZone?.IsChecked == true;
-      CurrentShowKillShots = showKillShots?.IsChecked == true;
-      CurrentShowPlayerKilling = showPlayerKillsPlayer?.IsChecked == true;
-      CurrentShowPlayerSlain = showPlayerSlain?.IsChecked == true;
-      EventView?.Refresh();
+      if (dataGrid?.ItemsSource != null)
+      {
+        CurrentShowMezBreaks = showMezBreaks.IsChecked.Value;
+        CurrentShowEnterZone = showEnterZone.IsChecked.Value;
+        CurrentShowKillShots = showKillShots.IsChecked.Value;
+        CurrentShowPlayerKilling = showPlayerKillsPlayer.IsChecked.Value;
+        CurrentShowPlayerSlain = showPlayerSlain.IsChecked.Value;
+        UpdateUI(true);
+      }
     }
 
     private void RefreshMouseClick(object sender, MouseButtonEventArgs e)

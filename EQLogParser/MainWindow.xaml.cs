@@ -45,15 +45,15 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.6.36";
+    private const string VERSION = "v1.6.37";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
     private static long FilePosition = 0;
-    private static ActionProcessor<string> CastProcessor = null;
-    private static ActionProcessor<string> DamageProcessor = null;
-    private static ActionProcessor<string> HealingProcessor = null;
-    private static ActionProcessor<string> MiscProcessor = null;
+    private static ActionProcessor<LineData> CastProcessor = null;
+    private static ActionProcessor<LineData> DamageProcessor = null;
+    private static ActionProcessor<LineData> HealingProcessor = null;
+    private static ActionProcessor<LineData> MiscProcessor = null;
 
     // progress window
     private static DateTime StartLoadTime;
@@ -911,11 +911,6 @@ namespace EQLogParser
 
             Helpers.SpellAbbrvCache.Clear(); // only really needed during big parse
             LOG.Info("Finished Loading Log File");
-
-            if (DataManager.Instance.GetUnhandledLines() is List<string> lines && lines.Count > 0)
-            {
-              Clipboard.SetDataObject(string.Join("\n", lines));
-            }
           }
           else
           {
@@ -956,10 +951,10 @@ namespace EQLogParser
         if (result.Value)
         {
           StopProcessing();
-          CastProcessor = new ActionProcessor<string>("CastProcessor", CastLineParser.Process);
-          DamageProcessor = new ActionProcessor<string>("DamageProcessor", DamageLineParser.Process);
-          HealingProcessor = new ActionProcessor<string>("HealProcessor", HealingLineParser.Process);
-          MiscProcessor = new ActionProcessor<string>("MiscProcessor", MiscLineParser.Process);
+          CastProcessor = new ActionProcessor<LineData>("CastProcessor", CastLineParser.Process);
+          DamageProcessor = new ActionProcessor<LineData>("DamageProcessor", DamageLineParser.Process);
+          HealingProcessor = new ActionProcessor<LineData>("HealProcessor", HealingLineParser.Process);
+          MiscProcessor = new ActionProcessor<LineData>("MiscProcessor", MiscLineParser.Process);
 
           bytesReadLabel.Foreground = BRIGHT_TEXT_BRUSH;
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
@@ -1040,19 +1035,21 @@ namespace EQLogParser
 
       Interlocked.Exchange(ref FilePosition, position);
 
-      if (PreLineParser.NeedProcessing(line))
+      if (PreLineParser.NeedProcessing(line, out string action))
       {
+        var lineData = new LineData() { Line = line, Action = action };
+
         // avoid having other things parse chat by accident
-        if (ChatLineParser.Process(line) is ChatType chatType)
+        if (ChatLineParser.Process(lineData) is ChatType chatType)
         {
           PlayerChatManager.Add(chatType);
         }
         else if (CurrentLogOption != LogOption.ARCHIVE)
         {
-          CastProcessor.Add(line);
-          DamageProcessor.Add(line);
-          HealingProcessor.Add(line);
-          MiscProcessor.Add(line);
+          CastProcessor.Add(lineData);
+          DamageProcessor.Add(lineData);
+          HealingProcessor.Add(lineData);
+          MiscProcessor.Add(lineData);
         }
       }
     }

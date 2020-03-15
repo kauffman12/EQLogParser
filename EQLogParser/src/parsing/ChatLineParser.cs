@@ -18,9 +18,9 @@ namespace EQLogParser
       " says,", " tells ", " shouts,", "says out of", " auctions,", " told you,"
     };
 
-    internal static ChatType Process(string line)
+    internal static ChatType Process(LineData lineData)
     {
-      var chatType = ParseChatType(line);
+      var chatType = ParseChatType(lineData.Line);
       if (chatType != null && chatType.SenderIsYou == false && chatType.Sender != null)
       {
         if (chatType.Channel == ChatChannels.GUILD || chatType.Channel == ChatChannels.RAID || chatType.Channel == ChatChannels.FELLOWSHIP)
