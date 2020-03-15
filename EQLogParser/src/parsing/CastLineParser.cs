@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,12 +7,9 @@ namespace EQLogParser
   class CastLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly DateUtil DateUtil = new DateUtil();
 
-    private static readonly Dictionary<string, byte> IgnoreMap = new Dictionary<string, byte>()
-    {
-      { "Players", 1 }, { "There", 1}, { "The", 1 }, { "Targeted", 1 }, { "Right", 1 }, { "Stand" , 1}
-    };
+    private static readonly DateUtil DateUtil = new DateUtil();
+    private static readonly char[] OldSpellChars = new char[] { '<', '>' };
 
     private static readonly Dictionary<string, string> SpecialLandsOnCodes = new Dictionary<string, string>()
     {
@@ -30,169 +26,172 @@ namespace EQLogParser
       { "Staunch Recovery", "6" }
     };
 
-    public static void Process(string source, string line)
+    public static void Process(LineData lineData)
     {
-      bool handled = false;
-
       try
       {
-        int index = -1;
-        bool isSpell = line.Length > 44 && (index = line.IndexOf(" begin", LineParsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1;
-        bool isActivate = !isSpell && line.Length > 44 && (index = line.IndexOf(" activate", LineParsing.ACTIONINDEX + 3, StringComparison.Ordinal)) > -1;
-        bool isYou = false;
+        string[] split = lineData.Action.Split(' ');
 
-        if (isSpell || isActivate)
+        if (split != null && split.Length > 2 && !split[0].Contains("."))
         {
-          SpellCast cast = null;
-          ProcessLine pline = null;
-          int firstSpace = line.IndexOf(" ", LineParsing.ACTIONINDEX, StringComparison.Ordinal);
-          if (firstSpace > -1 && firstSpace == index)
+          string player = null;
+          string spellName = null;
+          bool isYou = false;
+          bool isSpell = false;
+          bool isInterrupted = false;
+          bool handled = false;
+
+          // [Sat Mar 14 19:57:48 2020] You activate Venon's Vindication.
+          // [Mon Mar 02 19:46:09 2020] You begin casting Shield of Destiny Rk. II.
+          // [Sat Mar 14 19:45:40 2020] You begin singing Agilmente's Aria of Eagles.
+          // [Tue Dec 25 11:38:42 2018] You begin casting Focus of Arcanum VI.
+          // [Sun Dec 02 16:33:37 2018] You begin singing Vainglorious Shout VI.
+          // [Mon Mar 02 19:44:27 2020] Stabborz activates Conditioned Reflexes Rk. II.
+          // [Mon Mar 02 19:47:43 2020] Sancus begins casting Burnout XIV Rk. II.
+          // [Mon Mar 02 19:33:49 2020] Iggokk begins singing Shauri's Sonorous Clouding III.
+          // [Tue Dec 25 09:58:20 2018] Sylfvia begins to cast a spell. <Syllable of Mending Rk. II>
+          // [Tue Dec 25 14:19:57 2018] Sonozen begins to sing a song. <Lyre Leap>
+          // [Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
+          // [Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
+          if (split[0] == "You")
           {
-            if (firstSpace == (LineParsing.ACTIONINDEX + 3) && line.Substring(LineParsing.ACTIONINDEX, 3) == "You")
+            player = ConfigUtil.PlayerName;
+            isYou = true;
+
+            if (split[1] == "activate")
             {
-              var test = isActivate ? line[index + 9] == ' ' ? "activate" : "" : line.Substring(index + 7, 4);
-              if (test == "cast" || test == "sing" || test == "activate")
+              spellName = ParseNewSpellName(split, 2);
+            }
+            else if (split[1] == "begin")
+            {
+              if (split[2] == "casting")
               {
-                isYou = true;
-                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
-                pline.OptionalData = "you" + test;
-                pline.OptionalIndex = 3;
-                pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-                cast = HandleSpellCast(pline, line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX));
+                spellName = ParseNewSpellName(split, 3);
+                isSpell = true;
+              }
+              else if (split[2] == "singing")
+              {
+                spellName = ParseNewSpellName(split, 3);
               }
             }
-            else
+          }
+          else if (split[1] == "activates")
+          {
+            player = split[0];
+            spellName = ParseNewSpellName(split, 2);
+          }
+          else if (split[1] == "begins")
+          {
+            if (split[2] == "casting")
             {
-              // [Sun Mar 31 19:40:12 2019] Jiren begins to cast a spell. <Blood Pact Strike XXV>
-              // [Thu Apr 18 01:46:06 2019] Incogitable begins casting Dizzying Wheel Rk. II.
-
-              int spellIndex = -1;
-              var test = isActivate ? line[index + 9] == 's' ? "activates" : "" :  line.Substring(index + 8, 7);
-              if (test == "casting" || test == "singing")
+              player = split[0];
+              spellName = ParseNewSpellName(split, 3);
+              isSpell = true;
+            }
+            else if (split[2] == "singing")
+            {
+              player = split[0];
+              spellName = ParseNewSpellName(split, 3);
+            }
+            else if (split.Length > 5 && split[2] == "to" && split[4] == "a")
+            {
+              if (split[3] == "cast" && split[5] == "spell.")
               {
-                spellIndex = firstSpace - LineParsing.ACTIONINDEX + 16;
+                player = split[0];
+                spellName = ParseOldSpellName(split, 6);
+                isSpell = true;
               }
-              else if (test == "activates")
+              else if (split[3] == "sing" && split[5] == "song.")
               {
-                spellIndex = firstSpace - LineParsing.ACTIONINDEX + 11;
-              }
-              else if (line.Length >= index + 22)
-              {
-                test = line.Substring(index + 11, 11);
-                if (test == "cast a spel")
-                {
-                  test = "cast";
-                  spellIndex = firstSpace - LineParsing.ACTIONINDEX + 26;
-                }
-                else if (test == "sing a song")
-                {
-                  test = "sing";
-                  spellIndex = firstSpace - LineParsing.ACTIONINDEX + 25;
-                }
-              }
-
-              if (spellIndex > -1)
-              {
-                pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
-                pline.OptionalData = test;
-                pline.OptionalIndex = spellIndex;
-                pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-                cast = HandleSpellCast(pline, line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX));
+                player = split[0];
+                spellName = ParseOldSpellName(split, 6);
               }
             }
+          }
+          else if (split.Length > 4 && split[split.Length - 1] == "interrupted." && split[split.Length - 2] == "is" && split[split.Length - 3] == "spell")
+          {
+            isInterrupted = true;
+            spellName = string.Join(" ", split, 1, split.Length - 4);
 
-            if (cast != null)
+            if (split[0] == "Your")
+            {
+              player = ConfigUtil.PlayerName;
+            }
+            else if (split[0].Length > 3 && split[0][split[0].Length - 1] == 's' && split[0][split[0].Length - 2] == '\'')
+            {
+              player = split[0].Substring(0, split[0].Length - 2);
+            }
+          }
+
+          if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(spellName))
+          {
+            double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
+
+            if (!isInterrupted)
             {
               if (isSpell && isYou)
               {
                 // For some reason Glyphs don't show up for current player
-                CheckForSpecial(SpecialYouCodes, cast.Spell, cast.Caster, pline.CurrentTime);
+                CheckForSpecial(SpecialYouCodes, spellName, player, currentTime);
               }
               else if (isSpell && !isYou)
               {
                 // Some spells only show up as casting
-                CheckForSpecial(SpecialOtherCodes, cast.Spell, cast.Caster, pline.CurrentTime);
+                CheckForSpecial(SpecialOtherCodes, spellName, player, currentTime);
               }
 
-              DataManager.Instance.AddSpellCast(cast, pline.CurrentTime);
-              handled = true;
+              DataManager.Instance.AddSpellCast(new SpellCast() { Caster = player, Spell = string.Intern(spellName) }, currentTime);
             }
-          }
-        }
-
-        if (!handled && line.EndsWith(" spell is interrupted.", StringComparison.Ordinal))
-        {
-          //[Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
-          //[Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX), OptionalIndex = line.Length - 22 };
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-
-          string player = null;
-          string spell = null;
-          int end = line.Length - 22;
-          int len;
-
-          if (line.IndexOf("Your", LineParsing.ACTIONINDEX, 4, StringComparison.Ordinal) > -1)
-          {
-            player = ConfigUtil.PlayerName;
-            len = end - LineParsing.ACTIONINDEX - 5;
-            if (len > 0)
+            else
             {
-              spell = line.Substring(LineParsing.ACTIONINDEX + 5, len);
+              DataManager.Instance.HandleSpellInterrupt(player, spellName, currentTime);
             }
-          }
-          else
-          {
-            int possessive = line.IndexOf("'s ", LineParsing.ACTIONINDEX, StringComparison.Ordinal);
-            if (possessive > -1)
-            {
-              player = line.Substring(LineParsing.ACTIONINDEX, possessive - LineParsing.ACTIONINDEX);
 
-              len = end - possessive - 3;
-              if (len > 0)
+            handled = true;
+          }
+
+          if (!handled && lineData.Line[lineData.Line.Length - 1] != ')')
+          {
+            if (split[0].Length > 3 && split[0][split[0].Length - 1] == 's' && split[0][split[0].Length - 2] == '\'')
+            {
+              SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(string.Join(" ", split, 1, split.Length - 1), out _);
+              if (result != null)
               {
-                spell = line.Substring(possessive + 3, len);
+                double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
+                var newSpell = new ReceivedSpell() { Receiver = string.Intern(split[0].Substring(0, split[0].Length - 2)), SpellData = result };
+                DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
+                CheckForSpecial(SpecialLandsOnCodes, result.Name, newSpell.Receiver, currentTime);
               }
             }
-          }
-
-          if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(spell))
-          {
-            string timeString = line.Substring(1, 24);
-            double currentTime = DateUtil.ParseDate(timeString);
-            DataManager.Instance.HandleSpellInterrupt(player, spell, currentTime);
-            handled = true;
-          }
-        }
-        else if (!handled) // lands on messages
-        {
-          int firstSpace = line.IndexOf(" ", LineParsing.ACTIONINDEX, StringComparison.Ordinal);
-          if (firstSpace > -1 && line[firstSpace - 2] == '\'' && line[firstSpace - 1] == 's')
-          {
-            ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
-            pline.OptionalIndex = firstSpace + 1 - LineParsing.ACTIONINDEX;
-            pline.TimeString = pline.Line.Substring(1, 24);
-            pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-            HandlePosessiveLandsOnOther(pline);
-            handled = true;
-          }
-          else if (firstSpace > -1)
-          {
-            string player = line.Substring(LineParsing.ACTIONINDEX, firstSpace - LineParsing.ACTIONINDEX);
-            if (!IgnoreMap.ContainsKey(player))
+            else
             {
-              if (line.Length > firstSpace + 4)
+              string landsOnMessage = string.Join(" ", split, 1, split.Length - 1);
+              int midPeriod = -1;
+
+              // some abilities like staunch show a lands on message followed by a heal. so search based on first sentence
+              if ((midPeriod = landsOnMessage.LastIndexOf('.', landsOnMessage.Length - 2)) > -1)
               {
-                ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
-                pline.OptionalIndex = firstSpace + 1 - LineParsing.ACTIONINDEX;
-                pline.OptionalData = player;
-                pline.TimeString = pline.Line.Substring(1, 24);
-                pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-                HandleOtherLandsOnCases(pline);
-                handled = true;
+                landsOnMessage = landsOnMessage.Substring(0, midPeriod + 1);
+              }
+
+              player = split[0];
+              SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(landsOnMessage, out _);
+
+              if (result == null)
+              {
+                result = DataManager.Instance.GetLandsOnYou(player + " " + landsOnMessage, out _);
+                if (result != null)
+                {
+                  player = ConfigUtil.PlayerName;
+                }
+              }
+
+              if (result != null)
+              {
+                double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
+                var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), SpellData = result };
+                DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
+                CheckForSpecial(SpecialLandsOnCodes, result.Name, newSpell.Receiver, currentTime);
               }
             }
           }
@@ -214,102 +213,6 @@ namespace EQLogParser
       {
         LOG.Error(ae);
       }
-
-      if (!handled)
-      {
-        DataManager.Instance.AddUnhandledLine(source, line);
-      }
-    }
-
-    private static void HandleOtherLandsOnCases(ProcessLine pline)
-    {
-      string player = pline.OptionalData;
-
-      string landsOnMessage = pline.ActionPart;
-      // some abilities like staunch show a lands on message followed by a heal. so search based on first sentence
-      if (!string.IsNullOrEmpty(landsOnMessage) && landsOnMessage.IndexOf('.', pline.OptionalIndex) is int period && period > -1)
-      {
-        landsOnMessage = landsOnMessage.Substring(0, period + 1);
-      }
-
-      string matchOn = landsOnMessage.Substring(pline.OptionalIndex);
-
-      SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(matchOn, out _);
-      if (result == null)
-      {
-        matchOn = landsOnMessage;
-
-        result = DataManager.Instance.GetLandsOnYou(matchOn, out _);
-        if (result != null)
-        {
-          player = ConfigUtil.PlayerName;
-        }
-      }
-
-      if (result != null)
-      {
-        var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), SpellData = result };
-        DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
-        CheckForSpecial(SpecialLandsOnCodes, result.Name, newSpell.Receiver, pline.CurrentTime);
-      }
-    }
-
-    private static void HandlePosessiveLandsOnOther(ProcessLine pline)
-    {
-      string matchOn = pline.ActionPart.Substring(pline.OptionalIndex);
-      SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(matchOn, out _);
-      if (result != null)
-      {
-        var newSpell = new ReceivedSpell() { Receiver = string.Intern(pline.ActionPart.Substring(0, pline.OptionalIndex - 3)), SpellData = result };
-        DataManager.Instance.AddReceivedSpell(newSpell, pline.CurrentTime);
-        CheckForSpecial(SpecialLandsOnCodes, result.Name, newSpell.Receiver, pline.CurrentTime);
-      }
-    }
-
-    private static SpellCast HandleSpellCast(ProcessLine pline, string caster)
-    {
-      SpellCast cast = null;
-
-      switch (pline.OptionalData)
-      {
-        case "activates":
-        case "casting":
-        case "singing":
-        case "cast":
-        case "sing":
-          if (pline.ActionPart.Length > pline.OptionalIndex)
-          {
-            cast = new SpellCast()
-            {
-              Caster = string.Intern(caster),
-              Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex, pline.ActionPart.Length - pline.OptionalIndex - 1))
-            };
-          }
-          break;
-        case "youcast":
-        case "yousing":
-          if (pline.ActionPart.Length > pline.OptionalIndex + 15)
-          {
-            cast = new SpellCast()
-            {
-              Caster = ConfigUtil.PlayerName,
-              Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex + 15, pline.ActionPart.Length - pline.OptionalIndex - 15 - 1))
-            };
-          }
-          break;
-        case "youactivate":
-          if (pline.ActionPart.Length > pline.OptionalIndex + 10)
-          {
-            cast = new SpellCast()
-            {
-              Caster = ConfigUtil.PlayerName,
-              Spell = string.Intern(pline.ActionPart.Substring(pline.OptionalIndex + 10, pline.ActionPart.Length - pline.OptionalIndex - 10 - 1))
-            };
-          }
-          break;
-      }
-
-      return cast;
     }
 
     private static void CheckForSpecial(Dictionary<string, string> codes, string spellName, string player, double currentTime)
@@ -318,6 +221,16 @@ namespace EQLogParser
       {
         DataManager.Instance.AddSpecial(new SpecialSpell() { Code = codes[key], Player = player, BeginTime = currentTime });
       }
+    }
+
+    private static string ParseNewSpellName(string[] split, int spellIndex)
+    {
+      return string.Join(" ", split, spellIndex, split.Length - spellIndex).Trim('.');
+    }
+
+    private static string ParseOldSpellName(string[] split, int spellIndex)
+    {
+      return string.Join(" ", split, spellIndex, split.Length - spellIndex).Trim(OldSpellChars);
     }
   }
 }

@@ -56,9 +56,9 @@ namespace EQLogParser
       HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]);
     }
 
-    public static void Process(string source, string line)
+    public static void Process(LineData lineData)
     {
-      bool handled = false;
+      string line = lineData.Line;
 
       try
       {
@@ -97,8 +97,6 @@ namespace EQLogParser
                 DataManager.Instance.AddSpecial(new SpecialSpell() { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
               }
             }
-
-            handled = true;
           }
         }
         else if (line.Length >= 49 && (index = line.IndexOf(", but miss", LineParsing.ACTIONINDEX + 22, StringComparison.Ordinal)) > -1)
@@ -108,13 +106,11 @@ namespace EQLogParser
           {
             DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
             EventsDamageProcessed?.Invoke(record, e);
-            handled = true;
           }
         }
         else if (line.Length > 30 && line.Length < 102 && (index = line.IndexOf(" slain ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
           HandleSlain(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
-          handled = true;
         }
         else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
@@ -125,7 +121,6 @@ namespace EQLogParser
           string spell = actionPart.Substring(optionalIndex + 15, actionPart.Length - optionalIndex - 15 - 1);
 
           DataManager.Instance.AddResistRecord(new ResistRecord() { Spell = spell }, currentTime);
-          handled = true;
         }
       }
       catch (ArgumentNullException ne)
@@ -143,11 +138,6 @@ namespace EQLogParser
       catch (ArgumentException ae)
       {
         LOG.Error(ae);
-      }
-
-      if (!handled)
-      {
-        DataManager.Instance.AddUnhandledLine(source, line);
       }
     }
 

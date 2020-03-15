@@ -55,7 +55,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
-    private readonly Dictionary<string, Dictionary<string, byte>> UnHandledLines = new Dictionary<string, Dictionary<string, byte>>();
 
     private DataManager()
     {
@@ -186,25 +185,6 @@ namespace EQLogParser
 
     internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
 
-    internal void AddUnhandledLine(string source, string line)
-    {
-      if (ConfigUtil.Debug)
-      {
-        var actionPart = line.Substring(LineParsing.ACTIONINDEX);
-
-        lock (UnHandledLines)
-        {
-          if (!UnHandledLines.TryGetValue(source, out Dictionary<string, byte> cache))
-          {
-            cache = new Dictionary<string, byte>();
-            UnHandledLines[source] = cache;
-          }
-
-          cache[actionPart] = 1;
-        }
-      }
-    }
-
     internal Fight GetFight(string name, double currentTime)
     {
       Fight result = null;
@@ -252,30 +232,6 @@ namespace EQLogParser
       }
 
       return result;
-    }
-
-    internal List<string> GetUnhandledLines()
-    {
-      var list = new List<string>();
-
-      if (ConfigUtil.Debug)
-      {
-        foreach (var keypair in UnHandledLines)
-        {
-          if (list.Count == 0)
-          {
-            list.AddRange(keypair.Value.Keys);
-          }
-          else
-          {
-            list = list.Intersect(keypair.Value.Keys).ToList();
-          }
-        }
-
-        UnHandledLines.Clear();
-      }
-
-      return list;
     }
 
     internal void AddSpecial(TimedAction action)

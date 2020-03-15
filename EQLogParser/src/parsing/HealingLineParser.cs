@@ -7,9 +7,9 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
 
-    public static void Process(string source, string line)
+    public static void Process(LineData lineData)
     {
-      bool handled = false;
+      string line = lineData.Line;
 
       try
       {
@@ -25,7 +25,6 @@ namespace EQLogParser
           if (record != null)
           {
             DataManager.Instance.AddHealRecord(record, pline.CurrentTime);
-            handled = true;
           }
         }
       }
@@ -44,11 +43,6 @@ namespace EQLogParser
       catch (ArgumentException ae)
       {
         LOG.Error(ae);
-      }
-
-      if (!handled)
-      {
-        DataManager.Instance.AddUnhandledLine(source, line);
       }
     }
 

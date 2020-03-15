@@ -11,104 +11,112 @@ namespace EQLogParser
     private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly List<string> Currency = new List<string> { "Platinum", "Gold", "Silver", "Copper" };
     private static readonly Dictionary<char, uint> Rates = new Dictionary<char, uint>() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
-    private const string MasterLooterText = "The master looter, ";
-    private const string YouReceiveText = "You receive ";
-    private const string YourSplitText = " as your split ";
-    private const string BrokeMezText = "has been awakened by";
-    private const string ZoneText = "You have entered";
+    private static readonly char[] LootedFromTrim = new char[] { '-', '.' };
 
-    public static void Process(string source, string line)
+    public static void Process(LineData lineData)
     {
-      bool handled = false;
-
       try
       {
-        if (line.Length >= 45)
+        string[] split = lineData.Action.Split(' ');
+
+        if (split != null && split.Length > 2)
         {
-          // look for mez break
-          int index;
-          if ((index = line.IndexOf(BrokeMezText)) > -1)
-          {
-            int start = index + BrokeMezText.Length + 1;
-            string breaker = line.Substring(start, line.Length - (start + 1));
-            string awakened = line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX - 1);
-            if (!string.IsNullOrEmpty(breaker) && !string.IsNullOrEmpty(awakened))
-            {
-              double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
-              DataManager.Instance.AddMiscRecord(new MezBreakRecord() { Breaker = breaker, Awakened = awakened }, currentTime);
-              handled = true;
-            }
-          }
-          else if(line.Substring(LineParsing.ACTIONINDEX, ZoneText.Length) == ZoneText)
-          {
-            string zone = line.Substring(LineParsing.ACTIONINDEX + ZoneText.Length + 1);
-            if (!zone.StartsWith("an area"))
-            {
-              double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
-              zone = zone.TrimEnd('.');
-              DataManager.Instance.AddMiscRecord(new ZoneRecord() { Zone = zone }, currentTime);
-              handled = true;
-            }
-          }
-          else
-          {
-            // Handle Loot messages
-            string name = null;
-            string item = null;
-            string npc = null;
-            uint count = 0;
-            bool isCurrency = false;
+          // [Sun Mar 01 22:20:36 2020] A shaded torch has been awakened by Drogbaa.
+          // [Sun Mar 01 22:34:58 2020] You have entered The Eastern Wastes.
+          // [Sun Mar 01 20:35:55 2020] The master looter, Qulas, looted 32426 platinum from the corpse.
+          // [Sun Mar 01 23:51:02 2020] You receive 129 platinum, 2 gold and 1 copper as your split (with a lucky bonus).
+          // [Sun Feb 02 22:43:51 2020] You receive 28 platinum, 7 gold, 2 silver and 5 copper as your split.
+          // [Sun Feb 02 23:31:23 2020] You receive 57 platinum as your split.
+          // [Fri Feb 07 22:01:20 2020] --Kizant has looted a Lesser Engraved Velium Rune from Velden Dragonbane's corpse.--
+          // [Sat Feb 08 01:20:26 2020] --Proximoe has looted a Velium Infused Spider Silk from a restless devourer's corpse.--
+          // [Sat Feb 08 21:21:36 2020] --You have looted a Cold-Forged Cudgel from Queen Dracnia's corpse.--
 
-            if (line[LineParsing.ACTIONINDEX] == '-' && line[LineParsing.ACTIONINDEX + 1] == '-')
+          string looter = null;
+          int awakenedIndex = -1;
+          int lootedIndex = -1;
+          int masterLootIndex = -1;
+          int receiveIndex = -1;
+          bool handled = false;
+
+          for (int i = 0; i < split.Length && !handled; i++)
+          {
+            if (i == 0 && split[0].StartsWith("--"))
             {
-              if (line.Substring(LineParsing.ACTIONINDEX + 2).Split(' ') is string[] pieces && pieces.Length >= 7)
+              looter = split[0] == "--You" ? ConfigUtil.PlayerName : split[0].TrimStart('-');
+            }
+            else
+            {
+              switch (split[i])
               {
-                name = pieces[0] == "You" ? ConfigUtil.PlayerName : pieces[0];
-
-                if (pieces[2] == "looted" && Array.FindIndex(pieces, piece => piece == "from") is int fromIndex && fromIndex > 4)
-                {
-                  count = pieces[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(pieces[3]);
-                  item = string.Join(" ", pieces, 4, fromIndex - 4);
-
-                  if (Array.FindLastIndex(pieces, piece => piece.EndsWith(".--", StringComparison.Ordinal)) is int endIndex && endIndex > fromIndex)
+                case "awakened":
+                  awakenedIndex = i;
+                  break;
+                case "looted":
+                  lootedIndex = i;
+                  break;
+                case "looter,":
+                  masterLootIndex = (i == 2 && split[1] == "master" && split[0] == "The") ? masterLootIndex = i + 1 : -1;
+                  break;
+                case "receive":
+                  receiveIndex = (i == 1 && split[0] == "You") ? i : -1;
+                  break;
+                case "by":
+                  if (awakenedIndex > -1 && awakenedIndex == (i - 1) && split.Length > 5 && split[i - 2] == "been" && split[i - 3] == "has")
                   {
-                    var tmp = string.Join(" ", pieces, fromIndex + 1, endIndex - fromIndex);
-                    npc = tmp.Replace(".--", "").Replace("'s corpse", "");
+                     string awakened = string.Join(" ", split, 0, i - 3);
+                    string breaker = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('.');
+                    DataManager.Instance.AddMiscRecord(new MezBreakRecord() { Breaker = breaker, Awakened = awakened }, DateUtil.ParseLogDate(lineData.Line));
+                    handled = true;
                   }
-                }
-              }
-            }
-            else if (line.Length >= 47 && line.Substring(LineParsing.ACTIONINDEX, MasterLooterText.Length) == MasterLooterText)
-            {
-              if (line.Substring(LineParsing.ACTIONINDEX + MasterLooterText.Length).Split(' ') is string[] pieces && pieces.Length >= 7)
-              {
-                name = pieces[0].Substring(0, pieces[0].Length - 1);
+                  break;
+                case "entered":
+                  if (i == 2 && split[1] == "have" && split[0] == "You" && split.Length > 2)
+                  {
+                    string zone = string.Join(" ", split, 3, split.Length - 3).TrimEnd('.');
+                    DataManager.Instance.AddMiscRecord(new ZoneRecord() { Zone = zone }, DateUtil.ParseLogDate(lineData.Line));
+                    handled = true;
+                  }
+                  break;
+                case "from":
+                  if (masterLootIndex > -1 && lootedIndex > masterLootIndex && split.Length > lootedIndex + 1 && split.Length > 3)
+                  {
+                    string name = split[3].TrimEnd(',');
+                    if (ParseCurrency(split, lootedIndex + 1, i, out string item, out uint count))
+                    {
+                      PlayerManager.Instance.AddVerifiedPlayer(name);
+                      LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = true };
+                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                      handled = true;
+                    }
+                  }
+                  else if (!string.IsNullOrEmpty(looter) && lootedIndex == 2 && split.Length > 4)
+                  {
+                    // covers "a" or "an"
+                    uint count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]);
+                    string item = string.Join(" ", split, 4, i - 4);
+                    string npc = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Replace("'s corpse", "");
 
-                if (pieces[1] == "looted" && Array.FindIndex(pieces, piece => piece == "from") is int fromIndex && fromIndex > 3)
-                {
-                  ParseCurrency(pieces, 2, fromIndex, out item, out count);
-                  isCurrency = true;
-                }
+                    if (count > 0 && count != ushort.MaxValue)
+                    {
+                      PlayerManager.Instance.AddVerifiedPlayer(looter);
+                      LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = npc };
+                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                      handled = true;
+                    }
+                  }
+                  break;
+                case "split":
+                  if (receiveIndex > -1 && split[i - 1] == "your" && split[i - 2] == "as")
+                  {
+                    if (ParseCurrency(split, 2, i - 2, out string item, out uint count))
+                    {
+                      LootRecord record = new LootRecord() { Item = item, Player = ConfigUtil.PlayerName, Quantity = count, IsCurrency = true };
+                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                      handled = true;
+                    }
+                  }
+                  break;
               }
-            }
-            else if (line.Substring(LineParsing.ACTIONINDEX, YouReceiveText.Length) == YouReceiveText && line.IndexOf(YourSplitText, LineParsing.ACTIONINDEX + 15, StringComparison.Ordinal) > -1)
-            {
-              name = ConfigUtil.PlayerName;
-
-              if (line.Substring(LineParsing.ACTIONINDEX + YouReceiveText.Length).Split(' ') is string[] pieces && pieces.Length >= 2 && Array.FindIndex(pieces, end => end == "as") is int splitIndex && splitIndex > -1)
-              {
-                ParseCurrency(pieces, 0, splitIndex, out item, out count);
-                isCurrency = true;
-              }
-            }
-
-            if (count > 0 && !string.IsNullOrEmpty(item) && !string.IsNullOrEmpty(name))
-            {
-              PlayerManager.Instance.AddVerifiedPlayer(name);
-              double currentTime = DateUtil.ParseDate(line.Substring(1, 24));
-              LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = isCurrency, Npc = npc };
-              DataManager.Instance.AddLootRecord(record, currentTime);
-              handled = true;
             }
           }
         }
@@ -129,14 +137,9 @@ namespace EQLogParser
       {
         LOG.Error(ae);
       }
-
-      if (!handled)
-      {
-        DataManager.Instance.AddUnhandledLine(source, line);
-      }
     }
 
-    private static void ParseCurrency(string[] pieces, int startIndex, int toIndex, out string item, out uint count)
+    private static bool ParseCurrency(string[] pieces, int startIndex, int toIndex, out string item, out uint count)
     {
       bool parsed = true;
       item = null;
@@ -167,6 +170,8 @@ namespace EQLogParser
       {
         item = string.Join(", ", tmp);
       }
+
+      return parsed && count != ushort.MaxValue;
     }
   }
 }
