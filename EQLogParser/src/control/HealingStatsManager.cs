@@ -172,14 +172,14 @@ namespace EQLogParser
             });
           });
 
-          foreach(var stats in allStats.Values)
+          foreach (var stats in allStats.Values)
           {
             stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
             stats.BeginTime = double.NaN;
           }
         });
 
-        
+
         Parallel.ForEach(playerStats, stat =>
         {
           if (individualStats.ContainsKey(stat.Name))
@@ -341,7 +341,7 @@ namespace EQLogParser
                   });
                 });
 
-                foreach(var stats in allStats.Values)
+                foreach (var stats in allStats.Values)
                 {
                   stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
                   stats.BeginTime = double.NaN;
@@ -395,20 +395,41 @@ namespace EQLogParser
       string title = "";
       string details = "";
 
-      if (currentStats != null && type == Labels.HEALPARSE)
+      if (currentStats != null)
       {
-        if (selected?.Count > 0)
+        if (type == Labels.HEALPARSE)
         {
-          foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+          if (selected?.Count > 0)
           {
-            string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-            list.Add(playerFormat + damageFormat + " ");
+            foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+            {
+              string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
+              string healsFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              list.Add(playerFormat + healsFormat + " ");
+            }
+          }
+
+          details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
+          title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+        }
+        else if (type == Labels.TOPHEALSPARSE)
+        {
+          if (selected?.Count == 1 && selected[0].SubStats.Count > 0)
+          {
+            int rank = 1;
+            foreach (var stats in selected[0].SubStats.Values.OrderByDescending(stats => stats.Total).Take(10))
+            {
+              string abbrv = Helpers.AbbreviateSpellName(stats.Name);
+              string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, rank++, abbrv) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, abbrv);
+              string healsFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              list.Add(playerFormat + healsFormat + " ");
+            }
+
+            string totalTitle = selected[0].Name + "'s Top Heals";
+            details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
+            title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, totalTitle);
           }
         }
-
-        details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-        title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
       return new StatsSummary() { Title = title, RankedPlayers = details, };

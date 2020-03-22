@@ -123,6 +123,7 @@ namespace EQLogParser
         menuItemShowBreakdown.IsEnabled = menuItemShowSpellCasts.IsEnabled = true;
         menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyHealParseToEQClick.IsEnabled = true;
+        copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
         EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
         EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats.UniqueClasses);
       }
@@ -161,6 +162,11 @@ namespace EQLogParser
     private void CopyToEQClick(object sender, RoutedEventArgs e)
     {
       (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.HEALPARSE);
+    }
+
+    private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e)
+    {
+      (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TOPHEALSPARSE);
     }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)

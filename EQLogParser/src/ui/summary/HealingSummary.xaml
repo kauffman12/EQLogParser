@@ -30,6 +30,11 @@
               <fa:ImageAwesome x:Name="copyHealParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem IsEnabled="False" x:Name="copyTopHealsParseToEQClick" Header="Copy Top Heals Parse" Click="CopyTopHealsToEQClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="copyTopHealsParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <Separator />
           <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Compare Spell Counts">
             <MenuItem.Icon>
