@@ -25,6 +25,7 @@ namespace EQLogParser
     public const string RECEIVEDHEALPARSE = "Received Healing";
     public const string HEALPARSE = "Healing";
     public const string TANKPARSE = "Tanking";
+    public const string TOPHEALSPARSE = "Top Heals";
     public const string DAMAGEPARSE = "Damage";
     public const string MISS = "Miss";
   }

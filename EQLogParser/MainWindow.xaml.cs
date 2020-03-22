@@ -45,7 +45,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.6.37";
+    private const string VERSION = "v1.6.38";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -791,7 +791,26 @@ namespace EQLogParser
     {
       var options = new GenerateStatsOptions() { RequestChartData = true };
       HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-      (playerParseTextWindow.Content as ParsePreview)?.UpdateParse(Labels.HEALPARSE, data.Selected);
+
+      var preview = playerParseTextWindow.Content as ParsePreview;
+
+      // change the update order based on whats displayed
+      if (preview.parseList.SelectedItem?.ToString() == Labels.TOPHEALSPARSE)
+      {
+        preview?.UpdateParse(Labels.HEALPARSE, data.Selected);
+        if (data.Selected?.Count == 1 && (data.Selected[0] as PlayerStats).SubStats?.Count > 0)
+        {
+          preview?.AddParse(Labels.TOPHEALSPARSE, HealingStatsManager.Instance, data.CurrentStats, data.Selected);
+        }
+      }
+      else
+      {
+        if (data.Selected?.Count == 1 && (data.Selected[0] as PlayerStats).SubStats?.Count > 0)
+        {
+          preview?.AddParse(Labels.TOPHEALSPARSE, HealingStatsManager.Instance, data.CurrentStats, data.Selected);
+        }
+        preview?.UpdateParse(Labels.HEALPARSE, data.Selected);
+      }
     }
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)

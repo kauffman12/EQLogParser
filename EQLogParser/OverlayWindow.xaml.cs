@@ -199,10 +199,9 @@ namespace EQLogParser
         ButtonPopup.Width = 80;
         ButtonPopup.AllowsTransparency = true;
         ButtonPopup.Opacity = 0.3;
-        ButtonPopup.HorizontalOffset = Width / 2.1;
-        ButtonPopup.VerticalOffset = 2;
-        ButtonPopup.Placement = PlacementMode.RelativePoint;
-        ButtonPopup.PlacementTarget = this;
+        ButtonPopup.HorizontalOffset = 4;
+        ButtonPopup.Placement = PlacementMode.Right;
+        ButtonPopup.PlacementTarget = TitleBlock;
       }
     }
 
@@ -480,6 +479,13 @@ namespace EQLogParser
       TitlePanel.SetValue(Panel.ZIndexProperty, 2);
 
       TitleBlock = CreateTextBlock();
+      TitleBlock.SizeChanged += (object sender, SizeChangedEventArgs e) =>
+      {
+        // trigger placement event for popup
+        ButtonPopup.HorizontalOffset += 1;
+        ButtonPopup.HorizontalOffset -= 1;
+      };
+
       TitlePanel.Children.Add(TitleBlock);
       overlayCanvas.Children.Add(TitlePanel);
 
