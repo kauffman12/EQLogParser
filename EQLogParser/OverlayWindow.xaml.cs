@@ -32,7 +32,8 @@ namespace EQLogParser
 
     private OverlayDamageStats Stats = null;
     private DispatcherTimer UpdateTimer;
-    private double LastUpdate = 0;
+    private long HitRate = 0;
+    private double LastUpdate = double.NaN;
     private double CalculatedRowHeight = 0;
     private bool Active = false;
     private bool ProcessDirection = false;
@@ -225,11 +226,22 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
+        if (double.IsNaN(LastUpdate) || e.BeginTime - LastUpdate >= 1)
+        {
+          HitRate = 1;
+        }
+        else
+        {
+          HitRate++;
+        }
+
         Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
         if (UpdateTimer != null && !UpdateTimer.IsEnabled)
         {
           UpdateTimer.Start();
         }
+
+        LastUpdate = e.BeginTime;
       }
     }
 
@@ -266,14 +278,13 @@ namespace EQLogParser
             PrevList = null;
             UpdateTimer.Stop();
           }
-          else if (Active && Stats != null && Stats.RaidStats.LastTime > LastUpdate)
+          else if (Active && Stats != null)
           {
             var list = Stats.StatsList.Take(MAX_ROWS).ToList();
             if (list.Count > 0)
             {
               TitleBlock.Text = Stats.TargetTitle;
-              TitleDamageBlock.Text = StatsUtil.FormatTotals(Stats.RaidStats.Total) + " [" + Stats.RaidStats.TotalSeconds + "s @" +
-                StatsUtil.FormatTotals(Stats.RaidStats.DPS) + "]";
+              TitleDamageBlock.Text = string.Format("{0}/s   {1} [{2}s @{3}]", HitRate, StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
 
               long total = 0;
               int goodRowCount = 0;

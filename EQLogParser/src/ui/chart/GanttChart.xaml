@@ -1,7 +1,8 @@
 ﻿<UserControl x:Class="EQLogParser.GanttChart"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
@@ -20,11 +21,20 @@
       <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
       <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
     </StackPanel>
-    <Grid Grid.Row="1">
+    <Grid Grid.Row="1" x:Name="parent">
       <Grid.RowDefinitions>
         <RowDefinition Height="25"></RowDefinition>
         <RowDefinition Height="*"></RowDefinition>
       </Grid.RowDefinitions>
+      <Grid.ContextMenu>
+        <ContextMenu>
+          <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Copy Image" Click="CreateImageClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </ContextMenu>
+      </Grid.ContextMenu>
       <ScrollViewer x:Name="headerScroller" Grid.Row="0" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Hidden">
         <Grid x:Name="contentHeader" Grid.Row="0" Background="#FF252526">
           <Grid.RowDefinitions>
@@ -38,14 +48,14 @@
           <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <ScrollViewer x:Name="labelsScroller" Grid.Column="0" CanContentScroll="True" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" ScrollChanged="LabelsScrollViewChanged">
-          <Grid x:Name="contentLabels">
+          <Grid x:Name="contentLabels" Background="#FF252526">
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
           </Grid>
         </ScrollViewer>
         <ScrollViewer x:Name="contentScroller" Grid.Column="1" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" ScrollChanged="ContentScrollViewChanged">
-          <Grid x:Name="content">
+          <Grid x:Name="content" Background="#FF252526">
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
