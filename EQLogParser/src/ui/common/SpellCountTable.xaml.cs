@@ -43,6 +43,7 @@ namespace EQLogParser
     private int CurrentMinFreqCount = 0;
     private int CurrentSpellType = 0;
     private bool CurrentShowSelfOnly = false;
+    private bool CurrentShowProcs = false;
     private bool Ready = false;
 
     public SpellCountTable(string title)
@@ -245,8 +246,12 @@ namespace EQLogParser
       Dictionary<string, uint> uniqueSpellsMap, Dictionary<string, Dictionary<string, uint>> filteredPlayerMap, bool received, uint totalCasts)
     {
       var spellData = TheSpellCounts.UniqueSpells[id];
-      if ((CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.IsBeneficial) || (CurrentSpellType == 2 && !spellData.IsBeneficial))
-        && (!received || CurrentShowSelfOnly == true || !string.IsNullOrEmpty(spellData.LandsOnOther)))
+
+      var spellTypeCheck = CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.IsBeneficial) || (CurrentSpellType == 2 && !spellData.IsBeneficial);
+      var selfOnlyCheck = !received || CurrentShowSelfOnly == true || !string.IsNullOrEmpty(spellData.LandsOnOther);
+      var procCheck = received || CurrentShowProcs == true || !spellData.IsProc;
+
+      if (spellTypeCheck && selfOnlyCheck && procCheck)
       {
         string name = spellData.NameAbbrv;
 
@@ -281,6 +286,7 @@ namespace EQLogParser
         CurrentMinFreqCount = minFreqList.SelectedIndex;
         CurrentSpellType = spellTypes.SelectedIndex;
         CurrentShowSelfOnly = showSelfOnly.IsChecked.Value;
+        CurrentShowProcs = showProcs.IsChecked.Value;
         Display();
       }
     }
@@ -295,7 +301,7 @@ namespace EQLogParser
       OptionsChanged();
     }
 
-    private void SelfOnlyChange(object sender, RoutedEventArgs e)
+    private void CheckedOptionsChanged(object sender, RoutedEventArgs e)
     {
       if (SpellRowsView.Count > 0)
       {
