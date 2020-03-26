@@ -23,7 +23,7 @@
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="fightDataGrid" Grid.Row="1" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
       <DataGrid.ContextMenu>
-        <ContextMenu>
+        <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
           <MenuItem x:Name="fightMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="setPetIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Paw" Foreground="#FF4F9FE2" />

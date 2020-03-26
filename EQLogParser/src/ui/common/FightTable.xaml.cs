@@ -36,6 +36,7 @@ namespace EQLogParser
     private static DataGridRow CurrentSearchRow = null;
     private static bool NeedScroll = false;
     private static bool NeedRefresh = false;
+    private static bool NeedSelectionChange = false;
 
     private ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
     private bool CurrentShowBreaks;
@@ -68,7 +69,15 @@ namespace EQLogParser
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 800) };
       SelectionTimer.Tick += (sender, e) =>
       {
-        EventsSelectionChange(this, fightDataGrid.SelectedItems);
+        if (!rightClickMenu.IsOpen)
+        {
+          EventsSelectionChange(this, fightDataGrid.SelectedItems);
+        }
+        else
+        {
+          NeedSelectionChange = true;
+        }
+
         SelectionTimer.Stop();
       };
 
@@ -128,6 +137,15 @@ namespace EQLogParser
     public bool HasSelected()
     {
       return fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.GroupId > -1) != null;
+    }
+
+    private void RightClickClosed(object sender, RoutedEventArgs e)
+    {
+      if (NeedSelectionChange)
+      {
+        EventsSelectionChange(this, fightDataGrid.SelectedItems);
+        NeedSelectionChange = false;
+      }
     }
 
     private void AddFight(Fight fight)
@@ -252,6 +270,8 @@ namespace EQLogParser
 
     private void SelectGroupClick(object sender, RoutedEventArgs e)
     {
+      NeedSelectionChange = false;
+
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is Fight npc && npc.GroupId > -1)

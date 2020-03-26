@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 namespace EQLogParser
@@ -120,6 +122,35 @@ namespace EQLogParser
       }
 
       Display();
+    }
+
+    private void CreateImageClick(object sender, RoutedEventArgs e)
+    {
+      Task.Delay(10).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
+      {
+        var height = (int)content.ActualHeight + (int) contentHeader.ActualHeight;
+        var width = (int)contentLabels.ActualWidth + (int)content.ActualWidth;
+
+        var dpiScale = VisualTreeHelper.GetDpi(content);
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+
+        DrawingVisual dv = new DrawingVisual();
+        using (DrawingContext ctx = dv.RenderOpen())
+        {
+          var brush = new VisualBrush(contentHeader);
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, 0), new Size(width, contentHeader.ActualHeight)));
+
+          brush = new VisualBrush(contentLabels);
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, contentHeader.ActualHeight), new Size(contentLabels.ActualWidth, height - contentHeader.ActualHeight)));
+
+          brush = new VisualBrush(content);
+          ctx.DrawRectangle(brush, null, new Rect(new Point(contentLabels.ActualWidth, contentHeader.ActualHeight), new Size(content.ActualWidth, height - contentHeader.ActualHeight)));
+        }
+
+        rtb.Render(dv);
+        Clipboard.SetImage(rtb);
+      }
+      ), TaskScheduler.Default);
     }
 
     private void Display()
