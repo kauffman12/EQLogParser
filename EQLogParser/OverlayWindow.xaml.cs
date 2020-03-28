@@ -490,12 +490,16 @@ namespace EQLogParser
       TitlePanel.SetValue(Panel.ZIndexProperty, 2);
 
       TitleBlock = CreateTextBlock();
-      TitleBlock.SizeChanged += (object sender, SizeChangedEventArgs e) =>
+
+      if (!configure)
       {
-        // trigger placement event for popup
-        ButtonPopup.HorizontalOffset += 1;
-        ButtonPopup.HorizontalOffset -= 1;
-      };
+        TitleBlock.SizeChanged += (object sender, SizeChangedEventArgs e) =>
+        {
+          // trigger placement event for popup
+          ButtonPopup.HorizontalOffset += 1;
+          ButtonPopup.HorizontalOffset -= 1;
+        };
+      }
 
       TitlePanel.Children.Add(TitleBlock);
       overlayCanvas.Children.Add(TitlePanel);
