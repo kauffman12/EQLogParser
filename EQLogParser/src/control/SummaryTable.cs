@@ -154,6 +154,17 @@ namespace EQLogParser
       ShowBreakdown2(GetPlayerStatsByClass(menuItem?.Header as string));
     }
 
+    internal void DataGridShowSpellCountsClick(object sender, RoutedEventArgs e)
+    {
+      ShowSpellCounts(GetSelectedStats());
+    }
+
+    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e)
+    {
+      MenuItem menuItem = (sender as MenuItem);
+      ShowSpellCounts(GetPlayerStatsByClass(menuItem?.Header as string));
+    }
+
     internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e)
     {
       ShowSpellCasts(GetSelectedStats());
@@ -216,10 +227,20 @@ namespace EQLogParser
     {
       if (selected?.Count > 0)
       {
+        var spellTable = new SpellCastTable(CurrentStats?.ShortTitle ?? "", selected, CurrentStats);
+        var main = Application.Current.MainWindow as MainWindow;
+        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Cast Timeline", spellTable);
+      }
+    }
+
+    internal void ShowSpellCounts(List<PlayerStats> selected)
+    {
+      if (selected?.Count > 0)
+      {
         var spellTable = new SpellCountTable(CurrentStats?.ShortTitle ?? "");
         spellTable.ShowSpells(selected, CurrentStats);
         var main = Application.Current.MainWindow as MainWindow;
-        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Counts", spellTable);
+        Helpers.OpenNewTab(main.dockSite, "spellCountsWindow", "Spell Counts", spellTable);
       }
     }
 

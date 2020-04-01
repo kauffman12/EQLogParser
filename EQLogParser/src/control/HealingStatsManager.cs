@@ -17,8 +17,6 @@ namespace EQLogParser
 
     internal List<List<ActionBlock>> HealingGroups = new List<List<ActionBlock>>();
 
-    private const int HEAL_OFFSET = 7; // additional # of seconds to count
-
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;
@@ -51,7 +49,7 @@ namespace EQLogParser
           RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
           HealingGroups.Clear();
 
-          Selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(RaidTotals, npc, HEAL_OFFSET));
+          Selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(RaidTotals, npc));
           RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
 
           if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)

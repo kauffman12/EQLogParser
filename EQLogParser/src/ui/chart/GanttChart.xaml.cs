@@ -20,7 +20,6 @@ namespace EQLogParser
       new SolidColorBrush(Color.FromRgb(205, 205, 205))
     };
 
-    private const double BUFFS_OFFSET = 90;
     private const int ROW_HEIGHT = 24;
     private const int LABELS_WIDTH = 180;
     private const ushort CASTER_ADPS = 1;
@@ -43,7 +42,7 @@ namespace EQLogParser
       InitializeComponent();
 
       Selected = selected;
-      StartTime = groups.Min(group => group.First().BeginTime) - BUFFS_OFFSET;
+      StartTime = groups.Min(group => group.First().BeginTime) - DataManager.BUFFS_OFFSET;
       EndTime = groups.Max(group => group.Last().BeginTime) + 1;
       Length = EndTime - StartTime;
 
@@ -112,10 +111,10 @@ namespace EQLogParser
       showSelfOnly.IsEnabled = showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = SpellRanges.Count > 0;
 
       addHeaderLabel(0, "Buffs (T-90)", 20);
-      addHeaderLabel(BUFFS_OFFSET, DateUtil.FormatSimpleTime(StartTime), 10);
+      addHeaderLabel(DataManager.BUFFS_OFFSET, DateUtil.FormatSimpleTime(StartTime), 10);
 
       int minutes = 1;
-      for (int more = (int)(BUFFS_OFFSET + 60); more < Length; more += 60)
+      for (int more = (int)(DataManager.BUFFS_OFFSET + 60); more < Length; more += 60)
       {
         addHeaderLabel(more, minutes + "m", 0);
         minutes++;
@@ -174,10 +173,10 @@ namespace EQLogParser
       }
 
       int finalHeight = ROW_HEIGHT * row;
-      AddDivider(finalHeight, BUFFS_OFFSET);
+      AddDivider(finalHeight, DataManager.BUFFS_OFFSET);
       AddDivider(finalHeight, Length);
 
-      for (int more = (int)(BUFFS_OFFSET + 60); more < Length; more += 60)
+      for (int more = (int)(DataManager.BUFFS_OFFSET + 60); more < Length; more += 60)
       {
         AddDivider(finalHeight, more);
       }

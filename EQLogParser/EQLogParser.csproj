@@ -195,6 +195,9 @@
     <Compile Include="src\ui\common\ChatViewer.xaml.cs">
       <DependentUpon>ChatViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\common\SpellCastTable.xaml.cs">
+      <DependentUpon>SpellCastTable.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\common\EventViewer.xaml.cs">
       <DependentUpon>EventViewer.xaml</DependentUpon>
     </Compile>
@@ -284,6 +287,10 @@
     <Page Include="src\ui\common\ChatViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\common\SpellCastTable.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="src\ui\common\EventViewer.xaml">
       <SubType>Designer</SubType>

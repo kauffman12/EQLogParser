@@ -413,13 +413,6 @@
     <Style x:Key="SpellGridDataCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
       <Setter Property="TextBlock.TextAlignment" Value="Right" />
     </Style>
-    <Style x:Key="SpellGridNameCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Style.Triggers>
-        <DataTrigger Binding="{Binding IsReceived}" Value="True">
-          <Setter Property="Foreground" Value="LightGreen" />
-        </DataTrigger>
-      </Style.Triggers>
-    </Style>
     <Style x:Key="RightAlignGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
       <Setter Property="TextBlock.TextAlignment" Value="Right" />
     </Style>
