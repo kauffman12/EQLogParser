@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -31,6 +30,8 @@ namespace EQLogParser
     internal event EventHandler<bool> EventsClearedActiveData;
 
     internal const int FIGHT_TIMEOUT = 24;
+    internal const double BUFFS_OFFSET = 90;
+
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
 

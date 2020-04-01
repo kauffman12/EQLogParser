@@ -36,11 +36,17 @@
             </MenuItem.Icon>
           </MenuItem>          
           <Separator />
-          <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Compare Spell Counts">
+          <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Spell Cast Timeline">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calculator" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="ClockOutline" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem x:Name="menuItemShowSpellCounts" IsEnabled="False" Header="Spell Counts">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showSpellCountsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calculator" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem x:Name="menuItemShowBreakdown" IsEnabled="False" Header="Healing Breakdown">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showBreakdownIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Heart" Foreground="#FF4F9FE2" />

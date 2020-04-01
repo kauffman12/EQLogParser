@@ -134,19 +134,19 @@ namespace EQLogParser
       return y;
     }
 
-    internal static void UpdateTimeDiffs(PlayerSubStats subStats, FullTimedAction action, double offset = 0)
+    internal static void UpdateTimeDiffs(PlayerSubStats subStats, FullTimedAction action)
     {
       int currentIndex = subStats.BeginTimes.Count - 1;
       if (currentIndex == -1)
       {
         subStats.BeginTimes.Add(action.BeginTime);
-        subStats.LastTimes.Add(action.LastTime + offset);
+        subStats.LastTimes.Add(action.LastTime);
         subStats.TimeDiffs.Add(0); // update afterward
         currentIndex = 0;
       }
       else if (subStats.LastTimes[currentIndex] >= action.BeginTime)
       {
-        var offsetLastTime = action.LastTime + offset;
+        var offsetLastTime = action.LastTime;
         if (offsetLastTime > subStats.LastTimes[currentIndex])
         {
           subStats.LastTimes[currentIndex] = offsetLastTime;
@@ -155,7 +155,7 @@ namespace EQLogParser
       else
       {
         subStats.BeginTimes.Add(action.BeginTime);
-        subStats.LastTimes.Add(action.LastTime + offset);
+        subStats.LastTimes.Add(action.LastTime);
         subStats.TimeDiffs.Add(0); // update afterward
         currentIndex++;
       }

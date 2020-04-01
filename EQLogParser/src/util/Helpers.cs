@@ -232,8 +232,9 @@ namespace EQLogParser
 
   internal class DictionaryListHelper<T1, T2>
   {
-    internal void AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
+    internal int AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
     {
+      int size = 0;
       lock (dict)
       {
         if (!dict.ContainsKey(key))
@@ -244,8 +245,10 @@ namespace EQLogParser
         if (!dict[key].Contains(value))
         {
           dict[key].Add(value);
+          size = dict[key].Count;
         }
       }
+      return size;
     }
   }
 
