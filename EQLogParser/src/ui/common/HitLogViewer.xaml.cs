@@ -265,7 +265,7 @@ namespace EQLogParser
 
         if (CurrentGroupSpellCastsFilter)
         {
-          var rowKey = GetRowKey(row);
+          var rowKey = GetRowKey(row, CurrentActedFilter != null);
           if (rowCache.TryGetValue(rowKey, out HitLogRow previous))
           {
             if (row.Acted != previous.Acted && previous.Acted != "Multiple")
@@ -305,9 +305,9 @@ namespace EQLogParser
       return row;
     }
 
-    private static string GetRowKey(HitLogRow row)
+    private static string GetRowKey(HitLogRow row, bool useActedKey = false)
     {
-      return string.Format(CultureInfo.CurrentCulture, "{0}-{1}-{2}", row.Actor, row.SubType, row.Time);
+      return string.Format(CultureInfo.CurrentCulture, "{0}-{1}-{2}-{3}", row.Actor, useActedKey ? row.Acted : "", row.SubType, row.Time);
     }
 
     private void LoadingRow(object sender, DataGridRowEventArgs e)

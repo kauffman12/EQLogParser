@@ -140,7 +140,8 @@ namespace EQLogParser
                 CheckForSpecial(SpecialOtherCodes, spellName, player, currentTime);
               }
 
-              DataManager.Instance.AddSpellCast(new SpellCast() { Caster = player, Spell = string.Intern(spellName) }, currentTime);
+              var spellData = DataManager.Instance.GetSpellByName(spellName);
+              DataManager.Instance.AddSpellCast(new SpellCast() { Caster = player, Spell = string.Intern(spellName), SpellData = spellData }, currentTime);
             }
             else
             {

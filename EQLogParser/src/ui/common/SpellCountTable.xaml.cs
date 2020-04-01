@@ -26,8 +26,8 @@ namespace EQLogParser
   public partial class SpellCountTable : UserControl
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    private static bool Running = false;
+    private readonly object LockObject = new object();
+    private bool Running = false;
 
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
@@ -44,7 +44,6 @@ namespace EQLogParser
     private int CurrentSpellType = 0;
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowProcs = false;
-    private bool Ready = false;
 
     public SpellCountTable(string title)
     {
@@ -68,7 +67,6 @@ namespace EQLogParser
       minFreqList.SelectedIndex = 0;
       spellTypes.ItemsSource = SpellTypes;
       spellTypes.SelectedIndex = 0;
-      Ready = true;
     }
 
     public void ShowSpells(List<PlayerStats> selectedStats, CombinedStats currentStats)
@@ -92,29 +90,30 @@ namespace EQLogParser
 
     private void Display()
     {
-      if (Running == false)
+      lock(LockObject)
       {
-        Running = true;
-        Dispatcher.InvokeAsync(() =>
+        if (Running == false)
         {
-          castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
-          (Application.Current.MainWindow as MainWindow).Busy(true);
-        });
+          Running = true;
+          Helpers.SetBusy(true);
+          showSelfOnly.IsEnabled = showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
 
-        Task.Delay(20).ContinueWith(task =>
-        {
-          try
+          Task.Delay(50).ContinueWith(task =>
           {
-            if (TheSpellCounts != null)
+            try
             {
               Dispatcher.InvokeAsync(() =>
               {
-                dataGrid.Columns.Add(new DataGridTextColumn()
+                var column = new DataGridTextColumn()
                 {
                   Header = "",
-                  Binding = new Binding("Spell"),
-                  CellStyle = Application.Current.Resources["SpellGridNameCellStyle"] as Style
-                });
+                  Binding = new Binding("Spell")
+                };
+
+                var columnStyle = new Style(typeof(TextBlock));
+                columnStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding("Spell") { Converter = new ReceivedSpellColorConverter() }));
+                column.ElementStyle = columnStyle;
+                dataGrid.Columns.Add(column);
               });
 
               Dictionary<string, Dictionary<string, uint>> filteredPlayerMap = new Dictionary<string, Dictionary<string, uint>>();
@@ -180,7 +179,7 @@ namespace EQLogParser
                 var row = (SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new SpellCountRow();
 
                 row.Spell = spell;
-                row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
+                //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
                 row.IconColor = TableColors.ACTIVEICON;
 
                 int i;
@@ -221,24 +220,28 @@ namespace EQLogParser
                 Thread.Sleep(5);
               }
             }
-          }
-          catch (Exception ex)
-          {
-            LOG.Error(ex);
-            throw;
-          }
-          finally
-          {
-            Dispatcher.InvokeAsync(() =>
+            catch (Exception ex)
             {
-              castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
-              (Application.Current.MainWindow as MainWindow).Busy(false);
-              exportClick.IsEnabled = copyOptions.IsEnabled = removeRowClick.IsEnabled = SpellRowsView.Count > 0;
-            });
+              LOG.Error(ex);
+              throw;
+            }
+            finally
+            {
+              Helpers.SetBusy(false);
+              Dispatcher.InvokeAsync(() =>
+              {
+                showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
+                showSelfOnly.IsEnabled = PlayerList.Contains(ConfigUtil.PlayerName);
+                exportClick.IsEnabled = copyOptions.IsEnabled = removeRowClick.IsEnabled = SpellRowsView.Count > 0;
 
-            Running = false;
-          }
-        }, TaskScheduler.Default);
+                lock (LockObject)
+                {
+                  Running = false;
+                }
+              });
+            }
+          }, TaskScheduler.Default);
+        }
       }
     }
 
@@ -272,10 +275,15 @@ namespace EQLogParser
       return totalCasts;
     }
 
-    private void OptionsChanged()
+    private void OptionsChanged(bool clear = false)
     {
-      if (Ready)
+      if (SpellRowsView.Count > 0)
       {
+        if (clear)
+        {
+          SpellRowsView.Clear();
+        }
+
         for (int i = dataGrid.Columns.Count - 1; i > 0; i--)
         {
           dataGrid.Columns.RemoveAt(i);
@@ -293,22 +301,12 @@ namespace EQLogParser
 
     private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (SpellRowsView.Count > 0)
-      {
-        SpellRowsView.Clear();
-      }
-
-      OptionsChanged();
+      OptionsChanged(true);
     }
 
     private void CheckedOptionsChanged(object sender, RoutedEventArgs e)
     {
-      if (SpellRowsView.Count > 0)
-      {
-        SpellRowsView.Clear();
-      }
-
-      OptionsChanged();
+      OptionsChanged(true);
     }
 
     private void SelectAllClick(object sender, RoutedEventArgs e)
@@ -409,8 +407,7 @@ namespace EQLogParser
     private void ReloadClick(object sender, RoutedEventArgs e)
     {
       HiddenSpells.Clear();
-      SpellRowsView.Clear();
-      OptionsChanged();
+      OptionsChanged(true);
     }
 
     private void ImportClick(object sender, RoutedEventArgs e)
@@ -474,12 +471,7 @@ namespace EQLogParser
             }
           }
 
-          if (SpellRowsView.Count > 0)
-          {
-            SpellRowsView.Clear();
-          }
-
-          OptionsChanged();
+          OptionsChanged(true);
         }
       }
       catch (IOException ex)
