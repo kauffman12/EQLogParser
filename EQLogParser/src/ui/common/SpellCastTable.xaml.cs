@@ -81,15 +81,20 @@ namespace EQLogParser
               allSpells.AddRange(DataManager.Instance.GetReceivedSpellsDuring(RaidStats.BeginTimes[i], RaidStats.LastTimes[i]));
             }
 
-            allSpells.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
-
             var playerSpells = new Dictionary<string, List<string>>();
             var helper = new DictionaryListHelper<string, string>();
             int max = 0;
 
-            double currentTime = double.NaN;
-            allSpells.ForEach(block =>
+            double lastTime = double.NaN;
+            foreach (var block in allSpells.OrderBy(block => block.BeginTime).ThenBy(block => (block.Actions.Count > 0 && block.Actions[0] is ReceivedSpell) ? 1 : -1))
             {
+              if (!double.IsNaN(lastTime) && block.BeginTime != lastTime)
+              {
+                AddRow(playerSpells, max, lastTime);
+                playerSpells.Clear();
+                max = 0;
+              }
+
               if (block.Actions.Count > 0)
               {
                 int size = 0;
@@ -111,19 +116,12 @@ namespace EQLogParser
                 max = Math.Max(max, size);
               }
 
-              if (!double.IsNaN(currentTime) && block.BeginTime != currentTime)
-              {
-                AddRow(playerSpells, max, block.BeginTime);
-                playerSpells.Clear();
-                max = 0;
-              }
-
-              currentTime = block.BeginTime;
-            });
+              lastTime = block.BeginTime;
+            }
 
             if (playerSpells.Count > 0 && max > 0)
             {
-              AddRow(playerSpells, max, currentTime);
+              AddRow(playerSpells, max, lastTime);
             }
 
             Helpers.SetBusy(false);
