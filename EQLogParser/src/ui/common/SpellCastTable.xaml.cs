@@ -109,7 +109,15 @@ namespace EQLogParser
                 {
                   foreach (var received in block.Actions.Cast<ReceivedSpell>().Where(received => IsValid(received.SpellData, UniqueNames, received.Receiver)))
                   {
-                    size = helper.AddToList(playerSpells, received.Receiver, "Received " + received.SpellData.Name);
+                    var spellData = received.SpellData;
+                    var spellClass = PlayerManager.Instance.GetPlayerClassEnum(received.Receiver);
+
+                    if (DataManager.Instance.CheckForSpellAmbiguity(spellData, spellClass, out SpellData replaced))
+                    {
+                      spellData = replaced;
+                    }
+
+                    size = helper.AddToList(playerSpells, received.Receiver, "Received " + spellData.Name);
                   }
                 }
 
