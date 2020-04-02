@@ -396,11 +396,10 @@ namespace EQLogParser
             var distinct = output.Distinct(AbbrvComparer).ToList();
             if (distinct.Count == 1)
             {
-              result = distinct.Last();
+              result = distinct.First();
             }
             else
             {
-              // see if the spells look similar and pick one
               bool found = true;
               var data = distinct.First();
               foreach (var spell in distinct.Skip(1))
@@ -419,7 +418,10 @@ namespace EQLogParser
             }
           }
 
-          AllUniqueSpellsCache[value] = result;
+          if (result != null)
+          {
+            AllUniqueSpellsCache[value] = result;
+          }
         }
       }
       return result;
