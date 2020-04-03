@@ -383,7 +383,7 @@ namespace EQLogParser
   public class DataPoint
   {
     public long Avg { get; set; }
-    public string ClassName { get; set; }
+    public bool IsPet { get; set; }
     public string Name { get; set; }
     public int ModifiersMask { get; set; }
     public long Total { get; set; }

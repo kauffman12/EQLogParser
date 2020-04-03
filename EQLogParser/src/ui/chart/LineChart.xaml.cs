@@ -45,11 +45,16 @@ namespace EQLogParser
     };
 
     private DateTime ChartModifiedTime;
-    Dictionary<string, ChartValues<DataPoint>> ChartValues = null;
+    private Dictionary<string, ChartValues<DataPoint>> PlayerPetValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private Dictionary<string, ChartValues<DataPoint>> PlayerValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private Dictionary<string, ChartValues<DataPoint>> PetValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private Dictionary<string, ChartValues<DataPoint>> RaidValues = new Dictionary<string, ChartValues<DataPoint>>();
     private CartesianMapper<DataPoint> CurrentConfig;
+    private int CurrentPetOrPlayerIndex = 0;
     private List<PlayerStats> LastSelected = null;
     private Predicate<object> LastFilter = null;
     private List<ChartValues<DataPoint>> LastSortedValues = null;
+    private Dictionary<string, byte> HasPets = new Dictionary<string, byte>();
 
     public LineChart(List<string> choices)
     {
@@ -68,12 +73,18 @@ namespace EQLogParser
       CurrentConfig = CONFIG_VPS;
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
+
+      petOrPlayerList.ItemsSource = new List<string> { "Players +Pets", "Players", "Pets", "Raid Totals" };
+      petOrPlayerList.SelectedIndex = CurrentPetOrPlayerIndex;
       Reset();
     }
 
     internal void Clear()
     {
-      ChartValues = null;
+      PlayerPetValues.Clear();
+      PlayerValues.Clear();
+      PetValues.Clear();
+      RaidValues.Clear();
       Reset();
     }
 
@@ -117,80 +128,150 @@ namespace EQLogParser
       {
         double lastTime = double.NaN;
         double firstTime = double.NaN;
+        Dictionary<string, DataPoint> petData = new Dictionary<string, DataPoint>();
         Dictionary<string, DataPoint> playerData = new Dictionary<string, DataPoint>();
-        Dictionary<string, DataPoint> needAccounting = new Dictionary<string, DataPoint>();
-        Dictionary<string, ChartValues<DataPoint>> theValues = new Dictionary<string, ChartValues<DataPoint>>();
+        Dictionary<string, DataPoint> totalPlayerData = new Dictionary<string, DataPoint>();
+        Dictionary<string, DataPoint> raidData = new Dictionary<string, DataPoint>();
+        Dictionary<string, DataPoint> needTotalAccounting = new Dictionary<string, DataPoint>();
+        Dictionary<string, DataPoint> needPlayerAccounting = new Dictionary<string, DataPoint>();
+        Dictionary<string, DataPoint> needPetAccounting = new Dictionary<string, DataPoint>();
+        Dictionary<string, DataPoint> needRaidAccounting = new Dictionary<string, DataPoint>();
 
         foreach (var dataPoint in recordIterator)
         {
           double diff = double.IsNaN(lastTime) ? 1 : dataPoint.CurrentTime - lastTime;
 
-          if (!playerData.TryGetValue(dataPoint.Name, out DataPoint aggregate))
-          {
-            aggregate = new DataPoint() { Name = dataPoint.Name };
-            playerData[dataPoint.Name] = aggregate;
-          }
-
           if (double.IsNaN(firstTime) || diff > DataManager.FIGHT_TIMEOUT)
           {
             firstTime = dataPoint.CurrentTime;
+          }
 
-            if (diff > DataManager.FIGHT_TIMEOUT)
+          var raidName = "Raid";
+          if (!raidData.TryGetValue(raidName, out DataPoint raidAggregate))
+          {
+            raidAggregate = new DataPoint() { Name = raidName };
+            raidData[raidName] = raidAggregate;
+          }
+
+          Aggregate(raidData, RaidValues, needRaidAccounting, dataPoint, raidAggregate, firstTime, lastTime, diff);
+
+          var totalName = dataPoint.Name + " +Pets";
+          if (!totalPlayerData.TryGetValue(totalName, out DataPoint totalAggregate))
+          {
+            totalAggregate = new DataPoint() { Name = totalName };
+            totalPlayerData[totalName] = totalAggregate;
+          }
+
+          Aggregate(totalPlayerData, PlayerPetValues, needTotalAccounting, dataPoint, totalAggregate, firstTime, lastTime, diff);
+
+          if (dataPoint.IsPet == false)
+          {
+            if (!playerData.TryGetValue(dataPoint.Name, out DataPoint aggregate))
             {
-              UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
-              foreach (var value in playerData.Values)
-              {
-                value.RollingTotal = 0;
-                value.RollingCritHits = 0;
-                value.RollingHits = 0;
-                value.CurrentTime = lastTime + 6;
-                Insert(value, theValues);
-                value.CurrentTime = firstTime - 6;
-                Insert(value, theValues);
-              }
+              aggregate = new DataPoint() { Name = dataPoint.Name };
+              playerData[dataPoint.Name] = aggregate;
             }
+
+            Aggregate(playerData, PlayerValues, needPlayerAccounting, dataPoint, aggregate, firstTime, lastTime, diff);
+          }
+          else if (dataPoint.IsPet == true)
+          {
+            HasPets[dataPoint.Name + " +Pets"] = 1;
+            var petName = dataPoint.Name + "'s Pets";
+            if (!petData.TryGetValue(petName, out DataPoint petAggregate))
+            {
+              petAggregate = new DataPoint() { Name = petName };
+              petData[petName] = petAggregate;
+            }
+
+            Aggregate(petData, PetValues, needPetAccounting, dataPoint, petAggregate, firstTime, lastTime, diff);
           }
 
-          aggregate.Total += dataPoint.Total;
-          aggregate.RollingTotal += dataPoint.Total;
-          aggregate.RollingHits += 1;
-          aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
-          aggregate.BeginTime = firstTime;
-          aggregate.CurrentTime = dataPoint.CurrentTime;
           lastTime = dataPoint.CurrentTime;
-
-          if (diff >= 1)
-          {
-            Insert(aggregate, theValues);
-            UpdateRemaining(theValues, needAccounting, firstTime, lastTime, aggregate.Name);
-          }
-          else
-          {
-            needAccounting[aggregate.Name] = aggregate;
-          }
         }
 
-        UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
-        Plot(theValues, newTaskTime, selected, filter);
+        UpdateRemaining(RaidValues, needRaidAccounting, firstTime, lastTime);
+        UpdateRemaining(PlayerPetValues, needTotalAccounting, firstTime, lastTime);
+        UpdateRemaining(PlayerValues, needPlayerAccounting, firstTime, lastTime);
+        UpdateRemaining(PetValues, needPetAccounting, firstTime, lastTime);
+        Plot(newTaskTime, selected, filter);
       });
     }
 
-    private void Plot(Dictionary<string, ChartValues<DataPoint>> theValues, DateTime requestTime, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    private void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, ChartValues<DataPoint>> theValues,
+      Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate, double firstTime, double lastTime, double diff)
+    {
+      if (diff > DataManager.FIGHT_TIMEOUT)
+      {
+        UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
+        foreach (var value in playerData.Values)
+        {
+          value.RollingTotal = 0;
+          value.RollingCritHits = 0;
+          value.RollingHits = 0;
+          value.CurrentTime = lastTime + 6;
+          Insert(value, theValues);
+          value.CurrentTime = firstTime - 6;
+          Insert(value, theValues);
+        }
+      }
+
+      aggregate.Total += dataPoint.Total;
+      aggregate.RollingTotal += dataPoint.Total;
+      aggregate.RollingHits += 1;
+      aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.BeginTime = firstTime;
+      aggregate.CurrentTime = dataPoint.CurrentTime;
+
+      if (diff >= 1)
+      {
+        Insert(aggregate, theValues);
+        UpdateRemaining(theValues, needAccounting, firstTime, dataPoint.CurrentTime, aggregate.Name);
+      }
+      else
+      {
+        needAccounting[aggregate.Name] = aggregate;
+      }
+    }
+
+    private void Plot(DateTime requestTime, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       LastFilter = filter;
       LastSelected = selected;
 
+      Dictionary<string, ChartValues<DataPoint>> workingData = null;
+      switch (CurrentPetOrPlayerIndex)
+      {
+        case 0:
+          workingData = PlayerPetValues;
+          break;
+        case 1:
+          workingData = PlayerValues;
+          break;
+        case 2:
+          workingData = PetValues;
+          break;
+        case 3:
+          workingData = RaidValues;
+          break;
+      }
+
       string label;
       List<ChartValues<DataPoint>> sortedValues;
-      if (selected == null || selected.Count == 0)
+      if (CurrentPetOrPlayerIndex == 3)
       {
-        sortedValues = theValues.Values.Where(values => filter == null || filter(values.First())).OrderByDescending(values => values.Last().Total).Take(5).ToList();
+        sortedValues = workingData.Values.ToList();
+        label = sortedValues.Count > 0 ? "Raid Totals" : Labels.NODATA;
+      }
+      else if (selected == null || selected.Count == 0)
+      {
+        sortedValues = workingData.Values.Where(values => filter == null || filter(values.First())).OrderByDescending(values => values.Last().Total).Take(5).ToList();
         label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : Labels.NODATA;
       }
       else
       {
         List<string> names = selected.Select(stats => stats.OrigName).Take(10).ToList();
-        sortedValues = theValues.Values.Where(values => names.Contains(values.First().Name)).ToList();
+        sortedValues = workingData.Values.Where(values => names.FirstOrDefault(name => values.First().Name.Contains(name)) != null).ToList();
         label = sortedValues.Count > 0 ? "Selected Player(s)" : Labels.NODATA;
       }
 
@@ -200,7 +281,6 @@ namespace EQLogParser
       {
         if (ChartModifiedTime < requestTime)
         {
-          ChartValues = theValues;
           ChartModifiedTime = requestTime;
           Reset();
 
@@ -210,7 +290,9 @@ namespace EQLogParser
 
           foreach (var value in sortedValues)
           {
-            var series = new LineSeries() { Title = value.First().Name, Values = value };
+            var temp = value.First().Name;
+            var name = CurrentPetOrPlayerIndex == 0 && !HasPets.ContainsKey(temp) ? temp.Split(' ')[0] : temp;
+            var series = new LineSeries() { Title = name, Values = value };
 
             if (value.Count > 1)
             {
@@ -258,9 +340,9 @@ namespace EQLogParser
 
     private void Plot(Predicate<object> filter)
     {
-      if (ChartValues != null)
+      if (RaidValues.Count > 0)
       {
-        Plot(ChartValues, DateTime.Now, LastSelected, filter);
+        Plot(DateTime.Now, LastSelected, filter);
       }
       else
       {
@@ -270,13 +352,13 @@ namespace EQLogParser
 
     private void Plot(List<PlayerStats> selected)
     {
-      if (ChartValues != null)
+      if (RaidValues.Count > 0)
       {
         // handling case where chart can be updated twice
         // when toggling bane and selection is lost
         if (!(selected.Count == 0 && LastSelected == null))
         {
-          Plot(ChartValues, DateTime.Now, selected, LastFilter);
+          Plot(DateTime.Now, selected, LastFilter);
         }
       }
       else
@@ -311,10 +393,11 @@ namespace EQLogParser
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (ChartValues != null)
+      if (PlayerPetValues.Count > 0)
       {
         CurrentConfig = CHOICES[choicesList.SelectedIndex];
-        Plot(ChartValues, DateTime.Now, LastSelected, LastFilter);
+        CurrentPetOrPlayerIndex = petOrPlayerList.SelectedIndex;
+        Plot(DateTime.Now, LastSelected, LastFilter);
       }
     }
 

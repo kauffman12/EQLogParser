@@ -23,12 +23,14 @@ namespace EQLogParser
       {
         string attacker = record.Attacker;
         string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
+        bool isPet = false;
         if (pname != null || (!string.IsNullOrEmpty(record.AttackerOwner) && !string.IsNullOrEmpty((pname = record.AttackerOwner))))
         {
+          isPet = true;
           attacker = pname;
         }
 
-        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = attacker, CurrentTime = wrapper.BeginTime };
+        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = attacker, IsPet = isPet, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;
