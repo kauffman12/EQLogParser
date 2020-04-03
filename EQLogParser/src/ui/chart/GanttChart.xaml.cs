@@ -65,50 +65,53 @@ namespace EQLogParser
 
         DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime).ForEach(group =>
         {
-          foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == player &&
-            spell.SpellData.Adps > 0 && (spell.SpellData.MaxHits > 0 || spell.SpellData.Duration <= 1800)))
+          foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == player))
           {
             var received = action as ReceivedSpell;
             var spellData = received.SpellData;
 
-            if (DataManager.Instance.CheckForSpellAmbiguity(spellData, spellClass, out SpellData replaced))
+            if (spellData == null && received.Ambiguity != null && DataManager.Instance.ResolveSpellAmbiguity(received, out SpellData replaced))
             {
               spellData = replaced;
             }
 
-            var spellName = spellData.NameAbbrv;
+            if (spellData != null && spellData.Adps > 0 && (spellData.MaxHits > 0 || spellData.Duration <= 1800))
+            {         
+              var spellName = spellData.NameAbbrv;
 
-            if (string.IsNullOrEmpty(spellData.LandsOnOther))
-            {
-              SelfOnly[spellName] = 1;
-            }
-
-            if (!SpellRanges.TryGetValue(spellName, out SpellRange spellRange))
-            {
-              spellRange = new SpellRange() { Adps = spellData.Adps };
-              var duration = GetDuration(spellData, EndTime, group.BeginTime);
-              spellRange.Ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
-              SpellRanges[spellName] = spellRange;
-            }
-            else
-            {
-              var last = spellRange.Ranges.LastOrDefault(range => range.BlockBrush == BlockBrushes[i]);
-              var offsetSeconds = (int)(group.BeginTime - StartTime);
-              if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+              if (string.IsNullOrEmpty(spellData.LandsOnOther))
               {
-                last.Duration = GetDuration(spellData, EndTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
+                SelfOnly[spellName] = 1;
+              }
+
+              if (!SpellRanges.TryGetValue(spellName, out SpellRange spellRange))
+              {
+                spellRange = new SpellRange() { Adps = spellData.Adps };
+                var duration = GetDuration(spellData, EndTime, group.BeginTime);
+                spellRange.Ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
+                SpellRanges[spellName] = spellRange;
               }
               else
               {
-                var duration = GetDuration(spellData, EndTime, group.BeginTime);
-                spellRange.Ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
+                var last = spellRange.Ranges.LastOrDefault(range => range.BlockBrush == BlockBrushes[i]);
+                var offsetSeconds = (int)(group.BeginTime - StartTime);
+                if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+                {
+                  last.Duration = GetDuration(spellData, EndTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
+                }
+                else
+                {
+                  var duration = GetDuration(spellData, EndTime, group.BeginTime);
+                  spellRange.Ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
+                }
               }
             }
           }
         });
       }
 
-      showSelfOnly.IsEnabled = showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = SpellRanges.Count > 0;
+      showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = SpellRanges.Count > 0;
+      showSelfOnly.IsEnabled = SpellRanges.Count > 0 && Selected.Find(stats => stats.OrigName == ConfigUtil.PlayerName) != null;
 
       addHeaderLabel(0, "Buffs (T-90)", 20);
       addHeaderLabel(DataManager.BUFFS_OFFSET, DateUtil.FormatSimpleTime(StartTime), 10);
