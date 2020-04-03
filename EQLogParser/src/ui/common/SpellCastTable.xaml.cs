@@ -100,24 +100,20 @@ namespace EQLogParser
                 int size = 0;
                 if ((CurrentCastType == 0 || CurrentCastType == 1) && block.Actions[0] is SpellCast)
                 {
-                  foreach (var cast in block.Actions.Cast<SpellCast>().Where(cast => IsValid(cast.SpellData, UniqueNames, cast.Caster)))
+                  foreach (var cast in block.Actions.Cast<SpellCast>().Where(cast => IsValid(cast, UniqueNames, cast.Caster, out _)))
                   {
                     size = helper.AddToList(playerSpells, cast.Caster, cast.Spell);
                   }
                 }
                 else if ((CurrentCastType == 0 || CurrentCastType == 2) && block.Actions[0] is ReceivedSpell)
                 {
-                  foreach (var received in block.Actions.Cast<ReceivedSpell>().Where(received => IsValid(received.SpellData, UniqueNames, received.Receiver)))
+                  SpellData replaced = null;
+                  foreach (var received in block.Actions.Cast<ReceivedSpell>().Where(received => IsValid(received, UniqueNames, received.Receiver, out replaced)))
                   {
-                    var spellData = received.SpellData;
-                    var spellClass = PlayerManager.Instance.GetPlayerClassEnum(received.Receiver);
-
-                    if (DataManager.Instance.CheckForSpellAmbiguity(spellData, spellClass, out SpellData replaced))
+                    if (replaced != null)
                     {
-                      spellData = replaced;
+                      size = helper.AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
                     }
-
-                    size = helper.AddToList(playerSpells, received.Receiver, "Received " + spellData.Name);
                   }
                 }
 
@@ -149,11 +145,27 @@ namespace EQLogParser
       }
     }
 
-    private bool IsValid(SpellData data, Dictionary<string, byte> uniqueNames, string player)
+    private bool IsValid(ReceivedSpell spell, Dictionary<string, byte> uniqueNames, string player, out SpellData replaced)
     {
-      bool valid = data == null || (!data.IsProc && !string.IsNullOrEmpty(player) && uniqueNames.ContainsKey(player));
-      valid = valid && (CurrentShowSelfOnly ? true : !string.IsNullOrEmpty(data.LandsOnOther));
-      valid = valid && (CurrentSpellType == 0 || CurrentSpellType == 1 && data.IsBeneficial || CurrentSpellType == 2 && !data.IsBeneficial);
+      bool valid = false;
+      replaced = spell.SpellData;
+
+      if (!string.IsNullOrEmpty(player) && uniqueNames.ContainsKey(player))
+      {
+        SpellData spellData = spell.SpellData != null ? spell.SpellData : null;
+
+        if (spellData == null && spell.Ambiguity != null && DataManager.Instance.ResolveSpellAmbiguity(spell, out replaced))
+        {
+          spellData = replaced;
+        }
+
+        if (spellData != null)
+        {
+          valid = !spellData.IsProc && (CurrentShowSelfOnly ? true : (spell is SpellCast || !string.IsNullOrEmpty(spellData.LandsOnOther)));
+          valid = valid && (CurrentSpellType == 0 || CurrentSpellType == 1 && spellData.IsBeneficial || CurrentSpellType == 2 && !spellData.IsBeneficial);
+        }
+      }
+
       return valid;
     }
 

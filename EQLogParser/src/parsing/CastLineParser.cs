@@ -155,13 +155,24 @@ namespace EQLogParser
           {
             if (split[0].Length > 3 && split[0][split[0].Length - 1] == 's' && split[0][split[0].Length - 2] == '\'')
             {
-              SpellData result = DataManager.Instance.GetPosessiveLandsOnOther(string.Join(" ", split, 1, split.Length - 1), out _);
+              player = string.Intern(split[0].Substring(0, split[0].Length - 2));
+              List<SpellData> result = DataManager.Instance.GetPosessiveLandsOnOther(player, string.Join(" ", split, 1, split.Length - 1), out _);
               if (result != null)
               {
                 double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
-                var newSpell = new ReceivedSpell() { Receiver = string.Intern(split[0].Substring(0, split[0].Length - 2)), SpellData = result };
+                var newSpell = new ReceivedSpell() { Receiver = player };
+
+                if (result.Count == 1)
+                {
+                  newSpell.SpellData = result.First();
+                  CheckForSpecial(SpecialLandsOnCodes, newSpell.SpellData.Name, newSpell.Receiver, currentTime);
+                }
+                else
+                {
+                  newSpell.Ambiguity = result;
+                }
+
                 DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
-                CheckForSpecial(SpecialLandsOnCodes, result.Name, newSpell.Receiver, currentTime);
               }
             }
             else
@@ -176,11 +187,11 @@ namespace EQLogParser
               }
 
               player = split[0];
-              SpellData result = DataManager.Instance.GetNonPosessiveLandsOnOther(landsOnMessage, out _);
+              List<SpellData> result = DataManager.Instance.GetNonPosessiveLandsOnOther(player, landsOnMessage, out _);
 
               if (result == null)
               {
-                result = DataManager.Instance.GetLandsOnYou(player + " " + landsOnMessage, out _);
+                result = DataManager.Instance.GetLandsOnYou(player, player + " " + landsOnMessage, out _);
                 if (result != null)
                 {
                   player = ConfigUtil.PlayerName;
@@ -190,9 +201,19 @@ namespace EQLogParser
               if (result != null)
               {
                 double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
-                var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), SpellData = result };
+                var newSpell = new ReceivedSpell() { Receiver = string.Intern(player) };
+
+                if (result.Count == 1)
+                {
+                  newSpell.SpellData = result.First();
+                  CheckForSpecial(SpecialLandsOnCodes, newSpell.SpellData.Name, newSpell.Receiver, currentTime);
+                }
+                else
+                {
+                  newSpell.Ambiguity = result;
+                }
+
                 DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
-                CheckForSpecial(SpecialLandsOnCodes, result.Name, newSpell.Receiver, currentTime);
               }
             }
           }
