@@ -35,14 +35,15 @@ namespace EQLogParser
         ReceivedSpell received = action as ReceivedSpell;
 
         var spellData = received.SpellData;
-        var spellClass = PlayerManager.Instance.GetPlayerClassEnum(received.Receiver);
-
-        if (DataManager.Instance.CheckForSpellAmbiguity(spellData, spellClass, out SpellData replaced))
+        if (spellData == null && received.Ambiguity != null && DataManager.Instance.ResolveSpellAmbiguity(received, out SpellData replaced))
         {
           spellData = replaced;
         }
 
-        UpdateMaps(spellData, received.Receiver, result.PlayerReceivedCounts, result.MaxReceivedCounts, result.UniqueSpells);
+        if (spellData != null)
+        {
+          UpdateMaps(spellData, received.Receiver, result.PlayerReceivedCounts, result.MaxReceivedCounts, result.UniqueSpells);
+        }
       }
 
       return result;

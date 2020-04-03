@@ -45,7 +45,6 @@ namespace EQLogParser
     private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
 
     private readonly Dictionary<string, byte> AllNpcs = new Dictionary<string, byte>();
-    private readonly Dictionary<string, SpellData> AllUniqueSpellsCache = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
@@ -53,9 +52,9 @@ namespace EQLogParser
     private readonly Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, SpellClass> SpellsToClass = new Dictionary<string, SpellClass>();
 
-    private readonly ConcurrentDictionary<string, byte> AllUniqueSpellCasts = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
+    private int LastSpellIndex = -1;
 
     private DataManager()
     {
@@ -268,7 +267,7 @@ namespace EQLogParser
       if (SpellsNameDB.ContainsKey(cast.Spell))
       {
         Helpers.AddAction(AllSpellCastBlocks, cast, beginTime);
-        AllUniqueSpellCasts[cast.Spell] = 1;
+        LastSpellIndex = AllSpellCastBlocks.Count - 1;
 
         if (SpellsToClass.TryGetValue(cast.Spell, out SpellClass theClass))
         {
@@ -313,56 +312,47 @@ namespace EQLogParser
       return spellData?.ClassMask > 0;
     }
 
-    internal bool CheckForSpellAmbiguity(SpellData spellData, SpellClass spellClass, out SpellData replaced)
+    internal bool ResolveSpellAmbiguity(ReceivedSpell spell, out SpellData replaced)
     {
       replaced = null;
 
-      if (spellData.Target == 6 && spellData.Level != 255 && spellClass != 0 && (spellData.ClassMask & (int)spellClass) == 0)
+      if (spell.Ambiguity != null && spell.Ambiguity.Count < 30)
       {
-        List<SpellData> list;
-        if (GetNonPosessiveLandsOnOther(spellData.LandsOnOther, out list) != null)
-        {
-          replaced = list.FirstOrDefault(data => (data.ClassMask & (int)spellClass) != 0);
-        }
-        else if (GetPosessiveLandsOnOther(spellData.LandsOnOther, out list) != null)
-        {
-          replaced = list.FirstOrDefault(data => (data.ClassMask & (int)spellClass) != 0);
-        }
-        else if (GetLandsOnYou(spellData.LandsOnYou, out list) != null)
-        {
-          replaced = list.FirstOrDefault(data => (data.ClassMask & (int)spellClass) != 0);
-        }
+        int spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
+        var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.SELF && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
+        var distinct = subset.Distinct(AbbrvComparer).ToList();
+        replaced = distinct.Count == 1 ? distinct.First() : spell.Ambiguity.First();
       }
 
       return replaced != null;
     }
 
-    internal SpellData GetNonPosessiveLandsOnOther(string value, out List<SpellData> output)
+    internal List<SpellData> GetNonPosessiveLandsOnOther(string player, string value, out List<SpellData> output)
     {
-      SpellData result = null;
+      List<SpellData> result = null;
       if (NonPosessiveLandsOnOthers.TryGetValue(value, out output))
       {
-        result = FindByLandsOn(value, output);
+        result = FindByLandsOn(player, value, output);
       }
       return result;
     }
 
-    internal SpellData GetPosessiveLandsOnOther(string value, out List<SpellData> output)
+    internal List<SpellData> GetPosessiveLandsOnOther(string player, string value, out List<SpellData> output)
     {
-      SpellData result = null;
+      List<SpellData> result = null;
       if (PosessiveLandsOnOthers.TryGetValue(value, out output))
       {
-        result = FindByLandsOn(value, output);
+        result = FindByLandsOn(player, value, output);
       }
       return result;
     }
 
-    internal SpellData GetLandsOnYou(string value, out List<SpellData> output)
+    internal List<SpellData> GetLandsOnYou(string player, string value, out List<SpellData> output)
     {
-      SpellData result = null;
+      List<SpellData> result = null;
       if (LandsOnYou.TryGetValue(value, out output))
       {
-        result = FindByLandsOn(value, output);
+        result = FindByLandsOn(player, value, output);
       }
       return result;
     }
@@ -377,53 +367,59 @@ namespace EQLogParser
       return found; 
     }
 
-    private SpellData FindByLandsOn(string value, List<SpellData> output)
+    private SpellData FindPreviousCast(string player, List<SpellData> output)
     {
-      SpellData result = null;
-      if (output.Count == 1)
+      if (LastSpellIndex > -1)
       {
-        result = output[0];
-      }
-      else if (output.Count > 1)
-      {
-        if (!AllUniqueSpellsCache.TryGetValue(value, out result))
+        var endTime = AllSpellCastBlocks[LastSpellIndex].BeginTime - 5;
+        for (int i = LastSpellIndex; i >= 0 && AllSpellCastBlocks[i].BeginTime >= endTime; i--)
         {
-          result = output.Find(spellData => AllUniqueSpellCasts.ContainsKey(spellData.Name));
-          if (result == null)
-          {
-            // one more thing, if all the abbrviations look the same then we know the spell
-            // even if the version is wrong. grab the last one
-            var distinct = output.Distinct(AbbrvComparer).ToList();
-            if (distinct.Count == 1)
+          for (int j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
+          {         
+            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && output.Find(spellData => spellData == cast.SpellData) is SpellData found)
             {
-              result = distinct.First();
-            }
-            else
-            {
-              bool found = true;
-              var data = distinct.First();
-              foreach (var spell in distinct.Skip(1))
+              if (found.Target != (int)SpellTarget.SELF || cast.Caster == player)
               {
-                if (spell.IsBeneficial != data.IsBeneficial || (spell.ClassMask != 0 && data.ClassMask != 0 && (spell.ClassMask & data.ClassMask) == 0) || spell.Damaging != data.Damaging)
-                {
-                  found = false;
-                  break;
-                }
-              }
-
-              if (found)
-              {
-                result = data;
+                return cast.SpellData;
               }
             }
-          }
-
-          if (result != null)
-          {
-            AllUniqueSpellsCache[value] = result;
           }
         }
       }
+
+      return null;
+    }
+
+    private List<SpellData> FindByLandsOn(string player, string value, List<SpellData> output)
+    {
+      List<SpellData> result = null;
+
+      if (output.Count == 1)
+      {
+        result = output;
+      }
+      else if (output.Count > 1)
+      {
+        var foundSpellData = FindPreviousCast(player, output);
+        if (foundSpellData == null)
+        {
+          // one more thing, if all the abbrviations look the same then we know the spell
+          // even if the version is wrong. grab the newest
+          if (output.Distinct(AbbrvComparer).Count() == 1)
+          {
+            result = new List<SpellData> { output.First() };
+          }
+          else
+          {
+            result = output;
+          }
+        }
+        else
+        {
+          result = new List<SpellData> { foundSpellData };
+        }
+      }
+
       return result;
     }
 
@@ -461,13 +457,12 @@ namespace EQLogParser
     {
       lock (this)
       {
+        LastSpellIndex = -1;
         ActiveFights.Clear();
         LifetimeFights.Clear();
         AllDeathBlocks.Clear();
         AllMiscBlocks.Clear();
         AllSpellCastBlocks.Clear();
-        AllUniqueSpellCasts.Clear();
-        AllUniqueSpellsCache.Clear();
         AllReceivedSpellBlocks.Clear();
         AllResistBlocks.Clear();
         AllHealBlocks.Clear();
