@@ -54,12 +54,13 @@ namespace EQLogParser
     private Dictionary<string, ChartValues<DataPoint>> PlayerValues = new Dictionary<string, ChartValues<DataPoint>>();
     private Dictionary<string, ChartValues<DataPoint>> PetValues = new Dictionary<string, ChartValues<DataPoint>>();
     private Dictionary<string, ChartValues<DataPoint>> RaidValues = new Dictionary<string, ChartValues<DataPoint>>();
+
     private CartesianMapper<DataPoint> CurrentConfig;
     private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected = null;
     private Predicate<object> LastFilter = null;
     private List<ChartValues<DataPoint>> LastSortedValues = null;
-    private Dictionary<string, byte> HasPets = new Dictionary<string, byte>();
+    private Dictionary<string, Dictionary<string, byte>> HasPets = new Dictionary<string, Dictionary<string, byte>>();
 
     public LineChart(List<string> choices, bool includePets = false)
     {
@@ -100,6 +101,7 @@ namespace EQLogParser
       PlayerValues.Clear();
       PetValues.Clear();
       RaidValues.Clear();
+      HasPets.Clear();
       Reset();
     }
 
@@ -170,16 +172,18 @@ namespace EQLogParser
 
           Aggregate(raidData, RaidValues, needRaidAccounting, dataPoint, raidAggregate, firstTime, lastTime, diff);
 
-          var totalName = dataPoint.Name + " +Pets";
+          var playerName = dataPoint.PlayerName == null ? dataPoint.Name : dataPoint.PlayerName;
+          var petName = dataPoint.PlayerName == null ? null : dataPoint.Name;
+          var totalName = playerName + " +Pets";
           if (!totalPlayerData.TryGetValue(totalName, out DataPoint totalAggregate))
           {
-            totalAggregate = new DataPoint() { Name = totalName };
+            totalAggregate = new DataPoint() { Name = totalName, PlayerName = playerName };
             totalPlayerData[totalName] = totalAggregate;
           }
 
           Aggregate(totalPlayerData, PlayerPetValues, needTotalAccounting, dataPoint, totalAggregate, firstTime, lastTime, diff);
 
-          if (dataPoint.IsPet == false)
+          if (dataPoint.PlayerName == null)
           {
             if (!playerData.TryGetValue(dataPoint.Name, out DataPoint aggregate))
             {
@@ -189,10 +193,14 @@ namespace EQLogParser
 
             Aggregate(playerData, PlayerValues, needPlayerAccounting, dataPoint, aggregate, firstTime, lastTime, diff);
           }
-          else if (dataPoint.IsPet == true)
+          else if (dataPoint.PlayerName != null)
           {
-            HasPets[dataPoint.Name + " +Pets"] = 1;
-            var petName = dataPoint.Name + "'s Pets";
+            if (!HasPets.ContainsKey(totalName))
+            {
+              HasPets[totalName] = new Dictionary<string, byte>();
+            }
+
+            HasPets[totalName][petName] = 1;
             if (!petData.TryGetValue(petName, out DataPoint petAggregate))
             {
               petAggregate = new DataPoint() { Name = petName };
@@ -255,19 +263,29 @@ namespace EQLogParser
       LastSelected = selected;
 
       Dictionary<string, ChartValues<DataPoint>> workingData = null;
+
+      string selectedLabel = "Selected Player(s)";
+      string nonSelectedLabel = " Player(s)";
       switch (CurrentPetOrPlayerOption)
       {
         case PETPLAYEROPTION:
           workingData = PlayerPetValues;
+          selectedLabel = "Selected Player +Pets(s)";
+          nonSelectedLabel = " Player +Pets(s)";
           break;
         case PLAYEROPTION:
           workingData = PlayerValues;
           break;
         case PETOPTION:
           workingData = PetValues;
+          selectedLabel = "Selected Pet(s)";
+          nonSelectedLabel = " Pet(s)";
           break;
         case RAIDOPTION:
           workingData = RaidValues;
+          break;
+        default:
+          workingData = new Dictionary<string, ChartValues<DataPoint>>();
           break;
       }
 
@@ -280,14 +298,28 @@ namespace EQLogParser
       }
       else if (selected == null || selected.Count == 0)
       {
-        sortedValues = workingData.Values.Where(values => filter == null || filter(values.First())).OrderByDescending(values => values.Last().Total).Take(5).ToList();
-        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + " Player(s)" : Labels.NODATA;
+        sortedValues = workingData.Values.Where(values => PassFilter(filter, values)).OrderByDescending(values => values.Last().Total).Take(5).ToList();
+        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + nonSelectedLabel : Labels.NODATA;
       }
       else
       {
-        List<string> names = selected.Select(stats => stats.OrigName).Take(10).ToList();
-        sortedValues = workingData.Values.Where(values => names.FirstOrDefault(name => values.First().Name.Contains(name)) != null).ToList();
-        label = sortedValues.Count > 0 ? "Selected Player(s)" : Labels.NODATA;
+        List<string> names = selected.Select(stats => stats.OrigName).ToList();
+        sortedValues = workingData.Values.Where(values =>
+        {
+          bool pass = false;
+          var first = values.First();
+          if (CurrentPetOrPlayerOption == PETPLAYEROPTION)
+          {
+            pass = names.Contains(first.PlayerName) || (HasPets.ContainsKey(first.Name) && names.FirstOrDefault(name => HasPets[first.Name].ContainsKey(name)) != null);
+          }
+          else
+          {
+            pass = names.Contains(first.Name);
+          }
+          return pass;
+        }).Take(10).ToList();
+
+        label = sortedValues.Count > 0 ? selectedLabel : Labels.NODATA;
       }
 
       LastSortedValues = sortedValues = Smoothing(sortedValues);
@@ -305,8 +337,8 @@ namespace EQLogParser
 
           foreach (var value in sortedValues)
           {
-            var temp = value.First().Name;
-            var name = CurrentPetOrPlayerOption == PETPLAYEROPTION && !HasPets.ContainsKey(temp) ? temp.Split(' ')[0] : temp;
+            var name = value.First().Name;
+            name = CurrentPetOrPlayerOption == PETPLAYEROPTION && !HasPets.ContainsKey(name) ? name.Split(' ')[0] : name;
             var series = new LineSeries() { Title = name, Values = value };
 
             if (value.Count > 1)
@@ -351,6 +383,26 @@ namespace EQLogParser
           lvcChart.Series = collection;
         }
       });
+    }
+
+    private bool PassFilter(Predicate<object> filter, ChartValues<DataPoint> values)
+    {
+      bool pass = filter == null;
+
+      if (!pass)
+      {
+        var first = values.First();
+        if (CurrentPetOrPlayerOption == PETPLAYEROPTION)
+        {
+          pass = filter(first.PlayerName) || (HasPets.ContainsKey(first.Name) && filter(HasPets[first.Name]));
+        }
+        else
+        {
+          pass = filter(first.Name);
+        }
+      }
+
+      return pass;
     }
 
     private void Plot(Predicate<object> filter)
@@ -502,6 +554,7 @@ namespace EQLogParser
       DataPoint newEntry = new DataPoint
       {
         Name = aggregate.Name,
+        PlayerName = aggregate.PlayerName,
         CurrentTime = aggregate.CurrentTime,
         Total = aggregate.Total
       };

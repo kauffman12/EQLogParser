@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -23,6 +24,7 @@ namespace EQLogParser
     private List<DataGrid> ChildGrids = new List<DataGrid>();
     private string CurrentClass = null;
     private int CurrentGroupCount = 0;
+    private bool CurrentCombinePets = true;
 
     public DamageSummary()
     {
@@ -80,8 +82,7 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              var view = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
-              dataGrid.ItemsSource = SetFilter(view);
+              UpdateView();
             }
 
             if (!MainWindow.IsBaneDamageEnabled)
@@ -246,7 +247,7 @@ namespace EQLogParser
     {
       string selectedName = "Unknown";
 
-      if (CurrentStats?.StatsList?.Count > 0)
+      if (CurrentStats?.ExpandedStatsList?.Count > 0)
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
@@ -286,9 +287,9 @@ namespace EQLogParser
           {
             className = playerStats.ClassName;
           }
-          else if (stats is DataPoint dataPoint)
+          else if (stats is string name)
           {
-            className = PlayerManager.Instance.GetPlayerClass(dataPoint.Name);
+            className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
@@ -305,10 +306,33 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.DAMAGEPARSE);
     }
 
+    private void UpdateView()
+    {
+      if (dataGrid != null && CurrentStats?.ExpandedStatsList != null)
+      {
+        combinePets.IsEnabled = classesList.IsEnabled = false;
+        Task.Delay(20).ContinueWith(task =>
+        {
+          Dispatcher.InvokeAsync(() =>
+          {
+            var view = CollectionViewSource.GetDefaultView(CurrentCombinePets ? CurrentStats.StatsList : CurrentStats.ExpandedStatsList);
+            dataGrid.ItemsSource = SetFilter(view);
+            combinePets.IsEnabled = classesList.IsEnabled = true;
+          });
+        });
+      }
+    }
+
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
       SetFilter(dataGrid?.ItemsSource as ICollectionView);
+    }
+
+    private void CheckedOptionsChanged(object sender, RoutedEventArgs e)
+    {
+      CurrentCombinePets = combinePets.IsChecked.Value;
+      UpdateView();
     }
 
     #region IDisposable Support
@@ -316,6 +340,8 @@ namespace EQLogParser
 
     protected virtual void Dispose(bool disposing)
     {
+      DamageStatsManager.Instance.FireUpdateEvent(new GenerateStatsOptions() { RequestChartData = true });
+
       if (!disposedValue)
       {
         if (disposing)

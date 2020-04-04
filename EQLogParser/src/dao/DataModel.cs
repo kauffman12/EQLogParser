@@ -367,6 +367,7 @@ namespace EQLogParser
     public string FullTitle { get; set; }
     public string ShortTitle { get; set; }
     public List<PlayerStats> StatsList { get; } = new List<PlayerStats>();
+    public List<PlayerStats> ExpandedStatsList { get; } = new List<PlayerStats>();
     public PlayerStats RaidStats { get; set; }
     public Dictionary<string, byte> UniqueClasses { get; } = new Dictionary<string, byte>();
     public Dictionary<string, List<PlayerStats>> Children { get; } = new Dictionary<string, List<PlayerStats>>();
@@ -383,8 +384,8 @@ namespace EQLogParser
   public class DataPoint
   {
     public long Avg { get; set; }
-    public bool IsPet { get; set; }
     public string Name { get; set; }
+    public string PlayerName { get; set; }
     public int ModifiersMask { get; set; }
     public long Total { get; set; }
     public long RollingTotal { get; set; }

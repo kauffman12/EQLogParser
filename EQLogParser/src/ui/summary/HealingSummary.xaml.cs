@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -23,6 +24,7 @@ namespace EQLogParser
 
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, "All Classes");
+      list.Remove(Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), SpellClass.PET), CultureInfo.CurrentCulture));
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
@@ -147,9 +149,9 @@ namespace EQLogParser
           {
             className = playerStats.ClassName;
           }
-          else if (stats is DataPoint dataPoint)
+          else if (stats is string name)
           {
-            className = PlayerManager.Instance.GetPlayerClass(dataPoint.Name);
+            className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
@@ -182,6 +184,8 @@ namespace EQLogParser
 
     protected virtual void Dispose(bool disposing)
     {
+      HealingStatsManager.Instance.FireUpdateEvent(new GenerateStatsOptions() { RequestChartData = true });
+
       if (!disposedValue)
       {
         if (disposing)

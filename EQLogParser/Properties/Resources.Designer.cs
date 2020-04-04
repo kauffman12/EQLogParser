@@ -214,6 +214,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Pet.
+        /// </summary>
+        internal static string PET {
+            get {
+                return ResourceManager.GetString("PET", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Ranger.
         /// </summary>
         internal static string RNG {
