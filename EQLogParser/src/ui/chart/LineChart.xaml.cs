@@ -44,19 +44,24 @@ namespace EQLogParser
       CONFIG_VPS, CONFIG_TOTAL, CONFIG_AVG, CONFIG_CRIT_RATE
     };
 
+    private const string PETPLAYEROPTION = "Players +Pets";
+    private const string PLAYEROPTION = "Players";
+    private const string PETOPTION = "Pets";
+    private const string RAIDOPTION = "Raid Totals";
+
     private DateTime ChartModifiedTime;
     private Dictionary<string, ChartValues<DataPoint>> PlayerPetValues = new Dictionary<string, ChartValues<DataPoint>>();
     private Dictionary<string, ChartValues<DataPoint>> PlayerValues = new Dictionary<string, ChartValues<DataPoint>>();
     private Dictionary<string, ChartValues<DataPoint>> PetValues = new Dictionary<string, ChartValues<DataPoint>>();
     private Dictionary<string, ChartValues<DataPoint>> RaidValues = new Dictionary<string, ChartValues<DataPoint>>();
     private CartesianMapper<DataPoint> CurrentConfig;
-    private int CurrentPetOrPlayerIndex = 0;
+    private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected = null;
     private Predicate<object> LastFilter = null;
     private List<ChartValues<DataPoint>> LastSortedValues = null;
     private Dictionary<string, byte> HasPets = new Dictionary<string, byte>();
 
-    public LineChart(List<string> choices)
+    public LineChart(List<string> choices, bool includePets = false)
     {
       InitializeComponent();
 
@@ -74,8 +79,18 @@ namespace EQLogParser
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
 
-      petOrPlayerList.ItemsSource = new List<string> { "Players +Pets", "Players", "Pets", "Raid Totals" };
-      petOrPlayerList.SelectedIndex = CurrentPetOrPlayerIndex;
+      if (includePets)
+      {
+        petOrPlayerList.ItemsSource = new List<string> { PETPLAYEROPTION, PLAYEROPTION, PETOPTION, RAIDOPTION };
+      }
+      else
+      {
+        petOrPlayerList.ItemsSource = new List<string> { PLAYEROPTION, RAIDOPTION };
+      }
+
+      petOrPlayerList.SelectedIndex = 0;
+      CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
+
       Reset();
     }
 
@@ -240,25 +255,25 @@ namespace EQLogParser
       LastSelected = selected;
 
       Dictionary<string, ChartValues<DataPoint>> workingData = null;
-      switch (CurrentPetOrPlayerIndex)
+      switch (CurrentPetOrPlayerOption)
       {
-        case 0:
+        case PETPLAYEROPTION:
           workingData = PlayerPetValues;
           break;
-        case 1:
+        case PLAYEROPTION:
           workingData = PlayerValues;
           break;
-        case 2:
+        case PETOPTION:
           workingData = PetValues;
           break;
-        case 3:
+        case RAIDOPTION:
           workingData = RaidValues;
           break;
       }
 
       string label;
       List<ChartValues<DataPoint>> sortedValues;
-      if (CurrentPetOrPlayerIndex == 3)
+      if (CurrentPetOrPlayerOption == RAIDOPTION)
       {
         sortedValues = workingData.Values.ToList();
         label = sortedValues.Count > 0 ? "Raid Totals" : Labels.NODATA;
@@ -291,7 +306,7 @@ namespace EQLogParser
           foreach (var value in sortedValues)
           {
             var temp = value.First().Name;
-            var name = CurrentPetOrPlayerIndex == 0 && !HasPets.ContainsKey(temp) ? temp.Split(' ')[0] : temp;
+            var name = CurrentPetOrPlayerOption == PETPLAYEROPTION && !HasPets.ContainsKey(temp) ? temp.Split(' ')[0] : temp;
             var series = new LineSeries() { Title = name, Values = value };
 
             if (value.Count > 1)
@@ -396,7 +411,7 @@ namespace EQLogParser
       if (PlayerPetValues.Count > 0)
       {
         CurrentConfig = CHOICES[choicesList.SelectedIndex];
-        CurrentPetOrPlayerIndex = petOrPlayerList.SelectedIndex;
+        CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
         Plot(DateTime.Now, LastSelected, LastFilter);
       }
     }
