@@ -87,6 +87,12 @@ namespace EQLogParser
       }
     }
 
+    internal string GetClassName(SpellClass spellClass)
+    {
+      ClassNames.TryGetValue(spellClass, out string name);
+      return name;
+    }
+
     internal List<string> GetClassList()
     {
       var list = ClassNames.Values.ToList();
@@ -98,9 +104,16 @@ namespace EQLogParser
     {
       string className = "";
 
-      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+      if (!string.IsNullOrEmpty(name))
       {
-        className = ClassNames[counter.CurrentClass];
+        if (PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+        {
+          className = ClassNames[counter.CurrentClass];
+        }
+        else if (IsVerifiedPet(name))
+        {
+          className = ClassNames[SpellClass.PET];
+        }
       }
 
       return className;

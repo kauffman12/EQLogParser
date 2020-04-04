@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace EQLogParser
 {
@@ -531,6 +532,7 @@ namespace EQLogParser
               // get special field
               var specials = StatsUtil.GetSpecials(RaidTotals);
 
+              var expandedStats = new ConcurrentBag<PlayerStats>();
               Parallel.ForEach(individualStats.Values, stats =>
               {
                 if (topLevelStats.TryGetValue(stats.Name, out PlayerStats topLevel))
@@ -539,6 +541,7 @@ namespace EQLogParser
                   {
                     foreach (var child in children.Values)
                     {
+                      expandedStats.Add(child);
                       StatsUtil.UpdateCalculations(child, RaidTotals, resistCounts);
 
                       if (stats.Total > 0)
@@ -551,6 +554,10 @@ namespace EQLogParser
                         child.Special = special1;
                       }
                     }
+                  }
+                  else
+                  {
+                    expandedStats.Add(stats);
                   }
 
                   StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
@@ -573,15 +580,20 @@ namespace EQLogParser
               combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
               combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
               combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
+              combined.ExpandedStatsList.AddRange(expandedStats.AsParallel().OrderByDescending(item => item.Total));
 
-              for (int i = 0; i < combined.StatsList.Count; i++)
+              for (int i = 0; i < combined.ExpandedStatsList.Count; i++)
               {
-                combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
-                combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
-
-                if (childrenStats.TryGetValue(combined.StatsList[i].Name, out Dictionary<string, PlayerStats> children))
+                combined.ExpandedStatsList[i].Rank = Convert.ToUInt16(i + 1);
+                if (combined.StatsList.Count > i)
                 {
-                  combined.Children.Add(combined.StatsList[i].Name, children.Values.OrderByDescending(stats => stats.Total).ToList());
+                  combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
+                  combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
+
+                  if (childrenStats.TryGetValue(combined.StatsList[i].Name, out Dictionary<string, PlayerStats> children))
+                  {
+                    combined.Children.Add(combined.StatsList[i].Name, children.Values.OrderByDescending(stats => stats.Total).ToList());
+                  }
                 }
               }
             }
@@ -593,6 +605,10 @@ namespace EQLogParser
           catch (AggregateException agx)
           {
             LOG.Error(agx);
+          }
+          catch (NullReferenceException nre)
+          {
+            LOG.Error(nre);
           }
 
           FireCompletedEvent(options, combined, DamageGroups);
