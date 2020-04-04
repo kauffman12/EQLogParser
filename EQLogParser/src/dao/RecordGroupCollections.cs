@@ -21,16 +21,14 @@ namespace EQLogParser
 
       if (wrapper?.Record is DamageRecord record)
       {
-        string attacker = record.Attacker;
+        string origName = null;
         string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
-        bool isPet = false;
-        if (pname != null || (!string.IsNullOrEmpty(record.AttackerOwner) && !string.IsNullOrEmpty((pname = record.AttackerOwner))))
+        if (pname != null || (!string.IsNullOrEmpty(record.AttackerOwner) && !string.IsNullOrEmpty(pname = record.AttackerOwner)))
         {
-          isPet = true;
-          attacker = pname;
+          origName = pname;
         }
 
-        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = attacker, IsPet = isPet, CurrentTime = wrapper.BeginTime };
+        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = record.Attacker, PlayerName = origName, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;

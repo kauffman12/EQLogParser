@@ -203,19 +203,14 @@ namespace EQLogParser
             name = playerStats.Name;
             className = playerStats.ClassName;
           }
-          else if (stats is DataPoint dataPoint)
+          else if (stats is string dataPointName)
           {
-            name = dataPoint.Name;
+            name = dataPointName;
             className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
           var isPet = PlayerManager.Instance.IsVerifiedPet(name);
           if (isPet && CurrentPetValue == false)
-          {
-            return false;
-          }
-
-          if (!string.IsNullOrEmpty(CurrentClass) && isPet)
           {
             return false;
           }
@@ -256,6 +251,8 @@ namespace EQLogParser
 
     protected virtual void Dispose(bool disposing)
     {
+      TankingStatsManager.Instance.FireUpdateEvent(new GenerateStatsOptions() { RequestChartData = true });
+
       if (!disposedValue)
       {
         if (disposing)

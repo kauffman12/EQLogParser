@@ -20,7 +20,9 @@
       <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,4,0" x:Name="classesList" Height="24" SelectionChanged="ListSelectionChanged" />
+      <CheckBox x:Name="combinePets" IsChecked="True" Margin="4,0,4,0" VerticalAlignment="Center" IsEnabled="True" ToolTip="Includes Pet damage with that of their owner" VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Combine Pets</CheckBox>
+      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
+      <ComboBox Margin="4,0,4,0" x:Name="classesList" Height="24" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"
       Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGridSelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
