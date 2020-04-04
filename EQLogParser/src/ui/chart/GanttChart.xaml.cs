@@ -29,6 +29,7 @@ namespace EQLogParser
     private List<Rectangle> Dividers = new List<Rectangle>();
     private List<TextBlock> Headers = new List<TextBlock>();
     private Dictionary<string, byte> SelfOnly = new Dictionary<string, byte>();
+    private Dictionary<string, byte> SelfOnlyOverride = new Dictionary<string, byte>();
     private List<PlayerStats> Selected;
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowCasterAdps = true;
@@ -42,8 +43,8 @@ namespace EQLogParser
       InitializeComponent();
 
       Selected = selected;
-      StartTime = groups.Min(group => group.First().BeginTime) - DataManager.BUFFS_OFFSET;
-      EndTime = groups.Max(group => group.Last().BeginTime) + 1;
+      StartTime = groups.Min(block => block.First().BeginTime) - DataManager.BUFFS_OFFSET;
+      EndTime = groups.Max(block => block.Last().BeginTime) + 1;
       Length = EndTime - StartTime;
 
       switch (Selected.Count)
@@ -63,51 +64,50 @@ namespace EQLogParser
         var player = Selected[i].OrigName;
         var spellClass = PlayerManager.Instance.GetPlayerClassEnum(player);
 
-        DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime).ForEach(group =>
+        var allSpells = new List<ActionBlock>();
+        allSpells.AddRange(DataManager.Instance.GetCastsDuring(StartTime, EndTime));
+        allSpells.AddRange(DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime));
+
+        foreach (var block in allSpells.OrderBy(block => block.BeginTime).ThenBy(block => (block.Actions.Count > 0 && block.Actions[0] is ReceivedSpell) ? 1 : -1))
         {
-          foreach (var action in group.Actions.Where(action => action is ReceivedSpell spell && spell.Receiver == player))
+          foreach (var action in block.Actions)
           {
-            var received = action as ReceivedSpell;
-            var spellData = received.SpellData;
-
-            if (spellData == null && received.Ambiguity != null && DataManager.Instance.ResolveSpellAmbiguity(received, out SpellData replaced))
+            if (action is SpellCast cast && cast.Caster == player && cast.SpellData != null && cast.SpellData.Target == (int) SpellTarget.SELF &&
+              cast.SpellData.Adps > 0 && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800))
             {
-              spellData = replaced;
+              if (string.IsNullOrEmpty(cast.SpellData.LandsOnOther))
+              {
+                SelfOnlyOverride[cast.SpellData.NameAbbrv] = 1;
+
+                if (SelfOnly.ContainsKey(cast.SpellData.NameAbbrv))
+                {
+                  SelfOnly.Remove(cast.SpellData.NameAbbrv);
+                }
+              }
+
+              UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i]);
             }
+            else if (action is ReceivedSpell received && received.Receiver == player)
+            {
+              var spellData = received.SpellData;
 
-            if (spellData != null && spellData.Adps > 0 && (spellData.MaxHits > 0 || spellData.Duration <= 1800))
-            {         
-              var spellName = spellData.NameAbbrv;
-
-              if (string.IsNullOrEmpty(spellData.LandsOnOther))
+              if (spellData == null && received.Ambiguity != null && DataManager.Instance.ResolveSpellAmbiguity(received, out SpellData replaced))
               {
-                SelfOnly[spellName] = 1;
+                spellData = replaced;
               }
 
-              if (!SpellRanges.TryGetValue(spellName, out SpellRange spellRange))
+              if (spellData != null && spellData.Adps > 0 && (spellData.MaxHits > 0 || spellData.Duration <= 1800))
               {
-                spellRange = new SpellRange() { Adps = spellData.Adps };
-                var duration = GetDuration(spellData, EndTime, group.BeginTime);
-                spellRange.Ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
-                SpellRanges[spellName] = spellRange;
-              }
-              else
-              {
-                var last = spellRange.Ranges.LastOrDefault(range => range.BlockBrush == BlockBrushes[i]);
-                var offsetSeconds = (int)(group.BeginTime - StartTime);
-                if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+                if (string.IsNullOrEmpty(spellData.LandsOnOther) && !SelfOnlyOverride.ContainsKey(spellData.NameAbbrv))
                 {
-                  last.Duration = GetDuration(spellData, EndTime, group.BeginTime) + (offsetSeconds - last.BeginSeconds);
+                  SelfOnly[spellData.NameAbbrv] = 1;
                 }
-                else
-                {
-                  var duration = GetDuration(spellData, EndTime, group.BeginTime);
-                  spellRange.Ranges.Add(new TimeRange() { BlockBrush = BlockBrushes[i], BeginSeconds = (int)(group.BeginTime - StartTime), Duration = duration });
-                }
+
+                UpdateSpellRange(spellData, block.BeginTime, BlockBrushes[i]);
               }
             }
           }
-        });
+        }
       }
 
       showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = SpellRanges.Count > 0;
@@ -124,6 +124,31 @@ namespace EQLogParser
       }
 
       Display();
+    }
+
+    private void UpdateSpellRange(SpellData spellData, double beginTime, Brush brush)
+    {
+      if (!SpellRanges.TryGetValue(spellData.NameAbbrv, out SpellRange spellRange))
+      {
+        spellRange = new SpellRange() { Adps = spellData.Adps };
+        var duration = GetDuration(spellData, EndTime, beginTime);
+        spellRange.Ranges.Add(new TimeRange() { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
+        SpellRanges[spellData.NameAbbrv] = spellRange;
+      }
+      else
+      {
+        var last = spellRange.Ranges.LastOrDefault(range => range.BlockBrush == brush);
+        var offsetSeconds = (int)(beginTime - StartTime);
+        if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+        {
+          last.Duration = GetDuration(spellData, EndTime, beginTime) + (offsetSeconds - last.BeginSeconds);
+        }
+        else
+        {
+          var duration = GetDuration(spellData, EndTime, beginTime);
+          spellRange.Ranges.Add(new TimeRange() { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
+        }
+      }
     }
 
     private void CreateImageClick(object sender, RoutedEventArgs e)
