@@ -45,7 +45,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.6.50";
+    private const string VERSION = "v1.6.51";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -572,7 +572,8 @@ namespace EQLogParser
       }
     }
 
-    private bool OpenLineChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title, List<string> choices, out DocumentWindow newWindow)
+    private bool OpenLineChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title, 
+      List<string> choices, bool includePets, out DocumentWindow newWindow)
     {
       bool updated = false;
       newWindow = window;
@@ -585,7 +586,7 @@ namespace EQLogParser
       else
       {
         updated = true;
-        var chart = new LineChart(choices);
+        var chart = new LineChart(choices, includePets);
         newWindow = new DocumentWindow(dockSite, title, title, null, chart);
         IconToWindow[icon.Name] = newWindow;
 
@@ -608,7 +609,7 @@ namespace EQLogParser
 
     private void OpenDamageChart()
     {
-      if (OpenLineChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, out DamageChartWindow))
+      if (OpenLineChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, true, out DamageChartWindow))
       {
         var summary = DamageWindow?.Content as DamageSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
@@ -618,7 +619,7 @@ namespace EQLogParser
 
     private void OpenHealingChart()
     {
-      if (OpenLineChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, out HealingChartWindow))
+      if (OpenLineChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, false, out HealingChartWindow))
       {
         var summary = HealingWindow?.Content as HealingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
@@ -628,7 +629,7 @@ namespace EQLogParser
 
     private void OpenTankingChart()
     {
-      if (OpenLineChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, out TankingChartWindow))
+      if (OpenLineChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, false, out TankingChartWindow))
       {
         var summary = TankingWindow?.Content as TankingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
