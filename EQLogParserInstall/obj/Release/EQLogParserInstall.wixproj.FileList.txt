@@ -1,6 +1,0 @@
-C:\Users\john\code\github\EQLogParser\EQLogParserInstall\bin\Release\EQLogParser.msi
-C:\Users\john\code\github\EQLogParser\EQLogParserInstall\bin\Release\EQLogParser.wixpdb
-obj\Release\Product.wixobj
-obj\Release\EQLogParserInstall.wixproj.BindContentsFileListnull.txt
-obj\Release\EQLogParserInstall.wixproj.BindOutputsFileListnull.txt
-obj\Release\EQLogParserInstall.wixproj.BindBuiltOutputsFileListnull.txt

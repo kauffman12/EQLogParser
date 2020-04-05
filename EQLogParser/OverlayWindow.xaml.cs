@@ -21,9 +21,10 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public static SolidColorBrush TEXT_BRUSH = new SolidColorBrush(Colors.White);
+    private static SolidColorBrush TEXT_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush UP_BRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush DOWN_BRUSH = new SolidColorBrush(Colors.Red);
+    private static SolidColorBrush TITLE_BRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
     private static object StatsLock = new object();
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
@@ -32,17 +33,18 @@ namespace EQLogParser
 
     private OverlayDamageStats Stats = null;
     private DispatcherTimer UpdateTimer;
-    private long HitRate = 0;
-    private double LastUpdate = double.NaN;
     private double CalculatedRowHeight = 0;
     private bool Active = false;
     private bool ProcessDirection = false;
 
     private Popup ButtonPopup;
-    private StackPanel TitlePanel;
+    private StackPanel ButtonsPanel;
     private TextBlock TitleBlock;
+    private StackPanel TitlePanel;
     private TextBlock TitleDamageBlock;
+    private StackPanel TitleDamagePanel;
     private Rectangle TitleRectangle;
+    private List<StackPanel> NamePanels = new List<StackPanel>();
     private List<TextBlock> NameBlockList = new List<TextBlock>();
     private List<StackPanel> DamagePanels = new List<StackPanel>();
     private List<TextBlock> DamageBlockList = new List<TextBlock>();
@@ -163,18 +165,11 @@ namespace EQLogParser
 
       if (!configure)
       {
-        var settingsButton = CreateButton();
-        settingsButton.ToolTip = new ToolTip { Content = "Change Settings" };
-        settingsButton.Margin = new Thickness(8, 1, 0, 0);
-        settingsButton.Content = "\xE713";
-        settingsButton.FontSize = currentFontSize - 1;
+        var settingsButton = CreateButton("Change Settings", "\xE713", currentFontSize - 1);
         settingsButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
+        settingsButton.Margin = new Thickness(4, 0, 0, 0);
 
-        var copyButton = CreateButton();
-        copyButton.ToolTip = new ToolTip { Content = "Copy Parse" };
-        copyButton.Margin = new Thickness(4, 1, 0, 0);
-        copyButton.Content = "\xE8C8";
-        copyButton.FontSize = currentFontSize - 1;
+        var copyButton = CreateButton("Copy Parse", "\xE8C8", currentFontSize - 1);
         copyButton.Click += (object sender, RoutedEventArgs e) =>
         {
           lock (Stats)
@@ -183,26 +178,33 @@ namespace EQLogParser
           }
         };
 
-        var refreshButton = CreateButton();
-        refreshButton.ToolTip = new ToolTip { Content = "Cancel Current Parse" };
-        refreshButton.Margin = new Thickness(4, 1, 0, 0);
-        refreshButton.Content = "\xE8BB";
-        refreshButton.FontSize = currentFontSize - 2;
+        var refreshButton = CreateButton("Cancel Current Parse", "\xE8BB", currentFontSize - 1);
         refreshButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.ResetOverlay();
 
         ButtonPopup = new Popup();
-        StackPanel btns = new StackPanel { Orientation = Orientation.Horizontal };
-        btns.Children.Add(settingsButton);
-        btns.Children.Add(copyButton);
-        btns.Children.Add(refreshButton);
-        ButtonPopup.Child = btns;
-        ButtonPopup.Height = currentFontSize + 2;
-        ButtonPopup.Width = 80;
+        ButtonsPanel = CreateNameStackPanel();
+        ButtonsPanel.Children.Add(settingsButton);
+        ButtonsPanel.Children.Add(copyButton);
+        ButtonsPanel.Children.Add(refreshButton);
+        ButtonPopup.Child = ButtonsPanel;
         ButtonPopup.AllowsTransparency = true;
         ButtonPopup.Opacity = 0.3;
-        ButtonPopup.HorizontalOffset = 4;
-        ButtonPopup.Placement = PlacementMode.Right;
-        ButtonPopup.PlacementTarget = TitleBlock;
+        ButtonPopup.Placement = PlacementMode.Relative;
+        ButtonPopup.PlacementTarget = this;
+        ButtonPopup.VerticalOffset = -1;
+
+        ButtonsPanel.SizeChanged += (object sender, SizeChangedEventArgs e) =>
+        {
+          if (TitlePanel.Margin.Left != e.NewSize.Width + 2)
+          {
+            TitlePanel.Margin = new Thickness(e.NewSize.Width + 2, TitlePanel.Margin.Top, 0, TitlePanel.Margin.Bottom);
+          }
+
+          if (ButtonsPanel != null && ButtonsPanel.ActualHeight != TitlePanel.ActualHeight)
+          {
+            ButtonsPanel.Height = TitlePanel.ActualHeight;
+          }
+        };
       }
     }
 
@@ -226,22 +228,11 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
-        if (double.IsNaN(LastUpdate) || e.BeginTime - LastUpdate >= 1)
-        {
-          HitRate = 1;
-        }
-        else
-        {
-          HitRate++;
-        }
-
         Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
         if (UpdateTimer != null && !UpdateTimer.IsEnabled)
         {
           UpdateTimer.Start();
         }
-
-        LastUpdate = e.BeginTime;
       }
     }
 
@@ -273,7 +264,7 @@ namespace EQLogParser
             windowBrush.Opacity = 0.0;
             ButtonPopup.IsOpen = false;
             SetVisible(false);
-            this.Height = 0;
+            Height = 0;
             Stats = null;
             PrevList = null;
             UpdateTimer.Stop();
@@ -284,7 +275,8 @@ namespace EQLogParser
             if (list.Count > 0)
             {
               TitleBlock.Text = Stats.TargetTitle;
-              TitleDamageBlock.Text = string.Format("{0}/s   {1} [{2}s @{3}]", HitRate, StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
+              TitleDamageBlock.Text = string.Format("{0} [{1}s @{2}]", StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
+              //TitleDamageBlock.Text = string.Format("{0}/s   {1} [{2}s @{3}]", HitRate, StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
 
               long total = 0;
               int goodRowCount = 0;
@@ -375,27 +367,24 @@ namespace EQLogParser
               }
 
               var requested = (goodRowCount + 1) * CalculatedRowHeight;
-              if (this.ActualHeight != requested)
+              if (ActualHeight != requested)
               {
-                this.Height = requested;
+                Height = requested;
               }
 
               if (overlayCanvas.Visibility != Visibility.Visible)
               {
                 overlayCanvas.Visibility = Visibility.Hidden;
-                TitlePanel.Visibility = Visibility.Hidden;
                 TitleRectangle.Visibility = Visibility.Hidden;
-                TitleBlock.Visibility = Visibility.Hidden;
-                TitleDamageBlock.Visibility = Visibility.Hidden;
-                TitlePanel.Height = CalculatedRowHeight;
+                TitlePanel.Visibility = Visibility.Hidden;
+                TitleDamagePanel.Visibility = Visibility.Hidden;
                 TitleRectangle.Height = CalculatedRowHeight;
-                TitleDamageBlock.Height = CalculatedRowHeight;
-                TitleBlock.Height = CalculatedRowHeight;
+                TitleDamagePanel.Height = CalculatedRowHeight;
+                TitlePanel.Height = CalculatedRowHeight;
                 overlayCanvas.Visibility = Visibility.Visible;
-                TitlePanel.Visibility = Visibility.Visible;
                 TitleRectangle.Visibility = Visibility.Visible;
-                TitleBlock.Visibility = Visibility.Visible;
-                TitleDamageBlock.Visibility = Visibility.Visible;
+                TitlePanel.Visibility = Visibility.Visible;
+                TitleDamagePanel.Visibility = Visibility.Visible;
                 windowBrush.Opacity = OPACITY;
                 ButtonPopup.IsOpen = true;
               }
@@ -421,13 +410,14 @@ namespace EQLogParser
       if (visible)
       {
         DamagePanels[index].Height = CalculatedRowHeight;
-        NameBlockList[index].Height = CalculatedRowHeight;
+        NamePanels[index].Height = CalculatedRowHeight;
         RectangleList[index].Height = CalculatedRowHeight;
         DamagePanels[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
-        NameBlockList[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
+        NamePanels[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
         RectangleList[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
       }
 
+      NamePanels[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       NameBlockList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       DamagePanels[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       DamageRateList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
@@ -452,7 +442,7 @@ namespace EQLogParser
 
       SetSize(TitleRectangle, rowHeight, width);
       SetSize(TitlePanel, rowHeight, double.NaN);
-      SetSize(TitleDamageBlock, rowHeight, double.NaN);
+      SetSize(TitleDamagePanel, rowHeight, double.NaN);
 
       SetSize(configPanel, rowHeight, double.NaN);
       configPanel.SetValue(Canvas.TopProperty, rowHeight * MAX_ROWS);
@@ -462,17 +452,13 @@ namespace EQLogParser
         for (int i = 0; i < MAX_ROWS; i++)
         {
           SetSize(RectangleList[i], rowHeight, width);
-          SetSize(NameBlockList[i], rowHeight, double.NaN);
+          SetSize(NamePanels[i], rowHeight, double.NaN);
           SetSize(DamagePanels[i], rowHeight, double.NaN);
-          SetSize(DamageRateList[i], rowHeight, double.NaN);
-          SetSize(DamageBlockList[i], rowHeight, double.NaN);
 
           double pos = rowHeight * (i + 1);
           RectangleList[i].SetValue(Canvas.TopProperty, pos);
-          NameBlockList[i].SetValue(Canvas.TopProperty, pos);
+          NamePanels[i].SetValue(Canvas.TopProperty, pos);
           DamagePanels[i].SetValue(Canvas.TopProperty, pos);
-          DamageRateList[i].SetValue(Canvas.TopProperty, pos);
-          DamageBlockList[i].SetValue(Canvas.TopProperty, pos);
         }
       }
     }
@@ -485,28 +471,22 @@ namespace EQLogParser
       TitleRectangle = CreateRectangle(configure, TitleColorList);
       overlayCanvas.Children.Add(TitleRectangle);
 
-      TitlePanel = new StackPanel { Orientation = Orientation.Horizontal };
-      TitlePanel.SetValue(Canvas.LeftProperty, 5.0);
-      TitlePanel.SetValue(Panel.ZIndexProperty, 2);
-
+      TitlePanel = CreateNameStackPanel();
       TitleBlock = CreateTextBlock();
-
-      if (!configure)
-      {
-        TitleBlock.SizeChanged += (object sender, SizeChangedEventArgs e) =>
-        {
-          // trigger placement event for popup
-          ButtonPopup.HorizontalOffset += 1;
-          ButtonPopup.HorizontalOffset -= 1;
-        };
-      }
-
+      TitleBlock.Foreground = TITLE_BRUSH;
       TitlePanel.Children.Add(TitleBlock);
       overlayCanvas.Children.Add(TitlePanel);
 
+      TitleDamagePanel = CreateDamageStackPanel();
       TitleDamageBlock = CreateTextBlock();
-      TitleDamageBlock.SetValue(Canvas.RightProperty, 5.0);
-      overlayCanvas.Children.Add(TitleDamageBlock);
+      TitleDamagePanel.Children.Add(TitleDamageBlock);
+      overlayCanvas.Children.Add(TitleDamagePanel);
+
+      if (!configure)
+      {
+        TitlePanel.SizeChanged += TitleResizing;
+        TitleDamagePanel.SizeChanged += TitleResizing;
+      }
 
       for (int i = 0; i < MAX_ROWS; i++)
       {
@@ -514,25 +494,41 @@ namespace EQLogParser
         RectangleList.Add(rectangle);
         overlayCanvas.Children.Add(rectangle);
 
+        var nameStack = CreateNameStackPanel();
+        NamePanels.Add(nameStack);
+
         var nameBlock = CreateTextBlock();
         nameBlock.SetValue(Canvas.LeftProperty, 5.0);
         NameBlockList.Add(nameBlock);
-        overlayCanvas.Children.Add(nameBlock);
+        nameStack.Children.Add(nameBlock);
+        overlayCanvas.Children.Add(nameStack);
 
-        var stack = new StackPanel { Orientation = Orientation.Horizontal };
-        stack.SetValue(Panel.ZIndexProperty, 3);
-        stack.SetValue(Canvas.RightProperty, 5.0);
-        DamagePanels.Add(stack);
+        var damageStack = CreateDamageStackPanel();
+        DamagePanels.Add(damageStack);
 
         var damageRate = CreateImageAwesome();
         DamageRateList.Add(damageRate);
-        stack.Children.Add(damageRate);
+        damageStack.Children.Add(damageRate);
 
         var damageBlock = CreateTextBlock();
-        damageBlock.SetValue(Canvas.RightProperty, 5.0);
         DamageBlockList.Add(damageBlock);
-        stack.Children.Add(damageBlock);
-        overlayCanvas.Children.Add(stack);
+        damageStack.Children.Add(damageBlock);
+        overlayCanvas.Children.Add(damageStack);
+      }
+    }
+
+    private void TitleResizing(object sender, SizeChangedEventArgs e)
+    {
+      if (ButtonPopup != null)
+      {
+        // trigger placement event for popup
+        ButtonPopup.HorizontalOffset += 1;
+        ButtonPopup.HorizontalOffset -= 1;
+        TitlePanel.MaxWidth = ActualWidth - TitleDamagePanel.ActualWidth - ButtonsPanel.ActualWidth - 24;
+      }
+      else
+      {
+        TitlePanel.MaxWidth = ActualWidth - TitleDamagePanel.ActualWidth - 24;
       }
     }
 
@@ -634,17 +630,19 @@ namespace EQLogParser
       return brush;
     }
 
-    private static Button CreateButton()
+    private static Button CreateButton(string tooltip, string content, double size)
     {
-      var button = new Button();
+      var button = new Button() { Background = null, BorderBrush = null, IsEnabled = true };
       button.SetValue(Panel.ZIndexProperty, 3);
-      button.Background = null;
       button.Foreground = TEXT_BRUSH;
-      button.BorderBrush = null;
       button.VerticalAlignment = VerticalAlignment.Top;
       button.Padding = new Thickness(0, 0, 0, 0);
       button.FontFamily = new FontFamily("Segoe MDL2 Assets");
-      button.IsEnabled = true;
+      button.VerticalAlignment = VerticalAlignment.Center;
+      button.Margin = new Thickness(2, 0, 0, 0);
+      button.ToolTip = new ToolTip { Content = tooltip };
+      button.Content = content;
+      button.FontSize = size;
       return button;
     }
 
@@ -668,14 +666,32 @@ namespace EQLogParser
       textBlock.UseLayoutRounding = true;
       textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
       textBlock.FontFamily = new FontFamily("Lucidia Console");
-      textBlock.Margin = new Thickness() { Top = 2 };
+      textBlock.Margin = new Thickness() { };
+      textBlock.VerticalAlignment = VerticalAlignment.Center;
       return textBlock;
+    }
+
+    private static StackPanel CreateDamageStackPanel()
+    {
+      var stack = new StackPanel { Orientation = Orientation.Horizontal };
+      stack.SetValue(Panel.ZIndexProperty, 3);
+      stack.SetValue(Canvas.RightProperty, 5.0);
+      return stack;
+    }
+
+    private static StackPanel CreateNameStackPanel()
+    {
+      var stack = new StackPanel { Orientation = Orientation.Horizontal };
+      stack.SetValue(Panel.ZIndexProperty, 3);
+      stack.SetValue(Canvas.LeftProperty, 5.0);
+      return stack;
     }
 
     private static ImageAwesome CreateImageAwesome()
     {
-      var image = new ImageAwesome { Margin = new Thickness(0, 0, 2, 8), Opacity = 0.0, Foreground = UP_BRUSH, Icon = FontAwesomeIcon.None };
+      var image = new ImageAwesome { Margin = new Thickness { Bottom = 1, Right = 2 }, Opacity = 0.0, Foreground = UP_BRUSH, Icon = FontAwesomeIcon.None };
       image.SetValue(Panel.ZIndexProperty, 3);
+      image.VerticalAlignment = VerticalAlignment.Center;
       return image;
     }
 

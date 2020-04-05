@@ -1,2 +1,0 @@
-C:\Users\john\code\github\EQLogParser\EQLogParserInstall\bin\Release\EQLogParser.msi
-C:\Users\john\code\github\EQLogParser\EQLogParserInstall\bin\Release\EQLogParser.wixpdb
