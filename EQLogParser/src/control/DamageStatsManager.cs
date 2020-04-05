@@ -179,7 +179,7 @@ namespace EQLogParser
         overlayStats.RaidStats = overlayStats.RaidStats;
       }
 
-      if (overlayStats.UniqueNpcs.Count == 0 || (beginTime - overlayStats.RaidStats.LastTime > DataManager.FIGHT_TIMEOUT))
+      if (overlayStats.UniqueNpcs.Count == 0 || beginTime - overlayStats.RaidStats.LastTime > DataManager.FIGHT_TIMEOUT)
       {
         overlayStats.RaidStats.Total = 0;
         overlayStats.RaidStats.BeginTime = beginTime;
@@ -274,7 +274,7 @@ namespace EQLogParser
 
         // only calculate the top few
         Parallel.ForEach(overlayStats.StatsList, top => StatsUtil.UpdateCalculations(top, overlayStats.RaidStats));
-        overlayStats.TargetTitle = (overlayStats.UniqueNpcs.Count > 1 ? "Combined (" + overlayStats.UniqueNpcs.Count + "): " : "") + record.Defender;
+        overlayStats.TargetTitle = (overlayStats.UniqueNpcs.Count > 1 ? "C(" + overlayStats.UniqueNpcs.Count + "): " : "") + record.Defender;
         overlayStats.TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, overlayStats.RaidStats.TotalSeconds);
         overlayStats.TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(overlayStats.RaidStats.Total), " Damage ", StatsUtil.FormatTotals(overlayStats.RaidStats.DPS));
       }
