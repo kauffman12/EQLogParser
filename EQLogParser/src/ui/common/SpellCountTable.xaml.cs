@@ -21,7 +21,7 @@ using System.Windows.Media.Imaging;
 namespace EQLogParser
 {
   /// <summary>
-  /// Interaction logic for SpellCountGrid.xaml
+  /// Interaction logic for SpellCountTable.xaml
   /// </summary>
   public partial class SpellCountTable : UserControl
   {

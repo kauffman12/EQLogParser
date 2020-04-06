@@ -74,11 +74,13 @@ namespace EQLogParser
               }
             });
 
-            var allSpells = new List<ActionBlock>();
+            var allSpells = new HashSet<ActionBlock>();
             for (int i = 0; i < RaidStats.BeginTimes.Count; i++)
             {
-              allSpells.AddRange(DataManager.Instance.GetCastsDuring(RaidStats.BeginTimes[i], RaidStats.LastTimes[i]));
-              allSpells.AddRange(DataManager.Instance.GetReceivedSpellsDuring(RaidStats.BeginTimes[i], RaidStats.LastTimes[i]));
+              var blocks = DataManager.Instance.GetCastsDuring(RaidStats.BeginTimes[i] - SpellCountBuilder.COUNT_OFFSET, RaidStats.LastTimes[i]);
+              blocks.ForEach(block => allSpells.Add(block));
+              blocks = DataManager.Instance.GetReceivedSpellsDuring(RaidStats.BeginTimes[i] - SpellCountBuilder.COUNT_OFFSET, RaidStats.LastTimes[i]);
+              blocks.ForEach(block => allSpells.Add(block));
             }
 
             var playerSpells = new Dictionary<string, List<string>>();
