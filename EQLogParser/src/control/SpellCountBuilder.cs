@@ -6,18 +6,19 @@ namespace EQLogParser
 {
   class SpellCountBuilder
   {
+    public const int COUNT_OFFSET = 15;
     internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
       var result = new SpellCountData();
 
-      List<IAction> castsDuring = new List<IAction>();
-      List<IAction> receivedDuring = new List<IAction>();
+      HashSet<IAction> castsDuring = new HashSet<IAction>();
+      HashSet<IAction> receivedDuring = new HashSet<IAction>();
       for (int i = 0; i < raidStats.BeginTimes.Count; i++)
       {
-        var blocks = DataManager.Instance.GetCastsDuring(raidStats.BeginTimes[i], raidStats.LastTimes[i]);
-        blocks.ForEach(block => castsDuring.AddRange(block.Actions));
-        blocks = DataManager.Instance.GetReceivedSpellsDuring(raidStats.BeginTimes[i], raidStats.LastTimes[i]);
-        blocks.ForEach(block => receivedDuring.AddRange(block.Actions));
+        var blocks = DataManager.Instance.GetCastsDuring(raidStats.BeginTimes[i] - COUNT_OFFSET, raidStats.LastTimes[i]);
+        blocks.ForEach(block => block.Actions.ForEach(action => castsDuring.Add(action)));
+        blocks = DataManager.Instance.GetReceivedSpellsDuring(raidStats.BeginTimes[i] - COUNT_OFFSET, raidStats.LastTimes[i]);
+        blocks.ForEach(block => block.Actions.ForEach(action => receivedDuring.Add(action)));
       }
 
       foreach (var action in castsDuring.AsParallel().Where(cast => playerList.Contains((cast as SpellCast).Caster)))
