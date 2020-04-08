@@ -378,7 +378,7 @@ namespace EQLogParser
     public Dictionary<string, PlayerStats> TopLevelStats { get; } = new Dictionary<string, PlayerStats>();
     public Dictionary<string, PlayerStats> AggregateStats { get; } = new Dictionary<string, PlayerStats>();
     public Dictionary<string, PlayerStats> IndividualStats { get; } = new Dictionary<string, PlayerStats>();
-    public Dictionary<string, TimeSegment> UniqueNpcs { get; } = new Dictionary<string, TimeSegment>();
+    public Dictionary<string, byte> UniqueNpcs { get; } = new Dictionary<string, byte>();
     public TimeRange Range { get; set; } = new TimeRange();
     public int CombineCount { get; set; }
   }
