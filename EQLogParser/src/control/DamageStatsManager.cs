@@ -163,7 +163,7 @@ namespace EQLogParser
       }
     }
 
-    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, OverlayDamageStats overlayStats = null)
+    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, int damageSelectionMode, OverlayDamageStats overlayStats = null)
     {
       if (overlayStats == null)
       {
@@ -179,7 +179,7 @@ namespace EQLogParser
         overlayStats.RaidStats = overlayStats.RaidStats;
       }
 
-      if (overlayStats.UniqueNpcs.Count == 0 || beginTime - overlayStats.RaidStats.LastTime > DataManager.FIGHT_TIMEOUT)
+      if ((damageSelectionMode == 0 && overlayStats.UniqueNpcs.Count == 0) || beginTime - overlayStats.RaidStats.LastTime > DataManager.FIGHT_TIMEOUT)
       {
         overlayStats.RaidStats.Total = 0;
         overlayStats.RaidStats.BeginTime = beginTime;
@@ -521,13 +521,7 @@ namespace EQLogParser
               RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
 
               // add up resists
-              Dictionary<string, uint> resistCounts = new Dictionary<string, uint>();
-
-              Resists.ForEach(resist =>
-              {
-                ResistRecord record = resist as ResistRecord;
-                Helpers.StringUIntAddHelper.Add(resistCounts, record.Spell, 1);
-              });
+              var resistCounts = Resists.Cast<ResistRecord>().GroupBy(x => x.Spell).ToDictionary(g => g.Key, g => g.ToList().Count);
 
               // get special field
               var specials = StatsUtil.GetSpecials(RaidTotals);
