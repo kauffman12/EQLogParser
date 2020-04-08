@@ -706,7 +706,7 @@ namespace EQLogParser
         if ((pIndex > -1 && IsPetOrMount(name, pIndex + 3, out _)) || (pIndex = name.LastIndexOf(" pet", StringComparison.Ordinal)) > -1)
         {
           var verifiedPet = PlayerManager.Instance.IsVerifiedPet(name);
-          if (verifiedPet || Helpers.IsPossiblePlayerName(name, pIndex))
+          if (verifiedPet || PlayerManager.Instance.IsPossiblePlayerName(name, pIndex))
           {
             owner = name.Substring(0, pIndex);
             hasOwner = true;

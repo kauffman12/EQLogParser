@@ -14,10 +14,8 @@ namespace EQLogParser
 {
   class Helpers
   {
-    internal static ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
     internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
-    internal static DictionaryAddHelper<string, uint> StringUIntAddHelper = new DictionaryAddHelper<string, uint>();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
     private static Dispatcher MainDispatcher;
 
@@ -184,41 +182,6 @@ namespace EQLogParser
       }
 
       return key;
-    }
-
-    internal static bool IsPossiblePlayerName(string part, int stop = -1)
-    {
-      bool found = false;
-
-      if (part != null)
-      {
-        string key = part + "-" + stop;
-        if (PossiblePlayerCache.TryGetValue(key, out bool value))
-        {
-          found = value;
-        }
-        else
-        {
-          if (stop == -1)
-          {
-            stop = part.Length;
-          }
-
-          found = stop < 3 ? false : true;
-          for (int i = 0; found != false && i < stop; i++)
-          {
-            if (!char.IsLetter(part, i))
-            {
-              found = false;
-              break;
-            }
-          }
-
-          PossiblePlayerCache.TryAdd(key, found);
-        }
-      }
-
-      return found;
     }
 
     private class SortableNameComparer : IComparer<SortableName>

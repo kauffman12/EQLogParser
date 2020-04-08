@@ -265,7 +265,8 @@ namespace EQLogParser
 
       var selected = callingDataGrid.SelectedItem as Fight;
       fightMenuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupId != -1;
-      fightMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupId != -1 && Helpers.IsPossiblePlayerName((callingDataGrid.SelectedItem as Fight)?.Name);
+      fightMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && selected.GroupId != -1 && 
+        PlayerManager.Instance.IsPossiblePlayerName((callingDataGrid.SelectedItem as Fight)?.Name);
     }
 
     private void SelectGroupClick(object sender, RoutedEventArgs e)
