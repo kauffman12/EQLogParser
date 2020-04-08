@@ -107,7 +107,7 @@ namespace EQLogParser
 
         if (isDefenderNpc && !isAttackerNpc)
         {
-          valid = isAttackerPlayer || Helpers.IsPossiblePlayerName(record.Attacker);
+          valid = isAttackerPlayer || PlayerManager.Instance.IsPossiblePlayerName(record.Attacker);
           defender = true;
         }
         else if (!isDefenderNpc && isAttackerNpc)
@@ -118,7 +118,7 @@ namespace EQLogParser
         else if (!isDefenderNpc && !isAttackerNpc)
         {
           var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayer(record.Defender);
-          valid = (isAttackerPlayer || !Helpers.IsPossiblePlayerName(record.Attacker)) && !isDefenderPlayer;
+          valid = (isAttackerPlayer || !PlayerManager.Instance.IsPossiblePlayerName(record.Attacker)) && !isDefenderPlayer;
           defender = true;
         }
         else if (isDefenderNpc && isAttackerNpc && DataManager.Instance.GetFight(record.Defender, currentTime) != null

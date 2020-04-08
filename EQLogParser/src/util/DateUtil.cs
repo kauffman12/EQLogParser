@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace EQLogParser
 {
@@ -105,5 +107,124 @@ namespace EQLogParser
       precise = result;
       return result;
     }
+  }
+
+  public class TimeRange
+  {
+    private List<TimeSegment> TimeSegments = new List<TimeSegment>();
+
+    public double GetTotal() => TimeSegments.Sum(segment => segment.End - segment.Begin + 1);
+
+    public void Add(TimeSegment segment)
+    {
+      if (TimeSegments.Count == 0)
+      {
+        TimeSegments.Add(segment);
+      }
+      else
+      {
+        int i, action = -1, last = -1, exists = -1;
+        for (i = 0; i < TimeSegments.Count; i++)
+        {
+          if (TimeSegments[i].Equals(segment))
+          {
+            exists = i;
+          }
+          else
+          {
+            action = TimeSegments[i].CompareTo(segment);
+            if (action == 0 || (action == 1 && i + i == TimeSegments.Count) || (action == -1 && last == 1))
+            {
+              break;
+            }
+            else if (action == 1)
+            {
+              last = 1;
+            }
+          }
+        }
+
+        if (action == 0 && !(TimeSegments[i].Begin <= segment.Begin && TimeSegments[i].End >= segment.End))
+        {
+          TimeSegments[i].Begin = Math.Min(TimeSegments[i].Begin, segment.Begin);
+          TimeSegments[i].End = Math.Max(TimeSegments[i].End, segment.End);
+
+          if (exists > -1)
+          {
+            TimeSegments.RemoveAt(exists);
+          }
+          else
+          {
+            Add(TimeSegments[i]);
+          }
+        }
+        else if (action == 1 && exists == -1)
+        {
+          if (i - 1 is int previous && previous >= 0)
+          {
+            if (TimeSegments[previous].End + 1 == segment.Begin)
+            {
+              TimeSegments[previous].End = segment.End;
+            }
+            else
+            {
+              TimeSegments.Insert(i, segment);
+            }
+          }
+          else if (TimeSegments[i].End + 1 == segment.Begin)
+          {
+            TimeSegments[i].End = segment.End;
+          }
+          else
+          {
+            TimeSegments.Add(segment);
+          }
+        }
+        else if (action == -1 && last == 1)
+        {
+          if (i < TimeSegments.Count)
+          {
+            if (TimeSegments[i].Begin - 1 == segment.End)
+            {
+              TimeSegments[i].Begin = segment.Begin;
+            }
+            else
+            {
+              TimeSegments.Insert(i, segment);
+            }
+          }
+          else if (segment.End + 1 == TimeSegments[i].Begin)
+          {
+            TimeSegments[i].Begin = segment.Begin;
+          }
+          else
+          {
+            TimeSegments.Insert(i, segment);
+          }
+        }
+        else if (action == -1 && exists == -1)
+        {
+          TimeSegments.Insert(0, segment);
+        }
+      }
+    }
+  }
+
+  public class TimeSegment
+  {
+    public double Begin { get; set; }
+    public double End { get; set;  }
+
+    public TimeSegment(double begin, double end)
+    {
+      Begin = begin;
+      End = end;
+    }
+
+    public double GetTotal() => End - Begin + 1;
+
+    public int CompareTo(TimeSegment value) => (value.End < Begin) ? -1 : (value.Begin > End) ? 1 : 0;
+
+    public bool Equals(TimeSegment value) => value.Begin == Begin && value.End == End;
   }
 }

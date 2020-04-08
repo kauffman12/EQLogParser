@@ -217,7 +217,7 @@ namespace EQLogParser
     {
       bool valid = false;
 
-      if (record != null && (Helpers.IsPossiblePlayerName(record.Healed) || PlayerManager.Instance.IsPetOrPlayer(record.Healed)))
+      if (record != null && (PlayerManager.Instance.IsPossiblePlayerName(record.Healed) || PlayerManager.Instance.IsPetOrPlayer(record.Healed)))
       {
         valid = true;
         SpellData spellData;

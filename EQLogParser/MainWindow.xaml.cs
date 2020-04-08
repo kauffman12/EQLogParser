@@ -613,7 +613,7 @@ namespace EQLogParser
       {
         var summary = DamageWindow?.Content as DamageSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
-        DamageStatsManager.Instance.FireUpdateEvent(options, summary?.GetSelectedStats(), summary?.GetFilter());
+        DamageStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
       }
     }
 
@@ -784,7 +784,7 @@ namespace EQLogParser
     private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       var options = new GenerateStatsOptions() { RequestChartData = true };
-      DamageStatsManager.Instance.FireSelectionEvent(options, data.Selected);
+      DamageStatsManager.Instance.FireChartEvent(options, "SELECT", data.Selected);
       (playerParseTextWindow.Content as ParsePreview)?.UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 

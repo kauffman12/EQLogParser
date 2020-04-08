@@ -21,10 +21,11 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static SolidColorBrush TEXT_BRUSH = new SolidColorBrush(Colors.White);
-    private static SolidColorBrush UP_BRUSH = new SolidColorBrush(Colors.White);
-    private static SolidColorBrush DOWN_BRUSH = new SolidColorBrush(Colors.Red);
-    private static SolidColorBrush TITLE_BRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
+    private static SolidColorBrush TEXTBRUSH = new SolidColorBrush(Colors.White);
+    private static SolidColorBrush UPBRUSH = new SolidColorBrush(Colors.White);
+    private static SolidColorBrush DOWNBRUSH = new SolidColorBrush(Colors.Red);
+    private static SolidColorBrush TITLEBRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
+    private static SolidColorBrush GRAYBRUSH = new SolidColorBrush(Colors.Gray);
     private static object StatsLock = new object();
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
@@ -51,6 +52,7 @@ namespace EQLogParser
     private List<ImageAwesome> DamageRateList = new List<ImageAwesome>();
     private List<Rectangle> RectangleList = new List<Rectangle>();
     private Dictionary<int, double> PrevList = null;
+    private int CurrentDamageSelectionMode = 0;
 
     private List<Color> TitleColorList = new List<Color> { Color.FromRgb(50, 50, 50), Color.FromRgb(30, 30, 30), Color.FromRgb(10, 10, 10) };
     private List<List<Color>> ColorList = new List<List<Color>>()
@@ -79,7 +81,7 @@ namespace EQLogParser
         CreateRows();
         Title = "Overlay";
         MinHeight = 0;
-        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
         UpdateTimer.Tick += UpdateTimerTick;
         AllowsTransparency = true;
         Style = null;
@@ -129,14 +131,30 @@ namespace EQLogParser
         }
       }
 
-      string value = ConfigUtil.GetApplicationSetting("OverlayFontSize");
+      string damageMode = ConfigUtil.GetApplicationSetting("OverlayDamageMode");
+      if (!string.IsNullOrEmpty(damageMode))
+      {
+        if (int.TryParse(damageMode, out int currDamageMode))
+        {
+          foreach (var item in damageModeSelection.Items.Cast<ComboBoxItem>())
+          {
+            if ((string)item.Tag == damageMode)
+            {
+              damageModeSelection.SelectedItem = item;
+              CurrentDamageSelectionMode = currDamageMode;
+            }
+          }
+        }
+      }
+
+      string fontSize = ConfigUtil.GetApplicationSetting("OverlayFontSize");
       bool fontHasBeenSet = false;
       int currentFontSize = DEFAULT_TEXT_FONT_SIZE;
-      if (value != null && int.TryParse(value, out currentFontSize) && currentFontSize >= 0 && currentFontSize <= 64)
+      if (fontSize != null && int.TryParse(fontSize, out currentFontSize) && currentFontSize >= 0 && currentFontSize <= 64)
       {
         foreach (var item in fontSizeSelection.Items)
         {
-          if ((item as ComboBoxItem).Content as string == value)
+          if ((item as ComboBoxItem).Content as string == fontSize)
           {
             fontSizeSelection.SelectedItem = item;
             SetFont(currentFontSize);
@@ -211,14 +229,14 @@ namespace EQLogParser
     private void LoadTestData()
     {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
-      TitleBlock.Text = "Example NPC Name That is Kinda Long";
-      TitleDamageBlock.Text = "[3s @250K] 250M";
+      TitleBlock.Text = "Set Position and Size of this Window before Saving!!!";
 
       for (int i = 0; i < MAX_ROWS - 1; i++)
       {
-        NameBlockList[i].Text = i + ". Example Player Name";
+        NameBlockList[i].Text = (i + 1) + ". Example Player Name";
+        NameBlockList[i].Foreground = GRAYBRUSH;
         DamageBlockList[i].Text = "[3s @50K] 50M";
-        DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
+        DamageBlockList[i].Foreground = GRAYBRUSH;
         DamageRateList[i].Opacity = DATA_OPACITY;
       }
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
@@ -228,7 +246,7 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
-        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
+        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, CurrentDamageSelectionMode, Stats);
         if (UpdateTimer != null && !UpdateTimer.IsEnabled)
         {
           UpdateTimer.Start();
@@ -259,7 +277,8 @@ namespace EQLogParser
           // so this limits it to 1/2 the current time value
           ProcessDirection = !ProcessDirection;
 
-          if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > DataManager.FIGHT_TIMEOUT)
+          var timeout = CurrentDamageSelectionMode == 0 ? 10 : CurrentDamageSelectionMode;
+          if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > timeout)
           {
             windowBrush.Opacity = 0.0;
             ButtonPopup.IsOpen = false;
@@ -294,7 +313,7 @@ namespace EQLogParser
                   if (i == 0)
                   {
                     total = list[i].Total;
-                    RectangleList[i].Width = this.Width;
+                    RectangleList[i].Width = Width;
                   }
                   else
                   {
@@ -314,7 +333,7 @@ namespace EQLogParser
                     NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
                   }
 
-                  if (i <= 3 && !isMe && list[i].Total > 0)
+                  if (i <= 4 && !isMe && list[i].Total > 0)
                   {
                     topList[i] = list[i].Total;
                   }
@@ -345,13 +364,13 @@ namespace EQLogParser
                         if (PrevList[i] > diff)
                         {
                           DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
-                          DamageRateList[i].Foreground = DOWN_BRUSH;
+                          DamageRateList[i].Foreground = DOWNBRUSH;
                           DamageRateList[i].Opacity = DATA_OPACITY;
                         }
                         else if (PrevList[i] < diff)
                         {
                           DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
-                          DamageRateList[i].Foreground = UP_BRUSH;
+                          DamageRateList[i].Foreground = UPBRUSH;
                           DamageRateList[i].Opacity = DATA_OPACITY;
                         }
                       }
@@ -445,7 +464,9 @@ namespace EQLogParser
       SetSize(TitleDamagePanel, rowHeight, double.NaN);
 
       SetSize(configPanel, rowHeight, double.NaN);
+      SetSize(savePanel, rowHeight, double.NaN);
       configPanel.SetValue(Canvas.TopProperty, rowHeight * MAX_ROWS);
+      savePanel.SetValue(Canvas.TopProperty, rowHeight * MAX_ROWS);
 
       if (!Active)
       {
@@ -466,14 +487,16 @@ namespace EQLogParser
     private void CreateRows(bool configure = false)
     {
       configPanel.SetValue(Panel.ZIndexProperty, 3);
-      configPanel.SetValue(Canvas.RightProperty, 10.0);
+      configPanel.SetValue(Canvas.LeftProperty, 5.0);
+      savePanel.SetValue(Panel.ZIndexProperty, 3);
+      savePanel.SetValue(Canvas.RightProperty, 5.0);
 
       TitleRectangle = CreateRectangle(configure, TitleColorList);
       overlayCanvas.Children.Add(TitleRectangle);
 
       TitlePanel = CreateNameStackPanel();
       TitleBlock = CreateTextBlock();
-      TitleBlock.Foreground = TITLE_BRUSH;
+      TitleBlock.Foreground = configure ? TEXTBRUSH : TITLEBRUSH;
       TitlePanel.Children.Add(TitleBlock);
       overlayCanvas.Children.Add(TitlePanel);
 
@@ -534,10 +557,6 @@ namespace EQLogParser
 
     private void SetFont(int size)
     {
-      fontSizeLabel.FontSize = size - 1;
-      fontSizeSelection.FontSize = size - 1;
-      saveButton.FontSize = size - 1;
-
       TitleBlock.FontSize = size;
       TitleDamageBlock.FontSize = size;
 
@@ -589,6 +608,11 @@ namespace EQLogParser
         ConfigUtil.SetApplicationSetting("OverlayFontSize", size.ToString(CultureInfo.CurrentCulture));
       }
 
+      if (TitleBlock != null)
+      {
+        ConfigUtil.SetApplicationSetting("OverlayDamageMode", (string)(damageModeSelection.SelectedItem as ComboBoxItem).Tag);
+      }
+
       (Application.Current.MainWindow as MainWindow)?.OpenOverlay(false, true);
     }
 
@@ -634,7 +658,7 @@ namespace EQLogParser
     {
       var button = new Button() { Background = null, BorderBrush = null, IsEnabled = true };
       button.SetValue(Panel.ZIndexProperty, 3);
-      button.Foreground = TEXT_BRUSH;
+      button.Foreground = TEXTBRUSH;
       button.VerticalAlignment = VerticalAlignment.Top;
       button.Padding = new Thickness(0, 0, 0, 0);
       button.FontFamily = new FontFamily("Segoe MDL2 Assets");
@@ -661,7 +685,7 @@ namespace EQLogParser
 
     private static TextBlock CreateTextBlock()
     {
-      var textBlock = new TextBlock { Foreground = TEXT_BRUSH };
+      var textBlock = new TextBlock { Foreground = TEXTBRUSH };
       textBlock.SetValue(Panel.ZIndexProperty, 3);
       textBlock.UseLayoutRounding = true;
       textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
@@ -689,7 +713,7 @@ namespace EQLogParser
 
     private static ImageAwesome CreateImageAwesome()
     {
-      var image = new ImageAwesome { Margin = new Thickness { Bottom = 1, Right = 2 }, Opacity = 0.0, Foreground = UP_BRUSH, Icon = FontAwesomeIcon.None };
+      var image = new ImageAwesome { Margin = new Thickness { Bottom = 1, Right = 2 }, Opacity = 0.0, Foreground = UPBRUSH, Icon = FontAwesomeIcon.None };
       image.SetValue(Panel.ZIndexProperty, 3);
       image.VerticalAlignment = VerticalAlignment.Center;
       return image;
