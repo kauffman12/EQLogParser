@@ -172,7 +172,7 @@ namespace EQLogParser
       if (image.DataContext is PlayerStats stats && children != null && children.ContainsKey(stats.Name))
       {
         var list = children[stats.Name];
-        if (list.Count > 1 || stats.Name == Labels.UNASSIGNED || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name, StringComparison.Ordinal)))
+        if (list.Count > 1 || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name, StringComparison.Ordinal)))
         {
           if (dataGrid.ItemContainerGenerator.ContainerFromItem(stats) is DataGridRow container)
           {
@@ -295,7 +295,7 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
         };
 
-        DamageStatsManager.Instance.FireFilterEvent(new GenerateStatsOptions() { RequestChartData = true }, view.Filter);
+        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "FILTER", null, view.Filter);
       }
 
       return view;
@@ -340,7 +340,7 @@ namespace EQLogParser
 
     protected virtual void Dispose(bool disposing)
     {
-      DamageStatsManager.Instance.FireUpdateEvent(new GenerateStatsOptions() { RequestChartData = true });
+      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "UPDATE");
 
       if (!disposedValue)
       {

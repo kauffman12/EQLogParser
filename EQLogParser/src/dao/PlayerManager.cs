@@ -27,6 +27,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> TakenPetOrPlayerAction = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
 
     private bool PetMappingUpdated = false;
     private bool PlayersUpdated = false;
@@ -237,6 +238,7 @@ namespace EQLogParser
         TakenPetOrPlayerAction.Clear();
         VerifiedPets.Clear();
         VerifiedPlayers.Clear();
+        PossiblePlayerCache.Clear();
 
         AddVerifiedPlayer(ConfigUtil.PlayerName);
         foreach (var keypair in ConfigUtil.ReadPetMapping())
@@ -255,7 +257,7 @@ namespace EQLogParser
     {
       if (PetMappingUpdated)
       {
-        var filtered = PetToPlayer.Where(keypair => Helpers.IsPossiblePlayerName(keypair.Key) && Helpers.IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
+        var filtered = PetToPlayer.Where(keypair =>IsPossiblePlayerName(keypair.Key) && IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
         ConfigUtil.SavePetMapping(filtered);
         PetMappingUpdated = false;
       }
@@ -294,6 +296,41 @@ namespace EQLogParser
           counter.CurrentClass = theClass;
         }
       }
+    }
+
+    internal bool IsPossiblePlayerName(string part, int stop = -1)
+    {
+      bool found = false;
+
+      if (part != null)
+      {
+        string key = part + "-" + stop;
+        if (PossiblePlayerCache.TryGetValue(key, out bool value))
+        {
+          found = value;
+        }
+        else
+        {
+          if (stop == -1)
+          {
+            stop = part.Length;
+          }
+
+          found = stop < 3 ? false : true;
+          for (int i = 0; found != false && i < stop; i++)
+          {
+            if (!char.IsLetter(part, i))
+            {
+              found = false;
+              break;
+            }
+          }
+
+          PossiblePlayerCache.TryAdd(key, found);
+        }
+      }
+
+      return found;
     }
 
     private void AddMultiCase(string[] values, ConcurrentDictionary<string, byte> dict)

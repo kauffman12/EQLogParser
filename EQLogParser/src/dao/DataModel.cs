@@ -378,7 +378,9 @@ namespace EQLogParser
     public Dictionary<string, PlayerStats> TopLevelStats { get; } = new Dictionary<string, PlayerStats>();
     public Dictionary<string, PlayerStats> AggregateStats { get; } = new Dictionary<string, PlayerStats>();
     public Dictionary<string, PlayerStats> IndividualStats { get; } = new Dictionary<string, PlayerStats>();
-    public Dictionary<string, byte> UniqueNpcs { get; } = new Dictionary<string, byte>();
+    public Dictionary<string, TimeSegment> UniqueNpcs { get; } = new Dictionary<string, TimeSegment>();
+    public TimeRange Range { get; set; } = new TimeRange();
+    public int CombineCount { get; set; }
   }
 
   public class DataPoint
@@ -421,7 +423,7 @@ namespace EQLogParser
     public long DPS { get; set; }
     public long SDPS { get; set; }
     public long Extra { get; set; }
-    public uint Resists { get; set; }
+    public int Resists { get; set; }
     public long Avg { get; set; }
     public long AvgCrit { get; set; }
     public long AvgLucky { get; set; }

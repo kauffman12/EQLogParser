@@ -36,7 +36,7 @@ namespace EQLogParser
             {
               string owner = action.Substring(index + 21, period - index - 21);
 
-              if (!Helpers.IsPossiblePlayerName(pet) && (pet.StartsWith("A ", StringComparison.Ordinal) || pet.StartsWith("An ", StringComparison.Ordinal)))
+              if (!PlayerManager.Instance.IsPossiblePlayerName(pet) && (pet.StartsWith("A ", StringComparison.Ordinal) || pet.StartsWith("An ", StringComparison.Ordinal)))
               {
                 pet = pet.ToLower(CultureInfo.CurrentCulture);
               }
@@ -71,14 +71,14 @@ namespace EQLogParser
           found = true; // ignore anything that starts with Targeted
         }
         else if (action.Length < 27 && (index = action.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
-          && (index + 9) == action.Length && Helpers.IsPossiblePlayerName(action, index))
+          && (index + 9) == action.Length && PlayerManager.Instance.IsPossiblePlayerName(action, index))
         {
           string test = action.Substring(0, index);
           PlayerManager.Instance.AddPetOrPlayerAction(test);
           found = true;
         }
         else if (action.Length < 35 && (index = action.IndexOf(" joined the raid.", StringComparison.Ordinal)) > -1
-          && (index + 17) == action.Length && Helpers.IsPossiblePlayerName(action, index))
+          && (index + 17) == action.Length && PlayerManager.Instance.IsPossiblePlayerName(action, index))
         {
           string test = action.Substring(0, index);
           PlayerManager.Instance.AddVerifiedPlayer(test);
