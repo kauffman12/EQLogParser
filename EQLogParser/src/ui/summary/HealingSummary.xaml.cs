@@ -157,7 +157,7 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
         };
 
-        HealingStatsManager.Instance.FireFilterEvent(new GenerateStatsOptions() { RequestChartData = true }, view.Filter);
+        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, view.Filter);
       }
 
       return view;
@@ -184,7 +184,7 @@ namespace EQLogParser
 
     protected virtual void Dispose(bool disposing)
     {
-      HealingStatsManager.Instance.FireUpdateEvent(new GenerateStatsOptions() { RequestChartData = true });
+      HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "UPDATE");
 
       if (!disposedValue)
       {

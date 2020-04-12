@@ -359,6 +359,8 @@
       <Setter Property="ToolTipService.ShowDuration" Value="2500"/>
     </Style>
     
+    <Style TargetType="local:ColorComboBox" BasedOn="{StaticResource {x:Static themes:SharedResourceKeys.ComboBoxStyleKey}}" />
+
     <!-- LogRow Templates for check columns -->
     <DataTemplate x:Key="NoDataTemplate">
     </DataTemplate>
@@ -383,7 +385,7 @@
     <DataTemplate x:Key="TwincastCountTemplate">
       <TextBlock Text="{Binding TwincastCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
     </DataTemplate>
-
+    
     <!-- DataGrid Row/Column Colors and Alignment -->
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
       <Setter Property="Background" Value="#3a543f" />

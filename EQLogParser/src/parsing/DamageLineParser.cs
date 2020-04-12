@@ -162,7 +162,7 @@ namespace EQLogParser
       // Gotcharms has been slain by an animated mephit!
       if (test != null && test.Length > 0)
       {
-        if (!SlainQueue.Contains(test) && DataManager.Instance.GetFight(test, currentTime) != null)
+        if (!SlainQueue.Contains(test) && DataManager.Instance.GetFight(test) != null)
         {
           SlainQueue.Add(test);
           SlainTime = currentTime;

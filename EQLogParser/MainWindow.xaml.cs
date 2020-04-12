@@ -28,8 +28,6 @@ namespace EQLogParser
     internal static bool IsAoEHealingEnabled = true;
     internal static bool IsBaneDamageEnabled = false;
     internal static bool IsDamageOverlayEnabled = false;
-    internal static bool IsIgnoreIntialPullDamageEnabled = false;
-    internal static bool IsHideOverlayOtherPlayersEnabled = false;
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
     internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
@@ -45,7 +43,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.6.56";
+    private const string VERSION = "v1.7.0";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -87,8 +85,6 @@ namespace EQLogParser
 
         // update titles
         Title = APP_NAME + " " + VERSION;
-
-        ConfigUtil.Debug = false;     
 
         // upate helper
         Helpers.SetDispatcher(Dispatcher);
@@ -190,78 +186,35 @@ namespace EQLogParser
         DockingThemeCatalogRegistrar.Register();
         ThemeManager.CurrentTheme = ThemeName.MetroDark.ToString();
 
+        UpdateDeleteChatMenu();
+
         // Bane Damage
-        string value = ConfigUtil.GetApplicationSetting("IncludeBaneDamage");
-        IsBaneDamageEnabled = value != null && bool.TryParse(value, out bool bValue) && bValue;
+        IsBaneDamageEnabled = ConfigUtil.IfSet("IncludeBaneDamage");
         enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Damage Overlay
-        value = ConfigUtil.GetApplicationSetting("IsDamageOverlayEnabled");
-        IsDamageOverlayEnabled = value != null && bool.TryParse(value, out bValue) && bValue;
+        IsDamageOverlayEnabled = ConfigUtil.IfSet("IsDamageOverlayEnabled");
         enableDamageOverlayIcon.Visibility = IsDamageOverlayEnabled ? Visibility.Visible : Visibility.Hidden;
 
-        // Ignore Intitial Pull
-        value = ConfigUtil.GetApplicationSetting("IngoreInitialPullDamage");
-        IsIgnoreIntialPullDamageEnabled = value != null && bool.TryParse(value, out bool bValue2) && bValue2;
-        enableIgnoreInitialPullDamageIcon.Visibility = IsIgnoreIntialPullDamageEnabled ? Visibility.Visible : Visibility.Hidden;
-
         // AoE healing
-        value = ConfigUtil.GetApplicationSetting("IncludeAoEHealing");
-        IsAoEHealingEnabled = value == null || bool.TryParse(value, out bValue) && bValue;
+        IsAoEHealingEnabled = ConfigUtil.IfSet("IncludeAoEHealing");
         enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
 
-        // Hide other player names on overlay
-        value = ConfigUtil.GetApplicationSetting("HideOverlayOtherPlayers");
-        IsHideOverlayOtherPlayersEnabled = value != null && bool.TryParse(value, out bValue2) && bValue2;
-        enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        UpdateDeleteChatMenu();
-
-        // Show Tanking Summary at startup
-        value = ConfigUtil.GetApplicationSetting("ShowTankingSummaryAtStartup");
-        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
-        {
-          OpenTankingSummary();
-        }
-
-        // Show Healing Summary at startup
-        value = ConfigUtil.GetApplicationSetting("ShowHealingSummaryAtStartup");
-        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
-        {
-          OpenHealingSummary();
-        }
-
-        // Show Healing Summary at startup
-        value = ConfigUtil.GetApplicationSetting("ShowDamageSummaryAtStartup");
-        if (value == null || (bool.TryParse(value, out bValue2) && bValue2))
-        {
-          OpenDamageSummary();
-        }
-
-        // Show Tanking Summary at startup
-        value = ConfigUtil.GetApplicationSetting("ShowTankingChartAtStartup");
-        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
-        {
-          OpenTankingChart();
-        }
-
-        // Show Healing Summary at startup
-        value = ConfigUtil.GetApplicationSetting("ShowHealingChartAtStartup");
-        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
-        {
-          OpenHealingChart();
-        }
-
-        // Show Healing Summary at startup
-        value = ConfigUtil.GetApplicationSetting("ShowDamageChartAtStartup");
-        if (value != null && bool.TryParse(value, out bValue2) && bValue2)
-        {
-          OpenDamageChart();
-        }
-
         // Hide window when minimized
-        value = ConfigUtil.GetApplicationSetting("HideWindowOnMinimize");
-        IsHideOnMinimizeEnabled = value != null && bool.TryParse(value, out bValue2) && bValue2;
+        IsHideOnMinimizeEnabled = ConfigUtil.IfSet("HideWindowOnMinimize");
+
+        // Show Tanking Summary at startup
+        ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
+        // Show Tanking Summary at startup
+        ConfigUtil.IfSet("ShowTankingChartAtStartup", OpenTankingChart);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowHealingChartAtStartup", OpenHealingChart);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowDamageChartAtStartup", OpenDamageChart);
 
         LOG.Info("Initialized Components");
       }
@@ -464,24 +417,17 @@ namespace EQLogParser
       }
     }
 
-    private void ToggleHideOverlayOtherPlayersClick(object sender, RoutedEventArgs e)
-    {
-      IsHideOverlayOtherPlayersEnabled = !IsHideOverlayOtherPlayersEnabled;
-      ConfigUtil.SetApplicationSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
-      enableHideOverlayOtherPlayersIcon.Visibility = IsHideOverlayOtherPlayersEnabled ? Visibility.Visible : Visibility.Hidden;
-    }
-
     private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
     {
       IsHideOnMinimizeEnabled = !IsHideOnMinimizeEnabled;
-      ConfigUtil.SetApplicationSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled.ToString(CultureInfo.CurrentCulture));
       enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
     {
       IsAoEHealingEnabled = !IsAoEHealingEnabled;
-      ConfigUtil.SetApplicationSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
 
       var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
@@ -491,7 +437,7 @@ namespace EQLogParser
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
     {
       IsDamageOverlayEnabled = !IsDamageOverlayEnabled;
-      ConfigUtil.SetApplicationSetting("IsDamageOverlayEnabled", IsDamageOverlayEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("IsDamageOverlayEnabled", IsDamageOverlayEnabled.ToString(CultureInfo.CurrentCulture));
       enableDamageOverlayIcon.Visibility = IsDamageOverlayEnabled ? Visibility.Visible : Visibility.Hidden;
 
       if (IsDamageOverlayEnabled)
@@ -507,18 +453,8 @@ namespace EQLogParser
     private void ToggleBaneDamageClick(object sender, RoutedEventArgs e)
     {
       IsBaneDamageEnabled = !IsBaneDamageEnabled;
-      ConfigUtil.SetApplicationSetting("IncludeBaneDamage", IsBaneDamageEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("IncludeBaneDamage", IsBaneDamageEnabled.ToString(CultureInfo.CurrentCulture));
       enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
-
-      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
-      Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
-    }
-
-    private void ToggleIgnoreInitialPullDamageClick(object sender, RoutedEventArgs e)
-    {
-      IsIgnoreIntialPullDamageEnabled = !IsIgnoreIntialPullDamageEnabled;
-      ConfigUtil.SetApplicationSetting("IngoreInitialPullDamage", IsIgnoreIntialPullDamageEnabled.ToString(CultureInfo.CurrentCulture));
-      enableIgnoreInitialPullDamageIcon.Visibility = IsIgnoreIntialPullDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
@@ -623,7 +559,7 @@ namespace EQLogParser
       {
         var summary = HealingWindow?.Content as HealingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
-        HealingStatsManager.Instance.FireUpdateEvent(options, summary?.GetSelectedStats(), summary?.GetFilter());
+        HealingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
       }
     }
 
@@ -633,7 +569,7 @@ namespace EQLogParser
       {
         var summary = TankingWindow?.Content as TankingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
-        TankingStatsManager.Instance.FireUpdateEvent(options, summary?.GetSelectedStats(), summary?.GetFilter());
+        TankingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
       }
     }
 
@@ -661,7 +597,7 @@ namespace EQLogParser
 
         RepositionCharts(DamageWindow);
 
-        if (DamageStatsManager.Instance.DamageGroups.Count > 0)
+        if (DamageStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true };
@@ -694,7 +630,7 @@ namespace EQLogParser
 
         RepositionCharts(HealingWindow);
 
-        if (HealingStatsManager.Instance.HealingGroups.Count > 0)
+        if (HealingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           var healingOptions = new GenerateStatsOptions() { RequestSummaryData = true };
@@ -727,7 +663,7 @@ namespace EQLogParser
 
         RepositionCharts(TankingWindow);
 
-        if (TankingStatsManager.Instance.TankingGroups.Count > 0)
+        if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true };
@@ -791,7 +727,7 @@ namespace EQLogParser
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       var options = new GenerateStatsOptions() { RequestChartData = true };
-      HealingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
+      HealingStatsManager.Instance.FireChartEvent(options, "SELECT", data.Selected);
 
       var preview = playerParseTextWindow.Content as ParsePreview;
 
@@ -816,9 +752,7 @@ namespace EQLogParser
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var options = new GenerateStatsOptions() { RequestChartData = true };
-      TankingStatsManager.Instance.FireSelectionEvent(options, data.Selected);
-
+      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "SELECT", data.Selected);
       var preview = playerParseTextWindow.Content as ParsePreview;
 
       // change the update order based on whats displayed
@@ -1155,12 +1089,12 @@ namespace EQLogParser
 
     private void WindowClosed(object sender, EventArgs e)
     {
-      ConfigUtil.SetApplicationSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowHealingSummaryAtStartup", (HealingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowTankingSummaryAtStartup", (TankingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowDamageChartAtStartup", (DamageChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowHealingChartAtStartup", (HealingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetApplicationSetting("ShowTankingChartAtStartup", (TankingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowHealingSummaryAtStartup", (HealingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowTankingSummaryAtStartup", (TankingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowDamageChartAtStartup", (DamageChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowHealingChartAtStartup", (HealingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowTankingChartAtStartup", (TankingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
 
       StopProcessing();
       CloseOverlay();

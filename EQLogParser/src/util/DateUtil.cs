@@ -111,120 +111,171 @@ namespace EQLogParser
 
   public class TimeRange
   {
-    private List<TimeSegment> TimeSegments = new List<TimeSegment>();
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public double GetTotal() => TimeSegments.Sum(segment => segment.End - segment.Begin + 1);
+    const int OFFSET = 6;
+    public List<TimeSegment> TimeSegments { get; } = new List<TimeSegment>();
+
+    public double GetTotal()
+    {
+      var additional = new List<TimeSegment>();
+
+      for (int i=0; i<TimeSegments.Count; i++)
+      {
+        if (i + 1 is int next && next < TimeSegments.Count)
+        {
+          if (TimeSegments[i].EndTime + OFFSET >= TimeSegments[next].BeginTime)
+          {
+            additional.Add(new TimeSegment(TimeSegments[i].EndTime, TimeSegments[next].BeginTime));
+          }
+        }
+      }
+
+      additional.ForEach(segment => Add(segment));
+      return TimeSegments.Sum(segment => segment.GetTotal());
+    }
+
+    public void Add(List<TimeSegment> list) => list.ForEach(segment => Add(segment));
+
+    public TimeRange() { }
+
+    public TimeRange(TimeSegment segment)
+    {
+      TimeSegments.Add(segment);
+    }
 
     public void Add(TimeSegment segment)
     {
-      if (TimeSegments.Count == 0)
+      if (segment.BeginTime <= segment.EndTime)
       {
-        TimeSegments.Add(segment);
-      }
-      else
-      {
-        int i, action = -1, last = -1, exists = -1;
-        for (i = 0; i < TimeSegments.Count; i++)
+        if (TimeSegments.Count == 0)
         {
-          if (TimeSegments[i].Equals(segment))
+          TimeSegments.Add(segment);
+        }
+        else
+        {
+          int leftIndex = -1;
+          int rightIndex = -1;
+          bool handled = false;
+
+          for (int i = 0; i < TimeSegments.Count; i++)
           {
-            exists = i;
-          }
-          else
-          {
-            action = TimeSegments[i].CompareTo(segment);
-            if (action == 0 || (action == 1 && i + i == TimeSegments.Count) || (action == -1 && last == 1))
+            if (TimeSegments[i].Equals(segment))
             {
+              handled = true;
               break;
             }
-            else if (action == 1)
-            {
-              last = 1;
-            }
-          }
-        }
 
-        if (action == 0 && !(TimeSegments[i].Begin <= segment.Begin && TimeSegments[i].End >= segment.End))
-        {
-          TimeSegments[i].Begin = Math.Min(TimeSegments[i].Begin, segment.Begin);
-          TimeSegments[i].End = Math.Max(TimeSegments[i].End, segment.End);
+            if (IsSurrounding(TimeSegments[i], segment))
+            {
+              TimeSegments[i].BeginTime = segment.BeginTime;
+              TimeSegments[i].EndTime = segment.EndTime;
+              CollapseLeft(i);
+              CollapseRight(i);
+              handled = true;
+              break;
+            }
 
-          if (exists > -1)
-          {
-            TimeSegments.RemoveAt(exists);
-          }
-          else
-          {
-            Add(TimeSegments[i]);
-          }
-        }
-        else if (action == 1 && exists == -1)
-        {
-          if (i - 1 is int previous && previous >= 0)
-          {
-            if (TimeSegments[previous].End + 1 == segment.Begin)
+            if (IsWithin(TimeSegments[i], segment.BeginTime))
             {
-              TimeSegments[previous].End = segment.End;
+              if (segment.EndTime > TimeSegments[i].EndTime)
+              {
+                TimeSegments[i].EndTime = segment.EndTime;
+                CollapseRight(i);
+              }
+
+              handled = true;
+              break;
             }
-            else
+
+            if (IsWithin(TimeSegments[i], segment.EndTime))
             {
-              TimeSegments.Insert(i, segment);
+              if (segment.BeginTime < TimeSegments[i].BeginTime)
+              {
+                TimeSegments[i].BeginTime = segment.BeginTime;
+                CollapseLeft(i);
+              }
+
+              handled = true;
+              break;
             }
-          }
-          else if (TimeSegments[i].End + 1 == segment.Begin)
-          {
-            TimeSegments[i].End = segment.End;
-          }
-          else
-          {
-            TimeSegments.Add(segment);
-          }
-        }
-        else if (action == -1 && last == 1)
-        {
-          if (i < TimeSegments.Count)
-          {
-            if (TimeSegments[i].Begin - 1 == segment.End)
+
+            if (IsLeftOf(segment, TimeSegments[i].BeginTime))
             {
-              TimeSegments[i].Begin = segment.Begin;
+              leftIndex = i;
+              break;
             }
-            else
+            else if (IsRightOf(segment, TimeSegments[i].EndTime))
             {
-              TimeSegments.Insert(i, segment);
+              rightIndex = i;
             }
           }
-          else if (segment.End + 1 == TimeSegments[i].Begin)
+
+          if (!handled)
           {
-            TimeSegments[i].Begin = segment.Begin;
+            if (rightIndex + 1 is int newIndex && newIndex >= 1)
+            {
+              if (TimeSegments.Count > newIndex)
+              {
+                TimeSegments.Insert(newIndex, segment);
+              }
+              else
+              {
+                TimeSegments.Add(segment);
+              }
+            }
+            else if (leftIndex >= 0)
+            {
+              TimeSegments.Insert(leftIndex, segment);
+            }
           }
-          else
-          {
-            TimeSegments.Insert(i, segment);
-          }
-        }
-        else if (action == -1 && exists == -1)
-        {
-          TimeSegments.Insert(0, segment);
         }
       }
     }
+    private void CollapseLeft(int index)
+    {
+      if (index - 1 is int prev && prev >= 0)
+      {
+        if (TimeSegments[index].BeginTime <= TimeSegments[prev].EndTime)
+        {
+          TimeSegments[index].BeginTime = TimeSegments[prev].BeginTime;
+          TimeSegments.RemoveAt(prev);
+          CollapseLeft(prev);
+        }
+      }
+    }
+
+    private void CollapseRight(int index)
+    {
+      if (index + 1 is int next && next < TimeSegments.Count)
+      {
+        if (TimeSegments[index].EndTime >= TimeSegments[next].BeginTime)
+        {
+          TimeSegments[index].EndTime = TimeSegments[next].EndTime;
+          TimeSegments.RemoveAt(next);
+          CollapseRight(index);
+        }
+      }
+    }
+
+    private bool IsLeftOf(TimeSegment one, double value) => value > one.BeginTime && value > one.EndTime;
+    private bool IsRightOf(TimeSegment one, double value) => value < one.BeginTime && value < one.EndTime;
+    private bool IsSurrounding(TimeSegment one, TimeSegment two) => two.BeginTime <= one.BeginTime && two.EndTime >= one.EndTime;
+    private bool IsWithin(TimeSegment one, double value) => value >= one.BeginTime && value <= one.EndTime;
   }
 
   public class TimeSegment
   {
-    public double Begin { get; set; }
-    public double End { get; set;  }
+    public double BeginTime { get; set; }
+    public double EndTime { get; set; }
 
     public TimeSegment(double begin, double end)
     {
-      Begin = begin;
-      End = end;
+      BeginTime = begin;
+      EndTime = end;
     }
 
-    public double GetTotal() => End - Begin + 1;
-
-    public int CompareTo(TimeSegment value) => (value.End < Begin) ? -1 : (value.Begin > End) ? 1 : 0;
-
-    public bool Equals(TimeSegment value) => value.Begin == Begin && value.End == End;
+    public bool Equals(TimeSegment check) => check.BeginTime == BeginTime && check.EndTime == EndTime; 
+    public double GetTotal() => EndTime - BeginTime + 1;
   }
 }

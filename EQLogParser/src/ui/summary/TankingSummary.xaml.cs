@@ -218,7 +218,7 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || (!string.IsNullOrEmpty(name) && CurrentClass == className);
         };
 
-        TankingStatsManager.Instance.FireFilterEvent(new GenerateStatsOptions() { RequestChartData = true }, view.Filter);
+        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, view.Filter);
       }
 
       return view;
@@ -251,7 +251,7 @@ namespace EQLogParser
 
     protected virtual void Dispose(bool disposing)
     {
-      TankingStatsManager.Instance.FireUpdateEvent(new GenerateStatsOptions() { RequestChartData = true });
+      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "UPDATE");
 
       if (!disposedValue)
       {

@@ -9,7 +9,7 @@ namespace EQLogParser
 {
   class ConfigUtil
   {
-    public static bool Debug = false;
+    public delegate void PostConfigCallback();
     public static string PlayerName;
     public static string ServerName;
 
@@ -35,14 +35,35 @@ namespace EQLogParser
       return ArchiveDir;
     }
 
-    internal static string GetApplicationSetting(string key)
+    internal static bool IfSet(string setting, PostConfigCallback callback = null, bool callByDefault = false)
+    {
+      bool result = false;
+      string value = GetSetting(setting);
+      if ((value == null && callByDefault) || (value != null && bool.TryParse(value, out bool bValue) && bValue))
+      {
+        result = true;
+        callback?.Invoke();
+      }
+      return result;
+    }
+
+    internal static int GetSettingAsInteger(string key)
+    {
+      if (int.TryParse(GetSetting(key), out int result) == false)
+      {
+        result = int.MaxValue;
+      }
+      return result;
+    }
+
+    internal static string GetSetting(string key)
     {
       Init();
       ApplicationSettings.TryGetValue(key, out string setting);
       return setting;
     }
 
-    internal static void SetApplicationSetting(string key, string value)
+    internal static void SetSetting(string key, string value)
     {
       Init();
 

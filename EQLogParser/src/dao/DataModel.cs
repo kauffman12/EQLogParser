@@ -158,7 +158,6 @@ namespace EQLogParser
     public string TimeString { get; set; }
     public string ActionPart { get; set; }
     public int OptionalIndex { get; set; }
-    public string OptionalData { get; set; }
   }
 
   public class ResistRecord : IAction
@@ -253,7 +252,7 @@ namespace EQLogParser
     internal List<IAction> Actions { get; } = new List<IAction>();
   }
 
-  public class Attempt : FullTimedAction
+  public class Attempt
   {
     public uint Max { get; set; }
     public uint BaneHits { get; set; }
@@ -270,6 +269,7 @@ namespace EQLogParser
     public long Total { get; set; }
     public long TotalCrit { get; set; }
     public long TotalLucky { get; set; }
+    public double LastTime { get; set; }
     public Dictionary<long, int> CritFreqValues { get; } = new Dictionary<long, int>();
     public Dictionary<long, int> NonCritFreqValues { get; } = new Dictionary<long, int>();
   }
@@ -284,6 +284,10 @@ namespace EQLogParser
     public int GroupId { get; set; }
     public long Total { get; set; }
     public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
+    public Dictionary<string, TimeSegment> DamageSegments { get; } = new Dictionary<string, TimeSegment>();
+    public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
+    public Dictionary<string, TimeSegment> InitialTankSegments { get; } = new Dictionary<string, TimeSegment>();
+    public Dictionary<string, Dictionary<string, TimeSegment>> InitialTankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
   }
 
@@ -375,12 +379,12 @@ namespace EQLogParser
 
   public class OverlayDamageStats : CombinedStats
   {
+    public double BeginTime { get; set; }
+    public double LastTime { get; set; }
     public Dictionary<string, PlayerStats> TopLevelStats { get; } = new Dictionary<string, PlayerStats>();
     public Dictionary<string, PlayerStats> AggregateStats { get; } = new Dictionary<string, PlayerStats>();
     public Dictionary<string, PlayerStats> IndividualStats { get; } = new Dictionary<string, PlayerStats>();
-    public Dictionary<string, byte> UniqueNpcs { get; } = new Dictionary<string, byte>();
-    public TimeRange Range { get; set; } = new TimeRange();
-    public int CombineCount { get; set; }
+    public List<Fight> InactiveFights { get; } = new List<Fight>();
   }
 
   public class DataPoint
@@ -440,9 +444,7 @@ namespace EQLogParser
     public double PercentOfRaid { get; set; }
     public string Special { get; set; }
     public string ClassName { get; set; }
-    public List<double> BeginTimes { get; } = new List<double>();
-    public List<double> LastTimes { get; } = new List<double>();
-    public List<double> TimeDiffs { get; } = new List<double>();
+    public TimeRange Ranges { get; } = new TimeRange();
   }
 
   public class PlayerStats : PlayerSubStats
@@ -450,5 +452,6 @@ namespace EQLogParser
     public Dictionary<string, PlayerSubStats> SubStats { get; } = new Dictionary<string, PlayerSubStats>();
     public Dictionary<string, PlayerSubStats> SubStats2 { get; } = new Dictionary<string, PlayerSubStats>();
     public string OrigName { get; set; }
+    public double CalcTime { get; set; }
   }
 }

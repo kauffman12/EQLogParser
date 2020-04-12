@@ -25,12 +25,11 @@ namespace EQLogParser
     private static SolidColorBrush UPBRUSH = new SolidColorBrush(Colors.White);
     private static SolidColorBrush DOWNBRUSH = new SolidColorBrush(Colors.Red);
     private static SolidColorBrush TITLEBRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
-    private static SolidColorBrush GRAYBRUSH = new SolidColorBrush(Colors.Gray);
     private static object StatsLock = new object();
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
     private const double OPACITY = 0.40;
-    private const double DATA_OPACITY = 0.80;
+    private const double DATA_OPACITY = 0.65;
 
     private OverlayDamageStats Stats = null;
     private DispatcherTimer UpdateTimer;
@@ -45,6 +44,7 @@ namespace EQLogParser
     private TextBlock TitleDamageBlock;
     private StackPanel TitleDamagePanel;
     private Rectangle TitleRectangle;
+    private List<ColorComboBox> ColorComboBoxList = new List<ColorComboBox>();
     private List<StackPanel> NamePanels = new List<StackPanel>();
     private List<TextBlock> NameBlockList = new List<TextBlock>();
     private List<StackPanel> DamagePanels = new List<StackPanel>();
@@ -53,25 +53,23 @@ namespace EQLogParser
     private List<Rectangle> RectangleList = new List<Rectangle>();
     private Dictionary<int, double> PrevList = null;
     private int CurrentDamageSelectionMode = 0;
+    private bool IsHideOverlayOtherPlayersEnabled = false;
 
-    private List<Color> TitleColorList = new List<Color> { Color.FromRgb(50, 50, 50), Color.FromRgb(30, 30, 30), Color.FromRgb(10, 10, 10) };
-    private List<List<Color>> ColorList = new List<List<Color>>()
-    {
-      new List<Color> { Color.FromRgb(60, 134, 80), Color.FromRgb(54, 129, 27), Color.FromRgb(39, 69, 27) },
-      new List<Color> { Color.FromRgb(43, 111, 102), Color.FromRgb(38, 101, 78), Color.FromRgb(33, 62, 54) },
-      new List<Color> { Color.FromRgb(67, 91, 133), Color.FromRgb(50, 76, 121), Color.FromRgb(36, 49, 70) },
-      new List<Color> { Color.FromRgb(137, 141, 41), Color.FromRgb(130, 129, 42), Color.FromRgb(85, 86, 11) },
-      new List<Color> { Color.FromRgb(149, 94, 31), Color.FromRgb(128, 86, 25), Color.FromRgb(78, 53, 21) }
-    };
+    private Color TitleColor = Color.FromRgb(30, 30, 30);
+    private List<Color> ColorList = new List<Color>();
 
     public OverlayWindow(bool configure = false)
     {
       InitializeComponent();
+      LoadColorSettings();
 
-      string width = ConfigUtil.GetApplicationSetting("OverlayWidth");
-      string height = ConfigUtil.GetApplicationSetting("OverlayHeight");
-      string top = ConfigUtil.GetApplicationSetting("OverlayTop");
-      string left = ConfigUtil.GetApplicationSetting("OverlayLeft");
+      string width = ConfigUtil.GetSetting("OverlayWidth");
+      string height = ConfigUtil.GetSetting("OverlayHeight");
+      string top = ConfigUtil.GetSetting("OverlayTop");
+      string left = ConfigUtil.GetSetting("OverlayLeft");
+      // Hide other player names on overlay
+      IsHideOverlayOtherPlayersEnabled = ConfigUtil.IfSet("HideOverlayOtherPlayers");
+      showNameSelection.SelectedIndex = IsHideOverlayOtherPlayersEnabled ? 1 : 0;
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
       bool offsetSize = configure || width == null || height == null || top == null || left == null;
@@ -91,6 +89,7 @@ namespace EQLogParser
       }
       else
       {
+        overlayCanvas.Background = new SolidColorBrush(Color.FromRgb(45, 45, 48));
         CreateRows(true);
         MinHeight = 130;
         AllowsTransparency = false;
@@ -131,30 +130,24 @@ namespace EQLogParser
         }
       }
 
-      string damageMode = ConfigUtil.GetApplicationSetting("OverlayDamageMode");
-      if (!string.IsNullOrEmpty(damageMode))
+      int damageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
+      foreach (var item in damageModeSelection.Items.Cast<ComboBoxItem>())
       {
-        if (int.TryParse(damageMode, out int currDamageMode))
+        if ((string)item.Tag == damageMode.ToString())
         {
-          foreach (var item in damageModeSelection.Items.Cast<ComboBoxItem>())
-          {
-            if ((string)item.Tag == damageMode)
-            {
-              damageModeSelection.SelectedItem = item;
-              CurrentDamageSelectionMode = currDamageMode;
-            }
-          }
+          damageModeSelection.SelectedItem = item;
+          CurrentDamageSelectionMode = damageMode;
         }
       }
 
-      string fontSize = ConfigUtil.GetApplicationSetting("OverlayFontSize");
+      string fontSize = ConfigUtil.GetSetting("OverlayFontSize");
       bool fontHasBeenSet = false;
       int currentFontSize = DEFAULT_TEXT_FONT_SIZE;
       if (fontSize != null && int.TryParse(fontSize, out currentFontSize) && currentFontSize >= 0 && currentFontSize <= 64)
       {
         foreach (var item in fontSizeSelection.Items)
         {
-          if ((item as ComboBoxItem).Content as string == fontSize)
+          if ((item as ComboBoxItem).Tag as string == fontSize)
           {
             fontSizeSelection.SelectedItem = item;
             SetFont(currentFontSize);
@@ -226,18 +219,40 @@ namespace EQLogParser
       }
     }
 
+    private void LoadColorSettings()
+    {
+      // load defaults
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#2e7d32"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#01579b"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#006064"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#673ab7"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+
+      for (int i = 0; i < ColorList.Count; i++)
+      {
+        try
+        {
+          string name = ConfigUtil.GetSetting(string.Format("OverlayRankColor{0}", i + 1));
+          if (!string.IsNullOrEmpty(name) && ColorConverter.ConvertFromString(name) is Color color)
+          {
+            ColorList[i] = color; // override
+          }
+        }
+        catch (FormatException ex)
+        {
+          LOG.Error("Invalid Overlay Color", ex);
+        }
+      }
+    }
+
     private void LoadTestData()
     {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
-      TitleBlock.Text = "Set Position and Size of this Window before Saving!!!";
-
       for (int i = 0; i < MAX_ROWS - 1; i++)
       {
-        NameBlockList[i].Text = (i + 1) + ". Example Player Name";
-        NameBlockList[i].Foreground = GRAYBRUSH;
-        DamageBlockList[i].Text = "[3s @50K] 50M";
-        DamageBlockList[i].Foreground = GRAYBRUSH;
-        DamageRateList[i].Opacity = DATA_OPACITY;
+        NameBlockList[i].Text = i + 1 + ". Example Player Name";
+        NameBlockList[i].FontStyle = FontStyles.Italic;
+        NameBlockList[i].FontWeight = FontWeights.Light;
       }
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
     }
@@ -258,9 +273,9 @@ namespace EQLogParser
     {
       lock(StatsLock)
       {
-        if (Stats != null && Stats.UniqueNpcs.ContainsKey(e.Name))
+        if (Stats != null && e.LastTime >= Stats.BeginTime)
         {
-          Stats.UniqueNpcs.Remove(e.Name);
+          Stats.InactiveFights.Add(e);
         }
       }
     }
@@ -277,8 +292,8 @@ namespace EQLogParser
           // so this limits it to 1/2 the current time value
           ProcessDirection = !ProcessDirection;
 
-          var timeout = CurrentDamageSelectionMode == 0 ? 10 : CurrentDamageSelectionMode;
-          if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.RaidStats.LastTime)).TotalSeconds > timeout)
+          var timeout = CurrentDamageSelectionMode == 0 ? DataManager.FIGHT_TIMEOUT : CurrentDamageSelectionMode;
+          if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.LastTime)).TotalSeconds > timeout)
           {
             windowBrush.Opacity = 0.0;
             ButtonPopup.IsOpen = false;
@@ -318,13 +333,13 @@ namespace EQLogParser
                   else
                   {
                     RectangleList[i].Visibility = Visibility.Hidden; // maybe it calculates width better
-                    RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * this.Width;
+                    RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * Width;
                   }
 
                   string playerName = ConfigUtil.PlayerName;
                   var isMe = !string.IsNullOrEmpty(playerName) && list[i].Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
                     (playerName.Length >= list[i].Name.Length || list[i].Name[playerName.Length] == ' ');
-                  if (MainWindow.IsHideOverlayOtherPlayersEnabled && !isMe)
+                  if (IsHideOverlayOtherPlayersEnabled && !isMe)
                   {
                     NameBlockList[i].Text = list[i].Rank + ". " + "Hidden Player";
                   }
@@ -464,15 +479,14 @@ namespace EQLogParser
       SetSize(TitleDamagePanel, rowHeight, double.NaN);
 
       SetSize(configPanel, rowHeight, double.NaN);
-      SetSize(savePanel, rowHeight, double.NaN);
-      configPanel.SetValue(Canvas.TopProperty, rowHeight * MAX_ROWS);
-      savePanel.SetValue(Canvas.TopProperty, rowHeight * MAX_ROWS);
 
       if (!Active)
       {
         for (int i = 0; i < MAX_ROWS; i++)
         {
-          SetSize(RectangleList[i], rowHeight, width);
+          // should only effect test data
+          var percent = Convert.ToDouble(65 - 10 * i) / 100;
+          SetSize(RectangleList[i], rowHeight, width * percent);
           SetSize(NamePanels[i], rowHeight, double.NaN);
           SetSize(DamagePanels[i], rowHeight, double.NaN);
 
@@ -487,11 +501,9 @@ namespace EQLogParser
     private void CreateRows(bool configure = false)
     {
       configPanel.SetValue(Panel.ZIndexProperty, 3);
-      configPanel.SetValue(Canvas.LeftProperty, 5.0);
-      savePanel.SetValue(Panel.ZIndexProperty, 3);
-      savePanel.SetValue(Canvas.RightProperty, 5.0);
+      configPanel.SetValue(Canvas.RightProperty, 5.0);
 
-      TitleRectangle = CreateRectangle(configure, TitleColorList);
+      TitleRectangle = CreateRectangle(TitleColor);
       overlayCanvas.Children.Add(TitleRectangle);
 
       TitlePanel = CreateNameStackPanel();
@@ -513,7 +525,7 @@ namespace EQLogParser
 
       for (int i = 0; i < MAX_ROWS; i++)
       {
-        var rectangle = CreateRectangle(configure, ColorList[i]);
+        var rectangle = CreateRectangle(ColorList[i]);
         RectangleList.Add(rectangle);
         overlayCanvas.Children.Add(rectangle);
 
@@ -529,13 +541,34 @@ namespace EQLogParser
         var damageStack = CreateDamageStackPanel();
         DamagePanels.Add(damageStack);
 
-        var damageRate = CreateImageAwesome();
-        DamageRateList.Add(damageRate);
-        damageStack.Children.Add(damageRate);
+        if (configure)
+        {
+          var colorChoice = new ColorComboBox(ColorComboBox.Theme.Dark);
+          colorChoice.Tag = string.Format("OverlayRankColor{0}", i + 1);
+          colorChoice.SelectionChanged += (object sender, SelectionChangedEventArgs e) =>
+          {
+            rectangle.Fill = CreateBrush((colorChoice.SelectedValue as ColorItem).Brush.Color);
+          };
 
-        var damageBlock = CreateTextBlock();
-        DamageBlockList.Add(damageBlock);
-        damageStack.Children.Add(damageBlock);
+          if (colorChoice.ItemsSource is List<ColorItem> colors)
+          {
+            colorChoice.SelectedItem = colors.Find(item => item.Brush.Color == ColorList[i]);
+          }
+
+          ColorComboBoxList.Add(colorChoice);
+          damageStack.Children.Add(colorChoice);
+        }
+        else
+        {
+          var damageRate = CreateImageAwesome();
+          DamageRateList.Add(damageRate);
+          damageStack.Children.Add(damageRate);
+
+          var damageBlock = CreateTextBlock();
+          DamageBlockList.Add(damageBlock);
+          damageStack.Children.Add(damageBlock);
+        }
+
         overlayCanvas.Children.Add(damageStack);
       }
     }
@@ -563,11 +596,16 @@ namespace EQLogParser
       for (int i = 0; i < MAX_ROWS; i++)
       {
         NameBlockList[i].FontSize = size;
-        DamageRateList[i].Height = size;
-        DamageRateList[i].Width = size;
-        DamageRateList[i].MaxHeight = size;
-        DamageRateList[i].MaxWidth = size;
-        DamageBlockList[i].FontSize = size;
+
+        // empty during configure
+        if (DamageRateList.Count > 0)
+        {
+          DamageRateList[i].Height = size;
+          DamageRateList[i].Width = size;
+          DamageRateList[i].MaxHeight = size;
+          DamageRateList[i].MaxWidth = size;
+          DamageBlockList[i].FontSize = size;
+        }
       }
     }
 
@@ -578,39 +616,50 @@ namespace EQLogParser
 
     private void FontSizeSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out int size))
+      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Tag as string, out int size))
       {
         SetFont(size);
       }
+    }
+
+    private void ShowNamesSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      IsHideOverlayOtherPlayersEnabled = showNameSelection.SelectedIndex == 1;
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
       if (!double.IsNaN(overlayCanvas.ActualHeight) && overlayCanvas.ActualHeight > 0)
       {
-        ConfigUtil.SetApplicationSetting("OverlayHeight", overlayCanvas.ActualHeight.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("OverlayHeight", overlayCanvas.ActualHeight.ToString(CultureInfo.CurrentCulture));
       }
 
       if (!double.IsNaN(overlayCanvas.ActualWidth) && overlayCanvas.ActualWidth > 0)
       {
-        ConfigUtil.SetApplicationSetting("OverlayWidth", overlayCanvas.ActualWidth.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("OverlayWidth", overlayCanvas.ActualWidth.ToString(CultureInfo.CurrentCulture));
       }
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
       if (Top + margin.Top >= SystemParameters.VirtualScreenTop && (Left + margin.Left) >= SystemParameters.VirtualScreenLeft)
       {
-        ConfigUtil.SetApplicationSetting("OverlayTop", (Top + margin.Top).ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetApplicationSetting("OverlayLeft", (Left + margin.Left).ToString(CultureInfo.CurrentCulture));
-      }
-
-      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Content as string, out int size))
-      {
-        ConfigUtil.SetApplicationSetting("OverlayFontSize", size.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("OverlayTop", (Top + margin.Top).ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("OverlayLeft", (Left + margin.Left).ToString(CultureInfo.CurrentCulture));
       }
 
       if (TitleBlock != null)
       {
-        ConfigUtil.SetApplicationSetting("OverlayDamageMode", (string)(damageModeSelection.SelectedItem as ComboBoxItem).Tag);
+        if (int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Tag as string, out int size))
+        {
+          ConfigUtil.SetSetting("OverlayFontSize", size.ToString(CultureInfo.CurrentCulture));
+        }
+
+        ConfigUtil.SetSetting("OverlayDamageMode", (string)(damageModeSelection.SelectedItem as ComboBoxItem).Tag);
+        ConfigUtil.SetSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
+
+        ColorComboBoxList.ForEach(colorChoice =>
+        {
+          ConfigUtil.SetSetting(colorChoice.Tag as string, (colorChoice.SelectedValue as ColorItem).Name);
+        });
       }
 
       (Application.Current.MainWindow as MainWindow)?.OpenOverlay(false, true);
@@ -640,20 +689,6 @@ namespace EQLogParser
       NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
     }
 
-    private static LinearGradientBrush CreateBrush(List<Color> colors)
-    {
-      var brush = new LinearGradientBrush
-      {
-        StartPoint = new Point(0.5, 0),
-        EndPoint = new Point(0.5, 1)
-      };
-
-      brush.GradientStops.Add(new GradientStop(colors[0], 0.0));
-      brush.GradientStops.Add(new GradientStop(colors[1], 0.5));
-      brush.GradientStops.Add(new GradientStop(colors[2], 0.75));
-      return brush;
-    }
-
     private static Button CreateButton(string tooltip, string content, double size)
     {
       var button = new Button() { Background = null, BorderBrush = null, IsEnabled = true };
@@ -670,16 +705,13 @@ namespace EQLogParser
       return button;
     }
 
-    private static Rectangle CreateRectangle(bool configure, List<Color> colors)
+    private static Rectangle CreateRectangle(Color color)
     {
-      var rectangle = new Rectangle
-      {
-        Fill = CreateBrush(colors)
-      };
-
+      var rectangle = new Rectangle();
       rectangle.SetValue(Panel.ZIndexProperty, 1);
       rectangle.Effect = new BlurEffect { Radius = 5, RenderingBias = 0 };
-      rectangle.Opacity = configure ? 1.0 : DATA_OPACITY;
+      rectangle.Opacity = DATA_OPACITY;
+      rectangle.Fill = CreateBrush(color);
       return rectangle;
     }
 
@@ -730,6 +762,44 @@ namespace EQLogParser
       {
         element.Width = width;
       }
+    }
+
+    private static Brush CreateBrush(Color color)
+    {
+      var brush = new LinearGradientBrush
+      {
+        StartPoint = new Point(0.5, 0),
+        EndPoint = new Point(0.5, 1)
+      };
+
+      brush.GradientStops.Add(new GradientStop(ChangeColorBrightness(color, 0.15f), 0.0));
+      brush.GradientStops.Add(new GradientStop(color, 0.5));
+      brush.GradientStops.Add(new GradientStop(ChangeColorBrightness(color, -0.4f), 0.75));
+      return brush;
+    }
+
+    // From: https://gist.github.com/zihotki/09fc41d52981fb6f93a81ebf20b35cd5
+    public static Color ChangeColorBrightness(Color color, float correctionFactor)
+    {
+      float red = color.R;
+      float green = color.G;
+      float blue = color.B;
+
+      if (correctionFactor < 0)
+      {
+        correctionFactor = 1 + correctionFactor;
+        red *= correctionFactor;
+        green *= correctionFactor;
+        blue *= correctionFactor;
+      }
+      else
+      {
+        red = (255 - red) * correctionFactor + red;
+        green = (255 - green) * correctionFactor + green;
+        blue = (255 - blue) * correctionFactor + blue;
+      }
+
+      return Color.FromArgb(color.A, (byte)red, (byte)green, (byte)blue);
     }
   }
 }
