@@ -377,6 +377,7 @@ namespace EQLogParser
                         if ((!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerPets.ContainsKey(record.Attacker)) || player == Labels.UNASSIGNED)
                         {
                           topLevelStats[record.Attacker] = stats;
+                          stats.IsTopLevel = true;
                         }
                         else
                         {
@@ -392,7 +393,9 @@ namespace EQLogParser
                             childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
                           }
 
+                          
                           childrenStats[aggregateName][stats.Name] = stats;
+                          stats.IsTopLevel = false;
                         }
 
                         PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);

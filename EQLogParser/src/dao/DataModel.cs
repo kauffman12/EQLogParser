@@ -451,6 +451,7 @@ namespace EQLogParser
   {
     public Dictionary<string, PlayerSubStats> SubStats { get; } = new Dictionary<string, PlayerSubStats>();
     public Dictionary<string, PlayerSubStats> SubStats2 { get; } = new Dictionary<string, PlayerSubStats>();
+    public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }
     public double CalcTime { get; set; }
   }

@@ -107,6 +107,11 @@ namespace EQLogParser
       return results;
     }
 
+    internal virtual bool IsPetsCombined()
+    {
+      return false;
+    }
+
     internal string GetTargetTitle()
     {
       return CurrentStats?.TargetTitle ?? GetTitle();
