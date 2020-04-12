@@ -72,27 +72,7 @@
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"  Margin="0,0,0,0">
       <ComboBox x:Name="fontFamily" Height="20" FontSize="11" Width="120" ItemsSource="{x:Static Fonts.SystemFontFamilies}" SelectionChanged="FontFamily_Changed" />
       <ComboBox x:Name="fontSize" Height="20" FontSize="11" SelectionChanged="FontSize_Changed" />
-      <ComboBox x:Name="fontFgColor" Height="20" FontSize="11" SelectionChanged="FontFgColor_Changed">
-        <ComboBox.ItemTemplateSelector>
-          <local:ComboBoxItemTemplateSelector>
-            <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-              <DataTemplate DataType="{x:Type local:ColorItem}">
-                <StackPanel Orientation="Horizontal">
-                  <Rectangle Width="16" Height="16" Fill="{Binding Brush}"/>
-                </StackPanel>
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-            <local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-              <DataTemplate DataType="{x:Type local:ColorItem}">
-                <StackPanel Orientation="Horizontal">
-                  <Rectangle Width="16" Height="16" Fill="{Binding Brush}"/>
-                  <TextBlock Margin="4,0,0,0" Text="{Binding Name}" VerticalAlignment="Center"/>
-                </StackPanel>
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-          </local:ComboBoxItemTemplateSelector>
-        </ComboBox.ItemTemplateSelector>
-      </ComboBox>
+      <local:ColorComboBox x:Name="fontFgColor" Height="20" FontSize="11" SelectionChanged="FontFgColor_Changed" />
     </StackPanel>
   </Grid>
 </UserControl>

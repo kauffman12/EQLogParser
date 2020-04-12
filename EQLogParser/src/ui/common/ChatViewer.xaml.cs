@@ -20,7 +20,6 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private static List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
-    private static List<ColorItem> ColorItems;
     private static bool Running = false;
 
     private List<string> PlayerAutoCompleteList = new List<string>();
@@ -45,13 +44,6 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      ColorItems = typeof(Colors).GetProperties().
-        Where(prop => prop.Name != "Transparent").
-        Select(prop => new ColorItem() { Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(prop.Name)), Name = prop.Name }).
-        OrderBy(item => item.Name).ToList();
-
-      ColorItem DefaultForeground = new ColorItem { Name = "Default", Brush = new SolidColorBrush(Colors.White) };
-
       fontSize.ItemsSource = FontSizeList;
       startDate.Text = Properties.Resources.CHAT_START_DATE;
       endDate.Text = Properties.Resources.CHAT_END_DATE;
@@ -65,15 +57,21 @@ namespace EQLogParser
       context.Items.AddRange(PlayerAutoCompleteList);
       fromFilter.DataContext = context;
 
-      var fgList = new List<ColorItem>(ColorItems);
-      fgList.Insert(0, DefaultForeground);
-      fontFgColor.ItemsSource = fgList;
+      string fgColor = ConfigUtil.GetSetting("ChatFontFgColor");
+      if (fontFgColor.ItemsSource is List<ColorItem> colors)
+      {
+        if (colors.Find(item => item.Name == fgColor) is ColorItem found)
+        {
+          fontFgColor.SelectedItem = found;
+        }
+        else
+        {
+          // default to white
+          fontFgColor.SelectedItem = colors.Find(item => item.Name == "#ffffff");
+        }
+      }
 
-      string fgColor = ConfigUtil.GetApplicationSetting("ChatFontFgColor");
-      fgColor = fgColor ?? "Default";
-      fontFgColor.SelectedItem = fgList.Find(item => item.Name == fgColor);
-
-      string family = ConfigUtil.GetApplicationSetting("ChatFontFamily");
+      string family = ConfigUtil.GetSetting("ChatFontFamily");
       if (family != null)
       {
         fontFamily.SelectedItem = new FontFamily(family);
@@ -83,7 +81,7 @@ namespace EQLogParser
         fontFamily.SelectedItem = chatBox.FontFamily;
       }
 
-      string size = ConfigUtil.GetApplicationSetting("ChatFontSize");
+      string size = ConfigUtil.GetSetting("ChatFontSize");
       if (size != null && double.TryParse(size, out double dsize))
       {
         fontSize.SelectedItem = dsize;
@@ -302,7 +300,7 @@ namespace EQLogParser
 
               players.ItemsSource = playerList;
 
-              string player = ConfigUtil.GetApplicationSetting("ChatSelectedPlayer");
+              string player = ConfigUtil.GetSetting("ChatSelectedPlayer");
               if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
               {
                 player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
@@ -419,7 +417,7 @@ namespace EQLogParser
       {
         LoadChannels(players.SelectedItem as string);
         PlayerAutoCompleteList = ChatManager.GetPlayers(name);
-        ConfigUtil.SetApplicationSetting("ChatSelectedPlayer", name);
+        ConfigUtil.SetSetting("ChatSelectedPlayer", name);
 
         if (Ready)
         {
@@ -463,9 +461,8 @@ namespace EQLogParser
       if (fontFgColor.SelectedItem != null)
       {
         var item = fontFgColor.SelectedItem as ColorItem;
-
         chatBox.Foreground = item.Brush;
-        ConfigUtil.SetApplicationSetting("ChatFontFgColor", item.Name);
+        ConfigUtil.SetSetting("ChatFontFgColor", item.Name);
       }
     }
 
@@ -474,7 +471,7 @@ namespace EQLogParser
       if (fontSize.SelectedItem != null)
       {
         chatBox.FontSize = (double)fontSize.SelectedItem;
-        ConfigUtil.SetApplicationSetting("ChatFontSize", fontSize.SelectedItem.ToString());
+        ConfigUtil.SetSetting("ChatFontSize", fontSize.SelectedItem.ToString());
       }
     }
 
@@ -484,7 +481,7 @@ namespace EQLogParser
       {
         var family = fontFamily.SelectedItem as FontFamily;
         chatBox.FontFamily = family;
-        ConfigUtil.SetApplicationSetting("ChatFontFamily", family.ToString());
+        ConfigUtil.SetSetting("ChatFontFamily", family.ToString());
       }
     }
 

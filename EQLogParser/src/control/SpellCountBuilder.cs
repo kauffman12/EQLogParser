@@ -13,13 +13,14 @@ namespace EQLogParser
 
       HashSet<IAction> castsDuring = new HashSet<IAction>();
       HashSet<IAction> receivedDuring = new HashSet<IAction>();
-      for (int i = 0; i < raidStats.BeginTimes.Count; i++)
+
+      raidStats.Ranges.TimeSegments.ForEach(segment =>
       {
-        var blocks = DataManager.Instance.GetCastsDuring(raidStats.BeginTimes[i] - COUNT_OFFSET, raidStats.LastTimes[i]);
+        var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - COUNT_OFFSET, segment.EndTime);
         blocks.ForEach(block => block.Actions.ForEach(action => castsDuring.Add(action)));
-        blocks = DataManager.Instance.GetReceivedSpellsDuring(raidStats.BeginTimes[i] - COUNT_OFFSET, raidStats.LastTimes[i]);
+        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - COUNT_OFFSET, segment.EndTime);
         blocks.ForEach(block => block.Actions.ForEach(action => receivedDuring.Add(action)));
-      }
+      });
 
       foreach (var action in castsDuring.AsParallel().Where(cast => playerList.Contains((cast as SpellCast).Caster)))
       {

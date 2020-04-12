@@ -7,37 +7,36 @@
         Height="198" Width="500"
         MinWidth="375"
         Topmost="True"
-        Title="Configure Overlay Window"
+        Title="Configure Overlay (Set Position/Size Before Saving)"
         Style="{StaticResource OverlayStyle}" Closing="WindowClosing" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False">
   <Window.Background>
     <SolidColorBrush x:Name="windowBrush" Opacity="0.0" Color="Black" />
   </Window.Background>
   <Canvas x:Name="overlayCanvas" SizeChanged="PanelSizeChanged">
     <StackPanel x:Name="configPanel" Orientation="Horizontal">
-      <TextBlock x:Name="fontSizeLabel" VerticalAlignment="Center" FontSize="12" Foreground="White">Font Size:</TextBlock>
-      <ComboBox x:Name="fontSizeSelection" SelectedIndex="3" FontSize="12" MaxHeight="25" Margin="5,0,0,0" SelectionChanged="FontSizeSelectionChanged" Background="#FF040000">
-        <ComboBoxItem>10</ComboBoxItem>
-        <ComboBoxItem>11</ComboBoxItem>
-        <ComboBoxItem>12</ComboBoxItem>
-        <ComboBoxItem>13</ComboBoxItem>
-        <ComboBoxItem>14</ComboBoxItem>
-        <ComboBoxItem>15</ComboBoxItem>
-        <ComboBoxItem>16</ComboBoxItem>
-        <ComboBoxItem>17</ComboBoxItem>
-        <ComboBoxItem>18</ComboBoxItem>
+      <ComboBox x:Name="fontSizeSelection" SelectedIndex="2" FontSize="12" Width="70" MaxHeight="22" Margin="0,0,0,0" SelectionChanged="FontSizeSelectionChanged" Background="#FF040000">
+        <ComboBoxItem Tag="10">Font 10</ComboBoxItem>
+        <ComboBoxItem Tag="11">Font 11</ComboBoxItem>
+        <ComboBoxItem Tag="12">Font 12</ComboBoxItem>
+        <ComboBoxItem Tag="13">Font 13</ComboBoxItem>
+        <ComboBoxItem Tag="14">Font 14</ComboBoxItem>
+        <ComboBoxItem Tag="15">Font 15</ComboBoxItem>
+        <ComboBoxItem Tag="16">Font 16</ComboBoxItem>
+        <ComboBoxItem Tag="17">Font 17</ComboBoxItem>
+        <ComboBoxItem Tag="18">Font 18</ComboBoxItem>
       </ComboBox>
-      <TextBlock x:Name="damageModeLabel" VerticalAlignment="Center" FontSize="12" Margin="10,0,0,0" Foreground="White" ToolTip="Choose NPC Death for the Overlay to reset damage and dps after all NPCs are dead. Choose Timeout for it to reset damage and dps after the 24 second timeout period is reached.">Restart Damage After:</TextBlock>
-      <ComboBox x:Name="damageModeSelection" SelectedIndex="0" FontSize="12" MaxHeight="25" Margin="5,0,0,0" Background="#FF040000">
-        <ComboBoxItem Tag="0">NPC Death</ComboBoxItem>
-        <ComboBoxItem Tag="20">20 Seconds</ComboBoxItem>
-        <ComboBoxItem Tag="30">30 Seconds</ComboBoxItem>
-        <ComboBoxItem Tag="40">40 Seconds</ComboBoxItem>
-        <ComboBoxItem Tag="50">50 Seconds</ComboBoxItem>
-        <ComboBoxItem Tag="60">60 Seconds</ComboBoxItem>
+      <ComboBox x:Name="showNameSelection" SelectedIndex="0" FontSize="12" Width="98" MaxHeight="22" Margin="0,0,0,0" SelectionChanged="ShowNamesSelectionChanged" Background="#FF040000">
+        <ComboBoxItem Tag="10">Show Names</ComboBoxItem>
+        <ComboBoxItem Tag="10">Hide Names</ComboBoxItem>
+      </ComboBox>      
+      <ComboBox x:Name="damageModeSelection" SelectedIndex="0" FontSize="12" Width="148" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" ToolTip="Choose NPC Death for the Overlay to reset damage and dps after all NPCs are dead. Otherwise the selected timeout is used.">
+        <ComboBoxItem Tag="0">Reset After NPC Death</ComboBoxItem>
+        <ComboBoxItem Tag="30">Reset After 30s Inactive</ComboBoxItem>
+        <ComboBoxItem Tag="40">Reset After 40s Inactive</ComboBoxItem>
+        <ComboBoxItem Tag="50">Reset After 50s Inactive</ComboBoxItem>
+        <ComboBoxItem Tag="60">Reset After 60s Inactive</ComboBoxItem>
       </ComboBox>
-    </StackPanel>
-    <StackPanel x:Name="savePanel" Orientation="Horizontal">
-      <Button x:Name="saveButton" Margin="3,0,0,0" Width="58" MaxHeight="25" FontSize="12" Click="SaveClick">Save</Button>
+      <Button x:Name="saveButton" Margin="0,0,0,0" Width="48" MaxHeight="22" FontSize="12" Click="SaveClick">Save</Button>
     </StackPanel>
   </Canvas>
 </Window>

@@ -120,13 +120,10 @@ namespace EQLogParser
       UpdateTimer.Start();
 
       // read show hp setting
-      string showHitPoints = ConfigUtil.GetApplicationSetting("NpcShowHitPoints");
-      fightShowHitPoints.IsChecked = bool.TryParse(showHitPoints, out bool bValue) && bValue;
-      fightDataGrid.Columns[1].Visibility = bValue ? Visibility.Visible : Visibility.Hidden;
-
+      fightShowHitPoints.IsChecked = ConfigUtil.IfSet("NpcShowHitPoints");
+      fightDataGrid.Columns[1].Visibility = fightShowHitPoints.IsChecked.Value ? Visibility.Visible : Visibility.Hidden;
       // read show breaks setting
-      string showBreaks = ConfigUtil.GetApplicationSetting("NpcShowInactivityBreaks");
-      fightShowBreaks.IsChecked = CurrentShowBreaks = (showBreaks == null || (bool.TryParse(showBreaks, out bValue) && bValue));
+      fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
     }
 
     public IEnumerable<Fight> GetSelectedItems()
@@ -292,7 +289,7 @@ namespace EQLogParser
       if (fightDataGrid?.ItemsSource is ICollectionView view)
       {
         CurrentShowBreaks = fightShowBreaks.IsChecked.Value;
-        ConfigUtil.SetApplicationSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
 
         view.Refresh();
       }
@@ -304,7 +301,7 @@ namespace EQLogParser
       {
         var show = fightDataGrid.Columns[1].Visibility == Visibility.Hidden;
         fightDataGrid.Columns[1].Visibility = show ? Visibility.Visible : Visibility.Hidden;
-        ConfigUtil.SetApplicationSetting("NpcShowHitPoints", show.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("NpcShowHitPoints", show.ToString(CultureInfo.CurrentCulture));
       }
     }
 
