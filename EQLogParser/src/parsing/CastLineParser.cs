@@ -21,11 +21,6 @@ namespace EQLogParser
       { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
     };
 
-    private static readonly Dictionary<string, string> SpecialOtherCodes = new Dictionary<string, string>()
-    {
-      { "Staunch Recovery", "6" }
-    };
-
     public static void Process(LineData lineData)
     {
       try
@@ -133,11 +128,6 @@ namespace EQLogParser
               {
                 // For some reason Glyphs don't show up for current player
                 CheckForSpecial(SpecialYouCodes, spellName, player, currentTime);
-              }
-              else if (isSpell && !isYou)
-              {
-                // Some spells only show up as casting
-                CheckForSpecial(SpecialOtherCodes, spellName, player, currentTime);
               }
 
               var spellData = DataManager.Instance.GetSpellByName(spellName);
