@@ -242,6 +242,7 @@ namespace EQLogParser
           {
             var headers = tables[key].GetHeaders();
             var playerStats = tables[key].GetPlayerStats();
+            var isPetsCombined = tables[key].IsPetsCombined();
 
             var columns = headers.Select(header => header[1]).ToList();
             var rows = new List<object>();
@@ -259,10 +260,11 @@ namespace EQLogParser
                 data.Add(value);
               }
 
+              var isChild = stats.IsTopLevel == false && isPetsCombined;
               var row = new
               {
-                rank = stats.Rank == 0 ? "" : stats.Rank.ToString(CultureInfo.CurrentCulture),
-                ischild = stats.Rank == 0,
+                rank = isChild ? "" : stats.Rank.ToString(CultureInfo.CurrentCulture),
+                ischild = isChild,
                 haschild = stats.Name.Contains(" +Pets"),
                 data
               };
