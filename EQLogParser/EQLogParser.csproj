@@ -433,11 +433,8 @@
     <Folder Include="resources\" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CSharpTest.Net.Collections">
-      <Version>14.906.1403.1082</Version>
-    </PackageReference>
     <PackageReference Include="DotLiquid">
-      <Version>2.0.314</Version>
+      <Version>2.0.325</Version>
     </PackageReference>
     <PackageReference Include="FontAwesome.WPF">
       <Version>4.7.0.9</Version>
@@ -451,8 +448,13 @@
     <PackageReference Include="log4net">
       <Version>2.0.8</Version>
     </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers">
+      <Version>2.9.8</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
-      <Version>12.0.2</Version>
+      <Version>12.0.3</Version>
     </PackageReference>
     <PackageReference Include="WPFTextBoxAutoComplete">
       <Version>1.0.5</Version>

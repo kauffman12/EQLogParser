@@ -16,13 +16,13 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCastTable : UserControl
   {
-    private bool Running = false;
     private readonly object LockObject = new object();
-    private ObservableCollection<dynamic> Records = new ObservableCollection<dynamic>();
-    private List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
-    private List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
-    private Dictionary<string, byte> UniqueNames = new Dictionary<string, byte>();
-    private PlayerStats RaidStats;
+    private readonly ObservableCollection<dynamic> Records = new ObservableCollection<dynamic>();
+    private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
+    private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
+    private readonly Dictionary<string, byte> UniqueNames = new Dictionary<string, byte>();
+    private readonly PlayerStats RaidStats;
+    private bool Running = false;
     private int CurrentCastType = 0;
     private int CurrentSpellType = 0;
     private bool CurrentShowSelfOnly = false;
@@ -31,8 +31,8 @@ namespace EQLogParser
     {
       InitializeComponent();
       titleLabel.Content = title;
-      selectedStats.ForEach(stats => UniqueNames[stats.OrigName] = 1);
-      RaidStats = currentStats.RaidStats;
+      selectedStats?.ForEach(stats => UniqueNames[stats.OrigName] = 1);
+      RaidStats = currentStats?.RaidStats;
 
       dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(Records);
       BindingOperations.EnableCollectionSynchronization(Records, LockObject);
@@ -155,9 +155,9 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(player) && uniqueNames.ContainsKey(player))
       {
-        SpellData spellData = spell.SpellData != null ? spell.SpellData : null;
+        SpellData spellData = spell.SpellData ?? null;
 
-        if (spellData == null && spell.Ambiguity != null && DataManager.Instance.ResolveSpellAmbiguity(spell, out replaced))
+        if (spellData == null && spell.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(spell, out replaced))
         {
           spellData = replaced;
         }

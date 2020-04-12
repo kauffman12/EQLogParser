@@ -26,20 +26,20 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static CartesianMapper<DataPoint> CONFIG_VPS = Mappers.Xy<DataPoint>()
+    private readonly static CartesianMapper<DataPoint> CONFIG_VPS = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.VPS);
-    private static CartesianMapper<DataPoint> CONFIG_TOTAL = Mappers.Xy<DataPoint>()
+    private readonly static CartesianMapper<DataPoint> CONFIG_TOTAL = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.Total);
-    private static CartesianMapper<DataPoint> CONFIG_CRIT_RATE = Mappers.Xy<DataPoint>()
+    private readonly static CartesianMapper<DataPoint> CONFIG_CRIT_RATE = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.CritRate);
-    private static CartesianMapper<DataPoint> CONFIG_AVG = Mappers.Xy<DataPoint>()
+    private readonly static CartesianMapper<DataPoint> CONFIG_AVG = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.Avg);
 
-    private static List<CartesianMapper<DataPoint>> CHOICES = new List<CartesianMapper<DataPoint>>()
+    private readonly static List<CartesianMapper<DataPoint>> CHOICES = new List<CartesianMapper<DataPoint>>()
     {
       CONFIG_VPS, CONFIG_TOTAL, CONFIG_AVG, CONFIG_CRIT_RATE
     };
@@ -50,17 +50,17 @@ namespace EQLogParser
     private const string RAIDOPTION = "Raid Totals";
 
     private DateTime ChartModifiedTime;
-    private Dictionary<string, ChartValues<DataPoint>> PlayerPetValues = new Dictionary<string, ChartValues<DataPoint>>();
-    private Dictionary<string, ChartValues<DataPoint>> PlayerValues = new Dictionary<string, ChartValues<DataPoint>>();
-    private Dictionary<string, ChartValues<DataPoint>> PetValues = new Dictionary<string, ChartValues<DataPoint>>();
-    private Dictionary<string, ChartValues<DataPoint>> RaidValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private readonly Dictionary<string, ChartValues<DataPoint>> PlayerPetValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private readonly Dictionary<string, ChartValues<DataPoint>> PlayerValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private readonly Dictionary<string, ChartValues<DataPoint>> PetValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private readonly Dictionary<string, ChartValues<DataPoint>> RaidValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new Dictionary<string, Dictionary<string, byte>>();
 
     private CartesianMapper<DataPoint> CurrentConfig;
     private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected = null;
     private Predicate<object> LastFilter = null;
     private List<ChartValues<DataPoint>> LastSortedValues = null;
-    private Dictionary<string, Dictionary<string, byte>> HasPets = new Dictionary<string, Dictionary<string, byte>>();
 
     public LineChart(List<string> choices, bool includePets = false)
     {
@@ -172,7 +172,7 @@ namespace EQLogParser
 
           Aggregate(raidData, RaidValues, needRaidAccounting, dataPoint, raidAggregate, firstTime, lastTime, diff);
 
-          var playerName = dataPoint.PlayerName == null ? dataPoint.Name : dataPoint.PlayerName;
+          var playerName = dataPoint.PlayerName ?? dataPoint.Name;
           var petName = dataPoint.PlayerName == null ? null : dataPoint.Name;
           var totalName = playerName + " +Pets";
           if (!totalPlayerData.TryGetValue(totalName, out DataPoint totalAggregate))
@@ -219,42 +219,6 @@ namespace EQLogParser
         UpdateRemaining(PetValues, needPetAccounting, firstTime, lastTime);
         Plot(newTaskTime, selected, filter);
       });
-    }
-
-    private void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, ChartValues<DataPoint>> theValues,
-      Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate, double firstTime, double lastTime, double diff)
-    {
-      if (diff > DataManager.FIGHT_TIMEOUT)
-      {
-        UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
-        foreach (var value in playerData.Values)
-        {
-          value.RollingTotal = 0;
-          value.RollingCritHits = 0;
-          value.RollingHits = 0;
-          value.CurrentTime = lastTime + 6;
-          Insert(value, theValues);
-          value.CurrentTime = firstTime - 6;
-          Insert(value, theValues);
-        }
-      }
-
-      aggregate.Total += dataPoint.Total;
-      aggregate.RollingTotal += dataPoint.Total;
-      aggregate.RollingHits += 1;
-      aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
-      aggregate.BeginTime = firstTime;
-      aggregate.CurrentTime = dataPoint.CurrentTime;
-
-      if (diff >= 1)
-      {
-        Insert(aggregate, theValues);
-        UpdateRemaining(theValues, needAccounting, firstTime, dataPoint.CurrentTime, aggregate.Name);
-      }
-      else
-      {
-        needAccounting[aggregate.Name] = aggregate;
-      }
     }
 
     private void Plot(DateTime requestTime, List<PlayerStats> selected = null, Predicate<object> filter = null)
@@ -527,6 +491,42 @@ namespace EQLogParser
         {
           LOG.Error(se);
         }
+      }
+    }
+
+    private static void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, ChartValues<DataPoint>> theValues,
+      Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate, double firstTime, double lastTime, double diff)
+    {
+      if (diff > DataManager.FIGHT_TIMEOUT)
+      {
+        UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
+        foreach (var value in playerData.Values)
+        {
+          value.RollingTotal = 0;
+          value.RollingCritHits = 0;
+          value.RollingHits = 0;
+          value.CurrentTime = lastTime + 6;
+          Insert(value, theValues);
+          value.CurrentTime = firstTime - 6;
+          Insert(value, theValues);
+        }
+      }
+
+      aggregate.Total += dataPoint.Total;
+      aggregate.RollingTotal += dataPoint.Total;
+      aggregate.RollingHits += 1;
+      aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.BeginTime = firstTime;
+      aggregate.CurrentTime = dataPoint.CurrentTime;
+
+      if (diff >= 1)
+      {
+        Insert(aggregate, theValues);
+        UpdateRemaining(theValues, needAccounting, firstTime, dataPoint.CurrentTime, aggregate.Name);
+      }
+      else
+      {
+        needAccounting[aggregate.Name] = aggregate;
       }
     }
 
