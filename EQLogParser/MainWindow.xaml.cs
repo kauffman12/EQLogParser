@@ -43,7 +43,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.7.1";
+    private const string VERSION = "v1.7.2";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -202,6 +202,7 @@ namespace EQLogParser
 
         // Hide window when minimized
         IsHideOnMinimizeEnabled = ConfigUtil.IfSet("HideWindowOnMinimize");
+        enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Show Tanking Summary at startup
         ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
