@@ -121,6 +121,11 @@ namespace EQLogParser
       }
     }
 
+    internal override bool IsPetsCombined()
+    {
+      return CurrentCombinePets;
+    }
+
     private void ColumnWidthPropertyChanged(object sender, EventArgs e)
     {
       var column = sender as DataGridColumn;
@@ -295,7 +300,7 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
         };
 
-        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "FILTER", null, view.Filter);
+        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, view.Filter);
       }
 
       return view;
@@ -313,9 +318,16 @@ namespace EQLogParser
         combinePets.IsEnabled = classesList.IsEnabled = false;
         Task.Delay(20).ContinueWith(task =>
         {
+          // until i figure out something better just re-rank everything
+          var statsList = CurrentCombinePets ? CurrentStats.StatsList : CurrentStats.ExpandedStatsList;
+          for (int i=0; i<statsList.Count; i++)
+          {
+            statsList[i].Rank = Convert.ToUInt16(i + 1);
+          }
+
           Dispatcher.InvokeAsync(() =>
           {
-            var view = CollectionViewSource.GetDefaultView(CurrentCombinePets ? CurrentStats.StatsList : CurrentStats.ExpandedStatsList);
+            var view = CollectionViewSource.GetDefaultView(statsList);
             dataGrid.ItemsSource = SetFilter(view);
             combinePets.IsEnabled = classesList.IsEnabled = true;
           });
