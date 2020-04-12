@@ -112,7 +112,9 @@ namespace EQLogParser
             FireNoDataEvent(options, "NODATA");
           }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
         {
           if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
           {
@@ -223,7 +225,9 @@ namespace EQLogParser
               }
             }
           }
+#pragma warning disable CA1031 // Do not catch general exception types
           catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
           {
             if (ex is ArgumentNullException || ex is AggregateException || ex is NullReferenceException || ex is OutOfMemoryException)
             {

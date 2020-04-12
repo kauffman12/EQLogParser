@@ -125,7 +125,9 @@ namespace EQLogParser
             FireNoDataEvent(options, "NODATA");
           }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
         {
           if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
           {
@@ -261,7 +263,9 @@ namespace EQLogParser
             " Damage ", StatsUtil.FormatTotals(overlayStats.RaidStats.DPS));
         }
       }
+#pragma warning disable CA1031 // Do not catch general exception types
       catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
       {
         if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
         {
@@ -490,7 +494,9 @@ namespace EQLogParser
               }
             }
           }
+#pragma warning disable CA1031 // Do not catch general exception types
           catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
           {
             if (ex is ArgumentNullException || ex is AggregateException || ex is NullReferenceException || ex is OutOfMemoryException)
             {
@@ -576,10 +582,11 @@ namespace EQLogParser
       {
         if (!PlayerPets.TryGetValue(pname, out ConcurrentDictionary<string, byte> mapping))
         {
-          PlayerPets[pname] = new ConcurrentDictionary<string, byte>();
+          mapping = new ConcurrentDictionary<string, byte>();
+          PlayerPets[pname] = mapping;
         }
 
-        PlayerPets[pname][damage.Attacker] = 1;
+        mapping[damage.Attacker] = 1;
         PetToPlayer[damage.Attacker] = pname;
       }
     }

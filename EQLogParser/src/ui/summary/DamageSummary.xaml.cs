@@ -17,8 +17,8 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageSummary : SummaryTable, IDisposable
   {
-    private static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
-    private static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
+    private readonly static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
+    private readonly static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     // workaround for adjusting column withs of player datagrid
     private List<DataGrid> ChildGrids = new List<DataGrid>();
@@ -319,7 +319,7 @@ namespace EQLogParser
             dataGrid.ItemsSource = SetFilter(view);
             combinePets.IsEnabled = classesList.IsEnabled = true;
           });
-        });
+        }, TaskScheduler.Default);
       }
     }
 

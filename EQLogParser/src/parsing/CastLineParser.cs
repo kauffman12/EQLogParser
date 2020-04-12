@@ -159,7 +159,7 @@ namespace EQLogParser
                 }
                 else
                 {
-                  newSpell.Ambiguity = result;
+                  newSpell.Ambiguity.AddRange(result);
                 }
 
                 DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
@@ -200,7 +200,7 @@ namespace EQLogParser
                 }
                 else
                 {
-                  newSpell.Ambiguity = result;
+                  newSpell.Ambiguity.AddRange(result);
                 }
 
                 DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
