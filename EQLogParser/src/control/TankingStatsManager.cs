@@ -71,7 +71,7 @@ namespace EQLogParser
           Selected.ForEach(fight =>
           {
             damageBlocks.AddRange(fight.TankingBlocks);
-            RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTime, fight.LastTime));
+            RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime));
             StatsUtil.UpdateRaidTimeRanges(fight, PlayerTimeRanges, PlayerSubTimeRanges, true);
           });
 

@@ -162,7 +162,7 @@ namespace EQLogParser
     {
       object result;
       
-      if (value is string spellName && spellName.StartsWith("Received "))
+      if (value is string spellName && spellName.StartsWith("Received ", StringComparison.Ordinal))
       {
         result = Brushes.LightGreen;
       }

@@ -40,7 +40,7 @@ namespace EQLogParser
 
           for (int i = 0; i < split.Length && !handled; i++)
           {
-            if (i == 0 && split[0].StartsWith("--"))
+            if (i == 0 && split[0].StartsWith("--", StringComparison.OrdinalIgnoreCase))
             {
               looter = split[0] == "--You" ? ConfigUtil.PlayerName : split[0].TrimStart('-');
             }

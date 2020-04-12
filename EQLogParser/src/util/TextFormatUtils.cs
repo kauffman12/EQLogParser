@@ -198,11 +198,13 @@ namespace EQLogParser
             Target = target,
             MaxHits = ushort.Parse(data[5], CultureInfo.CurrentCulture),
             ClassMask = classMask,
-            LandsOnYou = string.Intern(data[8]),
-            LandsOnOther = string.Intern(data[9]),
-            Damaging = byte.Parse(data[10], CultureInfo.CurrentCulture) == 1,
-            Adps = ushort.Parse(data[12], CultureInfo.CurrentCulture),
-            IsProc = byte.Parse(data[13], CultureInfo.CurrentCulture) == 1
+            //Damaging = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1,
+            //CombatSkill = uint.Parse(data[9], CultureInfo.CurrentCulture),
+            Adps = ushort.Parse(data[10], CultureInfo.CurrentCulture),
+            LandsOnYou = string.Intern(data[11]),
+            LandsOnOther = string.Intern(data[12]),
+            WearOff = string.Intern(data[13]),
+            IsProc = byte.Parse(data[14], CultureInfo.CurrentCulture) == 1
           };
         }
       }
