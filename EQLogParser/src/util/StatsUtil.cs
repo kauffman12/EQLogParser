@@ -15,7 +15,7 @@ namespace EQLogParser
     internal const string PLAYER_FORMAT = "{0} = ";
     internal const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
     internal const string SPECIAL_FORMAT = "{0} {{{1}}}";
-    internal const int SPECIAL_OFFSET = 20;
+    internal const int SPECIAL_OFFSET = 10;
 
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
@@ -47,8 +47,7 @@ namespace EQLogParser
         Name = string.Intern(name),
         ClassName = string.Intern(className),
         OrigName = string.Intern(origName),
-        Percent = 100, // until something says otherwise
-        BeginTime = double.NaN
+        Percent = 100 // until something says otherwise
       };
     }
 
@@ -79,8 +78,7 @@ namespace EQLogParser
       {
         ClassName = "",
         Name = string.Intern(name),
-        Type = string.Intern(type),
-        BeginTime = double.NaN
+        Type = string.Intern(type)
       };
     }
 
@@ -134,36 +132,125 @@ namespace EQLogParser
       return y;
     }
 
-    internal static void UpdateTimeDiffs(PlayerSubStats subStats, FullTimedAction action)
+    internal static void UpdateRaidTimeRanges(Fight fight, ConcurrentDictionary<string, TimeRange> playerTimeRanges, 
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges,  bool includeInitialTanking = false)
     {
-      int currentIndex = subStats.BeginTimes.Count - 1;
-      if (currentIndex == -1)
+      if (includeInitialTanking)
       {
-        subStats.BeginTimes.Add(action.BeginTime);
-        subStats.LastTimes.Add(action.LastTime);
-        subStats.TimeDiffs.Add(0); // update afterward
-        currentIndex = 0;
-      }
-      else if (subStats.LastTimes[currentIndex] >= action.BeginTime)
-      {
-        var offsetLastTime = action.LastTime;
-        if (offsetLastTime > subStats.LastTimes[currentIndex])
+        foreach (var entry in fight.InitialTankSegments)
         {
-          subStats.LastTimes[currentIndex] = offsetLastTime;
+          AddTimeEntry(playerTimeRanges, entry);
         }
+
+        foreach (var subEntry in fight.InitialTankSubSegments)
+        {
+          AddSubTimeEntry(playerSubTimeRanges, subEntry);
+        }
+      }
+
+      foreach (var entry in fight.DamageSegments)
+      {
+        AddTimeEntry(playerTimeRanges, entry);
+      }
+
+      foreach (var subEntry in fight.DamageSubSegments)
+      {
+        AddSubTimeEntry(playerSubTimeRanges, subEntry);
+      }
+    }
+
+    internal static void AddSubTimeEntry(ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, 
+      KeyValuePair<string, Dictionary<string, TimeSegment>> subEntry)
+    {
+      if (!playerSubTimeRanges.TryGetValue(subEntry.Key, out ConcurrentDictionary<string, TimeRange> ranges))
+      {
+        ranges = new ConcurrentDictionary<string, TimeRange>();
+        playerSubTimeRanges[subEntry.Key] = ranges;
+      }
+
+      foreach (var typeEntry in subEntry.Value)
+      {
+        AddTimeEntry(ranges, typeEntry);
+      }
+    }
+
+    internal static void AddTimeEntry(ConcurrentDictionary<string, TimeRange> ranges, KeyValuePair<string, TimeSegment> entry)
+    {
+      if (ranges.TryGetValue(entry.Key, out TimeRange range))
+      {
+        range.Add(new TimeSegment(entry.Value.BeginTime, entry.Value.EndTime));
       }
       else
       {
-        subStats.BeginTimes.Add(action.BeginTime);
-        subStats.LastTimes.Add(action.LastTime);
-        subStats.TimeDiffs.Add(0); // update afterward
-        currentIndex++;
+        ranges[entry.Key] = new TimeRange(entry.Value);
       }
-
-      subStats.TimeDiffs[currentIndex] = subStats.LastTimes[currentIndex] - subStats.BeginTimes[currentIndex] + 1;
     }
 
-    internal static void UpdateStats(PlayerSubStats stats, HitRecord record, double beginTime)
+    internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges, 
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges)
+    {
+      if (playerTimeRanges.TryGetValue(stats.Name, out TimeRange range))
+      {
+        stats.TotalSeconds = range.GetTotal();
+      }
+
+      UpdateSubStatsTimeRanges(stats, playerSubTimeRanges);
+    }
+
+    internal static void UpdateSubStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges)
+    {
+      if (playerSubTimeRanges.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> subRanges))
+      {
+        foreach (var kv in stats.SubStats)
+        {
+          if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
+          {
+            kv.Value.TotalSeconds = subRange.GetTotal();
+          }
+        }
+
+        foreach (var kv in stats.SubStats2)
+        {
+          if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
+          {
+            kv.Value.TotalSeconds = subRange.GetTotal();
+          }
+        }
+      }
+    }
+
+    internal static void UpdateTimeSegments(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,
+      string key, string player, double time)
+    {
+      if (segments != null)
+      {
+        if (segments.TryGetValue(player, out TimeSegment segment))
+        {
+          segment.EndTime = time;
+        }
+        else
+        {
+          segments[player] = new TimeSegment(time, time);
+        }
+      }
+
+      if (!subSegments.TryGetValue(player, out Dictionary<string, TimeSegment> typeSegments))
+      {
+        typeSegments = new Dictionary<string, TimeSegment>();
+        subSegments[player] = typeSegments;
+      }
+
+      if (typeSegments.TryGetValue(key, out TimeSegment typeSegment))
+      {
+        typeSegment.EndTime = time;
+      }
+      else
+      {
+        typeSegments[key] = new TimeSegment(time, time);
+      }
+    }
+
+    internal static void UpdateStats(PlayerSubStats stats, HitRecord record)
     {
       switch (record.Type)
       {
@@ -202,9 +289,6 @@ namespace EQLogParser
       }
 
       LineModifiersParser.Parse(record, stats);
-
-      stats.BeginTime = double.IsNaN(stats.BeginTime) ? beginTime : stats.BeginTime;
-      stats.LastTime = beginTime;
     }
 
     internal static void MergeStats(PlayerSubStats to, PlayerSubStats from)
@@ -228,8 +312,6 @@ namespace EQLogParser
         to.StrikethroughHits += from.StrikethroughHits;
         to.RiposteHits += from.RiposteHits;
         to.RampageHits += from.RampageHits;
-        to.BeginTime = double.IsNaN(to.BeginTime) ? from.BeginTime : Math.Min(to.BeginTime, from.BeginTime);
-        to.LastTime = double.IsNaN(to.LastTime) ? from.LastTime : Math.Max(to.LastTime, from.LastTime);
         to.TotalSeconds = Math.Max(to.TotalSeconds, from.TotalSeconds);
       }
     }
@@ -326,83 +408,68 @@ namespace EQLogParser
       var allSpecials = DataManager.Instance.GetSpecials();
       int specialStart = 0;
 
-      if (raidStats.BeginTimes.Count > 0 && raidStats.LastTimes.Count > 0)
+      raidStats.Ranges.TimeSegments.ForEach(segment =>
       {
-        for (int i = 0; i < raidStats.BeginTimes.Count && i < raidStats.LastTimes.Count; i++)
+        double offsetBegin = segment.BeginTime - SPECIAL_OFFSET;
+        var actions = new List<IAction>();
+
+        if (specialStart > -1 && specialStart < allSpecials.Count)
         {
-          double beginTime = raidStats.BeginTimes[i] - SPECIAL_OFFSET;
-          double endTime = raidStats.LastTimes[i];
-          var actions = new List<IAction>();
-
-          if (specialStart > -1 && specialStart < allSpecials.Count)
+          specialStart = allSpecials.FindIndex(specialStart, special => special.BeginTime >= offsetBegin);
+          if (specialStart > -1)
           {
-            specialStart = allSpecials.FindIndex(specialStart, special => special.BeginTime >= beginTime);
-            if (specialStart > -1)
+            for (int j = specialStart; j < allSpecials.Count; j++)
             {
-              for (int j = specialStart; j < allSpecials.Count; j++)
+              if (allSpecials[j].BeginTime >= offsetBegin && allSpecials[j].BeginTime <= segment.EndTime)
               {
-                if (allSpecials[j].BeginTime >= beginTime && allSpecials[j].BeginTime <= endTime)
-                {
-                  specialStart = j;
-                  actions.Add(allSpecials[j]);
-                }
+                specialStart = j;
+                actions.Add(allSpecials[j]);
               }
             }
           }
-
-          foreach (var deaths in DataManager.Instance.GetDeathsDuring(beginTime, endTime).Select(block => block.Actions))
-          {
-            actions.AddRange(deaths);
-          }
-
-          actions.ForEach(action =>
-          {
-            if (!temp.ContainsKey(action))
-            {
-              string code = null;
-              string player = null;
-
-              if (action is DeathRecord death && PlayerManager.Instance.IsVerifiedPlayer(death.Killed))
-              {
-                player = death.Killed;
-                code = "X";
-              }
-              if (action is SpecialSpell spell)
-              {
-                player = spell.Player;
-                code = spell.Code;
-              }
-
-              if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(code))
-              {
-                if (playerSpecials.TryGetValue(player, out string special))
-                {
-                  playerSpecials[player] = special + code;
-                }
-                else
-                {
-                  playerSpecials[player] = code;
-                }
-              }
-
-              temp.TryAdd(action, true);
-            }
-          });
         }
-      }
+
+        foreach (var deaths in DataManager.Instance.GetDeathsDuring(offsetBegin, segment.EndTime).Select(block => block.Actions))
+        {
+          actions.AddRange(deaths);
+        }
+
+        actions.ForEach(action =>
+        {
+          if (!temp.ContainsKey(action))
+          {
+            string code = null;
+            string player = null;
+
+            if (action is DeathRecord death && PlayerManager.Instance.IsVerifiedPlayer(death.Killed))
+            {
+              player = death.Killed;
+              code = "X";
+            }
+            if (action is SpecialSpell spell)
+            {
+              player = spell.Player;
+              code = spell.Code;
+            }
+
+            if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(code))
+            {
+              if (playerSpecials.TryGetValue(player, out string special))
+              {
+                playerSpecials[player] = special + code;
+              }
+              else
+              {
+                playerSpecials[player] = code;
+              }
+            }
+
+            temp.TryAdd(action, true);
+          }
+        });
+      });
 
       return playerSpecials;
-    }
-  }
-
-  internal abstract class Parse
-  {
-    internal string Name { get; set; }
-    internal CombinedStats Combined { get; set; }
-    internal List<PlayerStats> Selected { get; set; }
-    internal virtual StatsSummary Create(bool showTotals, bool rankPlayers)
-    {
-      return null;
     }
   }
 }

@@ -203,7 +203,7 @@ namespace EQLogParser
             HasPets[totalName][petName] = 1;
             if (!petData.TryGetValue(petName, out DataPoint petAggregate))
             {
-              petAggregate = new DataPoint() { Name = petName };
+              petAggregate = new DataPoint() { Name = petName, PlayerName = playerName };
               petData[petName] = petAggregate;
             }
 
@@ -312,9 +312,13 @@ namespace EQLogParser
           {
             pass = names.Contains(first.PlayerName) || (HasPets.ContainsKey(first.Name) && names.FirstOrDefault(name => HasPets[first.Name].ContainsKey(name)) != null);
           }
-          else
+          else if (CurrentPetOrPlayerOption == PLAYEROPTION)
           {
             pass = names.Contains(first.Name);
+          }
+          else if (CurrentPetOrPlayerOption == PETOPTION)
+          {
+            pass = names.Contains(first.Name) || names.Contains(first.PlayerName);
           }
           return pass;
         }).Take(10).ToList();

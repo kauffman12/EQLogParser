@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace EQLogParser
 {
@@ -30,6 +31,11 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
+      if (LastUpdateTime != processed.BeginTime)
+      {
+        DataManager.Instance.CheckExpireFights(processed.BeginTime);
+      }
+
       if (IsValidAttack(processed.Record, processed.BeginTime, out bool defender))
       {
         if (!double.IsNaN(LastUpdateTime))
@@ -48,11 +54,13 @@ namespace EQLogParser
         if (defender)
         {
           Helpers.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
+          AddPlayerTime(fight, processed.Record, processed.Record.Attacker, processed.BeginTime);
           fight.Total += processed.Record.Total;
         }
         else
         {
           Helpers.AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
+          AddPlayerTime(fight, processed.Record, processed.Record.Defender, processed.BeginTime);
         }
 
         fight.LastTime = processed.BeginTime;
@@ -67,11 +75,19 @@ namespace EQLogParser
       }
     }
 
+    private void AddPlayerTime(Fight fight, DamageRecord record, string player, double time)
+    {
+      var isInitialTanking = fight.DamageBlocks.Count == 0;
+      var segments = isInitialTanking ? fight.InitialTankSegments : fight.DamageSegments;
+      var subSegments = isInitialTanking ? fight.InitialTankSubSegments : fight.DamageSubSegments;
+      StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
+    }
+
     private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender)
     {
       string npc = defender ? record.Defender : record.Attacker;
 
-      Fight fight = DataManager.Instance.GetFight(npc, currentTime);
+      Fight fight = DataManager.Instance.GetFight(npc);
       if (fight == null)
       {
         fight = Create(npc, currentTime, origTimeString);
@@ -121,8 +137,8 @@ namespace EQLogParser
           valid = (isAttackerPlayer || !PlayerManager.Instance.IsPossiblePlayerName(record.Attacker)) && !isDefenderPlayer;
           defender = true;
         }
-        else if (isDefenderNpc && isAttackerNpc && DataManager.Instance.GetFight(record.Defender, currentTime) != null
-          && DataManager.Instance.GetFight(record.Attacker, currentTime) == null)
+        else if (isDefenderNpc && isAttackerNpc && DataManager.Instance.GetFight(record.Defender) != null
+          && DataManager.Instance.GetFight(record.Attacker) == null)
         {
           valid = true;
           defender = true;

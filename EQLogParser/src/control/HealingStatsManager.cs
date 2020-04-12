@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -15,8 +16,19 @@ namespace EQLogParser
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
-    internal List<List<ActionBlock>> HealingGroups = new List<List<ActionBlock>>();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealedByHealerTimeRanges =
+      new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
 
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealedBySpellTimeRanges =
+      new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
+
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerHealedTimeRanges =
+      new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
+
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerSpellTimeRanges =
+      new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
+
+    private readonly List<List<ActionBlock>> HealingGroups = new List<List<ActionBlock>>();
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;
@@ -27,41 +39,96 @@ namespace EQLogParser
       {
         lock (HealingGroups)
         {
-          HealingGroups.Clear();
-          RaidTotals = null;
-          Selected = null;
-          Title = "";
+          Reset();
         }
       };
+    }
+
+    internal int GetGroupCount()
+    {
+      lock (HealingGroups)
+      {
+        return HealingGroups.Count;
+      }
+    }
+
+    internal void RebuildTotalStats(GenerateStatsOptions options, bool updatedAoEOption = false)
+    {
+      lock(HealingGroups)
+      {
+        if (HealingGroups.Count > 0)
+        {
+          if (updatedAoEOption)
+          {
+            var newOptions = new GenerateStatsOptions() { Name = Title, RequestChartData = options.RequestChartData, RequestSummaryData = options.RequestSummaryData };
+            newOptions.Npcs.AddRange(Selected);
+            BuildTotalStats(newOptions);
+          }
+          else
+          {
+            FireNewStatsEvent(options);
+            ComputeHealingStats(options);
+          }
+        }
+      }
     }
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
       lock (HealingGroups)
       {
-        Selected = options.Npcs;
-        Title = options.Name;
-
         try
         {
           FireNewStatsEvent(options);
+          Reset();
 
-          RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
-          HealingGroups.Clear();
+          Selected = options.Npcs;
+          Title = options.Name;
 
-          Selected.ForEach(npc => StatsUtil.UpdateTimeDiffs(RaidTotals, npc));
-          RaidTotals.TotalSeconds = RaidTotals.TimeDiffs.Sum();
-
-          if (RaidTotals.BeginTimes.Count > 0 && RaidTotals.BeginTimes.Count == RaidTotals.LastTimes.Count)
+          Selected.ForEach(fight => RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTime, fight.LastTime)));
+  
+          if (RaidTotals.Ranges.TimeSegments.Count > 0)
           {
-            for (int i = 0; i < RaidTotals.BeginTimes.Count; i++)
+            // calculate totals first since it can modify the ranges
+            RaidTotals.TotalSeconds = RaidTotals.Ranges.GetTotal();
+
+            RaidTotals.Ranges.TimeSegments.ForEach(segment =>
             {
               var updatedHeals = new List<ActionBlock>();
-              var heals = DataManager.Instance.GetHealsDuring(RaidTotals.BeginTimes[i], RaidTotals.LastTimes[i]);
-              heals.ForEach(heal =>
+              var healedByHealerTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
+              var healedBySpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
+              var healerHealedTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
+              var healerSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
+              DataManager.Instance.GetHealsDuring(segment.BeginTime, segment.EndTime).ForEach(heal =>
               {
                 var updatedHeal = new ActionBlock() { BeginTime = heal.BeginTime };
-                updatedHeal.Actions.AddRange(heal.Actions.Where(item => item is HealRecord record && IsValidHeal(record)));
+                foreach (var record in heal.Actions.Cast<HealRecord>())
+                {
+                  if (PlayerManager.Instance.IsPossiblePlayerName(record.Healed) || PlayerManager.Instance.IsPetOrPlayer(record.Healed))
+                  {
+                    bool valid = true;
+                    SpellData spellData;
+                    if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
+                    {
+                      if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
+                        spellData.Target == (byte)SpellTarget.TARGETRINGAE)
+                      {
+                        valid = MainWindow.IsAoEHealingEnabled;
+                      }
+                    }
+
+                    if (valid)
+                    {
+                      updatedHeal.Actions.Add(record);
+                      // store substats and substats2 which is based on the player that was healed
+                      var key = Helpers.CreateRecordKey(record.Type, record.SubType);
+                      StatsUtil.UpdateTimeSegments(null, healedByHealerTimeSegments, record.Healer, record.Healed, heal.BeginTime);
+                      StatsUtil.UpdateTimeSegments(null, healedBySpellTimeSegments, key, record.Healed, heal.BeginTime);
+                      StatsUtil.UpdateTimeSegments(null, healerHealedTimeSegments, record.Healed, record.Healer, heal.BeginTime);
+                      StatsUtil.UpdateTimeSegments(null, healerSpellTimeSegments, key, record.Healer, heal.BeginTime);
+                    }
+                  }
+                }
 
                 if (updatedHeal.Actions.Count > 0)
                 {
@@ -69,11 +136,16 @@ namespace EQLogParser
                 }
               });
 
+              Parallel.ForEach(healedByHealerTimeSegments, kv => StatsUtil.AddSubTimeEntry(HealedByHealerTimeRanges, kv));
+              Parallel.ForEach(healedBySpellTimeSegments, kv => StatsUtil.AddSubTimeEntry(HealedBySpellTimeRanges, kv));
+              Parallel.ForEach(healerHealedTimeSegments, kv => StatsUtil.AddSubTimeEntry(HealerHealedTimeRanges, kv));
+              Parallel.ForEach(healerSpellTimeSegments, kv => StatsUtil.AddSubTimeEntry(HealerSpellTimeRanges, kv));
+
               if (updatedHeals.Count > 0)
               {
                 HealingGroups.Add(updatedHeals);
               }
-            }
+            });
 
             ComputeHealingStats(options);
           }
@@ -86,43 +158,12 @@ namespace EQLogParser
             FireNoDataEvent(options, "NODATA");
           }
         }
-        catch (ArgumentNullException ne)
+        catch (Exception ex)
         {
-          LOG.Error(ne);
-        }
-        catch (NullReferenceException nr)
-        {
-          LOG.Error(nr);
-        }
-        catch (ArgumentOutOfRangeException aor)
-        {
-          LOG.Error(aor);
-        }
-        catch (ArgumentException ae)
-        {
-          LOG.Error(ae);
-        }
-        catch (OutOfMemoryException oem)
-        {
-          LOG.Error(oem);
-        }
-      }
-    }
-
-    internal void RebuildTotalStats(GenerateStatsOptions options, bool updatedAoEOption = false)
-    {
-      if (HealingGroups.Count > 0)
-      {
-        if (updatedAoEOption)
-        {
-          var newOptions = new GenerateStatsOptions() { Name = Title, RequestChartData = options.RequestChartData, RequestSummaryData = options.RequestSummaryData };
-          newOptions.Npcs.AddRange(Selected);
-          BuildTotalStats(newOptions);
-        }
-        else
-        {
-          FireNewStatsEvent(options);
-          ComputeHealingStats(options);
+          if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
+          {
+            LOG.Error(ex);
+          }
         }
       }
     }
@@ -137,9 +178,6 @@ namespace EQLogParser
 
         HealingGroups.ForEach(group =>
         {
-          // keep track of time range as well as the players that have been updated
-          Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
-
           group.ForEach(block =>
           {
             block.Actions.ForEach(action =>
@@ -147,17 +185,14 @@ namespace EQLogParser
               if (action is HealRecord record)
               {
                 PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
-                StatsUtil.UpdateStats(stats, record, block.BeginTime);
-                allStats[record.Healed] = stats;
+                StatsUtil.UpdateStats(stats, record);
 
                 PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.Healer, record.Type);
-                StatsUtil.UpdateStats(subStats, record, block.BeginTime);
-                allStats[record.Healer + "-" + record.Healed] = subStats;
+                StatsUtil.UpdateStats(subStats, record);
 
                 var spellStatName = record.SubType ?? Labels.SELFHEAL;
                 PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, spellStatName, record.Type);
-                StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
-                allStats[stats.Name + "=" + spellStatName] = spellStats;
+                StatsUtil.UpdateStats(spellStats, record);
 
                 long value = 0;
                 if (totals.ContainsKey(record.Healed))
@@ -169,14 +204,7 @@ namespace EQLogParser
               }
             });
           });
-
-          foreach (var stats in allStats.Values)
-          {
-            stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
-            stats.BeginTime = double.NaN;
-          }
         });
-
 
         Parallel.ForEach(playerStats, stat =>
         {
@@ -187,67 +215,49 @@ namespace EQLogParser
               stat.Extra = totals[stat.Name];
             }
 
-            var indStat = individualStats[stat.Name];
-            stat.SubStats2["receivedHealing"] = indStat;
-            StatsUtil.UpdateCalculations(indStat, RaidTotals);
+            var indStats = individualStats[stat.Name];
+            stat.SubStats2["receivedHealing"] = indStats;
+            UpdateStats(indStats, HealedBySpellTimeRanges, HealedByHealerTimeRanges);
 
-            indStat.SubStats.Values.ToList().ForEach(subStat => StatsUtil.UpdateCalculations(subStat, indStat));
-            indStat.SubStats2.Values.ToList().ForEach(subStat => StatsUtil.UpdateCalculations(subStat, indStat));
+            indStats.SubStats.Values.ToList().ForEach(subStat => StatsUtil.UpdateCalculations(subStat, indStats));
+            indStats.SubStats2.Values.ToList().ForEach(subStat => StatsUtil.UpdateCalculations(subStat, indStats));
           }
         });
       }
     }
 
-    internal void FireSelectionEvent(GenerateStatsOptions options, List<PlayerStats> selected)
+    private void UpdateStats(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> calc, 
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> secondary)
     {
-      FireChartEvent(options, "SELECT", selected);
-    }
-
-    internal void FireUpdateEvent(GenerateStatsOptions options, List<PlayerStats> selected = null, Predicate<object> filter = null)
-    {
-      FireChartEvent(options, "UPDATE", selected, filter);
-    }
-
-    internal void FireFilterEvent(GenerateStatsOptions options, Predicate<object> filter)
-    {
-      FireChartEvent(options, "FILTER", null, filter);
-    }
-
-    internal static bool IsValidHeal(HealRecord record)
-    {
-      bool valid = false;
-
-      if (record != null && (PlayerManager.Instance.IsPossiblePlayerName(record.Healed) || PlayerManager.Instance.IsPetOrPlayer(record.Healed)))
+      if (calc.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> ranges))
       {
-        valid = true;
-        SpellData spellData;
-        if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
-        {
-          if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
-            spellData.Target == (byte)SpellTarget.TARGETRINGAE)
-          {
-            valid = MainWindow.IsAoEHealingEnabled;
-          }
-        }
+        // base the total time range off the sub times ranges since healing doesn't have good Fight segments to work with
+        var totalRange = new TimeRange();
+        ranges.Values.ToList().ForEach(range => totalRange.Add(range.TimeSegments));
+        stats.TotalSeconds = totalRange.GetTotal();
       }
 
-      return valid;
+      StatsUtil.UpdateSubStatsTimeRanges(stats, calc);
+      StatsUtil.UpdateSubStatsTimeRanges(stats, secondary);
+      StatsUtil.UpdateCalculations(stats, RaidTotals);
     }
 
-    private void FireCompletedEvent(GenerateStatsOptions options, CombinedStats combined, List<List<ActionBlock>> groups)
+    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      if (options.RequestSummaryData)
+      lock (HealingGroups)
       {
-        // generating new stats
-        var genEvent = new StatsGenerationEvent()
+        if (options.RequestChartData)
         {
-          Type = Labels.HEALPARSE,
-          State = "COMPLETED",
-          CombinedStats = combined
-        };
+          // send update
+          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new HealGroupCollection(HealingGroups), Filter = filter };
 
-        genEvent.Groups.AddRange(groups);
-        EventsGenerationStatus?.Invoke(this, genEvent);
+          if (selected != null)
+          {
+            de.Selected.AddRange(selected);
+          }
+
+          EventsUpdateDataPoint?.Invoke(HealingGroups, de);
+        }
       }
     }
 
@@ -271,25 +281,6 @@ namespace EQLogParser
       FireChartEvent(options, "CLEAR");
     }
 
-    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
-    {
-      lock (HealingGroups)
-      {
-        if (options.RequestChartData)
-        {
-          // send update
-          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new HealGroupCollection(HealingGroups), Filter = filter };
-
-          if (selected != null)
-          {
-            de.Selected.AddRange(selected);
-          }
-
-          EventsUpdateDataPoint?.Invoke(HealingGroups, de);
-        }
-      }
-    }
-
     private void ComputeHealingStats(GenerateStatsOptions options)
     {
       lock (HealingGroups)
@@ -304,16 +295,12 @@ namespace EQLogParser
 
           try
           {
-            FireUpdateEvent(options);
+            FireChartEvent(options, "UPDATE");
 
             if (options.RequestSummaryData)
             {
-
               HealingGroups.ForEach(group =>
               {
-                // keep track of time range as well as the players that have been updated
-                Dictionary<string, PlayerSubStats> allStats = new Dictionary<string, PlayerSubStats>();
-
                 group.ForEach(block =>
                 {
                   block.Actions.ForEach(action =>
@@ -322,32 +309,22 @@ namespace EQLogParser
                     {
                       RaidTotals.Total += record.Total;
                       PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
-
-                      StatsUtil.UpdateStats(stats, record, block.BeginTime);
-                      allStats[record.Healer] = stats;
+                      StatsUtil.UpdateStats(stats, record);
 
                       var spellStatName = record.SubType ?? Labels.SELFHEAL;
                       PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
-                      StatsUtil.UpdateStats(spellStats, record, block.BeginTime);
-                      allStats[stats.Name + "=" + spellStatName] = spellStats;
+                      StatsUtil.UpdateStats(spellStats, record);
 
                       var healedStatName = record.Healed;
                       PlayerSubStats healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
-                      StatsUtil.UpdateStats(healedStats, record, block.BeginTime);
-                      allStats[stats.Name + "=" + healedStatName] = healedStats;
+                      StatsUtil.UpdateStats(healedStats, record);
                     }
                   });
                 });
-
-                foreach (var stats in allStats.Values)
-                {
-                  stats.TotalSeconds += stats.LastTime - stats.BeginTime + 1;
-                  stats.BeginTime = double.NaN;
-                }
               });
 
               RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-              Parallel.ForEach(individualStats.Values, stats => StatsUtil.UpdateCalculations(stats, RaidTotals));
+              Parallel.ForEach(individualStats.Values, stats => UpdateStats(stats, HealerSpellTimeRanges, HealerHealedTimeRanges));
 
               combined = new CombinedStats
               {
@@ -368,22 +345,41 @@ namespace EQLogParser
               }
             }
           }
-          catch (ArgumentNullException ane)
+          catch (Exception ex)
           {
-            LOG.Error(ane);
-          }
-          catch (NullReferenceException nre)
-          {
-            LOG.Error(nre);
-          }
-          catch (ArgumentOutOfRangeException aro)
-          {
-            LOG.Error(aro);
+            if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
+            {
+              LOG.Error(ex);
+            }
           }
 
-          FireCompletedEvent(options, combined, HealingGroups);
+          if (options.RequestSummaryData)
+          {
+            // generating new stats
+            var genEvent = new StatsGenerationEvent()
+            {
+              Type = Labels.HEALPARSE,
+              State = "COMPLETED",
+              CombinedStats = combined
+            };
+
+            genEvent.Groups.AddRange(HealingGroups);
+            EventsGenerationStatus?.Invoke(this, genEvent);
+          }
         }
       }
+    }
+
+    private void Reset()
+    {
+      HealedByHealerTimeRanges.Clear();
+      HealedBySpellTimeRanges.Clear();
+      HealerHealedTimeRanges.Clear();
+      HealerSpellTimeRanges.Clear();
+      HealingGroups.Clear();
+      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
+      Selected = null;
+      Title = "";
     }
 
     public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _)

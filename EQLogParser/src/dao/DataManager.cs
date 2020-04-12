@@ -185,7 +185,14 @@ namespace EQLogParser
 
     internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
 
-    internal Fight GetFight(string name, double currentTime)
+    internal List<Fight> GetActiveFights() => ActiveFights.Values.ToList();
+
+    internal void CheckExpireFights(double currentTime)
+    {
+      ActiveFights.Values.Where(fight => (currentTime - fight.LastTime) > FIGHT_TIMEOUT).ToList().ForEach(fight => RemoveActiveFight(fight.CorrectMapKey));
+    }
+
+    internal Fight GetFight(string name)
     {
       Fight result = null;
       if (!string.IsNullOrEmpty(name))
@@ -204,13 +211,6 @@ namespace EQLogParser
             ActiveFights.TryGetValue(Helpers.ToUpper(name), out result);
           }
         }
-      }
-
-      // assume npc has been killed and create new entry
-      if (result != null && (currentTime - result.LastTime) > FIGHT_TIMEOUT)
-      {
-        RemoveActiveFight(result.CorrectMapKey);
-        result = null;
       }
 
       return result;

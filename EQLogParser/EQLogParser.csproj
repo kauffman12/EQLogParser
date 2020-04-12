@@ -216,6 +216,9 @@
     <Compile Include="src\ui\common\ParsePreview.xaml.cs">
       <DependentUpon>ParsePreview.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\control\ColorComboBox.xaml.cs">
+      <DependentUpon>ColorComboBox.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\summary\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
@@ -223,7 +226,7 @@
     <Compile Include="src\util\TextFormatUtils.cs" />
     <Compile Include="src\util\DateUtil.cs" />
     <Compile Include="src\util\StatsUtil.cs" />
-    <Compile Include="src\control\SummaryTable.cs" />
+    <Compile Include="src\ui\control\SummaryTable.cs" />
     <Compile Include="src\dao\RecordGroupCollections.cs" />
     <Compile Include="src\parsing\CastLineParser.cs" />
     <Compile Include="src\dao\DataManager.cs" />
@@ -305,6 +308,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\common\ParsePreview.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\control\ColorComboBox.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
