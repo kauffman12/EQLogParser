@@ -110,7 +110,7 @@ namespace EQLogParser
         NonPosessiveLandsOnOthers[key].Sort((a, b) =>
         {
           int result = b.Duration.CompareTo(a.Duration);
-          return result != 0 ? result : b.ID.CompareTo(a.ID);
+          return result != 0 ? result : string.Compare(b.ID, a.ID, true, CultureInfo.CurrentCulture);
         });
       }
 
@@ -119,7 +119,7 @@ namespace EQLogParser
         PosessiveLandsOnOthers[key].Sort((a, b) =>
         {
           int result = b.Duration.CompareTo(a.Duration);
-          return result != 0 ? result : b.ID.CompareTo(a.ID);
+          return result != 0 ? result : string.Compare(b.ID, a.ID, true, CultureInfo.CurrentCulture);
         });
       }
 
@@ -128,7 +128,7 @@ namespace EQLogParser
         LandsOnYou[key].Sort((a, b) =>
         {
           int result = b.Duration.CompareTo(a.Duration);
-          return result != 0 ? result : b.ID.CompareTo(a.ID);
+          return result != 0 ? result : string.Compare(b.ID, a.ID, true, CultureInfo.CurrentCulture);
         });
       }
 
@@ -312,27 +312,12 @@ namespace EQLogParser
       return spellData?.ClassMask > 0;
     }
 
-    internal bool ResolveSpellAmbiguity(ReceivedSpell spell, out SpellData replaced)
-    {
-      replaced = null;
-
-      if (spell.Ambiguity != null && spell.Ambiguity.Count < 30)
-      {
-        int spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
-        var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.SELF && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
-        var distinct = subset.Distinct(AbbrvComparer).ToList();
-        replaced = distinct.Count == 1 ? distinct.First() : spell.Ambiguity.First();
-      }
-
-      return replaced != null;
-    }
-
     internal List<SpellData> GetNonPosessiveLandsOnOther(string player, string value, out List<SpellData> output)
     {
       List<SpellData> result = null;
       if (NonPosessiveLandsOnOthers.TryGetValue(value, out output))
       {
-        result = FindByLandsOn(player, value, output);
+        result = FindByLandsOn(player, output);
       }
       return result;
     }
@@ -342,7 +327,7 @@ namespace EQLogParser
       List<SpellData> result = null;
       if (PosessiveLandsOnOthers.TryGetValue(value, out output))
       {
-        result = FindByLandsOn(player, value, output);
+        result = FindByLandsOn(player, output);
       }
       return result;
     }
@@ -352,7 +337,7 @@ namespace EQLogParser
       List<SpellData> result = null;
       if (LandsOnYou.TryGetValue(value, out output))
       {
-        result = FindByLandsOn(player, value, output);
+        result = FindByLandsOn(player, output);
       }
       return result;
     }
@@ -390,7 +375,7 @@ namespace EQLogParser
       return null;
     }
 
-    private List<SpellData> FindByLandsOn(string player, string value, List<SpellData> output)
+    private List<SpellData> FindByLandsOn(string player, List<SpellData> output)
     {
       List<SpellData> result = null;
 
@@ -470,6 +455,21 @@ namespace EQLogParser
         AllSpecialActions.Clear();
         EventsClearedActiveData?.Invoke(this, true);
       }
+    }
+
+    internal static bool ResolveSpellAmbiguity(ReceivedSpell spell, out SpellData replaced)
+    {
+      replaced = null;
+
+      if (spell.Ambiguity.Count < 30)
+      {
+        int spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
+        var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.SELF && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
+        var distinct = subset.Distinct(AbbrvComparer).ToList();
+        replaced = distinct.Count == 1 ? distinct.First() : spell.Ambiguity.First();
+      }
+
+      return replaced != null;
     }
 
     private void RemoveFight(string name)

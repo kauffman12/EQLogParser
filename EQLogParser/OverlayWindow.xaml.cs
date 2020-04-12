@@ -21,42 +21,42 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static SolidColorBrush TEXTBRUSH = new SolidColorBrush(Colors.White);
-    private static SolidColorBrush UPBRUSH = new SolidColorBrush(Colors.White);
-    private static SolidColorBrush DOWNBRUSH = new SolidColorBrush(Colors.Red);
-    private static SolidColorBrush TITLEBRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
-    private static object StatsLock = new object();
+    private static readonly SolidColorBrush TEXTBRUSH = new SolidColorBrush(Colors.White);
+    private static readonly SolidColorBrush UPBRUSH = new SolidColorBrush(Colors.White);
+    private static readonly SolidColorBrush DOWNBRUSH = new SolidColorBrush(Colors.Red);
+    private static readonly SolidColorBrush TITLEBRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
+    private static readonly object StatsLock = new object();
+    private static readonly Color TITLECOLOR = Color.FromRgb(30, 30, 30);
+
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
     private const double OPACITY = 0.40;
     private const double DATA_OPACITY = 0.65;
 
-    private OverlayDamageStats Stats = null;
-    private DispatcherTimer UpdateTimer;
-    private double CalculatedRowHeight = 0;
-    private bool Active = false;
-    private bool ProcessDirection = false;
+    private readonly List<ColorComboBox> ColorComboBoxList = new List<ColorComboBox>();
+    private readonly List<StackPanel> NamePanels = new List<StackPanel>();
+    private readonly List<TextBlock> NameBlockList = new List<TextBlock>();
+    private readonly List<StackPanel> DamagePanels = new List<StackPanel>();
+    private readonly List<TextBlock> DamageBlockList = new List<TextBlock>();
+    private readonly List<ImageAwesome> DamageRateList = new List<ImageAwesome>();
+    private readonly List<Rectangle> RectangleList = new List<Rectangle>();
+    private readonly List<Color> ColorList = new List<Color>();
+    private readonly DispatcherTimer UpdateTimer;
+    private readonly double CalculatedRowHeight;
+    private readonly int CurrentDamageSelectionMode;
+    private readonly bool Active = false;
+    private readonly Popup ButtonPopup;
+    private readonly StackPanel ButtonsPanel;
 
-    private Popup ButtonPopup;
-    private StackPanel ButtonsPanel;
+    private OverlayDamageStats Stats = null;
+    private bool ProcessDirection = false;
     private TextBlock TitleBlock;
     private StackPanel TitlePanel;
     private TextBlock TitleDamageBlock;
     private StackPanel TitleDamagePanel;
     private Rectangle TitleRectangle;
-    private List<ColorComboBox> ColorComboBoxList = new List<ColorComboBox>();
-    private List<StackPanel> NamePanels = new List<StackPanel>();
-    private List<TextBlock> NameBlockList = new List<TextBlock>();
-    private List<StackPanel> DamagePanels = new List<StackPanel>();
-    private List<TextBlock> DamageBlockList = new List<TextBlock>();
-    private List<ImageAwesome> DamageRateList = new List<ImageAwesome>();
-    private List<Rectangle> RectangleList = new List<Rectangle>();
     private Dictionary<int, double> PrevList = null;
-    private int CurrentDamageSelectionMode = 0;
     private bool IsHideOverlayOtherPlayersEnabled = false;
-
-    private Color TitleColor = Color.FromRgb(30, 30, 30);
-    private List<Color> ColorList = new List<Color>();
 
     public OverlayWindow(bool configure = false)
     {
@@ -133,7 +133,7 @@ namespace EQLogParser
       int damageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
       foreach (var item in damageModeSelection.Items.Cast<ComboBoxItem>())
       {
-        if ((string)item.Tag == damageMode.ToString())
+        if ((string)item.Tag == damageMode.ToString(CultureInfo.CurrentCulture))
         {
           damageModeSelection.SelectedItem = item;
           CurrentDamageSelectionMode = damageMode;
@@ -232,7 +232,7 @@ namespace EQLogParser
       {
         try
         {
-          string name = ConfigUtil.GetSetting(string.Format("OverlayRankColor{0}", i + 1));
+          string name = ConfigUtil.GetSetting(string.Format(CultureInfo.CurrentCulture, "OverlayRankColor{0}", i + 1));
           if (!string.IsNullOrEmpty(name) && ColorConverter.ConvertFromString(name) is Color color)
           {
             ColorList[i] = color; // override
@@ -309,8 +309,8 @@ namespace EQLogParser
             if (list.Count > 0)
             {
               TitleBlock.Text = Stats.TargetTitle;
-              TitleDamageBlock.Text = string.Format("{0} [{1}s @{2}]", StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
-              //TitleDamageBlock.Text = string.Format("{0}/s   {1} [{2}s @{3}]", HitRate, StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
+              TitleDamageBlock.Text = string.Format(CultureInfo.CurrentCulture, "{0} [{1}s @{2}]", 
+                StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
 
               long total = 0;
               int goodRowCount = 0;
@@ -503,7 +503,7 @@ namespace EQLogParser
       configPanel.SetValue(Panel.ZIndexProperty, 3);
       configPanel.SetValue(Canvas.RightProperty, 5.0);
 
-      TitleRectangle = CreateRectangle(TitleColor);
+      TitleRectangle = CreateRectangle(TITLECOLOR);
       overlayCanvas.Children.Add(TitleRectangle);
 
       TitlePanel = CreateNameStackPanel();
@@ -543,8 +543,7 @@ namespace EQLogParser
 
         if (configure)
         {
-          var colorChoice = new ColorComboBox(ColorComboBox.Theme.Dark);
-          colorChoice.Tag = string.Format("OverlayRankColor{0}", i + 1);
+          var colorChoice = new ColorComboBox(ColorComboBox.Theme.Dark) { Tag = string.Format(CultureInfo.CurrentCulture, "OverlayRankColor{0}", i + 1) };
           colorChoice.SelectionChanged += (object sender, SelectionChangedEventArgs e) =>
           {
             rectangle.Fill = CreateBrush((colorChoice.SelectedValue as ColorItem).Brush.Color);

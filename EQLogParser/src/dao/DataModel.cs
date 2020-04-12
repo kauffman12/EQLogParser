@@ -313,7 +313,7 @@ namespace EQLogParser
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
 
-    public List<SpellData> Ambiguity { get; set; }
+    public List<SpellData> Ambiguity { get; } = new List<SpellData>();
   }
 
   public class SpellCast : ReceivedSpell

@@ -111,9 +111,7 @@ namespace EQLogParser
 
   public class TimeRange
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    const int OFFSET = 6;
+    private const int OFFSET = 6;
     public List<TimeSegment> TimeSegments { get; } = new List<TimeSegment>();
 
     public double GetTotal()
@@ -135,7 +133,7 @@ namespace EQLogParser
       return TimeSegments.Sum(segment => segment.GetTotal());
     }
 
-    public void Add(List<TimeSegment> list) => list.ForEach(segment => Add(segment));
+    public void Add(List<TimeSegment> list) => list?.ForEach(segment => Add(segment));
 
     public TimeRange() { }
 
@@ -146,7 +144,7 @@ namespace EQLogParser
 
     public void Add(TimeSegment segment)
     {
-      if (segment.BeginTime <= segment.EndTime)
+      if (segment?.BeginTime <= segment?.EndTime)
       {
         if (TimeSegments.Count == 0)
         {
@@ -258,10 +256,10 @@ namespace EQLogParser
       }
     }
 
-    private bool IsLeftOf(TimeSegment one, double value) => value > one.BeginTime && value > one.EndTime;
-    private bool IsRightOf(TimeSegment one, double value) => value < one.BeginTime && value < one.EndTime;
-    private bool IsSurrounding(TimeSegment one, TimeSegment two) => two.BeginTime <= one.BeginTime && two.EndTime >= one.EndTime;
-    private bool IsWithin(TimeSegment one, double value) => value >= one.BeginTime && value <= one.EndTime;
+    private static bool IsLeftOf(TimeSegment one, double value) => value > one.BeginTime && value > one.EndTime;
+    private static bool IsRightOf(TimeSegment one, double value) => value < one.BeginTime && value < one.EndTime;
+    private static bool IsSurrounding(TimeSegment one, TimeSegment two) => two.BeginTime <= one.BeginTime && two.EndTime >= one.EndTime;
+    private static bool IsWithin(TimeSegment one, double value) => value >= one.BeginTime && value <= one.EndTime;
   }
 
   public class TimeSegment
@@ -275,7 +273,7 @@ namespace EQLogParser
       EndTime = end;
     }
 
-    public bool Equals(TimeSegment check) => check.BeginTime == BeginTime && check.EndTime == EndTime; 
+    public bool Equals(TimeSegment check) => check?.BeginTime == BeginTime && check?.EndTime == EndTime; 
     public double GetTotal() => EndTime - BeginTime + 1;
   }
 }

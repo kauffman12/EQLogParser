@@ -36,7 +36,7 @@ namespace EQLogParser
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
       }
 
-      if (IsValidAttack(processed.Record, processed.BeginTime, out bool defender))
+      if (IsValidAttack(processed.Record, out bool defender))
       {
         if (!double.IsNaN(LastUpdateTime))
         {
@@ -75,14 +75,6 @@ namespace EQLogParser
       }
     }
 
-    private void AddPlayerTime(Fight fight, DamageRecord record, string player, double time)
-    {
-      var isInitialTanking = fight.DamageBlocks.Count == 0;
-      var segments = isInitialTanking ? fight.InitialTankSegments : fight.DamageSegments;
-      var subSegments = isInitialTanking ? fight.InitialTankSubSegments : fight.DamageSubSegments;
-      StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
-    }
-
     private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender)
     {
       string npc = defender ? record.Defender : record.Attacker;
@@ -110,7 +102,15 @@ namespace EQLogParser
       };
     }
 
-    private static bool IsValidAttack(DamageRecord record, double currentTime, out bool defender)
+    private static void AddPlayerTime(Fight fight, DamageRecord record, string player, double time)
+    {
+      var isInitialTanking = fight.DamageBlocks.Count == 0;
+      var segments = isInitialTanking ? fight.InitialTankSegments : fight.DamageSegments;
+      var subSegments = isInitialTanking ? fight.InitialTankSubSegments : fight.DamageSubSegments;
+      StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
+    }
+
+    private static bool IsValidAttack(DamageRecord record, out bool defender)
     {
       bool valid = false;
       defender = false;

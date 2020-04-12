@@ -37,7 +37,7 @@ namespace EQLogParser
         ReceivedSpell received = action as ReceivedSpell;
 
         var spellData = received.SpellData;
-        if (spellData == null && received.Ambiguity != null && DataManager.Instance.ResolveSpellAmbiguity(received, out SpellData replaced))
+        if (spellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out SpellData replaced))
         {
           spellData = replaced;
         }
