@@ -29,7 +29,8 @@ namespace EQLogParser
     internal event EventHandler<Fight> EventsRefreshFight;
     internal event EventHandler<bool> EventsClearedActiveData;
 
-    internal const int FIGHT_TIMEOUT = 24;
+    internal const int MAXTIMEOUT = 60;
+    internal const int FIGHTTIMEOUT = 24;
     internal const double BUFFS_OFFSET = 90;
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
@@ -189,7 +190,11 @@ namespace EQLogParser
 
     internal void CheckExpireFights(double currentTime)
     {
-      ActiveFights.Values.Where(fight => (currentTime - fight.LastTime) > FIGHT_TIMEOUT).ToList().ForEach(fight => RemoveActiveFight(fight.CorrectMapKey));
+      ActiveFights.Values.Where(fight =>
+      {
+        double diff = currentTime - fight.LastTime;
+        return diff > MAXTIMEOUT || diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0;
+      }).ToList().ForEach(fight => RemoveActiveFight(fight.CorrectMapKey));
     }
 
     internal Fight GetFight(string name)

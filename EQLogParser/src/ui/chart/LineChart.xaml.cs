@@ -158,7 +158,7 @@ namespace EQLogParser
         {
           double diff = double.IsNaN(lastTime) ? 1 : dataPoint.CurrentTime - lastTime;
 
-          if (double.IsNaN(firstTime) || diff > DataManager.FIGHT_TIMEOUT)
+          if (double.IsNaN(firstTime) || diff > DataManager.FIGHTTIMEOUT)
           {
             firstTime = dataPoint.CurrentTime;
           }
@@ -497,7 +497,7 @@ namespace EQLogParser
     private static void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, ChartValues<DataPoint>> theValues,
       Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate, double firstTime, double lastTime, double diff)
     {
-      if (diff > DataManager.FIGHT_TIMEOUT)
+      if (diff > DataManager.FIGHTTIMEOUT)
       {
         UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
         foreach (var value in playerData.Values)
