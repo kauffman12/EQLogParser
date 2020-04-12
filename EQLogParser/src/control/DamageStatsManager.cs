@@ -80,7 +80,7 @@ namespace EQLogParser
               DamageGroupIds[fight.GroupId] = 1;
             }
 
-            RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTime, fight.LastTime));
+            RaidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
             StatsUtil.UpdateRaidTimeRanges(fight, PlayerTimeRanges, PlayerSubTimeRanges);
           });
 
@@ -158,8 +158,8 @@ namespace EQLogParser
           overlayStats.RaidStats.Total += record.Total;
 
           var raidTimeRange = new TimeRange();
-          overlayStats.InactiveFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginTime, overlayStats.BeginTime), fight.LastTime)));
-          activeFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginTime, overlayStats.BeginTime), fight.LastTime)));
+          overlayStats.InactiveFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginDamageTime, overlayStats.BeginTime), fight.LastDamageTime)));
+          activeFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginDamageTime, overlayStats.BeginTime), fight.LastDamageTime)));
           overlayStats.RaidStats.TotalSeconds = raidTimeRange.GetTotal();
 
           // update pets
@@ -216,14 +216,14 @@ namespace EQLogParser
             var you = list[found];
             you.Rank = Convert.ToUInt16(found + 1);
             overlayStats.StatsList.Clear();
-            overlayStats.StatsList.AddRange(list.Where(stats => beginTime - stats.LastTime <= DataManager.FIGHT_TIMEOUT).Take(4));
+            overlayStats.StatsList.AddRange(list.Where(stats => beginTime - stats.LastTime <= DataManager.FIGHTTIMEOUT).Take(4));
             overlayStats.StatsList.Add(you);
             renumber = overlayStats.StatsList.Count - 1;
           }
           else
           {
             overlayStats.StatsList.Clear();
-            overlayStats.StatsList.AddRange(list.Where(stats => beginTime - stats.LastTime <= DataManager.FIGHT_TIMEOUT).Take(5));
+            overlayStats.StatsList.AddRange(list.Where(stats => beginTime - stats.LastTime <= DataManager.FIGHTTIMEOUT).Take(5));
             renumber = overlayStats.StatsList.Count;
           }
 

@@ -273,7 +273,7 @@ namespace EQLogParser
     {
       lock(StatsLock)
       {
-        if (Stats != null && e.LastTime >= Stats.BeginTime)
+        if (Stats != null && e.LastDamageTime >= Stats.BeginTime)
         {
           Stats.InactiveFights.Add(e);
         }
@@ -292,7 +292,7 @@ namespace EQLogParser
           // so this limits it to 1/2 the current time value
           ProcessDirection = !ProcessDirection;
 
-          var timeout = CurrentDamageSelectionMode == 0 ? DataManager.FIGHT_TIMEOUT : CurrentDamageSelectionMode;
+          var timeout = CurrentDamageSelectionMode == 0 ? DataManager.FIGHTTIMEOUT : CurrentDamageSelectionMode;
           if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.LastTime)).TotalSeconds > timeout)
           {
             windowBrush.Opacity = 0.0;

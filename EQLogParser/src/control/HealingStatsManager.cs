@@ -85,7 +85,7 @@ namespace EQLogParser
           Selected = options.Npcs;
           Title = options.Name;
 
-          Selected.ForEach(fight => RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTime, fight.LastTime)));
+          Selected.ForEach(fight => RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime)));
   
           if (RaidTotals.Ranges.TimeSegments.Count > 0)
           {

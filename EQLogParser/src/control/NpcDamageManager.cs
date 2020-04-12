@@ -7,7 +7,7 @@ namespace EQLogParser
     public static event EventHandler<DamageProcessedEvent> EventsPlayerAttackProcessed;
 
     internal const int GROUP_TIMEOUT = 120;
-    internal double LastUpdateTime = double.NaN;
+    internal double LastFightProcessTime = double.NaN;
 
     private int CurrentNpcID = 0;
     private int CurrentGroupID = 0;
@@ -25,21 +25,21 @@ namespace EQLogParser
 
     internal void ResetTime()
     {
-      LastUpdateTime = double.NaN;
+      LastFightProcessTime = double.NaN;
     }
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
-      if (LastUpdateTime != processed.BeginTime)
+      if (LastFightProcessTime != processed.BeginTime)
       {
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
       }
 
       if (IsValidAttack(processed.Record, out bool defender))
       {
-        if (!double.IsNaN(LastUpdateTime))
+        if (!double.IsNaN(LastFightProcessTime))
         {
-          var seconds = processed.BeginTime - LastUpdateTime;
+          var seconds = processed.BeginTime - LastFightProcessTime;
           if (seconds >= GROUP_TIMEOUT)
           {
             CurrentGroupID++;
@@ -55,15 +55,19 @@ namespace EQLogParser
           Helpers.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
           AddPlayerTime(fight, processed.Record, processed.Record.Attacker, processed.BeginTime);
           fight.Total += processed.Record.Total;
+          fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
+          fight.LastDamageTime = processed.BeginTime;
         }
         else
         {
           Helpers.AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
           AddPlayerTime(fight, processed.Record, processed.Record.Defender, processed.BeginTime);
+          fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? processed.BeginTime : fight.BeginTankingTime;
+          fight.LastTankingTime = processed.BeginTime;
         }
 
         fight.LastTime = processed.BeginTime;
-        LastUpdateTime = processed.BeginTime;
+        LastFightProcessTime = processed.BeginTime;
 
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight);
 

@@ -276,6 +276,11 @@ namespace EQLogParser
 
   public class Fight : FullTimedAction
   {
+    public double BeginDamageTime { get; set; } = double.NaN;
+    public double BeginTankingTime { get; set; } = double.NaN;
+    public double LastDamageTime { get; set; }
+    public double LastTankingTime { get; set; }
+
     public const string BREAKTIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
@@ -335,7 +340,8 @@ namespace EQLogParser
     public ushort Level { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
-    public bool Damaging { get; set; }
+    public string WearOff { get; set; }
+
     public bool IsProc { get; set; }
     public ushort Adps { get; set; }
   }
