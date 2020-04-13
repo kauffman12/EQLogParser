@@ -137,19 +137,10 @@ namespace EQLogParser
       }
     }
 
-    internal OverlayDamageStats ComputeOverlayDamageStats(DamageRecord record, double beginTime, int damageSelectionMode, OverlayDamageStats overlayStats = null)
+    internal void ComputeOverlayDamageStats(DamageRecord record, double beginTime, OverlayDamageStats overlayStats = null)
     {
       try
-      {
-        var activeFights = DataManager.Instance.GetActiveFights();
-
-        // reset if stats if first time or first new damage is received
-        if (overlayStats == null || (activeFights.Count == 1 && activeFights[0].DamageBlocks.Count == 1 && 
-          activeFights[0].DamageBlocks[0].Actions.Count == 1 && damageSelectionMode == 0))
-        {
-          overlayStats = new OverlayDamageStats { BeginTime = beginTime, RaidStats = new PlayerStats() };
-        }
-        
+      {      
         // set current time
         overlayStats.LastTime = beginTime;
 
@@ -159,10 +150,10 @@ namespace EQLogParser
 
           var raidTimeRange = new TimeRange();
           overlayStats.InactiveFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginDamageTime, overlayStats.BeginTime), fight.LastDamageTime)));
-          activeFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginDamageTime, overlayStats.BeginTime), fight.LastDamageTime)));
-          overlayStats.RaidStats.TotalSeconds = raidTimeRange.GetTotal();
+          overlayStats.ActiveFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginDamageTime, overlayStats.BeginTime), fight.LastDamageTime)));
+          overlayStats.RaidStats.TotalSeconds = Math.Max(raidTimeRange.GetTotal(), overlayStats.RaidStats.TotalSeconds);
 
-          // update pets
+           // update pets
           UpdatePetMapping(record);
 
           bool isPet = PetToPlayer.TryGetValue(record.Attacker, out string player);
@@ -243,20 +234,20 @@ namespace EQLogParser
                 mapping.Keys.ToList().ForEach(key =>
                 {
                   AddSegments(timeRange, overlayStats.InactiveFights, key, overlayStats.BeginTime);
-                  AddSegments(timeRange, activeFights, key, overlayStats.BeginTime);
+                  AddSegments(timeRange, overlayStats.ActiveFights, key, overlayStats.BeginTime);
                 });
               }
 
               AddSegments(timeRange, overlayStats.InactiveFights, overlayStats.StatsList[i].OrigName, overlayStats.BeginTime);
-              AddSegments(timeRange, activeFights, overlayStats.StatsList[i].OrigName, overlayStats.BeginTime);
-              overlayStats.StatsList[i].TotalSeconds = timeRange.GetTotal();
+              AddSegments(timeRange, overlayStats.ActiveFights, overlayStats.StatsList[i].OrigName, overlayStats.BeginTime);
+              overlayStats.StatsList[i].TotalSeconds = Math.Max(timeRange.GetTotal(), overlayStats.StatsList[i].TotalSeconds);
               overlayStats.StatsList[i].CalcTime = beginTime;
             }
 
             StatsUtil.UpdateCalculations(overlayStats.StatsList[i], overlayStats.RaidStats);
           }
 
-          var count = overlayStats.InactiveFights.Count + activeFights.Count;
+          var count = overlayStats.InactiveFights.Count + overlayStats.ActiveFights.Count;
           overlayStats.TargetTitle = (count > 1 ? "C(" + count + "): " : "") + record.Defender;
           overlayStats.TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, overlayStats.RaidStats.TotalSeconds);
           overlayStats.TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(overlayStats.RaidStats.Total), 
@@ -272,8 +263,6 @@ namespace EQLogParser
           LOG.Error(ex);
         }
       }
-
-      return overlayStats;
 
       void AddSegments(TimeRange range, List<Fight> fights, string key, double start)
       {

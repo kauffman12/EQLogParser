@@ -76,7 +76,7 @@ namespace EQLogParser
           EventsPlayerAttackProcessed?.Invoke(processed.Record, processed);
         }
       }
-    }
+  }
 
     private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender)
     {
