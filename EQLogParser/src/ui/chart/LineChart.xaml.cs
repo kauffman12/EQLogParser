@@ -294,62 +294,59 @@ namespace EQLogParser
 
       Dispatcher.InvokeAsync(() =>
       {
-        if (ChartModifiedTime < requestTime)
+        ChartModifiedTime = requestTime;
+        Reset();
+
+        titleLabel.Content = label;
+        SeriesCollection collection = new SeriesCollection(CurrentConfig);
+        bool fixStillNeeded = true;
+
+        foreach (var value in sortedValues)
         {
-          ChartModifiedTime = requestTime;
-          Reset();
+          var name = value.First().Name;
+          name = CurrentPetOrPlayerOption == PETPLAYEROPTION && !HasPets.ContainsKey(name) ? name.Split(' ')[0] : name;
+          var series = new LineSeries() { Title = name, Values = value };
 
-          titleLabel.Content = label;
-          SeriesCollection collection = new SeriesCollection(CurrentConfig);
-          bool fixStillNeeded = true;
-
-          foreach (var value in sortedValues)
+          if (value.Count > 1)
           {
-            var name = value.First().Name;
-            name = CurrentPetOrPlayerOption == PETPLAYEROPTION && !HasPets.ContainsKey(name) ? name.Split(' ')[0] : name;
-            var series = new LineSeries() { Title = name, Values = value };
-
-            if (value.Count > 1)
+            series.PointGeometry = null;
+            fixStillNeeded = false;
+          }
+          else if (value.Count == 1 && fixStillNeeded) // handles if everything is 1 point
+          {
+            if (!double.IsNaN(lvcChart.AxisX[0].MinValue))
             {
-              series.PointGeometry = null;
-              fixStillNeeded = false;
-            }
-            else if (value.Count == 1 && fixStillNeeded) // handles if everything is 1 point
-            {
-              if (!double.IsNaN(lvcChart.AxisX[0].MinValue))
-              {
-                lvcChart.AxisX[0].MinValue = Math.Min(lvcChart.AxisX[0].MinValue, value[0].CurrentTime - 3.0);
-              }
-              else
-              {
-                lvcChart.AxisX[0].MinValue = value[0].CurrentTime - 3.0;
-              }
-
-              if (!double.IsNaN(lvcChart.AxisX[0].MaxValue))
-              {
-                lvcChart.AxisX[0].MaxValue = Math.Max(lvcChart.AxisX[0].MaxValue, value[0].CurrentTime + 3.0);
-              }
-              else
-              {
-                lvcChart.AxisX[0].MaxValue = value[0].CurrentTime + 3.0;
-              }
+              lvcChart.AxisX[0].MinValue = Math.Min(lvcChart.AxisX[0].MinValue, value[0].CurrentTime - 3.0);
             }
             else
             {
-              fixStillNeeded = false;
+              lvcChart.AxisX[0].MinValue = value[0].CurrentTime - 3.0;
             }
 
-            if (!fixStillNeeded)
+            if (!double.IsNaN(lvcChart.AxisX[0].MaxValue))
             {
-              lvcChart.AxisX[0].MinValue = double.NaN;
-              lvcChart.AxisX[0].MaxValue = double.NaN;
+              lvcChart.AxisX[0].MaxValue = Math.Max(lvcChart.AxisX[0].MaxValue, value[0].CurrentTime + 3.0);
             }
-
-            collection.Add(series);
+            else
+            {
+              lvcChart.AxisX[0].MaxValue = value[0].CurrentTime + 3.0;
+            }
+          }
+          else
+          {
+            fixStillNeeded = false;
           }
 
-          lvcChart.Series = collection;
+          if (!fixStillNeeded)
+          {
+            lvcChart.AxisX[0].MinValue = double.NaN;
+            lvcChart.AxisX[0].MaxValue = double.NaN;
+          }
+
+          collection.Add(series);
         }
+
+        lvcChart.Series = collection;
       });
     }
 
