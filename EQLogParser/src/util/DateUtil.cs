@@ -236,7 +236,7 @@ namespace EQLogParser
       {
         if (TimeSegments[index].BeginTime <= TimeSegments[prev].EndTime)
         {
-          TimeSegments[index].BeginTime = TimeSegments[prev].BeginTime;
+          TimeSegments[index].BeginTime = Math.Min(TimeSegments[index].BeginTime, TimeSegments[prev].BeginTime);
           TimeSegments.RemoveAt(prev);
           CollapseLeft(prev);
         }
@@ -249,7 +249,7 @@ namespace EQLogParser
       {
         if (TimeSegments[index].EndTime >= TimeSegments[next].BeginTime)
         {
-          TimeSegments[index].EndTime = TimeSegments[next].EndTime;
+          TimeSegments[index].EndTime = Math.Max(TimeSegments[index].EndTime, TimeSegments[next].EndTime);
           TimeSegments.RemoveAt(next);
           CollapseRight(index);
         }

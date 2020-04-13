@@ -261,7 +261,18 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
-        Stats = DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, CurrentDamageSelectionMode, Stats);
+        var activeFights = DataManager.Instance.GetActiveFights();
+
+        // reset if stats if first time or first new damage is received
+        if (Stats == null || (activeFights.Count == 1 && activeFights[0].DamageBlocks.Count == 1 &&
+          activeFights[0].DamageBlocks[0].Actions.Count == 1 && CurrentDamageSelectionMode == 0))
+        {
+          Stats = new OverlayDamageStats { BeginTime = e.BeginTime, RaidStats = new PlayerStats() };
+        }
+
+        Stats.ActiveFights = activeFights;
+        DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
+
         if (UpdateTimer != null && !UpdateTimer.IsEnabled)
         {
           UpdateTimer.Start();

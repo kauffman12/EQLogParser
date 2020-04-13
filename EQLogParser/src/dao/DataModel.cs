@@ -391,6 +391,9 @@ namespace EQLogParser
     public Dictionary<string, PlayerStats> AggregateStats { get; } = new Dictionary<string, PlayerStats>();
     public Dictionary<string, PlayerStats> IndividualStats { get; } = new Dictionary<string, PlayerStats>();
     public List<Fight> InactiveFights { get; } = new List<Fight>();
+#pragma warning disable CA2227 // Collection properties should be read only
+    public List<Fight> ActiveFights { get; set; }
+#pragma warning restore CA2227 // Collection properties should be read only
   }
 
   public class DataPoint
