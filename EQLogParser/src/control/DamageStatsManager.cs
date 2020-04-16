@@ -268,12 +268,9 @@ namespace EQLogParser
       {
         fights.ForEach(fight =>
         {
-          if (fight.DamageSegments.TryGetValue(key, out TimeSegment segment))
+          if (fight.DamageSegments.TryGetValue(key, out TimeSegment segment) && segment.EndTime >= start)
           {
-            if (segment.EndTime >= start)
-            {
-              range.Add(new TimeSegment(Math.Max(segment.BeginTime, start), segment.EndTime));
-            }
+            range.Add(new TimeSegment(Math.Max(segment.BeginTime, start), segment.EndTime));
           }
         });
       }
@@ -283,39 +280,35 @@ namespace EQLogParser
     {
       Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
 
-      if (damageStats != null)
+      // get chart data for player and pets if available
+      if (damageStats?.Children.ContainsKey(selected.Name) == true)
       {
-        // get chart data for player and pets if available
-        List<PlayerStats> list = new List<PlayerStats>();
-        if (damageStats.Children.ContainsKey(selected.Name))
-        {
-          list.AddRange(damageStats.Children[selected.Name]);
-        }
-        else
-        {
-          list.Add(selected);
-        }
-
-        list.ForEach(stat =>
-        {
-          results[stat.Name] = new List<HitFreqChartData>();
-          foreach (string type in stat.SubStats.Keys)
-          {
-            HitFreqChartData chartData = new HitFreqChartData() { HitType = stat.SubStats[type].Name };
-
-            // add crits
-            chartData.CritXValues.AddRange(stat.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
-            chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stat.SubStats[type].CritFreqValues[damage]));
-
-            // add non crits
-            chartData.NonCritXValues.AddRange(stat.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
-            chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stat.SubStats[type].NonCritFreqValues[damage]));
-            results[stat.Name].Add(chartData);
-          }
-        });
+        damageStats?.Children[selected.Name].ForEach(stats => AddStats(stats));
+      }
+      else
+      {
+        AddStats(selected);
       }
 
       return results;
+
+      void AddStats(PlayerStats stats)
+      {
+        results[stats.Name] = new List<HitFreqChartData>();
+        foreach (string type in stats.SubStats.Keys)
+        {
+          HitFreqChartData chartData = new HitFreqChartData() { HitType = stats.SubStats[type].Name };
+
+          // add crits
+          chartData.CritXValues.AddRange(stats.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
+          chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stats.SubStats[type].CritFreqValues[damage]));
+
+          // add non crits
+          chartData.NonCritXValues.AddRange(stats.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
+          chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stats.SubStats[type].NonCritFreqValues[damage]));
+          results[stats.Name].Add(chartData);
+        }
+      }
     }
 
     private void ComputeDamageStats(GenerateStatsOptions options)
@@ -405,13 +398,8 @@ namespace EQLogParser
               });
 
               RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-
-              // add up resists
               var resistCounts = Resists.Cast<ResistRecord>().GroupBy(x => x.Spell).ToDictionary(g => g.Key, g => g.ToList().Count);
-
-              // get special field
               var specials = StatsUtil.GetSpecials(RaidTotals);
-
               var expandedStats = new ConcurrentBag<PlayerStats>();
 
               individualStats.Values.AsParallel().Where(stats => topLevelStats.ContainsKey(stats.Name)).ForAll(stats =>

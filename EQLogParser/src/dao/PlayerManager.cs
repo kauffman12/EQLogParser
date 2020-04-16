@@ -28,6 +28,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
+    private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
 
     private bool PetMappingUpdated = false;
     private bool PlayersUpdated = false;
@@ -43,9 +44,20 @@ namespace EQLogParser
         ClassNames[(SpellClass)item] = Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item), CultureInfo.CurrentCulture);
       }
 
+      DoTClasses[ClassNames[SpellClass.BRD]] = 1;
+      DoTClasses[ClassNames[SpellClass.BST]] = 1;
+      DoTClasses[ClassNames[SpellClass.DRU]] = 1;
+      DoTClasses[ClassNames[SpellClass.ENC]] = 1;
+      DoTClasses[ClassNames[SpellClass.NEC]] = 1;
+      DoTClasses[ClassNames[SpellClass.RNG]] = 1;
+      DoTClasses[ClassNames[SpellClass.SHD]] = 1;
+      DoTClasses[ClassNames[SpellClass.SHM]] = 1;
+
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
     }
+
+    internal bool IsDoTClass(string name) => !string.IsNullOrEmpty(name) && DoTClasses.ContainsKey(name);
 
     internal void AddPetOrPlayerAction(string name)
     {

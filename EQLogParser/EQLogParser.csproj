@@ -403,6 +403,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="data\adpsMeter.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="data\html\content.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

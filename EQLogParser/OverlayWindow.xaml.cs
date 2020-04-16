@@ -31,7 +31,7 @@ namespace EQLogParser
     private const int DEFAULT_TEXT_FONT_SIZE = 13;
     private const int MAX_ROWS = 5;
     private const double OPACITY = 0.40;
-    private const double DATA_OPACITY = 0.65;
+    private const double DATA_OPACITY = 0.70;
 
     private readonly List<ColorComboBox> ColorComboBoxList = new List<ColorComboBox>();
     private readonly List<StackPanel> NamePanels = new List<StackPanel>();
@@ -57,6 +57,7 @@ namespace EQLogParser
     private Rectangle TitleRectangle;
     private Dictionary<int, double> PrevList = null;
     private bool IsHideOverlayOtherPlayersEnabled = false;
+    private bool IsShowOverlayCritRateEnabled = false;
 
     public OverlayWindow(bool configure = false)
     {
@@ -67,9 +68,14 @@ namespace EQLogParser
       string height = ConfigUtil.GetSetting("OverlayHeight");
       string top = ConfigUtil.GetSetting("OverlayTop");
       string left = ConfigUtil.GetSetting("OverlayLeft");
+
       // Hide other player names on overlay
       IsHideOverlayOtherPlayersEnabled = ConfigUtil.IfSet("HideOverlayOtherPlayers");
       showNameSelection.SelectedIndex = IsHideOverlayOtherPlayersEnabled ? 1 : 0;
+
+      // Hide/Show crit rate
+      IsShowOverlayCritRateEnabled = ConfigUtil.IfSet("ShowOverlayCritRate");
+      showCritRateSelection.SelectedIndex = IsShowOverlayCritRateEnabled ? 1 : 0;
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
       bool offsetSize = configure || width == null || height == null || top == null || left == null;
@@ -350,14 +356,38 @@ namespace EQLogParser
                   string playerName = ConfigUtil.PlayerName;
                   var isMe = !string.IsNullOrEmpty(playerName) && list[i].Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
                     (playerName.Length >= list[i].Name.Length || list[i].Name[playerName.Length] == ' ');
+
+                  string updateText;
                   if (IsHideOverlayOtherPlayersEnabled && !isMe)
                   {
-                    NameBlockList[i].Text = list[i].Rank + ". " + "Hidden Player";
+                    updateText = string.Format(CultureInfo.CurrentCulture, "{0}. Hidden Player", list[i].Rank);
                   }
                   else
                   {
-                    NameBlockList[i].Text = list[i].Rank + ". " + list[i].Name;
+                    updateText = string.Format(CultureInfo.CurrentCulture, "{0}. {1}", list[i].Rank, list[i].Name);
                   }
+
+                  if (IsShowOverlayCritRateEnabled)
+                  {
+                    List<string> critMods = new List<string>();
+
+                    if (isMe && PlayerManager.Instance.IsDoTClass(list[i].ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
+                    {
+                      critMods.Add(string.Format(CultureInfo.CurrentCulture, "DoT CR +{0}", doTCritRate));
+                    }
+
+                    if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
+                    {
+                      critMods.Add(string.Format(CultureInfo.CurrentCulture, "Nuke CR +{0}", nukeCritRate));
+                    }
+
+                    if (critMods.Count > 0)
+                    {
+                      updateText = string.Format(CultureInfo.CurrentCulture, "{0} [{1}]", updateText, string.Join(", ", critMods));
+                    }
+                  }
+
+                  NameBlockList[i].Text = updateText;
 
                   if (i <= 4 && !isMe && list[i].Total > 0)
                   {
@@ -490,6 +520,7 @@ namespace EQLogParser
       SetSize(TitleDamagePanel, rowHeight, double.NaN);
 
       SetSize(configPanel, rowHeight, double.NaN);
+      SetSize(savePanel, rowHeight, width);
 
       if (!Active)
       {
@@ -512,7 +543,9 @@ namespace EQLogParser
     private void CreateRows(bool configure = false)
     {
       configPanel.SetValue(Panel.ZIndexProperty, 3);
-      configPanel.SetValue(Canvas.RightProperty, 5.0);
+      configPanel.SetValue(Canvas.RightProperty, 4.0);
+      savePanel.SetValue(Panel.ZIndexProperty, 3);
+      savePanel.SetValue(Canvas.BottomProperty, 1.0);
 
       TitleRectangle = CreateRectangle(TITLECOLOR);
       overlayCanvas.Children.Add(TitleRectangle);
@@ -544,7 +577,7 @@ namespace EQLogParser
         NamePanels.Add(nameStack);
 
         var nameBlock = CreateTextBlock();
-        nameBlock.SetValue(Canvas.LeftProperty, 5.0);
+        nameBlock.SetValue(Canvas.LeftProperty, 4.0);
         NameBlockList.Add(nameBlock);
         nameStack.Children.Add(nameBlock);
         overlayCanvas.Children.Add(nameStack);
@@ -637,6 +670,11 @@ namespace EQLogParser
       IsHideOverlayOtherPlayersEnabled = showNameSelection.SelectedIndex == 1;
     }
 
+    private void ShowCritRateSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      IsShowOverlayCritRateEnabled = showCritRateSelection.SelectedIndex == 1;
+    }
+    
     private void SaveClick(object sender, RoutedEventArgs e)
     {
       if (!double.IsNaN(overlayCanvas.ActualHeight) && overlayCanvas.ActualHeight > 0)
@@ -665,6 +703,7 @@ namespace EQLogParser
 
         ConfigUtil.SetSetting("OverlayDamageMode", (string)(damageModeSelection.SelectedItem as ComboBoxItem).Tag);
         ConfigUtil.SetSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("ShowOverlayCritRate", IsShowOverlayCritRateEnabled.ToString(CultureInfo.CurrentCulture));
 
         ColorComboBoxList.ForEach(colorChoice =>
         {
@@ -741,7 +780,7 @@ namespace EQLogParser
     {
       var stack = new StackPanel { Orientation = Orientation.Horizontal };
       stack.SetValue(Panel.ZIndexProperty, 3);
-      stack.SetValue(Canvas.RightProperty, 5.0);
+      stack.SetValue(Canvas.RightProperty, 4.0);
       return stack;
     }
 
@@ -749,7 +788,7 @@ namespace EQLogParser
     {
       var stack = new StackPanel { Orientation = Orientation.Horizontal };
       stack.SetValue(Panel.ZIndexProperty, 3);
-      stack.SetValue(Canvas.LeftProperty, 5.0);
+      stack.SetValue(Canvas.LeftProperty, 4.0);
       return stack;
     }
 

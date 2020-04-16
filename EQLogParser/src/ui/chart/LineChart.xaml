@@ -17,7 +17,7 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="0,0,0,0" x:Name="petOrPlayerList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,0,0" x:Name="choicesList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
-      <Button Margin="0,0,8,0" Padding="4,0,4,0" Height="24" Click="SaveCSVClick" Content="Save"/>
+      <Button Margin="0,0,8,0" Padding="4,0,4,0" Height="24" Width="50" Click="SaveCSVClick" Content="Save"/>
     </StackPanel>
     <lvc:CartesianChart x:Name="lvcChart" Grid.Row="1" Zoom="X" Pan="X" LegendLocation="Right" MouseDoubleClick="ChartDoubleClick">
       <lvc:CartesianChart.AxisY>
