@@ -32,6 +32,8 @@ namespace EQLogParser
     internal const int MAXTIMEOUT = 60;
     internal const int FIGHTTIMEOUT = 24;
     internal const double BUFFS_OFFSET = 90;
+    internal uint MyNukeCritRateMod { get; private set; } = 0;
+    internal uint MyDoTCritRateMod { get; private set; } = 0;
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
@@ -45,10 +47,15 @@ namespace EQLogParser
     private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
     private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
 
+    private readonly List<string> AdpsKeys = new List<string> { "#DoTCritRate", "#NukeCritRate" };
+    private readonly Dictionary<string, Dictionary<string, uint>> AdpsActive = new Dictionary<string, Dictionary<string, uint>>();
+    private readonly Dictionary<string, Dictionary<string, uint>> AdpsValues = new Dictionary<string, Dictionary<string, uint>>();
+    private readonly Dictionary<string, HashSet<SpellData>> AdpsLandsOn = new Dictionary<string, HashSet<SpellData>>();
+    private readonly Dictionary<string, HashSet<SpellData>> AdpsWearOff = new Dictionary<string, HashSet<SpellData>>();
     private readonly Dictionary<string, byte> AllNpcs = new Dictionary<string, byte>();
-    private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
-    private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
+    private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
+    private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, SpellData> SpellsNameDB = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
     private readonly Dictionary<string, SpellClass> SpellsToClass = new Dictionary<string, SpellClass>();
@@ -87,13 +94,13 @@ namespace EQLogParser
               spellData.LandsOnOther = spellData.LandsOnOther.Substring(3);
               helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther, spellData);
             }
-            else if (spellData.LandsOnOther.Length > 1)
+            else if (!string.IsNullOrEmpty(spellData.LandsOnOther))
             {
               spellData.LandsOnOther = spellData.LandsOnOther.Substring(1);
               helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther, spellData);
             }
 
-            if (spellData.LandsOnYou.Length > 0) // just do stuff in common
+            if (!string.IsNullOrEmpty(spellData.LandsOnYou)) // just do stuff in common
             {
               helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
             }
@@ -106,35 +113,24 @@ namespace EQLogParser
       });
 
       // sort by duration for the timeline to pick better options
-      foreach (var key in NonPosessiveLandsOnOthers.Keys)
+      foreach (var kv in NonPosessiveLandsOnOthers)
       {
-        NonPosessiveLandsOnOthers[key].Sort((a, b) =>
-        {
-          int result = b.Duration.CompareTo(a.Duration);
-          return result != 0 ? result : string.Compare(b.ID, a.ID, true, CultureInfo.CurrentCulture);
-        });
+        kv.Value.Sort((a, b) => DurationCompare(a, b));
       }
 
-      foreach (var key in PosessiveLandsOnOthers.Keys)
+      foreach (var kv in PosessiveLandsOnOthers)
       {
-        PosessiveLandsOnOthers[key].Sort((a, b) =>
-        {
-          int result = b.Duration.CompareTo(a.Duration);
-          return result != 0 ? result : string.Compare(b.ID, a.ID, true, CultureInfo.CurrentCulture);
-        });
+        kv.Value.Sort((a, b) => DurationCompare(a, b));
       }
 
-      foreach (var key in LandsOnYou.Keys)
+      foreach (var kv in LandsOnYou)
       {
-        LandsOnYou[key].Sort((a, b) =>
-        {
-          int result = b.Duration.CompareTo(a.Duration);
-          return result != 0 ? result : string.Compare(b.ID, a.ID, true, CultureInfo.CurrentCulture);
-        });
+        kv.Value.Sort((a, b) => DurationCompare(a, b));
       }
 
-      Dictionary<string, byte> keepOut = new Dictionary<string, byte>();
+      var keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
+
       spellList.ForEach(spell =>
       {
         // exact match meaning class-only spell that are of certain target types
@@ -157,9 +153,61 @@ namespace EQLogParser
       // load NPCs
       ConfigUtil.ReadList(@"data\npcs.txt").ForEach(line => AllNpcs[line.Trim()] = 1);
 
+      // Load Adps
+      AdpsKeys.ForEach(adpsKey => AdpsActive[adpsKey] = new Dictionary<string, uint>());
+      AdpsKeys.ForEach(adpsKey => AdpsValues[adpsKey] = new Dictionary<string, uint>());
+
+      string key = null;
+      foreach (var line in ConfigUtil.ReadList(@"data\adpsMeter.txt"))
+      {
+        if (!string.IsNullOrEmpty(line) && line.Trim() is string trimmed && trimmed.Length > 0)
+        {
+          if (trimmed[0] != '#' && !string.IsNullOrEmpty(key))
+          {
+            if (trimmed.Split('|') is string[] multiple && multiple.Length > 0)
+            {
+              foreach (var spellLine in multiple)
+              {
+                if (spellLine.Split('=') is string[] list && list.Length == 2 && uint.TryParse(list[1], out uint rate))
+                {
+                  if (SpellsAbbrvDB.TryGetValue(list[0], out SpellData spellData) || SpellsNameDB.TryGetValue(list[0], out spellData))
+                  {
+                    AdpsValues[key][spellData.NameAbbrv] = rate;
+
+                    if (!AdpsWearOff.TryGetValue(spellData.WearOff, out HashSet<SpellData> wearOffList))
+                    {
+                      AdpsWearOff[spellData.WearOff] = new HashSet<SpellData>();
+                    }
+
+                    AdpsWearOff[spellData.WearOff].Add(spellData);
+
+                    if (!AdpsLandsOn.TryGetValue(spellData.LandsOnYou, out HashSet<SpellData> landsOnList))
+                    {
+                      AdpsLandsOn[spellData.LandsOnYou] = new HashSet<SpellData>();
+                    }
+
+                    AdpsLandsOn[spellData.LandsOnYou].Add(spellData);
+                  }
+                }
+              }
+            }
+          }
+          else if (AdpsKeys.Contains(trimmed))
+          {
+            key = trimmed;
+          }
+        }
+      }
+
       PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => RemoveFight(name);
+
+      int DurationCompare(SpellData a, SpellData b)
+      {
+        int result = b.Duration.CompareTo(a.Duration);
+        return result != 0 ? result : string.Compare(b.ID, a.ID, true, CultureInfo.CurrentCulture);
+      }
     }
 
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
@@ -284,7 +332,7 @@ namespace EQLogParser
     internal List<TimedAction> GetSpecials()
     {
       List<TimedAction> sorted;
-      lock(AllSpecialActions)
+      lock (AllSpecialActions)
       {
         sorted = AllSpecialActions.OrderBy(special => special.BeginTime).ToList();
       }
@@ -337,13 +385,44 @@ namespace EQLogParser
       return result;
     }
 
-    internal List<SpellData> GetLandsOnYou(string player, string value, out List<SpellData> output)
+    internal List<SpellData> GetLandsOnYou(string player, string landsOn, out List<SpellData> output)
     {
       List<SpellData> result = null;
-      if (LandsOnYou.TryGetValue(value, out output))
+      if (LandsOnYou.TryGetValue(landsOn, out output))
       {
         result = FindByLandsOn(player, output);
+
+        // check Adps
+        if (AdpsLandsOn.TryGetValue(landsOn, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
+        {
+          var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(player, spellDataSet.ToList());
+
+          AdpsKeys.ForEach(key =>
+          {
+            if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+            {
+              AdpsActive[key][spellData.LandsOnYou] = value;
+              MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
+              MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
+            }
+          });
+        }
       }
+      else if (AdpsWearOff.TryGetValue(landsOn, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
+      {
+        var spellData = spellDataSet.First();
+
+        AdpsKeys.ForEach(key =>
+        {
+          if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+          {
+            AdpsActive[key].Remove(spellData.LandsOnYou);
+            MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
+            MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
+          }
+        });
+      }
+
       return result;
     }
 
@@ -354,7 +433,7 @@ namespace EQLogParser
       {
         found = AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
       }
-      return found; 
+      return found;
     }
 
     private SpellData FindPreviousCast(string player, List<SpellData> output)
@@ -365,7 +444,7 @@ namespace EQLogParser
         for (int i = LastSpellIndex; i >= 0 && AllSpellCastBlocks[i].BeginTime >= endTime; i--)
         {
           for (int j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
-          {         
+          {
             if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && output.Find(spellData => spellData == cast.SpellData) is SpellData found)
             {
               if (found.Target != (int)SpellTarget.SELF || cast.Caster == player)
@@ -458,6 +537,7 @@ namespace EQLogParser
         AllHealBlocks.Clear();
         AllLootBlocks.Clear();
         AllSpecialActions.Clear();
+        AdpsKeys.ForEach(key => AdpsActive[key].Clear());
         EventsClearedActiveData?.Invoke(this, true);
       }
     }

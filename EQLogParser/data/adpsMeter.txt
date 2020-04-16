@@ -1,0 +1,26 @@
+#NukeCritRate
+Apex of Enchantment=9
+Auspice of the Hunter=33
+Fierce Eye=15
+Glyph of Destruction=15
+Group Spirit of the Great Wolf=12|Spirit of the Great Wolf=18
+Illusions of Grandeur=13
+Intensity of the Resolute=50
+Mana Charge=175
+Spire of Arcanum=16
+Spire of the Elements=24
+Spire of Nature=24
+Spire of the Reavers=25
+Spire of the Sensei=25
+Spire of the Vicar=8
+Spirit of Vesagran=12
+
+#DoTCritRate
+Auspice of the Hunter=33
+Fierce Eye=15
+Glyph of Destruction=15
+Illusions of Grandeur=13
+Intensity of the Resolute=50
+Spire of Necromancy=25
+Spire of the Reavers=25
+Spirit of Vesagran=12
