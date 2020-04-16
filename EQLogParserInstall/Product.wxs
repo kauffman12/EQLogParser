@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.7.6" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.7.7" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x86" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -126,7 +126,10 @@
       </Component>
       <Component Id="npcs.txt" Guid="46C8209D-FDBA-4948-AB7C-699AFD8CDE8A">
         <File Id="npcs.txt" Name="npcs.txt" Source="$(var.EQLogParser_TargetDir)\data\npcs.txt" />
-      </Component>      
+      </Component>
+      <Component Id="adpsMeter.txt" Guid="F1428697-7A90-4E37-8894-289D81A5D32E">
+        <File Id="adpsMeter.txt" Name="adpsMeter.txt" Source="$(var.EQLogParser_TargetDir)\data\adpsMeter.txt" />
+      </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductHtmlDataComponents" Directory="HTMLDATAFOLDER">
       <Component Id="content.html" Guid="689B76E0-571D-4F27-B909-B18ABF902346">
