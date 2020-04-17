@@ -89,19 +89,16 @@ namespace EQLogParser
       }
     }
 
-    internal static void SetBusy(bool state)
-    {
-      MainDispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(state));
-    }
+    internal static void SetBusy(bool state) => MainDispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(state));
 
-    internal static string ToLower(string name)
+    internal static string FlipCase(string name)
     {
-      return char.ToLower(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
-    }
-
-    internal static string ToUpper(string name)
-    {
-      return char.ToUpper(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
+      string result = name;
+      if (!string.IsNullOrEmpty(name))
+      {
+        result = char.IsUpper(name[0]) ? ToLower(name) : ToUpper(name);
+      }
+      return result;
     }
 
     internal static void ChartResetView(CartesianChart theChart)
@@ -183,6 +180,10 @@ namespace EQLogParser
 
       return key;
     }
+
+    private static string ToLower(string name) => char.ToLower(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
+
+    private static string ToUpper(string name) => char.ToUpper(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
 
     private class SortableNameComparer : IComparer<SortableName>
     {
