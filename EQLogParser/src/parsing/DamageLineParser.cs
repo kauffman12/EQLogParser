@@ -108,6 +108,24 @@ namespace EQLogParser
             EventsDamageProcessed?.Invoke(record, e);
           }
         }
+        else if (line.Length > 35 && line.EndsWith(" died.", StringComparison.Ordinal))
+        {
+          var test = line.Substring(LineParsing.ACTIONINDEX, line.Length - LineParsing.ACTIONINDEX - 6);
+          if (!SlainQueue.Contains(test) && DataManager.Instance.GetFight(test) != null)
+          {
+            SlainQueue.Add(test);
+            SlainTime = currentTime;
+          }
+
+          if (test == "You")
+          {
+            test = ConfigUtil.PlayerName;
+            DataManager.Instance.ClearActiveAdps();
+          }
+
+          var death = new DeathRecord() { Killed = string.Intern(test), Killer = "" };
+          DataManager.Instance.AddDeathRecord(death, currentTime);
+        }
         else if (line.Length > 30 && line.Length < 102 && (index = line.IndexOf(" slain ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
           HandleSlain(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
@@ -119,7 +137,6 @@ namespace EQLogParser
           // [Mon Feb 11 20:00:28 2019] An inferno flare resisted your Frostreave Strike III!
           string defender = actionPart.Substring(0, optionalIndex);
           string spell = actionPart.Substring(optionalIndex + 15, actionPart.Length - optionalIndex - 15 - 1);
-
           DataManager.Instance.AddResistRecord(new ResistRecord() { Spell = spell }, currentTime);
         }
       }
@@ -170,18 +187,19 @@ namespace EQLogParser
 
         if (!InIgnoreList(test))
         {
-          if (killer != ConfigUtil.PlayerName)
+          if (killer != ConfigUtil.PlayerName && part.IndexOf(" by ", StringComparison.Ordinal) is int byIndex && byIndex > -1)
           {
-            int byIndex = part.IndexOf(" by ", StringComparison.Ordinal);
-            if (byIndex > -1)
+            int len = part.Length - byIndex - 4 - 1;
+            killer = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
+            if (string.IsNullOrEmpty(killer))
             {
-              int len = part.Length - byIndex - 4 - 1;
-              killer = (len + byIndex + 4) <= part.Length ? part.Substring(byIndex + 4, len) : "";
-              if (string.IsNullOrEmpty(killer))
-              {
-                killer = "!";
-              }
+              killer = "!";
             }
+          }
+
+          if (test == ConfigUtil.PlayerName)
+          {
+            DataManager.Instance.ClearActiveAdps();
           }
 
           var death = new DeathRecord() { Killed = string.Intern(test), Killer = string.Intern(killer) };
