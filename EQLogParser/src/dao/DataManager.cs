@@ -538,7 +538,19 @@ namespace EQLogParser
         AllLootBlocks.Clear();
         AllSpecialActions.Clear();
         AdpsKeys.ForEach(key => AdpsActive[key].Clear());
+        MyDoTCritRateMod = 0;
+        MyNukeCritRateMod = 0;
         EventsClearedActiveData?.Invoke(this, true);
+      }
+    }
+
+    internal void ClearActiveAdps()
+    {
+      lock (this)
+      {
+        AdpsKeys.ForEach(key => AdpsActive[key].Clear());
+        MyDoTCritRateMod = 0;
+        MyNukeCritRateMod = 0;
       }
     }
 
