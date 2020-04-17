@@ -9,7 +9,7 @@
         x:Class="EQLogParser.MainWindow"
         Style="{StaticResource StandardStyle}"
         Icon="EQLogParser.ico"
-        Title="" 
+        Title=""
         Closed="WindowClosed" 
         TextOptions.TextFormattingMode="Display"
         StateChanged="WindowStateChanged"
@@ -202,11 +202,6 @@
               <fa:ImageAwesome x:Name="npcIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="fileProgressWindowMenuItem" Click="MenuItemWindowClick" Header="_Status" Height="20">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="fileProgessIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
         </MenuItem>
       </MenuItem>
       <MenuItem Header="_Options" Height="20" Width="60">
@@ -240,29 +235,13 @@
       </MenuItem>
     </Menu>
     <fa:ImageAwesome Grid.Row="0" x:Name="busyIcon" Icon="Refresh" Spin="True" Height="14" Width="14" Visibility="Hidden" Foreground="#FF4F9FE2" HorizontalAlignment="Right" Margin="0,5,15,1" Grid.Column="1"/>
-    <docking:DockSite Grid.Row="2" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown" WindowUnregistered="DockSite_WindowUnreg">
+    <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown" WindowUnregistered="DockSite_WindowUnreg">
       <docking:SplitContainer Orientation="Horizontal">
-        <docking:SplitContainer Orientation="Vertical">
-          <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="npcWindow" Title="NPCs" ContainerAutoHideSize="320, 400" ContainerDockedSize="320,400">
-              <local:FightTable />
-            </docking:ToolWindow>
-          </docking:ToolWindowContainer>
-          <docking:ToolWindowContainer>
-            <docking:ToolWindow x:Name="progressWindow" CanFloat="False" CanAutoHide="False" IsOpen="False" Title="Status" ContainerDockedSize="320,35">
-              <WrapPanel Orientation="Vertical">
-                <StackPanel Orientation="Horizontal">
-                  <Label Width="85" x:Name="bytesReadTitle" HorizontalContentAlignment="Left" Margin="4,0,0,0">Reading:</Label>
-                  <Label x:Name="bytesReadLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">0%</Label>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                  <Label Width="85" HorizontalContentAlignment="Left" Margin="4,0,0,0">Load Time:</Label>
-                  <Label x:Name="processedTimeLabel" Width="65" HorizontalContentAlignment="Left" Margin="0,0,0,0">0 sec</Label>
-                </StackPanel>
-              </WrapPanel>
-            </docking:ToolWindow>
-          </docking:ToolWindowContainer>
-        </docking:SplitContainer>
+        <docking:ToolWindowContainer>
+          <docking:ToolWindow x:Name="npcWindow" Title="NPCs" ContainerAutoHideSize="320, 400" ContainerDockedSize="320,400">
+            <local:FightTable />
+          </docking:ToolWindow>
+        </docking:ToolWindowContainer>
         <docking:SplitContainer Orientation="Vertical">
           <docking:Workspace>
             <docking:TabbedMdiHost>
