@@ -113,20 +113,9 @@ namespace EQLogParser
       });
 
       // sort by duration for the timeline to pick better options
-      foreach (var kv in NonPosessiveLandsOnOthers)
-      {
-        kv.Value.Sort((a, b) => DurationCompare(a, b));
-      }
-
-      foreach (var kv in PosessiveLandsOnOthers)
-      {
-        kv.Value.Sort((a, b) => DurationCompare(a, b));
-      }
-
-      foreach (var kv in LandsOnYou)
-      {
-        kv.Value.Sort((a, b) => DurationCompare(a, b));
-      }
+      NonPosessiveLandsOnOthers.Values.ToList().ForEach(value => value.Sort((a, b) => DurationCompare(a, b)));
+      PosessiveLandsOnOthers.Values.ToList().ForEach(value => value.Sort((a, b) => DurationCompare(a, b)));
+      LandsOnYou.Values.ToList().ForEach(value => value.Sort((a, b) => DurationCompare(a, b)));
 
       var keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
@@ -205,36 +194,35 @@ namespace EQLogParser
 
       int DurationCompare(SpellData a, SpellData b)
       {
-        int result = b.Duration.CompareTo(a.Duration);
-        return result != 0 ? result : string.Compare(b.ID, a.ID, true, CultureInfo.CurrentCulture);
+        if (b.Duration.CompareTo(a.Duration) is int result && result == 0)
+        {
+          if (int.TryParse(a.ID, out int aInt) && int.TryParse(b.ID, out int bInt) && aInt != bInt)
+          {
+            result = aInt > bInt ? -1 : 1;
+          }
+        }
+
+        return result;
       }
     }
 
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
-
     internal void AddLootRecord(LootRecord record, double beginTime) => Helpers.AddAction(AllLootBlocks, record, beginTime);
-
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
-
     internal void AddResistRecord(ResistRecord record, double beginTime) => Helpers.AddAction(AllResistBlocks, record, beginTime);
-
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
-
-    internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
-
-    internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
-
-    internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
-
-    internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
-
-    internal List<ActionBlock> GetMiscDuring(double beginTime, double endTime) => SearchActions(AllMiscBlocks, beginTime, endTime);
-
-    internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
-
-    internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
-
     internal List<Fight> GetActiveFights() => ActiveFights.Values.ToList();
+    internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
+    internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
+    internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
+    internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
+    internal List<ActionBlock> GetMiscDuring(double beginTime, double endTime) => SearchActions(AllMiscBlocks, beginTime, endTime);
+    internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
+    internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
+    internal SpellData GetSpellByAbbrv(string abbrv) => (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv)) ? SpellsAbbrvDB[abbrv] : null;
+    internal SpellData GetSpellByName(string name) => (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.ContainsKey(name)) ? SpellsNameDB[name] : null;
+    internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
+    internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
 
     internal void CheckExpireFights(double currentTime)
     {
@@ -250,42 +238,15 @@ namespace EQLogParser
       Fight result = null;
       if (!string.IsNullOrEmpty(name))
       {
-        if (char.IsUpper(name[0]))
+        if (!ActiveFights.TryGetValue(name, out result))
         {
-          if (!ActiveFights.TryGetValue(name, out result))
-          {
-            ActiveFights.TryGetValue(Helpers.ToLower(name), out result);
-          }
-        }
-        else
-        {
-          if (!ActiveFights.TryGetValue(name, out result))
-          {
-            ActiveFights.TryGetValue(Helpers.ToUpper(name), out result);
-          }
+          ActiveFights.TryGetValue(Helpers.FlipCase(name), out result);
         }
       }
-
       return result;
     }
 
-    internal bool IsLifetimeNpc(string name)
-    {
-      bool result = false;
-      if (!string.IsNullOrEmpty(name))
-      {
-        if (char.IsUpper(name[0]))
-        {
-          result = LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(Helpers.ToLower(name));
-        }
-        else
-        {
-          result = LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(Helpers.ToUpper(name));
-        }
-      }
-
-      return result;
-    }
+    internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(Helpers.FlipCase(name));
 
     internal void AddSpecial(TimedAction action)
     {
@@ -331,38 +292,10 @@ namespace EQLogParser
 
     internal List<TimedAction> GetSpecials()
     {
-      List<TimedAction> sorted;
       lock (AllSpecialActions)
       {
-        sorted = AllSpecialActions.OrderBy(special => special.BeginTime).ToList();
+        return AllSpecialActions.OrderBy(special => special.BeginTime).ToList();
       }
-      return sorted;
-    }
-
-    internal SpellData GetSpellByAbbrv(string abbrv)
-    {
-      SpellData result = null;
-      if (abbrv.Length > 0 && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv))
-      {
-        result = SpellsAbbrvDB[abbrv];
-      }
-      return result;
-    }
-
-    internal SpellData GetSpellByName(string name)
-    {
-      SpellData result = null;
-      if (name.Length > 0 && name != Labels.UNKSPELL && SpellsNameDB.ContainsKey(name))
-      {
-        result = SpellsNameDB[name];
-      }
-      return result;
-    }
-
-    internal bool IsPlayerSpell(string name)
-    {
-      var spellData = GetSpellByName(name);
-      return spellData?.ClassMask > 0;
     }
 
     internal List<SpellData> GetNonPosessiveLandsOnOther(string player, string value, out List<SpellData> output)
@@ -426,16 +359,6 @@ namespace EQLogParser
       return result;
     }
 
-    internal bool IsKnownNpc(string npc)
-    {
-      bool found = false;
-      if (!string.IsNullOrEmpty(npc))
-      {
-        found = AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
-      }
-      return found;
-    }
-
     private SpellData FindPreviousCast(string player, List<SpellData> output)
     {
       if (LastSpellIndex > -1)
@@ -474,14 +397,7 @@ namespace EQLogParser
         {
           // one more thing, if all the abbrviations look the same then we know the spell
           // even if the version is wrong. grab the newest
-          if (output.Distinct(AbbrvComparer).Count() == 1)
-          {
-            result = new List<SpellData> { output.First() };
-          }
-          else
-          {
-            result = output;
-          }
+          result = (output.Distinct(AbbrvComparer).Count() == 1) ? new List<SpellData> { output.First() } : output;
         }
         else
         {
@@ -537,9 +453,7 @@ namespace EQLogParser
         AllHealBlocks.Clear();
         AllLootBlocks.Clear();
         AllSpecialActions.Clear();
-        AdpsKeys.ForEach(key => AdpsActive[key].Clear());
-        MyDoTCritRateMod = 0;
-        MyNukeCritRateMod = 0;
+        ClearActiveAdps();
         EventsClearedActiveData?.Invoke(this, true);
       }
     }
@@ -603,23 +517,14 @@ namespace EQLogParser
 
     private class SpellAbbrvComparer : IEqualityComparer<SpellData>
     {
-      public bool Equals(SpellData x, SpellData y)
-      {
-        return x.NameAbbrv == y.NameAbbrv;
-      }
+      public bool Equals(SpellData x, SpellData y) => x.NameAbbrv == y.NameAbbrv;
 
-      public int GetHashCode(SpellData obj)
-      {
-        return obj.NameAbbrv.GetHashCode();
-      }
+      public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
     }
 
     private class TimedActionComparer : IComparer<TimedAction>
     {
-      public int Compare(TimedAction x, TimedAction y)
-      {
-        return x.BeginTime.CompareTo(y.BeginTime);
-      }
+      public int Compare(TimedAction x, TimedAction y) => x.BeginTime.CompareTo(y.BeginTime);
     }
   }
 }
