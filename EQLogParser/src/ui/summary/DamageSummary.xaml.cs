@@ -121,10 +121,7 @@ namespace EQLogParser
       }
     }
 
-    internal override bool IsPetsCombined()
-    {
-      return CurrentCombinePets;
-    }
+    internal override bool IsPetsCombined() => CurrentCombinePets;
 
     private void ColumnWidthPropertyChanged(object sender, EventArgs e)
     {

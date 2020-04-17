@@ -24,6 +24,21 @@ namespace EQLogParser
     // binding property
     public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
 
+    public string StatusText
+    {
+      get { return (string) GetValue(StatusTextProperty); }
+      private set { SetValue(StatusTextProperty, value); }
+    }
+
+    public Brush StatusBrush
+    {
+      get { return (Brush)GetValue(StatusBrushProperty); }
+      private set { SetValue(StatusBrushProperty, value); }
+    }
+
+    public static readonly DependencyProperty StatusTextProperty = DependencyProperty.Register("StatusText", typeof(string), typeof(MainWindow));
+    public static readonly DependencyProperty StatusBrushProperty = DependencyProperty.Register("StatusBrush", typeof(Brush), typeof(MainWindow));
+
     // global settings
     internal static bool IsAoEHealingEnabled = true;
     internal static bool IsBaneDamageEnabled = false;
@@ -94,7 +109,7 @@ namespace EQLogParser
         {
           { npcIcon.Name, npcWindow }, { verifiedPlayersIcon.Name, verifiedPlayersWindow },
           { verifiedPetsIcon.Name, verifiedPetsWindow }, { petMappingIcon.Name, petMappingWindow },
-          { playerParseIcon.Name, playerParseTextWindow }, { fileProgessIcon.Name, progressWindow }
+          { playerParseIcon.Name, playerParseTextWindow }
         };
 
         // Clear/Reset
@@ -831,22 +846,22 @@ namespace EQLogParser
           Busy(true);
           CloseOverlay();
 
-          bytesReadTitle.Content = "Reading:";
-          processedTimeLabel.Content = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1) + " sec";
+          var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          bytesReadLabel.Content = filePercent + "%";
+          StatusText = (CurrentLogOption == LogOption.ARCHIVE ? "Archiving" : "Reading") + " (" + filePercent + "%, " + seconds + "s)";
+          StatusBrush = BRIGHT_TEXT_BRUSH;
 
           if (EQLogReader.FileLoadComplete)
           {
             if ((filePercent >= 100 && CurrentLogOption != LogOption.ARCHIVE) || CurrentLogOption == LogOption.MONITOR)
             {
-              bytesReadTitle.Content = "Monitoring:";
-              bytesReadLabel.Content = "Active";
+              StatusBrush = GOOD_BRUSH;
+              StatusText = "Monitoring Active";
             }
             else if (filePercent >= 100 && CurrentLogOption == LogOption.ARCHIVE)
             {
-              bytesReadTitle.Content = "Archiving:";
-              bytesReadLabel.Content = "Complete";
+              StatusBrush = GOOD_BRUSH;
+              StatusText = "Archiving Complete";
             }
           }
 
@@ -854,8 +869,6 @@ namespace EQLogParser
             && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) ||
             CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
           {
-            bytesReadLabel.Foreground = GOOD_BRUSH;
-
             if (IsDamageOverlayEnabled)
             {
               OpenOverlay();
@@ -908,7 +921,6 @@ namespace EQLogParser
           HealingProcessor = new ActionProcessor<LineData>("HealProcessor", HealingLineParser.Process);
           MiscProcessor = new ActionProcessor<LineData>("MiscProcessor", MiscLineParser.Process);
 
-          bytesReadLabel.Foreground = BRIGHT_TEXT_BRUSH;
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
           StartLoadTime = DateTime.Now;
           FilePosition = 0;
@@ -958,7 +970,6 @@ namespace EQLogParser
           PlayerChatManager = new ChatManager();
 
           NpcDamageManager.ResetTime();
-          progressWindow.IsOpen = true;
           EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
           UpdateLoadingProgress();
