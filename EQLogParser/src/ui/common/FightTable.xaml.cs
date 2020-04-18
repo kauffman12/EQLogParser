@@ -126,15 +126,9 @@ namespace EQLogParser
       fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
     }
 
-    public IEnumerable<Fight> GetSelectedItems()
-    {
-      return fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.GroupId > -1);
-    }
+    internal IEnumerable<Fight> GetSelectedItems() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.GroupId > -1);
 
-    public bool HasSelected()
-    {
-      return fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.GroupId > -1) != null;
-    }
+    internal bool HasSelected() => fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.GroupId > -1) != null;
 
     private void RightClickClosed(object sender, RoutedEventArgs e)
     {
@@ -154,7 +148,14 @@ namespace EQLogParser
           if (fight.GroupId > LastNpc.GroupId)
           {
             var seconds = fight.BeginTime - LastNpc.LastTime;
-            Fight divider = new Fight() { LastTime = fight.BeginTime, BeginTime = LastNpc.LastTime, GroupId = -1, BeginTimeString = Fight.BREAKTIME, Name = string.Intern(FormatTime(seconds)) };
+            Fight divider = new Fight()
+            { 
+              LastTime = fight.BeginTime, 
+              BeginTime = LastNpc.LastTime, 
+              GroupId = -1, 
+              BeginTimeString = Fight.BREAKTIME, 
+              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
+            };
             Fights.Add(divider);
           }
         }
@@ -430,43 +431,6 @@ namespace EQLogParser
       {
         SearchTextTimer?.Start();
       }
-    }
-
-    private static string FormatTime(double seconds)
-    {
-      TimeSpan diff = TimeSpan.FromSeconds(seconds);
-      string result = "Inactivity > ";
-
-      if (diff.Days >= 1)
-      {
-        switch(diff.Days)
-        {
-          case 1:
-            result += diff.Days + " day";
-            break;
-          default:
-            result += diff.Days + " days";
-            break;
-        }
-      }
-      else if (diff.Hours >= 1)
-      {
-        switch(diff.Hours)
-        {
-          case 1:
-            result += diff.Hours + " hour";
-            break;
-          default:
-            result += diff.Hours + " hours";
-            break;
-        }
-      }
-      else
-      {
-        result += diff.Minutes + " minutes";
-      }
-
-      return result;
     }
 
     private void Instance_EventsCleardActiveData(object sender, bool cleared)

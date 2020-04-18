@@ -198,10 +198,10 @@
     <Compile Include="src\ui\common\SpellCastTable.xaml.cs">
       <DependentUpon>SpellCastTable.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\common\EventViewer.xaml.cs">
+    <Compile Include="src\ui\log\EventViewer.xaml.cs">
       <DependentUpon>EventViewer.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\common\HitLogViewer.xaml.cs">
+    <Compile Include="src\ui\log\HitLogViewer.xaml.cs">
       <DependentUpon>HitLogViewer.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\breakdown\ReceivedHealingBreakdown.xaml.cs">
@@ -210,7 +210,7 @@
     <Compile Include="src\ui\breakdown\TankingBreakdown.xaml.cs">
       <DependentUpon>TankingBreakdown.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\common\LootViewer.xaml.cs">
+    <Compile Include="src\ui\log\LootViewer.xaml.cs">
       <DependentUpon>LootViewer.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\common\ParsePreview.xaml.cs">
@@ -263,6 +263,7 @@
     <Compile Include="src\util\ActionProcessor.cs" />
     <Compile Include="src\util\Helpers.cs" />
     <Compile Include="src\util\NativeMethods.cs" />
+    <Compile Include="src\util\TimeRange.cs" />
     <Compile Include="src\util\UserInterface.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -295,15 +296,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="src\ui\common\EventViewer.xaml">
+    <Page Include="src\ui\log\EventViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\common\HitLogViewer.xaml">
+    <Page Include="src\ui\log\HitLogViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\ui\common\LootViewer.xaml">
+    <Page Include="src\ui\log\LootViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
