@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace EQLogParser
 {
@@ -57,6 +58,7 @@ namespace EQLogParser
           fight.Total += processed.Record.Total;
           fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
           fight.LastDamageTime = processed.BeginTime;
+          fight.DamageHits++;
         }
         else
         {
@@ -64,10 +66,14 @@ namespace EQLogParser
           AddPlayerTime(fight, processed.Record, processed.Record.Defender, processed.BeginTime);
           fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? processed.BeginTime : fight.BeginTankingTime;
           fight.LastTankingTime = processed.BeginTime;
+          fight.TankHits++;
         }
 
         fight.LastTime = processed.BeginTime;
         LastFightProcessTime = processed.BeginTime;
+
+        var ttl = fight.LastTime - fight.BeginTime + 1;
+        fight.TooltipText = string.Format(CultureInfo.CurrentCulture, "#Hits To Players: {0}, #Hits From Players: {1}, Time Alive: {2}s", fight.TankHits, fight.DamageHits, ttl);
 
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight);
 
@@ -118,6 +124,14 @@ namespace EQLogParser
       bool valid = false;
       defender = false;
 
+      if (record.Defender.Contains("Tuona") || record.Attacker.Contains("Tuona"))
+      {
+        if (true)
+        {
+
+        }
+      }
+
       if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))
       {
         var isDefenderNpc = record.Defender.StartsWith("Combat Dummy", StringComparison.OrdinalIgnoreCase) || DataManager.Instance.IsKnownNpc(record.Defender);
@@ -137,8 +151,16 @@ namespace EQLogParser
         else if (!isDefenderNpc && !isAttackerNpc)
         {
           var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayer(record.Defender);
-          valid = (isAttackerPlayer || !PlayerManager.Instance.IsPossiblePlayerName(record.Attacker)) && !isDefenderPlayer;
-          defender = true;
+          if (isDefenderPlayer || isAttackerPlayer)
+          {
+            valid = isDefenderPlayer != isAttackerPlayer;
+            defender = !isDefenderPlayer;
+          }
+          else
+          {
+            defender = PlayerManager.Instance.IsPossiblePlayerName(record.Attacker) || !PlayerManager.Instance.IsPossiblePlayerName(record.Defender);
+            valid = true;
+          }
         }
         else if (isDefenderNpc && isAttackerNpc && DataManager.Instance.GetFight(record.Defender) != null
           && DataManager.Instance.GetFight(record.Attacker) == null)

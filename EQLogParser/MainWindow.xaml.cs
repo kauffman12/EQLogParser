@@ -47,6 +47,7 @@ namespace EQLogParser
     internal static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
     internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     internal static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
+    internal static readonly SolidColorBrush LOADING_BRUSH = new SolidColorBrush(Colors.Orange);
     internal static readonly SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -848,8 +849,8 @@ namespace EQLogParser
 
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          StatusText = (CurrentLogOption == LogOption.ARCHIVE ? "Archiving" : "Reading") + " (" + filePercent + "%, " + seconds + "s)";
-          StatusBrush = BRIGHT_TEXT_BRUSH;
+          StatusText = (CurrentLogOption == LogOption.ARCHIVE ? "Archiving" : "Reading Log @ ") + filePercent + "% Complete in " + seconds + "s";
+          StatusBrush = LOADING_BRUSH;
 
           if (EQLogReader.FileLoadComplete)
           {

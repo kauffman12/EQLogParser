@@ -430,6 +430,10 @@ namespace EQLogParser
           // Needed to replace 'You' and 'you', etc
           record.Attacker = PlayerManager.Instance.ReplacePlayer(record.Attacker, record.Defender);
           record.Defender = PlayerManager.Instance.ReplacePlayer(record.Defender, record.Attacker);
+          if (record.Attacker.Length == 0)
+          {
+            record.Attacker = Labels.ENVDAMAGE;
+          }
         }
       }
 
