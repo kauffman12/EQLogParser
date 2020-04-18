@@ -5,9 +5,11 @@ using LiveCharts.Wpf;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +17,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -56,6 +59,7 @@ namespace EQLogParser
     private readonly Dictionary<string, ChartValues<DataPoint>> RaidValues = new Dictionary<string, ChartValues<DataPoint>>();
     private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new Dictionary<string, Dictionary<string, byte>>();
 
+    private string CurrentChoice = "";
     private CartesianMapper<DataPoint> CurrentConfig;
     private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected = null;
@@ -79,6 +83,7 @@ namespace EQLogParser
       CurrentConfig = CONFIG_VPS;
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
+      CurrentChoice = choicesList.SelectedValue as string;
 
       if (includePets)
       {
@@ -258,7 +263,7 @@ namespace EQLogParser
       if (CurrentPetOrPlayerOption == RAIDOPTION)
       {
         sortedValues = workingData.Values.ToList();
-        label = sortedValues.Count > 0 ? "Raid Totals" : Labels.NODATA;
+        label = sortedValues.Count > 0 ? "Raid" : Labels.NODATA;
       }
       else if (selected == null || selected.Count == 0)
       {
@@ -288,6 +293,11 @@ namespace EQLogParser
         }).Take(10).ToList();
 
         label = sortedValues.Count > 0 ? selectedLabel : Labels.NODATA;
+      }
+
+      if (label != Labels.NODATA)
+      {
+        label += " " + CurrentChoice;
       }
 
       LastSortedValues = sortedValues = Smoothing(sortedValues);
@@ -418,22 +428,22 @@ namespace EQLogParser
       }
     }
 
-    private void ChartDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-      Helpers.ChartResetView(lvcChart);
-    }
+    private void ChartDoubleClick(object sender, MouseButtonEventArgs e) => Helpers.ChartResetView(lvcChart);
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (PlayerPetValues.Count > 0)
       {
+        CurrentChoice = choicesList.SelectedValue as string;
         CurrentConfig = CHOICES[choicesList.SelectedIndex];
         CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
         Plot(DateTime.Now, LastSelected, LastFilter);
       }
     }
 
-    private void SaveCSVClick(object sender, RoutedEventArgs e)
+    private void RecenterClick(object sender, RoutedEventArgs e) => Helpers.ChartResetView(lvcChart);
+
+    private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
       if (LastSortedValues != null)
       {
@@ -465,30 +475,44 @@ namespace EQLogParser
               }
 
               sb.Append(chartData.CurrentTime).Append(",").Append(chartValue).Append(",").Append(chartData.Name).AppendLine();
+              Clipboard.SetDataObject(sb.ToString());
             }
           });
-
-          SaveFileDialog saveFileDialog = new SaveFileDialog();
-          string filter = "CSV file (*.csv)|*.csv";
-          saveFileDialog.Filter = filter;
-          if (saveFileDialog.ShowDialog().Value)
-          {
-            File.WriteAllText(saveFileDialog.FileName, sb.ToString());
-          }
         }
-        catch (IOException ex)
+        catch (ExternalException ex)
         {
           LOG.Error(ex);
         }
-        catch (UnauthorizedAccessException uax)
-        {
-          LOG.Error(uax);
-        }
-        catch (SecurityException se)
-        {
-          LOG.Error(se);
-        }
       }
+    }
+
+    private void CreateImageClick(object sender, RoutedEventArgs e)
+    {
+      Task.Delay(100).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
+      {
+        var titleHeight = (int)titleLabel.ActualHeight - (int)titleLabel.Padding.Top;
+        var titleWidth = (int)titleLabel.ActualWidth;
+        var height = (int)lvcChart.ActualHeight + titleHeight;
+        var width = (int)lvcChart.ActualWidth;
+
+        var dpiScale = VisualTreeHelper.GetDpi(lvcChart);
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+
+        DrawingVisual dv = new DrawingVisual();
+        using (DrawingContext ctx = dv.RenderOpen())
+        {
+          var titleBrush = new VisualBrush(titleLabel);
+          var grayBrush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#2d2d30"));
+          var chartBrush = new VisualBrush(lvcChart);
+          ctx.DrawRectangle(grayBrush, null, new Rect(new System.Windows.Point(0, 0), new System.Windows.Size(width, height)));
+          ctx.DrawRectangle(titleBrush, null, new Rect(new System.Windows.Point(0, 0), new System.Windows.Size(titleWidth, titleHeight)));
+          ctx.DrawRectangle(chartBrush, null, new Rect(new System.Windows.Point(0, titleHeight), new System.Windows.Size(width, height - titleHeight)));
+        }
+
+        rtb.Render(dv);
+        Clipboard.SetImage(rtb);
+      }
+      ), TaskScheduler.Default);
     }
 
     private static void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, ChartValues<DataPoint>> theValues,
