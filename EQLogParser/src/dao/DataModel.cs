@@ -6,6 +6,7 @@ namespace EQLogParser
 {
   public static class Labels
   {
+    public const string ENVDAMAGE = "Environment Damage";
     public const string DD = "Direct Damage";
     public const string DOT = "DoT Tick";
     public const string DS = "Damage Shield";
@@ -288,6 +289,9 @@ namespace EQLogParser
     public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
     public long Total { get; set; }
+    public long DamageHits { get; set; }
+    public long TankHits { get; set; }
+    public string TooltipText { get; set; }
     public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
     public Dictionary<string, TimeSegment> DamageSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();

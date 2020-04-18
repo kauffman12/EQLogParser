@@ -59,9 +59,9 @@
         </ContextMenu>
       </DataGrid.ContextMenu>
       <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="92" Width="92" />
+        <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="92" Width="92" />
         <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource TotalFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="HP" IsReadOnly="True" CanUserReorder="False" MinWidth="38" Width="38" />
-        <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90*" />
+        <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90*" />
       </DataGrid.Columns>
     </datagrid:ThemedDataGrid>
   </Grid>
