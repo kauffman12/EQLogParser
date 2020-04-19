@@ -11,7 +11,7 @@
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
-    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+    <StackPanel x:Name="titlePane" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel1" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold" Padding="5,5,0,5"/>
       <Label x:Name="titleLabel2" Margin="0,0,0,0" Foreground="#FFCDCDCD" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold" Padding="0,5"/>
       <Label x:Name="titleLabel3" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold" Padding="0,5,5,5"/>
@@ -28,10 +28,20 @@
       </Grid.RowDefinitions>
       <Grid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Copy Image" Click="CreateImageClick">
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Copy" Foreground="#5191c1" />
             </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
           </MenuItem>
         </ContextMenu>
       </Grid.ContextMenu>
