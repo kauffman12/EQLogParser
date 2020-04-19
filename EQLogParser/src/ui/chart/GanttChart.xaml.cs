@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,8 +15,9 @@ namespace EQLogParser
 {
   public partial class GanttChart : UserControl
   {
-    private static readonly SolidColorBrush GridBrush = new SolidColorBrush(Colors.White);
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private static readonly SolidColorBrush GridBrush = new SolidColorBrush(Colors.White);
     private static readonly List<Brush> BlockBrushes = new List<Brush>()
     {
       new SolidColorBrush(Color.FromRgb(73, 151, 217)),
@@ -156,11 +159,56 @@ namespace EQLogParser
       }
     }
 
+    private void CopyCsvClick(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        StringBuilder sb = new StringBuilder();
+
+        /*
+          sb.Append("Seconds,").Append(choicesList.SelectedValue as string).Append(",Name").AppendLine();
+
+          LastSortedValues.Where(values => LastFilter == null || LastFilter(values.First())).ToList().ForEach(sortedValue =>
+          {
+            foreach (var chartData in sortedValue)
+            {
+              double chartValue = 0;
+              if (CurrentConfig == CONFIG_AVG)
+              {
+                chartValue = chartData.Avg;
+              }
+              else if (CurrentConfig == CONFIG_CRIT_RATE)
+              {
+                chartValue = chartData.CritRate;
+              }
+              else if (CurrentConfig == CONFIG_TOTAL)
+              {
+                chartValue = chartData.Total;
+              }
+              else if (CurrentConfig == CONFIG_VPS)
+              {
+                chartValue = chartData.VPS;
+              }
+
+              sb.Append(chartData.CurrentTime).Append(",").Append(chartValue).Append(",").Append(chartData.Name).AppendLine();
+              Clipboard.SetDataObject(sb.ToString());
+            }
+          });
+          */
+      }
+      catch (ExternalException ex)
+      {
+        LOG.Error(ex);
+      }
+    }
+
     private void CreateImageClick(object sender, RoutedEventArgs e)
     {
-      Task.Delay(10).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
+      Task.Delay(100).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
       {
-        var height = (int)content.ActualHeight + (int) contentHeader.ActualHeight;
+        var titleHeight = titleLabel1.ActualHeight - titleLabel1.Padding.Top - titleLabel1.Padding.Bottom;
+        var titleWidth = titleLabel1.ActualWidth + titleLabel2.ActualWidth + titleLabel3.ActualWidth;
+        var height = (int)content.ActualHeight + (int)contentHeader.ActualHeight + (int)titleHeight;
         var width = (int)contentLabels.ActualWidth + (int)content.ActualWidth;
 
         var dpiScale = VisualTreeHelper.GetDpi(content);
@@ -169,14 +217,16 @@ namespace EQLogParser
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
-          var brush = new VisualBrush(contentHeader);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(0, 0), new Size(width, contentHeader.ActualHeight)));
-
-          brush = new VisualBrush(contentLabels);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(0, contentHeader.ActualHeight), new Size(contentLabels.ActualWidth, height - contentHeader.ActualHeight)));
-
-          brush = new VisualBrush(content);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(contentLabels.ActualWidth, contentHeader.ActualHeight), new Size(content.ActualWidth, height - contentHeader.ActualHeight)));
+          var grayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2d2d30"));
+          var titleBrush = new VisualBrush(titlePane);
+          var headerBrush = new VisualBrush(contentHeader);
+          var labelsBrush = new VisualBrush(contentLabels);
+          var contentBrush = new VisualBrush(content);
+          ctx.DrawRectangle(grayBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
+          ctx.DrawRectangle(titleBrush, null, new Rect(new Point(5, 0), new Size(titlePane.ActualWidth, titleHeight))); // add 5 padding that's normally on the label
+          ctx.DrawRectangle(headerBrush, null, new Rect(new Point(0, titleHeight), new Size(width, contentHeader.ActualHeight)));
+          ctx.DrawRectangle(labelsBrush, null, new Rect(new Point(0, contentHeader.ActualHeight + titleHeight), new Size(contentLabels.ActualWidth, height - contentHeader.ActualHeight)));
+          ctx.DrawRectangle(contentBrush, null, new Rect(new Point(contentLabels.ActualWidth, contentHeader.ActualHeight + titleHeight), new Size(content.ActualWidth, height - contentHeader.ActualHeight)));
         }
 
         rtb.Render(dv);
@@ -194,7 +244,7 @@ namespace EQLogParser
       foreach (var key in SpellRanges.Keys.OrderBy(key => key))
       {
         var spellRange = SpellRanges[key];
-        if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key)) 
+        if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
           && (CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS)
           || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)))
         {
