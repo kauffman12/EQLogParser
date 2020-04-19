@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -48,38 +50,48 @@ namespace EQLogParser
       playerList.SelectedIndex = 0; // triggers event
     }
 
-    private void SaveCSVClick(object sender, RoutedEventArgs e)
+    private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
-      StringBuilder sb = new StringBuilder();
-      sb.Append("Hit Value,Frequency,Difference").AppendLine();
-
-      for (int i = 0; i < YValues.Count; i++)
-      {
-        sb.Append(XValues[i]).Append(",").Append(YValues[i]).Append(",").Append(XValuesDiff[i]).AppendLine();
-      }
-
       try
       {
-        SaveFileDialog saveFileDialog = new SaveFileDialog();
-        string filter = "CSV file (*.csv)|*.csv";
-        saveFileDialog.Filter = filter;
-        if (saveFileDialog.ShowDialog().Value)
+        StringBuilder sb = new StringBuilder();
+        sb.Append("Hit Value,Frequency,Difference").AppendLine();
+
+        for (int i = 0; i < YValues.Count; i++)
         {
-          File.WriteAllText(saveFileDialog.FileName, sb.ToString());
+          sb.Append(XValues[i]).Append(",").Append(YValues[i]).Append(",").Append(XValuesDiff[i]).AppendLine();
         }
+
+        Clipboard.SetDataObject(sb.ToString());
       }
-      catch (IOException ex)
+      catch (ExternalException ex)
       {
         LOG.Error(ex);
       }
-      catch (UnauthorizedAccessException uax)
+    }
+
+    private void CreateImageClick(object sender, RoutedEventArgs e)
+    {
+      Task.Delay(100).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
       {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
+        var height = (int)lvcChart.ActualHeight;
+        var width = (int)lvcChart.ActualWidth;
+
+        var dpiScale = VisualTreeHelper.GetDpi(lvcChart);
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+
+        DrawingVisual dv = new DrawingVisual();
+        using (DrawingContext ctx = dv.RenderOpen())
+        {
+          var grayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2d2d30"));
+          var chartBrush = new VisualBrush(lvcChart);
+          ctx.DrawRectangle(grayBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
+          ctx.DrawRectangle(chartBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
+        }
+
+        rtb.Render(dv);
+        Clipboard.SetImage(rtb);
+      }), TaskScheduler.Default);
     }
 
     private void UserSelectionChanged()
@@ -295,10 +307,7 @@ namespace EQLogParser
       return result;
     }
 
-    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      UserSelectionChanged();
-    }
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
 
     private void CritTypeListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -307,11 +316,6 @@ namespace EQLogParser
         UpdateSelectedHitTypes(selectedCritType == NON_CRIT_HITTYPE);
         UserSelectionChanged();
       }
-    }
-
-    private void ChartDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-      Helpers.ChartResetView(lvcChart);
     }
 
     private void PlayerListSelectionChanged(object sender, SelectionChangedEventArgs e)

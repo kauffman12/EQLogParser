@@ -223,6 +223,7 @@ namespace EQLogParser
     internal SpellData GetSpellByName(string name) => (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.ContainsKey(name)) ? SpellsNameDB[name] : null;
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
+    internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(Helpers.FlipCase(name));
 
     internal void CheckExpireFights(double currentTime)
     {
@@ -245,8 +246,6 @@ namespace EQLogParser
       }
       return result;
     }
-
-    internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(Helpers.FlipCase(name));
 
     internal void AddSpecial(TimedAction action)
     {
@@ -305,6 +304,7 @@ namespace EQLogParser
       {
         result = FindByLandsOn(player, output);
       }
+
       return result;
     }
 
@@ -315,6 +315,7 @@ namespace EQLogParser
       {
         result = FindByLandsOn(player, output);
       }
+
       return result;
     }
 
@@ -335,8 +336,7 @@ namespace EQLogParser
             if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
             {
               AdpsActive[key][spellData.LandsOnYou] = value;
-              MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
-              MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
+              RecalculateAdps();
             }
           });
         }
@@ -350,13 +350,39 @@ namespace EQLogParser
           if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
           {
             AdpsActive[key].Remove(spellData.LandsOnYou);
-            MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
-            MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
+            RecalculateAdps();
           }
         });
       }
 
       return result;
+    }
+
+    internal void ZoneChanged()
+    {
+      bool updated = false;
+      foreach (var active in AdpsActive)
+      {
+        active.Value.Keys.ToList().ForEach(landsOn =>
+        {
+          if (AdpsLandsOn[landsOn].Any(spellData => spellData.SongWindow))
+          {
+            AdpsActive[active.Key].Remove(landsOn);
+            updated = true;
+          }
+        });
+      }
+
+      if (updated)
+      {
+        RecalculateAdps();
+      }
+    }
+
+    private void RecalculateAdps()
+    {
+      MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
+      MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
     }
 
     private SpellData FindPreviousCast(string player, List<SpellData> output)

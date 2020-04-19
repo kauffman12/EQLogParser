@@ -200,11 +200,12 @@ namespace EQLogParser
             ClassMask = classMask,
             //Damaging = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1,
             //CombatSkill = uint.Parse(data[9], CultureInfo.CurrentCulture),
-            Adps = ushort.Parse(data[10], CultureInfo.CurrentCulture),
-            LandsOnYou = string.Intern(data[11]),
-            LandsOnOther = string.Intern(data[12]),
-            WearOff = string.Intern(data[13]),
-            IsProc = byte.Parse(data[14], CultureInfo.CurrentCulture) == 1
+            SongWindow = data[10] == "1",
+            Adps = ushort.Parse(data[11], CultureInfo.CurrentCulture),
+            LandsOnYou = string.Intern(data[12]),
+            LandsOnOther = string.Intern(data[13]),
+            WearOff = string.Intern(data[14]),
+            IsProc = byte.Parse(data[15], CultureInfo.CurrentCulture) == 1
           };
         }
       }
