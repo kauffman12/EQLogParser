@@ -344,6 +344,7 @@ namespace EQLogParser
     public ushort Level { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
+    public bool SongWindow { get; set; }
     public string WearOff { get; set; }
 
     public bool IsProc { get; set; }
@@ -457,6 +458,7 @@ namespace EQLogParser
     public double PercentOfRaid { get; set; }
     public string Special { get; set; }
     public string ClassName { get; set; }
+    public string TooltipText { get; set; } // referenced by cell style and could start using
     public TimeRange Ranges { get; } = new TimeRange();
   }
 

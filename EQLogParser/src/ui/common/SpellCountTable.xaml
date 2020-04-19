@@ -36,7 +36,7 @@
                 <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV Table" Click="CopyCsvClick">
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
               </MenuItem.Icon>

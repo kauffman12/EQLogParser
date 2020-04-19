@@ -20,7 +20,7 @@ namespace EQLogParser
     private static readonly List<string> SlainQueue = new List<string>();
     private static double SlainTime = double.NaN;
 
-    private static readonly Dictionary<string, string> HitMap = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> HitMap = new Dictionary<string, string>
     {
       { "bash", "bashes" }, { "backstab", "backstabs" }, { "bit", "bites" }, { "claw", "claws" }, { "crush", "crushes" },
       { "frenzy", "frenzies" }, { "gore", "gores" }, { "hit", "hits" }, { "kick", "kicks" }, { "learn", "learns" },
@@ -29,23 +29,23 @@ namespace EQLogParser
       { "strike", "strikes" }, { "sweep", "sweeps" }
     };
 
-    private static readonly Dictionary<string, string> HitAdditionalMap = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> HitAdditionalMap = new Dictionary<string, string>
     {
       { "frenzy", "frenzies" }, { "frenzies", "frenzies" },
     };
 
-    private static readonly List<string> ChestTypes = new List<string>()
+    private static readonly List<string> ChestTypes = new List<string>
     {
       " chest", " cache", " satchel", " treasure box"
     };
 
-    private static readonly Dictionary<string, byte> SpellTypesMap = new Dictionary<string, byte>()
+    private static readonly Dictionary<string, byte> SpellTypesMap = new Dictionary<string, byte>
     {
       { "fire", 1 }, { "cold", 1 }, { "poison", 1 }, { "magic", 1 }, { "disease", 1 }, { "unresistable", 1 },
       { "chromatic", 1 }, { "physical", 1 }, { "corruption", 1 }, { "prismatic", 1 },
     };
 
-    private static readonly Dictionary<string, string> SpecialCodes = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> SpecialCodes = new Dictionary<string, string>
     {
       { "Mana Burn", "M" }, { "Harm Touch", "H" }, { "Life Burn", "L" }
     };
