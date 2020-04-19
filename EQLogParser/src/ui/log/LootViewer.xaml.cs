@@ -227,10 +227,10 @@ namespace EQLogParser
       }
     }
 
-    private Tuple<List<string>, List<List<string>>> BuildExportData()
+    private Tuple<List<string>, List<List<object>>> BuildExportData()
     {
       List<string> header = new List<string>();
-      List<List<string>> data = new List<List<string>>();
+      List<List<object>> data = new List<List<object>>();
 
       for (int col = 0; col < dataGrid.Columns.Count; col++)
       {
@@ -244,7 +244,7 @@ namespace EQLogParser
       {
         if (item is LootRow looted)
         {
-          List<string> row = new List<string>();
+          var row = new List<object>();
           for (int col = 0; col < dataGrid.Columns.Count; col++)
           {
             if (dataGrid.Columns[col].Visibility == Visibility.Visible)
@@ -261,7 +261,14 @@ namespace EQLogParser
                   row.Add(looted.Item);
                   break;
                 case "Quantity":
-                  row.Add(looted.IsCurrency ? "" : looted.Quantity.ToString(CultureInfo.CurrentCulture));
+                  if (looted.IsCurrency)
+                  {
+                    row.Add("");
+                  }
+                  else
+                  {
+                    row.Add(looted.Quantity);
+                  }
                   break;
                 case "NPC":
                   row.Add(looted.Npc);
@@ -274,7 +281,7 @@ namespace EQLogParser
         }
       }
 
-      return new Tuple<List<string>, List<List<string>>>(header, data);
+      return new Tuple<List<string>, List<List<object>>>(header, data);
     }
 
     private static LootRow CreateRow(LootRecord looted, double time = 0)

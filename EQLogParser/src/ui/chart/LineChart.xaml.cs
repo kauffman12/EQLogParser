@@ -2,16 +2,11 @@
 using LiveCharts;
 using LiveCharts.Configurations;
 using LiveCharts.Wpf;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Security;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -52,7 +47,6 @@ namespace EQLogParser
     private const string PETOPTION = "Pets";
     private const string RAIDOPTION = "Raid Totals";
 
-    private DateTime ChartModifiedTime;
     private readonly Dictionary<string, ChartValues<DataPoint>> PlayerPetValues = new Dictionary<string, ChartValues<DataPoint>>();
     private readonly Dictionary<string, ChartValues<DataPoint>> PlayerValues = new Dictionary<string, ChartValues<DataPoint>>();
     private readonly Dictionary<string, ChartValues<DataPoint>> PetValues = new Dictionary<string, ChartValues<DataPoint>>();
@@ -304,7 +298,6 @@ namespace EQLogParser
 
       Dispatcher.InvokeAsync(() =>
       {
-        ChartModifiedTime = requestTime;
         Reset();
 
         titleLabel.Content = label;
@@ -449,9 +442,9 @@ namespace EQLogParser
       {
         try
         {
-          StringBuilder sb = new StringBuilder();
-          sb.Append("Seconds,").Append(choicesList.SelectedValue as string).Append(",Name").AppendLine();
+          List<string> header = new List<string> { "Seconds", choicesList.SelectedValue as string, "Name" };
 
+          var data = new List<List<object>>();
           LastSortedValues.Where(values => LastFilter == null || LastFilter(values.First())).ToList().ForEach(sortedValue =>
           {
             foreach (var chartData in sortedValue)
@@ -474,8 +467,8 @@ namespace EQLogParser
                 chartValue = chartData.VPS;
               }
 
-              sb.Append(chartData.CurrentTime).Append(",").Append(chartValue).Append(",").Append(chartData.Name).AppendLine();
-              Clipboard.SetDataObject(sb.ToString());
+              data.Add(new List<object> { chartData.CurrentTime, chartValue, chartData.Name });
+              Clipboard.SetDataObject(TextFormatUtils.BuildCsv(header, data, titleLabel.Content as string));
             }
           });
         }

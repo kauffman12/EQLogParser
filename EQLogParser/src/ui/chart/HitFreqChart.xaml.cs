@@ -1,18 +1,13 @@
 ﻿using LiveCharts;
 using LiveCharts.Wpf;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Security;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -54,15 +49,15 @@ namespace EQLogParser
     {
       try
       {
-        StringBuilder sb = new StringBuilder();
-        sb.Append("Hit Value,Frequency,Difference").AppendLine();
+        var header = new List<string> { "Hit Value", "Frequency", "Difference" };
 
+        List<List<object>> data = new List<List<object>>();
         for (int i = 0; i < YValues.Count; i++)
         {
-          sb.Append(XValues[i]).Append(",").Append(YValues[i]).Append(",").Append(XValuesDiff[i]).AppendLine();
+          data.Add(new List<object> { XValues[i], YValues[i], XValuesDiff[i] });
         }
 
-        Clipboard.SetDataObject(sb.ToString());
+        Clipboard.SetDataObject(TextFormatUtils.BuildCsv(header, data));
       }
       catch (ExternalException ex)
       {
