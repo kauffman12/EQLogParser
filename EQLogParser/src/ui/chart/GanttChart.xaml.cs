@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -163,38 +162,69 @@ namespace EQLogParser
     {
       try
       {
-        StringBuilder sb = new StringBuilder();
-
-        /*
-          sb.Append("Seconds,").Append(choicesList.SelectedValue as string).Append(",Name").AppendLine();
-
-          LastSortedValues.Where(values => LastFilter == null || LastFilter(values.First())).ToList().ForEach(sortedValue =>
+        List<string> labels = new List<string>();
+        foreach (var visual in contentLabels.Children)
+        {
+          if (visual is TextBlock block)
           {
-            foreach (var chartData in sortedValue)
-            {
-              double chartValue = 0;
-              if (CurrentConfig == CONFIG_AVG)
-              {
-                chartValue = chartData.Avg;
-              }
-              else if (CurrentConfig == CONFIG_CRIT_RATE)
-              {
-                chartValue = chartData.CritRate;
-              }
-              else if (CurrentConfig == CONFIG_TOTAL)
-              {
-                chartValue = chartData.Total;
-              }
-              else if (CurrentConfig == CONFIG_VPS)
-              {
-                chartValue = chartData.VPS;
-              }
+            labels.Add(block.Text);
+          }
+        }
 
-              sb.Append(chartData.CurrentTime).Append(",").Append(chartValue).Append(",").Append(chartData.Name).AppendLine();
-              Clipboard.SetDataObject(sb.ToString());
+        DictionaryListHelper<string, Rectangle> helper = new DictionaryListHelper<string, Rectangle>();
+        Dictionary<string, List<Rectangle>> player1 = new Dictionary<string, List<Rectangle>>();
+        Dictionary<string, List<Rectangle>> player2 = new Dictionary<string, List<Rectangle>>();
+
+        foreach (var visual in content.Children)
+        {
+          if (visual is Rectangle rectangle)
+          {
+            if (rectangle.Tag is string adps && !string.IsNullOrEmpty(adps))
+            {
+              if (BlockBrushes[0] == rectangle.Fill)
+              {
+                helper.AddToList(player1, adps, rectangle);
+              }
+              else
+              {
+                helper.AddToList(player2, adps, rectangle);
+              }
             }
-          });
-          */
+          }
+        }
+
+        List<List<object>> playerData = new List<List<object>>();
+        labels.ForEach(label =>
+        {
+          if (player1.TryGetValue(label, out List<Rectangle> l1))
+          {
+            l1.ForEach(rectangle =>
+            {
+              playerData.Add(new List<object> { label, Selected[0].OrigName, StartTime + rectangle.Margin.Left, StartTime + rectangle.Margin.Left + rectangle.ActualWidth });
+            });
+          }
+
+          if (player2.TryGetValue(label, out List<Rectangle> l2))
+          {
+            l2.ForEach(rectangle =>
+            {
+              playerData.Add(new List<object> { label, Selected[1].OrigName, StartTime + rectangle.Margin.Left, StartTime + rectangle.Margin.Left + rectangle.ActualWidth });
+            });
+          }
+        });
+
+        string title;
+        if (string.IsNullOrEmpty(titleLabel2.Content as string))
+        {
+          title = titleLabel1.Content as string;
+        }
+        else
+        {
+          title = string.Format(CultureInfo.CurrentCulture, "{0} {1} {2}", titleLabel1.Content as string, titleLabel2.Content as string, titleLabel3.Content as string);
+        }
+
+        List<string> header = new List<string> { "Adps", "Player", "Start", "End" };
+        Clipboard.SetDataObject(TextFormatUtils.BuildCsv(header, playerData, title));
       }
       catch (ExternalException ex)
       {
@@ -250,7 +280,7 @@ namespace EQLogParser
         {
           int hPos = ROW_HEIGHT * row;
           AddGridRow(hPos, key);
-          spellRange.Ranges.ForEach(range => content.Children.Add(CreateAdpsBlock(hPos, range.BeginSeconds, range.Duration, range.BlockBrush, Selected.Count)));
+          spellRange.Ranges.ForEach(range => content.Children.Add(CreateAdpsBlock(key, hPos, range.BeginSeconds, range.Duration, range.BlockBrush, Selected.Count)));
           row++;
         }
       }
@@ -383,7 +413,7 @@ namespace EQLogParser
       }
     }
 
-    private static Rectangle CreateAdpsBlock(int hPos, int start, int length, Brush blockBrush, int count)
+    private static Rectangle CreateAdpsBlock(string label, int hPos, int start, int length, Brush blockBrush, int count)
     {
       var offset = count == 1 ? 0 : blockBrush == BlockBrushes[0] ? -3 : 3;
       var zIndex = blockBrush == BlockBrushes[0] ? 11 : 10;
@@ -401,7 +431,8 @@ namespace EQLogParser
         Margin = new Thickness(start, hPos + (ROW_HEIGHT / 3) + offset, 0, 0),
         Effect = new DropShadowEffect() { ShadowDepth = 2, Direction = 240, BlurRadius = 0.5, Opacity = 0.5 },
         RadiusX = 2,
-        RadiusY = 2
+        RadiusY = 2,
+        Tag = label
       };
 
       block.SetValue(Panel.ZIndexProperty, zIndex);

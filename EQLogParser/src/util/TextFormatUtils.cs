@@ -21,7 +21,8 @@ namespace EQLogParser
     private const string BB_TABLE_START = "[table]\r\n";
     private const string BB_TABLE_END = "[/table]\r\n";
     private const string BB_TITLE = "[b]{0}[/b]\r\n";
-    private const string CSV_CELL = "\"{0}\"\t";
+    private const string CSV_STRING_CELL = "\"{0}\"\t";
+    private const string CSV_NUMBER_CELL = "{0}\t";
 
     private const string BB_GAMPARSE_SPELL_COUNT = "   --- {0} - {1}";
 
@@ -44,7 +45,7 @@ namespace EQLogParser
       header.ForEach(item =>
       {
         var nameCounts = item.Split('=');
-        sb.AppendFormat(CultureInfo.CurrentCulture, CSV_CELL, (nameCounts.Length == 2) ? nameCounts[0].Trim() : item);
+        sb.AppendFormat(CultureInfo.CurrentCulture, CSV_STRING_CELL, (nameCounts.Length == 2) ? nameCounts[0].Trim() : item);
 
         // keep track of totals
         if (nameCounts.Length == 2)
@@ -55,20 +56,20 @@ namespace EQLogParser
 
       // print totals
       sb.AppendLine();
-      list.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_CELL, item.Trim()));
+      list.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_STRING_CELL, item.Trim()));
       sb.AppendLine();
 
       // data
       data.ForEach(row =>
       {
-        row.ToList().ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_CELL, item));
+        row.ToList().ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_STRING_CELL, item));
         sb.AppendLine();
       });
 
       return sb.ToString();
     }
 
-    internal static string BuildCsv(List<string> header, List<List<string>> data, string title = null)
+    internal static string BuildCsv(List<string> header, List<List<object>> data, string title = null)
     {
       StringBuilder sb = new StringBuilder();
 
@@ -78,13 +79,17 @@ namespace EQLogParser
       }
 
       // header
-      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_CELL, item));
+      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_STRING_CELL, item));
       sb.AppendLine();
 
       // data
       data.ForEach(row =>
       {
-        row.ToList().ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_CELL, item));
+        row.ToList().ForEach(item =>
+        {
+          sb.AppendFormat(CultureInfo.CurrentCulture, item.GetType() == typeof(string) ? CSV_STRING_CELL : CSV_NUMBER_CELL, item);
+        });
+
         sb.AppendLine();
       });
 

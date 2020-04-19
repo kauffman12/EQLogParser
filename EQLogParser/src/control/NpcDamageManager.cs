@@ -124,14 +124,6 @@ namespace EQLogParser
       bool valid = false;
       defender = false;
 
-      if (record.Defender.Contains("Tuona") || record.Attacker.Contains("Tuona"))
-      {
-        if (true)
-        {
-
-        }
-      }
-
       if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))
       {
         var isDefenderNpc = record.Defender.StartsWith("Combat Dummy", StringComparison.OrdinalIgnoreCase) || DataManager.Instance.IsKnownNpc(record.Defender);

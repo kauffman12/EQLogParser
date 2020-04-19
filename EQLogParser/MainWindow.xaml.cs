@@ -841,7 +841,7 @@ namespace EQLogParser
 
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          StatusText = (CurrentLogOption == LogOption.ARCHIVE ? "Archiving" : "Reading Log @ ") + filePercent + "% Complete in " + seconds + "s";
+          StatusText = (CurrentLogOption == LogOption.ARCHIVE ? "Archiving" : "Reading Log... ") + filePercent + "% in " + seconds + " seconds";
           StatusBrush = LOADING_BRUSH;
 
           if (EQLogReader.FileLoadComplete)
