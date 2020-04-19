@@ -59,7 +59,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.7.9";
+    private const string VERSION = "v1.7.10";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -253,10 +253,7 @@ namespace EQLogParser
       busyIcon.Visibility = BusyCount == 0 ? Visibility.Hidden : Visibility.Visible;
     }
 
-    internal void CopyToEQClick(string type)
-    {
-      (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
-    }
+    internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
 
     internal void OpenOverlay(bool configure = false, bool saveFirst = false)
     {
@@ -300,19 +297,17 @@ namespace EQLogParser
 
         item.Click += (object sender, RoutedEventArgs e) =>
         {
-          if (MessageBox.Show("Clear all chat for " + player + ", are you sure?", "Clear Chat Archive", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+          if (MessageBox.Show("Clear all chat for " + player + ", are you sure?", "Clear Chat Archive", MessageBoxButton.YesNo) == MessageBoxResult.Yes
+            && ChatManager.DeleteArchivedPlayer(player))
           {
-            if (ChatManager.DeleteArchivedPlayer(player))
+            if (PlayerChatManager != null && PlayerChatManager.GetCurrentPlayer().Equals(player, StringComparison.Ordinal))
             {
-              if (PlayerChatManager != null && PlayerChatManager.GetCurrentPlayer().Equals(player, StringComparison.Ordinal))
-              {
-                PlayerChatManager.Reset();
-              }
-              else
-              {
-                deleteChat.Items.Remove(item);
-                deleteChat.IsEnabled = deleteChat.Items.Count > 0;
-              }
+              PlayerChatManager.Reset();
+            }
+            else
+            {
+              deleteChat.Items.Remove(item);
+              deleteChat.IsEnabled = deleteChat.Items.Count > 0;
             }
           }
         };
@@ -384,10 +379,7 @@ namespace EQLogParser
       Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingOptions));
     }
 
-    private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e)
-    {
-      playerParseTextWindow.State = DockingWindowState.AutoHide;
-    }
+    private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e) => playerParseTextWindow.State = DockingWindowState.AutoHide;
 
     private void MenuItemExportHTMLClick(object sender, RoutedEventArgs e)
     {

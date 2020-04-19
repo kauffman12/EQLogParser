@@ -48,6 +48,7 @@ namespace EQLogParser
           // [Tue Dec 25 14:19:57 2018] Sonozen begins to sing a song. <Lyre Leap>
           // [Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
           // [Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
+          // [Sun Mar 01 22:34:58 2020] You have entered The Eastern Wastes.
           if (split[0] == "You")
           {
             player = ConfigUtil.PlayerName;
@@ -56,6 +57,19 @@ namespace EQLogParser
             if (split[1] == "activate")
             {
               spellName = ParseNewSpellName(split, 2);
+            }
+
+            // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
+            if (split[1] == "have" && split[2] == "entered")
+            {
+              string zone = string.Join(" ", split, 3, split.Length - 3).TrimEnd('.');
+              DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, DateUtil.ParseLogDate(lineData.Line));
+              handled = true;
+
+              if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
+              {
+                DataManager.Instance.ZoneChanged();
+              }
             }
             else if (split[1] == "begin")
             {
@@ -118,7 +132,7 @@ namespace EQLogParser
             }
           }
 
-          if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(spellName))
+          if (!handled && !string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(spellName))
           {
             double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
 
@@ -209,21 +223,14 @@ namespace EQLogParser
           }
         }
       }
-      catch (ArgumentNullException ne)
+#pragma warning disable CA1031 // Do not catch general exception types
+      catch (Exception e)
+#pragma warning restore CA1031 // Do not catch general exception types
       {
-        LOG.Error(ne);
-      }
-      catch (NullReferenceException nr)
-      {
-        LOG.Error(nr);
-      }
-      catch (ArgumentOutOfRangeException aor)
-      {
-        LOG.Error(aor);
-      }
-      catch (ArgumentException ae)
-      {
-        LOG.Error(ae);
+        if (e is ArgumentException || e is NullReferenceException || e is ArgumentOutOfRangeException || e is ArgumentException)
+        {
+          LOG.Error(e);
+        }
       }
     }
 

@@ -511,8 +511,7 @@ namespace EQLogParser
 
         rtb.Render(dv);
         Clipboard.SetImage(rtb);
-      }
-      ), TaskScheduler.Default);
+      }), TaskScheduler.Default);
     }
 
     private static void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, ChartValues<DataPoint>> theValues,

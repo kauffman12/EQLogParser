@@ -22,7 +22,6 @@ namespace EQLogParser
         if (split != null && split.Length > 2)
         {
           // [Sun Mar 01 22:20:36 2020] A shaded torch has been awakened by Drogbaa.
-          // [Sun Mar 01 22:34:58 2020] You have entered The Eastern Wastes.
           // [Sun Mar 01 20:35:55 2020] The master looter, Qulas, looted 32426 platinum from the corpse.
           // [Sun Mar 01 23:51:02 2020] You receive 129 platinum, 2 gold and 1 copper as your split (with a lucky bonus).
           // [Sun Feb 02 22:43:51 2020] You receive 28 platinum, 7 gold, 2 silver and 5 copper as your split.
@@ -65,15 +64,7 @@ namespace EQLogParser
                   {
                      string awakened = string.Join(" ", split, 0, i - 3);
                     string breaker = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('.');
-                    DataManager.Instance.AddMiscRecord(new MezBreakRecord() { Breaker = breaker, Awakened = awakened }, DateUtil.ParseLogDate(lineData.Line));
-                    handled = true;
-                  }
-                  break;
-                case "entered":
-                  if (i == 2 && split[1] == "have" && split[0] == "You" && split.Length > 2)
-                  {
-                    string zone = string.Join(" ", split, 3, split.Length - 3).TrimEnd('.');
-                    DataManager.Instance.AddMiscRecord(new ZoneRecord() { Zone = zone }, DateUtil.ParseLogDate(lineData.Line));
+                    DataManager.Instance.AddMiscRecord(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, DateUtil.ParseLogDate(lineData.Line));
                     handled = true;
                   }
                   break;
