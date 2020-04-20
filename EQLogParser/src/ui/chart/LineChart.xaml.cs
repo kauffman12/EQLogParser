@@ -12,7 +12,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -41,11 +40,6 @@ namespace EQLogParser
     {
       CONFIG_VPS, CONFIG_TOTAL, CONFIG_AVG, CONFIG_CRIT_RATE
     };
-
-    private const string PETPLAYEROPTION = "Players +Pets";
-    private const string PLAYEROPTION = "Players";
-    private const string PETOPTION = "Pets";
-    private const string RAIDOPTION = "Raid Totals";
 
     private readonly Dictionary<string, ChartValues<DataPoint>> PlayerPetValues = new Dictionary<string, ChartValues<DataPoint>>();
     private readonly Dictionary<string, ChartValues<DataPoint>> PlayerValues = new Dictionary<string, ChartValues<DataPoint>>();
@@ -81,11 +75,11 @@ namespace EQLogParser
 
       if (includePets)
       {
-        petOrPlayerList.ItemsSource = new List<string> { PETPLAYEROPTION, PLAYEROPTION, PETOPTION, RAIDOPTION };
+        petOrPlayerList.ItemsSource = new List<string> { Labels.PETPLAYEROPTION, Labels.PLAYEROPTION, Labels.PETOPTION, Labels.RAIDOPTION };
       }
       else
       {
-        petOrPlayerList.ItemsSource = new List<string> { PLAYEROPTION, RAIDOPTION };
+        petOrPlayerList.ItemsSource = new List<string> { Labels.PLAYEROPTION, Labels.RAIDOPTION };
       }
 
       petOrPlayerList.SelectedIndex = 0;
@@ -216,11 +210,11 @@ namespace EQLogParser
         UpdateRemaining(PlayerPetValues, needTotalAccounting, firstTime, lastTime);
         UpdateRemaining(PlayerValues, needPlayerAccounting, firstTime, lastTime);
         UpdateRemaining(PetValues, needPetAccounting, firstTime, lastTime);
-        Plot(newTaskTime, selected, filter);
+        Plot(selected, filter);
       });
     }
 
-    private void Plot(DateTime requestTime, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    private void Plot(List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       LastFilter = filter;
       LastSelected = selected;
@@ -231,20 +225,20 @@ namespace EQLogParser
       string nonSelectedLabel = " Player(s)";
       switch (CurrentPetOrPlayerOption)
       {
-        case PETPLAYEROPTION:
+        case Labels.PETPLAYEROPTION:
           workingData = PlayerPetValues;
           selectedLabel = "Selected Player +Pets(s)";
           nonSelectedLabel = " Player +Pets(s)";
           break;
-        case PLAYEROPTION:
+        case Labels.PLAYEROPTION:
           workingData = PlayerValues;
           break;
-        case PETOPTION:
+        case Labels.PETOPTION:
           workingData = PetValues;
           selectedLabel = "Selected Pet(s)";
           nonSelectedLabel = " Pet(s)";
           break;
-        case RAIDOPTION:
+        case Labels.RAIDOPTION:
           workingData = RaidValues;
           break;
         default:
@@ -254,7 +248,7 @@ namespace EQLogParser
 
       string label;
       List<ChartValues<DataPoint>> sortedValues;
-      if (CurrentPetOrPlayerOption == RAIDOPTION)
+      if (CurrentPetOrPlayerOption == Labels.RAIDOPTION)
       {
         sortedValues = workingData.Values.ToList();
         label = sortedValues.Count > 0 ? "Raid" : Labels.NODATA;
@@ -271,15 +265,15 @@ namespace EQLogParser
         {
           bool pass = false;
           var first = values.First();
-          if (CurrentPetOrPlayerOption == PETPLAYEROPTION)
+          if (CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION)
           {
             pass = names.Contains(first.PlayerName) || (HasPets.ContainsKey(first.Name) && names.FirstOrDefault(name => HasPets[first.Name].ContainsKey(name)) != null);
           }
-          else if (CurrentPetOrPlayerOption == PLAYEROPTION)
+          else if (CurrentPetOrPlayerOption == Labels.PLAYEROPTION)
           {
             pass = names.Contains(first.Name);
           }
-          else if (CurrentPetOrPlayerOption == PETOPTION)
+          else if (CurrentPetOrPlayerOption == Labels.PETOPTION)
           {
             pass = names.Contains(first.Name) || names.Contains(first.PlayerName);
           }
@@ -307,7 +301,7 @@ namespace EQLogParser
         foreach (var value in sortedValues)
         {
           var name = value.First().Name;
-          name = CurrentPetOrPlayerOption == PETPLAYEROPTION && !HasPets.ContainsKey(name) ? name.Split(' ')[0] : name;
+          name = CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION && !HasPets.ContainsKey(name) ? name.Split(' ')[0] : name;
           var series = new LineSeries() { Title = name, Values = value };
 
           if (value.Count > 1)
@@ -353,6 +347,10 @@ namespace EQLogParser
       });
     }
 
+    private void ChartDoubleClick(object sender, MouseButtonEventArgs e) => Helpers.ChartResetView(lvcChart);
+    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CopyImage(Dispatcher, lvcChart, titleLabel);
+    private void RecenterClick(object sender, RoutedEventArgs e) => Helpers.ChartResetView(lvcChart);
+
     private bool PassFilter(Predicate<object> filter, ChartValues<DataPoint> values)
     {
       bool pass = filter == null;
@@ -360,7 +358,7 @@ namespace EQLogParser
       if (!pass)
       {
         var first = values.First();
-        if (CurrentPetOrPlayerOption == PETPLAYEROPTION)
+        if (CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION)
         {
           pass = filter(first.PlayerName) || (HasPets.ContainsKey(first.Name) && filter(HasPets[first.Name]));
         }
@@ -377,7 +375,7 @@ namespace EQLogParser
     {
       if (RaidValues.Count > 0)
       {
-        Plot(DateTime.Now, LastSelected, filter);
+        Plot(LastSelected, filter);
       }
       else
       {
@@ -393,7 +391,7 @@ namespace EQLogParser
         // when toggling bane and selection is lost
         if (!(selected.Count == 0 && LastSelected == null))
         {
-          Plot(DateTime.Now, selected, LastFilter);
+          Plot(selected, LastFilter);
         }
       }
       else
@@ -421,8 +419,6 @@ namespace EQLogParser
       }
     }
 
-    private void ChartDoubleClick(object sender, MouseButtonEventArgs e) => Helpers.ChartResetView(lvcChart);
-
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (PlayerPetValues.Count > 0)
@@ -430,11 +426,9 @@ namespace EQLogParser
         CurrentChoice = choicesList.SelectedValue as string;
         CurrentConfig = CHOICES[choicesList.SelectedIndex];
         CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
-        Plot(DateTime.Now, LastSelected, LastFilter);
+        Plot(LastSelected, LastFilter);
       }
     }
-
-    private void RecenterClick(object sender, RoutedEventArgs e) => Helpers.ChartResetView(lvcChart);
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
@@ -477,34 +471,6 @@ namespace EQLogParser
           LOG.Error(ex);
         }
       }
-    }
-
-    private void CreateImageClick(object sender, RoutedEventArgs e)
-    {
-      Task.Delay(100).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
-      {
-        var titleHeight = (int)titleLabel.ActualHeight - (int)titleLabel.Padding.Top;
-        var titleWidth = (int)titleLabel.ActualWidth;
-        var height = (int)lvcChart.ActualHeight + titleHeight;
-        var width = (int)lvcChart.ActualWidth;
-
-        var dpiScale = VisualTreeHelper.GetDpi(lvcChart);
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
-
-        DrawingVisual dv = new DrawingVisual();
-        using (DrawingContext ctx = dv.RenderOpen())
-        {
-          var titleBrush = new VisualBrush(titleLabel);
-          var grayBrush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#2d2d30"));
-          var chartBrush = new VisualBrush(lvcChart);
-          ctx.DrawRectangle(grayBrush, null, new Rect(new System.Windows.Point(0, 0), new System.Windows.Size(width, height)));
-          ctx.DrawRectangle(titleBrush, null, new Rect(new System.Windows.Point(0, 0), new System.Windows.Size(titleWidth, titleHeight)));
-          ctx.DrawRectangle(chartBrush, null, new Rect(new System.Windows.Point(0, titleHeight), new System.Windows.Size(width, height - titleHeight)));
-        }
-
-        rtb.Render(dv);
-        Clipboard.SetImage(rtb);
-      }), TaskScheduler.Default);
     }
 
     private static void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, ChartValues<DataPoint>> theValues,

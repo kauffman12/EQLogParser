@@ -6,8 +6,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -87,6 +90,47 @@ namespace EQLogParser
         newSegment.Actions.Add(action);
         blockList.Add(newSegment);
       }
+    }
+
+    internal static void CopyImage(Dispatcher dispatcher, FrameworkElement content, FrameworkElement title = null)
+    {
+      Task.Delay(100).ContinueWith((task) => dispatcher.InvokeAsync(() =>
+      {
+        var wasHidden = content.Visibility != Visibility.Visible;
+        content.Visibility = Visibility.Visible;
+
+        var titleHeight = title?.ActualHeight ?? 0;
+        var titleWidth = title?.ActualWidth ?? 0;
+        var height = (int)content.ActualHeight + (int)titleHeight;
+        var width = (int)content.ActualWidth;
+
+        var dpiScale = VisualTreeHelper.GetDpi(content);
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+
+        DrawingVisual dv = new DrawingVisual();
+        using (DrawingContext ctx = dv.RenderOpen())
+        {
+          var grayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2d2d30"));
+          ctx.DrawRectangle(grayBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
+
+          if (title != null)
+          {
+            var titleBrush = new VisualBrush(title);
+            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(0, 0), new Size(titleWidth, titleHeight)));
+          }
+
+          var chartBrush = new VisualBrush(content);
+          ctx.DrawRectangle(chartBrush, null, new Rect(new Point(0, titleHeight), new Size(width, height - titleHeight)));
+        }
+
+        rtb.Render(dv);
+        Clipboard.SetImage(rtb);
+
+        if (wasHidden)
+        {
+          content.Visibility = Visibility.Hidden;
+        }
+      }), TaskScheduler.Default);
     }
 
     internal static void SetBusy(bool state) => MainDispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(state));

@@ -21,7 +21,7 @@
       <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
       <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
     </StackPanel>
-    <Grid Grid.Row="1" x:Name="parent">
+    <Grid Grid.Row="1">
       <Grid.RowDefinitions>
         <RowDefinition Height="25"></RowDefinition>
         <RowDefinition Height="*"></RowDefinition>

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -236,13 +237,16 @@ namespace EQLogParser
     {
       Task.Delay(100).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
       {
-        var titleHeight = titleLabel1.ActualHeight - titleLabel1.Padding.Top - titleLabel1.Padding.Bottom;
+        int paddingTop = 4;
+        int padding = 8;
+        
+        var titleHeight = titleLabel1.ActualHeight - titleLabel1.Padding.Top * 2;
         var titleWidth = titleLabel1.ActualWidth + titleLabel2.ActualWidth + titleLabel3.ActualWidth;
         var height = (int)content.ActualHeight + (int)contentHeader.ActualHeight + (int)titleHeight;
         var width = (int)contentLabels.ActualWidth + (int)content.ActualWidth;
 
         var dpiScale = VisualTreeHelper.GetDpi(content);
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + (int)titleHeight + padding, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
@@ -253,10 +257,10 @@ namespace EQLogParser
           var labelsBrush = new VisualBrush(contentLabels);
           var contentBrush = new VisualBrush(content);
           ctx.DrawRectangle(grayBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
-          ctx.DrawRectangle(titleBrush, null, new Rect(new Point(5, 0), new Size(titlePane.ActualWidth, titleHeight))); // add 5 padding that's normally on the label
-          ctx.DrawRectangle(headerBrush, null, new Rect(new Point(0, titleHeight), new Size(width, contentHeader.ActualHeight)));
-          ctx.DrawRectangle(labelsBrush, null, new Rect(new Point(0, contentHeader.ActualHeight + titleHeight), new Size(contentLabels.ActualWidth, height - contentHeader.ActualHeight)));
-          ctx.DrawRectangle(contentBrush, null, new Rect(new Point(contentLabels.ActualWidth, contentHeader.ActualHeight + titleHeight), new Size(content.ActualWidth, height - contentHeader.ActualHeight)));
+          ctx.DrawRectangle(titleBrush, null, new Rect(new Point(6, paddingTop), new Size(titlePane.ActualWidth, titleHeight))); // add padding that's normally on the label
+          ctx.DrawRectangle(headerBrush, null, new Rect(new Point(0, titleHeight + padding), new Size(width, contentHeader.ActualHeight)));
+          ctx.DrawRectangle(labelsBrush, null, new Rect(new Point(0, contentHeader.ActualHeight + titleHeight + padding), new Size(contentLabels.ActualWidth, height - contentHeader.ActualHeight)));
+          ctx.DrawRectangle(contentBrush, null, new Rect(new Point(contentLabels.ActualWidth, contentHeader.ActualHeight + titleHeight + padding), new Size(content.ActualWidth, height - contentHeader.ActualHeight)));
         }
 
         rtb.Render(dv);
