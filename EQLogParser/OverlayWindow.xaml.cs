@@ -277,7 +277,8 @@ namespace EQLogParser
         }
 
         Stats.ActiveFights = activeFights;
-        DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, Stats);
+        var timeout = CurrentDamageSelectionMode == 0 ? DataManager.FIGHTTIMEOUT : CurrentDamageSelectionMode;
+        DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, timeout, Stats);
 
         if (UpdateTimer != null && !UpdateTimer.IsEnabled)
         {

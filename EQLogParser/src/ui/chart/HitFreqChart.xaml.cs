@@ -65,29 +65,7 @@ namespace EQLogParser
       }
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e)
-    {
-      Task.Delay(100).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
-      {
-        var height = (int)lvcChart.ActualHeight;
-        var width = (int)lvcChart.ActualWidth;
-
-        var dpiScale = VisualTreeHelper.GetDpi(lvcChart);
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
-
-        DrawingVisual dv = new DrawingVisual();
-        using (DrawingContext ctx = dv.RenderOpen())
-        {
-          var grayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2d2d30"));
-          var chartBrush = new VisualBrush(lvcChart);
-          ctx.DrawRectangle(grayBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
-          ctx.DrawRectangle(chartBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
-        }
-
-        rtb.Render(dv);
-        Clipboard.SetImage(rtb);
-      }), TaskScheduler.Default);
-    }
+    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CopyImage(Dispatcher, lvcChart);
 
     private void UserSelectionChanged()
     {

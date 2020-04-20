@@ -257,7 +257,7 @@ namespace EQLogParser
       PlayerTimeRanges.Clear();
       PlayerSubTimeRanges.Clear();
       TankingGroups.Clear();
-      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
+      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAIDTOTALS);
       Selected = null;
       Title = "";
     }

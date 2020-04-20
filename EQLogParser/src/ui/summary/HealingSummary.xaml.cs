@@ -24,7 +24,6 @@ namespace EQLogParser
 
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, "All Classes");
-      list.Remove(Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), SpellClass.PET), CultureInfo.CurrentCulture));
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 

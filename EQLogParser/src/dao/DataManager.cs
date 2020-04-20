@@ -9,7 +9,7 @@ namespace EQLogParser
   internal enum SpellClass
   {
     WAR = 1, CLR = 2, PAL = 4, RNG = 8, SHD = 16, DRU = 32, MNK = 64, BRD = 128, ROG = 256,
-    SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768, PET = 65536
+    SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768
   }
 
   internal enum SpellTarget
@@ -329,16 +329,22 @@ namespace EQLogParser
         // check Adps
         if (AdpsLandsOn.TryGetValue(landsOn, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
         {
-          var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(player, spellDataSet.ToList());
+          var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(ConfigUtil.PlayerName, spellDataSet.ToList());
 
-          AdpsKeys.ForEach(key =>
+          // this only handles latest versions of spells so an older one may have given us the landsOn string and then it wasn't found
+          // for some spells this makes sense because of the level requirements and it wouldn't do anything but thats not true for all of them
+          // need to handle older spells and multiple rate values
+          if (spellData != null)
           {
-            if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+            AdpsKeys.ForEach(key =>
             {
-              AdpsActive[key][spellData.LandsOnYou] = value;
-              RecalculateAdps();
-            }
-          });
+              if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+              {
+                AdpsActive[key][spellData.LandsOnYou] = value;
+                RecalculateAdps();
+              }
+            });
+          }
         }
       }
       else if (AdpsWearOff.TryGetValue(landsOn, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)

@@ -168,9 +168,6 @@
   <data name="PAL" xml:space="preserve">
     <value>Paladin</value>
   </data>
-  <data name="PET" xml:space="preserve">
-    <value>Pet</value>
-  </data>
   <data name="RNG" xml:space="preserve">
     <value>Ranger</value>
   </data>
