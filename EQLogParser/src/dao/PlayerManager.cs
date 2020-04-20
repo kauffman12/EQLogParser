@@ -117,16 +117,9 @@ namespace EQLogParser
     {
       string className = "";
 
-      if (!string.IsNullOrEmpty(name))
+      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
       {
-        if (PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
-        {
-          className = ClassNames[counter.CurrentClass];
-        }
-        else if (IsVerifiedPet(name))
-        {
-          className = ClassNames[SpellClass.PET];
-        }
+        className = ClassNames[counter.CurrentClass];
       }
 
       return className;

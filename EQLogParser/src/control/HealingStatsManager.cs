@@ -381,7 +381,7 @@ namespace EQLogParser
       HealerHealedTimeRanges.Clear();
       HealerSpellTimeRanges.Clear();
       HealingGroups.Clear();
-      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
+      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAIDTOTALS);
       Selected = null;
       Title = "";
     }

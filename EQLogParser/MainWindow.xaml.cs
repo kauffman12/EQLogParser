@@ -868,7 +868,7 @@ namespace EQLogParser
             }
 
             Helpers.SpellAbbrvCache.Clear(); // only really needed during big parse
-            LOG.Info("Finished Loading Log File");
+            LOG.Info("Finished Loading Log File in " + seconds + " seconds.");
           }
           else
           {
@@ -1027,10 +1027,7 @@ namespace EQLogParser
       }
     }
 
-    private void NPCWindow_KeyDown(object sender, KeyEventArgs e)
-    {
-      (npcWindow?.Content as FightTable).FightSearchBoxKeyDown(sender, e);
-    }
+    private void NPCWindow_KeyDown(object sender, KeyEventArgs e) => (npcWindow?.Content as FightTable).FightSearchBoxKeyDown(sender, e);
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
@@ -1050,11 +1047,8 @@ namespace EQLogParser
       }
     }
 
-    private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e)
-    {
-      // This is where closing summary tables and line charts will get disposed
-      (e.Window.Content as IDisposable)?.Dispose();
-    }
+    // This is where closing summary tables and line charts will get disposed
+    private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e) => (e.Window.Content as IDisposable)?.Dispose();
 
     private void TrayIcon_MouseUp(object sender, RoutedEventArgs e)
     {
@@ -1084,10 +1078,7 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClose(object sender, EventArgs e)
-    {
-      Close();
-    }
+    private void WindowClose(object sender, EventArgs e) => Close();
 
     private void WindowClosed(object sender, EventArgs e)
     {

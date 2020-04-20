@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -137,7 +136,7 @@ namespace EQLogParser
       }
     }
 
-    internal void ComputeOverlayDamageStats(DamageRecord record, double beginTime, OverlayDamageStats overlayStats = null)
+    internal void ComputeOverlayDamageStats(DamageRecord record, double beginTime, int timeout, OverlayDamageStats overlayStats = null)
     {
       try
       {      
@@ -200,21 +199,21 @@ namespace EQLogParser
 
           var list = overlayStats.TopLevelStats.Values.OrderByDescending(item => item.Total).ToList();
           int found = list.FindIndex(stats => stats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal));
+          var you = list[found];
 
           int renumber;
           if (found > 4)
           {
-            var you = list[found];
             you.Rank = Convert.ToUInt16(found + 1);
             overlayStats.StatsList.Clear();
-            overlayStats.StatsList.AddRange(list.Where(stats => beginTime - stats.LastTime <= DataManager.FIGHTTIMEOUT).Take(4));
+            overlayStats.StatsList.AddRange(list.Where(stats => stats == you || beginTime - stats.LastTime <= timeout).Take(4));
             overlayStats.StatsList.Add(you);
             renumber = overlayStats.StatsList.Count - 1;
           }
           else
           {
             overlayStats.StatsList.Clear();
-            overlayStats.StatsList.AddRange(list.Where(stats => beginTime - stats.LastTime <= DataManager.FIGHTTIMEOUT).Take(5));
+            overlayStats.StatsList.AddRange(list.Where(stats => stats == you || beginTime - stats.LastTime <= timeout).Take(5));
             renumber = overlayStats.StatsList.Count;
           }
 
@@ -545,7 +544,7 @@ namespace EQLogParser
     {
       DamageGroups.Clear();
       DamageGroupIds.Clear();
-      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID);
+      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAIDTOTALS);
       PlayerPets.Clear();
       PetToPlayer.Clear();
       Resists.Clear();

@@ -24,7 +24,7 @@ namespace EQLogParser
     private List<DataGrid> ChildGrids = new List<DataGrid>();
     private string CurrentClass = null;
     private int CurrentGroupCount = 0;
-    private bool CurrentCombinePets = true;
+    private int CurrentPetOrPlayerOption = 0;
 
     public DamageSummary()
     {
@@ -41,6 +41,9 @@ namespace EQLogParser
       list.Insert(0, "All Classes");
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
+
+      petOrPlayerList.ItemsSource = new List<string> { Labels.PETPLAYEROPTION, Labels.PLAYEROPTION, Labels.PETOPTION, Labels.EVERYTHINGOPTION };
+      petOrPlayerList.SelectedIndex = 0;
 
       CreateClassMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
       CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
@@ -121,7 +124,7 @@ namespace EQLogParser
       }
     }
 
-    internal override bool IsPetsCombined() => CurrentCombinePets;
+    internal override bool IsPetsCombined() => CurrentPetOrPlayerOption == 0;
 
     private void ColumnWidthPropertyChanged(object sender, EventArgs e)
     {
@@ -284,17 +287,34 @@ namespace EQLogParser
       {
         view.Filter = (stats) =>
         {
-          string className = null;
+          string name = "";
+          string className = "";
           if (stats is PlayerStats playerStats)
           {
+            name = playerStats.Name;
             className = playerStats.ClassName;
           }
-          else if (stats is string name)
+          else if (stats is string playerName)
           {
+            name = playerName;
             className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
-          return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
+          bool result = false;
+          if (CurrentPetOrPlayerOption == 1)
+          {
+            result = !PlayerManager.Instance.IsVerifiedPet(name) && (string.IsNullOrEmpty(CurrentClass) || CurrentClass == className);
+          }
+          else if (CurrentPetOrPlayerOption == 2)
+          {
+            result = PlayerManager.Instance.IsVerifiedPet(name);
+          }
+          else
+          {
+            result = string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
+          }
+
+          return result;
         };
 
         DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, view.Filter);
@@ -312,11 +332,11 @@ namespace EQLogParser
     {
       if (dataGrid != null && CurrentStats?.ExpandedStatsList != null)
       {
-        combinePets.IsEnabled = classesList.IsEnabled = false;
+        petOrPlayerList.IsEnabled = classesList.IsEnabled = false;
         Task.Delay(20).ContinueWith(task =>
         {
           // until i figure out something better just re-rank everything
-          var statsList = CurrentCombinePets ? CurrentStats.StatsList : CurrentStats.ExpandedStatsList;
+          var statsList = CurrentPetOrPlayerOption == 0 ? CurrentStats.StatsList : CurrentStats.ExpandedStatsList;
           for (int i=0; i<statsList.Count; i++)
           {
             statsList[i].Rank = Convert.ToUInt16(i + 1);
@@ -326,7 +346,8 @@ namespace EQLogParser
           {
             var view = CollectionViewSource.GetDefaultView(statsList);
             dataGrid.ItemsSource = SetFilter(view);
-            combinePets.IsEnabled = classesList.IsEnabled = true;
+            petOrPlayerList.IsEnabled = true;
+            classesList.IsEnabled = CurrentPetOrPlayerOption != 2;
           });
         }, TaskScheduler.Default);
       }
@@ -335,12 +356,7 @@ namespace EQLogParser
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      SetFilter(dataGrid?.ItemsSource as ICollectionView);
-    }
-
-    private void CheckedOptionsChanged(object sender, RoutedEventArgs e)
-    {
-      CurrentCombinePets = combinePets.IsChecked.Value;
+      CurrentPetOrPlayerOption = petOrPlayerList.SelectedIndex;
       UpdateView();
     }
 
