@@ -150,6 +150,9 @@
   <data name="ENC" xml:space="preserve">
     <value>Enchanter</value>
   </data>
+  <data name="EVENT_FILTER_TEXT" xml:space="preserve">
+    <value>Event Search</value>
+  </data>
   <data name="FILEMENU_EXPORT_SUMMARY" xml:space="preserve">
     <value>Can Not Save Summary Data</value>
   </data>
