@@ -139,7 +139,7 @@ namespace EQLogParser
     internal void ComputeOverlayDamageStats(DamageRecord record, double beginTime, int timeout, OverlayDamageStats overlayStats = null)
     {
       try
-      {      
+      {
         // set current time
         overlayStats.LastTime = beginTime;
 
@@ -199,21 +199,21 @@ namespace EQLogParser
 
           var list = overlayStats.TopLevelStats.Values.OrderByDescending(item => item.Total).ToList();
           int found = list.FindIndex(stats => stats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal));
-          var you = list[found];
+          var you = found > -1 ? list[found] : null;
 
           int renumber;
           if (found > 4)
           {
             you.Rank = Convert.ToUInt16(found + 1);
             overlayStats.StatsList.Clear();
-            overlayStats.StatsList.AddRange(list.Where(stats => stats == you || beginTime - stats.LastTime <= timeout).Take(4));
+            overlayStats.StatsList.AddRange(list.Where(stats => (stats != null && stats == you) || beginTime - stats.LastTime <= timeout).Take(4));
             overlayStats.StatsList.Add(you);
             renumber = overlayStats.StatsList.Count - 1;
           }
           else
           {
             overlayStats.StatsList.Clear();
-            overlayStats.StatsList.AddRange(list.Where(stats => stats == you || beginTime - stats.LastTime <= timeout).Take(5));
+            overlayStats.StatsList.AddRange(list.Where(stats => (stats != null && stats == you) || beginTime - stats.LastTime <= timeout).Take(5));
             renumber = overlayStats.StatsList.Count;
           }
 
