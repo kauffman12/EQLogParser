@@ -60,26 +60,11 @@ namespace EQLogParser
       string fgColor = ConfigUtil.GetSetting("ChatFontFgColor");
       if (fontFgColor.ItemsSource is List<ColorItem> colors)
       {
-        if (colors.Find(item => item.Name == fgColor) is ColorItem found)
-        {
-          fontFgColor.SelectedItem = found;
-        }
-        else
-        {
-          // default to white
-          fontFgColor.SelectedItem = colors.Find(item => item.Name == "#ffffff");
-        }
+        fontFgColor.SelectedItem = (colors.Find(item => item.Name == fgColor) is ColorItem found) ? found : colors.Find(item => item.Name == "#ffffff");
       }
 
       string family = ConfigUtil.GetSetting("ChatFontFamily");
-      if (family != null)
-      {
-        fontFamily.SelectedItem = new FontFamily(family);
-      }
-      else
-      {
-        fontFamily.SelectedItem = chatBox.FontFamily;
-      }
+      fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : chatBox.FontFamily;
 
       string size = ConfigUtil.GetSetting("ChatFontSize");
       if (size != null && double.TryParse(size, out double dsize))
@@ -133,10 +118,7 @@ namespace EQLogParser
               }, DispatcherPriority.DataBind);
             }
 
-            Dispatcher.Invoke(() =>
-            {
-              RefreshTimer.Stop();
-            });
+            Dispatcher.Invoke(() => RefreshTimer.Stop());
           });
         }
       };
@@ -161,10 +143,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
     }
 
-    private void ChatManager_EventsUpdatePlayer(object sender, string player)
-    {
-      LoadPlayers(player);
-    }
+    private void ChatManager_EventsUpdatePlayer(object sender, string player) => LoadPlayers(player);
 
     private void DisplayPage(int count)
     {
@@ -555,21 +534,6 @@ namespace EQLogParser
       }
     }
 
-    private void ToFilter_LostFocus(object sender, RoutedEventArgs e)
-    {
-      Filter_LostFocus(toFilter, Properties.Resources.CHAT_TO_FILTER);
-    }
-
-    private void FromFilter_LostFocus(object sender, RoutedEventArgs e)
-    {
-      Filter_LostFocus(fromFilter, Properties.Resources.CHAT_FROM_FILTER);
-    }
-
-    private void TextFilter_LostFocus(object sender, RoutedEventArgs e)
-    {
-      Filter_LostFocus(textFilter, Properties.Resources.CHAT_TEXT_FILTER);
-    }
-
     private void Filter_TextChanged(object sender, TextChangedEventArgs e)
     {
       FilterTimer?.Stop();
@@ -647,16 +611,6 @@ namespace EQLogParser
       }
     }
 
-    private void StartDate_MouseClick(object sender, MouseButtonEventArgs e)
-    {
-      DateTimeMouseClick(startDate, e);
-    }
-
-    private void EndDate_MouseClick(object sender, MouseButtonEventArgs e)
-    {
-      DateTimeMouseClick(endDate, e);
-    }
-
     private void DateChooser_KeyDown(object sender, KeyEventArgs e)
     {
       if (e.Key == Key.Escape)
@@ -701,10 +655,14 @@ namespace EQLogParser
         endDate.FontStyle = FontStyles.Italic;
       }
     }
-    private void Refresh_MouseClick(object sender, MouseButtonEventArgs e)
-    {
-      ChangeSearch(true);
-    }
+
+    private void ToFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(toFilter, Properties.Resources.CHAT_TO_FILTER);
+    private void FromFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(fromFilter, Properties.Resources.CHAT_FROM_FILTER);
+    private void TextFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(textFilter, Properties.Resources.CHAT_TEXT_FILTER);
+    private void StartDate_MouseClick(object sender, MouseButtonEventArgs e) => DateTimeMouseClick(startDate, e);
+    private void EndDate_MouseClick(object sender, MouseButtonEventArgs e) => DateTimeMouseClick(endDate, e);
+    private void Refresh_MouseClick(object sender, MouseButtonEventArgs e) => ChangeSearch(true);
+
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls

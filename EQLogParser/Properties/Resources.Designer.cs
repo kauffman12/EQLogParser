@@ -160,6 +160,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Event Search.
+        /// </summary>
+        internal static string EVENT_FILTER_TEXT {
+            get {
+                return ResourceManager.GetString("EVENT_FILTER_TEXT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Can Not Save Summary Data.
         /// </summary>
         internal static string FILEMENU_EXPORT_SUMMARY {

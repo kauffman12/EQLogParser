@@ -24,8 +24,8 @@
         <fa:ImageAwesome Height="14" Width="14" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Refresh" ToolTip="Refresh Results" Foreground="#5191c1"/>
       </Button>
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <ComboBox Margin="4,0,4,0" x:Name="playersList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="itemsList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="4,0,0,0" x:Name="playersList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,0" x:Name="itemsList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="optionsList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
     </StackPanel>    
     <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="50" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True">
