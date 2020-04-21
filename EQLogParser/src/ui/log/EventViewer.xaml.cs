@@ -8,25 +8,26 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for EventViewer.xaml
   /// </summary>
-  public partial class EventViewer : UserControl
+  public partial class EventViewer : UserControl, IDisposable
   {
     private static bool Running = false;
     private static object CollectionLock = new object();
-    private static string ZONE_EVENT = "Entered Area";
-    private static string KILLSHOT_EVENT = "Kill Shot";
-    private static string PLAYERSLAIN_EVENT = "Player Slain";
-    private static string PLAYERKILL_EVENT = "Player Killing";
-    private static string MEZBREAK_EVENT = "Mez Break";
+    private const string ZONE_EVENT = "Entered Area";
+    private const string KILLSHOT_EVENT = "Kill Shot";
+    private const string PLAYERSLAIN_EVENT = "Player Slain";
+    private const string PLAYERKILL_EVENT = "Player Killing";
+    private const string MEZBREAK_EVENT = "Mez Break";
 
     private ObservableCollection<EventRow> EventRows = new ObservableCollection<EventRow>();
     private ICollectionView EventView;
-
+    private DispatcherTimer FilterTimer;
     private bool CurrentShowMezBreaks = true;
     private bool CurrentShowEnterZone = true;
     private bool CurrentShowKillShots = true;
@@ -44,13 +45,38 @@ namespace EQLogParser
         bool result = false;
         if (obj is EventRow row)
         {
-          result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots && row.Event == KILLSHOT_EVENT ||
-          CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT || CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT;
+          result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots && 
+            row.Event == KILLSHOT_EVENT || CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT || CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT;
+
+          if (result && !string.IsNullOrEmpty(eventFilter.Text) && eventFilter.Text != Properties.Resources.EVENT_FILTER_TEXT)
+          {
+            if (eventFilterModifier.SelectedIndex == 0)
+            {
+              result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 || row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1;
+            }
+            else if (eventFilterModifier.SelectedIndex == 1)
+            {
+              result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1 && row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1;
+            }
+            else if (eventFilterModifier.SelectedIndex == 2)
+            {
+              result = row.Actor?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true || row.Target?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true;
+            }
+          }
         }
         return result;
       });
 
       BindingOperations.EnableCollectionSynchronization(EventRows, CollectionLock);
+      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventViewer_EventsLogLoadingComplete;
+
+      eventFilter.Text = Properties.Resources.EVENT_FILTER_TEXT;
+      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      FilterTimer.Tick += (sender, e) =>
+      {
+        FilterTimer.Stop();
+        UpdateUI(true);
+      };
 
       Load();
     }
@@ -150,7 +176,7 @@ namespace EQLogParser
       }
     }
 
-    private void OptionsChange(object sender, RoutedEventArgs e)
+    private void OptionsChange(object sender, EventArgs e)
     {
       if (dataGrid?.ItemsSource != null)
       {
@@ -163,9 +189,70 @@ namespace EQLogParser
       }
     }
 
-    private void RefreshMouseClick(object sender, MouseButtonEventArgs e)
+    private void Filter_KeyDown(object sender, KeyEventArgs e)
     {
-      Load();
+      if (e.Key == Key.Escape)
+      {
+        eventFilter.Text = Properties.Resources.EVENT_FILTER_TEXT;
+        eventFilter.FontStyle = FontStyles.Italic;
+        dataGrid.Focus();
+      }
     }
+
+    private void Filter_GotFocus(object sender, RoutedEventArgs e)
+    {
+      if (eventFilter.Text == Properties.Resources.EVENT_FILTER_TEXT)
+      {
+        eventFilter.Text = "";
+        eventFilter.FontStyle = FontStyles.Normal;
+      }
+    }
+
+    private void Filter_LostFocus(object sender, RoutedEventArgs e)
+    {
+      if (string.IsNullOrEmpty(eventFilter.Text))
+      {
+        eventFilter.Text = Properties.Resources.EVENT_FILTER_TEXT;
+        eventFilter.FontStyle = FontStyles.Italic;
+      }
+    }
+
+    private void Filter_TextChanged(object sender, TextChangedEventArgs e)
+    {
+      FilterTimer?.Stop();
+      FilterTimer?.Start();
+    }
+
+    private void EventViewer_EventsLogLoadingComplete(object sender, bool e) => Load();
+    private void RefreshMouseClick(object sender, MouseButtonEventArgs e) => Load();
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "UPDATE");
+
+      if (!disposedValue)
+      {
+        if (disposing)
+        {
+          // TODO: dispose managed state (managed objects).
+        }
+
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventViewer_EventsLogLoadingComplete;
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }

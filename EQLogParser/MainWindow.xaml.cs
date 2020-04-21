@@ -24,6 +24,8 @@ namespace EQLogParser
     // binding property
     public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
 
+    internal event EventHandler<bool> EventsLogLoadingComplete;
+
     public string StatusText
     {
       get { return (string) GetValue(StatusTextProperty); }
@@ -59,7 +61,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.7.11";
+    private const string VERSION = "v1.7.12";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -703,7 +705,9 @@ namespace EQLogParser
       }
       else
       {
+#pragma warning disable CA2000 // Dispose objects before losing scope
         EventWindow = new DocumentWindow(dockSite, "eventWindow", "Event Log", null, new EventViewer());
+#pragma warning restore CA2000 // Dispose objects before losing scope
         IconToWindow[eventIcon.Name] = EventWindow;
         Helpers.OpenWindow(EventWindow);
       }
@@ -717,7 +721,9 @@ namespace EQLogParser
       }
       else
       {
+#pragma warning disable CA2000 // Dispose objects before losing scope
         LootWindow = new DocumentWindow(dockSite, "lootWindow", "Loot Log", null, new LootViewer());
+#pragma warning restore CA2000 // Dispose objects before losing scope
         IconToWindow[playerLootIcon.Name] = LootWindow;
         Helpers.OpenWindow(LootWindow);
       }
@@ -869,6 +875,8 @@ namespace EQLogParser
 
             Helpers.SpellAbbrvCache.Clear(); // only really needed during big parse
             LOG.Info("Finished Loading Log File in " + seconds + " seconds.");
+
+            EventsLogLoadingComplete?.Invoke(this, true);
           }
           else
           {
