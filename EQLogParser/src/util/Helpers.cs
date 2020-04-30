@@ -1,10 +1,8 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
 using LiveCharts.Wpf;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -17,7 +15,6 @@ namespace EQLogParser
 {
   class Helpers
   {
-    internal static ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
     private static Dispatcher MainDispatcher;
@@ -25,57 +22,6 @@ namespace EQLogParser
     internal static void SetDispatcher(Dispatcher mainDispatcher)
     {
       MainDispatcher = mainDispatcher;
-    }
-
-    internal static string AbbreviateSpellName(string spell)
-    {
-      if (!SpellAbbrvCache.TryGetValue(spell, out string result))
-      {
-        result = spell;
-        int index;
-        if ((index = spell.IndexOf(" Rk. ", StringComparison.Ordinal)) > -1)
-        {
-          result = spell.Substring(0, index);
-        }
-        else if ((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
-        {
-          bool isARank = true;
-          for (int i = index + 1; i < spell.Length && isARank; i++)
-          {
-            switch (spell[i])
-            {
-              case 'I':
-              case 'V':
-              case 'X':
-              case 'L':
-              case 'C':
-              case '0':
-              case '1':
-              case '2':
-              case '3':
-              case '4':
-              case '5':
-              case '6':
-              case '7':
-              case '8':
-              case '9':
-                break;
-              default:
-                isARank = false;
-                break;
-            }
-          }
-
-          if (isARank)
-          {
-            result = spell.Substring(0, index);
-          }
-        }
-
-        SpellAbbrvCache[spell] = result;
-      }
-
-      return string.Intern(result);
     }
 
     public static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
@@ -135,38 +81,12 @@ namespace EQLogParser
 
     internal static void SetBusy(bool state) => MainDispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(state));
 
-    internal static string FlipCase(string name)
-    {
-      string result = name;
-      if (!string.IsNullOrEmpty(name))
-      {
-        result = char.IsUpper(name[0]) ? ToLower(name) : ToUpper(name);
-      }
-      return result;
-    }
-
     internal static void ChartResetView(CartesianChart theChart)
     {
       theChart.AxisY[0].MaxValue = double.NaN;
       theChart.AxisY[0].MinValue = 0;
       theChart.AxisX[0].MinValue = double.NaN;
       theChart.AxisX[0].MaxValue = double.NaN;
-    }
-
-    internal static void DataGridSelectAll(FrameworkElement sender)
-    {
-      if (sender?.Parent is ContextMenu menu)
-      {
-        (menu.PlacementTarget as DataGrid)?.SelectAll();
-      }
-    }
-
-    internal static void DataGridUnselectAll(FrameworkElement sender)
-    {
-      if (sender?.Parent is ContextMenu menu)
-      {
-        (menu.PlacementTarget as DataGrid)?.UnselectAll();
-      }
     }
 
     internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
@@ -181,6 +101,25 @@ namespace EQLogParser
       {
         collection.Insert(index, entry);
       }
+    }
+
+    internal static DocumentWindow OpenWindow(DockSite dockSite, DocumentWindow window, Type type, string key, string title)
+    {
+      if (window?.IsOpen == true)
+      {
+        window.Close();
+        window = null;
+      }
+      else
+      {
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        var instance = Activator.CreateInstance(type);
+        window = new DocumentWindow(dockSite, key, title, null, instance);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        OpenWindow(window);
+      }
+
+      return window;
     }
 
     internal static void OpenWindow(DockingWindow window)
@@ -224,10 +163,6 @@ namespace EQLogParser
 
       return key;
     }
-
-    private static string ToLower(string name) => char.ToLower(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
-
-    private static string ToUpper(string name) => char.ToUpper(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
 
     private class SortableNameComparer : IComparer<SortableName>
     {

@@ -17,11 +17,11 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static bool Running = false;
     private bool CurrentShowSpellsChoice = true;
-    List<PlayerStats> PlayerStats = null;
+    private List<PlayerStats> PlayerStats = null;
 
     private List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
 
-    public HealBreakdown(CombinedStats currentStats)
+    internal HealBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
       titleLabel.Content = currentStats?.ShortTitle;
@@ -29,7 +29,7 @@ namespace EQLogParser
       choicesList.SelectedIndex = 0;
     }
 
-    public void Show(List<PlayerStats> selectedStats)
+    internal void Show(List<PlayerStats> selectedStats)
     {
       if (selectedStats != null)
       {
@@ -38,7 +38,7 @@ namespace EQLogParser
       }
     }
 
-    protected override void Display(List<PlayerStats> _ = null)
+    override internal void Display(List<PlayerStats> _ = null)
     {
       if (Running == false && PlayerStats != null)
       {

@@ -417,7 +417,7 @@ namespace EQLogParser
             int rank = 1;
             foreach (var stats in selected[0].SubStats.Values.OrderByDescending(stats => stats.Total).Take(10))
             {
-              string abbrv = Helpers.AbbreviateSpellName(stats.Name);
+              string abbrv = DataManager.Instance.AbbreviateSpellName(stats.Name);
               string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, rank++, abbrv) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, abbrv);
               string healsFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + healsFormat + " ");

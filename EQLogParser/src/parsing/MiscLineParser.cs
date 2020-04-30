@@ -29,12 +29,15 @@ namespace EQLogParser
           // [Fri Feb 07 22:01:20 2020] --Kizant has looted a Lesser Engraved Velium Rune from Velden Dragonbane's corpse.--
           // [Sat Feb 08 01:20:26 2020] --Proximoe has looted a Velium Infused Spider Silk from a restless devourer's corpse.--
           // [Sat Feb 08 21:21:36 2020] --You have looted a Cold-Forged Cudgel from Queen Dracnia's corpse.--
+          // [Mon Apr 27 22:32:04 2020] Restless Tijoely resisted your Stormjolt Vortex Effect!
+          // [Mon Apr 27 20:51:22 2020] Kazint's Scorching Beam Rk. III spell has been reflected by a shadow reflection.
 
           string looter = null;
           int awakenedIndex = -1;
           int lootedIndex = -1;
           int masterLootIndex = -1;
           int receiveIndex = -1;
+          int resistedIndex = -1;
           bool handled = false;
 
           for (int i = 0; i < split.Length && !handled; i++)
@@ -59,10 +62,32 @@ namespace EQLogParser
                 case "receive":
                   receiveIndex = (i == 1 && split[0] == "You") ? i : -1;
                   break;
+                case "reflected":
+                  if (split.Length > 6 && i >= 6 && i + 2 < split.Length && split[0].StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal) 
+                    && split[i-1] == "been" && split[i - 2] == "has" && split[i - 3] == "spell" && split[i + 1] == "by")
+                  {
+                    // var spell = string.Join(" ", split, 1, i - 4);
+                    var npc = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('.');
+                    DataManager.Instance.UpdateNpcSpellReflectStats(npc);
+                    handled = true;
+                  }
+                  break;
+                case "resisted":
+                  resistedIndex = i;
+                  break;
+                case "your":
+                  if (resistedIndex > 0 && resistedIndex + 1 == i && split.Length > i + 1 && split[split.Length - 1].EndsWith("!", StringComparison.Ordinal))
+                  {
+                    string npc = string.Join(" ", split, 0, resistedIndex);
+                    string spell = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('!');
+                    DataManager.Instance.AddResistRecord(new ResistRecord() { Defender = npc, Spell = spell }, DateUtil.ParseLogDate(lineData.Line));
+                    handled = true;
+                  }
+                  break;
                 case "by":
                   if (awakenedIndex > -1 && awakenedIndex == (i - 1) && split.Length > 5 && split[i - 2] == "been" && split[i - 3] == "has")
                   {
-                     string awakened = string.Join(" ", split, 0, i - 3);
+                    string awakened = string.Join(" ", split, 0, i - 3);
                     string breaker = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('.');
                     DataManager.Instance.AddMiscRecord(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, DateUtil.ParseLogDate(lineData.Line));
                     handled = true;

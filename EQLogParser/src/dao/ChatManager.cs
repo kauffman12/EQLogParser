@@ -590,4 +590,16 @@ namespace EQLogParser
     }
     #endregion
   }
+
+  internal class ChannelDetails
+  {
+    public string Text { get; set; }
+    public string SelectedText { get; set; }
+    public bool IsChecked { get; set; }
+  }
+
+  internal class ChatLine : TimedAction
+  {
+    public string Line { get; set; }
+  }
 }

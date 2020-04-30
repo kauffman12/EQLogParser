@@ -188,20 +188,9 @@ namespace EQLogParser
       }, DispatcherPriority.DataBind);
     }
 
-    private void ClearClick(object sender, RoutedEventArgs e)
-    {
-      DataManager.Instance.Clear();
-    }
-
-    private void SelectAllClick(object sender, RoutedEventArgs e)
-    {
-      Helpers.DataGridSelectAll(sender as FrameworkElement);
-    }
-
-    private void UnselectAllClick(object sender, RoutedEventArgs e)
-    {
-      Helpers.DataGridUnselectAll(sender as FrameworkElement);
-    }
+    private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
+    private void SelectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.SelectAll(sender as FrameworkElement);
+    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.UnselectAll(sender as FrameworkElement);
 
     private void SetPetClick(object sender, RoutedEventArgs e)
     {

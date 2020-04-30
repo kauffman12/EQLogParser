@@ -1,0 +1,39 @@
+﻿<UserControl x:Class="EQLogParser.NpcStatsViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="300*"></RowDefinition>
+    </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+    </StackPanel>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button Margin="0,0,4,0" Height="24" Width="25" PreviewMouseLeftButtonUp="RefreshMouseClick">
+        <fa:ImageAwesome Height="14" Width="14" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Refresh" ToolTip="Refresh Results" Foreground="#5191c1"/>
+      </Button>
+    </StackPanel>
+    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="30" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Single">
+      <DataGrid.Columns>
+        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="True" Width="170"/>
+        <DataGridTextColumn Binding="{Binding LowestText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Chromatic Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding ColdText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Cold Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding CorruptionText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Corruption Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding DiseaseText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Disease Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding FireText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Fire Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding MagicText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Magic Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding PhysicalText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Physical Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding PoisonText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Poison Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding AverageText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Prismatic Resist %" IsReadOnly="True" CanUserReorder="True"/>
+        <DataGridTextColumn Binding="{Binding ReflectedText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Reflected %" IsReadOnly="True" CanUserReorder="True"/>
+      </DataGrid.Columns>
+    </datagrid:ThemedDataGrid>            
+    </Grid>
+</UserControl>

@@ -29,6 +29,9 @@ namespace EQLogParser
     private readonly object LockObject = new object();
     private bool Running = false;
 
+    private const string EMPTYICON = "#00ffffff";
+    private const string ACTIVEICON = "#5191c1";
+
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
     private ObservableCollection<SpellCountRow> SpellRowsView = new ObservableCollection<SpellCountRow>();
@@ -69,7 +72,7 @@ namespace EQLogParser
       spellTypes.SelectedIndex = 0;
     }
 
-    public void ShowSpells(List<PlayerStats> selectedStats, CombinedStats currentStats)
+    internal void ShowSpells(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
       var childStats = currentStats?.Children;
       var raidStats = currentStats?.RaidStats;
@@ -87,6 +90,11 @@ namespace EQLogParser
         Display();
       }
     }
+
+    private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e) => OptionsChanged(true);
+    private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged(true);
+    private void SelectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.SelectAll(sender as FrameworkElement);
+    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.UnselectAll(sender as FrameworkElement);
 
     private void Display()
     {
@@ -180,7 +188,7 @@ namespace EQLogParser
 
                 row.Spell = spell;
                 //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
-                row.IconColor = TableColors.ACTIVEICON;
+                row.IconColor = ACTIVEICON;
 
                 int i;
                 double[] values = new double[sortedPlayers.Count + 1];
@@ -299,26 +307,6 @@ namespace EQLogParser
       }
     }
 
-    private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      OptionsChanged(true);
-    }
-
-    private void CheckedOptionsChanged(object sender, RoutedEventArgs e)
-    {
-      OptionsChanged(true);
-    }
-
-    private void SelectAllClick(object sender, RoutedEventArgs e)
-    {
-      Helpers.DataGridSelectAll(sender as FrameworkElement);
-    }
-
-    private void UnselectAllClick(object sender, RoutedEventArgs e)
-    {
-      Helpers.DataGridUnselectAll(sender as FrameworkElement);
-    }
-
     private void SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       // adds a delay where a drag-select doesn't keep sending events
@@ -342,7 +330,7 @@ namespace EQLogParser
         {
           dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
           dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          SpellRowsView.ToList().ForEach(spr => spr.IconColor = TableColors.EMPTYICON);
+          SpellRowsView.ToList().ForEach(spr => spr.IconColor = EMPTYICON);
           dataGrid.Items.Refresh();
 
           Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => CreateImage()), TaskScheduler.Default);
@@ -379,24 +367,17 @@ namespace EQLogParser
         rtb.Render(dv);
         Clipboard.SetImage(rtb);
 
-        SpellRowsView.ToList().ForEach(spr => spr.IconColor = TableColors.ACTIVEICON);
+        SpellRowsView.ToList().ForEach(spr => spr.IconColor = ACTIVEICON);
         dataGrid.Items.Refresh();
       }
-      catch (ExternalException ex)
+#pragma warning disable CA1031 // Do not catch general exception types
+      catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
       {
-        LOG.Error("Could not Copy Image", ex);
-      }
-      catch (ThreadStateException ex)
-      {
-        LOG.Error("Could not Copy Image", ex);
-      }
-      catch (ArgumentNullException ex)
-      {
-        LOG.Error("Could not Copy Image", ex);
-      }
-      catch (NullReferenceException ex)
-      {
-        LOG.Error("Could not Copy Image", ex);
+        if (ex is ExternalException || ex is ThreadStateException || ex is ArgumentNullException || ex is NullReferenceException)
+        {
+          LOG.Error("Could not Copy Image", ex);
+        }
       }
       finally
       {

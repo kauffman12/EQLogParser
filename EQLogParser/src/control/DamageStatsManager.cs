@@ -602,7 +602,7 @@ namespace EQLogParser
         title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
-      return new StatsSummary() { Title = title, RankedPlayers = details };
+      return new StatsSummary { Title = title, RankedPlayers = details };
     }
   }
 }

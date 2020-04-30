@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -33,7 +34,7 @@ namespace EQLogParser
     private Dictionary<string, List<PlayerSubStats>> UnGroupedResisted = new Dictionary<string, List<PlayerSubStats>>();
     private Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
 
-    public DamageBreakdown(CombinedStats currentStats)
+    internal DamageBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
       titleLabel.Content = currentStats?.ShortTitle;
@@ -41,7 +42,7 @@ namespace EQLogParser
       ChildStats = currentStats.Children;
     }
 
-    public void Show(List<PlayerStats> selectedStats)
+    internal void Show(List<PlayerStats> selectedStats)
     {
       if (selectedStats != null)
       {
@@ -49,7 +50,7 @@ namespace EQLogParser
       }
     }
 
-    protected override void Display(List<PlayerStats> selectedStats = null)
+    override internal void Display(List<PlayerStats> selectedStats = null)
     {
       if (Running == false && ChildStats != null && RaidStats != null)
       {

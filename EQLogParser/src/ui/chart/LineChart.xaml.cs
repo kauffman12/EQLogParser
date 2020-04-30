@@ -255,13 +255,13 @@ namespace EQLogParser
       }
       else if (selected == null || selected.Count == 0)
       {
-        sortedValues = workingData.Values.Where(values => PassFilter(filter, values)).OrderByDescending(values => values.Last().Total).Take(5).ToList();
+        sortedValues = workingData.Values.ToList().Where(values => PassFilter(filter, values)).OrderByDescending(values => values.Last().Total).Take(5).ToList();
         label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + nonSelectedLabel : Labels.NODATA;
       }
       else
       {
         List<string> names = selected.Select(stats => stats.OrigName).ToList();
-        sortedValues = workingData.Values.Where(values =>
+        sortedValues = workingData.Values.ToList().Where(values =>
         {
           bool pass = false;
           var first = values.First();
@@ -624,5 +624,20 @@ namespace EQLogParser
 
       return smoothed;
     }
+  }
+  public class DataPoint
+  {
+    public long Avg { get; set; }
+    public string Name { get; set; }
+    public string PlayerName { get; set; }
+    public int ModifiersMask { get; set; }
+    public long Total { get; set; }
+    public long RollingTotal { get; set; }
+    public uint RollingHits { get; set; }
+    public uint RollingCritHits { get; set; }
+    public long VPS { get; set; }
+    public double CritRate { get; set; }
+    public double BeginTime { get; set; }
+    public double CurrentTime { get; set; }
   }
 }

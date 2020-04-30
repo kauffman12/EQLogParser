@@ -231,8 +231,6 @@ namespace EQLogParser
 
     protected virtual void Dispose(bool disposing)
     {
-      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "UPDATE");
-
       if (!disposedValue)
       {
         if (disposing)

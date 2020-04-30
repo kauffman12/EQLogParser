@@ -25,7 +25,7 @@ namespace EQLogParser
       foreach (var action in castsDuring.AsParallel().Where(cast => playerList.Contains((cast as SpellCast).Caster)))
       {
         SpellCast cast = action as SpellCast;
-        var spellData = DataManager.Instance.GetSpellByAbbrv(Helpers.AbbreviateSpellName(cast.Spell));
+        var spellData = DataManager.Instance.GetSpellByAbbrv(DataManager.Instance.AbbreviateSpellName(cast.Spell));
         if (spellData != null)
         {
           UpdateMaps(spellData, cast.Caster, result.PlayerCastCounts, result.MaxCastCounts, result.UniqueSpells);

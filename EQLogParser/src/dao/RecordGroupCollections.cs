@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  public class DamageGroupCollection : RecordGroupCollection
+  internal class DamageGroupCollection : RecordGroupCollection
   {
-    public DamageGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
+    internal DamageGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
     {
     }
 
@@ -35,9 +35,9 @@ namespace EQLogParser
     }
   }
 
-  public class HealGroupCollection : RecordGroupCollection
+  internal class HealGroupCollection : RecordGroupCollection
   {
-    public HealGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
+    internal HealGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
     {
     }
 
@@ -59,9 +59,9 @@ namespace EQLogParser
     }
   }
 
-  public class TankGroupCollection : RecordGroupCollection
+  internal class TankGroupCollection : RecordGroupCollection
   {
-    public TankGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
+    internal TankGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
     {
     }
 
@@ -83,7 +83,7 @@ namespace EQLogParser
     }
   }
 
-  public abstract class RecordGroupCollection : IEnumerable<DataPoint>
+  internal abstract class RecordGroupCollection : IEnumerable<DataPoint>
   {
     private static readonly RecordWrapper StopWrapper = new RecordWrapper();
     private readonly List<List<ActionBlock>> RecordGroups;
@@ -91,7 +91,7 @@ namespace EQLogParser
     private int CurrentBlock;
     private int CurrentRecord;
 
-    public RecordGroupCollection(List<List<ActionBlock>> recordGroups)
+    internal RecordGroupCollection(List<List<ActionBlock>> recordGroups)
     {
       RecordGroups = recordGroups;
       CurrentGroup = 0;
@@ -165,7 +165,7 @@ namespace EQLogParser
       return wrapper;
     }
 
-    protected class RecordWrapper : TimedAction
+    internal class RecordWrapper : TimedAction
     {
       internal IAction Record { get; set; }
     }
