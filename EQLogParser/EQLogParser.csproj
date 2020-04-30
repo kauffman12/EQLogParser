@@ -198,6 +198,14 @@
     <Compile Include="src\ui\common\SpellCastTable.xaml.cs">
       <DependentUpon>SpellCastTable.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\control\ComboBoxItemTemplateSelector.cs" />
+    <Compile Include="src\ui\control\CountCheckedTemplateSelector.cs" />
+    <Compile Include="src\ui\control\DateTimeConverter.cs" />
+    <Compile Include="src\ui\control\LootQuantityTemplateSelector.cs" />
+    <Compile Include="src\ui\control\ReceivedSpellColorConverter.cs" />
+    <Compile Include="src\ui\control\TextBoxBehavior.cs" />
+    <Compile Include="src\ui\control\TotalFormatConverter.cs" />
+    <Compile Include="src\ui\control\ZeroConverter.cs" />
     <Compile Include="src\ui\log\EventViewer.xaml.cs">
       <DependentUpon>EventViewer.xaml</DependentUpon>
     </Compile>
@@ -219,9 +227,14 @@
     <Compile Include="src\ui\control\ColorComboBox.xaml.cs">
       <DependentUpon>ColorComboBox.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\log\NpcStatsViewer.xaml.cs">
+      <DependentUpon>NpcStatsViewer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\summary\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\util\DataGridUtils.cs" />
+    <Compile Include="src\ui\util\OverlayUtil.cs" />
     <Compile Include="src\util\ConfigUtil.cs" />
     <Compile Include="src\util\TextFormatUtils.cs" />
     <Compile Include="src\util\DateUtil.cs" />
@@ -235,7 +248,7 @@
     <Compile Include="src\parsing\HealingLineParser.cs" />
     <Compile Include="src\parsing\LineModifiersParser.cs" />
     <Compile Include="src\parsing\ChatLineParser.cs" />
-    <Compile Include="src\control\BreakdownTable.cs" />
+    <Compile Include="src\ui\breakdown\BreakdownTable.cs" />
     <Compile Include="src\ui\summary\DamageSummary.xaml.cs">
       <DependentUpon>DamageSummary.xaml</DependentUpon>
     </Compile>
@@ -264,7 +277,6 @@
     <Compile Include="src\util\Helpers.cs" />
     <Compile Include="src\util\NativeMethods.cs" />
     <Compile Include="src\util\TimeRange.cs" />
-    <Compile Include="src\util\UserInterface.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -313,6 +325,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\control\ColorComboBox.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\log\NpcStatsViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

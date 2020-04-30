@@ -167,57 +167,6 @@ namespace EQLogParser
       return sb.ToString();
     }
 
-    internal static SpellData ParseCustomSpellData(string line)
-    {
-      SpellData spellData = null;
-
-      if (!string.IsNullOrEmpty(line))
-      {
-        string[] data = line.Split('^');
-        if (data.Length >= 11)
-        {
-          int duration = int.Parse(data[3], CultureInfo.CurrentCulture) * 6; // as seconds
-          int beneficial = int.Parse(data[4], CultureInfo.CurrentCulture);
-          byte target = byte.Parse(data[6], CultureInfo.CurrentCulture);
-          ushort classMask = ushort.Parse(data[7], CultureInfo.CurrentCulture);
-
-          // deal with too big or too small values
-          // all adps we care about is in the range of a few minutes
-          if (duration > ushort.MaxValue)
-          {
-            duration = ushort.MaxValue;
-          }
-          else if (duration < 0)
-          {
-            duration = 0;
-          }
-
-          spellData = new SpellData()
-          {
-            ID = string.Intern(data[0]),
-            Name = string.Intern(data[1]),
-            NameAbbrv = Helpers.AbbreviateSpellName(data[1]),
-            Level = ushort.Parse(data[2], CultureInfo.CurrentCulture),
-            Duration = (ushort)duration,
-            IsBeneficial = beneficial != 0,
-            Target = target,
-            MaxHits = ushort.Parse(data[5], CultureInfo.CurrentCulture),
-            ClassMask = classMask,
-            //Damaging = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1,
-            //CombatSkill = uint.Parse(data[9], CultureInfo.CurrentCulture),
-            SongWindow = data[10] == "1",
-            Adps = ushort.Parse(data[11], CultureInfo.CurrentCulture),
-            LandsOnYou = string.Intern(data[12]),
-            LandsOnOther = string.Intern(data[13]),
-            WearOff = string.Intern(data[14]),
-            IsProc = byte.Parse(data[15], CultureInfo.CurrentCulture) == 1
-          };
-        }
-      }
-
-      return spellData;
-    }
-
     internal static void ExportAsHTML(Dictionary<string, SummaryTable> tables)
     {
       try
@@ -305,5 +254,40 @@ namespace EQLogParser
         LOG.Error(ane);
       }
     }
+
+    internal static string CapitalizeNpc(string name)
+    {
+      var result = name;
+      if (!string.IsNullOrEmpty(name))
+      {
+        var split = name.Split(' ');
+        if (split[0] != "a" && split[0] != "an")
+        {
+          for (int i = 0; i < split.Length; i++)
+          {
+            if (split[i] != "a" && split[i] != "an" && split[i] != "the" && split[i] != "of" && split[i] != "for" && split[i] != "with")
+            {
+              split[i] = ToUpper(split[i]);
+            }
+          }
+
+          result = string.Join(" ", split);
+        }
+      }
+      return result;
+    }
+
+    internal static string FlipCase(string name)
+    {
+      string result = name;
+      if (!string.IsNullOrEmpty(name))
+      {
+        result = char.IsUpper(name[0]) ? ToLower(name) : ToUpper(name);
+      }
+      return result;
+    }
+
+    internal static string ToLower(string name) => char.ToLower(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
+    internal static string ToUpper(string name) => char.ToUpper(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
   }
 }

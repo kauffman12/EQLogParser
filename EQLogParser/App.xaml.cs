@@ -10,34 +10,15 @@ namespace EQLogParser
   {
     private void Maximize_Click(object sender, RoutedEventArgs e)
     {
-      if (MainWindow.WindowState == WindowState.Maximized)
-      {
-        MainWindow.WindowState = WindowState.Normal;
-      }
-      else
-      {
-        MainWindow.WindowState = WindowState.Maximized;
-      }
+      MainWindow.WindowState = MainWindow.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     }
 
-    private void Minimize_Click(object sender, RoutedEventArgs e)
-    {
-      MainWindow.WindowState = WindowState.Minimized;
-    }
+    private void Minimize_Click(object sender, RoutedEventArgs e) => MainWindow.WindowState = WindowState.Minimized;
 
-    private void Close_MouseClick(object sender, RoutedEventArgs e)
-    {
-      MainWindow.Close();
-    }
+    private void Close_MouseClick(object sender, RoutedEventArgs e) => MainWindow.Close();
 
-    private void CloseOverlay_MouseClick(object sender, RoutedEventArgs e)
-    {
-      (Current.MainWindow as MainWindow).ResetOverlay();
-    }
+    private void CloseOverlay_MouseClick(object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay(Dispatcher);
 
-    private void CloseDialog_MouseClick(object sender, RoutedEventArgs e)
-    {
-      Window.GetWindow(sender as Button).Close();
-    }
+    private void CloseDialog_MouseClick(object sender, RoutedEventArgs e) => Window.GetWindow(sender as Button).Close();
   }
 }

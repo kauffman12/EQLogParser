@@ -39,10 +39,12 @@ namespace EQLogParser
       " chest", " cache", " satchel", " treasure box"
     };
 
-    private static readonly Dictionary<string, byte> SpellTypesMap = new Dictionary<string, byte>
+    private static readonly Dictionary<string, SpellResist> SpellResistMap = new Dictionary<string, SpellResist>
     {
-      { "fire", 1 }, { "cold", 1 }, { "poison", 1 }, { "magic", 1 }, { "disease", 1 }, { "unresistable", 1 },
-      { "chromatic", 1 }, { "physical", 1 }, { "corruption", 1 }, { "prismatic", 1 },
+      { "fire", SpellResist.FIRE }, { "cold", SpellResist.COLD }, { "poison", SpellResist.POISON }, 
+      { "magic", SpellResist.MAGIC }, { "disease", SpellResist.DISEASE }, { "unresistable", SpellResist.UNRESISTABLE },
+      { "chromatic", SpellResist.LOWEST }, { "physical", SpellResist.PHYSICAL }, { "corruption", SpellResist.CORRUPTION }, 
+      { "prismatic", SpellResist.AVERAGE },
     };
 
     private static readonly Dictionary<string, string> SpecialCodes = new Dictionary<string, string>
@@ -130,31 +132,15 @@ namespace EQLogParser
         {
           HandleSlain(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
         }
-        else if (line.Length >= 40 && line.Length < 110 && (index = line.IndexOf(" resisted your ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
+      }
+#pragma warning disable CA1031 // Do not catch general exception types
+      catch (Exception e)
+#pragma warning restore CA1031 // Do not catch general exception types
+      {
+        if (e is ArgumentNullException || e is NullReferenceException || e is ArgumentOutOfRangeException || e is ArgumentException)
         {
-          var optionalIndex = index - LineParsing.ACTIONINDEX;
-
-          // [Mon Feb 11 20:00:28 2019] An inferno flare resisted your Frostreave Strike III!
-          string defender = actionPart.Substring(0, optionalIndex);
-          string spell = actionPart.Substring(optionalIndex + 15, actionPart.Length - optionalIndex - 15 - 1);
-          DataManager.Instance.AddResistRecord(new ResistRecord() { Spell = spell }, currentTime);
+          LOG.Error(e);
         }
-      }
-      catch (ArgumentNullException ne)
-      {
-        LOG.Error(ne);
-      }
-      catch (NullReferenceException nr)
-      {
-        LOG.Error(nr);
-      }
-      catch (ArgumentOutOfRangeException aor)
-      {
-        LOG.Error(aor);
-      }
-      catch (ArgumentException ae)
-      {
-        LOG.Error(ae);
       }
     }
 
@@ -315,6 +301,7 @@ namespace EQLogParser
       StringBuilder builder = new StringBuilder();
       var data = withoutMods.Split(' ');
 
+      SpellResist resist = SpellResist.UNDEFINED;
       for (int i = 0; i < data.Length; i++)
       {
         switch (data[i])
@@ -365,9 +352,10 @@ namespace EQLogParser
               parseType = ParseType.POINTSOF;
               pointsIndex = i;
 
-              int magicTypeIndex = ofIndex + 1;
-              if (magicTypeIndex < data.Length && SpellTypesMap.ContainsKey(data[magicTypeIndex]))
+              int resistIndex = ofIndex + 1;
+              if (resistIndex < data.Length && SpellResistMap.TryGetValue(data[resistIndex], out SpellResist value))
               {
+                resist = value;
                 nonMelee = true;
               }
             }
@@ -408,10 +396,10 @@ namespace EQLogParser
         record.ModifiersMask = LineModifiersParser.Parse(actionPart.Substring(modifiersIndex + 1, actionPart.Length - 1 - modifiersIndex - 1));
       }
 
-      return ValidateDamage(record);
+      return ValidateDamage(record, resist);
     }
 
-    private static DamageRecord ValidateDamage(DamageRecord record)
+    private static DamageRecord ValidateDamage(DamageRecord record, SpellResist resist = SpellResist.UNDEFINED)
     {
       if (record != null)
       {
@@ -430,9 +418,14 @@ namespace EQLogParser
           // Needed to replace 'You' and 'you', etc
           record.Attacker = PlayerManager.Instance.ReplacePlayer(record.Attacker, record.Defender);
           record.Defender = PlayerManager.Instance.ReplacePlayer(record.Defender, record.Attacker);
-          if (record.Attacker.Length == 0)
+          if (string.IsNullOrEmpty(record.Attacker))
           {
             record.Attacker = Labels.ENVDAMAGE;
+          }
+
+          if (resist != SpellResist.UNDEFINED && ConfigUtil.PlayerName == record.Attacker && record.Defender != record.Attacker)
+          {
+            DataManager.Instance.UpdateNpcSpellResistStats(record.Defender, resist);
           }
         }
       }
@@ -776,7 +769,7 @@ namespace EQLogParser
       {
         if (!string.IsNullOrEmpty(key))
         {
-          string spellName = Helpers.AbbreviateSpellName(name);
+          string spellName = DataManager.Instance.AbbreviateSpellName(name);
           SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
           result = (data != null && data.IsProc) ? Labels.PROC : type;
           SpellTypeCache[key] = result;

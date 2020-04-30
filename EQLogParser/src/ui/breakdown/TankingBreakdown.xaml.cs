@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 
 namespace EQLogParser
 {
@@ -14,18 +15,18 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    List<PlayerStats> PlayerStats;
+    private List<PlayerStats> PlayerStats;
     private PlayerStats RaidStats;
     private static bool Running = false;
 
-    public TankingBreakdown(CombinedStats currentStats)
+    internal TankingBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
       titleLabel.Content = currentStats?.ShortTitle;
       RaidStats = currentStats?.RaidStats;
     }
 
-    public void Show(List<PlayerStats> selectedStats)
+    internal void Show(List<PlayerStats> selectedStats)
     {
       if (selectedStats != null)
       {
@@ -34,7 +35,7 @@ namespace EQLogParser
       }
     }
 
-    protected override void Display(List<PlayerStats> _ = null)
+    override internal void Display(List<PlayerStats> _ = null)
     {
       if (Running == false && RaidStats != null)
       {

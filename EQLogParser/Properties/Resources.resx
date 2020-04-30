@@ -166,7 +166,7 @@
     <value>Necromancer</value>
   </data>
   <data name="NPC_SEARCH_TEXT" xml:space="preserve">
-    <value>NPC Search</value>
+    <value>FIght/NPC Search</value>
   </data>
   <data name="PAL" xml:space="preserve">
     <value>Paladin</value>

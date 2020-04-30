@@ -4,89 +4,31 @@ using System.Windows.Media;
 
 namespace EQLogParser
 {
-  public static class Labels
-  {
-    public const string ENVDAMAGE = "Environment Damage";
-    public const string DD = "Direct Damage";
-    public const string DOT = "DoT Tick";
-    public const string DS = "Damage Shield";
-    public const string BANE = "Bane Damage";
-    public const string PROC = "Proc";
-    public const string RESIST = "Resisted Spells";
-    public const string HOT = "HoT Tick";
-    public const string HEAL = "Direct Heal";
-    public const string MELEE = "Melee";
-    public const string SELFHEAL = "Melee Heal";
-    public const string NODATA = "No Data Available";
-    public const string PETPLAYEROPTION = "Players +Pets";
-    public const string PLAYEROPTION = "Players";
-    public const string PETOPTION = "Pets";
-    public const string RAIDOPTION = "Raid";
-    public const string RAIDTOTALS = "Totals";
-    public const string RIPOSTE = "Riposte";
-    public const string EVERYTHINGOPTION = "Uncategorized";
-    public const string UNASSIGNED = "Unk Pet Owner";
-    public const string UNKSPELL = "Unk Spell";
-    public const string UNKPLAYER = "Unk Player";
-    public const string RECEIVEDHEALPARSE = "Received Healing";
-    public const string HEALPARSE = "Healing";
-    public const string TANKPARSE = "Tanking";
-    public const string TOPHEALSPARSE = "Top Heals";
-    public const string DAMAGEPARSE = "Damage";
-    public const string MISS = "Miss";
-  }
-
-  public static class ChatChannels
-  {
-    public const string AUCTION = "Auction";
-    public const string SAY = "Say";
-    public const string GUILD = "Guild";
-    public const string FELLOWSHIP = "Fellowship";
-    public const string TELL = "Tell";
-    public const string SHOUT = "Shout";
-    public const string GROUP = "Group";
-    public const string RAID = "Raid";
-    public const string OOC = "OOC";
-  }
-
   public static class LineParsing
   {
     public const int ACTIONINDEX = 27;
   }
 
-  public static class TableColors
-  {
-    public const string EMPTYICON = "#00ffffff";
-    public const string ACTIVEICON = "#5191c1";
-  }
-
-  public interface ISummaryBuilder
+  internal interface ISummaryBuilder
   {
     StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial);
   }
 
   internal interface IAction { }
 
-  public class ColorItem
+  internal class ColorItem
   {
     public SolidColorBrush Brush { get; set; }
     public string Name { get; set; }
   }
 
-  public class AutoCompleteText
+  internal class AutoCompleteText
   {
     public string Text { get; set; }
     public List<string> Items { get; } = new List<string>();
   }
 
-  public class ChannelDetails
-  {
-    public string Text { get; set; }
-    public string SelectedText { get; set; }
-    public bool IsChecked { get; set; }
-  }
-
-  public class ChatType
+  internal class ChatType
   {
     public string Channel { get; set; }
     public string Sender { get; set; }
@@ -97,37 +39,37 @@ namespace EQLogParser
     public int KeywordStart { get; set; }
   }
 
-  public class ParseData
+  internal class ParseData
   {
     public CombinedStats CombinedStats { get; set; }
     public ISummaryBuilder Builder { get; set; }
     public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
   }
 
-  public class TimedAction : IAction
+  internal class TimedAction : IAction
   {
     public double BeginTime { get; set; }
   }
 
-  public class FullTimedAction : TimedAction
+  internal class FullTimedAction : TimedAction
   {
     public double LastTime { get; set; }
   }
 
-  public class PlayerStatsSelectionChangedEventArgs : EventArgs
+  internal class PlayerStatsSelectionChangedEventArgs : EventArgs
   {
     public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
     public CombinedStats CurrentStats { get; set; }
   }
 
-  public class DamageProcessedEvent
+  internal class DamageProcessedEvent
   {
     public DamageRecord Record { get; set; }
     public string OrigTimeString { get; set; }
     public double BeginTime { get; set; }
   }
 
-  public class DataPointEvent
+  internal class DataPointEvent
   {
     public string Action { get; set; }
     public RecordGroupCollection Iterator { get; set; }
@@ -135,7 +77,7 @@ namespace EQLogParser
     public Predicate<object> Filter { get; set; }
   }
 
-  public class GenerateStatsOptions
+  internal class GenerateStatsOptions
   {
     public string Name { get; set; }
     public List<Fight> Npcs { get; } = new List<Fight>();
@@ -143,7 +85,7 @@ namespace EQLogParser
     public bool RequestSummaryData { get; set; }
   }
 
-  public class StatsGenerationEvent
+  internal class StatsGenerationEvent
   {
     public string Type { get; set; }
     public string State { get; set; }
@@ -152,12 +94,7 @@ namespace EQLogParser
     public int UniqueGroupCount { get; set; }
   }
 
-  public class ChatLine : TimedAction
-  {
-    public string Line { get; set; }
-  }
-
-  public class ProcessLine
+  internal class ProcessLine
   {
     public string Line { get; set; }
     public double CurrentTime { get; set; }
@@ -166,12 +103,13 @@ namespace EQLogParser
     public int OptionalIndex { get; set; }
   }
 
-  public class ResistRecord : IAction
+  internal class ResistRecord : IAction
   {
     public string Spell { get; set; }
+    public string Defender { get; set; }
   }
 
-  public class HitRecord : IAction
+  internal class HitRecord : IAction
   {
     public uint Total { get; set; }
     public uint OverTotal { get; set; }
@@ -180,13 +118,13 @@ namespace EQLogParser
     public int ModifiersMask { get; set; }
   }
 
-  public class HealRecord : HitRecord
+  internal class HealRecord : HitRecord
   {
     public string Healer { get; set; }
     public string Healed { get; set; }
   }
 
-  public class DamageRecord : HitRecord
+  internal class DamageRecord : HitRecord
   {
     public string Attacker { get; set; }
     public string AttackerOwner { get; set; }
@@ -194,7 +132,7 @@ namespace EQLogParser
     public string DefenderOwner { get; set; }
   }
 
-  public class LootRecord : IAction
+  internal class LootRecord : IAction
   {
     public string Item { get; set; }
     public uint Quantity { get; set; }
@@ -203,24 +141,24 @@ namespace EQLogParser
     public bool IsCurrency { get; set; }
   }
 
-  public class DeathRecord : IAction
+  internal class DeathRecord : IAction
   {
     public string Killed { get; set; }
     public string Killer { get; set; }
   }
 
-  public class MezBreakRecord : IAction
+  internal class MezBreakRecord : IAction
   {
     public string Breaker { get; set; }
     public string Awakened { get; set; }
   }
 
-  public class ZoneRecord : IAction
+  internal class ZoneRecord : IAction
   {
     public string Zone { get; set; }
   }
 
-  public class LineData
+  internal class LineData
   {
     public string Line { get; set; }
     public string Action { get; set; }
@@ -238,6 +176,7 @@ namespace EQLogParser
     public bool IsPet { get; set; }
     public bool IsGroupingEnabled { get; set; }
     public string TimeSince { get; set; }
+    public string TooltipText { get; set; }
   }
 
   internal class EventRow
@@ -246,19 +185,21 @@ namespace EQLogParser
     public string Actor { get; set; }
     public string Target { get; set; }
     public string Event { get; set; }
+    public string TooltipText { get; set; }
   }
 
   internal class LootRow : LootRecord
   {
     public double Time { get; set; }
+    public string TooltipText { get; set; }
   }
 
-  public class ActionBlock : TimedAction
+  internal class ActionBlock : TimedAction
   {
-    internal List<IAction> Actions { get; } = new List<IAction>();
+    public List<IAction> Actions { get; } = new List<IAction>();
   }
 
-  public class Attempt
+  internal class Attempt
   {
     public uint Max { get; set; }
     public uint BaneHits { get; set; }
@@ -280,7 +221,7 @@ namespace EQLogParser
     public Dictionary<long, int> NonCritFreqValues { get; } = new Dictionary<long, int>();
   }
 
-  public class Fight : FullTimedAction
+  internal class Fight : FullTimedAction
   {
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
@@ -305,24 +246,24 @@ namespace EQLogParser
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
   }
 
-  public class PetMapping
+  internal class PetMapping
   {
     public string Owner { get; set; }
     public string Pet { get; set; }
   }
 
-  public class SortableName
+  internal class SortableName
   {
     public string Name { get; set; }
   }
 
-  public class SpecialSpell : TimedAction
+  internal class SpecialSpell : TimedAction
   {
     public string Code { get; set; }
     public string Player { get; set; }
   }
 
-  public class ReceivedSpell : IAction
+  internal class ReceivedSpell : IAction
   {
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
@@ -330,13 +271,13 @@ namespace EQLogParser
     public List<SpellData> Ambiguity { get; } = new List<SpellData>();
   }
 
-  public class SpellCast : ReceivedSpell
+  internal class SpellCast : ReceivedSpell
   {
     public string Spell { get; set; }
     public string Caster { get; set; }
   }
 
-  public class SpellData
+  internal class SpellData
   {
     public string ID { get; set; }
     public string Name { get; set; }
@@ -344,6 +285,7 @@ namespace EQLogParser
     public ushort Duration { get; set; }
     public ushort MaxHits { get; set; }
     public bool IsBeneficial { get; set; }
+    public SpellResist Resist { get; set; }
     public byte Target { get; set; }
     public ushort ClassMask { get; set; }
     public ushort Level { get; set; }
@@ -356,7 +298,7 @@ namespace EQLogParser
     public ushort Adps { get; set; }
   }
 
-  public class SpellCountData
+  internal class SpellCountData
   {
     public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
     public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
@@ -365,21 +307,22 @@ namespace EQLogParser
     public Dictionary<string, SpellData> UniqueSpells { get; } = new Dictionary<string, SpellData>();
   }
 
-  public class SpellCountRow
+  internal class SpellCountRow
   {
     public string Spell { get; set; }
     public List<double> Values { get; } = new List<double>();
     public bool IsReceived { get; set; }
     public string IconColor { get; set; }
+    public string TooltipText { get; set; }
   }
 
-  public class SpellCountsSerialized
+  internal class SpellCountsSerialized
   {
     public List<string> PlayerNames { get; } = new List<string>();
     public SpellCountData TheSpellData { get; set; }
   }
 
-  public class CombinedStats
+  internal class CombinedStats
   {
     public string TargetTitle { get; set; }
     public string TimeTitle { get; set; }
@@ -393,7 +336,7 @@ namespace EQLogParser
     public Dictionary<string, List<PlayerStats>> Children { get; } = new Dictionary<string, List<PlayerStats>>();
   }
 
-  public class OverlayDamageStats : CombinedStats
+  internal class OverlayDamageStats : CombinedStats
   {
     public double BeginTime { get; set; }
     public double LastTime { get; set; }
@@ -406,23 +349,7 @@ namespace EQLogParser
 #pragma warning restore CA2227 // Collection properties should be read only
   }
 
-  public class DataPoint
-  {
-    public long Avg { get; set; }
-    public string Name { get; set; }
-    public string PlayerName { get; set; }
-    public int ModifiersMask { get; set; }
-    public long Total { get; set; }
-    public long RollingTotal { get; set; }
-    public uint RollingHits { get; set; }
-    public uint RollingCritHits { get; set; }
-    public long VPS { get; set; }
-    public double CritRate { get; set; }
-    public double BeginTime { get; set; }
-    public double CurrentTime { get; set; }
-  }
-
-  public class HitFreqChartData
+  internal class HitFreqChartData
   {
     public string HitType { get; set; }
     public List<int> CritYValues { get; } = new List<int>();
@@ -431,13 +358,13 @@ namespace EQLogParser
     public List<long> NonCritXValues { get; } = new List<long>();
   }
 
-  public class StatsSummary
+  internal class StatsSummary
   {
     public string Title { get; set; }
     public string RankedPlayers { get; set; }
   }
 
-  public class PlayerSubStats : Attempt
+  internal class PlayerSubStats : Attempt
   {
     public ushort Rank { get; set; }
     public string Name { get; set; }
@@ -467,7 +394,7 @@ namespace EQLogParser
     public TimeRange Ranges { get; } = new TimeRange();
   }
 
-  public class PlayerStats : PlayerSubStats
+  internal class PlayerStats : PlayerSubStats
   {
     public Dictionary<string, PlayerSubStats> SubStats { get; } = new Dictionary<string, PlayerSubStats>();
     public Dictionary<string, PlayerSubStats> SubStats2 { get; } = new Dictionary<string, PlayerSubStats>();

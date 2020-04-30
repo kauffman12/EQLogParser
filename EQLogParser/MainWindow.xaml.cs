@@ -22,7 +22,7 @@ namespace EQLogParser
   public partial class MainWindow : Window, IDisposable
   {
     // binding property
-    public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
+    internal ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
 
     internal event EventHandler<bool> EventsLogLoadingComplete;
 
@@ -44,7 +44,6 @@ namespace EQLogParser
     // global settings
     internal static bool IsAoEHealingEnabled = true;
     internal static bool IsBaneDamageEnabled = false;
-    internal static bool IsDamageOverlayEnabled = false;
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
     internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
@@ -61,7 +60,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.7.12";
+    private const string VERSION = "v1.7.13";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -90,9 +89,9 @@ namespace EQLogParser
     private DocumentWindow TankingChartWindow = null;
     private DocumentWindow EventWindow = null;
     private DocumentWindow LootWindow = null;
+    private DocumentWindow NpcStatsWindow = null;
 
     private LogReader EQLogReader = null;
-    private OverlayWindow Overlay = null;
     private int BusyCount = 0;
 
     public MainWindow()
@@ -211,8 +210,7 @@ namespace EQLogParser
         enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Damage Overlay
-        IsDamageOverlayEnabled = ConfigUtil.IfSet("IsDamageOverlayEnabled");
-        enableDamageOverlayIcon.Visibility = IsDamageOverlayEnabled ? Visibility.Visible : Visibility.Hidden;
+        enableDamageOverlayIcon.Visibility = OverlayUtil.LoadSettings() ? Visibility.Visible : Visibility.Hidden;
 
         // AoE healing
         IsAoEHealingEnabled = ConfigUtil.IfSet("IncludeAoEHealing");
@@ -234,7 +232,6 @@ namespace EQLogParser
         ConfigUtil.IfSet("ShowHealingChartAtStartup", OpenHealingChart);
         // Show Healing Summary at startup
         ConfigUtil.IfSet("ShowDamageChartAtStartup", OpenDamageChart);
-
         LOG.Info("Initialized Components");
       }
       catch (Exception e)
@@ -248,41 +245,14 @@ namespace EQLogParser
       }
     }
 
+   internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
+
     internal void Busy(bool state)
     {
       BusyCount += state ? 1 : -1;
       BusyCount = BusyCount < 0 ? 0 : BusyCount;
       busyIcon.Visibility = BusyCount == 0 ? Visibility.Hidden : Visibility.Visible;
     }
-
-    internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
-
-    internal void OpenOverlay(bool configure = false, bool saveFirst = false)
-    {
-      if (saveFirst)
-      {
-        ConfigUtil.Save();
-      }
-
-      Dispatcher.InvokeAsync(() =>
-      {
-        Overlay?.Close();
-        Overlay = new OverlayWindow(configure);
-        Overlay.Show();
-      });
-    }
-
-    internal void ResetOverlay()
-    {
-      Overlay?.Close();
-
-      if (IsDamageOverlayEnabled)
-      {
-        OpenOverlay();
-      }
-    }
-
-    internal void CloseOverlay() => Overlay?.Close();
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -381,8 +351,6 @@ namespace EQLogParser
       Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingOptions));
     }
 
-    private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e) => playerParseTextWindow.State = DockingWindowState.AutoHide;
-
     private void MenuItemExportHTMLClick(object sender, RoutedEventArgs e)
     {
       var tables = new Dictionary<string, SummaryTable>();
@@ -444,18 +412,8 @@ namespace EQLogParser
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
     {
-      IsDamageOverlayEnabled = !IsDamageOverlayEnabled;
-      ConfigUtil.SetSetting("IsDamageOverlayEnabled", IsDamageOverlayEnabled.ToString(CultureInfo.CurrentCulture));
-      enableDamageOverlayIcon.Visibility = IsDamageOverlayEnabled ? Visibility.Visible : Visibility.Hidden;
-
-      if (IsDamageOverlayEnabled)
-      {
-        OpenOverlay(true, false);
-      }
-      else
-      {
-        CloseOverlay();
-      }
+      var enabled = OverlayUtil.ToggleOverlay(Dispatcher);
+      enableDamageOverlayIcon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleBaneDamageClick(object sender, RoutedEventArgs e)
@@ -497,15 +455,23 @@ namespace EQLogParser
       }
       else if (e.Source == chatMenuItem)
       {
-        OpenChat();
+        ChatWindow = Helpers.OpenWindow(dockSite, ChatWindow, typeof(ChatViewer), "chatWindow", "Chat Archive");
+        IconToWindow[chatIcon.Name] = ChatWindow;
       }
       else if (e.Source == eventMenuItem)
       {
-        OpenEventViewer();
+        EventWindow = Helpers.OpenWindow(dockSite, EventWindow, typeof(EventViewer), "eventWindow", "Event Log");
+        IconToWindow[eventIcon.Name] = EventWindow;
       }
       else if (e.Source == playerLootMenuItem)
       {
-        OpenLootList();
+        LootWindow = Helpers.OpenWindow(dockSite, LootWindow, typeof(LootViewer), "lootWindow", "Loot Log");
+        IconToWindow[playerLootIcon.Name] = LootWindow;
+      }
+      else if (e.Source == npcStatsMenuItem)
+      {
+        NpcStatsWindow = Helpers.OpenWindow(dockSite, NpcStatsWindow, typeof(NpcStatsViewer), "npcStatsWindow", "NPC Spell Stats");
+        IconToWindow[npcStatsIcon.Name] = NpcStatsWindow;
       }
       else
       {
@@ -680,55 +646,6 @@ namespace EQLogParser
       }
     }
 
-    private void OpenChat()
-    {
-      if (ChatWindow?.IsOpen == true)
-      {
-        ChatWindow.Close();
-      }
-      else
-      {
-#pragma warning disable CA2000 // Dispose objects before losing scope
-        ChatWindow = new DocumentWindow(dockSite, "chatWindow", "Chat Archive", null, new ChatViewer());
-#pragma warning restore CA2000 // Dispose objects before losing scope
-
-        IconToWindow[chatIcon.Name] = ChatWindow;
-        Helpers.OpenWindow(ChatWindow);
-      }
-    }
-
-    private void OpenEventViewer()
-    {
-      if (EventWindow?.IsOpen == true)
-      {
-        EventWindow.Close();
-      }
-      else
-      {
-#pragma warning disable CA2000 // Dispose objects before losing scope
-        EventWindow = new DocumentWindow(dockSite, "eventWindow", "Event Log", null, new EventViewer());
-#pragma warning restore CA2000 // Dispose objects before losing scope
-        IconToWindow[eventIcon.Name] = EventWindow;
-        Helpers.OpenWindow(EventWindow);
-      }
-    }
-
-    private void OpenLootList()
-    {
-      if (LootWindow?.IsOpen == true)
-      {
-        LootWindow.Close();
-      }
-      else
-      {
-#pragma warning disable CA2000 // Dispose objects before losing scope
-        LootWindow = new DocumentWindow(dockSite, "lootWindow", "Loot Log", null, new LootViewer());
-#pragma warning restore CA2000 // Dispose objects before losing scope
-        IconToWindow[playerLootIcon.Name] = LootWindow;
-        Helpers.OpenWindow(LootWindow);
-      }
-    }
-
     private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       var options = new GenerateStatsOptions() { RequestChartData = true };
@@ -810,20 +727,6 @@ namespace EQLogParser
         }
       }
     }
-
-    // Main Menu Op File
-    private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e)
-    {
-      CurrentLogOption = LogOption.MONITOR;
-      OpenLogFile();
-    }
-
-    private void MenuItemSelectArchiveChatClick(object sender, RoutedEventArgs e)
-    {
-      CurrentLogOption = LogOption.ARCHIVE;
-      OpenLogFile();
-    }
-
     private void MenuItemSelectLogFileClick(object sender, RoutedEventArgs e)
     {
       int lastMins = -1;
@@ -832,8 +735,7 @@ namespace EQLogParser
         lastMins = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
       }
 
-      CurrentLogOption = LogOption.OPEN;
-      OpenLogFile(lastMins);
+      OpenLogFile(LogOption.OPEN, lastMins);
     }
 
     private void UpdateLoadingProgress()
@@ -843,7 +745,7 @@ namespace EQLogParser
         if (EQLogReader != null)
         {
           Busy(true);
-          CloseOverlay();
+          OverlayUtil.CloseOverlay();
 
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
@@ -868,14 +770,8 @@ namespace EQLogParser
             && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) ||
             CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
           {
-            if (IsDamageOverlayEnabled)
-            {
-              OpenOverlay();
-            }
-
-            Helpers.SpellAbbrvCache.Clear(); // only really needed during big parse
+            OverlayUtil.OpenIfEnabled(Dispatcher);
             LOG.Info("Finished Loading Log File in " + seconds + " seconds.");
-
             EventsLogLoadingComplete?.Invoke(this, true);
           }
           else
@@ -890,18 +786,17 @@ namespace EQLogParser
 
     private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is ComboBox comboBox)
+      if (sender is ComboBox comboBox && comboBox.DataContext is PetMapping mapping && comboBox.SelectedItem is SortableName selected && selected.Name != mapping.Owner)
       {
-        if (comboBox.DataContext is PetMapping mapping && comboBox.SelectedItem is SortableName selected && selected.Name != mapping.Owner)
-        {
-          PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selected.Name);
-          petMappingGrid.CommitEdit();
-        }
+        PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selected.Name);
+        petMappingGrid.CommitEdit();
       }
     }
 
-    private void OpenLogFile(int lastMins = -1)
+    private void OpenLogFile(LogOption option, int lastMins = -1)
     {
+      CurrentLogOption = option;
+
       try
       {
         // WPF doesn't have its own file chooser so use Win32 Version
@@ -976,17 +871,12 @@ namespace EQLogParser
           UpdateLoadingProgress();
         }
       }
-      catch (InvalidCastException)
+      catch (Exception e)
       {
-        // ignore
-      }
-      catch (ArgumentException)
-      {
-        // ignore
-      }
-      catch (FormatException)
-      {
-        // ignore
+        if (!(e is InvalidCastException || e is ArgumentException || e is FormatException))
+        {
+          throw;
+        }
       }
     }
 
@@ -1055,9 +945,6 @@ namespace EQLogParser
       }
     }
 
-    // This is where closing summary tables and line charts will get disposed
-    private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e) => (e.Window.Content as IDisposable)?.Dispose();
-
     private void TrayIcon_MouseUp(object sender, RoutedEventArgs e)
     {
       if (Visibility == Visibility.Hidden)
@@ -1086,8 +973,6 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClose(object sender, EventArgs e) => Close();
-
     private void WindowClosed(object sender, EventArgs e)
     {
       ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
@@ -1098,13 +983,21 @@ namespace EQLogParser
       ConfigUtil.SetSetting("ShowTankingChartAtStartup", (TankingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
 
       StopProcessing();
-      CloseOverlay();
+      OverlayUtil.CloseOverlay();
       taskBarIcon?.Dispose();
       PlayerChatManager?.Dispose();
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
       Application.Current.Shutdown();
     }
+
+    // This is where closing summary tables and line charts will get disposed
+    private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e) => (e.Window.Content as IDisposable)?.Dispose();
+    private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e) => playerParseTextWindow.State = DockingWindowState.AutoHide;
+    private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
+    private void MenuItemSelectArchiveChatClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.ARCHIVE);
+    private void WindowClose(object sender, EventArgs e) => Close();
+
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls

@@ -183,7 +183,7 @@ namespace EQLogParser
       if (!configure)
       {
         var settingsButton = CreateButton("Change Settings", "\xE713", currentFontSize - 1);
-        settingsButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.OpenOverlay(true, false);
+        settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(Dispatcher, true, false);
         settingsButton.Margin = new Thickness(4, 0, 0, 0);
 
         var copyButton = CreateButton("Copy Parse", "\xE8C8", currentFontSize - 1);
@@ -196,7 +196,7 @@ namespace EQLogParser
         };
 
         var refreshButton = CreateButton("Cancel Current Parse", "\xE8BB", currentFontSize - 1);
-        refreshButton.Click += (object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.ResetOverlay();
+        refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay(Dispatcher);
 
         ButtonPopup = new Popup();
         ButtonsPanel = CreateNameStackPanel();
@@ -653,10 +653,9 @@ namespace EQLogParser
       }
     }
 
-    private void PanelSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-      Resize(e.NewSize.Height, e.NewSize.Width);
-    }
+    private void PanelSizeChanged(object sender, SizeChangedEventArgs e) => Resize(e.NewSize.Height, e.NewSize.Width);
+    private void ShowNamesSelectionChanged(object sender, SelectionChangedEventArgs e) => IsHideOverlayOtherPlayersEnabled = showNameSelection.SelectedIndex == 1;
+    private void ShowCritRateSelectionChanged(object sender, SelectionChangedEventArgs e) => IsShowOverlayCritRateEnabled = showCritRateSelection.SelectedIndex == 1;
 
     private void FontSizeSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -665,17 +664,7 @@ namespace EQLogParser
         SetFont(size);
       }
     }
-
-    private void ShowNamesSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      IsHideOverlayOtherPlayersEnabled = showNameSelection.SelectedIndex == 1;
-    }
-
-    private void ShowCritRateSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      IsShowOverlayCritRateEnabled = showCritRateSelection.SelectedIndex == 1;
-    }
-    
+   
     private void SaveClick(object sender, RoutedEventArgs e)
     {
       if (!double.IsNaN(overlayCanvas.ActualHeight) && overlayCanvas.ActualHeight > 0)
@@ -712,7 +701,7 @@ namespace EQLogParser
         });
       }
 
-      (Application.Current.MainWindow as MainWindow)?.OpenOverlay(false, true);
+      OverlayUtil.OpenOverlay(Dispatcher, false, true);
     }
 
     private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)

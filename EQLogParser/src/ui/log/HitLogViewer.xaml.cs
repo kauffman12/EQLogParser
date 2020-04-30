@@ -33,7 +33,7 @@ namespace EQLogParser
     private bool CurrentShowPetsFilter = true;
     private bool CurrentGroupSpellCastsFilter = true;
 
-    public HitLogViewer(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups, bool defending = false)
+    internal HitLogViewer(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups, bool defending = false)
     {
       InitializeComponent();
 

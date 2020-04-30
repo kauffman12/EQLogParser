@@ -174,7 +174,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void AddTimeEntry(ConcurrentDictionary<string, TimeRange> ranges, KeyValuePair<string, TimeSegment> entry)
+    private static void AddTimeEntry(ConcurrentDictionary<string, TimeRange> ranges, KeyValuePair<string, TimeSegment> entry)
     {
       if (ranges.TryGetValue(entry.Key, out TimeRange range))
       {
@@ -182,7 +182,8 @@ namespace EQLogParser
       }
       else
       {
-        ranges[entry.Key] = new TimeRange(entry.Value);
+        // make sure to copy the time segment and not just use the one in the Fight
+        ranges[entry.Key] = new TimeRange(new TimeSegment(entry.Value.BeginTime, entry.Value.EndTime));
       }
     }
 
