@@ -143,6 +143,21 @@
           </MenuItem>
         </MenuItem>
         <Separator />
+        <MenuItem x:Name="npcView" Header="_NPCs" Height="20">
+          <MenuItem.Icon>
+            <fa:ImageAwesome x:Name="npcViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Desktop" Foreground="#FF4F9FE2" />
+          </MenuItem.Icon>
+          <MenuItem x:Name="npcWindowMenuitem" Header="Fight List" Click="MenuItemWindowClick" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="npcIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="npcStatsMenuItem" Header="Spell Stats" Click="MenuItemWindowClick" Height="20">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="npcStatsIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </MenuItem>        
         <MenuItem x:Name="petsView" Header="_Pets" Height="20">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="petsViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Paw" Foreground="#FF4F9FE2" />
@@ -188,18 +203,10 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="eventIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-          </MenuItem>          
+          </MenuItem>
           <MenuItem x:Name="playerLootMenuItem" Header="_Loot Log" Click="MenuItemWindowClick" Height="20">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerLootIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
-        </MenuItem>
-        <Separator />
-        <MenuItem x:Name="othersView" Header="_Other" Height="20">
-          <MenuItem x:Name="npcWindowMenuitem" Header="_NPCs" Click="MenuItemWindowClick" Height="20">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="npcIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
@@ -238,7 +245,7 @@
     <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown" WindowUnregistered="DockSite_WindowUnreg">
       <docking:SplitContainer Orientation="Horizontal">
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="npcWindow" Title="NPCs" ContainerAutoHideSize="320, 400" ContainerDockedSize="320,400">
+          <docking:ToolWindow x:Name="npcWindow" Title="Fight List" ContainerAutoHideSize="320, 400" ContainerDockedSize="320,400">
             <local:FightTable />
           </docking:ToolWindow>
         </docking:ToolWindowContainer>

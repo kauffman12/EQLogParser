@@ -206,24 +206,29 @@ namespace EQLogParser
           }
         }
       }
-      catch (ArgumentNullException ne)
+#pragma warning disable CA1031 // Do not catch general exception types
+      catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
       {
-        LOG.Error(ne);
-      }
-      catch (NullReferenceException nr)
-      {
-        LOG.Error(nr);
-      }
-      catch (ArgumentOutOfRangeException aor)
-      {
-        LOG.Error(aor);
-      }
-      catch (ArgumentException ae)
-      {
-        LOG.Error(ae);
+        if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException)
+        {
+          LOG.Error(ex);
+        }
       }
 
       return chatType;
     }
+  }
+  public static class ChatChannels
+  {
+    public const string AUCTION = "Auction";
+    public const string SAY = "Say";
+    public const string GUILD = "Guild";
+    public const string FELLOWSHIP = "Fellowship";
+    public const string TELL = "Tell";
+    public const string SHOUT = "Shout";
+    public const string GROUP = "Group";
+    public const string RAID = "Raid";
+    public const string OOC = "OOC";
   }
 }

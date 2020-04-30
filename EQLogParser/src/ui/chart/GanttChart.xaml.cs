@@ -43,7 +43,7 @@ namespace EQLogParser
     private bool CurrentShowCasterAdps = true;
     private bool CurrentShowMeleeAdps = true;
 
-    public GanttChart(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups)
+    internal GanttChart(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups)
     {
       InitializeComponent();
 

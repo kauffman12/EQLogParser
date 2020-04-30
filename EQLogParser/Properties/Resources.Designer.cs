@@ -205,7 +205,7 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to NPC Search.
+        ///   Looks up a localized string similar to FIght/NPC Search.
         /// </summary>
         internal static string NPC_SEARCH_TEXT {
             get {

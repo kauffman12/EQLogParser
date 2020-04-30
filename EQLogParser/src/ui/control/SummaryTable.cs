@@ -36,6 +36,22 @@ namespace EQLogParser
       }
     }
 
+    internal virtual bool IsPetsCombined() => false;
+    internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
+    internal string GetTitle() => TheTitle.Content as string;
+    internal List<PlayerStats> GetSelectedStats() => TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.SelectAll(sender as FrameworkElement);
+    internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.UnselectAll(sender as FrameworkElement);
+    internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetSelectedStats());
+    internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e) => ShowBreakdown2(GetSelectedStats());
+    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown2(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowSpellCountsClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetSelectedStats());
+    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetSelectedStats());
+    internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
+
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
     {
       MenuItem selected = new MenuItem() { IsEnabled = false, Header = "Selected" };
@@ -63,11 +79,6 @@ namespace EQLogParser
         MenuItem menuItem = item as MenuItem;
         menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses != null && uniqueClasses.ContainsKey(menuItem.Header as string);
       }
-    }
-
-    internal Predicate<object> GetFilter()
-    {
-      return (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
     }
 
     internal List<string[]> GetHeaders()
@@ -105,80 +116,6 @@ namespace EQLogParser
       }
 
       return results;
-    }
-
-    internal virtual bool IsPetsCombined()
-    {
-      return false;
-    }
-
-    internal string GetTargetTitle()
-    {
-      return CurrentStats?.TargetTitle ?? GetTitle();
-    }
-
-    internal string GetTitle()
-    {
-      return TheTitle.Content as string;
-    }
-
-    internal List<PlayerStats> GetSelectedStats()
-    {
-      return TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-    }
-
-    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e)
-    {
-      Helpers.DataGridSelectAll(sender as FrameworkElement);
-    }
-
-    internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e)
-    {
-      Helpers.DataGridUnselectAll(sender as FrameworkElement);
-    }
-
-    internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e)
-    {
-      ShowBreakdown(GetSelectedStats());
-    }
-
-    internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e)
-    {
-      ShowBreakdown2(GetSelectedStats());
-    }
-
-    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e)
-    {
-      MenuItem menuItem = (sender as MenuItem);
-      ShowBreakdown(GetPlayerStatsByClass(menuItem?.Header as string));
-    }
-
-    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e)
-    {
-      MenuItem menuItem = sender as MenuItem;
-      ShowBreakdown2(GetPlayerStatsByClass(menuItem?.Header as string));
-    }
-
-    internal void DataGridShowSpellCountsClick(object sender, RoutedEventArgs e)
-    {
-      ShowSpellCounts(GetSelectedStats());
-    }
-
-    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e)
-    {
-      MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCounts(GetPlayerStatsByClass(menuItem?.Header as string));
-    }
-
-    internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e)
-    {
-      ShowSpellCasts(GetSelectedStats());
-    }
-
-    internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e)
-    {
-      MenuItem menuItem = (sender as MenuItem);
-      ShowSpellCasts(GetPlayerStatsByClass(menuItem?.Header as string));
     }
 
     internal List<PlayerStats> GetPlayerStatsByClass(string className)

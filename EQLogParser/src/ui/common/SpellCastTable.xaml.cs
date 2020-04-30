@@ -27,7 +27,7 @@ namespace EQLogParser
     private int CurrentSpellType = 0;
     private bool CurrentShowSelfOnly = false;
 
-    public SpellCastTable(string title, List<PlayerStats> selectedStats, CombinedStats currentStats)
+    internal SpellCastTable(string title, List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
       InitializeComponent();
       titleLabel.Content = title;
