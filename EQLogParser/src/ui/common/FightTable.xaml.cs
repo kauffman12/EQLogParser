@@ -127,7 +127,6 @@ namespace EQLogParser
     }
 
     internal IEnumerable<Fight> GetSelectedItems() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.GroupId > -1);
-
     internal bool HasSelected() => fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => item.GroupId > -1) != null;
 
     private void RightClickClosed(object sender, RoutedEventArgs e)
@@ -429,20 +428,9 @@ namespace EQLogParser
       CurrentSearchRow = null;
     }
 
-    private void Instance_EventsRemovedFight(object sender, string name)
-    {
-      RemoveFight(name);
-    }
-
-    private void Instance_EventsNewFight(object sender, Fight fight)
-    {
-      AddFight(fight);
-    }
-
-    private void Instance_EventsRefreshFight(object sender, Fight fight)
-    {
-      NeedRefresh = true;
-    }
+    private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
+    private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
+    private void Instance_EventsRefreshFight(object sender, Fight fight) => NeedRefresh = true;
 
     private void TableUnloaded(object sender, RoutedEventArgs e)
     {
