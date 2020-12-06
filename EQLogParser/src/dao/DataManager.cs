@@ -102,6 +102,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
+    private readonly ConcurrentDictionary<string, string> RanksCache = new ConcurrentDictionary<string, string>();
 
     private int LastSpellIndex = -1;
 
@@ -109,6 +110,13 @@ namespace EQLogParser
     {
       DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
       var spellList = new List<SpellData>();
+
+      // build ranks cache
+      Enumerable.Range(1, 9).ToList().ForEach(r => RanksCache[r.ToString(CultureInfo.CurrentCulture)] = "");
+      Enumerable.Range(1, 200).ToList().ForEach(r => RanksCache[TextFormatUtils.IntToRoman(r)] = "");
+      RanksCache["Third"] = "Root";
+      RanksCache["Fifth"] = "Root";
+      RanksCache["Octave"] = "Root";
 
       ConfigUtil.ReadList(@"data\spells.txt").ForEach(line =>
       {
@@ -279,36 +287,15 @@ namespace EQLogParser
         }
         else if ((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
         {
-          bool isARank = true;
-          for (int i = index + 1; i < spell.Length && isARank; i++)
-          {
-            switch (spell[i])
-            {
-              case 'I':
-              case 'V':
-              case 'X':
-              case 'L':
-              case 'C':
-              case '0':
-              case '1':
-              case '2':
-              case '3':
-              case '4':
-              case '5':
-              case '6':
-              case '7':
-              case '8':
-              case '9':
-                break;
-              default:
-                isARank = false;
-                break;
-            }
-          }
+          string lastWord = spell.Substring(index + 1);
 
-          if (isARank)
+          if (RanksCache.TryGetValue(lastWord, out string root))
           {
             result = spell.Substring(0, index);
+            if (!string.IsNullOrEmpty(root))
+            {
+              result += " " + root;
+            }
           }
         }
 

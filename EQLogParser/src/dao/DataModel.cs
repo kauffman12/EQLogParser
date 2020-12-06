@@ -252,7 +252,8 @@ namespace EQLogParser
     public string Pet { get; set; }
   }
 
-  internal class SortableName
+  // keep public since reference from a property
+  public class SortableName
   {
     public string Name { get; set; }
   }
