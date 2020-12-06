@@ -26,6 +26,11 @@ namespace EQLogParser
 
     private const string BB_GAMPARSE_SPELL_COUNT = "   --- {0} - {1}";
 
+    private static Dictionary<int, string> ROMAN = new Dictionary<int, string>()
+    {
+      { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
+    };
+
     // Tab delimited CSV for copy/paste to excel
     internal static string BuildSpellCountCsv(List<string> header, List<List<string>> data, string title = null)
     {
@@ -285,6 +290,22 @@ namespace EQLogParser
         result = char.IsUpper(name[0]) ? ToLower(name) : ToUpper(name);
       }
       return result;
+    }
+
+    internal static string IntToRoman(int value)
+    {
+      var roman = new StringBuilder();
+
+      foreach (var item in ROMAN)
+      {
+        while (value >= item.Key)
+        {
+          roman.Append(item.Value);
+          value -= item.Key;
+        }
+      }
+
+      return roman.ToString();
     }
 
     internal static string ToLower(string name) => char.ToLower(name[0], CultureInfo.CurrentCulture) + name.Substring(1);
