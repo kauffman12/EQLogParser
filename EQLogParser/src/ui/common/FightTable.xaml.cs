@@ -41,6 +41,7 @@ namespace EQLogParser
     private ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
     private bool CurrentShowBreaks;
 
+    private DispatcherTimer RefreshTimer;
     private DispatcherTimer SelectionTimer;
     private DispatcherTimer SearchTextTimer;
     private DispatcherTimer UpdateTimer;
@@ -88,6 +89,14 @@ namespace EQLogParser
         SearchTextTimer.Stop();
       };
 
+      RefreshTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 5000) };
+      RefreshTimer.Tick += (sender, e) =>
+      {
+        (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+        NeedRefresh = false;
+        RefreshTimer.Stop();
+      };
+
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       UpdateTimer.Tick += (sender, e) =>
       {
@@ -110,10 +119,9 @@ namespace EQLogParser
           NeedScroll = false;
         }
 
-        if (currentNeedRefresh)
+        if (currentNeedRefresh && !Keyboard.IsKeyDown(Key.LeftShift) && !RefreshTimer.IsEnabled)
         {
-          (fightDataGrid.ItemsSource as ICollectionView).Refresh();
-          NeedRefresh = false;
+          RefreshTimer.Start();
         }
       };
 
@@ -240,6 +248,8 @@ namespace EQLogParser
 
     private void SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      RefreshTimer.Stop();
+
       // adds a delay where a drag-select doesn't keep sending events
       SelectionTimer.Stop();
       SelectionTimer.Start();
