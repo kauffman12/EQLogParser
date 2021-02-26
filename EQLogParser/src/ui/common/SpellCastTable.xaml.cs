@@ -75,12 +75,26 @@ namespace EQLogParser
             });
 
             var allSpells = new HashSet<ActionBlock>();
+            double maxTime = -1;
             RaidStats.Ranges.TimeSegments.ForEach(segment =>
             {
+              maxTime = maxTime == -1 ? segment.BeginTime + RaidStats.TotalSeconds : maxTime;
               var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - SpellCountBuilder.COUNT_OFFSET, segment.EndTime);
-              blocks.ForEach(block => allSpells.Add(block));
+              blocks.ForEach(block =>
+              {
+                if (block.BeginTime <= maxTime)
+                {
+                  allSpells.Add(block);
+                }
+              });
               blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - SpellCountBuilder.COUNT_OFFSET, segment.EndTime);
-              blocks.ForEach(block => allSpells.Add(block));
+              blocks.ForEach(block =>
+              {
+                if (block.BeginTime <= maxTime)
+                {
+                  allSpells.Add(block);
+                }
+              });
 
             });
 

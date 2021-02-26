@@ -120,6 +120,8 @@
     <Reference Include="PresentationFramework">
       <Private>False</Private>
     </Reference>
+    <Reference Include="ReachFramework" />
+    <Reference Include="Syncfusion.Shared.WPF, Version=18.2460.0.44, Culture=neutral, PublicKeyToken=3d67ed1f87d44c89, processorArchitecture=MSIL" />
     <Reference Include="System">
       <Private>False</Private>
     </Reference>
@@ -137,6 +139,7 @@
     <Reference Include="System.Numerics">
       <Private>False</Private>
     </Reference>
+    <Reference Include="System.Printing" />
     <Reference Include="System.Web">
       <Private>False</Private>
     </Reference>
@@ -453,6 +456,9 @@
     <Folder Include="resources\" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Dirkster.NumericUpDownLib">
+      <Version>2.4.2.2</Version>
+    </PackageReference>
     <PackageReference Include="DotLiquid">
       <Version>2.0.325</Version>
     </PackageReference>

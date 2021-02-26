@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -25,6 +26,7 @@ namespace EQLogParser
     private string CurrentClass = null;
     private int CurrentGroupCount = 0;
     private int CurrentPetOrPlayerOption = 0;
+    private DispatcherTimer SelectionTimer;
 
     public DamageSummary()
     {
@@ -51,8 +53,15 @@ namespace EQLogParser
 
       DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
-    }
 
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1200) };
+      SelectionTimer.Tick += (sender, e) =>
+      {
+        var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true, MaxSeconds = timeChooser.Value };
+        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
+        SelectionTimer.Stop();
+      };
+    }
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
@@ -72,9 +81,12 @@ namespace EQLogParser
             title.Content = "Calculating DPS...";
             dataGrid.ItemsSource = null;
             ChildGrids.Clear();
+            timeChooser.Value = 0;
+            timeChooser.MaxValue = 0;
+            timeChooser.IsEnabled = false;
             break;
           case "COMPLETED":
-            CurrentStats = e.CombinedStats as CombinedStats;
+            CurrentStats = e.CombinedStats;
             CurrentGroups = e.Groups;
             CurrentGroupCount = e.UniqueGroupCount;
 
@@ -86,6 +98,9 @@ namespace EQLogParser
             {
               title.Content = CurrentStats.FullTitle;
               UpdateView();
+              timeChooser.IsEnabled = true;
+              timeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds);
+              timeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
             }
 
             if (!MainWindow.IsBaneDamageEnabled)
@@ -360,12 +375,21 @@ namespace EQLogParser
       UpdateView();
     }
 
+    private void MaxTimeChanged(object sender, RoutedPropertyChangedEventArgs<long> e)
+    {
+      if (timeChooser.IsEnabled && e.OldValue != 0 && e.NewValue != 0)
+      {
+        SelectionTimer.Stop();
+        SelectionTimer.Start();
+      }
+    }
+
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "UPDATE");
+      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { MaxSeconds = long.MinValue, RequestChartData = true }, "UPDATE");
 
       if (!disposedValue)
       {

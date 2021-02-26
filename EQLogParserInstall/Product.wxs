@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.7.14" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.7.15" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x86" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -116,6 +116,9 @@
       <Component Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser_TargetDir)DotLiquid.dll" />
       </Component>
+      <Component Id="NumericUpDownLib.dll" Guid="831B4CF2-8B97-4C4A-A865-71A0DA79C9CA">
+        <File Id="NumericUpDownLib.dll" Name="NumericUpDownLib.dll" Source="$(var.EQLogParser_TargetDir)NumericUpDownLib.dll" />
+      </Component>      
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">

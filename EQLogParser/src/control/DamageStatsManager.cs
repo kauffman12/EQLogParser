@@ -16,12 +16,13 @@ namespace EQLogParser
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
     private readonly Dictionary<int, byte> DamageGroupIds = new Dictionary<int, byte>();
-    private readonly List<List<ActionBlock>> DamageGroups = new List<List<ActionBlock>>();
     private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new ConcurrentDictionary<string, TimeRange>();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> PlayerPets = new ConcurrentDictionary<string, ConcurrentDictionary<string, byte>>();
     private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
     private readonly List<IAction> Resists = new List<IAction>();
+    private List<List<ActionBlock>> AllDamageGroups;
+    private List<List<ActionBlock>> DamageGroups = new List<List<ActionBlock>>();
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;
@@ -30,7 +31,7 @@ namespace EQLogParser
     {
       DataManager.Instance.EventsClearedActiveData += (object sender, bool e) => 
       {
-        lock (DamageGroups)
+        lock (DamageGroupIds)
         {
           Reset();
         }
@@ -39,7 +40,7 @@ namespace EQLogParser
 
     internal int GetGroupCount()
     {
-      lock (DamageGroups)
+      lock (DamageGroupIds)
       {
         return DamageGroups.Count;
       }
@@ -59,7 +60,7 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock (DamageGroups)
+      lock (DamageGroupIds)
       {
         try
         {
@@ -88,6 +89,7 @@ namespace EQLogParser
           if (damageBlocks.Count > 0)
           {
             RaidTotals.TotalSeconds = RaidTotals.Ranges.GetTotal();
+            RaidTotals.MaxTime = RaidTotals.TotalSeconds;
 
             int rangeIndex = 0;
             var newBlock = new List<ActionBlock>();
@@ -112,7 +114,7 @@ namespace EQLogParser
             });
 
             DamageGroups.Add(newBlock);
-            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block => Resists.AddRange(block.Actions))); 
+            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block => Resists.AddRange(block.Actions)));
             ComputeDamageStats(options);
           }
           else if (Selected == null || Selected.Count == 0)
@@ -312,7 +314,7 @@ namespace EQLogParser
 
     private void ComputeDamageStats(GenerateStatsOptions options)
     {
-      lock (DamageGroups)
+      lock (DamageGroupIds)
       {
         if (RaidTotals != null)
         {
@@ -324,6 +326,7 @@ namespace EQLogParser
 
           // always start over
           RaidTotals.Total = 0;
+          double stopTime = -1;
 
           try
           {
@@ -331,6 +334,31 @@ namespace EQLogParser
 
             if (options.RequestSummaryData)
             {
+              if (options.MaxSeconds > -1 && options.MaxSeconds <= RaidTotals.MaxTime && options.MaxSeconds != RaidTotals.TotalSeconds)
+              {
+                var filteredGroups = new List<List<ActionBlock>>();
+                DamageGroups.ForEach(group =>
+                {
+                  var filteredBlocks = new List<ActionBlock>();
+                  filteredGroups.Add(filteredBlocks);
+                  group.ForEach(block =>
+                  {
+                    stopTime = stopTime == -1 ? block.BeginTime + options.MaxSeconds : stopTime;
+                    if (block.BeginTime <= stopTime)
+                    {
+                      filteredBlocks.Add(block);
+                    }
+                  });
+                });
+
+                DamageGroups = filteredGroups;
+                RaidTotals.TotalSeconds = options.MaxSeconds;
+              }
+              else
+              {
+                DamageGroups = AllDamageGroups;
+              }
+
               DamageGroups.ForEach(group =>
               {
                 group.ForEach(block =>
@@ -410,7 +438,7 @@ namespace EQLogParser
                   {
                     if (PlayerTimeRanges.TryGetValue(child.Name, out TimeRange range))
                     {
-                      StatsUtil.UpdateAllStatsTimeRanges(child, PlayerTimeRanges, PlayerSubTimeRanges);
+                      StatsUtil.UpdateAllStatsTimeRanges(child, PlayerTimeRanges, PlayerSubTimeRanges, stopTime);
                       timeRange.Add(range.TimeSegments);
                     }
 
@@ -428,12 +456,13 @@ namespace EQLogParser
                     }
                   }
 
-                  stats.TotalSeconds = timeRange.GetTotal();
+                  var filteredTimeRange = StatsUtil.FilterMaxTime(timeRange, stopTime);
+                  stats.TotalSeconds = filteredTimeRange.GetTotal();
                 }
                 else
                 {
                   expandedStats.Add(stats);
-                  StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges);
+                  StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges, stopTime);
                 }
 
                 StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
@@ -523,10 +552,16 @@ namespace EQLogParser
 
     internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      lock (DamageGroups)
+      lock (DamageGroupIds)
       {
         if (options.RequestChartData)
         {
+          // reset groups
+          if (options.MaxSeconds == long.MinValue && AllDamageGroups != null)
+          {
+            DamageGroups = AllDamageGroups;
+          }
+
           // send update
           DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new DamageGroupCollection(DamageGroups), Filter = filter };
 
@@ -542,6 +577,7 @@ namespace EQLogParser
 
     private void Reset()
     {
+      AllDamageGroups = DamageGroups;
       DamageGroups.Clear();
       DamageGroupIds.Clear();
       RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAIDTOTALS);

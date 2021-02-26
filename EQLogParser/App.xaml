@@ -3,9 +3,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
+             xmlns:options="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+             xmlns:reskeys="clr-namespace:NumericUpDownLib.Themes;assembly=NumericUpDownLib"
              xmlns:local="clr-namespace:EQLogParser"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
+
+    <!-- Number Up Down control -->
+    <Color x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=ControlAccentColorKey}">#2660b7</Color>
+    <SolidColorBrush x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=ControlAccentBrushKey}" options:Freeze="true" Color="{DynamicResource {x:Static reskeys:ResourceKeys.ControlAccentColorKey}}" />
+    <SolidColorBrush x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=GlyphNormalForegroundKey}"	options:Freeze="true"	Color="#FFFFFF" />
+    <SolidColorBrush x:Key="{x:Static reskeys:ResourceKeys.GlyphMouseOverForegroundKey}" options:Freeze="true" Color="{DynamicResource {x:Static reskeys:ResourceKeys.ControlAccentColorKey}}" />
+    <SolidColorBrush x:Key="{x:Static reskeys:ResourceKeys.GlyphDisabledForegroundKey}"	options:Freeze="true"	Color="#FF4e4e50" />
+    <SolidColorBrush x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=GlyphPressedBackroundKey}"	options:Freeze="true"	Color="{DynamicResource {x:Static reskeys:ResourceKeys.ControlAccentColorKey}}" />
+
     <!-- Overriding Actipro DarkMetro Colors -->
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemForegroundHoverBrushKey}" Color="#c2c2c0" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemBorderHoverBrushKey}" Color="#101010" />
@@ -40,11 +51,21 @@
     
     <!-- General Element Styles -->
      <Style TargetType="TextBox">
+      <Setter Property="Background">
+        <Setter.Value>
+          <SolidColorBrush Color="#101010"/>
+        </Setter.Value>
+      </Setter>
+      <Setter Property="Foreground">
+        <Setter.Value>
+          <SolidColorBrush Color="#EEE"/>
+        </Setter.Value>
+      </Setter>
       <Setter Property="local:TextBoxBehavior.TripleClickSelectAll" Value="True" />
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="TextBox">
-            <Border BorderThickness="{TemplateBinding Border.BorderThickness}" BorderBrush="{TemplateBinding Border.BorderBrush}" Background="{TemplateBinding Panel.Background}"
+            <Border BorderThickness="{TemplateBinding Border.BorderThickness}" BorderBrush="#FF707070" Background="{TemplateBinding Panel.Background}"
                   Name="border" SnapsToDevicePixels="True">
               <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" Name="PART_ContentHost" Focusable="False" />
             </Border>

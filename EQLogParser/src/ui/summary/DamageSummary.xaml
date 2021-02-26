@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:dirk="clr-namespace:NumericUpDownLib;assembly=NumericUpDownLib"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="1200">
@@ -17,11 +18,12 @@
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
     <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
-      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="32" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,0,0" x:Name="petOrPlayerList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="classesList" Height="24" SelectionChanged="ListSelectionChanged" />
+      <dirk:LongUpDown x:Name="timeChooser" Margin="0,0,4,0" Height="26" IsEnabled="False" IsMouseDragEnabled="False" Padding="0" DisplayLength="4" Value="0" MaxValue="0" MinValue="0" ValueChanged="MaxTimeChanged"/>
+      <ComboBox Margin="0,0,0,0" x:Name="petOrPlayerList" Height="26" MinWidth="60" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,4,0" x:Name="classesList" Height="26" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"
       Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGridSelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
