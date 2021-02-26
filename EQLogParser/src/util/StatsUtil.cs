@@ -188,17 +188,18 @@ namespace EQLogParser
     }
 
     internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges, 
-      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges)
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double maxTime = -1)
     {
       if (playerTimeRanges.TryGetValue(stats.Name, out TimeRange range))
       {
-        stats.TotalSeconds = range.GetTotal();
+        var filteredRange = FilterMaxTime(range, maxTime);
+        stats.TotalSeconds = filteredRange.GetTotal();
       }
 
-      UpdateSubStatsTimeRanges(stats, playerSubTimeRanges);
+      UpdateSubStatsTimeRanges(stats, playerSubTimeRanges, maxTime);
     }
 
-    internal static void UpdateSubStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges)
+    internal static void UpdateSubStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double maxTime = -1)
     {
       if (playerSubTimeRanges.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> subRanges))
       {
@@ -206,7 +207,8 @@ namespace EQLogParser
         {
           if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
           {
-            kv.Value.TotalSeconds = subRange.GetTotal();
+            var filteredRange = FilterMaxTime(subRange, maxTime);
+            kv.Value.TotalSeconds = filteredRange.GetTotal();
           }
         }
 
@@ -214,7 +216,8 @@ namespace EQLogParser
         {
           if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
           {
-            kv.Value.TotalSeconds = subRange.GetTotal();
+            var filteredRange = FilterMaxTime(subRange, maxTime);
+            kv.Value.TotalSeconds = filteredRange.GetTotal();
           }
         }
       }
@@ -471,6 +474,33 @@ namespace EQLogParser
       });
 
       return playerSpecials;
+    }
+
+    internal static TimeRange FilterMaxTime(TimeRange range, double maxTime)
+    {
+      TimeRange result;
+
+      if (maxTime > -1)
+      {
+        result = new TimeRange();
+        range.TimeSegments.ForEach(segment =>
+        {
+          if (segment.EndTime <= maxTime)
+          {
+            result.Add(segment);
+          }
+          else if (segment.BeginTime < maxTime)
+          {
+            result.Add(new TimeSegment(segment.BeginTime, maxTime));
+          }
+        });
+      }
+      else
+      {
+        result = range;
+      }
+
+      return result;
     }
   }
 }

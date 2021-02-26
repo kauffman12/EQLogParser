@@ -83,6 +83,8 @@ namespace EQLogParser
     public List<Fight> Npcs { get; } = new List<Fight>();
     public bool RequestChartData { get; set; }
     public bool RequestSummaryData { get; set; }
+
+    public long MaxSeconds { get; set; } = -1;
   }
 
   internal class StatsGenerationEvent
@@ -402,5 +404,6 @@ namespace EQLogParser
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }
     public double CalcTime { get; set; }
+    public double MaxTime { get; set; }
   }
 }

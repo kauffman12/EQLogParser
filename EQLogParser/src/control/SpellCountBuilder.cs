@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace EQLogParser
@@ -13,13 +12,28 @@ namespace EQLogParser
 
       HashSet<IAction> castsDuring = new HashSet<IAction>();
       HashSet<IAction> receivedDuring = new HashSet<IAction>();
+      double maxTime = -1;
 
       raidStats.Ranges.TimeSegments.ForEach(segment =>
       {
+        maxTime = maxTime == -1 ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
         var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - COUNT_OFFSET, segment.EndTime);
-        blocks.ForEach(block => block.Actions.ForEach(action => castsDuring.Add(action)));
+        blocks.ForEach(block =>
+        {
+          if (block.BeginTime <= maxTime)
+          {
+            block.Actions.ForEach(action => castsDuring.Add(action));
+          }
+        });
+
         blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - COUNT_OFFSET, segment.EndTime);
-        blocks.ForEach(block => block.Actions.ForEach(action => receivedDuring.Add(action)));
+        blocks.ForEach(block =>
+        {
+          if (block.BeginTime <= maxTime)
+          {
+            block.Actions.ForEach(action => receivedDuring.Add(action));
+          }
+        });
       });
 
       foreach (var action in castsDuring.AsParallel().Where(cast => playerList.Contains((cast as SpellCast).Caster)))
