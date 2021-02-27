@@ -262,7 +262,7 @@ namespace EQLogParser
       Title = "";
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _, bool showTime)
     {
       List<string> list = new List<string>();
 
@@ -284,7 +284,8 @@ namespace EQLogParser
           }
 
           details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-          title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+          var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
+          title = StatsUtil.FormatTitle(currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
         }
         else if (type == Labels.RECEIVEDHEALPARSE)
         {
@@ -303,7 +304,8 @@ namespace EQLogParser
             var hps = (long)Math.Round(totals / currentStats.RaidStats.TotalSeconds, 2);
             string totalTitle = showTotals ? (selected[0].Name + " Received " + StatsUtil.FormatTotals(totals) + " Healing") : (selected[0].Name + " Received Healing");
             details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-            title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, totalTitle);
+            var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
+            title = StatsUtil.FormatTitle(currentStats.TargetTitle, timeTitle, totalTitle);
           }
         }
       }

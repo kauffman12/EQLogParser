@@ -47,6 +47,20 @@ namespace EQLogParser
       return result;
     }
 
+    internal static bool IfSetOrElse(string setting, bool def = false)
+    {
+      bool result = def;
+      string value = GetSetting(setting);
+      if (value != null)
+      {
+        if (bool.TryParse(value, out result) == false)
+        {
+          result = def;
+        }
+      }
+      return result;
+    }
+
     internal static int GetSettingAsInteger(string key)
     {
       if (int.TryParse(GetSetting(key), out int result) == false)

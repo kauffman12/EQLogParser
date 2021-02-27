@@ -16,6 +16,7 @@ namespace EQLogParser
   {
     private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
     private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
+    private Boolean initialized = false;
 
     public ParsePreview()
     {
@@ -24,9 +25,15 @@ namespace EQLogParser
       parseList.ItemsSource = AvailableParses;
       parseList.SelectedIndex = -1;
 
+      playerParseTextDoRank.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowRank", true);
+      playerParseTextDoTotals.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowTotals", true);
+      playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
+      playerParseTextDoTime.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowTime", true);
+
       DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      initialized = true;
     }
 
     internal void CopyToEQClick(string type)
@@ -93,7 +100,7 @@ namespace EQLogParser
       {
         var combined = Parses[type].CombinedStats;
         var summary = Parses[type].Builder?.BuildSummary(type, combined, Parses[type].Selected, playerParseTextDoTotals.IsChecked.Value,
-          playerParseTextDoRank.IsChecked.Value, playerParseTextDoSpecials.IsChecked.Value);
+          playerParseTextDoRank.IsChecked.Value, playerParseTextDoSpecials.IsChecked.Value, playerParseTextDoTime.IsChecked.Value);
         playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
         playerParseTextBox.SelectAll();
       }
@@ -164,6 +171,15 @@ namespace EQLogParser
       if (parseList.SelectedIndex > -1)
       {
         SetParseTextByType(parseList.SelectedItem as string);
+      }
+
+      // dont call these until after init/load
+      if (initialized)
+      {
+        ConfigUtil.SetSetting("PlayerParseShowRank", playerParseTextDoRank.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("PlayerParseShowTotals", playerParseTextDoTotals.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("PlayerParseShowSpecials", playerParseTextDoSpecials.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("PlayerParseShowTime", playerParseTextDoTime.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
       }
     }
 
