@@ -606,7 +606,7 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial, bool showTime)
     {
       List<string> list = new List<string>();
 
@@ -623,7 +623,12 @@ namespace EQLogParser
             string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS));
             string timeFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, stats.TotalSeconds);
 
-            var dps = playerFormat + damageFormat + " " + timeFormat;
+            var dps = playerFormat + damageFormat;
+
+            if (showTime)
+            {
+              dps += " " + timeFormat;
+            }
 
             if (showSpecial && !string.IsNullOrEmpty(stats.Special))
             {
@@ -634,8 +639,9 @@ namespace EQLogParser
           }
         }
 
-        details = list.Count > 0 ? ", " + string.Join(", ", list) : "";
-        title = StatsUtil.FormatTitle(currentStats.TargetTitle, currentStats.TimeTitle, showTotals ? currentStats.TotalTitle : "");
+        details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
+        var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
+        title = StatsUtil.FormatTitle(currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
       return new StatsSummary { Title = title, RankedPlayers = details };
