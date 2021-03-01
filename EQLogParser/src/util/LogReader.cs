@@ -139,23 +139,27 @@ namespace EQLogParser
 
           while (Running)
           {
-            WaitForChangedResult result = fsw.WaitForChanged(WatcherChangeTypes.Deleted | WatcherChangeTypes.Changed, 2000);
+            WaitForChangedResult result = fsw.WaitForChanged(WatcherChangeTypes.Renamed | WatcherChangeTypes.Deleted | WatcherChangeTypes.Changed, 2000);
 
             switch (result.ChangeType)
             {
+              case WatcherChangeTypes.Renamed:
+              case WatcherChangeTypes.Deleted:
+                // never gets used?
+                break;
               case WatcherChangeTypes.Changed:
                 if (reader != null)
                 {
+                  if (Running && reader.EndOfStream)
+                  {
+                    reader.Close();
+                    fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
+                  }
+
                   while (Running && !reader.EndOfStream)
                   {
                     LoadingCallback(reader.ReadLine(), fs.Length);
-                  }
-
-                  // try to re-open if at end of stream
-                  if (Running && reader.EndOfStream)
-                  {
-                    fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                    reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
                   }
                 }
                 break;
