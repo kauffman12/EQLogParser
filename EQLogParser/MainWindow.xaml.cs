@@ -60,7 +60,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.7.16";
+    private const string VERSION = "v1.7.17";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -881,7 +881,7 @@ namespace EQLogParser
 
     private void FileLoadingCallback(string line, long position)
     {
-      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 5000) is int sleep && sleep > 10)
+      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 10000) is int sleep && sleep > 10)
       {
         Thread.Sleep(4 * (sleep - 10));
       }
