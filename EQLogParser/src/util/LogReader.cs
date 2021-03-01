@@ -40,7 +40,7 @@ namespace EQLogParser
           bool isGzip = logFileName.EndsWith(".gz", StringComparison.Ordinal);
 
           Stream gs;
-          Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+          Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
           StreamReader reader;
           FileSize = fs.Length;
 
@@ -137,24 +137,25 @@ namespace EQLogParser
           fsw.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.CreationTime;
           fsw.EnableRaisingEvents = true;
 
-          bool exitOnError = false;
-
-          while (Running && !exitOnError)
+          while (Running)
           {
             WaitForChangedResult result = fsw.WaitForChanged(WatcherChangeTypes.Deleted | WatcherChangeTypes.Changed, 2000);
 
             switch (result.ChangeType)
             {
-              case WatcherChangeTypes.Deleted:
-                // file gone
-                exitOnError = true;
-                break;
               case WatcherChangeTypes.Changed:
                 if (reader != null)
                 {
                   while (Running && !reader.EndOfStream)
                   {
                     LoadingCallback(reader.ReadLine(), fs.Length);
+                  }
+
+                  // try to re-open if at end of stream
+                  if (Running && reader.EndOfStream)
+                  {
+                    fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
                   }
                 }
                 break;
