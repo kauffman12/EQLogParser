@@ -134,29 +134,32 @@ namespace EQLogParser
           };
 
           // events to notify for changes
-          fsw.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.CreationTime;
+          //fsw.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.CreationTime;
           fsw.EnableRaisingEvents = true;
 
           while (Running)
           {
             WaitForChangedResult result = fsw.WaitForChanged(WatcherChangeTypes.Renamed | WatcherChangeTypes.Deleted | WatcherChangeTypes.Changed, 2000);
 
+            if (reader == null && File.Exists(FileName))
+            {
+              fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+              reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
+            }
+
             switch (result.ChangeType)
             {
               case WatcherChangeTypes.Renamed:
               case WatcherChangeTypes.Deleted:
-                // never gets used?
+                if (reader != null)
+                {
+                  reader.Close();
+                  reader = null;
+                }
                 break;
               case WatcherChangeTypes.Changed:
                 if (reader != null)
                 {
-                  if (Running && reader.EndOfStream)
-                  {
-                    reader.Close();
-                    fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                    reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
-                  }
-
                   while (Running && !reader.EndOfStream)
                   {
                     LoadingCallback(reader.ReadLine(), fs.Length);
