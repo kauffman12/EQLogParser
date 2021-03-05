@@ -15,7 +15,7 @@ namespace EQLogParser
 
     private static readonly List<string> OtherCriteria = new List<string>
     {
-      " says,", " tells ", " shouts,", "says out of", " auctions,", " told you,"
+      " says,", " tells ", " shouts,", " says out of", " auctions,", " told you,"
     };
 
     internal static ChatType Process(LineData lineData)
@@ -41,6 +41,14 @@ namespace EQLogParser
         int count;
         int max = Math.Min(16, line.Length - LineParsing.ACTIONINDEX);
         int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, LineParsing.ACTIONINDEX, max, StringComparison.Ordinal) > -1);
+
+        if (line.Contains("out of character"))
+        {
+          if (true)
+          {
+
+          }
+        }
        
         if (index < 0)
         {
