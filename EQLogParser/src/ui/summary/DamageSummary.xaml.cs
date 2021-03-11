@@ -98,7 +98,7 @@ namespace EQLogParser
             {
               title.Content = CurrentStats.FullTitle;
               UpdateView();
-              timeChooser.IsEnabled = true;
+              timeChooser.IsEnabled = CurrentGroupCount == 1;
               timeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds);
               timeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
             }

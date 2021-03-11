@@ -337,7 +337,7 @@ namespace EQLogParser
               if (options.MaxSeconds > -1 && options.MaxSeconds <= RaidTotals.MaxTime && options.MaxSeconds != RaidTotals.TotalSeconds)
               {
                 var filteredGroups = new List<List<ActionBlock>>();
-                DamageGroups.ForEach(group =>
+                AllDamageGroups.ForEach(group =>
                 {
                   var filteredBlocks = new List<ActionBlock>();
                   filteredGroups.Add(filteredBlocks);

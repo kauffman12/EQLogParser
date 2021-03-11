@@ -21,7 +21,7 @@
       <CheckBox x:Name="fightShowHitPoints" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowHitPointsChange" Unchecked="ShowHitPointsChange">HP</CheckBox>
       <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="fightDataGrid" Grid.Row="1" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
+    <datagrid:ThemedDataGrid x:Name="fightDataGrid" Grid.Row="1" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
       <DataGrid.ContextMenu>
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
           <MenuItem x:Name="fightMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">

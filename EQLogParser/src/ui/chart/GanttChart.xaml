@@ -46,26 +46,26 @@
         </ContextMenu>
       </Grid.ContextMenu>
       <ScrollViewer x:Name="headerScroller" Grid.Row="0" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Hidden">
-        <Grid x:Name="contentHeader" Grid.Row="0" Background="#FF252526">
+        <Grid x:Name="contentHeader" Grid.Row="0" Background="#FF232325">
           <Grid.RowDefinitions>
             <RowDefinition Height="*" />
           </Grid.RowDefinitions>
         </Grid>
       </ScrollViewer>
-      <Grid Grid.Row="1" Background="#FF252526">
+      <Grid Grid.Row="1" Background="#FF232325">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="190" MaxWidth="190" MinWidth="190" />
           <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <ScrollViewer x:Name="labelsScroller" Grid.Column="0" CanContentScroll="True" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" ScrollChanged="LabelsScrollViewChanged">
-          <Grid x:Name="contentLabels" Background="#FF252526">
+          <Grid x:Name="contentLabels" Background="#FF232325">
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
           </Grid>
         </ScrollViewer>
         <ScrollViewer x:Name="contentScroller" Grid.Column="1" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" ScrollChanged="ContentScrollViewChanged">
-          <Grid x:Name="content" Background="#FF252526">
+          <Grid x:Name="content" Background="#FF232325">
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
