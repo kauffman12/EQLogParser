@@ -232,21 +232,24 @@ namespace EQLogParser
     {
       HitLogRow row = null;
 
-      if (action is DamageRecord damage && !defending && !string.IsNullOrEmpty(damage.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && damage.Type != Labels.MISS)
+      if (action is DamageRecord damage)
       {
-        bool isPet = false;
-        if (damage.Attacker.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase) ||
-        (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(damage.Attacker), StringComparison.OrdinalIgnoreCase) ||
-        (!string.IsNullOrEmpty(damage.AttackerOwner) && damage.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
+        if (!defending && !string.IsNullOrEmpty(damage.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && damage.Type != Labels.MISS)
         {
-          row = new HitLogRow() { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
+          bool isPet = false;
+          if (damage.Attacker.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase) ||
+          (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(damage.Attacker), StringComparison.OrdinalIgnoreCase) ||
+          (!string.IsNullOrEmpty(damage.AttackerOwner) && damage.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
+          {
+            row = new HitLogRow() { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
+          }
         }
-      }
-      else if (action is DamageRecord tanking && defending && !string.IsNullOrEmpty(tanking.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && tanking.Type != Labels.MISS)
-      {
-        if (tanking.Defender.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
+        else if (defending && !string.IsNullOrEmpty(damage.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && damage.Type != Labels.MISS)
         {
-          row = new HitLogRow() { Actor = tanking.Defender, Acted = tanking.Attacker, IsPet = false, TimeSince = "-" };
+          if (damage.Defender.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
+          {
+            row = new HitLogRow() { Actor = damage.Defender, Acted = damage.Attacker, IsPet = false, TimeSince = "-" };
+          }
         }
       }
       else if (action is HealRecord heal && !string.IsNullOrEmpty(heal.Healer) && !string.IsNullOrEmpty(playerStats.OrigName))

@@ -10,7 +10,6 @@
   <Application.Resources>
 
     <!-- Number Up Down control -->
-    <Color x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=ControlAccentColorKey}">#2660b7</Color>
     <SolidColorBrush x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=ControlAccentBrushKey}" options:Freeze="true" Color="{DynamicResource {x:Static reskeys:ResourceKeys.ControlAccentColorKey}}" />
     <SolidColorBrush x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=GlyphNormalForegroundKey}"	options:Freeze="true"	Color="#FFFFFF" />
     <SolidColorBrush x:Key="{x:Static reskeys:ResourceKeys.GlyphMouseOverForegroundKey}" options:Freeze="true" Color="{DynamicResource {x:Static reskeys:ResourceKeys.ControlAccentColorKey}}" />
@@ -20,20 +19,19 @@
     <!-- Overriding Actipro DarkMetro Colors -->
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemForegroundHoverBrushKey}" Color="#c2c2c0" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemBorderHoverBrushKey}" Color="#101010" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ApplicationButtonBorderHoverBrushKey}" Color="#202020" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTitleBarBackgroundActiveBrushKey}" Color="#202020" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarBackgroundActiveBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderPressedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderHoverBrushKey}" Color="Transparent" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundNormalBrushKey}" Color="#101010" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonForegroundDefaultedBrushKey}" Color="#c2c2c0" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundDisabledBrushKey}" Color="#2d2d30" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderDefaultedBrushKey}" Color="Transparent" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedFocusedBrushKey}" Color="#2660b7" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedHoverBrushKey}" Color="#2660b7" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedNormalBrushKey}" Color="#2660b7" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBorderSelectedFocusedBrushKey}" Color="#2660b7" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AccentBackgroundActiveNormalBrushKey}" Color="#202020" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedFocusedBrushKey}" Color="#004885" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedHoverBrushKey}" Color="#004885" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedNormalBrushKey}" Color="#004885" />
+    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBorderSelectedFocusedBrushKey}" Color="#004885" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.BackstageHeaderSeparatorBorderNormalBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.DockingWindowContainerTitleBarBackgroundActiveBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBackgroundActiveFocusedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBorderActiveFocusedBrushKey}" Color="#202020" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBackgroundHoverBrushKey}" Color="#202020" />
@@ -503,17 +501,17 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="{x:Type Window}">
-            <Grid Background="#FF252526">
-              <Border Background="#FF252526" Margin="{Binding Source={x:Static SystemParameters.WindowNonClientFrameThickness}}">
+            <Grid Background="#FF232325">
+              <Border Background="#FF232325" Margin="{Binding Source={x:Static SystemParameters.WindowNonClientFrameThickness}}">
                 <ContentPresenter Content="{TemplateBinding Content}" />
               </Border>
               <StackPanel Orientation="Horizontal" Margin="20,6,0,0" VerticalAlignment="Top">
                 <TextBlock Foreground="LightGray" MaxHeight="16" Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Title}" />
                 <TextBlock Foreground="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=StatusBrush}" MaxHeight="18" Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=StatusText, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,0,0"/>
               </StackPanel>
-              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF252526" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,80,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
-              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF252526" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,50,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
-              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF252526" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,20,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
+              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF232325" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,80,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
+              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF232325" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,50,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
+              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF232325" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,20,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
             </Grid>
           </ControlTemplate>
         </Setter.Value>
@@ -528,12 +526,12 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="{x:Type Window}">
-            <Grid Background="#FF252526">
-              <Border Background="#FF252526" Margin="{Binding Source={x:Static SystemParameters.WindowNonClientFrameThickness}}">
+            <Grid Background="#FF232325">
+              <Border Background="#FF232325" Margin="{Binding Source={x:Static SystemParameters.WindowNonClientFrameThickness}}">
                 <ContentPresenter Content="{TemplateBinding Content}" />
               </Border>
               <TextBlock Foreground="LightGray" MaxHeight="16" Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Title}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="20,6,0,0"/>
-              <Button Name="CloseButton" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF252526" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,20,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" Click="CloseOverlay_MouseClick" FontSize="13" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
+              <Button Name="CloseButton" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF232325" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,20,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" Click="CloseOverlay_MouseClick" FontSize="13" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
             </Grid>
           </ControlTemplate>
         </Setter.Value>

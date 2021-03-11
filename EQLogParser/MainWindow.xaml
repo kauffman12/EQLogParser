@@ -20,7 +20,7 @@
       <ColumnDefinition Width="1200*"/>
     </Grid.ColumnDefinitions>
     <Grid.RowDefinitions>
-      <RowDefinition Height="20" />
+      <RowDefinition Height="24" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
     <tb:TaskbarIcon x:Name="taskBarIcon" ToolTipText="EQ Log Parser" TrayLeftMouseUp="TrayIcon_MouseUp" TrayRightMouseUp="TrayIcon_MouseUp" IconSource="EQLogParser.ico">
@@ -30,159 +30,159 @@
         </Border>
       </tb:TaskbarIcon.TrayToolTip>
     </tb:TaskbarIcon>
-    <Menu Grid.Row="0" Margin="0" Height="20" VerticalAlignment="Top" Grid.ColumnSpan="2">
-      <MenuItem Header="_File" Height="20" Width="40">
-        <MenuItem Header="_Archive Chat" Height="20" Click="MenuItemSelectArchiveChatClick" ToolTip="Only Archive Chat from a Log File">
+    <Menu Grid.Row="0" Margin="0" Height="24" VerticalAlignment="Top" Grid.ColumnSpan="2" Background="#373a3e">
+      <MenuItem Header="_File" Height="24" Width="40">
+        <MenuItem Header="_Archive Chat" Height="24" Click="MenuItemSelectArchiveChatClick" ToolTip="Only Archive Chat from a Log File">
           <MenuItem.Icon>
             <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Database" Foreground="#5191c1" />
           </MenuItem.Icon>
         </MenuItem>
-        <MenuItem Header="Monitor Log File" Height="20" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
+        <MenuItem Header="Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
           <MenuItem.Icon>
             <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Eye" Foreground="#5191c1" />
           </MenuItem.Icon>
         </MenuItem>
-        <MenuItem Header="Open and Monitor _Log File" Height="20" ToolTip="Open Log File, Archive Chat and Start Monitoring">
+        <MenuItem Header="Open and Monitor _Log File" Height="24" ToolTip="Open Log File, Archive Chat and Start Monitoring">
           <MenuItem.Icon>
             <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="FolderOpen" Foreground="#5191c1" />
           </MenuItem.Icon>
-          <MenuItem Header="Last Hour" Tag="1" Height="20" Click="MenuItemSelectLogFileClick">
+          <MenuItem Header="Last Hour" Tag="1" Height="24" Click="MenuItemSelectLogFileClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Last  8 Hours" Tag="8" Height="20" Click="MenuItemSelectLogFileClick">
+          <MenuItem Header="Last  8 Hours" Tag="8" Height="24" Click="MenuItemSelectLogFileClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Last 24 Hours" Tag="24 " Height="20" Click="MenuItemSelectLogFileClick">
+          <MenuItem Header="Last 24 Hours" Tag="24 " Height="24" Click="MenuItemSelectLogFileClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Last  7 Days" Tag="168" Height="20" Click="MenuItemSelectLogFileClick">
+          <MenuItem Header="Last  7 Days" Tag="168" Height="24" Click="MenuItemSelectLogFileClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Last 14 Days" Tag="336" Height="20" Click="MenuItemSelectLogFileClick">
+          <MenuItem Header="Last 14 Days" Tag="336" Height="24" Click="MenuItemSelectLogFileClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Last 30 Days" Tag="720" Height="20" Click="MenuItemSelectLogFileClick">
+          <MenuItem Header="Last 30 Days" Tag="720" Height="24" Click="MenuItemSelectLogFileClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calendar" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Everything" Height="20" Click="MenuItemSelectLogFileClick">
+          <MenuItem Header="Everything" Height="24" Click="MenuItemSelectLogFileClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Globe" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
          </MenuItem>
         <Separator/>
-        <MenuItem Header="_Save Summary (html)" Height="20" Click="MenuItemExportHTMLClick" ToolTip="Save Open Summary Tables As HTML">
+        <MenuItem Header="_Save Summary (html)" Height="24" Click="MenuItemExportHTMLClick" ToolTip="Save Open Summary Tables As HTML">
           <MenuItem.Icon>
             <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Save"  Foreground="#5191c1" />
           </MenuItem.Icon>
         </MenuItem>
         <Separator/>
-        <MenuItem Header="E_xit" Height="20" Click="WindowClose" InputGestureText="Alt+F4"/>
+        <MenuItem Header="E_xit" Height="24" Click="WindowClose" InputGestureText="Alt+F4"/>
       </MenuItem>
-      <MenuItem Header="_View" Height="20" Width="40">
-        <MenuItem x:Name="damageView" Header="_Damage" Height="20">
+      <MenuItem Header="_View" Height="24" Width="45">
+        <MenuItem x:Name="damageView" Header="_Damage" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="damageViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Gavel" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="Damage _Chart" Height="20">
+          <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="Damage _Chart" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageChartIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="Damage _Summary" Height="20">
+          <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="Damage _Summary" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageSummaryIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="enableDamageOverlay" Header="Damage _Overlay" Click="ToggleDamageOverlayClick" Height="20">
+          <MenuItem x:Name="enableDamageOverlay" Header="Damage _Overlay" Click="ToggleDamageOverlayClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
-        <MenuItem x:Name="healingView" Header="_Healing" Height="20">
+        <MenuItem x:Name="healingView" Header="_Healing" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="healingViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Heart" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindowClick" Header="Healing _Chart" Height="20">
+          <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindowClick" Header="Healing _Chart" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="healingChartIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindowClick" Header="Healing _Summary" Height="20">
+          <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindowClick" Header="Healing _Summary" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="healingSummaryIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
-        <MenuItem x:Name="tankingView" Header="_Tanking" Height="20">
+        <MenuItem x:Name="tankingView" Header="_Tanking" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="tankingViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Shield" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindowClick" Header="Tanking _Chart" Height="20">
+          <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindowClick" Header="Tanking _Chart" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="tankingChartIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindowClick" Header="Tanking _Summary" Height="20">
+          <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindowClick" Header="Tanking _Summary" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="tankingSummaryIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
         <Separator />
-        <MenuItem x:Name="npcView" Header="_NPCs" Height="20">
+        <MenuItem x:Name="npcView" Header="_NPCs" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="npcViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Desktop" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="npcWindowMenuitem" Header="Fight List" Click="MenuItemWindowClick" Height="20">
+          <MenuItem x:Name="npcWindowMenuitem" Header="Fight List" Click="MenuItemWindowClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="npcIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="npcStatsMenuItem" Header="Spell Stats" Click="MenuItemWindowClick" Height="20">
+          <MenuItem x:Name="npcStatsMenuItem" Header="Spell Stats" Click="MenuItemWindowClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="npcStatsIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>        
-        <MenuItem x:Name="petsView" Header="_Pets" Height="20">
+        <MenuItem x:Name="petsView" Header="_Pets" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="petsViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Paw" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Pet _List" Height="20">
+          <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Pet _List" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="verifiedPetsIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick" Height="20">
+          <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="petMappingIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
-        <MenuItem x:Name="playersView" Header="P_layers" Height="20">
+        <MenuItem x:Name="playersView" Header="P_layers" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="playersViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="User" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick" Height="20">
+          <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerParseIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Player _List" Height="20">
+          <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Player _List" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="verifiedPlayersIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
@@ -190,51 +190,51 @@
           <Separator />
         </MenuItem>
         <Separator />
-        <MenuItem x:Name="searchView" Header="_Search" Height="20">
+        <MenuItem x:Name="searchView" Header="_Search" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="searchViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Search" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
-          <MenuItem x:Name="chatMenuItem" Click="MenuItemWindowClick" Header="_Chat Archive" Height="20">
+          <MenuItem x:Name="chatMenuItem" Click="MenuItemWindowClick" Header="_Chat Archive" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="chatIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="eventMenuItem" Header="_Event Log" Click="MenuItemWindowClick" Height="20">
+          <MenuItem x:Name="eventMenuItem" Header="_Event Log" Click="MenuItemWindowClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="eventIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="playerLootMenuItem" Header="_Loot Log" Click="MenuItemWindowClick" Height="20">
+          <MenuItem x:Name="playerLootMenuItem" Header="_Loot Log" Click="MenuItemWindowClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerLootIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
       </MenuItem>
-      <MenuItem Header="_Options" Height="20" Width="60">
-        <MenuItem x:Name="enableAoEHealing" Header="Show _AoE Heals" Click="ToggleAoEHealingClick" Height="20">
+      <MenuItem Header="_Options" Height="24" Width="65">
+        <MenuItem x:Name="enableAoEHealing" Header="Show _AoE Heals" Click="ToggleAoEHealingClick" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="enableAoEHealingIcon" Visibility="Hidden" Height="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
         </MenuItem>
-        <MenuItem x:Name="enableBaneDamage" Header="Show _Bane Damage" Click="ToggleBaneDamageClick" Height="20">
+        <MenuItem x:Name="enableBaneDamage" Header="Show _Bane Damage" Click="ToggleBaneDamageClick" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="enableBaneDamageIcon" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
         </MenuItem>
-        <MenuItem x:Name="hideOnMinimize" Header="_Hide When Minimized" Click="ToggleHideOnMinimizeClick" Height="20">
+        <MenuItem x:Name="hideOnMinimize" Header="_Hide When Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
         </MenuItem>
       </MenuItem>
-      <MenuItem Header="_Tools" Height="20" Width="45">
-        <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="20">
+      <MenuItem Header="_Tools" Height="24" Width="55">
+        <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="deleteChatIcon" Visibility="Visible" Height="10" Width="10" HorizontalAlignment="Center" Icon="Close"  Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
         </MenuItem>
-        <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLogClick" Height="20">
+        <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLogClick" Height="24">
           <MenuItem.Icon>
             <fa:ImageAwesome x:Name="viewErrorLogIcon" Visibility="Visible" Height="10" Width="10" HorizontalAlignment="Center" Icon="File"  Foreground="#FF4F9FE2" />
           </MenuItem.Icon>
