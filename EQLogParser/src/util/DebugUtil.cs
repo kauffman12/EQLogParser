@@ -62,6 +62,17 @@ namespace EQLogParser
       }
     }
 
+    public static void WriteLine(string line)
+    {
+      if (ConfigUtil.Debug)
+      {
+        lock(LockObject)
+        {
+          Output.WriteLine(line);
+        }
+      }
+    }
+
     private class LineInfo
     {
       public int Count { get; set; }
