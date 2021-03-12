@@ -16,6 +16,10 @@ namespace EQLogParser
         action = line.Substring(LineParsing.ACTIONINDEX);
         valid = !(CheckForPlayersOrNPCs(action) || CheckForPetLeader(action));
       }
+      else if (line != null)
+      {
+        DebugUtil.WriteLine(line);
+      }
 
       return valid;
     }
