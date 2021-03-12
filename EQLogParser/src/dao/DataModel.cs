@@ -162,8 +162,9 @@ namespace EQLogParser
 
   internal class LineData
   {
-    public string Line { get; set; }
     public string Action { get; set; }
+    public string Line { get; set; }
+    public long LineNumber { get; set; }
   }
 
   internal class HitLogRow : HitRecord

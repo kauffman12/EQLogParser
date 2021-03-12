@@ -12,6 +12,8 @@ namespace EQLogParser
     public delegate void PostConfigCallback();
     public static string PlayerName;
     public static string ServerName;
+    public static string LogsDir;
+    public static bool Debug = false;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -160,14 +162,14 @@ namespace EQLogParser
         initDone = true;
         ArchiveDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\archive\");
         ConfigDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\config\");
+        LogsDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\logs\");
         ServerConfigDir = ConfigDir + PETMAP_PATH;
         SettingsFile = ConfigDir + @"\settings.txt";
 
-        // remove this in the future
-        RemoveFileIfExists(ConfigDir + PETMAP_FILE);
-
         // create config dir if it doesn't exist
         Directory.CreateDirectory(ConfigDir);
+        // create logs dir if it doesn't exist
+        Directory.CreateDirectory(LogsDir);
 
         LoadProperties(ApplicationSettings, ReadList(SettingsFile));
       }

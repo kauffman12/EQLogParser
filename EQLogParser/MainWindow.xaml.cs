@@ -60,10 +60,11 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
     private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.7.21";
+    private const string VERSION = "v1.7.22";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
+    private static long LineCount = 0;
     private static long FilePosition = 0;
     private static ActionProcessor<LineData> CastProcessor = null;
     private static ActionProcessor<LineData> DamageProcessor = null;
@@ -231,6 +232,12 @@ namespace EQLogParser
         // Show Healing Summary at startup
         ConfigUtil.IfSet("ShowDamageChartAtStartup", OpenDamageChart);
         LOG.Info("Initialized Components");
+
+        if (ConfigUtil.IfSet("Debug"))
+        {
+          LOG.Info("Debug Enabled. Saving Unprocessed Lines to " + ConfigUtil.LogsDir);
+          ConfigUtil.Debug = true;
+        }
       }
       catch (Exception e)
       {
@@ -817,7 +824,8 @@ namespace EQLogParser
 
           Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
           StartLoadTime = DateTime.Now;
-          FilePosition = 0;
+          FilePosition = LineCount = 0;
+          DebugUtil.Reset();
 
           string name = "You";
           string server = "Uknown";
@@ -886,10 +894,11 @@ namespace EQLogParser
       }
 
       Interlocked.Exchange(ref FilePosition, position);
+      Interlocked.Add(ref LineCount, 1);
 
       if (PreLineParser.NeedProcessing(line, out string action))
       {
-        var lineData = new LineData() { Line = line, Action = action };
+        var lineData = new LineData() { Line = line, LineNumber = LineCount, Action = action };
 
         // avoid having other things parse chat by accident
         if (ChatLineParser.Process(lineData) is ChatType chatType)
@@ -898,6 +907,8 @@ namespace EQLogParser
         }
         else if (CurrentLogOption != LogOption.ARCHIVE)
         {
+          // 4 is for the number of processors
+          DebugUtil.RegisterLine(LineCount, line, 4);
           CastProcessor.Add(lineData);
           DamageProcessor.Add(lineData);
           HealingProcessor.Add(lineData);
