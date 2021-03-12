@@ -61,6 +61,7 @@ namespace EQLogParser
     public static void Process(LineData lineData)
     {
       string line = lineData.Line;
+      bool handled = false;
 
       try
       {
@@ -99,6 +100,8 @@ namespace EQLogParser
                 DataManager.Instance.AddSpecial(new SpecialSpell() { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
               }
             }
+
+            handled = true;
           }
         }
         else if (line.Length >= 49 && (index = line.IndexOf(", but miss", LineParsing.ACTIONINDEX + 22, StringComparison.Ordinal)) > -1)
@@ -108,6 +111,7 @@ namespace EQLogParser
           {
             DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
             EventsDamageProcessed?.Invoke(record, e);
+            handled = true;
           }
         }
         else if (line.Length > 35 && line.EndsWith(" died.", StringComparison.Ordinal))
@@ -127,10 +131,12 @@ namespace EQLogParser
 
           var death = new DeathRecord() { Killed = string.Intern(test), Killer = "" };
           DataManager.Instance.AddDeathRecord(death, currentTime);
+          handled = true;
         }
         else if (line.Length > 30 && line.Length < 102 && (index = line.IndexOf(" slain ", LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
         {
           HandleSlain(actionPart, currentTime, index - LineParsing.ACTIONINDEX);
+          handled = true;
         }
       }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -142,6 +148,8 @@ namespace EQLogParser
           LOG.Error(e);
         }
       }
+
+      DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
     private static void HandleSlain(string part, double currentTime, int optionalIndex)

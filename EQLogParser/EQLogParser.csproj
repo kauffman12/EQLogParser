@@ -257,6 +257,7 @@
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\ui\util\DataGridUtils.cs" />
+    <Compile Include="src\util\DebugUtil.cs" />
     <Compile Include="src\ui\util\OverlayUtil.cs" />
     <Compile Include="src\util\ConfigUtil.cs" />
     <Compile Include="src\util\TextFormatUtils.cs" />

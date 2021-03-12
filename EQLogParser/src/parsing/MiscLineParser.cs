@@ -15,6 +15,8 @@ namespace EQLogParser
 
     public static void Process(LineData lineData)
     {
+      bool handled = false;
+
       try
       {
         string[] split = lineData.Action.Split(' ');
@@ -38,7 +40,6 @@ namespace EQLogParser
           int masterLootIndex = -1;
           int receiveIndex = -1;
           int resistedIndex = -1;
-          bool handled = false;
 
           for (int i = 0; i < split.Length && !handled; i++)
           {
@@ -153,6 +154,8 @@ namespace EQLogParser
       {
         LOG.Error(ae);
       }
+
+      DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
     private static bool ParseCurrency(string[] pieces, int startIndex, int toIndex, out string item, out uint count)

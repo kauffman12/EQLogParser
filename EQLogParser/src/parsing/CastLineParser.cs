@@ -23,6 +23,8 @@ namespace EQLogParser
 
     public static void Process(LineData lineData)
     {
+      bool handled = false;
+
       try
       {
         string[] split = lineData.Action.Split(' ');
@@ -34,7 +36,6 @@ namespace EQLogParser
           bool isYou = false;
           bool isSpell = false;
           bool isInterrupted = false;
-          bool handled = false;
 
           // [Sat Mar 14 19:57:48 2020] You activate Venon's Vindication.
           // [Mon Mar 02 19:46:09 2020] You begin casting Shield of Destiny Rk. II.
@@ -177,6 +178,7 @@ namespace EQLogParser
                 }
 
                 DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
+                handled = true;
               }
             }
             else
@@ -218,6 +220,7 @@ namespace EQLogParser
                 }
 
                 DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
+                handled = true;
               }
             }
           }
@@ -232,6 +235,8 @@ namespace EQLogParser
           LOG.Error(e);
         }
       }
+
+      DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
     private static void CheckForSpecial(Dictionary<string, string> codes, string spellName, string player, double currentTime)
