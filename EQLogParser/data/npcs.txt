@@ -21570,7 +21570,7 @@ dimbwicket middifoodle
 dimlore stormhammer
 dindaek everhot
 dinn
-dinner
+dinnerremoved
 dinoli fantalicus
 dinus
 diodite bluespark
@@ -35339,7 +35339,6 @@ unhatched lavaspinner eggs
 unkempt messenger
 unkempt preserver
 unkempt protector
-unknown
 unmuz tukore
 unraveling consciousness blue
 unrepentant bronze temper
