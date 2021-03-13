@@ -25,7 +25,6 @@ namespace EQLogParser
 
   internal static class Labels
   {
-    public const string ENVDAMAGE = "Environment Damage";
     public const string DD = "Direct Damage";
     public const string DOT = "DoT Tick";
     public const string DS = "Damage Shield";
@@ -44,9 +43,9 @@ namespace EQLogParser
     public const string RAIDTOTALS = "Totals";
     public const string RIPOSTE = "Riposte";
     public const string EVERYTHINGOPTION = "Uncategorized";
-    public const string UNASSIGNED = "Unk Pet Owner";
-    public const string UNKSPELL = "Unk Spell";
-    public const string UNKPLAYER = "Unk Player";
+    public const string UNASSIGNED = "Unknown Pet Owner";
+    public const string UNK = "Unknown";
+    public const string UNKSPELL = "Unknown Spell";
     public const string RECEIVEDHEALPARSE = "Received Healing";
     public const string HEALPARSE = "Healing";
     public const string TANKPARSE = "Tanking";

@@ -68,7 +68,7 @@ namespace EQLogParser
         var actionPart = line.Substring(LineParsing.ACTIONINDEX);
         var timeString = line.Substring(1, 24);
         var currentTime = DateUtil.ParseDate(timeString);
-        
+      
         // handle Slain queue
         if (!double.IsNaN(SlainTime) && currentTime > SlainTime)
         {
@@ -381,7 +381,7 @@ namespace EQLogParser
       {
         record = ParsePointsOf(data, nonMelee, forIndex, byIndex, hitIndex, builder, nameList);
       }
-      else if (parseType == ParseType.HASTAKEN && takenIndex < fromIndex && fromIndex > -1)
+      else if (parseType == ParseType.HASTAKEN && (takenIndex < fromIndex || fromIndex == -1))
       {
         record = ParseHasTaken(data, takenIndex, fromIndex, byIndex, builder);
       }
@@ -390,7 +390,7 @@ namespace EQLogParser
         record = ParseExtra(data, takenIndex, extraIndex, fromIndex, nameList);
       }
       // there are more messages without a specificied attacker or spell but do these first
-      else if (parseType == ParseType.YOUHAVETAKEN && takenIndex > -1 && fromIndex > -1 && byIndex > fromIndex)
+      else if (parseType == ParseType.YOUHAVETAKEN && takenIndex > -1 && fromIndex > -1)
       {
         record = ParseYouHaveTaken(data, takenIndex, fromIndex, byIndex, builder);
       }
@@ -428,7 +428,7 @@ namespace EQLogParser
           record.Defender = PlayerManager.Instance.ReplacePlayer(record.Defender, record.Attacker);
           if (string.IsNullOrEmpty(record.Attacker))
           {
-            record.Attacker = Labels.ENVDAMAGE;
+            record.Attacker = record.SubType;
           }
 
           if (resist != SpellResist.UNDEFINED && ConfigUtil.PlayerName == record.Attacker && record.Defender != record.Attacker)
@@ -476,8 +476,27 @@ namespace EQLogParser
       DamageRecord record = null;
 
       string defender = "you";
-      string attacker = ReadStringToPeriod(data, byIndex, builder);
-      string spell = string.Join(" ", data, fromIndex + 1, byIndex - fromIndex - 1);
+      string attacker = null;
+      string spell = null;
+      if (byIndex == -1)
+      {
+        spell = ReadStringToPeriod(data, fromIndex, builder);
+        var spellData = DataManager.Instance.GetSpellByName(spell);
+        if (spellData != null && ((spellData.ClassMask > 0 && spellData.Level < 255) || spellData.NameAbbrv != spellData.Name))
+        {
+          defender = null;
+        }
+        else
+        {
+          attacker = spell;
+        }
+      }
+      else
+      {
+        attacker = ReadStringToPeriod(data, byIndex, builder);
+        spell = string.Join(" ", data, fromIndex + 1, byIndex - fromIndex - 1);
+      }
+
       uint damage = StatsUtil.ParseUInt(data[takenIndex + 1]);
 
       // check for pets
@@ -559,10 +578,23 @@ namespace EQLogParser
       string attacker = null;
       if (byIndex > -1 && fromIndex < byIndex)
       {
-        spell = string.Join(" ", data, fromIndex + 1, byIndex - fromIndex - 1);
         attacker = ReadStringToPeriod(data, byIndex, builder);
+
+        if (fromIndex > -1)
+        {
+          spell = string.Join(" ", data, fromIndex + 1, byIndex - fromIndex - 1);
+        }
+        else
+        {
+          spell = attacker;
+          var spellData = DataManager.Instance.GetSpellByName(spell);
+          if (spellData != null && ((spellData.ClassMask > 0 && spellData.Level < 255) || spellData.NameAbbrv != spellData.Name))
+          {
+            attacker = Labels.UNK;
+          }
+        }
       }
-      else if (data[fromIndex + 1] == "your")
+      else if (fromIndex > -1 && data[fromIndex + 1] == "your")
       {
         spell = ReadStringToPeriod(data, fromIndex + 1, builder);
         attacker = "you";
