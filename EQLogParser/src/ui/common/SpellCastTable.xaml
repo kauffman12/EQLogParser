@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -25,6 +26,25 @@
       <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
     </StackPanel>    
     <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="50" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Single">
+      <DataGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Copy" Foreground="#5191c1" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+        </ContextMenu>
+      </DataGrid.ContextMenu>     
       <DataGrid.Columns>
         <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="92" Width="92" />
       </DataGrid.Columns>
