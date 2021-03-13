@@ -22,7 +22,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly object LockObject = new object();
-    private readonly ObservableCollection<dynamic> Records = new ObservableCollection<dynamic>();
+    private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
     private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
     private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
     private readonly Dictionary<string, byte> UniqueNames = new Dictionary<string, byte>();
@@ -221,7 +221,7 @@ namespace EQLogParser
     {
       try
       {
-        var export = BuildExportData();
+        var export = DataGridUtils.BuildExportData(dataGrid);
         string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
@@ -234,33 +234,6 @@ namespace EQLogParser
       {
         LOG.Error(ex);
       }
-    }
-
-    private Tuple<List<string>, List<List<object>>> BuildExportData()
-    {
-      var header = new List<string>();
-      var data = new List<List<object>>();
-
-      for (int i = 0; i < dataGrid.Columns.Count; i++)
-      {
-        header.Add(dataGrid.Columns[i].Header as string);
-      }
-
-      foreach (var item in dataGrid.Items)
-      {
-        if (item is IDictionary<string, object> dict)
-        {
-          var row = new List<object>();
-          foreach (var key in dict.Keys)
-          {
-            row.Add(dict[key]);
-          }
-
-          data.Add(row);
-        }
-      }
-
-      return new Tuple<List<string>, List<List<object>>>(header, data);
     }
 
     private void CreateImageClick(object sender, RoutedEventArgs e)
