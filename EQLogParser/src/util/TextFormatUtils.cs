@@ -31,49 +31,6 @@ namespace EQLogParser
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };
 
-    // Tab delimited CSV for copy/paste to excel
-    internal static string BuildSpellCountCsv(List<string> header, List<List<string>> data, string title = null)
-    {
-      StringBuilder sb = new StringBuilder();
-
-      if (title != null)
-      {
-        sb.Append('"').Append(title).Append('"').AppendLine();
-      }
-
-      var list = new List<string>
-      {
-        "Totals"
-      };
-
-      // header
-      header.ForEach(item =>
-      {
-        var nameCounts = item.Split('=');
-        sb.AppendFormat(CultureInfo.CurrentCulture, CSV_STRING_CELL, (nameCounts.Length == 2) ? nameCounts[0].Trim() : item);
-
-        // keep track of totals
-        if (nameCounts.Length == 2)
-        {
-          list.Add(nameCounts[1].Trim());
-        }
-      });
-
-      // print totals
-      sb.AppendLine();
-      list.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_STRING_CELL, item.Trim()));
-      sb.AppendLine();
-
-      // data
-      data.ForEach(row =>
-      {
-        row.ToList().ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_STRING_CELL, item));
-        sb.AppendLine();
-      });
-
-      return sb.ToString();
-    }
-
     internal static string BuildCsv(List<string> header, List<List<object>> data, string title = null)
     {
       StringBuilder sb = new StringBuilder();
@@ -101,7 +58,7 @@ namespace EQLogParser
       return sb.ToString();
     }
 
-    internal static string BuildBBCodeTable(List<string> header, List<List<string>> data, string title = null)
+    internal static string BuildBBCodeTable(List<string> header, List<List<object>> data, string title = null)
     {
       StringBuilder sb = new StringBuilder();
 
@@ -137,7 +94,7 @@ namespace EQLogParser
       return sb.ToString();
     }
 
-    internal static string BuildGamparseList(List<string> header, List<List<string>> data, string title = null)
+    internal static string BuildGamparseList(List<string> header, List<List<object>> data, string title = null)
     {
       StringBuilder sb = new StringBuilder();
 
@@ -161,7 +118,7 @@ namespace EQLogParser
 
         data.OrderBy(row => row[0]).ToList().ForEach(row =>
         {
-          if (!string.IsNullOrEmpty(row[pair.Value]) && (row[pair.Value] != "0"))
+          if (row[pair.Value] != null && row[pair.Value].ToString().Length > 0 && row[pair.Value].ToString() != "0")
           {
             sb.AppendFormat(CultureInfo.CurrentCulture, BB_GAMPARSE_SPELL_COUNT, row[0], row[pair.Value]);
             sb.AppendLine();

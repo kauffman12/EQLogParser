@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -34,7 +35,7 @@ namespace EQLogParser
 
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
-    private ObservableCollection<SpellCountRow> SpellRowsView = new ObservableCollection<SpellCountRow>();
+    private ObservableCollection<IDictionary<string, object>> SpellRowsView = new ObservableCollection<IDictionary<string, object>>();
     private DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
     private Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
     private List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
@@ -156,7 +157,7 @@ namespace EQLogParser
               int colCount = 0;
               foreach (string name in sortedPlayers)
               {
-                string colBinding = "Values[" + colCount + "]"; // dont use colCount directly since it will change during Dispatch
+                string colBinding = name; // dont use colCount directly since it will change during Dispatch
                 double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
                 string header = name + " = " + ((CurrentCountType == 0) ? total.ToString(CultureInfo.CurrentCulture) : Math.Round(total / totalCasts * 100, 2).ToString(CultureInfo.CurrentCulture));
 
@@ -175,7 +176,7 @@ namespace EQLogParser
               string totalHeader = CurrentCountType == 0 ? "Totals = " + totalCasts : "Totals = 100";
               Dispatcher.InvokeAsync(() =>
               {
-                DataGridTextColumn col = new DataGridTextColumn() { Header = totalHeader, Binding = new Binding("Values[" + colCount + "]") };
+                DataGridTextColumn col = new DataGridTextColumn() { Header = totalHeader, Binding = new Binding("totalColumn") };
                 col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
                 col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
                 dataGrid.Columns.Add(col);
@@ -184,11 +185,11 @@ namespace EQLogParser
               int existingIndex = 0;
               foreach (var spell in sortedSpellList)
               {
-                var row = (SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new SpellCountRow();
+                var row = ((SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new ExpandoObject()) as IDictionary<string, object>;
 
-                row.Spell = spell;
+                row.Add("Spell", spell);
                 //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
-                row.IconColor = ACTIVEICON;
+                row.Add("IconColor", ACTIVEICON);
 
                 int i;
                 double[] values = new double[sortedPlayers.Count + 1];
@@ -200,24 +201,21 @@ namespace EQLogParser
                     {
                       if (CurrentCountType == 0)
                       {
-                        values[i] = filteredPlayerMap[sortedPlayers[i]][spell];
+                        row.Add(sortedPlayers[i], filteredPlayerMap[sortedPlayers[i]][spell]);
                       }
                       else
                       {
-                        values[i] = Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2);
+                        row.Add(sortedPlayers[i], Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2));
                       }
                     }
                     else
                     {
-                      values[i] = CurrentCountType == 0 ? 0 : 0.0;
+                      row.Add(sortedPlayers[i], CurrentCountType == 0 ? 0 : 0.0);
                     }
                   }
                 }
 
-                values[i] = CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
-
-                row.Values.Clear();
-                row.Values.AddRange(values);
+                row.Add("totalColumn", CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2));
 
                 if ((SpellRowsView.Count <= existingIndex))
                 {
@@ -330,7 +328,7 @@ namespace EQLogParser
         {
           dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
           dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          SpellRowsView.ToList().ForEach(spr => spr.IconColor = EMPTYICON);
+          SpellRowsView.ToList().ForEach(spr => spr["IconColor"] = EMPTYICON);
           dataGrid.Items.Refresh();
 
           Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => CreateImage()), TaskScheduler.Default);
@@ -367,7 +365,7 @@ namespace EQLogParser
         rtb.Render(dv);
         Clipboard.SetImage(rtb);
 
-        SpellRowsView.ToList().ForEach(spr => spr.IconColor = ACTIVEICON);
+        SpellRowsView.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
         dataGrid.Items.Refresh();
       }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -504,34 +502,12 @@ namespace EQLogParser
       }
     }
 
-    private Tuple<List<string>, List<List<string>>> BuildExportData()
-    {
-      List<string> header = new List<string>();
-      List<List<string>> data = new List<List<string>>();
-
-      header.Add("");
-      for (int i = 2; i < dataGrid.Columns.Count; i++)
-      {
-        header.Add(dataGrid.Columns[i].Header as string);
-      }
-
-      foreach (var item in dataGrid.Items)
-      {
-        var counts = item as SpellCountRow;
-        List<string> row = new List<string> { counts.Spell };
-        counts.Values.ForEach(value => row.Add(value.ToString(CultureInfo.CurrentCulture)));
-        data.Add(row);
-      }
-
-      return new Tuple<List<string>, List<List<string>>>(header, data);
-    }
-
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
       try
       {
-        var export = BuildExportData();
-        string result = TextFormatUtils.BuildSpellCountCsv(export.Item1, export.Item2, titleLabel.Content as string);
+        var export = DataGridUtils.BuildExportData(dataGrid);
+        string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
@@ -549,7 +525,7 @@ namespace EQLogParser
     {
       try
       {
-        var export = BuildExportData();
+        var export = DataGridUtils.BuildExportData(dataGrid);
         string result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
@@ -568,7 +544,7 @@ namespace EQLogParser
     {
       try
       {
-        var export = BuildExportData();
+        var export = DataGridUtils.BuildExportData(dataGrid);
         string result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
@@ -592,9 +568,9 @@ namespace EQLogParser
         var modified = false;
         while (dataGrid.SelectedItems.Count > 0)
         {
-          if (dataGrid.SelectedItem is SpellCountRow spr)
+          if (dataGrid.SelectedItem is IDictionary<string, object> spr)
           {
-            HiddenSpells[spr.Spell] = 1;
+            HiddenSpells[spr["Spell"] as string] = 1;
             SpellRowsView.Remove(spr);
             modified = true;
           }
@@ -613,9 +589,9 @@ namespace EQLogParser
 
       // Don't allow if the previous operation hasn't finished
       // this probably needs to be better...
-      if (!Running && cell.DataContext is SpellCountRow spr)
+      if (!Running && cell.DataContext is IDictionary<string, object> spr)
       {
-        HiddenSpells[spr.Spell] = 1;
+        HiddenSpells[spr["Spell"] as string] = 1;
         SpellRowsView.Remove(spr);
         OptionsChanged();
       }
