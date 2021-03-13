@@ -4,10 +4,14 @@ using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -16,6 +20,7 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCastTable : UserControl
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly object LockObject = new object();
     private readonly ObservableCollection<dynamic> Records = new ObservableCollection<dynamic>();
     private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
@@ -209,6 +214,119 @@ namespace EQLogParser
         {
           Records.Add(row);
         }
+      }
+    }
+
+    private void CopyCsvClick(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var export = BuildExportData();
+        string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, titleLabel.Content as string);
+        Clipboard.SetDataObject(result);
+      }
+      catch (ArgumentNullException ane)
+      {
+        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
+        LOG.Error(ane);
+      }
+      catch (ExternalException ex)
+      {
+        LOG.Error(ex);
+      }
+    }
+
+    private Tuple<List<string>, List<List<object>>> BuildExportData()
+    {
+      var header = new List<string>();
+      var data = new List<List<object>>();
+
+      for (int i = 0; i < dataGrid.Columns.Count; i++)
+      {
+        header.Add(dataGrid.Columns[i].Header as string);
+      }
+
+      foreach (var item in dataGrid.Items)
+      {
+        if (item is IDictionary<string, object> dict)
+        {
+          var row = new List<object>();
+          foreach (var key in dict.Keys)
+          {
+            row.Add(dict[key]);
+          }
+
+          data.Add(row);
+        }
+      }
+
+      return new Tuple<List<string>, List<List<object>>>(header, data);
+    }
+
+    private void CreateImageClick(object sender, RoutedEventArgs e)
+    {
+      // lame workaround to toggle scrollbar to fix UI
+      dataGrid.IsEnabled = false;
+      dataGrid.SelectedItem = null;
+      dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
+      dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
+
+      Task.Delay(50).ContinueWith((bleh) =>
+      {
+        Dispatcher.InvokeAsync(() =>
+        {
+          dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+          dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
+          //SpellRowsView.ToList().ForEach(spr => spr.IconColor = EMPTYICON);
+          dataGrid.Items.Refresh();
+
+          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => CreateImage()), TaskScheduler.Default);
+        });
+      }, TaskScheduler.Default);
+    }
+
+    private void CreateImage()
+    {
+      try
+      {
+        const int labelHeight = 16;
+        const int margin = 4;
+
+        var details = DataGridUtils.GetRowDetails(dataGrid);
+        var totalRowHeight = details.Item1 * details.Item2 + details.Item1 + 2; // add extra for header row and a little for the bottom border
+        var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth);
+        var realTableHeight = dataGrid.ActualHeight < totalRowHeight ? dataGrid.ActualHeight : totalRowHeight;
+        var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
+
+        var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + labelHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+
+        DrawingVisual dv = new DrawingVisual();
+        using (DrawingContext ctx = dv.RenderOpen())
+        {
+          var brush = new VisualBrush(titleLabel);
+          ctx.DrawRectangle(brush, null, new Rect(new Point(4, margin / 2), new Size(titleLabel.ActualWidth, labelHeight)));
+
+          brush = new VisualBrush(dataGrid);
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, labelHeight + margin), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight + SystemParameters.HorizontalScrollBarHeight)));
+        }
+
+        rtb.Render(dv);
+        Clipboard.SetImage(rtb);
+        dataGrid.Items.Refresh();
+      }
+#pragma warning disable CA1031 // Do not catch general exception types
+      catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
+      {
+        if (ex is ExternalException || ex is ThreadStateException || ex is ArgumentNullException || ex is NullReferenceException)
+        {
+          LOG.Error("Could not Copy Image", ex);
+        }
+      }
+      finally
+      {
+        dataGrid.IsEnabled = true;
       }
     }
 
