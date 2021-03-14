@@ -91,8 +91,6 @@ namespace EQLogParser
       {
         if (e.Type == Labels.HEALPARSE && e.State == "COMPLETED")
         {
-          (Application.Current.MainWindow as MainWindow).Busy(true);
-
           if (CurrentStats != null)
           {
             HealingStatsManager.Instance.PopulateHealing(CurrentStats);
@@ -107,15 +105,12 @@ namespace EQLogParser
               title.Content = CurrentStats.FullTitle;
             }
           }
-
-          Helpers.SetBusy(false);
         }
         else if (e.Type == Labels.TANKPARSE)
         {
           switch (e.State)
           {
             case "STARTED":
-              Helpers.SetBusy(true);
               title.Content = "Calculating Tanking DPS...";
               dataGrid.ItemsSource = null;
               break;
@@ -140,14 +135,12 @@ namespace EQLogParser
                 title.Content += " (Not Including AE Healing)";
               }
 
-              Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
               break;
             case "NONPC":
             case "NODATA":
               CurrentStats = null;
               title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
-              Helpers.SetBusy(false);
               UpdateDataGridMenuItems();
               break;
           }

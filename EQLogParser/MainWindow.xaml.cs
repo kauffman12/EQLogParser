@@ -8,12 +8,14 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -25,21 +27,6 @@ namespace EQLogParser
     public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
 
     internal event EventHandler<bool> EventsLogLoadingComplete;
-
-    public string StatusText
-    {
-      get { return (string) GetValue(StatusTextProperty); }
-      private set { SetValue(StatusTextProperty, value); }
-    }
-
-    public Brush StatusBrush
-    {
-      get { return (Brush)GetValue(StatusBrushProperty); }
-      private set { SetValue(StatusBrushProperty, value); }
-    }
-
-    public static readonly DependencyProperty StatusTextProperty = DependencyProperty.Register("StatusText", typeof(string), typeof(MainWindow));
-    public static readonly DependencyProperty StatusBrushProperty = DependencyProperty.Register("StatusBrush", typeof(Brush), typeof(MainWindow));
 
     // global settings
     internal static bool IsAoEHealingEnabled = true;
@@ -59,8 +46,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string APP_NAME = "EQ Log Parser";
-    private const string VERSION = "v1.7.26";
+    private const string VERSION = "v1.7.27";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -102,7 +88,9 @@ namespace EQLogParser
         InitializeComponent();
 
         // update titles
-        Title = APP_NAME + " " + VERSION;
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+        versionText.Text = VERSION;
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
 
         // upate helper
         Helpers.SetDispatcher(Dispatcher);
@@ -251,13 +239,6 @@ namespace EQLogParser
     }
 
    internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
-
-    internal void Busy(bool state)
-    {
-      BusyCount += state ? 1 : -1;
-      BusyCount = BusyCount < 0 ? 0 : BusyCount;
-      busyIcon.Visibility = BusyCount == 0 ? Visibility.Hidden : Visibility.Visible;
-    }
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -749,25 +730,24 @@ namespace EQLogParser
       {
         if (EQLogReader != null)
         {
-          Busy(true);
           OverlayUtil.CloseOverlay();
 
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          StatusText = (CurrentLogOption == LogOption.ARCHIVE ? "Archiving" : "Reading Log... ") + filePercent + "% in " + seconds + " seconds";
-          StatusBrush = LOADING_BRUSH;
+          statusText.Text = (CurrentLogOption == LogOption.ARCHIVE ? "Archiving" : "Reading Log... ") + filePercent + "% in " + seconds + " seconds";
+          statusText.Foreground = LOADING_BRUSH;
 
           if (EQLogReader.FileLoadComplete)
           {
             if ((filePercent >= 100 && CurrentLogOption != LogOption.ARCHIVE) || CurrentLogOption == LogOption.MONITOR)
             {
-              StatusBrush = GOOD_BRUSH;
-              StatusText = "Monitoring Active";
+              statusText.Foreground = GOOD_BRUSH;
+              statusText.Text = "Monitoring Active";
             }
             else if (filePercent >= 100 && CurrentLogOption == LogOption.ARCHIVE)
             {
-              StatusBrush = GOOD_BRUSH;
-              StatusText = "Archiving Complete";
+              statusText.Foreground = GOOD_BRUSH;
+              statusText.Text = "Archiving Complete";
             }
           }
 
@@ -783,8 +763,6 @@ namespace EQLogParser
           {
             _ = Task.Delay(500).ContinueWith(task => UpdateLoadingProgress(), TaskScheduler.Default);
           }
-
-          Busy(false);
         }
       });
     }
@@ -822,7 +800,7 @@ namespace EQLogParser
           HealingProcessor = new ActionProcessor<LineData>("HealProcessor", HealingLineParser.Process);
           MiscProcessor = new ActionProcessor<LineData>("MiscProcessor", MiscLineParser.Process);
 
-          Title = APP_NAME + " " + VERSION + " -- (" + dialog.FileName + ")";
+          fileText.Text = "-- (" + dialog.FileName + ")";
           StartLoadTime = DateTime.Now;
           FilePosition = LineCount = 0;
           DebugUtil.Reset();
@@ -982,6 +960,18 @@ namespace EQLogParser
       }
     }
 
+    public void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+      if (WindowState == WindowState.Maximized)
+      {
+        BorderThickness = new Thickness(6);
+      }
+      else
+      {
+        BorderThickness = new Thickness(0);
+      }
+    }
+
     private void WindowClosed(object sender, EventArgs e)
     {
       ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
@@ -1000,6 +990,23 @@ namespace EQLogParser
       Application.Current.Shutdown();
     }
 
+    private void Maximize_Click(object sender, RoutedEventArgs e)
+    {
+      WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    private void Maximize_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+      if (e.ClickCount == 2)
+      {
+        Maximize_Click(sender, e);
+      }
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void Close_MouseClick(object sender, RoutedEventArgs e) => Close();
+
     // This is where closing summary tables and line charts will get disposed
     private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e) => (e.Window.Content as IDisposable)?.Dispose();
     private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e) => playerParseTextWindow.State = DockingWindowState.AutoHide;
@@ -1007,6 +1014,19 @@ namespace EQLogParser
     private void MenuItemSelectArchiveChatClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.ARCHIVE);
     private void WindowClose(object sender, EventArgs e) => Close();
 
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImportAttribute("user32.dll")]
+    public static extern bool ReleaseCapture();
+
+    //Attach this to the MouseDown event of your drag control to move the window in place of the title bar
+    private void WindowDrag(object sender, MouseButtonEventArgs e) // MouseDown
+    {
+      ReleaseCapture();
+      SendMessage(new WindowInteropHelper(this).Handle,
+          0xA1, (IntPtr)0x2, (IntPtr)0);
+    }
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls

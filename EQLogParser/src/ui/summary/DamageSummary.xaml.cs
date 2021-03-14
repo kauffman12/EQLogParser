@@ -77,7 +77,6 @@ namespace EQLogParser
         switch (e.State)
         {
           case "STARTED":
-            (Application.Current.MainWindow as MainWindow).Busy(true);
             title.Content = "Calculating DPS...";
             dataGrid.ItemsSource = null;
             ChildGrids.Clear();
@@ -108,14 +107,12 @@ namespace EQLogParser
               title.Content += " (Not Including Banes)";
             }
 
-            (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
           case "NODATA":
             CurrentStats = null;
             title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
-            (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
         }

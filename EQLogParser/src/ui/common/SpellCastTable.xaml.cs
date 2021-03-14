@@ -56,7 +56,6 @@ namespace EQLogParser
         if (Running == false)
         {
           Running = true;
-          Helpers.SetBusy(true);
           showSelfOnly.IsEnabled = castTypes.IsEnabled = spellTypes.IsEnabled = false;
 
           Task.Delay(50).ContinueWith(task =>
@@ -150,7 +149,6 @@ namespace EQLogParser
               AddRow(playerSpells, max, lastTime);
             }
 
-            Helpers.SetBusy(false);
             Dispatcher.InvokeAsync(() =>
             {
               // only enable for current player

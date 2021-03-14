@@ -27,8 +27,6 @@ namespace EQLogParser
 
     private void Load()
     {
-      Helpers.SetBusy(true);
-
       var npcStatsRows = new Dictionary<string, NpcStatsRow>();
       foreach (var kv in DataManager.Instance.GetNpcResistStats())
       {
@@ -108,7 +106,6 @@ namespace EQLogParser
 
       dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
       titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Your Spell Stats for " + npcStatsRows.Count + " Unique NPCs";
-      Helpers.SetBusy(false);
 
       Tuple<double, string> GetRate(uint landed, uint notLanded)
       {

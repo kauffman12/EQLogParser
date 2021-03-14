@@ -61,7 +61,6 @@ namespace EQLogParser
         {
           try
           {
-            Helpers.SetBusy(true);
             ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
 
             // initial load
@@ -129,7 +128,6 @@ namespace EQLogParser
           }
           finally
           {
-            Helpers.SetBusy(false);
             Dispatcher.InvokeAsync(() => groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = groupResisted.IsEnabled = showPets.IsEnabled = true);
             Running = false;
           }

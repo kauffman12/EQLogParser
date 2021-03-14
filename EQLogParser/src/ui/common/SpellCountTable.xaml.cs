@@ -104,7 +104,6 @@ namespace EQLogParser
         if (Running == false)
         {
           Running = true;
-          Helpers.SetBusy(true);
           showSelfOnly.IsEnabled = showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
 
           Task.Delay(50).ContinueWith(task =>
@@ -233,7 +232,6 @@ namespace EQLogParser
             }
             finally
             {
-              Helpers.SetBusy(false);
               Dispatcher.InvokeAsync(() =>
               {
                 showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
