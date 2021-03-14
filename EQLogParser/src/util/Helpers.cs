@@ -79,8 +79,6 @@ namespace EQLogParser
       }), TaskScheduler.Default);
     }
 
-    internal static void SetBusy(bool state) => MainDispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow)?.Busy(state));
-
     internal static void ChartResetView(CartesianChart theChart)
     {
       theChart.AxisY[0].MaxValue = double.NaN;

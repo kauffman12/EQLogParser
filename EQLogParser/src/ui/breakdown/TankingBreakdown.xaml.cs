@@ -44,8 +44,6 @@ namespace EQLogParser
         {
           try
           {
-            Helpers.SetBusy(true);
-
             if (PlayerStats != null)
             {
               ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
@@ -78,7 +76,6 @@ namespace EQLogParser
           }
           finally
           {
-            Helpers.SetBusy(false);
             Running = false;
           }
         }, TaskScheduler.Default);

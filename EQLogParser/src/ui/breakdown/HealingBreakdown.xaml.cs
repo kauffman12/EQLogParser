@@ -49,8 +49,6 @@ namespace EQLogParser
         {
           try
           {
-            Helpers.SetBusy(true);
-
             if (PlayerStats != null)
             {
               ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
@@ -91,7 +89,6 @@ namespace EQLogParser
           }
           finally
           {
-            Helpers.SetBusy(false);
             Dispatcher.InvokeAsync(() => choicesList.IsEnabled = true);
             Running = false;
           }

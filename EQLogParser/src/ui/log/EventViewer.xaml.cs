@@ -89,8 +89,6 @@ namespace EQLogParser
 
         Task.Delay(75).ContinueWith(task =>
         {
-          Helpers.SetBusy(true);
-
           lock (CollectionLock)
           {
             EventRows.Clear();
@@ -143,8 +141,6 @@ namespace EQLogParser
 
           rows.Sort((a, b) => a.Time.CompareTo(b.Time));
           rows.ForEach(row => EventRows.Add(row));
-
-          Helpers.SetBusy(false);
 
           Dispatcher.InvokeAsync(() =>
           {

@@ -492,31 +492,6 @@
     </Style>
 
     <!-- Window/Chrome Styles -->
-    <Style x:Key="StandardStyle" TargetType="{x:Type Window}">
-      <Setter Property="WindowChrome.WindowChrome">
-        <Setter.Value>
-          <WindowChrome GlassFrameThickness="0 0 0 0" />
-        </Setter.Value>
-      </Setter>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="{x:Type Window}">
-            <Grid Background="#FF232325">
-              <Border Background="#FF232325" Margin="{Binding Source={x:Static SystemParameters.WindowNonClientFrameThickness}}">
-                <ContentPresenter Content="{TemplateBinding Content}" />
-              </Border>
-              <StackPanel Orientation="Horizontal" Margin="20,6,0,0" VerticalAlignment="Top">
-                <TextBlock Foreground="LightGray" MaxHeight="16" Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Title}" />
-                <TextBlock Foreground="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=StatusBrush}" MaxHeight="18" Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=StatusText, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,0,0"/>
-              </StackPanel>
-              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF232325" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,80,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
-              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF232325" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,50,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
-              <Button WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF232325" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,20,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
-            </Grid>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
     <Style x:Key="OverlayStyle" TargetType="{x:Type Window}">
       <Setter Property="WindowChrome.WindowChrome">
         <Setter.Value>

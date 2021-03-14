@@ -90,8 +90,6 @@ namespace EQLogParser
 
         Task.Delay(75).ContinueWith(task =>
         {
-          Helpers.SetBusy(true);
-
           lock (CollectionLock)
           {
             TotalRecords.Clear();
@@ -143,8 +141,6 @@ namespace EQLogParser
           {
             totalRecords.OrderByDescending(row => row.Quantity).ToList().ForEach(s => TotalRecords.Add(s));
           }
-
-          Helpers.SetBusy(false);
 
           Dispatcher.InvokeAsync(() =>
           {

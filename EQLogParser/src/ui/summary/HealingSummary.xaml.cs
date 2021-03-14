@@ -49,7 +49,6 @@ namespace EQLogParser
         switch (e.State)
         {
           case "STARTED":
-            (Application.Current.MainWindow as MainWindow).Busy(true);
             title.Content = "Calculating HPS...";
             dataGrid.ItemsSource = null;
             break;
@@ -73,14 +72,12 @@ namespace EQLogParser
               title.Content += " (Not Including AE Healing)";
             }
 
-            (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
           case "NONPC":
           case "NODATA":
             CurrentStats = null;
             title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
-            (Application.Current.MainWindow as MainWindow).Busy(false);
             UpdateDataGridMenuItems();
             break;
         }

@@ -110,7 +110,6 @@ namespace EQLogParser
 
         Task.Delay(125).ContinueWith(task =>
         {
-          Helpers.SetBusy(true);
           var rowCache = new Dictionary<string, HitLogRow>();
           Dictionary<string, byte> uniqueDefenders = new Dictionary<string, byte>();
           Dictionary<string, byte> uniqueActions = new Dictionary<string, byte>();
@@ -170,8 +169,6 @@ namespace EQLogParser
 
             actionList.IsEnabled = typeList.IsEnabled = actedList.IsEnabled = showPets.IsEnabled = groupHits.IsEnabled = true;
           });
-
-          Helpers.SetBusy(false);
         }, TaskScheduler.Default);
       }
     }
