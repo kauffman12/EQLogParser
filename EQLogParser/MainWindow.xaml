@@ -10,7 +10,7 @@
         WindowStyle="None"
         SizeChanged="Window_SizeChanged"
         Icon="EQLogParser.ico"
-        Title=""
+        Title="EQLogParser"
         Closed="WindowClosed"
         ResizeMode="CanResize"
         TextOptions.TextFormattingMode="Display"
@@ -27,7 +27,7 @@
       <ColumnDefinition Width="1200*"/>
     </Grid.ColumnDefinitions>
     <Grid.RowDefinitions>
-      <RowDefinition Height="24" />
+      <RowDefinition Height="26" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
     <tb:TaskbarIcon x:Name="taskBarIcon" ToolTipText="EQ Log Parser" TrayLeftMouseUp="TrayIcon_MouseUp" TrayRightMouseUp="TrayIcon_MouseUp" IconSource="EQLogParser.ico">
@@ -37,9 +37,9 @@
         </Border>
       </tb:TaskbarIcon.TrayToolTip>
     </tb:TaskbarIcon>
-    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Background="#373a3e">
-      <Image Source="EQLogParser.ico" Height="18" Width="18" Margin="10,5,0,0"/>
-      <Menu Margin="0" Height="24" Width="210" VerticalAlignment="Top" Background="#373a3e">
+    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Background="#202020">
+      <Image Source="EQLogParser.ico" Height="16" Width="16" Margin="10,2,0,0"/>
+      <Menu Margin="0" Height="24" Width="210" VerticalAlignment="Top" Background="#202020">
         <MenuItem Header="_File" Height="24" Width="40">
           <MenuItem Header="_Archive Chat" Height="24" Click="MenuItemSelectArchiveChatClick" ToolTip="Only Archive Chat from a Log File">
             <MenuItem.Icon>
@@ -250,14 +250,14 @@
           </MenuItem>
         </MenuItem>
       </Menu>
-      <StackPanel Height="24" Width="5000" PreviewMouseDown="WindowDrag" MouseLeftButtonDown="Maximize_DoubleClick" Background="#373a3e" Orientation="Horizontal">
+      <StackPanel Height="24" Width="5000" PreviewMouseDown="WindowDrag" MouseLeftButtonDown="Maximize_DoubleClick" Background="#202020" Orientation="Horizontal">
         <TextBlock x:Name="statusText" Height="24" Margin="4,6,0,0"/>
         <TextBlock x:Name="fileText" Height="24" Margin="4,6,0,0" Foreground="LightGray"/>
       </StackPanel>
     </StackPanel>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF373a3e" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,70,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF373a3e" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,40,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF373a3e" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,5,10,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
+    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,4,70,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
+    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,4,40,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
+    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,4,10,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
     <TextBlock Grid.Column="2" x:Name="versionText" Height="24" Margin="0,6,110,0" Foreground="Orange" FontStyle="Italic" PreviewMouseDown="WindowDrag" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
     <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown" WindowUnregistered="DockSite_WindowUnreg">
       <docking:SplitContainer Orientation="Horizontal">
