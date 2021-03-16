@@ -27,7 +27,7 @@
       <ColumnDefinition Width="1200*"/>
     </Grid.ColumnDefinitions>
     <Grid.RowDefinitions>
-      <RowDefinition Height="26" />
+      <RowDefinition Height="30" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
     <tb:TaskbarIcon x:Name="taskBarIcon" ToolTipText="EQ Log Parser" TrayLeftMouseUp="TrayIcon_MouseUp" TrayRightMouseUp="TrayIcon_MouseUp" IconSource="EQLogParser.ico">
@@ -38,9 +38,9 @@
       </tb:TaskbarIcon.TrayToolTip>
     </tb:TaskbarIcon>
     <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Background="#202020">
-      <Image Source="EQLogParser.ico" Height="16" Width="16" Margin="10,2,0,0"/>
-      <Menu Margin="0" Height="24" Width="210" VerticalAlignment="Top" Background="#202020">
-        <MenuItem Header="_File" Height="24" Width="40">
+      <Image Source="EQLogParser.ico" Height="18" Width="18" Margin="10,2,0,0"/>
+      <Menu Margin="0" Height="30" Width="210" VerticalAlignment="Top" Background="#202020">
+        <MenuItem Header="_File" Height="30" Width="40">
           <MenuItem Header="_Archive Chat" Height="24" Click="MenuItemSelectArchiveChatClick" ToolTip="Only Archive Chat from a Log File">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Database" Foreground="#5191c1" />
@@ -100,7 +100,7 @@
           <Separator/>
           <MenuItem Header="E_xit" Height="24" Click="WindowClose" InputGestureText="Alt+F4"/>
         </MenuItem>
-        <MenuItem Header="_View" Height="24" Width="45">
+        <MenuItem Header="_View" Height="30" Width="45">
           <MenuItem x:Name="damageView" Header="_Damage" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageViewIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Gavel" Foreground="#FF4F9FE2" />
@@ -220,7 +220,7 @@
             </MenuItem>
           </MenuItem>
         </MenuItem>
-        <MenuItem Header="_Options" Height="24" Width="65">
+        <MenuItem Header="_Options" Height="30" Width="65">
           <MenuItem x:Name="enableAoEHealing" Header="Show _AoE Heals" Click="ToggleAoEHealingClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableAoEHealingIcon" Visibility="Hidden" Height="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
@@ -237,7 +237,7 @@
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
-        <MenuItem Header="_Tools" Height="24" Width="55">
+        <MenuItem Header="_Tools" Height="30" Width="55">
           <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="deleteChatIcon" Visibility="Visible" Height="10" Width="10" HorizontalAlignment="Center" Icon="Close"  Foreground="#FF4F9FE2" />
@@ -255,10 +255,10 @@
         <TextBlock x:Name="fileText" Height="24" Margin="4,6,0,0" Foreground="LightGray"/>
       </StackPanel>
     </StackPanel>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,4,70,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,4,40,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,4,10,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
-    <TextBlock Grid.Column="2" x:Name="versionText" Height="24" Margin="0,6,110,0" Foreground="Orange" FontStyle="Italic" PreviewMouseDown="WindowDrag" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
+    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,70,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
+    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,40,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
+    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,10,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
+    <TextBlock Grid.Column="2" x:Name="versionText" Height="24" Margin="0,8,100,0" Foreground="Orange" FontStyle="Italic" PreviewMouseDown="WindowDrag" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
     <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown" WindowUnregistered="DockSite_WindowUnreg">
       <docking:SplitContainer Orientation="Horizontal">
         <docking:ToolWindowContainer>
