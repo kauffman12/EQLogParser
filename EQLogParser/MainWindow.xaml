@@ -7,7 +7,7 @@
         xmlns:tb="http://www.hardcodet.net/taskbar"
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
-        WindowStyle="None"
+        WindowStyle="SingleBorderWindow"
         SizeChanged="Window_SizeChanged"
         Icon="EQLogParser.ico"
         Title="EQLogParser"
@@ -17,9 +17,8 @@
         StateChanged="WindowStateChanged"
         Width="1500">
   <WindowChrome.WindowChrome>
-    <WindowChrome 
-        CaptionHeight="0"
-        ResizeBorderThickness="5" />
+    <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" 
+            UseAeroCaptionButtons="False" ResizeBorderThickness="7" />
   </WindowChrome.WindowChrome>
   <Grid>
     <Grid.ColumnDefinitions>
@@ -258,7 +257,7 @@
     <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,70,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
     <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,40,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
     <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,10,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
-    <TextBlock Grid.Column="2" x:Name="versionText" Height="24" Margin="0,8,100,0" Foreground="Orange" FontStyle="Italic" PreviewMouseDown="WindowDrag" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
+    <TextBlock Grid.Column="2" x:Name="versionText" Height="24" Width="40" Margin="0,8,100,0" Foreground="Orange" FontStyle="Italic" PreviewMouseDown="WindowDrag" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
     <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown" WindowUnregistered="DockSite_WindowUnreg">
       <docking:SplitContainer Orientation="Horizontal">
         <docking:ToolWindowContainer>
