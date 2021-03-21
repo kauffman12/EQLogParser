@@ -31,7 +31,7 @@ namespace EQLogParser
     private string CurrentActionFilter = null;
     private string CurrentTypeFilter = null;
     private bool CurrentShowPetsFilter = true;
-    private bool CurrentGroupSpellCastsFilter = true;
+    private bool CurrentGroupActionsFilter = true;
 
     internal HitLogViewer(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups, bool defending = false)
     {
@@ -106,7 +106,7 @@ namespace EQLogParser
       if (init || actionList.IsEnabled)
       {
         actionList.IsEnabled = typeList.IsEnabled = actedList.IsEnabled = showPets.IsEnabled = groupHits.IsEnabled = false;
-        dataGrid.Columns[6].Visibility = CurrentGroupSpellCastsFilter ? Visibility.Visible : Visibility.Collapsed;
+        dataGrid.Columns[6].Visibility = CurrentGroupActionsFilter ? Visibility.Visible : Visibility.Collapsed;
 
         Task.Delay(125).ContinueWith(task =>
         {
@@ -133,13 +133,13 @@ namespace EQLogParser
               rowCache.Clear();
               block.Actions.ForEach(action =>
               {
-                if (CreateRow(rowCache, PlayerStats, action, block.BeginTime, Defending) is HitLogRow row && !CurrentGroupSpellCastsFilter)
+                if (CreateRow(rowCache, PlayerStats, action, block.BeginTime, Defending) is HitLogRow row && !CurrentGroupActionsFilter)
                 {
                   AddRow(row, uniqueActions, uniqueDefenders, uniqueTypes, acted);
                 }
               });
 
-              if (CurrentGroupSpellCastsFilter)
+              if (CurrentGroupActionsFilter)
               {
                 foreach (var row in rowCache.Values.OrderByDescending(row => row.Total))
                 {
@@ -263,7 +263,7 @@ namespace EQLogParser
         row.SubType = hit.SubType;
         row.Time = currentTime;
 
-        if (CurrentGroupSpellCastsFilter)
+        if (CurrentGroupActionsFilter)
         {
           var rowKey = GetRowKey(row, CurrentActedFilter != null);
           if (rowCache.TryGetValue(rowKey, out HitLogRow previous))
@@ -281,7 +281,7 @@ namespace EQLogParser
           }
         }
 
-        row.IsGroupingEnabled = CurrentGroupSpellCastsFilter;
+        row.IsGroupingEnabled = CurrentGroupActionsFilter;
         row.Total += hit.Total;
         row.OverTotal += hit.OverTotal;
         row.CritCount += (uint)(LineModifiersParser.IsCrit(hit.ModifiersMask) ? 1 : 0);
@@ -325,8 +325,8 @@ namespace EQLogParser
         CurrentTypeFilter = typeList.SelectedIndex == 0 ? null : typeList.SelectedItem as string;
         CurrentShowPetsFilter = showPets.IsChecked.Value;
 
-        var refresh = CurrentGroupSpellCastsFilter == groupHits.IsChecked.Value;
-        CurrentGroupSpellCastsFilter = groupHits.IsChecked.Value;
+        var refresh = CurrentGroupActionsFilter == groupHits.IsChecked.Value;
+        CurrentGroupActionsFilter = groupHits.IsChecked.Value;
 
         if (refresh)
         {

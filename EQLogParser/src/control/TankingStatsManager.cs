@@ -82,6 +82,7 @@ namespace EQLogParser
             RaidTotals.TotalSeconds = RaidTotals.Ranges.GetTotal();
 
             int rangeIndex = 0;
+            double lastTime = 0;
             var newBlock = new List<ActionBlock>();
             damageBlocks.ForEach(block =>
             {
@@ -97,7 +98,14 @@ namespace EQLogParser
                 newBlock = new List<ActionBlock>();
               }
 
-              newBlock.Add(block);
+              if (lastTime != block.BeginTime)
+              {
+                newBlock.Add(block);
+              }
+              else
+              {
+                newBlock.Last().Actions.AddRange(block.Actions);
+              }
             });
 
             TankingGroups.Add(newBlock);
