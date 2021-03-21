@@ -20379,6 +20379,66 @@ colonel honeybags
 colonel thalan
 colossus of war
 coloth meadowgreen
+combat dummy azia
+combat dummy azia II
+combat dummy azia III
+combat dummy beza
+combat dummy beza II
+combat dummy beza III
+combat dummy caza
+combat dummy caza II
+combat dummy caza III
+combat dummy dena
+combat dummy dena II
+combat dummy dena III
+combat dummy ena
+combat dummy ena II
+combat dummy ena III
+combat dummy fana
+combat dummy fana II
+combat dummy fana III
+combat dummy geza
+combat dummy geza II
+combat dummy geza III
+combat dummy heda 
+combat dummy heda II
+combat dummy heda III
+combat dummy izah
+combat dummy izah II
+combat dummy izah III
+combat dummy jaka
+combat dummy jaka II
+combat dummy jaka III
+combat dummy kala
+combat dummy kala II
+combat dummy kala III
+combat dummy lena
+combat dummy lena II
+combat dummy lena III
+combat dummy meda
+combat dummy meda II
+combat dummy meda III
+combat dummy neza
+combat dummy neza II
+combat dummy neza III
+combat dummy ozah
+combat dummy ozah II
+combat dummy ozah III
+combat dummy paza
+combat dummy paza II
+combat dummy paza III
+combat dummy qela
+combat dummy qela II
+combat dummy qela III
+combat dummy rena
+combat dummy rena II
+combat dummy rena III
+combat dummy sana
+combat dummy sana II
+combat dummy sana III
+combat dummy taza
+combat dummy taza II
+combat dummy taza III
 commander alast degmar
 commander bahreck
 commander barvian

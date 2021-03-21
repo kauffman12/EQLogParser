@@ -128,8 +128,8 @@ namespace EQLogParser
       {
         var isAttackerPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
         var isDefenderPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Defender);
-        var isAttackerNpc = !isAttackerPlayer && (record.Attacker.StartsWith("Combat Dummy", StringComparison.OrdinalIgnoreCase) || DataManager.Instance.IsKnownNpc(record.Attacker));
-        var isDefenderNpc = !isDefenderPlayer && (record.Defender.StartsWith("Combat Dummy", StringComparison.OrdinalIgnoreCase) || DataManager.Instance.IsKnownNpc(record.Defender));
+        var isAttackerNpc = !isAttackerPlayer && DataManager.Instance.IsKnownNpc(record.Attacker);
+        var isDefenderNpc = !isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender);
 
         if (isDefenderNpc && !isAttackerNpc)
         {
