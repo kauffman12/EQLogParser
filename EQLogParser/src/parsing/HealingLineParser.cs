@@ -107,6 +107,15 @@ namespace EQLogParser
             type = Labels.HOT;
           }
         }
+        else
+        {
+          int wardIndex = test.IndexOf("`s ward", StringComparison.OrdinalIgnoreCase);
+          if (wardIndex > 0)
+          {
+            // assign owner of ward as healer
+            healer = test.Substring(0, wardIndex);
+          }
+        }
       }
       else
       {
