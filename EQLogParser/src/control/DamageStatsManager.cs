@@ -92,6 +92,7 @@ namespace EQLogParser
             RaidTotals.MaxTime = RaidTotals.TotalSeconds;
 
             int rangeIndex = 0;
+            double lastTime = 0;
             var newBlock = new List<ActionBlock>();
             damageBlocks.ForEach(block =>
             {
@@ -107,10 +108,18 @@ namespace EQLogParser
                 newBlock = new List<ActionBlock>();
               }
 
-              newBlock.Add(block);
+              if (lastTime != block.BeginTime)
+              {
+                newBlock.Add(block);
+              }
+              else
+              {
+                newBlock.Last().Actions.AddRange(block.Actions);
+              }
 
               // update pet mapping
               block.Actions.ForEach(action => UpdatePetMapping(action as DamageRecord));
+              lastTime = block.BeginTime;
             });
 
             DamageGroups.Add(newBlock);
