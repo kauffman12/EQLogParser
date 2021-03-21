@@ -12,6 +12,13 @@ namespace EQLogParser
     private static readonly List<string> Currency = new List<string> { "Platinum", "Gold", "Silver", "Copper" };
     private static readonly Dictionary<char, uint> Rates = new Dictionary<char, uint>() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
     private static readonly char[] LootedFromTrim = new char[] { '-', '.' };
+    private static readonly Dictionary<string, byte> StruckByTypes = new Dictionary<string, byte>()
+    {
+      { "afflicted", 1 }, { "beset", 1 }, { "bound", 1 }, { "burned", 1 }, { "consumed", 1 }, { "cursed", 1 }, { "crushed", 1 }, { "cut", 1 },
+      { "drained", 1 }, { "engulfed", 1 }, { "enveloped", 1 }, { "chilled", 1 }, { "frozen", 1 }, { "hit", 1 }, { "immolated", 1 }, { "impaled", 1 },
+      { "pierced", 1 },  { "pummeled", 1 }, { "rent", 1 }, { "shaken", 1 }, { "slashed", 1 }, { "sliced", 1 }, { "surrounded", 1 }, { "struck", 1 },
+      { "stunned", 1 }, { "withered", 1 }
+    };
 
     public static void Process(LineData lineData)
     {
@@ -19,9 +26,16 @@ namespace EQLogParser
 
       try
       {
+        // handle junk line to avoid it being written to debug
+        if (lineData.Action.StartsWith("Your Irae Faycite Shard:", StringComparison.OrdinalIgnoreCase))
+        {
+          handled = true;
+          return;
+        }
+
         string[] split = lineData.Action.Split(' ');
 
-        if (split != null && split.Length > 2)
+        if (split != null && split.Length >= 2)
         {
           // [Sun Mar 01 22:20:36 2020] A shaded torch has been awakened by Drogbaa.
           // [Sun Mar 01 20:35:55 2020] The master looter, Qulas, looted 32426 platinum from the corpse.
@@ -40,6 +54,7 @@ namespace EQLogParser
           int masterLootIndex = -1;
           int receiveIndex = -1;
           int resistedIndex = -1;
+          int isIndex = -1;
 
           for (int i = 0; i < split.Length && !handled; i++)
           {
@@ -53,6 +68,9 @@ namespace EQLogParser
               {
                 case "awakened":
                   awakenedIndex = i;
+                  break;
+                case "is":
+                  isIndex = i;
                   break;
                 case "looted":
                   lootedIndex = i;
@@ -93,6 +111,11 @@ namespace EQLogParser
                     DataManager.Instance.AddMiscRecord(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, DateUtil.ParseLogDate(lineData.Line));
                     handled = true;
                   }
+                  else if (isIndex > 0 && StruckByTypes.ContainsKey(split[i-1]))
+                  {
+                    // ignore common lines like: is struck by
+                    handled = true;
+                  }
                   break;
                 case "from":
                   if (masterLootIndex > -1 && lootedIndex > masterLootIndex && split.Length > lootedIndex + 1 && split.Length > 3)
@@ -122,6 +145,7 @@ namespace EQLogParser
                     }
                   }
                   break;
+                case "split.":
                 case "split":
                   if (receiveIndex > -1 && split[i - 1] == "your" && split[i - 2] == "as")
                   {
@@ -132,6 +156,10 @@ namespace EQLogParser
                       handled = true;
                     }
                   }
+                  break;
+                case "staggers.":
+                  // ingore X staggers.
+                  handled = true;
                   break;
               }
             }
@@ -190,7 +218,7 @@ namespace EQLogParser
         item = string.Join(", ", tmp);
       }
 
-      return parsed && count != ushort.MaxValue;
+      return parsed;
     }
   }
 }
