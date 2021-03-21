@@ -90,7 +90,7 @@ namespace EQLogParser
           if (RaidTotals.Ranges.TimeSegments.Count > 0)
           {
             // calculate totals first since it can modify the ranges
-            RaidTotals.TotalSeconds = RaidTotals.Ranges.GetTotal();
+            RaidTotals.TotalSeconds = RaidTotals.MaxTime = RaidTotals.Ranges.GetTotal();
 
             RaidTotals.Ranges.TimeSegments.ForEach(segment =>
             {
@@ -236,7 +236,7 @@ namespace EQLogParser
         // base the total time range off the sub times ranges since healing doesn't have good Fight segments to work with
         var totalRange = new TimeRange();
         ranges.Values.ToList().ForEach(range => totalRange.Add(range.TimeSegments));
-        stats.TotalSeconds = totalRange.GetTotal();
+        stats.TotalSeconds = stats.MaxTime = totalRange.GetTotal();
       }
 
       StatsUtil.UpdateSubStatsTimeRanges(stats, calc);

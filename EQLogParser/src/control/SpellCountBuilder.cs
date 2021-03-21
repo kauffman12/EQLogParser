@@ -20,7 +20,7 @@ namespace EQLogParser
         var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - COUNT_OFFSET, segment.EndTime);
         blocks.ForEach(block =>
         {
-          if (block.BeginTime <= maxTime)
+          if (raidStats.MaxTime == raidStats.TotalSeconds || block.BeginTime <= maxTime)
           {
             block.Actions.ForEach(action => castsDuring.Add(action));
           }
@@ -29,7 +29,7 @@ namespace EQLogParser
         blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - COUNT_OFFSET, segment.EndTime);
         blocks.ForEach(block =>
         {
-          if (block.BeginTime <= maxTime)
+          if (raidStats.MaxTime == raidStats.TotalSeconds || block.BeginTime <= maxTime)
           {
             block.Actions.ForEach(action => receivedDuring.Add(action));
           }

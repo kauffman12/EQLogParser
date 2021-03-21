@@ -79,7 +79,7 @@ namespace EQLogParser
 
           if (damageBlocks.Count > 0)
           {
-            RaidTotals.TotalSeconds = RaidTotals.Ranges.GetTotal();
+            RaidTotals.TotalSeconds = RaidTotals.MaxTime = RaidTotals.Ranges.GetTotal();
 
             int rangeIndex = 0;
             double lastTime = 0;

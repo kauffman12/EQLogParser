@@ -86,7 +86,7 @@ namespace EQLogParser
               var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - SpellCountBuilder.COUNT_OFFSET, segment.EndTime);
               blocks.ForEach(block =>
               {
-                if (block.BeginTime <= maxTime)
+                if (RaidStats.MaxTime == RaidStats.TotalSeconds || block.BeginTime <= maxTime)
                 {
                   allSpells.Add(block);
                 }
@@ -94,12 +94,11 @@ namespace EQLogParser
               blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - SpellCountBuilder.COUNT_OFFSET, segment.EndTime);
               blocks.ForEach(block =>
               {
-                if (block.BeginTime <= maxTime)
+                if (RaidStats.MaxTime == RaidStats.TotalSeconds || block.BeginTime <= maxTime)
                 {
                   allSpells.Add(block);
                 }
               });
-
             });
 
             var playerSpells = new Dictionary<string, List<string>>();
