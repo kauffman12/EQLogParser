@@ -14,10 +14,10 @@ namespace EQLogParser
     private static readonly char[] LootedFromTrim = new char[] { '-', '.' };
     private static readonly Dictionary<string, byte> StruckByTypes = new Dictionary<string, byte>()
     {
-      { "afflicted", 1 }, { "beset", 1 }, { "bound", 1 }, { "burned", 1 }, { "consumed", 1 }, { "cursed", 1 }, { "crushed", 1 }, { "cut", 1 },
-      { "drained", 1 }, { "engulfed", 1 }, { "enveloped", 1 }, { "chilled", 1 }, { "frozen", 1 }, { "hit", 1 }, { "immolated", 1 }, { "impaled", 1 },
-      { "pierced", 1 },  { "pummeled", 1 }, { "rent", 1 }, { "shaken", 1 }, { "slashed", 1 }, { "sliced", 1 }, { "surrounded", 1 }, { "struck", 1 },
-      { "stunned", 1 }, { "withered", 1 }
+      { "afflicted", 1 }, { "angered", 1 }, { "assaulted", 1 }, { "beset", 1 }, { "bound", 1 }, { "burned", 1 }, { "consumed", 1 }, { "cursed", 1 },
+      { "crushed", 1 }, { "cut", 1 }, { "drained", 1 }, { "engulfed", 1 }, { "enveloped", 1 }, { "chilled", 1 }, { "frozen", 1 }, { "hit", 1 },
+      { "immolated", 1 }, { "impaled", 1 }, { "pierced", 1 }, { "pummeled", 1 }, { "rent", 1 }, { "seared", 1 }, { "shaken", 1 }, { "slashed", 1 },
+      { "sliced", 1 }, { "stabbed", 1 }, { "surrounded", 1 }, { "struck", 1 }, { "stunned", 1 }, { "targeted", 1 }, { "withered", 1 }
     };
 
     public static void Process(LineData lineData)
@@ -26,13 +26,6 @@ namespace EQLogParser
 
       try
       {
-        // handle junk line to avoid it being written to debug
-        if (lineData.Action.StartsWith("Your Irae Faycite Shard:", StringComparison.OrdinalIgnoreCase))
-        {
-          handled = true;
-          return;
-        }
-
         string[] split = lineData.Action.Split(' ');
 
         if (split != null && split.Length >= 2)
@@ -156,10 +149,6 @@ namespace EQLogParser
                       handled = true;
                     }
                   }
-                  break;
-                case "staggers.":
-                  // ingore X staggers.
-                  handled = true;
                   break;
               }
             }

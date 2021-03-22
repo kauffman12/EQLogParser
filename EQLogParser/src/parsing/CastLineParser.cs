@@ -29,7 +29,7 @@ namespace EQLogParser
       {
         string[] split = lineData.Action.Split(' ');
 
-        if (split != null && split.Length > 2 && !split[0].Contains("."))
+        if (split != null && split.Length > 1 && !split[0].Contains("."))
         {
           string player = null;
           string spellName = null;

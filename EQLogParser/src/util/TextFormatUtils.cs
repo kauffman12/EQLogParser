@@ -171,9 +171,16 @@ namespace EQLogParser
               foreach (var column in headers.Skip(1))
               {
                 var value = stats.GetType().GetProperty(column[0]).GetValue(stats, null);
-                if (column[1].Contains("%") && value is double doubleValue && doubleValue == 0)
+                if (column[1].Contains("%"))
                 {
-                  value = "-";
+                  if (value is double doubleValue && doubleValue == 0)
+                  {
+                    value = "-";
+                  }
+                }
+                else if (!(value is string))
+                {
+                  value = $"{value:n0}";
                 }
 
                 data.Add(value);

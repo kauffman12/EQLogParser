@@ -210,8 +210,14 @@ namespace EQLogParser
             healer = "";
             heal = 0;
           }
-
-          if (healer.Length > 0 && heal != 0)
+          // found a mage pet
+          else if (string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Theft of Essence Effect", StringComparison.Ordinal))
+          {
+            PlayerManager.Instance.AddVerifiedPet(healed);
+            healer = Labels.UNK;
+          }
+          
+          if (!string.IsNullOrEmpty(healer) && heal != 0)
           {
             record = new HealRecord()
             {
