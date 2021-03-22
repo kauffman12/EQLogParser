@@ -64,7 +64,6 @@ namespace EQLogParser
 
       if (action.Length > 10)
       {
-        int index;
         if (action.Length > 20 && action.StartsWith("Targeted (", StringComparison.Ordinal))
         {
           if (action[10] == 'P' && action[11] == 'l') // Player
@@ -74,24 +73,55 @@ namespace EQLogParser
 
           found = true; // ignore anything that starts with Targeted
         }
-        else if (action.Length < 27 && (index = action.IndexOf(" shrinks.", StringComparison.Ordinal)) > -1
-          && (index + 9) == action.Length && PlayerManager.Instance.IsPossiblePlayerName(action, index))
+        else if (action.EndsWith(" shrinks.", StringComparison.Ordinal) && PlayerManager.Instance.IsPossiblePlayerName(action, action.Length - 9))
         {
-          string test = action.Substring(0, index);
+          string test = action.Substring(0, action.Length - 9);
           PlayerManager.Instance.AddPetOrPlayerAction(test);
           found = true;
         }
-        else if (action.Length < 35 && (index = action.IndexOf(" joined the raid.", StringComparison.Ordinal)) > -1
-          && (index + 17) == action.Length && PlayerManager.Instance.IsPossiblePlayerName(action, index))
+        else if (action.EndsWith(" joined the raid.", StringComparison.Ordinal) && !action.StartsWith("You have", StringComparison.Ordinal))
         {
-          string test = action.Substring(0, index);
+          string test = action.Substring(0, action.Length - 17);
           PlayerManager.Instance.AddVerifiedPlayer(test);
           found = true;
         }
-        else if (action.Length < 60 && (index = action.IndexOf(" has joined the group.", StringComparison.Ordinal)) > -1)
+        else if (action.EndsWith(" has joined the group.", StringComparison.Ordinal))
         {
-          string test = action.Substring(0, index);
+          string test = action.Substring(0, action.Length - 22);
           PlayerManager.Instance.AddPetOrPlayerAction(test);
+          found = true;
+        }
+        else if (action.EndsWith(" has left the raid.", StringComparison.Ordinal))
+        {
+          string test = action.Substring(0, action.Length - 19);
+          PlayerManager.Instance.AddPetOrPlayerAction(test);
+          found = true;
+        }
+        else if (action.EndsWith(" has left the group.", StringComparison.Ordinal))
+        {
+          string test = action.Substring(0, action.Length - 20);
+          PlayerManager.Instance.AddPetOrPlayerAction(test);
+          found = true;
+        }
+        else if (action.EndsWith(" is now the leader of your raid.", StringComparison.Ordinal))
+        {
+          string test = action.Substring(0, action.Length - 32);
+          PlayerManager.Instance.AddPetOrPlayerAction(test);
+          found = true;
+        }
+        // handle junk line to avoid it being written to debug
+        else if (action.StartsWith("Your Irae Faycite Shard:", StringComparison.Ordinal))
+        {
+          found = true;
+        }
+        else if (action.EndsWith("feels alive with power.", StringComparison.Ordinal))
+        {
+          // handle junk line to avoid it being written to debug
+          found = true;
+        }
+        else if (action.Equals("You cannot see your target.", StringComparison.Ordinal))
+        {
+          // handle junk line to avoid it being written to debug
           found = true;
         }
       }
