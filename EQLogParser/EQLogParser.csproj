@@ -225,6 +225,7 @@
     <Compile Include="src\ui\control\CountCheckedTemplateSelector.cs" />
     <Compile Include="src\ui\control\DateTimeConverter.cs" />
     <Compile Include="src\ui\control\LootQuantityTemplateSelector.cs" />
+    <Compile Include="src\ui\control\NumberFormatConverter.cs" />
     <Compile Include="src\ui\control\ReceivedSpellColorConverter.cs" />
     <Compile Include="src\ui\control\TextBoxBehavior.cs" />
     <Compile Include="src\ui\control\TotalFormatConverter.cs" />
