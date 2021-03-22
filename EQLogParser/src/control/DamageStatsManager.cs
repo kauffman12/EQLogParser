@@ -110,7 +110,10 @@ namespace EQLogParser
 
               if (lastTime != block.BeginTime)
               {
-                newBlock.Add(block);
+                var copy = new ActionBlock();
+                copy.Actions.AddRange(block.Actions);
+                copy.BeginTime = block.BeginTime;
+                newBlock.Add(copy);
               }
               else
               {
