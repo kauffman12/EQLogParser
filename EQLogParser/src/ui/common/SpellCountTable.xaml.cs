@@ -16,8 +16,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -328,57 +326,13 @@ namespace EQLogParser
           dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
           SpellRowsView.ToList().ForEach(spr => spr["IconColor"] = EMPTYICON);
           dataGrid.Items.Refresh();
-
-          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => CreateImage()), TaskScheduler.Default);
+          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() =>
+          {
+            DataGridUtils.CreateImage(dataGrid, titleLabel);
+            SpellRowsView.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
+          }), TaskScheduler.Default);
         });
       }, TaskScheduler.Default);
-    }
-
-    private void CreateImage()
-    {
-      try
-      {
-        const int labelHeight = 16;
-        const int margin = 4;
-
-        var details = DataGridUtils.GetRowDetails (dataGrid);
-        var totalRowHeight = details.Item1 * details.Item2 + details.Item1 + 2; // add extra for header row and a little for the bottom border
-        var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth);
-        var realTableHeight = dataGrid.ActualHeight < totalRowHeight ? dataGrid.ActualHeight : totalRowHeight;
-        var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
-
-        var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + labelHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
-
-        DrawingVisual dv = new DrawingVisual();
-        using (DrawingContext ctx = dv.RenderOpen())
-        {
-          var brush = new VisualBrush(titleLabel);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(4, margin / 2), new Size(titleLabel.ActualWidth, labelHeight)));
-
-          brush = new VisualBrush(dataGrid);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(0, labelHeight + margin), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight + SystemParameters.HorizontalScrollBarHeight)));
-        }
-
-        rtb.Render(dv);
-        Clipboard.SetImage(rtb);
-
-        SpellRowsView.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
-        dataGrid.Items.Refresh();
-      }
-#pragma warning disable CA1031 // Do not catch general exception types
-      catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
-      {
-        if (ex is ExternalException || ex is ThreadStateException || ex is ArgumentNullException || ex is NullReferenceException)
-        {
-          LOG.Error("Could not Copy Image", ex);
-        }
-      }
-      finally
-      {
-        dataGrid.IsEnabled = true;
-      }
     }
 
     private void ReloadClick(object sender, RoutedEventArgs e)
@@ -502,21 +456,7 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
-      try
-      {
-        var export = DataGridUtils.BuildExportData(dataGrid);
-        string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, titleLabel.Content as string);
-        Clipboard.SetDataObject(result);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
-        LOG.Error(ane);
-      }
-      catch (ExternalException ex)
-      {
-        LOG.Error(ex);
-      }
+      DataGridUtils.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     }
 
     private void CopyBBCodeClick(object sender, RoutedEventArgs e)

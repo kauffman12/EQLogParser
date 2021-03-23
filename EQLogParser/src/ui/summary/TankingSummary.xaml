@@ -18,7 +18,7 @@
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
     <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
-      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showPets" IsChecked="True" Margin="2,0,4,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
@@ -28,16 +28,31 @@
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" SelectionChanged="DataGridSelectionChanged" EnableRowVirtualization="True">
       <DataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="False" x:Name="copyTankingParseToEQClick" Header="Copy Parse" Click="CopyToEQClick">
+          <MenuItem IsEnabled="False" x:Name="copyTankingParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="copyTankingParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem IsEnabled="False" x:Name="copyReceivedHealingParseToEQClick" Header="Copy Received Healing Parse" Click="CopyReceivedHealingToEQClick">
+          <MenuItem IsEnabled="False" x:Name="copyReceivedHealingParseToEQClick" Header="Copy Selected Received Healing Parse" Click="CopyReceivedHealingToEQClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="copyReceivedHealingParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-          </MenuItem>
+          </MenuItem>          
+          <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Copy" Foreground="#5191c1" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>          
           <Separator />
           <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Set Unknown As Pet" Click="SetPetClick">
             <MenuItem.Icon>

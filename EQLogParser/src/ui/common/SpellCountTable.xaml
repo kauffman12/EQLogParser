@@ -13,7 +13,7 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel x:Name="titlePanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold">This is a title</Label>
+      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" FontSize="15" FontWeight="Bold">This is a title</Label>
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,6,0" VerticalAlignment="Center" IsEnabled="False" ToolTip="Include spell counts for spells that only have a message when the player uses the spell on themselves.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell counts for things that players have in common." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Spells Only You See</CheckBox>

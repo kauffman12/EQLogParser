@@ -18,8 +18,8 @@
       <RowDefinition Height="30" />
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
-    <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
-      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="32" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0" >
+      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <dirk:LongUpDown x:Name="timeChooser" Margin="0,0,4,0" Height="26" IsEnabled="False" IsMouseDragEnabled="False" Padding="0" DisplayLength="4" Value="0" MaxValue="0" MinValue="0" ValueChanged="MaxTimeChanged"/>
@@ -27,14 +27,29 @@
       <ComboBox Margin="0,0,4,0" x:Name="classesList" Height="26" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"
-      Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGridSelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
+      AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGridSelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
       RowDetailsVisibilityChanged="ChildrenGridRowDetailsVis" EnableRowVirtualization="False">
       <DataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy Parse" Click="CopyToEQClick">
+          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="copyDamageParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Copy" Foreground="#5191c1" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+              </MenuItem.Icon>
+            </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Set Unknown As Pet" Click="SetPetClick">

@@ -158,7 +158,7 @@ namespace EQLogParser
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowSpellCasts.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
         menuItemShowTankingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
-        copyTankingParseToEQClick.IsEnabled = true;
+        copyTankingParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
         copyReceivedHealingParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats2?.ContainsKey("receivedHealing") == true;
 
         if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
@@ -176,7 +176,7 @@ namespace EQLogParser
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
            menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
-           copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
+           copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
       }
 
       menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);

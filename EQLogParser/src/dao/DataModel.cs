@@ -311,15 +311,6 @@ namespace EQLogParser
     public Dictionary<string, SpellData> UniqueSpells { get; } = new Dictionary<string, SpellData>();
   }
 
-  internal class SpellCountRow
-  {
-    public string Spell { get; set; }
-    public List<double> Values { get; } = new List<double>();
-    public bool IsReceived { get; set; }
-    public string IconColor { get; set; }
-    public string TooltipText { get; set; }
-  }
-
   internal class SpellCountsSerialized
   {
     public List<string> PlayerNames { get; } = new List<string>();
