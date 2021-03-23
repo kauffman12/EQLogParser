@@ -681,6 +681,11 @@ namespace EQLogParser
       }
       else if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(defender))
       {
+        if (damage > 0 && type == null && subType == null)
+        {
+          type = subType = Labels.DD;
+        }
+
         record = BuildRecord(attacker, defender, damage, attackerOwner, defenderOwner, subType, type);
       }
 
