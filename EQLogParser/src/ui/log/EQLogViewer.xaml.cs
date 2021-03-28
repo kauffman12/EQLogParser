@@ -137,11 +137,13 @@ namespace EQLogParser
               {
                 var paragraph = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
 
+                int lines = 0;
                 list.ForEach(line =>
                 {
+                  lines++;
                   paragraph.Inlines.Add(line);
 
-                  if (list.Last() != line)
+                  if (lines < list.Count)
                   {
                     paragraph.Inlines.Add(Environment.NewLine);
                   }
@@ -153,18 +155,21 @@ namespace EQLogParser
                 {
                   statusCount.Text += " (Maximum Reached)";
                 }
-
-                searchButton.IsEnabled = true;
-                searchIcon.Icon = FontAwesomeIcon.Search;
-                progress.Visibility = Visibility.Hidden;
-                logScroller.ScrollToEnd();
-                Running = false;
-                Complete = true;
               });
 
               f.Close();
             }
           }
+
+          Dispatcher.Invoke(() =>
+          {
+            searchButton.IsEnabled = true;
+            searchIcon.Icon = FontAwesomeIcon.Search;
+            progress.Visibility = Visibility.Hidden;
+            logScroller.ScrollToEnd();
+            Running = false;
+            Complete = true;
+          });
         }, TaskScheduler.Default);
       }
       else
