@@ -89,8 +89,14 @@ namespace EQLogParser
                 if (TimeCheck(line, logTimeIndex))
                 {
                   bool match = true;
+                  int firstIndex = -2;
                   int secondIndex = -2;
-                  int firstIndex = line.IndexOf(logSearchText, StringComparison.OrdinalIgnoreCase);
+
+                  if (logSearchText != Properties.Resources.LOG_SEARCH_TEXT && logSearchText.Length > 1)
+                  {
+                    firstIndex = line.IndexOf(logSearchText, StringComparison.OrdinalIgnoreCase);
+                  }
+
                   if (logSearchText2 != Properties.Resources.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
                   {
                     secondIndex = line.IndexOf(logSearchText2, StringComparison.OrdinalIgnoreCase);
@@ -102,7 +108,7 @@ namespace EQLogParser
                     match = false;
                   }
                   // OR
-                  else if (modifierIndex == 1 && firstIndex == -1 && secondIndex < 0)
+                  else if (modifierIndex == 1 && firstIndex < 0 && secondIndex < 0)
                   {
                     match = false;
                   }
