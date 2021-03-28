@@ -6,7 +6,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -17,12 +16,6 @@ namespace EQLogParser
   {
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
-    private static Dispatcher MainDispatcher;
-
-    internal static void SetDispatcher(Dispatcher mainDispatcher)
-    {
-      MainDispatcher = mainDispatcher;
-    }
 
     public static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
     {
@@ -110,10 +103,8 @@ namespace EQLogParser
       }
       else
       {
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var instance = Activator.CreateInstance(type);
         window = new DocumentWindow(dockSite, key, title, null, instance);
-#pragma warning restore CA2000 // Dispose objects before losing scope
         OpenWindow(window);
       }
 

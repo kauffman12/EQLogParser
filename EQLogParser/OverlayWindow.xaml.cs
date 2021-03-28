@@ -253,14 +253,12 @@ namespace EQLogParser
 
     private void LoadTestData()
     {
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
       for (int i = 0; i < MAX_ROWS - 1; i++)
       {
         NameBlockList[i].Text = i + 1 + ". Example Player Name";
         NameBlockList[i].FontStyle = FontStyles.Italic;
         NameBlockList[i].FontWeight = FontWeights.Light;
       }
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
     }
 
     private void NpcDamageManager_EventsPlayerAttackProcessed(object sender, DamageProcessedEvent e)
@@ -399,7 +397,7 @@ namespace EQLogParser
                     me = list[i].Total;
                   }
 
-                  var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
+                  var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds.ToString(CultureInfo.CurrentCulture) + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
                   DamageBlockList[i].Text = damage;
                   goodRowCount++;
                 }
@@ -472,9 +470,7 @@ namespace EQLogParser
             }
           }
         }
-#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
         {
           LOG.Error("Overlay Error", ex);
         }

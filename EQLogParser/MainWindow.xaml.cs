@@ -29,6 +29,7 @@ namespace EQLogParser
     internal event EventHandler<bool> EventsLogLoadingComplete;
 
     // global settings
+    internal static string CurrentLogFile;
     internal static bool IsAoEHealingEnabled = true;
     internal static bool IsBaneDamageEnabled = false;
     internal static bool IsHideOnMinimizeEnabled = false;
@@ -46,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.7.38";
+    private const string VERSION = "v1.7.39";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -75,11 +76,10 @@ namespace EQLogParser
     private DocumentWindow HealingChartWindow = null;
     private DocumentWindow TankingChartWindow = null;
     private DocumentWindow EventWindow = null;
+    private DocumentWindow EQLogWindow = null;
     private DocumentWindow LootWindow = null;
     private DocumentWindow NpcStatsWindow = null;
-
     private LogReader EQLogReader = null;
-    private int BusyCount = 0;
 
     public MainWindow()
     {
@@ -91,9 +91,6 @@ namespace EQLogParser
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
         versionText.Text = VERSION;
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
-
-        // upate helper
-        Helpers.SetDispatcher(Dispatcher);
 
         // used for setting menu icons based on open windows
         IconToWindow = new Dictionary<string, DockingWindow>()
@@ -446,13 +443,18 @@ namespace EQLogParser
       }
       else if (e.Source == eventMenuItem)
       {
-        EventWindow = Helpers.OpenWindow(dockSite, EventWindow, typeof(EventViewer), "eventWindow", "Event Log");
+        EventWindow = Helpers.OpenWindow(dockSite, EventWindow, typeof(EventViewer), "eventWindow", "Special Events");
         IconToWindow[eventIcon.Name] = EventWindow;
       }
       else if (e.Source == playerLootMenuItem)
       {
-        LootWindow = Helpers.OpenWindow(dockSite, LootWindow, typeof(LootViewer), "lootWindow", "Loot Log");
+        LootWindow = Helpers.OpenWindow(dockSite, LootWindow, typeof(LootViewer), "lootWindow", "Looted Items");
         IconToWindow[playerLootIcon.Name] = LootWindow;
+      }
+      else if (e.Source == eqLogMenuItem)
+      {
+        EQLogWindow = Helpers.OpenWindow(dockSite, EQLogWindow, typeof(EQLogViewer), "eqLogWindow", "Full Log Search");
+        IconToWindow[eqLogIcon.Name] = EQLogWindow;
       }
       else if (e.Source == npcStatsMenuItem)
       {
@@ -756,7 +758,7 @@ namespace EQLogParser
             CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
           {
             OverlayUtil.OpenIfEnabled(Dispatcher);
-            LOG.Info("Finished Loading Log File in " + seconds + " seconds.");
+            LOG.Info("Finished Loading Log File in " + seconds.ToString(CultureInfo.CurrentCulture) + " seconds.");
             EventsLogLoadingComplete?.Invoke(this, true);
           }
           else
@@ -849,6 +851,7 @@ namespace EQLogParser
           DataManager.Instance.Clear();
           PlayerChatManager = new ChatManager();
 
+          CurrentLogFile = dialog.FileName;
           NpcDamageManager.ResetTime();
           EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
@@ -960,7 +963,7 @@ namespace EQLogParser
       }
     }
 
-    public void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+    public void WindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
       if (WindowState == WindowState.Maximized)
       {
@@ -1018,7 +1021,7 @@ namespace EQLogParser
     private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
     [DllImportAttribute("user32.dll")]
-    public static extern bool ReleaseCapture();
+    internal static extern bool ReleaseCapture();
 
     //Attach this to the MouseDown event of your drag control to move the window in place of the title bar
     private void WindowDrag(object sender, MouseButtonEventArgs e) // MouseDown

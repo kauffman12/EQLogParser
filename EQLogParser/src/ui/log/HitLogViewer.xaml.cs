@@ -17,15 +17,15 @@ namespace EQLogParser
   public partial class HitLogViewer : UserControl
   {
     private readonly object CollectionLock = new object();
-    private ObservableCollection<HitLogRow> Records = new ObservableCollection<HitLogRow>();
-    private ObservableCollection<string> Actions = new ObservableCollection<string>();
-    private ObservableCollection<string> Types = new ObservableCollection<string>();
+    private readonly ObservableCollection<HitLogRow> Records = new ObservableCollection<HitLogRow>();
+    private readonly ObservableCollection<string> Actions = new ObservableCollection<string>();
+    private readonly ObservableCollection<string> Types = new ObservableCollection<string>();
 
-    private string ActedOption = "Unknown";
-    private List<List<ActionBlock>> CurrentGroups;
-    private Dictionary<string, double> LastSeenCache = new Dictionary<string, double>();
-    private bool Defending;
-    private PlayerStats PlayerStats;
+    private readonly string ActedOption = "Unknown";
+    private readonly List<List<ActionBlock>> CurrentGroups;
+    private readonly Dictionary<string, double> LastSeenCache = new Dictionary<string, double>();
+    private readonly bool Defending;
+    private readonly PlayerStats PlayerStats;
 
     private string CurrentActedFilter = null;
     private string CurrentActionFilter = null;

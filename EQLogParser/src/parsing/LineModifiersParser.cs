@@ -8,26 +8,26 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static Dictionary<string, byte> ALL_MODIFIERS = new Dictionary<string, byte>()
+    private static readonly Dictionary<string, byte> ALL_MODIFIERS = new Dictionary<string, byte>()
     {
       { "Assassinate", 1 }, { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Double Bow Shot", 1 }, { "Finishing Blow", 1 },
       { "Flurry", 1 }, { "Headshot", 1 }, { "Lucky", 1 }, { "Rampage", 1 }, { "Riposte", 1 }, { "Slay Undead", 1 }, { "Strikethrough", 1 },
       { "Twincast", 1 }, { "Wild Rampage", 1 },
     };
 
-    private static Dictionary<string, byte> CRIT_MODIFIERS = new Dictionary<string, byte>()
+    private static readonly Dictionary<string, byte> CRIT_MODIFIERS = new Dictionary<string, byte>()
     {
       { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1 }
     };
 
-    private static int TWINCAST = 1;
-    private static int CRIT = 2;
-    private static int LUCKY = 4;
-    private static int RAMPAGE = 8;
-    private static int STRIKETHROUGH = 16;
-    private static int RIPOSTE = 32;
+    private const int TWINCAST = 1;
+    private const int CRIT = 2;
+    private const int LUCKY = 4;
+    private const int RAMPAGE = 8;
+    private const int STRIKETHROUGH = 16;
+    private const int RIPOSTE = 32;
 
-    private static ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
+    private static readonly ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
 
     internal static bool IsRiposte(int mask)
     {
@@ -159,27 +159,27 @@ namespace EQLogParser
         {
           if (!critical && CRIT_MODIFIERS.ContainsKey(temp))
           {
-            result = result | CRIT;
+            result |= CRIT;
           }
 
           if (!lucky && "Lucky" == temp)
           {
-            result = result | LUCKY;
+            result |= LUCKY;
           }
 
           switch (temp)
           {
             case "Twincast":
-              result = result | TWINCAST;
+              result |= TWINCAST;
               break;
             case "Rampage":
-              result = result | RAMPAGE;
+              result |= RAMPAGE;
               break;
             case "Strikethrough":
-              result = result | STRIKETHROUGH;
+              result |= STRIKETHROUGH;
               break;
             case "Riposte":
-              result = result | RIPOSTE;
+              result |= RIPOSTE;
               break;
           }
 

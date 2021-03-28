@@ -156,6 +156,9 @@
   <data name="FILEMENU_EXPORT_SUMMARY" xml:space="preserve">
     <value>Can Not Save Summary Data</value>
   </data>
+  <data name="LOG_SEARCH_TEXT" xml:space="preserve">
+    <value>Search Term</value>
+  </data>
   <data name="MAG" xml:space="preserve">
     <value>Magician</value>
   </data>

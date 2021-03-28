@@ -8,7 +8,7 @@
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         WindowStyle="SingleBorderWindow"
-        SizeChanged="Window_SizeChanged"
+        SizeChanged="WindowSizeChanged"
         Icon="EQLogParser.ico"
         Title="EQLogParser"
         Closed="WindowClosed"
@@ -207,14 +207,19 @@
                 <fa:ImageAwesome x:Name="chatIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="eventMenuItem" Header="_Event Log" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="eqLogMenuItem" Header="_Full Log Search" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="eventIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="eqLogIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="playerLootMenuItem" Header="_Loot Log" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="playerLootMenuItem" Header="_Looted Items" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="playerLootIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="eventMenuItem" Header="_Special Events" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="eventIcon" Loaded="WindowIcon_Loaded" Visibility="Hidden" Height="10" Width="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>

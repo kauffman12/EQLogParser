@@ -69,8 +69,6 @@ namespace EQLogParser
         for (int i = 0; i < Selected.Count; i++)
         {
           var player = Selected[i].OrigName;
-          var spellClass = PlayerManager.Instance.GetPlayerClassEnum(player);
-
           var allSpells = new List<ActionBlock>();
           allSpells.AddRange(DataManager.Instance.GetCastsDuring(StartTime, EndTime));
           allSpells.AddRange(DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime));
@@ -241,7 +239,6 @@ namespace EQLogParser
         int padding = 8;
         
         var titleHeight = titleLabel1.ActualHeight - titleLabel1.Padding.Top * 2;
-        var titleWidth = titleLabel1.ActualWidth + titleLabel2.ActualWidth + titleLabel3.ActualWidth;
         var height = (int)content.ActualHeight + (int)contentHeader.ActualHeight + (int)titleHeight;
         var width = (int)contentLabels.ActualWidth + (int)content.ActualWidth;
 

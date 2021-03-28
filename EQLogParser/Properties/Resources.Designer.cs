@@ -178,6 +178,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Search Term.
+        /// </summary>
+        internal static string LOG_SEARCH_TEXT {
+            get {
+                return ResourceManager.GetString("LOG_SEARCH_TEXT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Magician.
         /// </summary>
         internal static string MAG {
