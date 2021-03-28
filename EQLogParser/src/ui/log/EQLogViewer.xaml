@@ -1,0 +1,53 @@
+﻿<UserControl x:Class="EQLogParser.EQLogViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:EQLogParser"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+  <Grid>
+    <Grid.Resources>
+      <local:DateTimeConverter x:Key="DateTimeConverter" />
+    </Grid.Resources>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="30" />
+      <RowDefinition Height="300*" />
+      <RowDefinition Height="20" />
+    </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+    </StackPanel>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <TextBox x:Name="logSearch" Margin="4,0,0,0" Height="24" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown" BorderBrush="#FF707070"/>
+      <ComboBox x:Name="logSearchModifier" Margin="0,0,0,0" Height="24" SelectedIndex="0" Width="76" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE">
+        <ComboBoxItem>And</ComboBoxItem>
+        <ComboBoxItem>Or</ComboBoxItem>
+        <ComboBoxItem>Excluding</ComboBoxItem>
+      </ComboBox>
+      <TextBox x:Name="logSearch2" Margin="0,0,0,0" Height="24" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown" BorderBrush="#FF707070"/>
+      <ComboBox x:Name="logSearchTime" Margin="0,0,0,0" Height="24" SelectedIndex="0" Width="76" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" />
+      <Button x:Name="searchButton" Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="SearchClick">
+        <fa:ImageAwesome x:Name="searchIcon" Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Search" ToolTip="Search Log" Foreground="#5191c1"/>
+      </Button>
+      <Label x:Name="progress" Visibility="Hidden" Height="24" FontStyle="Italic" />
+    </StackPanel>
+    <ScrollViewer x:Name="logScroller" Grid.Row="1" BorderThickness="1" BorderBrush="Black">
+      <RichTextBox x:Name="logBox" FontSize="16" Margin="0,0,0,0" Foreground="White" IsInactiveSelectionHighlightEnabled="True" Style="{x:Null}" PreviewKeyDown="LogKeyDown" IsReadOnly="True" PreviewMouseWheel="LogMouseWheel" BorderThickness="0" BorderBrush="{x:Null}" Background="#FF202020">
+        <FlowDocument>
+        </FlowDocument>
+      </RichTextBox>
+    </ScrollViewer>
+    <StatusBar Grid.Row="2" FontSize="11" Background="#151515">
+      <TextBlock x:Name="statusCount">0 Lines</TextBlock>
+    </StatusBar>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"  Margin="0,0,0,0">
+      <ComboBox x:Name="fontFamily" Height="20" FontSize="11" Width="120" ItemsSource="{x:Static Fonts.SystemFontFamilies}" SelectionChanged="FontFamily_Changed" />
+      <ComboBox x:Name="fontSize" Height="20" FontSize="11" SelectionChanged="FontSize_Changed" />
+      <local:ColorComboBox x:Name="fontFgColor" Height="20" FontSize="11" SelectionChanged="FontFgColor_Changed" />
+    </StackPanel>    
+  </Grid>
+</UserControl>
+
+

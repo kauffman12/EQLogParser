@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 
 namespace EQLogParser
@@ -9,6 +10,18 @@ namespace EQLogParser
     private static object LockObject = new object();
     private static string UNPROCESSED_LINES_FILE = "UnprocessedLines.log";
     private static StreamWriter Output;
+    private static ConcurrentDictionary<long, string> LineTypes= new ConcurrentDictionary<long, string>();
+
+    private DebugUtil()
+    {
+
+    }
+
+    public static string GetLineType(long lineNum)
+    {
+      LineTypes.TryGetValue(lineNum, out string value);
+      return value;
+    }
 
     public static void Reset()
     {
@@ -24,36 +37,41 @@ namespace EQLogParser
       }
     }
 
-    public static void RegisterLine(long id, string line, int count)
+    public static void RegisterLine(long lineNum, string line, int count)
     {
       if (ConfigUtil.Debug)
       {
         lock (LockObject)
         {
-          UnprocessedLines[id] = new LineInfo { Line = line, Count = count };
+          UnprocessedLines[lineNum] = new LineInfo { Line = line, Count = count };
         }
       }
     }
 
-    public static void UnregisterLine(long id, bool handled)
+    public static void UnregisterLine(long lineNum, bool handled, string type = null)
     {
+      if (handled && type != null)
+      {
+        LineTypes[lineNum] = type;
+      }
+
       if (ConfigUtil.Debug)
       {
         lock (LockObject)
         {
           if (handled)
-          {
-            UnprocessedLines.Remove(id);
+          {           
+            UnprocessedLines.Remove(lineNum);
           }
           else
           {
-            if (UnprocessedLines.TryGetValue(id, out LineInfo info))
+            if (UnprocessedLines.TryGetValue(lineNum, out LineInfo info))
             {
               info.Count -= 1;
 
               if (info.Count == 0)
               {
-                UnprocessedLines.Remove(id);
+                UnprocessedLines.Remove(lineNum);
                 Output.WriteLine(info.Line);
               }
             }

@@ -321,7 +321,7 @@ namespace EQLogParser
             stop = part.Length;
           }
 
-          found = stop < 3 ? false : true;
+          found = stop >= 3;
           for (int i = 0; found != false && i < stop; i++)
           {
             if (!char.IsLetter(part, i))
@@ -338,7 +338,7 @@ namespace EQLogParser
       return found;
     }
 
-    private void AddMultiCase(string[] values, ConcurrentDictionary<string, byte> dict)
+    private static void AddMultiCase(string[] values, ConcurrentDictionary<string, byte> dict)
     {
       if (values.Length > 0)
       {

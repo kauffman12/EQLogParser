@@ -25,12 +25,12 @@ namespace EQLogParser
     private const string ONLYCURR = "Only Currency";
     private const string ONLYITEMS = "Only Items";
 
-    private static object CollectionLock = new object();
-    private List<string> Options = new List<string>() { "Individual View", "Summary View" };
-    private ObservableCollection<LootRow> IndividualRecords = new ObservableCollection<LootRow>();
-    private ObservableCollection<LootRow> TotalRecords = new ObservableCollection<LootRow>();
-    private ICollectionView IndividualView = null;
-    private ICollectionView SummaryView = null;
+    private static readonly object CollectionLock = new object();
+    private readonly List<string> Options = new List<string>() { "Individual View", "Summary View" };
+    private readonly ObservableCollection<LootRow> IndividualRecords = new ObservableCollection<LootRow>();
+    private readonly ObservableCollection<LootRow> TotalRecords = new ObservableCollection<LootRow>();
+    private readonly ICollectionView IndividualView = null;
+    private readonly ICollectionView SummaryView = null;
     private bool ShowSummaryView = false;
     private string CurrentSelectedItem = ALLITEMS;
     private string CurrentSelectedPlayer = ALLPLAYERS;
@@ -326,12 +326,12 @@ namespace EQLogParser
       rem = amount % 100;
       if (rem / 10 is uint silver && silver > 0)
       {
-        values.Add(silver + " Silver");
+        values.Add(silver.ToString(CultureInfo.CurrentCulture) + " Silver");
       }
 
       if (rem % 10 is uint copper && copper > 0)
       {
-        values.Add(copper + " Copper");
+        values.Add(copper.ToString(CultureInfo.CurrentCulture) + " Copper");
       }
 
       return string.Join(", ", values);

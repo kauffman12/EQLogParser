@@ -179,7 +179,6 @@ namespace EQLogParser
     public bool IsPet { get; set; }
     public bool IsGroupingEnabled { get; set; }
     public string TimeSince { get; set; }
-    public string TooltipText { get; set; }
   }
 
   internal class EventRow
@@ -339,9 +338,7 @@ namespace EQLogParser
     public Dictionary<string, PlayerStats> AggregateStats { get; } = new Dictionary<string, PlayerStats>();
     public Dictionary<string, PlayerStats> IndividualStats { get; } = new Dictionary<string, PlayerStats>();
     public List<Fight> InactiveFights { get; } = new List<Fight>();
-#pragma warning disable CA2227 // Collection properties should be read only
     public List<Fight> ActiveFights { get; set; }
-#pragma warning restore CA2227 // Collection properties should be read only
   }
 
   internal class HitFreqChartData

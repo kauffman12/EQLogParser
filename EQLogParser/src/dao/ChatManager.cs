@@ -205,7 +205,7 @@ namespace EQLogParser
 
       foreach (string line in GetSavedChannels(playerAndServer))
       {
-        var isChecked = selected == null ? true : selected.Contains(line);
+        var isChecked = selected == null || selected.Contains(line);
         ChannelDetails details = new ChannelDetails { Text = line, IsChecked = isChecked };
         channelList.Add(details);
       }

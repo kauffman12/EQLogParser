@@ -26,7 +26,7 @@ namespace EQLogParser
     private string CurrentClass = null;
     private int CurrentGroupCount = 0;
     private int CurrentPetOrPlayerOption = 0;
-    private DispatcherTimer SelectionTimer;
+    private readonly DispatcherTimer SelectionTimer;
 
     public DamageSummary()
     {

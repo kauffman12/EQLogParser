@@ -20,7 +20,6 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCastTable : UserControl
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly object LockObject = new object();
     private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
     private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
@@ -180,7 +179,7 @@ namespace EQLogParser
 
         if (spellData != null)
         {
-          valid = !spellData.IsProc && (CurrentShowSelfOnly ? true : (spell is SpellCast || !string.IsNullOrEmpty(spellData.LandsOnOther)));
+          valid = !spellData.IsProc && (CurrentShowSelfOnly || (spell is SpellCast || !string.IsNullOrEmpty(spellData.LandsOnOther)));
           valid = valid && (CurrentSpellType == 0 || CurrentSpellType == 1 && spellData.IsBeneficial || CurrentSpellType == 2 && !spellData.IsBeneficial);
         }
       }

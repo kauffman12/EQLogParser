@@ -6,6 +6,10 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
+    private HealingLineParser()
+    {
+
+    }
 
     public static void Process(LineData lineData)
     {

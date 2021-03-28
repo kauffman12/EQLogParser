@@ -19,13 +19,13 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
+    private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static bool Running = false;
 
     private List<string> PlayerAutoCompleteList = new List<string>();
     private Paragraph MainParagraph;
-    private DispatcherTimer FilterTimer;
-    private DispatcherTimer RefreshTimer;
+    private readonly DispatcherTimer FilterTimer;
+    private readonly DispatcherTimer RefreshTimer;
     private ChatFilter CurrentChatFilter = null;
     private ChatIterator CurrentIterator = null;
     private ChatType FirstChat = null;
@@ -38,7 +38,7 @@ namespace EQLogParser
     private double LastStartDate = 0;
     private double LastEndDate = 0;
     private bool Connected = false;
-    private bool Ready = false;
+    private readonly bool Ready = false;
 
     public ChatViewer()
     {
@@ -679,8 +679,8 @@ namespace EQLogParser
         ChatManager.EventsUpdatePlayer -= ChatManager_EventsUpdatePlayer;
         ChatManager.EventsNewChannels -= ChatManager_EventsNewChannels;
 
-        RefreshTimer.Stop();
-        FilterTimer.Stop();
+        RefreshTimer?.Stop();
+        FilterTimer?.Stop();
         disposedValue = true;
       }
     }
