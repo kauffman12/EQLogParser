@@ -55,8 +55,8 @@ namespace EQLogParser
       fightSearchBox.FontStyle = FontStyles.Italic;
       fightSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
 
-      fightMenuItemClear.IsEnabled = fightMenuItemSelectAll.IsEnabled = fightMenuItemUnselectAll.IsEnabled = fightMenuItemSelectFight.IsEnabled = false;
-      fightMenuItemSetPet.IsEnabled = fightMenuItemSetPlayer.IsEnabled = false;
+      fightMenuItemClear.IsEnabled = fightMenuItemSelectAll.IsEnabled = fightMenuItemUnselectAll.IsEnabled = 
+      fightMenuItemSelectFight.IsEnabled = fightMenuItemUnselectFight.IsEnabled = fightMenuItemSetPet.IsEnabled = fightMenuItemSetPlayer.IsEnabled = false;
 
       var view = CollectionViewSource.GetDefaultView(Fights);
       view.Filter = new Predicate<object>(item =>
@@ -143,6 +143,17 @@ namespace EQLogParser
       {
         EventsSelectionChange(this, fightDataGrid.SelectedItems);
         NeedSelectionChange = false;
+      }
+    }
+
+    private void UpdateCurrentItem(object sender, MouseButtonEventArgs e)
+    {
+      var gridPoint = e.GetPosition(fightDataGrid);
+      var vis = VisualTreeHelper.HitTest(fightDataGrid, gridPoint);
+
+      if (vis != null && vis.VisualHit is FrameworkElement elem && elem.DataContext != null)
+      {
+        fightDataGrid.CurrentItem = elem.DataContext;
       }
     }
 
@@ -242,7 +253,7 @@ namespace EQLogParser
 
       if (fightMenuItemSelectFight.IsEnabled == false)
       {
-        fightMenuItemSelectFight.IsEnabled = true;
+        fightMenuItemSelectFight.IsEnabled = fightMenuItemUnselectFight.IsEnabled = true;
       }
     }
 
@@ -271,13 +282,31 @@ namespace EQLogParser
 
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      if (callingDataGrid.SelectedItem is Fight npc && npc.GroupId > -1)
+      if (callingDataGrid.CurrentItem is Fight npc && npc.GroupId > -1)
       {
         foreach (var one in Fights)
         {
           if (one.GroupId == npc.GroupId)
           {
             Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(one), DispatcherPriority.Normal);
+          }
+        }
+      }
+    }
+
+    private void UnselectGroupClick(object sender, RoutedEventArgs e)
+    {
+      NeedSelectionChange = false;
+
+      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
+      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
+      if (callingDataGrid.CurrentItem is Fight npc && npc.GroupId > -1)
+      {
+        foreach (var one in Fights)
+        {
+          if (one.GroupId == npc.GroupId)
+          {
+            Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Remove(one), DispatcherPriority.Normal);
           }
         }
       }
