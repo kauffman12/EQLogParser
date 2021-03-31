@@ -120,7 +120,7 @@ namespace EQLogParser
       showSelfOnly.IsEnabled = SpellRanges.Count > 0 && Selected?.Find(stats => stats.OrigName == ConfigUtil.PlayerName) != null;
 
       AddHeaderLabel(0, string.Format(CultureInfo.CurrentCulture, "Buffs (T-{0})", DataManager.BUFFS_OFFSET), 20);
-      AddHeaderLabel(DataManager.BUFFS_OFFSET, DateUtil.FormatSimpleTime(StartTime), 10);
+      AddHeaderLabel(DataManager.BUFFS_OFFSET, DateUtil.FormatSimpleTime(StartTime + DataManager.BUFFS_OFFSET), 10);
 
       int minutes = 1;
       for (int more = (int)(DataManager.BUFFS_OFFSET + 60); more < Length; more += 60)

@@ -87,7 +87,7 @@ namespace EQLogParser
         bool receiverIsFrom = receiver != null && From != null && receiver.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
         bool senderIsTo = sender != null && To != null && sender.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1;
 
-        if (((To == null || receiverIsTo) && (From == null || senderIsFrom)) || (senderIsTo && receiverIsFrom))
+        if (((To == null || receiverIsTo) && (From == null || senderIsFrom)) || (senderIsTo && receiverIsFrom) || (To == From && (sender == Player && receiverIsTo || receiver == Player && senderIsFrom)))
         {
           if (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender))
           {
