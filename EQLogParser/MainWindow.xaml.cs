@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.7.42";
+    private const string VERSION = "v1.7.43";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -217,6 +217,20 @@ namespace EQLogParser
         // Show Healing Summary at startup
         ConfigUtil.IfSet("ShowDamageChartAtStartup", OpenDamageChart);
         LOG.Info("Initialized Components");
+
+        if (ConfigUtil.IfSet("AutoMonitor"))
+        {
+          enableAutoMonitorIcon.Visibility = Visibility.Visible;
+          var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
+          if (File.Exists(previousFile))
+          {
+            OpenLogFile(LogOption.MONITOR, previousFile);
+          }
+        }
+        else
+        {
+          enableAutoMonitorIcon.Visibility = Visibility.Hidden;
+        }
 
         if (ConfigUtil.IfSet("Debug"))
         {
@@ -391,6 +405,12 @@ namespace EQLogParser
 
       var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
       Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options, true));
+    }
+
+    private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
+    {
+      ConfigUtil.SetSetting("AutoMonitor", (enableAutoMonitorIcon.Visibility == Visibility.Hidden).ToString(CultureInfo.CurrentCulture));
+      enableAutoMonitorIcon.Visibility = enableAutoMonitorIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
@@ -723,7 +743,7 @@ namespace EQLogParser
         lastMins = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
       }
 
-      OpenLogFile(LogOption.OPEN, lastMins);
+      OpenLogFile(LogOption.OPEN, null, lastMins);
     }
 
     private void UpdateLoadingProgress()
@@ -751,6 +771,8 @@ namespace EQLogParser
               statusText.Foreground = GOOD_BRUSH;
               statusText.Text = "Archiving Complete";
             }
+
+            ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
           }
 
           if (((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
@@ -778,23 +800,35 @@ namespace EQLogParser
       }
     }
 
-    private void OpenLogFile(LogOption option, int lastMins = -1)
+    private void OpenLogFile(LogOption option, string previousFile = null, int lastMins = -1)
     {
       CurrentLogOption = option;
 
       try
       {
-        // WPF doesn't have its own file chooser so use Win32 Version
-        Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog
+        string theFile;
+        bool success = true;
+        if (previousFile != null)
         {
-          // filter to txt files
-          DefaultExt = ".txt",
-          Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz",
-        };
+          theFile = previousFile;
+        }
+        else
+        {
+          // WPF doesn't have its own file chooser so use Win32 Version
+          Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog
+          {
+            // filter to txt files
+            DefaultExt = ".txt",
+            Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz",
+          };
 
-        // show dialog and read result
-        var result = dialog.ShowDialog();
-        if (result.Value)
+          // show dialog and read result
+          success = dialog.ShowDialog() == true;
+          theFile = dialog.FileName;
+        }
+
+
+        if (success)
         {
           StopProcessing();
           CastProcessor = new ActionProcessor<LineData>("CastProcessor", CastLineParser.Process);
@@ -802,18 +836,18 @@ namespace EQLogParser
           HealingProcessor = new ActionProcessor<LineData>("HealProcessor", HealingLineParser.Process);
           MiscProcessor = new ActionProcessor<LineData>("MiscProcessor", MiscLineParser.Process);
 
-          fileText.Text = "-- " + dialog.FileName;
+          fileText.Text = "-- " + theFile;
           StartLoadTime = DateTime.Now;
           FilePosition = LineCount = 0;
           DebugUtil.Reset();
 
           string name = "You";
           string server = "Uknown";
-          if (dialog.FileName.Length > 0)
+          if (theFile.Length > 0)
           {
-            LOG.Info("Selected Log File: " + dialog.FileName);
+            LOG.Info("Selected Log File: " + theFile);
 
-            string file = Path.GetFileName(dialog.FileName);
+            string file = Path.GetFileName(theFile);
             MatchCollection matches = ParseFileName.Matches(file);
             if (matches.Count == 1)
             {
@@ -851,9 +885,9 @@ namespace EQLogParser
           DataManager.Instance.Clear();
           PlayerChatManager = new ChatManager();
 
-          CurrentLogFile = dialog.FileName;
+          CurrentLogFile = theFile;
           NpcDamageManager.ResetTime();
-          EQLogReader = new LogReader(dialog.FileName, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
+          EQLogReader = new LogReader(theFile, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
           UpdateLoadingProgress();
         }

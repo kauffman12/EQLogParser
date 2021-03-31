@@ -225,6 +225,11 @@
           </MenuItem>
         </MenuItem>
         <MenuItem Header="_Options" Height="30" Width="65">
+          <MenuItem x:Name="enableAutoMonitor" Header="Auto _Monitor Last Log" Click="ToggleAutoMonitorClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableAutoMonitorIcon" Visibility="Hidden" Height="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <MenuItem x:Name="enableAoEHealing" Header="Show _AoE Heals" Click="ToggleAoEHealingClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableAoEHealingIcon" Visibility="Hidden" Height="10" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
