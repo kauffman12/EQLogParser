@@ -320,7 +320,10 @@ namespace EQLogParser
             found = block.Actions.FindLastIndex(item => item is LootRecord loot && loot.Player == record.Player && loot.Item == record.Item);
             if (found > -1)
             {
-              block.Actions.RemoveAt(found);
+              lock(block.Actions)
+              {
+                block.Actions.RemoveAt(found);
+              }
             }
           }
         }
