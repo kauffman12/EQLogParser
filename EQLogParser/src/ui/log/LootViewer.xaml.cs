@@ -114,26 +114,30 @@ namespace EQLogParser
             ONLYITEMS
           };
 
-          DataManager.Instance.GetAllLoot().ForEach(blocks =>
+          DataManager.Instance.GetAllLoot().ForEach(block =>
           {
-            blocks.Actions.ForEach(record =>
+            // lock since actions can be removed by the parsing thread
+            lock(block.Actions)
             {
-              if (record is LootRecord looted)
+              block.Actions.ForEach(record =>
               {
-                lock(CollectionLock)
+                if (record is LootRecord looted)
                 {
-                  IndividualRecords.Add(CreateRow(looted, blocks.BeginTime));
-                }
+                  lock (CollectionLock)
+                  {
+                    IndividualRecords.Add(CreateRow(looted, block.BeginTime));
+                  }
 
-                UpdateTotals(totalRecords, looted);
+                  UpdateTotals(totalRecords, looted);
 
-                uniquePlayers[looted.Player] = 1;
-                if (!looted.IsCurrency)
-                {
-                  uniqueItems[looted.Item] = 1;
+                  uniquePlayers[looted.Player] = 1;
+                  if (!looted.IsCurrency)
+                  {
+                    uniqueItems[looted.Item] = 1;
+                  }
                 }
-              }
-            });
+              });
+            }
           });
 
           uniquePlayers.Keys.OrderBy(player => player).ToList().ForEach(newPlayer => players.Add(newPlayer));
