@@ -22,6 +22,7 @@ namespace EQLogParser
 
     private const string ALLPLAYERS = "All Players";
     private const string ALLITEMS = "All Loot";
+    private const string ONLYASS = "Only Assigned";
     private const string ONLYCURR = "Only Currency";
     private const string ONLYITEMS = "Only Items";
 
@@ -53,7 +54,7 @@ namespace EQLogParser
         if (obj is LootRow row)
         {
           found = (CurrentSelectedItem == ALLITEMS || row.IsCurrency && CurrentSelectedItem == ONLYCURR ||
-          !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == row.Item) && 
+          !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) && 
           (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
         }
 
@@ -108,6 +109,7 @@ namespace EQLogParser
           List<string> itemNames = new List<string>
           {
             ALLITEMS,
+            ONLYASS,
             ONLYCURR,
             ONLYITEMS
           };

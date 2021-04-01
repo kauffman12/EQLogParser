@@ -82,6 +82,7 @@ namespace EQLogParser
     private readonly List<ActionBlock> AllResistBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
     private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
+    private readonly List<LootRecord> AssignedLoot = new List<LootRecord>();
 
     private readonly List<string> AdpsKeys = new List<string> { "#DoTCritRate", "#NukeCritRate" };
     private readonly Dictionary<string, Dictionary<string, uint>> AdpsActive = new Dictionary<string, Dictionary<string, uint>>();
@@ -255,7 +256,6 @@ namespace EQLogParser
     }
 
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
-    internal void AddLootRecord(LootRecord record, double beginTime) => Helpers.AddAction(AllLootBlocks, record, beginTime);
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
     internal List<Fight> GetActiveFights() => ActiveFights.Values.ToList();
@@ -302,6 +302,33 @@ namespace EQLogParser
       }
 
       return string.Intern(result);
+    }
+
+    internal void AddLootRecord(LootRecord record, double beginTime)
+    {
+      Helpers.AddAction(AllLootBlocks, record, beginTime);
+
+      if (!record.IsCurrency && record.Quantity == 1 && AssignedLoot.Count > 0)
+      {
+        var found = AssignedLoot.FindLastIndex(item => item.Player == record.Player && item.Item == record.Item);
+        if (found > -1)
+        {
+          AssignedLoot.RemoveAt(found);
+
+          foreach (var block in AllLootBlocks.OrderByDescending(block => block.BeginTime))
+          {
+            found = block.Actions.FindLastIndex(item => item is LootRecord loot && loot.Player == record.Player && loot.Item == record.Item);
+            if (found > -1)
+            {
+              block.Actions.RemoveAt(found);
+            }
+          }
+        }
+      }
+      else if (!record.IsCurrency && record.Quantity == 0)
+      {
+        AssignedLoot.Add(record);
+      }
     }
 
     internal void AddResistRecord(ResistRecord record, double beginTime)
