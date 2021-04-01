@@ -40,6 +40,7 @@ namespace EQLogParser
           // [Sat Feb 08 21:21:36 2020] --You have looted a Cold-Forged Cudgel from Queen Dracnia's corpse.--
           // [Mon Apr 27 22:32:04 2020] Restless Tijoely resisted your Stormjolt Vortex Effect!
           // [Mon Apr 27 20:51:22 2020] Kazint's Scorching Beam Rk. III spell has been reflected by a shadow reflection.
+          // [Sun Mar 28 19:42:46 2021] A Draconic Lava Chain Feet Ornament was given to Aldryn.
 
           string looter = null;
           int awakenedIndex = -1;
@@ -133,6 +134,21 @@ namespace EQLogParser
                     {
                       PlayerManager.Instance.AddVerifiedPlayer(looter);
                       LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = npc };
+                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                      handled = true;
+                    }
+                  }
+                  break;
+                case "given":
+                  if (split[i - 1] == "was" && split.Length == (i+3) && split[i + 1] == "to")
+                  {
+                    string player = split[i + 2];
+                    if (player.Length > 3)
+                    {
+                      looter = player.Substring(0, player.Length - 1);
+                      looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
+                      string item = string.Join(" ", split, 1, i - 2);
+                      LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Assigned (Not Looted)" };
                       DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
                       handled = true;
                     }
