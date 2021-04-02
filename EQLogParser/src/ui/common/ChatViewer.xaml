@@ -20,6 +20,11 @@
         <ComboBoxItem Content="No Chat Data"/>
       </ComboBox>
       <ComboBox x:Name="channels" Height="24" Width="135" Margin="0,0,0,0" DropDownClosed="Channels_DropDownClosed" BorderBrush="#FF707070">
+        <ComboBox.ItemContainerStyle>
+          <Style>
+            <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="Channel_PreviewMouseDown"/>
+          </Style>
+        </ComboBox.ItemContainerStyle>
         <ComboBox.ItemTemplateSelector>
           <local:ComboBoxItemTemplateSelector>
             <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>

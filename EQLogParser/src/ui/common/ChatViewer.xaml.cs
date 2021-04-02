@@ -247,6 +247,9 @@ namespace EQLogParser
     private void LoadChannels(string playerAndServer)
     {
       List<ChannelDetails> items = new List<ChannelDetails>();
+      items.Add(new ChannelDetails { Text = "Select All" });
+      items.Add(new ChannelDetails { Text = "Unselect All" });
+
       int selectedCount = 0;
       ChatManager.GetChannels(playerAndServer).ForEach(chan =>
       {
@@ -304,9 +307,9 @@ namespace EQLogParser
       List<string> selected = new List<string>();
 
       StringBuilder builder = new StringBuilder();
-      foreach (var item in channels.Items)
+      for (int i = 2; i < channels.Items.Count; i++)
       {
-        if (item is ChannelDetails checkedItem && checkedItem.IsChecked)
+        if (channels.Items[i] is ChannelDetails checkedItem && checkedItem.IsChecked)
         {
           selected.Add(checkedItem.Text);
           builder.Append(checkedItem.Text);
@@ -405,14 +408,78 @@ namespace EQLogParser
       }
     }
 
+    private void Channel_PreviewMouseDown(object sender, EventArgs e)
+    {
+      var item = sender as ComboBoxItem;
+      if (item.Content is ChannelDetails details)
+      {
+        if (details.Text == "Select All" && !details.IsChecked)
+        {
+          details.IsChecked = true;
+          var unselect = channels.Items[1] as ChannelDetails;
+          unselect.IsChecked = false;
+
+          for (int i = 2; i < channels.Items.Count; i++)
+          {
+            (channels.Items[i] as ChannelDetails).IsChecked = true;
+          }
+
+          channels.Items.Refresh();
+        }
+        else if (details.Text == "Select All" && details.IsChecked)
+        {
+          details.IsChecked = true;
+          channels.Items.Refresh();
+        }
+        else if (details.Text == "Unselect All" && !details.IsChecked)
+        {
+          details.IsChecked = true;
+          var select = channels.Items[0] as ChannelDetails;
+          select.IsChecked = false;
+
+          for (int i = 2; i < channels.Items.Count; i++)
+          {
+            (channels.Items[i] as ChannelDetails).IsChecked = false;
+          }
+
+          channels.Items.Refresh();
+        }
+        else if (details.Text == "Unselect All" && details.IsChecked)
+        {
+          details.IsChecked = true;
+          channels.Items.Refresh();
+        }
+        else if (details.IsChecked)
+        {
+          var select = channels.Items[0] as ChannelDetails;
+          if (select.IsChecked)
+          {
+            select.IsChecked = false;
+            details.IsChecked = false;
+            channels.Items.Refresh();
+          }
+        }
+        else if (!details.IsChecked)
+        {
+          var unselect = channels.Items[1] as ChannelDetails;
+          if (unselect.IsChecked)
+          {
+            unselect.IsChecked = false;
+            details.IsChecked = true;
+            channels.Items.Refresh();
+          }
+        }
+      }
+    }
+
     private void Channels_DropDownClosed(object sender, EventArgs e)
     {
       if (channels.Items.Count > 0)
       {
         int count = 0;
-        foreach (var item in channels.Items)
+        for (int i = 2; i < channels.Items.Count; i++)
         {
-          var checkedItem = item as ChannelDetails;
+          var checkedItem = channels.Items[i] as ChannelDetails;
           if (checkedItem.IsChecked)
           {
             count++;
@@ -421,7 +488,7 @@ namespace EQLogParser
 
         if (!(channels.SelectedItem is ChannelDetails selected))
         {
-          selected = channels.Items[0] as ChannelDetails;
+          selected = channels.Items[2] as ChannelDetails;
         }
 
         selected.SelectedText = count + " Channels Selected";
