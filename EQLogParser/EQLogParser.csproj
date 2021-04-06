@@ -58,10 +58,10 @@
     <StartupObject>EQLogParser.App</StartupObject>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>C2F62C2B4D2DA028B7EFEC41BEA790C9C6F04212</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>263EC30559646FBF37D9B31A8D743891880A6719</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>EQLogParser_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>newsigner.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <GenerateManifests>false</GenerateManifests>
@@ -120,6 +120,12 @@
     <ErrorReport>prompt</ErrorReport>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>newsigner.pfx</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="ActiproSoftware.DataGrid.Contrib.Wpf, Version=19.1.681.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -133,7 +139,15 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v21.1.1\Assemblies\ActiproSoftware.Shared.Wpf.dll</HintPath>
     </Reference>
+    <Reference Include="Hardcodet.Wpf.TaskbarNotification, Version=1.0.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="NumericUpDownLib, Version=2.4.2.2, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Dependencies\NumericUpDownLib.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore">
       <Private>False</Private>
     </Reference>
@@ -432,6 +446,7 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
+    <None Include="newsigner.pfx" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -487,17 +502,11 @@
     <Folder Include="resources\" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Dirkster.NumericUpDownLib">
-      <Version>2.4.2.2</Version>
-    </PackageReference>
     <PackageReference Include="DotLiquid">
       <Version>2.0.325</Version>
     </PackageReference>
     <PackageReference Include="FontAwesome.WPF">
       <Version>4.7.0.9</Version>
-    </PackageReference>
-    <PackageReference Include="Hardcodet.NotifyIcon.Wpf">
-      <Version>1.0.8</Version>
     </PackageReference>
     <PackageReference Include="LiveCharts.Wpf">
       <Version>0.9.7</Version>

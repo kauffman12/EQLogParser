@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.7.46" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.7.47" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -109,15 +109,15 @@
       <Component Win64="yes" Id="Newtonsoft.Json.dll" Guid="6D0CCBFE-C08A-492C-8583-800E5E35D846">
         <File Id="Newtonsoft.Json.dll" Name="Newtonsoft.Json.dll" Source="$(var.EQLogParser_TargetDir)Newtonsoft.Json.dll" />
       </Component>
-      <Component Win64="yes" Id="Hardcodet.Wpf.TaskbarNotification.dll" Guid="98ACDE1E-0088-4EAF-90C4-955CF4464F04">
+      <Component Win64="yes" Id="Hardcodet.Wpf.TaskbarNotification.dll" Guid="D79C74F8-96A9-4C61-8125-7AA5AA5670DC">
         <File Id="Hardcodet.Wpf.TaskbarNotification.dll" Name="Hardcodet.Wpf.TaskbarNotification.dll" Source="$(var.EQLogParser_TargetDir)Hardcodet.Wpf.TaskbarNotification.dll" />
       </Component>
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser_TargetDir)DotLiquid.dll" />
       </Component>
-      <Component Win64="yes" Id="NumericUpDownLib.dll" Guid="831B4CF2-8B97-4C4A-A865-71A0DA79C9CA">
+      <Component Win64="yes" Id="NumericUpDownLib.dll" Guid="208222FF-AC0C-4E7D-8E1C-EF503E2A932E">
         <File Id="NumericUpDownLib.dll" Name="NumericUpDownLib.dll" Source="$(var.EQLogParser_TargetDir)NumericUpDownLib.dll" />
-      </Component>      
+      </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
