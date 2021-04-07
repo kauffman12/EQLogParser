@@ -75,7 +75,7 @@ namespace EQLogParser
           {
             using (var f = File.OpenRead(MainWindow.CurrentLogFile))
             {
-              if (f.Length > 100000000)
+              if (!f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) && f.Length > 100000000)
               {
                 SetStartingPosition(f, logTimeIndex);
               }
