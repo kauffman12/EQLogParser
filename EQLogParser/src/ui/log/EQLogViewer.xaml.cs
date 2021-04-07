@@ -1,10 +1,8 @@
 ﻿using FontAwesome.WPF;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,7 +18,7 @@ namespace EQLogParser
   public partial class EQLogViewer : UserControl, IDisposable
   {
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
-    private static readonly List<string> Times = new List<string>() { "< 1 hrs", "< 12 hrs", "< 24 hrs", "< 1 wks", "< 2 wks", "Any Time" };
+    private static readonly List<string> Times = new List<string>() { "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Everything" };
     private static readonly DateUtil DateUtil = new DateUtil();
     private static bool Complete = true;
     private static bool Running = false;
@@ -77,7 +75,11 @@ namespace EQLogParser
           {
             using (var f = File.OpenRead(MainWindow.CurrentLogFile))
             {
-              SetStartingPosition(f, logTimeIndex);
+              if (f.Length > 100000000)
+              {
+                SetStartingPosition(f, logTimeIndex);
+              }
+
               var s = new StreamReader(f);
               var list = new List<string>();
               int lastPercent = -1;
@@ -185,37 +187,50 @@ namespace EQLogParser
       }
     }
 
-    private void SetStartingPosition(FileStream f, int index)
+    private void SetStartingPosition(FileStream f, int index, long left = 0, long right = 0, long good = 0, int count = 0)
     {
-      if (f.Length > 100000000)
+      if (count <= 5)
       {
-        f.Seek(-50000000, SeekOrigin.End);
-        var s = new StreamReader(f);
-        s.ReadLine();
-        var test = s.ReadLine();
-        s.DiscardBufferedData();
-
-        if (TimeCheck(test, index))
+        if (f.Position == 0)
         {
-          var mid = f.Length / 2;
-          if (mid > 100000000)
-          {
-            f.Seek(mid, SeekOrigin.Begin);
-            s = new StreamReader(f);
-            s.ReadLine();
-            test = s.ReadLine();
-            s.DiscardBufferedData();
+          right = f.Length;
+          f.Seek(f.Length / 2, SeekOrigin.Begin);
+        }
 
-            if (TimeCheck(test, index))
-            {
-              f.Seek(0, SeekOrigin.Begin);
-            }
+        try
+        {
+          var s = new StreamReader(f);
+          s.ReadLine();
+          var check = TimeCheck(s.ReadLine(), index);
+          s.DiscardBufferedData();
+
+          long pos = 0;
+          if (check)
+          {
+            pos = left + (f.Position - left) / 2;
+            right = f.Position;
           }
           else
           {
-            f.Seek(0, SeekOrigin.Begin);
+            pos = right - (right - f.Position) / 2;
+            good = left = f.Position;
           }
+
+          f.Seek(pos, SeekOrigin.Begin);
+          SetStartingPosition(f, index, left, right, good, count + 1);
         }
+        catch (IOException ioe)
+        {
+          // do nothing
+        }
+        catch (OutOfMemoryException ome)
+        {
+          // do nothing
+        }
+      }
+      else if (f.Position != good)
+      {
+        f.Seek(good, SeekOrigin.Begin);
       }
     }
 
@@ -234,7 +249,7 @@ namespace EQLogParser
             pass = (currentTime - logTime) < (60 * 60);
             break;
           case 1:
-            pass = (currentTime - logTime) < (60 * 60) * 12;
+            pass = (currentTime - logTime) < (60 * 60) * 8;
             break;
           case 2:
             pass = (currentTime - logTime) < (60 * 60) * 24;
@@ -243,7 +258,10 @@ namespace EQLogParser
             pass = (currentTime - logTime) < (60 * 60) * 24 * 7;
             break;
           case 4:
-            pass = (currentTime - logTime) < (60 * 60) * 24 * 7 * 2;
+            pass = (currentTime - logTime) < (60 * 60) * 24 * 14;
+            break;
+          case 5:
+            pass = (currentTime - logTime) < (60 * 60) * 24 * 30;
             break;
         }
       }

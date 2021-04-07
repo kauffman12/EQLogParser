@@ -56,7 +56,8 @@ namespace EQLogParser
           spellData = replaced;
         }
 
-        if (spellData != null)
+        // dont include detrimental received spells since they're mostly things like being nuked
+        if (spellData != null && spellData.IsBeneficial)
         {
           UpdateMaps(spellData, received.Receiver, result.PlayerReceivedCounts, result.MaxReceivedCounts, result.UniqueSpells);
         }
