@@ -27,7 +27,7 @@
         <ComboBoxItem>Excluding</ComboBoxItem>
       </ComboBox>
       <TextBox x:Name="logSearch2" Margin="0,0,0,0" Height="24" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown" BorderBrush="#FF707070"/>
-      <ComboBox x:Name="logSearchTime" Margin="0,0,0,0" Height="24" SelectedIndex="0" Width="76" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" />
+      <ComboBox x:Name="logSearchTime" Margin="0,0,0,0" Height="24" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" />
       <Button x:Name="searchButton" Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="SearchClick">
         <fa:ImageAwesome x:Name="searchIcon" Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Search" ToolTip="Search Log" Foreground="#5191c1"/>
       </Button>
