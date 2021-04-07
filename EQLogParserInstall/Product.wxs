@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.7.49" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.7.50" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -115,7 +115,7 @@
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser_TargetDir)DotLiquid.dll" />
       </Component>
-      <Component Win64="yes" Id="NumericUpDownLib2.dll" Guid="C87D67EB-B970-4030-8B42-FE263934B734">
+      <Component Win64="yes" Id="NumericUpDownLib2.dll" Guid="831B4CF2-8B97-4C4A-A865-71A0DA79C9CA">
         <File Id="NumericUpDownLib2.dll" Name="NumericUpDownLib.dll" Source="$(var.EQLogParser_TargetDir)NumericUpDownLib.dll" />
       </Component>
     </ComponentGroup>
