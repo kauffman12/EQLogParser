@@ -151,10 +151,13 @@
     <value>Enchanter</value>
   </data>
   <data name="EVENT_FILTER_TEXT" xml:space="preserve">
-    <value>Event Search</value>
+    <value>Actor | Target Filter</value>
   </data>
   <data name="FILEMENU_EXPORT_SUMMARY" xml:space="preserve">
     <value>Can Not Save Summary Data</value>
+  </data>
+  <data name="LOG_FILTER_TEXT" xml:space="preserve">
+    <value>Results Filter</value>
   </data>
   <data name="LOG_SEARCH_TEXT" xml:space="preserve">
     <value>Search Term</value>
