@@ -160,7 +160,7 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Event Search.
+        ///   Looks up a localized string similar to Actor | Target Filter.
         /// </summary>
         internal static string EVENT_FILTER_TEXT {
             get {
@@ -174,6 +174,15 @@ namespace EQLogParser.Properties {
         internal static string FILEMENU_EXPORT_SUMMARY {
             get {
                 return ResourceManager.GetString("FILEMENU_EXPORT_SUMMARY", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Results Filter.
+        /// </summary>
+        internal static string LOG_FILTER_TEXT {
+            get {
+                return ResourceManager.GetString("LOG_FILTER_TEXT", resourceCulture);
             }
         }
         

@@ -71,7 +71,7 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventViewer_EventsLogLoadingComplete;
 
       eventFilter.Text = Properties.Resources.EVENT_FILTER_TEXT;
-      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       FilterTimer.Tick += (sender, e) =>
       {
         FilterTimer.Stop();

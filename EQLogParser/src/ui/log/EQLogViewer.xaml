@@ -33,6 +33,13 @@
       </Button>
       <Label x:Name="progress" Visibility="Hidden" Height="24" FontStyle="Italic" />
     </StackPanel>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <ComboBox x:Name="logFilterModifier" Margin="4,0,0,0" Height="24" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange" Background="#101010" Foreground="#EEEEEE">
+        <ComboBoxItem>Includes</ComboBoxItem>
+        <ComboBoxItem>Excludes</ComboBoxItem>
+      </ComboBox>
+      <TextBox x:Name="logFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" BorderBrush="#FF707070"/>
+    </StackPanel>
     <ScrollViewer x:Name="logScroller" Grid.Row="1" BorderThickness="1" BorderBrush="Black">
       <RichTextBox x:Name="logBox" FontSize="16" Margin="0,0,0,0" Foreground="White" IsInactiveSelectionHighlightEnabled="True" Style="{x:Null}" PreviewKeyDown="LogKeyDown" IsReadOnly="True" PreviewMouseWheel="LogMouseWheel" BorderThickness="0" BorderBrush="{x:Null}" Background="#FF202020">
         <FlowDocument>

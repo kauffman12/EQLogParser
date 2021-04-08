@@ -82,7 +82,7 @@ namespace EQLogParser
         SelectionTimer.Stop();
       };
 
-      SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 400) };
+      SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SearchTextTimer.Tick += (sender, e) =>
       {
         HandleSearchTextChanged();

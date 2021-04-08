@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -22,6 +23,9 @@ namespace EQLogParser
     private static readonly DateUtil DateUtil = new DateUtil();
     private static bool Complete = true;
     private static bool Running = false;
+    private DispatcherTimer FilterTimer;
+    private int UnFilteredCount;
+    private Paragraph UnFiltered;
 
     public EQLogViewer()
     {
@@ -52,6 +56,60 @@ namespace EQLogParser
       logSearch2.Text = Properties.Resources.LOG_SEARCH_TEXT;
       progress.Foreground = MainWindow.WARNING_BRUSH;
       searchButton.Focus();
+
+      logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
+      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      FilterTimer.Tick += (sender, e) =>
+      {
+        UpdateUI();
+        FilterTimer.Stop();
+      };
+    }
+
+    private void UpdateUI()
+    {
+      if (logBox.Document.Blocks.FirstBlock is Paragraph para)
+      {
+        if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT && para != UnFiltered)
+        {
+          logBox.Document.Blocks.Clear();
+          logBox.Document.Blocks.Add(UnFiltered);
+          statusCount.Text = UnFilteredCount + " Lines";
+          if (UnFilteredCount == 5000)
+          {
+            statusCount.Text += " (Maximum Reached)";
+          }
+        }
+        else if (logFilter.Text != Properties.Resources.LOG_FILTER_TEXT && logFilter.Text.Length > 1)
+        {
+          int count = 0;
+          var filtered = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
+          UnFiltered.Inlines.ToList().ForEach(inline =>
+          {
+            if (inline is Run run && run.Text != Environment.NewLine)
+            {
+              if (logFilterModifier.SelectedIndex == 0 && run.Text.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 || 
+              logFilterModifier.SelectedIndex == 1 && run.Text.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0)
+              {
+                count++;
+                filtered.Inlines.Add(new Run(run.Text));
+                filtered.Inlines.Add(new Run(Environment.NewLine));
+              }
+            }
+          });
+
+          // get rid of last new line character
+          if (filtered.Inlines.Count > 0)
+          {
+            filtered.Inlines.Remove(filtered.Inlines.LastInline);
+          }
+
+          statusCount.Text = count + " Lines (Filtered)";
+          logBox.Document.Blocks.Clear();
+          logBox.Document.Blocks.Add(filtered);
+          logScroller.ScrollToEnd();
+        }
+      }
     }
 
     private void SearchClick(object sender, MouseButtonEventArgs e)
@@ -133,7 +191,7 @@ namespace EQLogParser
                   Dispatcher.Invoke(() =>
                   {
                     progress.Content = "Searching (" + percent + "% Complete)";
-                  }, System.Windows.Threading.DispatcherPriority.Background);
+                  }, DispatcherPriority.Background);
                 }
               }
 
@@ -159,10 +217,17 @@ namespace EQLogParser
 
                 logBox.Document.Blocks.Add(paragraph);
                 statusCount.Text = list.Count + " Lines";
+                UnFilteredCount = list.Count;
                 if (list.Count == 5000)
                 {
                   statusCount.Text += " (Maximum Reached)";
                 }
+
+                UnFiltered = paragraph;
+
+                // reset filter
+                logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
+                logFilter.FontStyle = FontStyles.Italic;
               });
 
               f.Close();
@@ -315,6 +380,11 @@ namespace EQLogParser
           textBox.FontStyle = FontStyles.Italic;
         }
       }
+      else if (e.Key == Key.Enter)
+      {
+        searchButton.Focus();
+        SearchClick(sender, null);
+      }
     }
 
     private void SearchGotFocus(object sender, RoutedEventArgs e)
@@ -365,6 +435,42 @@ namespace EQLogParser
         ConfigUtil.SetSetting("EQLogViewerFontFamily", family.ToString());
       }
     }
+
+    private void FilterKeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Escape)
+      {
+        logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
+        logFilter.FontStyle = FontStyles.Italic;
+        logBox.Focus();
+      }
+    }
+
+    private void FilterGotFocus(object sender, RoutedEventArgs e)
+    {
+      if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT)
+      {
+        logFilter.Text = "";
+        logFilter.FontStyle = FontStyles.Normal;
+      }
+    }
+
+    private void FilterLostFocus(object sender, RoutedEventArgs e)
+    {
+      if (string.IsNullOrEmpty(logFilter.Text))
+      {
+        logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
+        logFilter.FontStyle = FontStyles.Italic;
+      }
+    }
+
+    private void FilterTextChanged(object sender, TextChangedEventArgs e)
+    {
+      FilterTimer?.Stop();
+      FilterTimer?.Start();
+    }
+
+    private void OptionsChange(object sender, EventArgs e) => UpdateUI();
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
