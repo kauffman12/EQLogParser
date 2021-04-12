@@ -306,16 +306,9 @@ namespace EQLogParser
 
     internal void AddLootRecord(LootRecord record, double beginTime)
     {
-      if (record.Player.Equals("Qulas"))
-      {
-        if (true)
-        {
-
-        }
-      }
       Helpers.AddAction(AllLootBlocks, record, beginTime);
 
-      if (!record.IsCurrency && record.Quantity == 1 && AssignedLoot.Count > 0)
+      if (!record.IsCurrency && record.Quantity > 0 && AssignedLoot.Count > 0)
       {
         var found = AssignedLoot.FindLastIndex(item => item.Player == record.Player && item.Item == record.Item);
         if (found > -1)
