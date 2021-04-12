@@ -306,6 +306,13 @@ namespace EQLogParser
 
     internal void AddLootRecord(LootRecord record, double beginTime)
     {
+      if (record.Player.Equals("Qulas"))
+      {
+        if (true)
+        {
+
+        }
+      }
       Helpers.AddAction(AllLootBlocks, record, beginTime);
 
       if (!record.IsCurrency && record.Quantity == 1 && AssignedLoot.Count > 0)
@@ -317,7 +324,7 @@ namespace EQLogParser
 
           foreach (var block in AllLootBlocks.OrderByDescending(block => block.BeginTime))
           {
-            found = block.Actions.FindLastIndex(item => item is LootRecord loot && loot.Player == record.Player && loot.Item == record.Item);
+            found = block.Actions.FindLastIndex(item => item is LootRecord loot && loot.Player == record.Player && loot.Item == record.Item && loot.Quantity == 0);
             if (found > -1)
             {
               lock(block.Actions)
