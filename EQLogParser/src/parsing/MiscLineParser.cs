@@ -41,6 +41,7 @@ namespace EQLogParser
           // [Mon Apr 27 22:32:04 2020] Restless Tijoely resisted your Stormjolt Vortex Effect!
           // [Mon Apr 27 20:51:22 2020] Kazint's Scorching Beam Rk. III spell has been reflected by a shadow reflection.
           // [Sun Mar 28 19:42:46 2021] A Draconic Lava Chain Feet Ornament was given to Aldryn.
+          // [Mon Apr 05 19:42:24 2021] Hacket won the need roll on 1 item(s): Restless Velium Tainted Pelt with a roll of 996.
 
           string looter = null;
           int awakenedIndex = -1;
@@ -49,6 +50,7 @@ namespace EQLogParser
           int receiveIndex = -1;
           int resistedIndex = -1;
           int isIndex = -1;
+          int itemsIndex = -1;
 
           for (int i = 0; i < split.Length && !handled; i++)
           {
@@ -69,11 +71,32 @@ namespace EQLogParser
                 case "looted":
                   lootedIndex = i;
                   break;
+                case "resisted":
+                  resistedIndex = i;
+                  break;
+                case "item(s):":
+                  if (split.Length > 9 && split[1] == "won" && split[4] == "roll")
+                  {
+                    itemsIndex = i;
+                  }
+                  break;
                 case "looter,":
                   masterLootIndex = (i == 2 && split[1] == "master" && split[0] == "The") ? masterLootIndex = i + 1 : -1;
                   break;
                 case "receive":
                   receiveIndex = (i == 1 && split[0] == "You") ? i : -1;
+                  break;
+                case "with":
+                  if (itemsIndex > -1 && split.Length > i + 2 && split[i + 2] == "roll")
+                  {
+                    looter = split[0].Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : split[0];
+                    string item = string.Join(" ", split, itemsIndex + 1, i - itemsIndex - 1);
+                    PlayerManager.Instance.AddVerifiedPlayer(looter);
+
+                    LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Won Roll (Not Looted)" };
+                    DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                    handled = true;
+                  }
                   break;
                 case "reflected":
                   if (split.Length > 6 && i >= 6 && i + 2 < split.Length && split[0].StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal) 
@@ -84,9 +107,6 @@ namespace EQLogParser
                     DataManager.Instance.UpdateNpcSpellReflectStats(npc);
                     handled = true;
                   }
-                  break;
-                case "resisted":
-                  resistedIndex = i;
                   break;
                 case "your":
                   if (resistedIndex > 0 && resistedIndex + 1 == i && split.Length > i + 1 && split[split.Length - 1].EndsWith("!", StringComparison.Ordinal))
@@ -147,8 +167,10 @@ namespace EQLogParser
                     {
                       looter = player.Substring(0, player.Length - 1);
                       looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
+                      PlayerManager.Instance.AddVerifiedPlayer(looter);
+
                       string item = string.Join(" ", split, 1, i - 2);
-                      LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Assigned (Not Looted)" };
+                      LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Given (Not Looted)" };
                       DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
                       handled = true;
                     }
