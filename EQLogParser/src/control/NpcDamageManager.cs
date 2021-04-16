@@ -128,8 +128,10 @@ namespace EQLogParser
       {
         var isAttackerPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
         var isDefenderPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Defender);
-        var isAttackerNpc = !isAttackerPlayer && DataManager.Instance.IsKnownNpc(record.Attacker);
-        var isDefenderNpc = !isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender);
+        var isAttackerNpc = !isAttackerPlayer && (DataManager.Instance.IsKnownNpc(record.Attacker) 
+          || (DataManager.Instance.GetSpellByName(record.Attacker) is SpellData spell && spell.IsBeneficial == false));
+        var isDefenderNpc = !isDefenderPlayer && (DataManager.Instance.IsKnownNpc(record.Defender) 
+          || (DataManager.Instance.GetSpellByName(record.Defender) is SpellData spell2 && spell2.IsBeneficial == false));
 
         if (isDefenderNpc && !isAttackerNpc)
         {
