@@ -119,10 +119,10 @@ namespace EQLogParser
       StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
     }
 
-    private static bool IsValidAttack(DamageRecord record, out bool defender)
+    private static bool IsValidAttack(DamageRecord record, out bool npcDefender)
     {
       bool valid = false;
-      defender = false;
+      npcDefender = false;
 
       if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))
       {
@@ -134,23 +134,39 @@ namespace EQLogParser
         if (isDefenderNpc && !isAttackerNpc)
         {
           valid = isAttackerPlayer || PlayerManager.Instance.IsPossiblePlayerName(record.Attacker);
-          defender = true;
+          npcDefender = true;
         }
         else if (!isDefenderNpc && isAttackerNpc)
         {
           valid = true;
-          defender = false;
+          npcDefender = false;
         }
         else if (!isDefenderNpc && !isAttackerNpc)
         {
           if (isDefenderPlayer || isAttackerPlayer)
           {
             valid = isDefenderPlayer != isAttackerPlayer;
-            defender = !isDefenderPlayer;
+            if (!valid)
+            {
+              if (PlayerManager.Instance.IsCharmPet(record.Attacker))
+              {
+                valid = true;
+                npcDefender = false;
+              }
+              else if (PlayerManager.Instance.IsCharmPet(record.Defender))
+              {
+                valid = true;
+                npcDefender = true;
+              }
+            }
+            else
+            {
+              npcDefender = !isDefenderPlayer;
+            }
           }
           else
           {
-            defender = PlayerManager.Instance.IsPossiblePlayerName(record.Attacker) || !PlayerManager.Instance.IsPossiblePlayerName(record.Defender);
+            npcDefender = PlayerManager.Instance.IsPossiblePlayerName(record.Attacker) || !PlayerManager.Instance.IsPossiblePlayerName(record.Defender);
             valid = true;
           }
         }
@@ -158,7 +174,7 @@ namespace EQLogParser
           && DataManager.Instance.GetFight(record.Attacker) == null)
         {
           valid = true;
-          defender = true;
+          npcDefender = true;
         }
       }
 

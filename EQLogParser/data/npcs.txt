@@ -999,6 +999,7 @@ a burned indagator vitali
 a burner
 a burner pet
 a burning ash giant
+a burning aggressor
 a burning book dervish
 a burning book dervish pet
 a burning bunny
@@ -1734,6 +1735,7 @@ acolyte vessa
 acolyte wivlx
 acomar lothwol
 a combat medic
+a combative adherent
 a combine attendant
 a combine brutalis
 a combine coordinator
@@ -1794,6 +1796,7 @@ a confused slave
 a confused sludgeworker
 a confused smith
 a confused thrall
+a confused warden
 a congealed mass
 a conjured automoton
 a conjured storm
@@ -2924,6 +2927,7 @@ a demented scrykin
 a demi lich
 a demolisher
 a demoted soldier
+a dendridic shard
 adenox
 a dense golem
 a dense mound
@@ -4228,6 +4232,7 @@ a fiery golem
 a fiery guardian
 a fiery lavaspinner
 a fiery mepheeka
+a fiery orb
 a fiery skeleton
 a fiery skeleton statue
 a fiery skirmisher
@@ -6261,6 +6266,7 @@ a guardian of flame
 a guardian of hoshkar
 a guardian of jiva
 a guardian of kernagir
+a guardian of klandicar
 a guardian of life
 a guardian of marr
 a guardian of narikor
@@ -7520,6 +7526,7 @@ a lesser blightshell
 a lesser brann frienai
 a lesser chaosbone skeleton
 a lesser charbone skeleton
+a lesser dendridic shard
 a lesser ebon drake
 a lesser essence of nature
 a lesser fiery spirit steed
@@ -9080,6 +9087,7 @@ an ancient treant
 an ancient trilobite
 an ancient vekerchiki champion
 an ancient volcanite
+an ancient warden
 an ancient water warden
 an ancient wurm
 an ancient wyvern
@@ -9663,6 +9671,8 @@ an earthen mage
 an earthen mudslinger
 an earthen mudwalker
 an earthen ooze
+an earthen orb
+an earthen prison
 an earthen protector
 an earthen reject
 an earthen sandblaster
@@ -9684,10 +9694,13 @@ an eavesdropping sneak
 an ebbing flashfire
 an ebon drake
 an ebon drakeling
+an ebon guardian
 an ebonfang wolf
 an ebon mask spy
+an ebon protector
 an ebonwing chick
 an ebonwing guardian
+an ebon warden
 an ebon wing hatchling
 an ebonwing tender
 an ebony horror
@@ -10005,12 +10018,14 @@ an emerald fencer
 an emerald golem
 an emerald guardian
 an emerald plaguebone
+an emerald protector
 an emerald sailfin
 an emerald scale drake
 an emerald skirmisher
 an emerald sky defender
 an emerald skywing
 an emerald spirit
+an emerald warden
 an emerald watcher
 an emergence hole
 an emergency repair mechanic
@@ -12316,6 +12331,7 @@ a priest of vergalid pet
 april
 aprilia marrow
 a primalist
+a primal guardian
 a prime air elemental
 a prime anglerfish
 a prime derivation
@@ -13582,6 +13598,9 @@ a rubble widow
 a ruby cluster
 a ruby drake
 a ruby golem
+a ruby guardian
+a ruby protector
+a ruby warden
 a rude potter
 a rude shopworker
 a ruffled squawker
@@ -14435,6 +14454,7 @@ a shadowmane warlock
 a shadowmane warrior
 a shadow master
 a shadow mephit
+a shadow orb
 a shadow of darkness
 a shadow of despair
 a shadow of lxanvon
@@ -15803,6 +15823,7 @@ a stenographer
 a steppes leopard
 a stern escort
 a stern guard
+asterated golem
 a steward
 a steward bloodadvisor
 a steward bonegrater
@@ -16376,6 +16397,7 @@ a tanglefoot rootstitch
 a tanglefoot rootwalker
 a tanglefoot spirit
 a tantalum clockwork
+a tantorling
 a tar goo
 a tarmok beetle herder
 a tarmok defender
@@ -17314,6 +17336,7 @@ a vekerchiki warlord
 a vekerchiki warrior
 a vekerchiki watcher
 a velious bronthotherium
+a velious brontotherium
 a velious burrower
 a velious drake
 a velious hare
@@ -18371,6 +18394,7 @@ balknir
 balkor the knife
 balloondabloop
 bally
+ball of ice and stone
 balni stoneskull
 balrezu
 balrolok haldarano
@@ -18557,6 +18581,7 @@ bashil shralok
 basil
 basil the skinner
 baslo crackhammer
+basnivan
 bassanio weekin
 basta shivstalker
 basten ghunret
@@ -20380,65 +20405,65 @@ colonel thalan
 colossus of war
 coloth meadowgreen
 combat dummy azia
-combat dummy azia II
-combat dummy azia III
+combat dummy azia ii
+combat dummy azia iii
 combat dummy beza
-combat dummy beza II
-combat dummy beza III
+combat dummy beza ii
+combat dummy beza iii
 combat dummy caza
-combat dummy caza II
-combat dummy caza III
+combat dummy caza ii
+combat dummy caza iii
 combat dummy dena
-combat dummy dena II
-combat dummy dena III
+combat dummy dena ii
+combat dummy dena iii
 combat dummy ena
-combat dummy ena II
-combat dummy ena III
+combat dummy ena ii
+combat dummy ena iii
 combat dummy fana
-combat dummy fana II
-combat dummy fana III
+combat dummy fana ii
+combat dummy fana iii
 combat dummy geza
-combat dummy geza II
-combat dummy geza III
+combat dummy geza ii
+combat dummy geza iii
 combat dummy heda 
-combat dummy heda II
-combat dummy heda III
+combat dummy heda ii
+combat dummy heda iii
 combat dummy izah
-combat dummy izah II
-combat dummy izah III
+combat dummy izah ii
+combat dummy izah iii
 combat dummy jaka
-combat dummy jaka II
-combat dummy jaka III
+combat dummy jaka ii
+combat dummy jaka iii
 combat dummy kala
-combat dummy kala II
-combat dummy kala III
+combat dummy kala ii
+combat dummy kala iii
 combat dummy lena
-combat dummy lena II
-combat dummy lena III
+combat dummy lena ii
+combat dummy lena iii
 combat dummy meda
-combat dummy meda II
-combat dummy meda III
+combat dummy meda ii
+combat dummy meda iii
 combat dummy neza
-combat dummy neza II
-combat dummy neza III
+combat dummy neza ii
+combat dummy neza iii
 combat dummy ozah
-combat dummy ozah II
-combat dummy ozah III
+combat dummy ozah ii
+combat dummy ozah iii
 combat dummy paza
-combat dummy paza II
-combat dummy paza III
+combat dummy paza ii
+combat dummy paza iii
 combat dummy qela
-combat dummy qela II
-combat dummy qela III
+combat dummy qela ii
+combat dummy qela iii
 combat dummy rena
-combat dummy rena II
-combat dummy rena III
+combat dummy rena ii
+combat dummy rena iii
 combat dummy sana
-combat dummy sana II
-combat dummy sana III
+combat dummy sana ii
+combat dummy sana iii
 combat dummy taza
-combat dummy taza II
-combat dummy taza III
+combat dummy taza ii
+combat dummy taza iii
 commander alast degmar
 commander bahreck
 commander barvian
@@ -21439,6 +21464,7 @@ dena
 dena loommistress
 denat c`luzz
 den ironblend
+dendritic golem
 denise
 denise songweaver
 denken strongpick
@@ -22556,6 +22582,7 @@ empowered blades
 empowered reflection
 empress saarisz the undying
 empty rainbow
+emterizad
 emylie steelclaws
 enasni the demented
 encan v`dal
@@ -24808,6 +24835,7 @@ groi gutblade pet
 grok
 grokui, the slumbering basilisk
 grolak the ancient
+grolik
 grolk, the honey eater
 grollikthania
 grom
@@ -25764,6 +25792,7 @@ harfange the black
 hargar the velium chef
 harg tonicka
 hargvex shralok
+harissa
 harkin duskfoot
 harla dar
 harlad ragesoul
@@ -26677,6 +26706,7 @@ isilisinisusurpa
 isinente
 iskopa
 island shuttle
+islak
 islan hetston
 isle havocwright
 isobelle losiwoo
@@ -27049,6 +27079,7 @@ jorna
 jornin
 jorth hunter of beasts
 jortreva the crusader
+jortreva the crusader pet
 jortreva`s herald
 jorumin
 jorun grimblewimbus
@@ -33200,6 +33231,7 @@ starn bearjumper
 starr dreamspinner
 starshine, icebreaker
 star stealing sage
+starseed golem
 starzin the sweet one
 stash of glimpse
 static field
@@ -33560,6 +33592,7 @@ tainted wooly mammoth
 tain whistleburrow
 taisika cloudfire
 takacha
+takidar
 takish-hiz lady of the court
 takish-hiz librarian
 takish-hiz priest
@@ -33842,6 +33875,7 @@ tharvig the haunted
 thaumathurgist of saryrn
 the acolyte of affliction
 the adversary
+the amalgam arbiter
 the ant queen
 the anvil
 the arisen admiral tylix
@@ -35827,6 +35861,7 @@ vyer`s personal chest
 vyishe
 vyldin flamereaver
 vylleam vyaeltor
+vylpa
 vynn thrildur
 vynon estaliun
 vyntal zintha
