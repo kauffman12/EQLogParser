@@ -771,7 +771,7 @@ namespace EQLogParser
             owner = name.Substring(0, pIndex);
             hasOwner = true;
 
-            if (!verifiedPet && PlayerManager.Instance.IsPetOrPlayer(owner))
+            if (!verifiedPet && PlayerManager.Instance.IsVerifiedPlayer(owner))
             {
               PlayerManager.Instance.AddVerifiedPet(name);
             }

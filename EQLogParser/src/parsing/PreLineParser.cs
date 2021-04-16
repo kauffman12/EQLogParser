@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Globalization;
 
 namespace EQLogParser
 {
@@ -39,12 +38,6 @@ namespace EQLogParser
             if (period > -1)
             {
               string owner = action.Substring(index + 21, period - index - 21);
-
-              if (!PlayerManager.Instance.IsPossiblePlayerName(pet) && (pet.StartsWith("A ", StringComparison.Ordinal) || pet.StartsWith("An ", StringComparison.Ordinal)))
-              {
-                pet = pet.ToLower(CultureInfo.CurrentCulture);
-              }
-
               PlayerManager.Instance.AddVerifiedPlayer(owner);
               PlayerManager.Instance.AddVerifiedPet(pet);
               PlayerManager.Instance.AddPetToPlayer(pet, owner);
@@ -88,25 +81,25 @@ namespace EQLogParser
         else if (action.EndsWith(" has joined the group.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 22);
-          PlayerManager.Instance.AddPetOrPlayerAction(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test);
           found = true;
         }
         else if (action.EndsWith(" has left the raid.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 19);
-          PlayerManager.Instance.AddPetOrPlayerAction(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test);
           found = true;
         }
         else if (action.EndsWith(" has left the group.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 20);
-          PlayerManager.Instance.AddPetOrPlayerAction(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test);
           found = true;
         }
         else if (action.EndsWith(" is now the leader of your raid.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 32);
-          PlayerManager.Instance.AddPetOrPlayerAction(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test);
           found = true;
         }
         // handle junk line to avoid it being written to debug

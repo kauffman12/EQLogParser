@@ -303,7 +303,7 @@ namespace EQLogParser
     {
       bool pass = true;
 
-      if (!string.IsNullOrEmpty(line) && line.Length >= 24 && index >= 0 && index < 5)
+      if (!string.IsNullOrEmpty(line) && line.Length > 24 && index >= 0 && index < 5)
       {
         var timeString = line.Substring(1, 24);
         var logTime = DateUtil.ParseDate(timeString);

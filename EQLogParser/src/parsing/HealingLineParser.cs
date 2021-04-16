@@ -199,7 +199,7 @@ namespace EQLogParser
           }
         }
 
-        if (healed.Length > 0)
+        if (!string.IsNullOrEmpty(healed))
         {
           // check for pets
           int possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
@@ -214,10 +214,13 @@ namespace EQLogParser
             healer = "";
             heal = 0;
           }
-          // found a mage pet
-          else if (string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Theft of Essence Effect", StringComparison.Ordinal))
+          // found a bst/mag/nec pet
+          else if (!string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Mend Companion", StringComparison.Ordinal))
           {
             PlayerManager.Instance.AddVerifiedPet(healed);
+          }
+          else if (string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase))
+          {
             healer = Labels.UNK;
           }
           

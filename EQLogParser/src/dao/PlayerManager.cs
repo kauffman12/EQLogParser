@@ -29,6 +29,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
     private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, byte> CharmPets = new ConcurrentDictionary<string, byte>();
 
     private bool PetMappingUpdated = false;
     private bool PlayersUpdated = false;
@@ -57,7 +58,15 @@ namespace EQLogParser
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
     }
 
+    internal bool IsCharmPet(string name) => !string.IsNullOrEmpty(name) && CharmPets.ContainsKey(name);
+
     internal bool IsDoTClass(string name) => !string.IsNullOrEmpty(name) && DoTClasses.ContainsKey(name);
+
+    internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name) || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
+
+    internal bool IsPetOrPlayer(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || TakenPetOrPlayerAction.ContainsKey(name));
+
+    internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayer(name) || DataManager.Instance.IsPlayerSpell(name);
 
     internal void AddPetOrPlayerAction(string name)
     {
@@ -69,41 +78,62 @@ namespace EQLogParser
 
     internal void AddPetToPlayer(string pet, string player)
     {
-      if ((!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player) && !IsVerifiedPlayer(pet))
+      if (!string.IsNullOrEmpty(pet) && !string.IsNullOrEmpty(player))
       {
-        PetToPlayer[pet] = player;
-        EventsNewPetMapping?.Invoke(this, new PetMapping() { Pet = pet, Owner = player });
-        PetMappingUpdated = true;
+        if (!IsPossiblePlayerName(pet) && (pet.StartsWith("A ", StringComparison.Ordinal) || pet.StartsWith("An ", StringComparison.Ordinal)))
+        {
+          pet = pet.ToLower(CultureInfo.CurrentCulture);
+        }
+
+        if ((!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player) && !IsVerifiedPlayer(pet))
+        {
+          PetToPlayer[pet] = player;
+          EventsNewPetMapping?.Invoke(this, new PetMapping() { Pet = pet, Owner = player });
+          PetMappingUpdated = true;
+        }
       }
     }
 
     internal void AddVerifiedPet(string name)
     {
-      TakenPetOrPlayerAction.TryRemove(name, out _);
-      VerifiedPlayers.TryRemove(name, out _);
-
-      if (VerifiedPets.TryAdd(name, 1))
+      if (!string.IsNullOrEmpty(name))
       {
-        EventsNewVerifiedPet?.Invoke(this, name);
+        if (!IsPossiblePlayerName(name))
+        {
+          if (name.StartsWith("A ", StringComparison.Ordinal) || name.StartsWith("An ", StringComparison.Ordinal))
+          {
+            name = name.ToLower(CultureInfo.CurrentCulture);
+          }
+
+          if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase))
+          {
+            CharmPets[name] = 1;
+          }
+        }
+
+        TakenPetOrPlayerAction.TryRemove(name, out _);
+        VerifiedPlayers.TryRemove(name, out _);
+
+        if (VerifiedPets.TryAdd(name, 1))
+        {
+          EventsNewVerifiedPet?.Invoke(this, name);
+        }
       }
     }
 
     internal void AddVerifiedPlayer(string name)
     {
-      TakenPetOrPlayerAction.TryRemove(name, out _);
-      VerifiedPets.TryRemove(name, out _);
-
-      if (VerifiedPlayers.TryAdd(name, 1))
+      if (!string.IsNullOrEmpty(name))
       {
-        EventsNewVerifiedPlayer?.Invoke(this, name);
-        PlayersUpdated = true;
-      }
-    }
+        TakenPetOrPlayerAction.TryRemove(name, out _);
+        VerifiedPets.TryRemove(name, out _);
 
-    internal string GetClassName(SpellClass spellClass)
-    {
-      ClassNames.TryGetValue(spellClass, out string name);
-      return name;
+        if (VerifiedPlayers.TryAdd(name, 1))
+        {
+          EventsNewVerifiedPlayer?.Invoke(this, name);
+          PlayersUpdated = true;
+        }
+      }
     }
 
     internal List<string> GetClassList()
@@ -166,21 +196,6 @@ namespace EQLogParser
       }
 
       return found || isGameGenerated;
-    }
-
-    internal bool IsVerifiedPlayer(string name)
-    {
-      return !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name) || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
-    }
-
-    internal bool IsPetOrPlayer(string name)
-    {
-      return !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || TakenPetOrPlayerAction.ContainsKey(name));
-    }
-
-    internal bool IsPetOrPlayerOrSpell(string name)
-    {
-      return IsPetOrPlayer(name) || DataManager.Instance.IsPlayerSpell(name);
     }
 
     internal void RemoveVerifiedPet(string name)

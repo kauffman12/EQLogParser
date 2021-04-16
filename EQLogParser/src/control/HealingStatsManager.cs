@@ -104,7 +104,7 @@ namespace EQLogParser
                 var updatedHeal = new ActionBlock() { BeginTime = heal.BeginTime };
                 foreach (var record in heal.Actions.Cast<HealRecord>())
                 {
-                  if (PlayerManager.Instance.IsPossiblePlayerName(record.Healed) || PlayerManager.Instance.IsPetOrPlayer(record.Healed))
+                  if (PlayerManager.Instance.IsPetOrPlayer(record.Healed) || PlayerManager.Instance.IsPossiblePlayerName(record.Healed))
                   {
                     bool valid = true;
                     SpellData spellData;
