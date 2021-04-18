@@ -32,11 +32,11 @@ namespace EQLogParser
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
       }
 
-      if (IsValidAttack(processed.Record, out bool defender, out bool isSpell))
+      if (IsValidAttack(processed.Record, out bool defender))
       {
         string origTimeString = processed.OrigTimeString.Substring(4, 15);
 
-        Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender, isSpell);
+        Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
 
         if (defender)
         {
@@ -45,7 +45,11 @@ namespace EQLogParser
           fight.Total += processed.Record.Total;
           fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
           fight.LastDamageTime = processed.BeginTime;
-          fight.DamageHits++;
+
+          if (processed.Record.Type != Labels.MISS)
+          {
+            fight.DamageHits++;
+          }
         }
         else
         {
@@ -53,7 +57,11 @@ namespace EQLogParser
           AddPlayerTime(fight, processed.Record, processed.Record.Defender, processed.BeginTime);
           fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? processed.BeginTime : fight.BeginTankingTime;
           fight.LastTankingTime = processed.BeginTime;
-          fight.TankHits++;
+
+          if (processed.Record.Type != Labels.MISS)
+          {
+            fight.TankHits++;
+          }
         }
 
         fight.LastTime = processed.BeginTime;
@@ -71,20 +79,20 @@ namespace EQLogParser
       }
   }
 
-    private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender, bool isSpell)
+    private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender)
     {
       string npc = defender ? record.Defender : record.Attacker;
 
       Fight fight = DataManager.Instance.GetFight(npc);
       if (fight == null)
       {
-        fight = Create(npc, currentTime, origTimeString, isSpell);
+        fight = Create(npc, currentTime, origTimeString);
       }
 
       return fight;
     }
 
-    private Fight Create(string defender, double currentTime, string origTimeString, bool isSpell)
+    private Fight Create(string defender, double currentTime, string origTimeString)
     {
       return new Fight()
       {
@@ -93,7 +101,6 @@ namespace EQLogParser
         BeginTime = currentTime,
         LastTime = currentTime,
         Id = CurrentNpcID++,
-        IsSpell = isSpell,
         CorrectMapKey = string.Intern(defender)
       };
     }
@@ -106,11 +113,10 @@ namespace EQLogParser
       StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
     }
 
-    private static bool IsValidAttack(DamageRecord record, out bool npcDefender, out bool isSpell)
+    private static bool IsValidAttack(DamageRecord record, out bool npcDefender)
     {
       bool valid = false;
       npcDefender = false;
-      isSpell = false;
 
       if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))
       {
@@ -123,8 +129,6 @@ namespace EQLogParser
           || (attackerSpell != null && attackerSpell.IsBeneficial == false));
         var isDefenderNpc = !isDefenderPlayer && (DataManager.Instance.IsKnownNpc(record.Defender) 
           || (defenderSpell != null && defenderSpell.IsBeneficial == false));
-
-        isSpell = attackerSpell != null && !attackerSpell.IsBeneficial;
 
         if (isDefenderNpc && !isAttackerNpc)
         {

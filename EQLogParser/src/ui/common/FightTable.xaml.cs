@@ -37,21 +37,20 @@ namespace EQLogParser
     private static int CurrentFightSearchIndex = 0;
     private static int CurrentFightSearchDirection = 1;
     private static DataGridRow CurrentSearchRow = null;
-    private static bool NeedScroll = false;
-    private static bool NeedRefresh = false;
     private static bool NeedSelectionChange = false;
 
     private ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
     private bool CurrentShowBreaks;
-    private bool CurrentShowSpells;
+    private bool CurrentShowTanking;
     private int CurrentGroup = 0;
+    private bool NeedRefresh = false;
 
-    private DispatcherTimer RefreshTimer;
+    private List<Fight> FightsToProcess = new List<Fight>();
     private DispatcherTimer SelectionTimer;
     private DispatcherTimer SearchTextTimer;
     private DispatcherTimer UpdateTimer;
-    private Fight LastNpc;
-    private Fight LastNpcOrSpell;
+    private Fight LastNonTankingNpc;
+    private Fight LastNpcWithTanking;
 
     public FightTable()
     {
@@ -70,19 +69,23 @@ namespace EQLogParser
         bool display = true;
         var fight = (Fight) item;
 
-        if (CurrentShowSpells == false && fight.IsSpell && fight.DamageHits <= 0)
+        if (CurrentShowTanking == false && fight.DamageHits <= 0 && fight.GroupId >= 0)
         {
           display = false;
         }
-        else if (CurrentShowSpells == false && fight.GroupId == -1)
+        else if (CurrentShowTanking == false && fight.GroupId == -1)
         {
           display = false;
         }
-        else if (CurrentShowSpells == true && fight.GroupId == -2)
+        else if (CurrentShowTanking == true && fight.GroupId == -2)
         {
           display = false;
         }
         else if (CurrentShowBreaks == false && fight.GroupId < 0)
+        {
+          display = false;
+        }
+        else if (fight.TankHits == 0 && fight.DamageHits == 0 && fight.GroupId >= 0)
         {
           display = false;
         }
@@ -114,42 +117,8 @@ namespace EQLogParser
         SearchTextTimer.Stop();
       };
 
-      RefreshTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 5000) };
-      RefreshTimer.Tick += (sender, e) =>
-      {
-        (fightDataGrid.ItemsSource as ICollectionView).Refresh();
-        NeedRefresh = false;
-        RefreshTimer.Stop();
-      };
-
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-      UpdateTimer.Tick += (sender, e) =>
-      {
-        // get state so it can't be modified outside this thread
-        var currentNeedRefresh = NeedRefresh;
-
-        if (NeedScroll)
-        {
-          (fightDataGrid.ItemsSource as ICollectionView).Refresh();
-          currentNeedRefresh = false;
-          NeedRefresh = false;
-
-          var last = Fights.LastOrDefault(fight => fight.GroupId > -1);
-
-          if (last != null)
-          {
-            fightDataGrid.ScrollIntoView(last);
-          }
-
-          NeedScroll = false;
-        }
-
-        if (currentNeedRefresh && !Keyboard.IsKeyDown(Key.LeftShift) && !RefreshTimer.IsEnabled)
-        {
-          RefreshTimer.Start();
-        }
-      };
-
+      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 3000) };
+      UpdateTimer.Tick += (sender, e) => ProcessFights();
       UpdateTimer.Start();
 
       // read show hp setting
@@ -158,7 +127,7 @@ namespace EQLogParser
 
       // read show breaks and spells setting
       fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
-      fightShowSpells.IsChecked = CurrentShowSpells = ConfigUtil.IfSet("NpcShowSpells", null, true);
+      fightShowTanking.IsChecked = CurrentShowTanking = ConfigUtil.IfSet("NpcShowTanking", null, true);
     }
 
     internal IEnumerable<Fight> GetSelectedItems() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.GroupId > -1);
@@ -186,58 +155,88 @@ namespace EQLogParser
 
     private void AddFight(Fight fight)
     {
-      Dispatcher.InvokeAsync(() =>
+      lock(FightsToProcess)
       {
-        if (LastNpcOrSpell != null && fight.BeginTime - LastNpcOrSpell.LastTime >= GROUP_TIMEOUT)
-        {
-          CurrentGroup++;
+        FightsToProcess.Add(fight);
+      }
+    }
 
-          var seconds = fight.BeginTime - LastNpcOrSpell.LastTime;
-          Fight divider = new Fight()
+    private void ProcessFights()
+    {
+      List<Fight> processList = null;
+      lock (FightsToProcess)
+      {
+        if (FightsToProcess.Count > 0)
+        {
+          processList = new List<Fight>();
+          processList.AddRange(FightsToProcess);
+          FightsToProcess.Clear();
+        }
+      }
+
+      if (processList != null)
+      {
+        processList.ForEach(fight =>
+        {
+          if (LastNpcWithTanking != null && fight.BeginTime - LastNpcWithTanking.LastTime >= GROUP_TIMEOUT)
           {
-            LastTime = fight.BeginTime,
-            BeginTime = LastNpcOrSpell.LastTime,
-            GroupId = -1,
-            BeginTimeString = Fight.BREAKTIME,
-            Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
-          };
+            CurrentGroup++;
 
-          Fights.Add(divider);
-        }
+            var seconds = fight.BeginTime - LastNpcWithTanking.LastTime;
+            Fight divider = new Fight
+            {
+              LastTime = fight.BeginTime,
+              BeginTime = LastNpcWithTanking.LastTime,
+              GroupId = -1,
+              BeginTimeString = Fight.BREAKTIME,
+              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
+            };
 
-        if (LastNpc != null && !fight.IsSpell && fight.BeginTime - LastNpc.LastTime >= GROUP_TIMEOUT)
-        {
-          var seconds = fight.BeginTime - LastNpc.LastTime;
-          Fight divider = new Fight()
+            Fights.Add(divider);
+          }
+
+          if (LastNonTankingNpc != null && fight.DamageHits > 0 && fight.BeginTime - LastNonTankingNpc.LastTime >= GROUP_TIMEOUT)
           {
-            LastTime = fight.BeginTime,
-            BeginTime = LastNpc.LastTime,
-            GroupId = -2,
-            BeginTimeString = Fight.BREAKTIME,
-            Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
-          };
+            var seconds = fight.BeginTime - LastNonTankingNpc.LastTime;
+            Fight divider = new Fight
+            {
+              LastTime = fight.BeginTime,
+              BeginTime = LastNonTankingNpc.LastTime,
+              GroupId = -2,
+              BeginTimeString = Fight.BREAKTIME,
+              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
+            };
 
-          Fights.Add(divider);
-        }
+            Fights.Add(divider);
+          }
 
-        fight.GroupId = CurrentGroup;
-        Fights.Add(fight);
+          fight.GroupId = CurrentGroup;
+          Fights.Add(fight);
+          LastNpcWithTanking = fight;
 
-        if (fight.GroupId > -1)
+          if (fight.DamageHits > 0)
+          {
+            LastNonTankingNpc = fight;
+          }
+        });
+      }
+
+      if (processList != null || NeedRefresh)
+      {
+        (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+      }
+
+      if (processList != null)
+      {
+        var last = Fights.LastOrDefault(fight => fight.GroupId > -1);
+
+        if (last != null && (Parent as ToolWindow).IsOpen && !fightDataGrid.IsMouseOver)
         {
-          LastNpcOrSpell = fight;
+          fightDataGrid.ScrollIntoView(last);
         }
+      }
 
-        if (fight.GroupId > -1 && !fight.IsSpell)
-        {
-          LastNpc = fight;
-        }
-
-        if ((Parent as ToolWindow).IsOpen && !fightDataGrid.IsMouseOver && !NeedScroll)
-        {
-          NeedScroll = true;
-        }
-      }, DispatcherPriority.DataBind);
+      NeedRefresh = false;
     }
 
     private void RemoveFight(string name)
@@ -307,8 +306,6 @@ namespace EQLogParser
 
     private void SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      RefreshTimer.Stop();
-
       // adds a delay where a drag-select doesn't keep sending events
       SelectionTimer.Stop();
       SelectionTimer.Start();
@@ -370,12 +367,12 @@ namespace EQLogParser
       }
     }
 
-    private void ShowSpellsChange(object sender, RoutedEventArgs e)
+    private void ShowTankingChange(object sender, RoutedEventArgs e)
     {
       if (fightDataGrid?.ItemsSource is ICollectionView view)
       {
-        CurrentShowSpells = fightShowSpells.IsChecked.Value;
-        ConfigUtil.SetSetting("NpcShowSpells", CurrentShowSpells.ToString(CultureInfo.CurrentCulture));
+        CurrentShowTanking = fightShowTanking.IsChecked.Value;
+        ConfigUtil.SetSetting("NpcShowTanking", CurrentShowTanking.ToString(CultureInfo.CurrentCulture));
         view.Refresh();
       }
     }
@@ -520,15 +517,20 @@ namespace EQLogParser
     private void Instance_EventsCleardActiveData(object sender, bool cleared)
     {
       Fights.Clear();
+      FightsToProcess.Clear();
       CurrentGroup = 0;
-      LastNpc = null;
-      LastNpcOrSpell = null;
+      LastNonTankingNpc = null;
+      LastNpcWithTanking = null;
       CurrentSearchRow = null;
+    }
+
+    private void Instance_EventsRefreshFight(object sender, Fight fight)
+    {
+      NeedRefresh = true;
     }
 
     private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
-    private void Instance_EventsRefreshFight(object sender, Fight fight) => NeedRefresh = true;
 
     private void TableUnloaded(object sender, RoutedEventArgs e)
     {

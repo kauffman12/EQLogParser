@@ -234,7 +234,6 @@ namespace EQLogParser
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public int Id { get; set; }
-    public bool IsSpell { get; set; }
     public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
     public long Total { get; set; }
