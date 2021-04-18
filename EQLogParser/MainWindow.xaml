@@ -14,8 +14,7 @@
         Closed="WindowClosed"
         ResizeMode="CanResize"
         TextOptions.TextFormattingMode="Display"
-        StateChanged="WindowStateChanged"
-        Width="1500">
+        StateChanged="WindowStateChanged">
   <WindowChrome.WindowChrome>
     <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" 
             UseAeroCaptionButtons="False" ResizeBorderThickness="7" />
@@ -271,7 +270,7 @@
     <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown" WindowUnregistered="DockSite_WindowUnreg">
       <docking:SplitContainer Orientation="Horizontal">
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="npcWindow" Title="Fight List" ContainerAutoHideSize="320, 400" ContainerDockedSize="320,400">
+          <docking:ToolWindow x:Name="npcWindow" Title="Fight List" ContainerAutoHideSize="330, 400" ContainerDockedSize="330,400">
             <local:FightTable />
           </docking:ToolWindow>
         </docking:ToolWindowContainer>

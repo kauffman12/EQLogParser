@@ -20,7 +20,7 @@
       <TextBox x:Name="fightSearchBox" Margin="4,0,8,0" VerticalContentAlignment="Center" Height="24" Width="130" GotFocus="FightSearchBoxGotFocus" LostFocus="FightSearchBoxLostFocus" TextChanged="FightSearchBoxTextChanged" BorderBrush="#FF707070" />
       <CheckBox x:Name="fightShowHitPoints" IsChecked="True" Margin="0,0,6,0" ToolTip="Show Hit Points" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowHitPointsChange" Unchecked="ShowHitPointsChange">HP</CheckBox>
       <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="2,0,6,0" ToolTip="Add Breaks for Inactivity" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
-      <CheckBox x:Name="fightShowSpells" IsChecked="True" Margin="2,0,6,0" ToolTip="Include Spells not from an NPC" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowSpellsChange" Unchecked="ShowSpellsChange">Spells</CheckBox>
+      <CheckBox x:Name="fightShowTanking" IsChecked="True" Margin="2,0,6,0" ToolTip="Include Fights with only Tanking data" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowTankingChange" Unchecked="ShowTankingChange">Tanking</CheckBox>
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="fightDataGrid" Grid.Row="1" PreviewMouseDown="UpdateCurrentItem" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
       <DataGrid.ContextMenu>
