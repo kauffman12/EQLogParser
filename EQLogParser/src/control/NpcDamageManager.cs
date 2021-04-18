@@ -7,16 +7,12 @@ namespace EQLogParser
   {
     public static event EventHandler<DamageProcessedEvent> EventsPlayerAttackProcessed;
 
-    internal const int GROUP_TIMEOUT = 120;
     internal double LastFightProcessTime = double.NaN;
-
     private int CurrentNpcID = 0;
-    private int CurrentGroupID = 0;
 
     public NpcDamageManager()
     {
       DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
-      DataManager.Instance.EventsClearedActiveData += (sender, cleared) => CurrentGroupID = 0;
     }
 
     ~NpcDamageManager()
@@ -36,20 +32,11 @@ namespace EQLogParser
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
       }
 
-      if (IsValidAttack(processed.Record, out bool defender))
+      if (IsValidAttack(processed.Record, out bool defender, out bool isSpell))
       {
-        if (!double.IsNaN(LastFightProcessTime))
-        {
-          var seconds = processed.BeginTime - LastFightProcessTime;
-          if (seconds >= GROUP_TIMEOUT)
-          {
-            CurrentGroupID++;
-          }
-        }
-
         string origTimeString = processed.OrigTimeString.Substring(4, 15);
 
-        Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
+        Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender, isSpell);
 
         if (defender)
         {
@@ -84,20 +71,20 @@ namespace EQLogParser
       }
   }
 
-    private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender)
+    private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender, bool isSpell)
     {
       string npc = defender ? record.Defender : record.Attacker;
 
       Fight fight = DataManager.Instance.GetFight(npc);
       if (fight == null)
       {
-        fight = Create(npc, currentTime, origTimeString);
+        fight = Create(npc, currentTime, origTimeString, isSpell);
       }
 
       return fight;
     }
 
-    private Fight Create(string defender, double currentTime, string origTimeString)
+    private Fight Create(string defender, double currentTime, string origTimeString, bool isSpell)
     {
       return new Fight()
       {
@@ -106,7 +93,7 @@ namespace EQLogParser
         BeginTime = currentTime,
         LastTime = currentTime,
         Id = CurrentNpcID++,
-        GroupId = CurrentGroupID,
+        IsSpell = isSpell,
         CorrectMapKey = string.Intern(defender)
       };
     }
@@ -119,19 +106,25 @@ namespace EQLogParser
       StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
     }
 
-    private static bool IsValidAttack(DamageRecord record, out bool npcDefender)
+    private static bool IsValidAttack(DamageRecord record, out bool npcDefender, out bool isSpell)
     {
       bool valid = false;
       npcDefender = false;
+      isSpell = false;
 
       if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))
       {
+        var attackerSpell = DataManager.Instance.GetSpellByName(record.Attacker);
+        var defenderSpell = DataManager.Instance.GetSpellByName(record.Defender);
+
         var isAttackerPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
         var isDefenderPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Defender);
         var isAttackerNpc = !isAttackerPlayer && (DataManager.Instance.IsKnownNpc(record.Attacker) 
-          || (DataManager.Instance.GetSpellByName(record.Attacker) is SpellData spell && spell.IsBeneficial == false));
+          || (attackerSpell != null && attackerSpell.IsBeneficial == false));
         var isDefenderNpc = !isDefenderPlayer && (DataManager.Instance.IsKnownNpc(record.Defender) 
-          || (DataManager.Instance.GetSpellByName(record.Defender) is SpellData spell2 && spell2.IsBeneficial == false));
+          || (defenderSpell != null && defenderSpell.IsBeneficial == false));
+
+        isSpell = attackerSpell != null && !attackerSpell.IsBeneficial;
 
         if (isDefenderNpc && !isAttackerNpc)
         {

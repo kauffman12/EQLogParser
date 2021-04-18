@@ -30,6 +30,9 @@ namespace EQLogParser
     private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(35, 35, 37));
     private static SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
 
+    // time before creating new group
+    private const int GROUP_TIMEOUT = 120;
+
     // NPC Search
     private static int CurrentFightSearchIndex = 0;
     private static int CurrentFightSearchDirection = 1;
@@ -40,12 +43,15 @@ namespace EQLogParser
 
     private ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
     private bool CurrentShowBreaks;
+    private bool CurrentShowSpells;
+    private int CurrentGroup = 0;
 
     private DispatcherTimer RefreshTimer;
     private DispatcherTimer SelectionTimer;
     private DispatcherTimer SearchTextTimer;
     private DispatcherTimer UpdateTimer;
     private Fight LastNpc;
+    private Fight LastNpcOrSpell;
 
     public FightTable()
     {
@@ -61,8 +67,27 @@ namespace EQLogParser
       var view = CollectionViewSource.GetDefaultView(Fights);
       view.Filter = new Predicate<object>(item =>
       {
-        var fightItem = (Fight)item;
-        return CurrentShowBreaks ? fightItem.GroupId >= -1 : fightItem.GroupId > -1;
+        bool display = true;
+        var fight = (Fight) item;
+
+        if (CurrentShowSpells == false && fight.IsSpell && fight.DamageHits <= 0)
+        {
+          display = false;
+        }
+        else if (CurrentShowSpells == false && fight.GroupId == -1)
+        {
+          display = false;
+        }
+        else if (CurrentShowSpells == true && fight.GroupId == -2)
+        {
+          display = false;
+        }
+        else if (CurrentShowBreaks == false && fight.GroupId < 0)
+        {
+          display = false;
+        }
+
+        return display;
       });
 
       fightDataGrid.ItemsSource = view;
@@ -130,8 +155,10 @@ namespace EQLogParser
       // read show hp setting
       fightShowHitPoints.IsChecked = ConfigUtil.IfSet("NpcShowHitPoints");
       fightDataGrid.Columns[1].Visibility = fightShowHitPoints.IsChecked.Value ? Visibility.Visible : Visibility.Hidden;
-      // read show breaks setting
+
+      // read show breaks and spells setting
       fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
+      fightShowSpells.IsChecked = CurrentShowSpells = ConfigUtil.IfSet("NpcShowSpells", null, true);
     }
 
     internal IEnumerable<Fight> GetSelectedItems() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => item.GroupId > -1);
@@ -161,26 +188,47 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (LastNpc != null)
+        if (LastNpcOrSpell != null && fight.BeginTime - LastNpcOrSpell.LastTime >= GROUP_TIMEOUT)
         {
-          if (fight.GroupId > LastNpc.GroupId)
+          CurrentGroup++;
+
+          var seconds = fight.BeginTime - LastNpcOrSpell.LastTime;
+          Fight divider = new Fight()
           {
-            var seconds = fight.BeginTime - LastNpc.LastTime;
-            Fight divider = new Fight()
-            { 
-              LastTime = fight.BeginTime, 
-              BeginTime = LastNpc.LastTime, 
-              GroupId = -1, 
-              BeginTimeString = Fight.BREAKTIME, 
-              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
-            };
-            Fights.Add(divider);
-          }
+            LastTime = fight.BeginTime,
+            BeginTime = LastNpcOrSpell.LastTime,
+            GroupId = -1,
+            BeginTimeString = Fight.BREAKTIME,
+            Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
+          };
+
+          Fights.Add(divider);
         }
 
+        if (LastNpc != null && !fight.IsSpell && fight.BeginTime - LastNpc.LastTime >= GROUP_TIMEOUT)
+        {
+          var seconds = fight.BeginTime - LastNpc.LastTime;
+          Fight divider = new Fight()
+          {
+            LastTime = fight.BeginTime,
+            BeginTime = LastNpc.LastTime,
+            GroupId = -2,
+            BeginTimeString = Fight.BREAKTIME,
+            Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
+          };
+
+          Fights.Add(divider);
+        }
+
+        fight.GroupId = CurrentGroup;
         Fights.Add(fight);
 
         if (fight.GroupId > -1)
+        {
+          LastNpcOrSpell = fight;
+        }
+
+        if (fight.GroupId > -1 && !fight.IsSpell)
         {
           LastNpc = fight;
         }
@@ -318,7 +366,16 @@ namespace EQLogParser
       {
         CurrentShowBreaks = fightShowBreaks.IsChecked.Value;
         ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
+        view.Refresh();
+      }
+    }
 
+    private void ShowSpellsChange(object sender, RoutedEventArgs e)
+    {
+      if (fightDataGrid?.ItemsSource is ICollectionView view)
+      {
+        CurrentShowSpells = fightShowSpells.IsChecked.Value;
+        ConfigUtil.SetSetting("NpcShowSpells", CurrentShowSpells.ToString(CultureInfo.CurrentCulture));
         view.Refresh();
       }
     }
@@ -463,7 +520,9 @@ namespace EQLogParser
     private void Instance_EventsCleardActiveData(object sender, bool cleared)
     {
       Fights.Clear();
+      CurrentGroup = 0;
       LastNpc = null;
+      LastNpcOrSpell = null;
       CurrentSearchRow = null;
     }
 
