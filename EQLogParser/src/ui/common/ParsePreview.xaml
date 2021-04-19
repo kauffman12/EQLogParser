@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="140" d:DesignWidth="400">
+             d:DesignHeight="140" d:DesignWidth="900">
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="100" />
@@ -27,13 +27,15 @@
         <RowDefinition Height="50*" />
       </Grid.RowDefinitions>
       <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
-        <ComboBox Margin="0,0,15,0" x:Name="parseList" IsEnabled="True" Height="24" SelectionChanged="ParseList_SelectionChanged" />
-        <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Raid Total</CheckBox>
-        <CheckBox x:Name="playerParseTextDoSpecials" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Specials</CheckBox>
-        <CheckBox x:Name="playerParseTextDoTime" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Time</CheckBox>
-        <CheckBox x:Name="playerParseTextDoRank" IsChecked="True" Margin="0,2,15,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Rank Players</CheckBox>
+        <TextBox x:Name="customParseTitle" Margin="4,0,8,0" VerticalContentAlignment="Center" Height="24" Width="200" TextChanged="CustomTitleTextChanged" KeyDown="CustomTitleKeyDown" GotFocus="CustomTitleGotFocus" LostFocus="CustomTitleLostFocus" BorderBrush="#FF707070" />
+        <ComboBox Margin="0,0,4,0" x:Name="parseList" IsEnabled="True" Height="24" SelectionChanged="ParseListSelectionChanged" />
+        <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
+        <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="4,2,10,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Raid Total</CheckBox>
+        <CheckBox x:Name="playerParseTextDoSpecials" IsChecked="True" Margin="0,2,10,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Specials</CheckBox>
+        <CheckBox x:Name="playerParseTextDoTime" IsChecked="True" Margin="0,2,10,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Time</CheckBox>
+        <CheckBox x:Name="playerParseTextDoRank" IsChecked="True" Margin="0,2,10,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Rank Players</CheckBox>
       </StackPanel>
-      <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerParseTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF232325" Foreground="#c2c2c0" BorderThickness="0" FontSize="14" MouseEnter="PlayerParseText_MouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerParseTextBox_TextChanged"/>
+      <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerParseTextBox" TextWrapping="Wrap" IsReadOnly="True" Background="#FF232325" Foreground="#c2c2c0" BorderThickness="0" FontSize="14" MouseEnter="PlayerParseTextMouseEnter" SelectionBrush="#FF206CF1" TextChanged="PlayerParseTextBoxTextChanged"/>
     </Grid>
   </Grid>
 </UserControl>

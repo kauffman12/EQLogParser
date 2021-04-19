@@ -618,7 +618,7 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial, bool showTime)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();
 
@@ -652,8 +652,8 @@ namespace EQLogParser
         }
 
         details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-        var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-        title = StatsUtil.FormatTitle(currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
+        var timeTitle = showTime ? currentStats.TimeTitle : "";
+        title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
       return new StatsSummary { Title = title, RankedPlayers = details };

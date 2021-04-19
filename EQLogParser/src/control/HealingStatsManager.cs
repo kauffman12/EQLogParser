@@ -386,7 +386,7 @@ namespace EQLogParser
       Title = "";
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _, bool showTime)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();
 
@@ -409,7 +409,7 @@ namespace EQLogParser
 
           details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
           var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-          title = StatsUtil.FormatTitle(currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
+          title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
         }
         else if (type == Labels.TOPHEALSPARSE)
         {
@@ -426,8 +426,8 @@ namespace EQLogParser
 
             string totalTitle = selected[0].Name + "'s Top Heals";
             details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-            var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-            title = StatsUtil.FormatTitle(currentStats.TargetTitle, timeTitle, totalTitle);
+            var timeTitle = showTime ? currentStats.TimeTitle : "";
+            title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, totalTitle);
           }
         }
       }

@@ -142,6 +142,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Custom Parse Title.
+        /// </summary>
+        internal static string CUSTOM_PARSE_TITLE {
+            get {
+                return ResourceManager.GetString("CUSTOM_PARSE_TITLE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Druid.
         /// </summary>
         internal static string DRU {
