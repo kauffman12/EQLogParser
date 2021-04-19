@@ -62,7 +62,7 @@ namespace EQLogParser
     internal event EventHandler<Fight> EventsNewInactiveFight;
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
-    internal event EventHandler<Fight> EventsRefreshFight;
+    internal event EventHandler<Fight> EventsUpdateFight;
     internal event EventHandler<bool> EventsClearedActiveData;
 
     internal const int MAXTIMEOUT = 60;
@@ -698,7 +698,7 @@ namespace EQLogParser
       }
       else
       {
-        EventsRefreshFight?.Invoke(this, fight);
+        EventsUpdateFight?.Invoke(this, fight);
       }
     }
 
