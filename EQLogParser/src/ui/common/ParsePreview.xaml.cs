@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -16,7 +17,8 @@ namespace EQLogParser
   {
     private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
     private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
-    private Boolean initialized = false;
+    private bool initialized = false;
+    private DispatcherTimer TitleTimer;
 
     public ParsePreview()
     {
@@ -33,6 +35,21 @@ namespace EQLogParser
       DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+
+      TitleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      TitleTimer.Tick += (sender, e) =>
+      {
+        TitleTimer.Stop();
+
+        if (parseList.SelectedIndex > -1)
+        {
+          SetParseTextByType(parseList.SelectedItem as string);
+        }
+      };
+
+      customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+      customParseTitle.FontStyle = FontStyles.Italic;
+      parseList.Focus();
       initialized = true;
     }
 
@@ -99,8 +116,9 @@ namespace EQLogParser
       if (Parses.ContainsKey(type))
       {
         var combined = Parses[type].CombinedStats;
+        var customTitle = customParseTitle.FontStyle == FontStyles.Italic ? null : customParseTitle.Text;
         var summary = Parses[type].Builder?.BuildSummary(type, combined, Parses[type].Selected, playerParseTextDoTotals.IsChecked.Value,
-          playerParseTextDoRank.IsChecked.Value, playerParseTextDoSpecials.IsChecked.Value, playerParseTextDoTime.IsChecked.Value);
+          playerParseTextDoRank.IsChecked.Value, playerParseTextDoSpecials.IsChecked.Value, playerParseTextDoTime.IsChecked.Value, customTitle);
         playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
         playerParseTextBox.SelectAll();
       }
@@ -126,7 +144,7 @@ namespace EQLogParser
       });
     }
 
-    private void PlayerParseTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void PlayerParseTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
       if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == Properties.Resources.SHARE_DPS_SELECTED)
       {
@@ -183,7 +201,7 @@ namespace EQLogParser
       }
     }
 
-    private void ParseList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ParseListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (parseList.SelectedIndex > -1)
       {
@@ -191,12 +209,46 @@ namespace EQLogParser
       }
     }
 
-    private void PlayerParseText_MouseEnter(object sender, MouseEventArgs e)
+    private void PlayerParseTextMouseEnter(object sender, MouseEventArgs e)
     {
       if (!playerParseTextBox.IsFocused)
       {
         playerParseTextBox.Focus();
       }
+    }
+
+    private void CustomTitleGotFocus(object sender, RoutedEventArgs e)
+    {
+      if (customParseTitle.Text == Properties.Resources.CUSTOM_PARSE_TITLE)
+      {
+        customParseTitle.Text = "";
+        customParseTitle.FontStyle = FontStyles.Normal;
+      }
+    }
+
+    private void CustomTitleLostFocus(object sender, RoutedEventArgs e)
+    {
+      if (customParseTitle.Text.Length == 0)
+      {
+        customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+        customParseTitle.FontStyle = FontStyles.Italic;
+      }
+    }
+
+    private void CustomTitleKeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Escape)
+      {
+        customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+        customParseTitle.FontStyle = FontStyles.Italic;
+        parseList.Focus();
+      }
+    }
+
+    private void CustomTitleTextChanged(object sender, TextChangedEventArgs e)
+    {
+      TitleTimer.Stop();
+      TitleTimer.Start();
     }
 
     #region IDisposable Support

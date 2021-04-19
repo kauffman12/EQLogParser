@@ -273,7 +273,7 @@ namespace EQLogParser
       Title = "";
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _, bool showTime)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool _, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();
 
@@ -296,11 +296,11 @@ namespace EQLogParser
 
           details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
           var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-          title = StatsUtil.FormatTitle(currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
+          title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
         }
         else if (type == Labels.RECEIVEDHEALPARSE)
         {
-          if (selected?.Count == 1 && (selected[0] as PlayerStats).SubStats2.TryGetValue("receivedHealing", out PlayerSubStats subStats) && subStats is PlayerStats receivedHealing)
+          if (selected?.Count == 1 && selected[0].SubStats2.TryGetValue("receivedHealing", out PlayerSubStats subStats) && subStats is PlayerStats receivedHealing)
           {
             int rank = 1;
             long totals = 0;
@@ -315,8 +315,8 @@ namespace EQLogParser
             var hps = (long)Math.Round(totals / currentStats.RaidStats.TotalSeconds, 2);
             string totalTitle = showTotals ? (selected[0].Name + " Received " + StatsUtil.FormatTotals(totals) + " Healing") : (selected[0].Name + " Received Healing");
             details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-            var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-            title = StatsUtil.FormatTitle(currentStats.TargetTitle, timeTitle, totalTitle);
+            var timeTitle = showTime ? currentStats.TimeTitle : "";
+            title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, totalTitle);
           }
         }
       }
