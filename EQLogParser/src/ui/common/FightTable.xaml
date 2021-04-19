@@ -45,14 +45,15 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-          </MenuItem>          <MenuItem x:Name="fightMenuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick">
+          </MenuItem>          
+          <MenuItem x:Name="fightMenuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectFightIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="ObjectGroup" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="selectFightIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Square" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="fightMenuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectFightIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="ObjectGroup" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="unselectFightIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>          
           <Separator />

@@ -44,13 +44,12 @@ namespace EQLogParser
     private bool CurrentShowTanking;
     private int CurrentGroup = 0;
     private bool NeedRefresh = false;
+    private bool IsEveryOther = false;
 
     private List<Fight> FightsToProcess = new List<Fight>();
     private DispatcherTimer SelectionTimer;
     private DispatcherTimer SearchTextTimer;
     private DispatcherTimer UpdateTimer;
-    private Fight LastNonTankingNpc;
-    private Fight LastNpcWithTanking;
 
     public FightTable()
     {
@@ -117,7 +116,7 @@ namespace EQLogParser
         SearchTextTimer.Stop();
       };
 
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 3000) };
+      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
       UpdateTimer.Tick += (sender, e) => ProcessFights();
       UpdateTimer.Start();
 
@@ -163,6 +162,8 @@ namespace EQLogParser
 
     private void ProcessFights()
     {
+      IsEveryOther = !IsEveryOther;
+
       List<Fight> processList = null;
       lock (FightsToProcess)
       {
@@ -176,17 +177,35 @@ namespace EQLogParser
 
       if (processList != null)
       {
+        double lastWithTankingTime = double.NaN;
+        double lastNonTankingTime = double.NaN;
+
+        foreach (var fight in Fights.Reverse())
+        {
+          if (fight.GroupId < 0)
+          {
+            break;
+          }
+
+          lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
+
+          if (fight.DamageHits > 0)
+          {
+            lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
+          }
+        }
+
         processList.ForEach(fight =>
         {
-          if (LastNpcWithTanking != null && fight.BeginTime - LastNpcWithTanking.LastTime >= GROUP_TIMEOUT)
+          if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GROUP_TIMEOUT)
           {
             CurrentGroup++;
 
-            var seconds = fight.BeginTime - LastNpcWithTanking.LastTime;
+            var seconds = fight.BeginTime - lastWithTankingTime;
             Fight divider = new Fight
             {
               LastTime = fight.BeginTime,
-              BeginTime = LastNpcWithTanking.LastTime,
+              BeginTime = lastWithTankingTime,
               GroupId = -1,
               BeginTimeString = Fight.BREAKTIME,
               Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
@@ -195,13 +214,13 @@ namespace EQLogParser
             Fights.Add(divider);
           }
 
-          if (LastNonTankingNpc != null && fight.DamageHits > 0 && fight.BeginTime - LastNonTankingNpc.LastTime >= GROUP_TIMEOUT)
+          if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GROUP_TIMEOUT)
           {
-            var seconds = fight.BeginTime - LastNonTankingNpc.LastTime;
+            var seconds = fight.BeginTime - lastNonTankingTime;
             Fight divider = new Fight
             {
               LastTime = fight.BeginTime,
-              BeginTime = LastNonTankingNpc.LastTime,
+              BeginTime = lastNonTankingTime,
               GroupId = -2,
               BeginTimeString = Fight.BREAKTIME,
               Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
@@ -212,31 +231,26 @@ namespace EQLogParser
 
           fight.GroupId = CurrentGroup;
           Fights.Add(fight);
-          LastNpcWithTanking = fight;
+          lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
 
           if (fight.DamageHits > 0)
           {
-            LastNonTankingNpc = fight;
+            lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
           }
         });
-      }
 
-      if (processList != null || NeedRefresh)
+        if ((Parent as ToolWindow).IsOpen && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
+        {
+          fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
+        }
+
+        NeedRefresh = false;
+      }
+      else if (NeedRefresh && IsEveryOther)
       {
         (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+        NeedRefresh = false;
       }
-
-      if (processList != null)
-      {
-        var last = Fights.LastOrDefault(fight => fight.GroupId > -1);
-
-        if (last != null && (Parent as ToolWindow).IsOpen && !fightDataGrid.IsMouseOver)
-        {
-          fightDataGrid.ScrollIntoView(last);
-        }
-      }
-
-      NeedRefresh = false;
     }
 
     private void RemoveFight(string name)
@@ -519,16 +533,10 @@ namespace EQLogParser
       Fights.Clear();
       FightsToProcess.Clear();
       CurrentGroup = 0;
-      LastNonTankingNpc = null;
-      LastNpcWithTanking = null;
       CurrentSearchRow = null;
     }
 
-    private void Instance_EventsRefreshFight(object sender, Fight fight)
-    {
-      NeedRefresh = true;
-    }
-
+    private void Instance_EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
     private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
 
@@ -537,7 +545,7 @@ namespace EQLogParser
       DataManager.Instance.EventsClearedActiveData -= Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight -= Instance_EventsRemovedFight;
       DataManager.Instance.EventsNewFight -= Instance_EventsNewFight;
-      DataManager.Instance.EventsRefreshFight -= Instance_EventsRefreshFight;
+      DataManager.Instance.EventsUpdateFight -= Instance_EventsUpdateFight;
     }
 
     private void TableLoaded(object sender, RoutedEventArgs e)
@@ -545,7 +553,7 @@ namespace EQLogParser
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
       DataManager.Instance.EventsNewFight += Instance_EventsNewFight;
-      DataManager.Instance.EventsRefreshFight += Instance_EventsRefreshFight;
+      DataManager.Instance.EventsUpdateFight += Instance_EventsUpdateFight;
     }
   }
 }
