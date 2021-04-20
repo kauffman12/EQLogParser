@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FontAwesome.WPF;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
@@ -38,6 +40,7 @@ namespace EQLogParser
     private readonly double EndTime;
     private readonly double Length;
     private readonly List<PlayerStats> Selected;
+    private readonly Dictionary<string, byte> Ignore = new Dictionary<string, byte>();
 
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowCasterAdps = true;
@@ -277,7 +280,7 @@ namespace EQLogParser
         var spellRange = SpellRanges[key];
         if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
           && (CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS)
-          || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)))
+          || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)) && !Ignore.ContainsKey(key))
         {
           int hPos = ROW_HEIGHT * row;
           AddGridRow(hPos, key);
@@ -287,12 +290,13 @@ namespace EQLogParser
       }
 
       int finalHeight = ROW_HEIGHT * row;
-      AddDivider(finalHeight, DataManager.BUFFS_OFFSET);
-      AddDivider(finalHeight, Length);
+      AddDivider(contentLabels, finalHeight, 20);
+      AddDivider(content, finalHeight, DataManager.BUFFS_OFFSET);
+      AddDivider(content, finalHeight, Length);
 
       for (int more = (int)(DataManager.BUFFS_OFFSET + 60); more < Length; more += 60)
       {
-        AddDivider(finalHeight, more);
+        AddDivider(content, finalHeight, more);
       }
     }
 
@@ -304,18 +308,37 @@ namespace EQLogParser
       contentLabels.Children.Add(labelsRow);
       content.Children.Add(contentRow);
 
-      var textBlock = new TextBlock()
+      var image = new ImageAwesome
       {
-        Foreground = GridBrush,
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
-        Text = name,
-        Width = LABELS_WIDTH,
-        FontSize = 12,
-        Margin = new Thickness(5, hPos + 4, 0, 0)
+        Height = 12,
+        Width = 12,
+        Icon = FontAwesomeIcon.Close,
+        Foreground = new SolidColorBrush(Color.FromRgb(81, 145, 193)),
+        Margin = new Thickness(4, hPos + 6, 4, 0)
       };
 
+      image.PreviewMouseLeftButtonDown += (object sender, MouseButtonEventArgs e) =>
+      {
+        Ignore[name] = 1;
+        Display();
+      };
+
+      var textBlock = new TextBlock()
+      {
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top,
+        Foreground = GridBrush,
+        Text = name,
+        Width = LABELS_WIDTH - 20,
+        FontSize = 12,
+        Margin = new Thickness(24, hPos + 4, 0, 0)
+      };
+
+      image.SetValue(Panel.ZIndexProperty, 10);
       textBlock.SetValue(Panel.ZIndexProperty, 10);
+      contentLabels.Children.Add(image);
       contentLabels.Children.Add(textBlock);
     }
 
@@ -337,7 +360,7 @@ namespace EQLogParser
       contentHeader.Children.Add(textBlock);
     }
 
-    private void AddDivider(int hPos, double left)
+    private void AddDivider(Grid target, int hPos, double left)
     {
       var rectangle = new Rectangle()
       {
@@ -351,7 +374,7 @@ namespace EQLogParser
       };
 
       Dividers.Add(rectangle);
-      content.Children.Add(rectangle);
+      target.Children.Add(rectangle);
     }
 
     private void ContentScrollViewChanged(object sender, ScrollChangedEventArgs e)
@@ -412,6 +435,12 @@ namespace EQLogParser
       {
         Display();
       }
+    }
+
+    private void ReloadClick(object sender, RoutedEventArgs e)
+    {
+      Ignore.Clear();
+      Display();
     }
 
     private static Rectangle CreateAdpsBlock(string label, int hPos, int start, int length, Brush blockBrush, int count)
