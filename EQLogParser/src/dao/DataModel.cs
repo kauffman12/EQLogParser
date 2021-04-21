@@ -225,6 +225,7 @@ namespace EQLogParser
 
   internal class Fight : FullTimedAction
   {
+    public bool Processed { get; set; } = false;
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
     public double LastDamageTime { get; set; }
