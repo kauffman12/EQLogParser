@@ -179,17 +179,31 @@ namespace EQLogParser
       {
         double lastWithTankingTime = double.NaN;
         double lastNonTankingTime = double.NaN;
+        bool stopWithTanking = false;
+        bool stopNonTanking = false;
 
+        int searchAttempts = 0;
         foreach (var fight in Fights.Reverse())
         {
-          if (fight.GroupId < 0)
+          if (searchAttempts++ == 30 || (stopWithTanking && stopNonTanking))
           {
             break;
           }
 
-          lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
+          if (fight.GroupId == -1 || stopWithTanking)
+          {
+            stopWithTanking = true;
+          }
+          else
+          {
+            lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
+          }
 
-          if (fight.DamageHits > 0)
+          if (fight.GroupId == -2 || stopNonTanking)
+          {
+            stopNonTanking = true;
+          }
+          else if (fight.DamageHits > 0)
           {
             lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
           }
@@ -216,6 +230,8 @@ namespace EQLogParser
 
           if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GROUP_TIMEOUT)
           {
+            // only set processed for non tanking since its a special case
+            fight.Processed = true;
             var seconds = fight.BeginTime - lastNonTankingTime;
             Fight divider = new Fight
             {
@@ -536,7 +552,45 @@ namespace EQLogParser
       CurrentSearchRow = null;
     }
 
-    private void Instance_EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
+    private void Instance_EventsUpdateFight(object sender, Fight fight)
+    {
+      NeedRefresh = true;
+
+      if (!fight.Processed && fight.TankHits > 0 && fight.DamageHits == 1)
+      {
+        fight.Processed = true;
+
+        // on update of a fight that previously only had tanking entries
+        // try to find if a divider should have been added
+        var found = Fights.IndexOf(fight);
+        if (found > 0)
+        {
+          int searchAttempts = 0;
+          var lastNonTankingTime = double.NaN;
+          for (int i = found - 1; i >= 0 && Fights[i].GroupId != 2 && searchAttempts < 30; i--)
+          {
+            searchAttempts++;
+            lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? Fights[i].LastDamageTime : Math.Max(lastNonTankingTime, Fights[i].LastDamageTime);
+          }
+
+          if (!double.IsNaN(lastNonTankingTime) && fight.BeginTime - lastNonTankingTime >= GROUP_TIMEOUT)
+          {
+            var seconds = fight.BeginTime - lastNonTankingTime;
+            Fight divider = new Fight
+            {
+              LastTime = fight.BeginTime,
+              BeginTime = lastNonTankingTime,
+              GroupId = -2,
+              BeginTimeString = Fight.BREAKTIME,
+              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
+            };
+
+            Dispatcher.InvokeAsync(() => Fights.Insert(found - 1, divider), DispatcherPriority.Normal);
+          }
+        }
+      } 
+    }
+
     private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
 
