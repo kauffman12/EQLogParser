@@ -62,6 +62,7 @@ namespace EQLogParser
     internal event EventHandler<Fight> EventsNewInactiveFight;
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
+    internal event EventHandler<Fight> EventsNewNonTankingFight;
     internal event EventHandler<Fight> EventsUpdateFight;
     internal event EventHandler<bool> EventsClearedActiveData;
 
@@ -684,7 +685,7 @@ namespace EQLogParser
       return removed;
     }
 
-    internal void UpdateIfNewFightMap(string name, Fight fight)
+    internal void UpdateIfNewFightMap(string name, Fight fight, bool isNonTankingFight)
     {
       if (!LifetimeFights.ContainsKey(name))
       {
@@ -699,6 +700,12 @@ namespace EQLogParser
       else
       {
         EventsUpdateFight?.Invoke(this, fight);
+      }
+
+      // basically an Add use case for only showing Fights with player damage
+      if (isNonTankingFight)
+      {
+        EventsNewNonTankingFight?.Invoke(this, fight);
       }
     }
 

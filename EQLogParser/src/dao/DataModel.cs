@@ -225,7 +225,6 @@ namespace EQLogParser
 
   internal class Fight : FullTimedAction
   {
-    public bool Processed { get; set; } = false;
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
     public double LastDamageTime { get; set; }
@@ -237,6 +236,8 @@ namespace EQLogParser
     public int Id { get; set; }
     public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
+    public int NonTankingGroupId { get; set; }
+    public bool IsInactivity { get; set; } = false;
     public long Total { get; set; }
     public long DamageHits { get; set; }
     public long TankHits { get; set; }
