@@ -34,6 +34,7 @@ namespace EQLogParser
 
       if (IsValidAttack(processed.Record, out bool defender))
       {
+        bool isNonTankingFight = false;
         string origTimeString = processed.OrigTimeString.Substring(4, 15);
 
         Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
@@ -49,6 +50,7 @@ namespace EQLogParser
           if (processed.Record.Type != Labels.MISS)
           {
             fight.DamageHits++;
+            isNonTankingFight = fight.DamageHits == 1;
           }
         }
         else
@@ -70,7 +72,7 @@ namespace EQLogParser
         var ttl = fight.LastTime - fight.BeginTime + 1;
         fight.TooltipText = string.Format(CultureInfo.CurrentCulture, "#Hits To Players: {0}, #Hits From Players: {1}, Time Alive: {2}s", fight.TankHits, fight.DamageHits, ttl);
 
-        DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight);
+        DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
 
         if (defender)
         {
