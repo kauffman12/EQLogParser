@@ -41,13 +41,13 @@ namespace EQLogParser
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private enum LogOption { OPEN, MONITOR, ARCHIVE };
+    private enum LogOption { OPEN, MONITOR };
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.7.67";
+    private const string VERSION = "v1.7.68";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -85,9 +85,10 @@ namespace EQLogParser
     {
       try
       {
+        var dpi = VisualTreeHelper.GetDpi(this);
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-        Width = resolution.Width * 0.80;
-        Height = resolution.Height * 0.70;       
+        Width = resolution.Width * 0.80 / dpi.DpiScaleX;
+        Height = resolution.Height * 0.70 / dpi.DpiScaleY;       
         InitializeComponent();
 
         // update titles
@@ -757,20 +758,15 @@ namespace EQLogParser
 
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          statusText.Text = (CurrentLogOption == LogOption.ARCHIVE ? "Archiving" : "Reading Log... ") + filePercent + "% in " + seconds + " seconds";
+          statusText.Text = "Reading Log... " + filePercent + "% in " + seconds + " seconds";
           statusText.Foreground = LOADING_BRUSH;
 
           if (EQLogReader.FileLoadComplete)
           {
-            if ((filePercent >= 100 && CurrentLogOption != LogOption.ARCHIVE) || CurrentLogOption == LogOption.MONITOR)
+            if (filePercent >= 100 || CurrentLogOption == LogOption.MONITOR)
             {
               statusText.Foreground = GOOD_BRUSH;
               statusText.Text = "Monitoring Active";
-            }
-            else if (filePercent >= 100 && CurrentLogOption == LogOption.ARCHIVE)
-            {
-              statusText.Foreground = GOOD_BRUSH;
-              statusText.Text = "Archiving Complete";
             }
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
@@ -778,7 +774,7 @@ namespace EQLogParser
 
           if (((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
             && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) ||
-            CurrentLogOption == LogOption.MONITOR || CurrentLogOption == LogOption.ARCHIVE) && EQLogReader.FileLoadComplete)
+            CurrentLogOption == LogOption.MONITOR) && EQLogReader.FileLoadComplete)
           {
             OverlayUtil.OpenIfEnabled(Dispatcher);
             LOG.Info("Finished Loading Log File in " + seconds.ToString(CultureInfo.CurrentCulture) + " seconds.");
@@ -926,7 +922,7 @@ namespace EQLogParser
         {
           PlayerChatManager.Add(chatType);
         }
-        else if (CurrentLogOption != LogOption.ARCHIVE)
+        else
         {
           // 4 is for the number of processors
           DebugUtil.RegisterLine(LineCount, line, 4);
@@ -1054,7 +1050,6 @@ namespace EQLogParser
     private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e) => (e.Window.Content as IDisposable)?.Dispose();
     private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e) => playerParseTextWindow.State = DockingWindowState.AutoHide;
     private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
-    private void MenuItemSelectArchiveChatClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.ARCHIVE);
     private void WindowClose(object sender, EventArgs e) => Close();
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
