@@ -79,8 +79,10 @@ namespace EQLogParser
 
             var allSpells = new HashSet<ActionBlock>();
             double maxTime = -1;
+            var startTime = double.NaN;
             RaidStats.Ranges.TimeSegments.ForEach(segment =>
             {
+              startTime = double.IsNaN(startTime) ? segment.BeginTime : Math.Min(startTime, segment.BeginTime);
               maxTime = maxTime == -1 ? segment.BeginTime + RaidStats.TotalSeconds : maxTime;
               var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - SpellCountBuilder.COUNT_OFFSET, segment.EndTime);
               blocks.ForEach(block =>
@@ -90,6 +92,7 @@ namespace EQLogParser
                   allSpells.Add(block);
                 }
               });
+
               blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - SpellCountBuilder.COUNT_OFFSET, segment.EndTime);
               blocks.ForEach(block =>
               {
@@ -109,7 +112,7 @@ namespace EQLogParser
             {
               if (!double.IsNaN(lastTime) && block.BeginTime != lastTime)
               {
-                AddRow(playerSpells, max, lastTime);
+                AddRow(playerSpells, max, lastTime, startTime);
                 playerSpells.Clear();
                 max = 0;
               }
@@ -144,7 +147,7 @@ namespace EQLogParser
 
             if (playerSpells.Count > 0 && max > 0)
             {
-              AddRow(playerSpells, max, lastTime);
+              AddRow(playerSpells, max, lastTime, startTime);
             }
 
             Dispatcher.InvokeAsync(() =>
@@ -187,12 +190,13 @@ namespace EQLogParser
       return valid;
     }
 
-    private void AddRow(Dictionary<string, List<string>> playerSpells, int max, double beginTime)
+    private void AddRow(Dictionary<string, List<string>> playerSpells, int max, double beginTime, double startTime)
     {
       for (int i = 0; i < max; i++)
       {
         var row = new ExpandoObject() as IDictionary<string, object>;
         row.Add("Time", beginTime);
+        row.Add("Seconds", (int) (beginTime - startTime));
 
         foreach (var player in UniqueNames.Keys)
         {
@@ -244,7 +248,7 @@ namespace EQLogParser
       {
         Records.Clear();
 
-        for (int i = dataGrid.Columns.Count - 1; i > 0; i--)
+        for (int i = dataGrid.Columns.Count - 1; i > 1; i--)
         {
           dataGrid.Columns.RemoveAt(i);
         }
@@ -256,15 +260,9 @@ namespace EQLogParser
       }
     }
 
-    private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      OptionsChanged();
-    }
+    private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e) => OptionsChanged();
 
-    private void CheckedOptionsChanged(object sender, RoutedEventArgs e)
-    {
-      OptionsChanged();
-    }
+    private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged();
 
     private void LoadingRow(object sender, DataGridRowEventArgs e)
     {
