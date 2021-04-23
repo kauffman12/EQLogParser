@@ -44,9 +44,10 @@
             </MenuItem>
           </MenuItem>
         </ContextMenu>
-      </DataGrid.ContextMenu>     
+      </DataGrid.ContextMenu>
       <DataGrid.Columns>
         <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="92" Width="92" />
+        <DataGridTextColumn Binding="{Binding Seconds}" Header="Sec" CanUserReorder="True" MinWidth="45" Width="45" />
       </DataGrid.Columns>
     </datagrid:ThemedDataGrid>
   </Grid>
