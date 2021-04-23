@@ -14,6 +14,7 @@
         Closed="WindowClosed"
         ResizeMode="CanResize"
         TextOptions.TextFormattingMode="Display"
+        WindowStartupLocation="CenterScreen"
         StateChanged="WindowStateChanged">
   <WindowChrome.WindowChrome>
     <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" 
@@ -39,11 +40,6 @@
       <Image Source="EQLogParser.ico" Height="18" Width="18" Margin="10,2,0,0"/>
       <Menu Margin="0" Height="30" Width="210" VerticalAlignment="Top" Background="#202020">
         <MenuItem Header="_File" Height="30" Width="40">
-          <MenuItem Header="_Archive Chat" Height="24" Click="MenuItemSelectArchiveChatClick" ToolTip="Only Archive Chat from a Log File">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Database" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
           <MenuItem Header="Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
             <MenuItem.Icon>
               <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Eye" Foreground="#FF4F9FE2" />
