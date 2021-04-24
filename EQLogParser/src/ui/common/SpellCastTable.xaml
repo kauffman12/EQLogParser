@@ -20,7 +20,7 @@
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="4,0,4,0" VerticalAlignment="Center" IsEnabled="False" ToolTip="Include spell counts for spells that only have a message when the player uses the spell on themselves.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell counts for things that players have in common." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Spells Only You See</CheckBox>
+      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="4,0,4,0" VerticalAlignment="Center" IsEnabled="False" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Spells Only You See</CheckBox>
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
       <ComboBox Margin="4,0,0,0" x:Name="spellTypes" Height="26" SelectionChanged="Options_SelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="26" SelectionChanged="Options_SelectionChanged" />
