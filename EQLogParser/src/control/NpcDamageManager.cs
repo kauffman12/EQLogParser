@@ -47,7 +47,7 @@ namespace EQLogParser
           fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
           fight.LastDamageTime = processed.BeginTime;
 
-          if (processed.Record.Type != Labels.MISS)
+          if (StatsUtil.IsHitType(processed.Record.Type))
           {
             fight.DamageHits++;
             isNonTankingFight = fight.DamageHits == 1;
@@ -60,7 +60,7 @@ namespace EQLogParser
           fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? processed.BeginTime : fight.BeginTankingTime;
           fight.LastTankingTime = processed.BeginTime;
 
-          if (processed.Record.Type != Labels.MISS)
+          if (StatsUtil.IsHitType(processed.Record.Type))
           {
             fight.TankHits++;
           }

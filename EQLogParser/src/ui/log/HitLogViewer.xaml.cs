@@ -231,7 +231,7 @@ namespace EQLogParser
 
       if (action is DamageRecord damage)
       {
-        if (!defending && !string.IsNullOrEmpty(damage.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && damage.Type != Labels.MISS)
+        if (!defending && !string.IsNullOrEmpty(damage.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && StatsUtil.IsHitType(damage.Type))
         {
           bool isPet = false;
           if (damage.Attacker.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase) ||
@@ -241,7 +241,7 @@ namespace EQLogParser
             row = new HitLogRow() { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
           }
         }
-        else if (defending && !string.IsNullOrEmpty(damage.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && damage.Type != Labels.MISS)
+        else if (defending && !string.IsNullOrEmpty(damage.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && StatsUtil.IsHitType(damage.Type))
         {
           if (damage.Defender.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
           {

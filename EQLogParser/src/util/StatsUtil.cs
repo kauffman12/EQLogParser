@@ -262,8 +262,16 @@ namespace EQLogParser
           stats.BaneHits++;
           stats.Hits += 1;
           break;
+        case Labels.DODGE:
+          stats.Dodges++;
+          stats.MeleeAttempts += 1;
+          break;
         case Labels.MISS:
           stats.Misses++;
+          stats.MeleeAttempts += 1;
+          break;
+        case Labels.PARRY:
+          stats.Parries++;
           stats.MeleeAttempts += 1;
           break;
         case Labels.PROC:
@@ -300,7 +308,9 @@ namespace EQLogParser
       if (to != null && from != null)
       {
         to.BaneHits += from.BaneHits;
+        to.Dodges += from.Dodges;
         to.Misses += from.Misses;
+        to.Parries += from.Parries;
         to.MeleeAttempts += from.MeleeAttempts;
         to.MeleeHits += from.MeleeHits;
         to.Total += from.Total;
@@ -501,6 +511,23 @@ namespace EQLogParser
       }
 
       return result;
+    }
+
+    internal static bool IsHitType(string type)
+    {
+      bool isHitType = true;
+      if (!string.IsNullOrEmpty(type))
+      {
+        switch (type)
+        {
+          case Labels.MISS:
+          case Labels.DODGE:
+          case Labels.PARRY:
+            isHitType = false;
+            break;
+        }
+      }
+      return isHitType;
     }
   }
 }
