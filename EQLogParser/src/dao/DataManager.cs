@@ -52,6 +52,8 @@ namespace EQLogParser
     public const string TOPHEALSPARSE = "Top Heals";
     public const string DAMAGEPARSE = "Damage";
     public const string MISS = "Miss";
+    public const string DODGE = "Dodge";
+    public const string PARRY = "Parry";
   }
 
   class DataManager
@@ -620,8 +622,11 @@ namespace EQLogParser
 
     private void RecalculateAdps()
     {
-      MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
-      MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
+      lock(this)
+      {
+        MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
+        MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
+      }
     }
 
     private SpellData FindPreviousCast(string player, List<SpellData> output)
