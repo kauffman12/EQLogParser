@@ -21,7 +21,26 @@
       <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,4,0" x:Name="classesList" Height="24" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,0,0" x:Name="classesList" Height="26" SelectionChanged="ListSelectionChanged" />
+      <ComboBox x:Name="selectedColumns" Tag="HealingColumns" Height="26" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns" BorderBrush="#FF707070">
+        <ComboBox.ItemTemplateSelector>
+          <local:ComboBoxItemTemplateSelector>
+            <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
+              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
+                <TextBlock Text="{Binding SelectedText}" />
+              </DataTemplate>
+            </local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
+            <local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
+              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
+                <StackPanel Orientation="Horizontal">
+                  <CheckBox IsChecked="{Binding IsChecked}" Width="20" />
+                  <TextBlock Text="{Binding Text}" IsHitTestVisible="false" />
+                </StackPanel>
+              </DataTemplate>
+            </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
+          </local:ComboBoxItemTemplateSelector>
+        </ComboBox.ItemTemplateSelector>
+      </ComboBox>      
     </StackPanel>    
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" SelectionChanged="DataGridSelectionChanged" EnableRowVirtualization="True">
       <DataGrid.ContextMenu>

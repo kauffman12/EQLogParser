@@ -31,7 +31,7 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid);
+      InitSummaryTable(title, dataGrid, selectedColumns);
 
       PropertyDescriptor pd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
       foreach (var column in dataGrid.Columns)
@@ -240,21 +240,32 @@ namespace EQLogParser
       var children = CurrentStats?.Children;
       if (e.Row.Item is PlayerStats stats && e.DetailsElement is DataGrid childrenDataGrid && children != null && children.ContainsKey(stats.Name))
       {
+        // initialize data one time
         if (childrenDataGrid.ItemsSource != children[stats.Name])
         {
           childrenDataGrid.ItemsSource = children[stats.Name];
           ChildGrids.Add(childrenDataGrid);
 
-          // show bane column if needed
-          if (dataGrid.Columns[4].Visibility == Visibility.Visible)
+          // fix column widths and hidden values
+          for (int i = 0; i < dataGrid.Columns.Count; i++)
           {
-            childrenDataGrid.Columns[4].Visibility = Visibility.Visible;
-          }
+            var column = dataGrid.Columns[i];
+            var childColumn = childrenDataGrid.Columns[i];
+            childColumn.Width = column.ActualWidth;
 
-          // fix column widths
-          foreach (var column in dataGrid.Columns)
-          {
-            childrenDataGrid.Columns[column.DisplayIndex].Width = column.ActualWidth;
+            if (TheShownColumns != null && TheShownColumns.Count > 0)
+            {
+              // never let users hide the first two columns
+              if (i > 1)
+              {
+                childColumn.Visibility = TheShownColumns.ContainsKey(column.Header as string) ? Visibility.Visible : Visibility.Hidden;
+                Console.WriteLine("C" + i + " = " + (childColumn.Visibility == Visibility.Visible ? "Visible" : "Hidden"));
+              }
+            }
+            else
+            {
+              childColumn.Visibility = Visibility.Visible;
+            }
           }
         }
       }
@@ -379,6 +390,11 @@ namespace EQLogParser
         SelectionTimer.Stop();
         SelectionTimer.Start();
       }
+    }
+
+    internal new void SelectDataGridColumns(object sender, EventArgs e)
+    {
+      TheShownColumns = DataGridUtils.ShowColumns(selectedColumns, dataGrid, ChildGrids);
     }
 
     #region IDisposable Support

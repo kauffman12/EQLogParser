@@ -198,15 +198,15 @@ namespace EQLogParser
       return result;
     }
 
-    internal static List<ChannelDetails> GetChannels(string playerAndServer)
+    internal static List<ComboBoxItemDetails> GetChannels(string playerAndServer)
     {
       var selected = GetSelectedChannels(playerAndServer);
-      List<ChannelDetails> channelList = new List<ChannelDetails>();
+      List<ComboBoxItemDetails> channelList = new List<ComboBoxItemDetails>();
 
       foreach (string line in GetSavedChannels(playerAndServer))
       {
         var isChecked = selected == null || selected.Contains(line);
-        ChannelDetails details = new ChannelDetails { Text = line, IsChecked = isChecked };
+        ComboBoxItemDetails details = new ComboBoxItemDetails { Text = line, IsChecked = isChecked };
         channelList.Add(details);
       }
 
@@ -589,13 +589,6 @@ namespace EQLogParser
       GC.SuppressFinalize(this);
     }
     #endregion
-  }
-
-  internal class ChannelDetails
-  {
-    public string Text { get; set; }
-    public string SelectedText { get; set; }
-    public bool IsChecked { get; set; }
   }
 
   internal class ChatLine : TimedAction

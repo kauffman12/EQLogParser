@@ -87,8 +87,8 @@ namespace EQLogParser
       {
         var dpi = VisualTreeHelper.GetDpi(this);
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-        Width = resolution.Width * 0.80 / dpi.DpiScaleX;
-        Height = resolution.Height * 0.70 / dpi.DpiScaleY;       
+        Width = resolution.Width * 0.85 / dpi.DpiScaleX;
+        Height = resolution.Height * 0.75 / dpi.DpiScaleY;       
         InitializeComponent();
 
         // update titles

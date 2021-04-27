@@ -22,6 +22,13 @@ namespace EQLogParser
     public string Name { get; set; }
   }
 
+  internal class ComboBoxItemDetails
+  {
+    public string Text { get; set; }
+    public string SelectedText { get; set; }
+    public bool IsChecked { get; set; }
+  }
+
   internal class AutoCompleteText
   {
     public string Text { get; set; }

@@ -144,6 +144,9 @@
   <data name="CLR" xml:space="preserve">
     <value>Cleric</value>
   </data>
+  <data name="COLUMNS_SELECTED" xml:space="preserve">
+    <value>Columns Selected</value>
+  </data>
   <data name="CUSTOM_PARSE_TITLE" xml:space="preserve">
     <value>Custom Parse Title</value>
   </data>
