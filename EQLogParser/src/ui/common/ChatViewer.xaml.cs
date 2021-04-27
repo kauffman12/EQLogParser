@@ -246,9 +246,9 @@ namespace EQLogParser
 
     private void LoadChannels(string playerAndServer)
     {
-      List<ChannelDetails> items = new List<ChannelDetails>();
-      items.Add(new ChannelDetails { Text = "Select All" });
-      items.Add(new ChannelDetails { Text = "Unselect All" });
+      List<ComboBoxItemDetails> items = new List<ComboBoxItemDetails>();
+      items.Add(new ComboBoxItemDetails { Text = "Select All" });
+      items.Add(new ComboBoxItemDetails { Text = "Unselect All" });
 
       int selectedCount = 0;
       ChatManager.GetChannels(playerAndServer).ForEach(chan =>
@@ -261,7 +261,7 @@ namespace EQLogParser
 
       if (items.Count > 0)
       {
-        items[0].SelectedText = selectedCount + " Selected Channels";
+        items[0].SelectedText = selectedCount + " Channels Selected";
         channels.SelectedItem = items[0];
       }
     }
@@ -309,7 +309,7 @@ namespace EQLogParser
       StringBuilder builder = new StringBuilder();
       for (int i = 2; i < channels.Items.Count; i++)
       {
-        if (channels.Items[i] is ChannelDetails checkedItem && checkedItem.IsChecked)
+        if (channels.Items[i] is ComboBoxItemDetails checkedItem && checkedItem.IsChecked)
         {
           selected.Add(checkedItem.Text);
           builder.Append(checkedItem.Text);
@@ -411,17 +411,17 @@ namespace EQLogParser
     private void Channel_PreviewMouseDown(object sender, EventArgs e)
     {
       var item = sender as ComboBoxItem;
-      if (item.Content is ChannelDetails details)
+      if (item.Content is ComboBoxItemDetails details)
       {
         if (details.Text == "Select All" && !details.IsChecked)
         {
           details.IsChecked = true;
-          var unselect = channels.Items[1] as ChannelDetails;
+          var unselect = channels.Items[1] as ComboBoxItemDetails;
           unselect.IsChecked = false;
 
           for (int i = 2; i < channels.Items.Count; i++)
           {
-            (channels.Items[i] as ChannelDetails).IsChecked = true;
+            (channels.Items[i] as ComboBoxItemDetails).IsChecked = true;
           }
 
           channels.Items.Refresh();
@@ -434,12 +434,12 @@ namespace EQLogParser
         else if (details.Text == "Unselect All" && !details.IsChecked)
         {
           details.IsChecked = true;
-          var select = channels.Items[0] as ChannelDetails;
+          var select = channels.Items[0] as ComboBoxItemDetails;
           select.IsChecked = false;
 
           for (int i = 2; i < channels.Items.Count; i++)
           {
-            (channels.Items[i] as ChannelDetails).IsChecked = false;
+            (channels.Items[i] as ComboBoxItemDetails).IsChecked = false;
           }
 
           channels.Items.Refresh();
@@ -451,7 +451,7 @@ namespace EQLogParser
         }
         else if (details.IsChecked)
         {
-          var select = channels.Items[0] as ChannelDetails;
+          var select = channels.Items[0] as ComboBoxItemDetails;
           if (select.IsChecked)
           {
             select.IsChecked = false;
@@ -461,7 +461,7 @@ namespace EQLogParser
         }
         else if (!details.IsChecked)
         {
-          var unselect = channels.Items[1] as ChannelDetails;
+          var unselect = channels.Items[1] as ComboBoxItemDetails;
           if (unselect.IsChecked)
           {
             unselect.IsChecked = false;
@@ -479,16 +479,16 @@ namespace EQLogParser
         int count = 0;
         for (int i = 2; i < channels.Items.Count; i++)
         {
-          var checkedItem = channels.Items[i] as ChannelDetails;
+          var checkedItem = channels.Items[i] as ComboBoxItemDetails;
           if (checkedItem.IsChecked)
           {
             count++;
           }
         }
 
-        if (!(channels.SelectedItem is ChannelDetails selected))
+        if (!(channels.SelectedItem is ComboBoxItemDetails selected))
         {
-          selected = channels.Items[2] as ChannelDetails;
+          selected = channels.Items[2] as ComboBoxItemDetails;
         }
 
         selected.SelectedText = count + " Channels Selected";

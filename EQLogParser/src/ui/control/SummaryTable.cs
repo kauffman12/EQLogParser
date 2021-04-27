@@ -16,13 +16,16 @@ namespace EQLogParser
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
     internal DataGrid TheDataGrid;
+    internal ComboBox TheSelectedColumns;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
     internal List<List<ActionBlock>> CurrentGroups;
+    internal Dictionary<string, bool> TheShownColumns;
 
-    internal void InitSummaryTable(Label title, DataGrid dataGrid)
+    internal void InitSummaryTable(Label title, DataGrid dataGrid, ComboBox columns)
     {
       TheDataGrid = dataGrid;
+      TheSelectedColumns = columns;
       TheTitle = title;
 
       if (title != null)
@@ -33,6 +36,11 @@ namespace EQLogParser
       if (TheDataGrid != null)
       {
         TheDataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
+
+        if (TheSelectedColumns != null)
+        {
+          TheShownColumns = DataGridUtils.LoadColumns(TheSelectedColumns, TheDataGrid);
+        }
       }
     }
 
@@ -52,6 +60,7 @@ namespace EQLogParser
     internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtils.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
+    internal void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtils.ShowColumns(TheSelectedColumns, TheDataGrid);
 
     internal void CreateImageClick(object sender, RoutedEventArgs e)
     {

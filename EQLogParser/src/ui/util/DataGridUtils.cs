@@ -1,7 +1,7 @@
 ﻿
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -44,7 +44,7 @@ namespace EQLogParser
       for (int i = 0; i < dataGrid.Columns.Count; i++)
       {
         var bound = dataGrid.Columns[i] as DataGridBoundColumn;
-        if (bound != null)
+        if (bound != null && bound.Visibility == Visibility.Visible)
         {
           headers.Add(bound.Header as string);
           headerKeys.Add(((System.Windows.Data.Binding)bound.Binding).Path.Path);
@@ -140,6 +140,100 @@ namespace EQLogParser
       {
         (menu.PlacementTarget as DataGrid)?.UnselectAll();
       }
+    }
+
+    internal static Dictionary<string, bool> LoadColumns(ComboBox columns, DataGrid dataGrid)
+    {
+      Dictionary<string, bool> cache = new Dictionary<string, bool>();
+      string columnSetting = ConfigUtil.GetSetting(columns.Tag as string);
+      if (!string.IsNullOrEmpty(columnSetting))
+      {
+        foreach (var selected in columnSetting.Split(','))
+        {
+          cache[selected] = true;
+        }
+      }
+
+      int selectedCount = 0;
+      List<ComboBoxItemDetails> list = new List<ComboBoxItemDetails>();
+      for (int i = 0; i < dataGrid.Columns.Count; i++)
+      {
+        var column = dataGrid.Columns[i];
+        var header = column.Header as string;
+        if (!string.IsNullOrEmpty(header) && header != "Name")
+        {
+          var visible = cache.Count == 0 || cache.ContainsKey(header);
+          column.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
+          selectedCount += visible ? 1 : 0;
+          list.Add(new ComboBoxItemDetails { Text = column.Header as string, IsChecked = visible });
+        }
+      }
+
+      columns.ItemsSource = list;
+      SetSelectedColumnsTitle(columns, selectedCount);
+      return cache;
+    }
+
+    internal static Dictionary<string, bool> ShowColumns(ComboBox columns, DataGrid dataGrid, List<DataGrid> children = null)
+    {
+      Dictionary<string, bool> cache = new Dictionary<string, bool>();
+      if (columns.Items.Count > 0)
+      {
+        for (int i = 0; i < columns.Items.Count; i++)
+        {
+          var checkedItem = columns.Items[i] as ComboBoxItemDetails;
+          if (checkedItem.IsChecked)
+          {
+            cache[checkedItem.Text] = true;
+          }
+        }
+
+        SetSelectedColumnsTitle(columns, cache.Count);
+
+        for (int i = 0; i < dataGrid.Columns.Count; i++)
+        {
+          string header = dataGrid.Columns[i].Header as string;
+          if (!string.IsNullOrEmpty(header) && header != "Name")
+          {
+            if (cache.ContainsKey(header))
+            {
+              dataGrid.Columns[i].Visibility = Visibility.Visible;
+              if (children != null)
+              {
+                children.ForEach(child => child.Columns[i].Visibility = Visibility.Visible);
+              }
+            }
+            else
+            {
+              dataGrid.Columns[i].Visibility = Visibility.Hidden;
+              if (children != null)
+              {
+                children.ForEach(child => child.Columns[i].Visibility = Visibility.Hidden);
+              }
+            }
+          }
+        }
+
+        if (!string.IsNullOrEmpty(columns.Tag as string))
+        {
+          ConfigUtil.SetSetting(columns.Tag as string, string.Join(",", cache.Keys));
+        }
+      }
+
+      return cache;
+    }
+
+    private static void SetSelectedColumnsTitle(ComboBox columns, int count)
+    {
+      if (!(columns.SelectedItem is ComboBoxItemDetails selected))
+      {
+        selected = columns.Items[0] as ComboBoxItemDetails;
+      }
+
+      string countString = columns.Items.Count == count ? "All" : count.ToString(CultureInfo.CurrentCulture);
+      selected.SelectedText = countString + " " + Properties.Resources.COLUMNS_SELECTED;
+      columns.SelectedIndex = -1;
+      columns.SelectedItem = selected;
     }
 
     internal static Tuple<double, int> GetRowDetails(DataGrid dataGrid)

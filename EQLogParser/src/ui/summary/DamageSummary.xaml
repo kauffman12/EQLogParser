@@ -24,7 +24,26 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <dirk:LongUpDown x:Name="timeChooser" Margin="0,0,4,0" Height="26" IsEnabled="False" IsMouseDragEnabled="False" Padding="0" DisplayLength="4" Value="0" MaxValue="0" MinValue="0" ValueChanged="MaxTimeChanged"/>
       <ComboBox Margin="0,0,0,0" x:Name="petOrPlayerList" Height="26" MinWidth="60" SelectionChanged="ListSelectionChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="classesList" Height="26" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,0,0" x:Name="classesList" Height="26" SelectionChanged="ListSelectionChanged" />
+      <ComboBox x:Name="selectedColumns" Tag="DamageSummaryColumns" Height="26" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns" BorderBrush="#FF707070">
+        <ComboBox.ItemTemplateSelector>
+          <local:ComboBoxItemTemplateSelector>
+            <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
+              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
+                <TextBlock Text="{Binding SelectedText}" />
+              </DataTemplate>
+            </local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
+            <local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
+              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
+                <StackPanel Orientation="Horizontal">
+                  <CheckBox IsChecked="{Binding IsChecked}" Width="20" />
+                  <TextBlock Text="{Binding Text}" IsHitTestVisible="false" />
+                </StackPanel>
+              </DataTemplate>
+            </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
+          </local:ComboBoxItemTemplateSelector>
+        </ComboBox.ItemTemplateSelector>
+      </ComboBox>
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"
       AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGridSelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
@@ -127,13 +146,13 @@
         <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="58" Width="58*"/>
         <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="64" Width="64*"/>
         <DataGridTextColumn Binding="{Binding Special}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Special" IsReadOnly="True" CanUserReorder="False" MinWidth="64" Width="64*"/>
-        <DataGridTextColumn Binding="{Binding BaneHits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bn" IsReadOnly="True" CanUserReorder="False" MinWidth="54" Width="54*"/>
+        <DataGridTextColumn Binding="{Binding BaneHits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="False" MinWidth="54" Width="54*"/>
         <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90*" />
       </DataGrid.Columns>
       <DataGrid.RowDetailsTemplate>
         <DataTemplate>
           <datagrid:ThemedDataGrid x:Name="childrenDataGrid" IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ChildrenDataGridPrevMouseWheel" 
-              HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
+              HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="-2,0,0,0" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
               EnableRowVirtualization="False" GridLinesVisibility="Vertical" AreRowDetailsFrozen="False" FrozenColumnCount="0">
             <DataGrid.Columns>
               <DataGridTextColumn ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False"/>
