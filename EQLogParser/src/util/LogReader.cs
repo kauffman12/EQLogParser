@@ -169,7 +169,11 @@ namespace EQLogParser
             }
           }
 
-          reader.Close();
+          if (reader != null)
+          {
+            reader.Close();
+          }
+
           fsw.Dispose();
         }
         catch (IOException e)

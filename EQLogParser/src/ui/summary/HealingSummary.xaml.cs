@@ -20,7 +20,7 @@ namespace EQLogParser
     public HealingSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid, selectedColumns);
+      InitSummaryTable(title, dataGrid, null, selectedColumns);
 
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, "All Classes");

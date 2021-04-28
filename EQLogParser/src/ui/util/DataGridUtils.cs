@@ -144,7 +144,27 @@ namespace EQLogParser
 
     internal static Dictionary<string, bool> LoadColumns(ComboBox columns, DataGrid dataGrid)
     {
-      Dictionary<string, bool> cache = new Dictionary<string, bool>();
+      var indexesCache = new Dictionary<string, int>();
+      var indexString = ConfigUtil.GetSetting(columns.Tag as string + "DisplayIndex");
+      if (!string.IsNullOrEmpty(indexString))
+      {
+        foreach (var index in indexString.Split(','))
+        {
+          if (!string.IsNullOrEmpty(index))
+          {
+            var split = index.Split('|');
+            if (split != null && split.Length == 2 && !string.IsNullOrEmpty(split[0]) && !string.IsNullOrEmpty(split[1]))
+            {
+              if (int.TryParse(split[1], out int result))
+              {
+                indexesCache[split[0]] = result;
+              }
+            }
+          }
+        }
+      }
+
+      var cache = new Dictionary<string, bool>();
       string columnSetting = ConfigUtil.GetSetting(columns.Tag as string);
       if (!string.IsNullOrEmpty(columnSetting))
       {
@@ -160,12 +180,20 @@ namespace EQLogParser
       {
         var column = dataGrid.Columns[i];
         var header = column.Header as string;
-        if (!string.IsNullOrEmpty(header) && header != "Name")
+        if (!string.IsNullOrEmpty(header))
         {
-          var visible = cache.Count == 0 || cache.ContainsKey(header);
-          column.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
-          selectedCount += visible ? 1 : 0;
-          list.Add(new ComboBoxItemDetails { Text = column.Header as string, IsChecked = visible });
+          if (header != "Name")
+          {
+            var visible = (cache.Count == 0 && column.Visibility == Visibility.Visible) || cache.ContainsKey(header);
+            column.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
+            selectedCount += visible ? 1 : 0;
+            list.Add(new ComboBoxItemDetails { Text = column.Header as string, IsChecked = visible });
+
+            if (indexesCache.ContainsKey(header))
+            {
+              column.DisplayIndex = indexesCache[header];
+            }
+          }
         }
       }
 
@@ -221,6 +249,21 @@ namespace EQLogParser
       }
 
       return cache;
+    }
+
+    internal static void SaveColumnIndexes(ComboBox columns, DataGrid dataGrid)
+    {
+      var columnIndexes = new List<string>();
+      for (int i = 0; i < dataGrid.Columns.Count; i++)
+      {
+        string header = dataGrid.Columns[i].Header as string;
+        if (!string.IsNullOrEmpty(header))
+        {
+          columnIndexes.Add(header + "|" + dataGrid.Columns[i].DisplayIndex);
+        }
+      }
+
+      ConfigUtil.SetSetting(columns.Tag + "DisplayIndex", string.Join(",", columnIndexes));
     }
 
     private static void SetSelectedColumnsTitle(ComboBox columns, int count)

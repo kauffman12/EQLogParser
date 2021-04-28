@@ -27,16 +27,18 @@ namespace EQLogParser
     private int CurrentGroupCount = 0;
     private int CurrentPetOrPlayerOption = 0;
     private readonly DispatcherTimer SelectionTimer;
+    private Dictionary<string, bool> DefaultHiddenColumns = new Dictionary<string, bool>()
+    { { "# Bane", true } };
 
     public DamageSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid, selectedColumns);
+      InitSummaryTable(title, dataGrid, DefaultHiddenColumns, selectedColumns);
 
-      PropertyDescriptor pd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
+      PropertyDescriptor widthPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
       foreach (var column in dataGrid.Columns)
       {
-        pd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
+        widthPd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
       }
 
       var list = PlayerManager.Instance.GetClassList();
@@ -62,6 +64,13 @@ namespace EQLogParser
         SelectionTimer.Stop();
       };
     }
+
+    internal new void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtils.ShowColumns(selectedColumns, dataGrid, ChildGrids);
+
+    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.DAMAGEPARSE);
+
+    internal override bool IsPetsCombined() => CurrentPetOrPlayerOption == 0;
+
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
@@ -136,9 +145,7 @@ namespace EQLogParser
       }
     }
 
-    internal override bool IsPetsCombined() => CurrentPetOrPlayerOption == 0;
-
-    private void ColumnWidthPropertyChanged(object sender, EventArgs e)
+    internal void ColumnWidthPropertyChanged(object sender, EventArgs e)
     {
       var column = sender as DataGridColumn;
       ChildGrids.ForEach(grid => grid.Columns[column.DisplayIndex].Width = column.ActualWidth);
@@ -346,11 +353,6 @@ namespace EQLogParser
       return view;
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e)
-    {
-      (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.DAMAGEPARSE);
-    }
-
     private void UpdateView()
     {
       if (dataGrid != null && CurrentStats?.ExpandedStatsList != null)
@@ -390,11 +392,6 @@ namespace EQLogParser
         SelectionTimer.Stop();
         SelectionTimer.Start();
       }
-    }
-
-    internal new void SelectDataGridColumns(object sender, EventArgs e)
-    {
-      TheShownColumns = DataGridUtils.ShowColumns(selectedColumns, dataGrid, ChildGrids);
     }
 
     #region IDisposable Support

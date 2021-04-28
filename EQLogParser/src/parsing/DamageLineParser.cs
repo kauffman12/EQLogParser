@@ -106,10 +106,10 @@ namespace EQLogParser
         
           if (!handled)
           {
-            int byIndex = -1, dodgeIndex = -1, forIndex = -1, pointsOfIndex = -1, endDamage = -1, byDamage = -1;
-            int extraIndex = -1, fromDamage = -1, hasIndex = -1, haveIndex = -1, hitType = -1, hitTypeAdd = -1;
-            int slainIndex = -1, takenIndex = -1, missIndex = -1, tryIndex = -1, yourIndex = -1, isIndex = -1;
-            int parryIndex = -1, dsIndex = -1, butIndex = -1;
+            int byIndex = -1, forIndex = -1, pointsOfIndex = -1, endDamage = -1, byDamage = -1, extraIndex = -1;
+            int fromDamage = -1, hasIndex = -1, haveIndex = -1, hitType = -1, hitTypeAdd = -1, slainIndex = -1;
+            int takenIndex = -1, tryIndex = -1, yourIndex = -1, isIndex = -1, dsIndex = -1, butIndex = -1;
+            int missType = -1;
             string subType = null;
 
             bool found = false;
@@ -173,6 +173,7 @@ namespace EQLogParser
                       found = true; // short circut
                     }
                     break;
+                  case "point":
                   case "points":
                     if (stop >= (i + 1) && split[i + 1] == "of")
                     {
@@ -183,25 +184,24 @@ namespace EQLogParser
                       }
                     }
                     break;
+                  case "blocks!":
+                    missType = (stop == i && butIndex > -1 && i > tryIndex) ? 0 : missType;
+                    break;
+                  case "shield!":
+                  case "staff!":
+                    missType = (i > 5 && stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "with" && 
+                      split[i - 3].StartsWith("block", StringComparison.OrdinalIgnoreCase)) ? 0 : missType;
+                    break;
                   case "dodge!":
                   case "dodges!":
-                    if (stop == i && butIndex > -1)
-                    {
-                      dodgeIndex = i;
-                    }
-                    break;
-                  case "parries!":
-                    if (stop == i && butIndex > -1)
-                    {
-                      parryIndex = i;
-                    }
+                    missType = (stop == i && butIndex > -1 && i > tryIndex) ? 1 : missType;
                     break;
                   case "miss!":
                   case "misses!":
-                    if (stop == i && butIndex > -1)
-                    {
-                      missIndex = i;
-                    }
+                    missType = (stop == i && butIndex > -1 && i > tryIndex) ? 2 : missType;
+                    break;
+                  case "parries!":
+                    missType = (stop == i && butIndex > -1 && i > tryIndex) ? 3 : missType;
                     break;
                   case "slain":
                     slainIndex = i;
@@ -349,17 +349,40 @@ namespace EQLogParser
             // [Sun Apr 18 19:45:21 2021] You try to crush a primal guardian, but a primal guardian parries!
             // [Sun Apr 25 22:56:22 2021] Romance tries to bash Vulak`Aerr, but Vulak`Aerr parries!
             // [Sun Jul 28 20:12:46 2019] Drogbaa tries to slash Whirlrender Scout, but misses! (Strikethrough)
-            else if (tryIndex > -1 && butIndex > tryIndex && (missIndex > tryIndex || dodgeIndex > tryIndex || parryIndex > tryIndex))
+            // [Tue Mar 30 16:43:54 2021] You try to crush a desert madman, but a desert madman blocks!
+            // [Mon Apr 26 22:40:10 2021] An ancient warden tries to hit Reisil, but Reisil blocks with his shield!
+            // [Sun Mar 21 00:11:31 2021] A carrion bat tries to bite YOU, but YOU block with your shield!
+            // [Mon Apr 26 14:51:01 2021] A windchill sprite tries to smash YOU, but YOU block with your staff!
+            else if (tryIndex > -1 && butIndex > tryIndex && missType > -1)
             {
-              int hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
-              string label = missIndex > -1 ? Labels.MISS : dodgeIndex > -1 ? Labels.DODGE : Labels.PARRY;
-              string defender = string.Join(" ", split, hitType + hitTypeMod + 1, butIndex - hitType - hitTypeMod - 1);
-              if (!string.IsNullOrEmpty(defender) && defender[defender.Length - 1] == ',')
+              string label = null;
+              switch (missType)
               {
-                defender = defender.Substring(0, defender.Length - 1);
-                string attacker = string.Join(" ", split, 0, tryIndex);
-                subType = TextFormatUtils.ToUpper(subType);
-                handled = CreateDamageRecord(timeString, currentTime, split, stop, attacker, defender, 0, label, subType);
+                case 0:
+                  label = Labels.BLOCK;
+                  break;
+                case 1:
+                  label = Labels.DODGE;
+                  break;
+                case 2:
+                  label = Labels.MISS;
+                  break;
+                case 3:
+                  label = Labels.PARRY;
+                  break;
+              }
+
+              if (!string.IsNullOrEmpty(label))
+              {
+                int hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
+                string defender = string.Join(" ", split, hitType + hitTypeMod + 1, butIndex - hitType - hitTypeMod - 1);
+                if (!string.IsNullOrEmpty(defender) && defender[defender.Length - 1] == ',')
+                {
+                  defender = defender.Substring(0, defender.Length - 1);
+                  string attacker = string.Join(" ", split, 0, tryIndex);
+                  subType = TextFormatUtils.ToUpper(subType);
+                  handled = CreateDamageRecord(timeString, currentTime, split, stop, attacker, defender, 0, label, subType);
+                }
               }
             }
             // [Sun Apr 18 21:26:20 2021] Strangle`s pet has been slain by Kzerk!
@@ -481,12 +504,6 @@ namespace EQLogParser
           // improve this later so maybe the string doesn't have to be re-joined
           string modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
           record.ModifiersMask = LineModifiersParser.Parse(modifiers.Substring(1, modifiers.Length - 2));
-
-          // handle riposte separately
-          if (LineModifiersParser.IsRiposte(record.ModifiersMask))
-          {
-            record.SubType = Labels.RIPOSTE;
-          }
         }
 
         DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString, BeginTime = currentTime };

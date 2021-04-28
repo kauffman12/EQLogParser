@@ -151,6 +151,8 @@ namespace EQLogParser
       if (SettingsUpdated)
       {
         ApplicationSettings.TryRemove("IncludeAEHealing", out _); // not used anymore
+        ApplicationSettings.TryRemove("HealingColumns", out _); // not used anymore
+        ApplicationSettings.TryRemove("TankingColumns", out _); // not used anymore
         SaveProperties(SettingsFile, ApplicationSettings);
       }
     }

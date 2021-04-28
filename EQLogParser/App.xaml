@@ -478,8 +478,11 @@
     <Style x:Key="SDPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Scaled Damage Per Second based on Total Time (raid time)" />
     </Style>
+    <Style x:Key="MeleeAccRateColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Percent of Hits that were not Misses" />
+    </Style>    
     <Style x:Key="MeleeHitRateColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Hits that were not Dodged, Missed, or Parried" />
+      <Setter Property="ToolTip" Value="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
     </Style>
     <Style x:Key="SHPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Scaled Healing Per Second based on Total Time (raid time)" />

@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -21,17 +20,14 @@ namespace EQLogParser
     private bool CurrentGroupDDSetting = true;
     private bool CurrentGroupDoTSetting = true;
     private bool CurrentGroupProcsSetting = true;
-    private bool CurrentGroupResistedSetting = true;
     private bool CurrentShowPets = true;
     private static bool Running = false;
     private readonly Dictionary<string, PlayerSubStats> GroupedDD = new Dictionary<string, PlayerSubStats>();
     private readonly Dictionary<string, PlayerSubStats> GroupedDoT = new Dictionary<string, PlayerSubStats>();
     private readonly Dictionary<string, PlayerSubStats> GroupedProcs = new Dictionary<string, PlayerSubStats>();
-    private readonly Dictionary<string, PlayerSubStats> GroupedResisted = new Dictionary<string, PlayerSubStats>();
     private readonly Dictionary<string, List<PlayerSubStats>> UnGroupedDD = new Dictionary<string, List<PlayerSubStats>>();
     private readonly Dictionary<string, List<PlayerSubStats>> UnGroupedDoT = new Dictionary<string, List<PlayerSubStats>>();
     private readonly Dictionary<string, List<PlayerSubStats>> UnGroupedProcs = new Dictionary<string, List<PlayerSubStats>>();
-    private readonly Dictionary<string, List<PlayerSubStats>> UnGroupedResisted = new Dictionary<string, List<PlayerSubStats>>();
     private readonly Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
 
     internal DamageBreakdown(CombinedStats currentStats)
@@ -55,7 +51,7 @@ namespace EQLogParser
       if (Running == false && ChildStats != null && RaidStats != null)
       {
         Running = true;
-        groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = groupResisted.IsEnabled = showPets.IsEnabled = false;
+        groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = showPets.IsEnabled = false;
 
         Task.Delay(10).ContinueWith(task =>
         {
@@ -128,7 +124,7 @@ namespace EQLogParser
           }
           finally
           {
-            Dispatcher.InvokeAsync(() => groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = groupResisted.IsEnabled = showPets.IsEnabled = true);
+            Dispatcher.InvokeAsync(() => groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = showPets.IsEnabled = true);
             Running = false;
           }
         }, TaskScheduler.Default);
@@ -141,11 +137,9 @@ namespace EQLogParser
       PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT, Type = Labels.DOT };
       PlayerSubStats dds = new PlayerSubStats() { Name = Labels.DD, Type = Labels.DD };
       PlayerSubStats procs = new PlayerSubStats() { Name = Labels.PROC, Type = Labels.PROC };
-      PlayerSubStats resisted = new PlayerSubStats() { Name = Labels.RESIST, Type = Labels.RESIST, ResistRate = 100 };
       List<PlayerSubStats> allDots = new List<PlayerSubStats>();
       List<PlayerSubStats> allDds = new List<PlayerSubStats>();
       List<PlayerSubStats> allProcs = new List<PlayerSubStats>();
-      List<PlayerSubStats> allResisted = new List<PlayerSubStats>();
 
       all.ForEach(sub =>
       {
@@ -166,10 +160,6 @@ namespace EQLogParser
             stats = procs;
             allProcs.Add(sub);
             break;
-          case Labels.RESIST:
-            stats = resisted;
-            allResisted.Add(sub);
-            break;
           default:
             list.Add(sub);
             break;
@@ -178,7 +168,7 @@ namespace EQLogParser
         StatsUtil.MergeStats(stats, sub);
       });
 
-      foreach (var stats in new PlayerSubStats[] { dots, dds, procs, resisted })
+      foreach (var stats in new PlayerSubStats[] { dots, dds, procs })
       {
         StatsUtil.CalculateRates(stats, RaidStats, playerStats);
       }
@@ -186,11 +176,9 @@ namespace EQLogParser
       UnGroupedDD[playerStats.Name] = allDds;
       UnGroupedDoT[playerStats.Name] = allDots;
       UnGroupedProcs[playerStats.Name] = allProcs;
-      UnGroupedResisted[playerStats.Name] = allResisted;
       GroupedDD[playerStats.Name] = dds;
       GroupedDoT[playerStats.Name] = dots;
       GroupedProcs[playerStats.Name] = procs;
-      GroupedResisted[playerStats.Name] = resisted;
       OtherDamage[playerStats.Name] = list;
 
       Dispatcher.InvokeAsync(() =>
@@ -208,11 +196,6 @@ namespace EQLogParser
         if (allDots.Count > 0 && !groupDoT.IsEnabled)
         {
           groupDoT.IsEnabled = true;
-        }
-
-        if (allResisted.Count > 0 && !groupResisted.IsEnabled)
-        {
-          groupResisted.IsEnabled = true;
         }
       });
     }
@@ -275,21 +258,6 @@ namespace EQLogParser
         }
       }
 
-      if (GroupedResisted.ContainsKey(name))
-      {
-        if (UnGroupedResisted[name].Count > 0)
-        {
-          if (CurrentGroupResistedSetting)
-          {
-            list.Add(GroupedResisted[name]);
-          }
-          else
-          {
-            AddToList(playerStats, list, UnGroupedResisted[name]);
-          }
-        }
-      }
-
       return list;
     }
 
@@ -321,7 +289,6 @@ namespace EQLogParser
         CurrentGroupDDSetting = groupDirectDamage.IsChecked.Value;
         CurrentGroupDoTSetting = groupDoT.IsChecked.Value;
         CurrentGroupProcsSetting = groupProcs.IsChecked.Value;
-        CurrentGroupResistedSetting = groupResisted.IsChecked.Value;
         CurrentShowPets = showPets.IsChecked.Value;
         Display();
       }
