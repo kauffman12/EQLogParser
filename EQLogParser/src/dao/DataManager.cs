@@ -30,7 +30,6 @@ namespace EQLogParser
     public const string DS = "Damage Shield";
     public const string BANE = "Bane Damage";
     public const string PROC = "Proc";
-    public const string RESIST = "Resisted Spells";
     public const string HOT = "HoT Tick";
     public const string HEAL = "Direct Heal";
     public const string MELEE = "Melee";
@@ -54,6 +53,7 @@ namespace EQLogParser
     public const string MISS = "Miss";
     public const string DODGE = "Dodge";
     public const string PARRY = "Parry";
+    public const string BLOCK = "Block";
   }
 
   class DataManager

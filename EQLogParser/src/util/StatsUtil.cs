@@ -15,7 +15,8 @@ namespace EQLogParser
     internal const string PLAYER_FORMAT = "{0} = ";
     internal const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
     internal const string SPECIAL_FORMAT = "{0} {{{1}}}";
-    internal const int SPECIAL_OFFSET = 10;
+    internal const int SPECIAL_OFFSET = 15;
+    internal const int DEATH_OFFSET = 15;
 
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
@@ -262,6 +263,10 @@ namespace EQLogParser
           stats.BaneHits++;
           stats.Hits += 1;
           break;
+        case Labels.BLOCK:
+          stats.Blocks++;
+          stats.MeleeAttempts += 1;
+          break;
         case Labels.DODGE:
           stats.Dodges++;
           stats.MeleeAttempts += 1;
@@ -308,6 +313,7 @@ namespace EQLogParser
       if (to != null && from != null)
       {
         to.BaneHits += from.BaneHits;
+        to.Blocks += from.Blocks;
         to.Dodges += from.Dodges;
         to.Misses += from.Misses;
         to.Parries += from.Parries;
@@ -316,6 +322,8 @@ namespace EQLogParser
         to.Total += from.Total;
         to.TotalCrit += from.TotalCrit;
         to.TotalLucky += from.TotalLucky;
+        to.TotalRiposte += from.TotalRiposte;
+        to.TotalSlay += from.TotalSlay;
         to.Hits += from.Hits;
         to.Max = Math.Max(to.Max, from.Max);
         to.Extra += from.Extra;
@@ -325,6 +333,7 @@ namespace EQLogParser
         to.Resists += from.Resists;
         to.StrikethroughHits += from.StrikethroughHits;
         to.RiposteHits += from.RiposteHits;
+        to.SlayHits += from.SlayHits;
         to.RampageHits += from.RampageHits;
         to.TotalSeconds = Math.Max(to.TotalSeconds, from.TotalSeconds);
       }
@@ -366,6 +375,7 @@ namespace EQLogParser
         if (stats.MeleeAttempts > 0)
         {
           stats.MeleeHitRate = Math.Round(Convert.ToDouble(stats.MeleeHits) / stats.MeleeAttempts * 100, 2);
+          stats.MeleeAccRate = Math.Round(Convert.ToDouble(stats.MeleeHits) / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks) * 100, 2);
         }
 
         var tcMult = stats.Type == Labels.DD ? 2 : 1;
@@ -443,7 +453,7 @@ namespace EQLogParser
           }
         }
 
-        foreach (var deaths in DataManager.Instance.GetDeathsDuring(offsetBegin, segment.EndTime).Select(block => block.Actions))
+        foreach (var deaths in DataManager.Instance.GetDeathsDuring(offsetBegin, segment.EndTime + DEATH_OFFSET).Select(block => block.Actions))
         {
           actions.AddRange(deaths);
         }

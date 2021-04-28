@@ -26,6 +26,7 @@ namespace EQLogParser
     private const int RAMPAGE = 8;
     private const int STRIKETHROUGH = 16;
     private const int RIPOSTE = 32;
+    private const int SLAY = 64;
 
     private static readonly ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
 
@@ -77,10 +78,22 @@ namespace EQLogParser
         if (IsRiposte(record.ModifiersMask))
         {
           playerStats.RiposteHits++;
+          playerStats.TotalRiposte += record.Total;
 
           if (theHit != null)
           {
             theHit.RiposteHits++;
+          }
+        }
+
+        if ((record.ModifiersMask & SLAY) != 0)
+        {
+          playerStats.SlayHits++;
+          playerStats.TotalSlay += record.Total;
+
+          if (theHit != null)
+          {
+            theHit.SlayHits++;
           }
         }
 
@@ -180,6 +193,9 @@ namespace EQLogParser
               break;
             case "Riposte":
               result |= RIPOSTE;
+              break;
+            case "Slay Undead":
+              result |= SLAY;
               break;
           }
 
