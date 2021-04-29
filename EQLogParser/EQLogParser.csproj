@@ -288,7 +288,7 @@
     <Compile Include="src\parsing\HealingLineParser.cs" />
     <Compile Include="src\parsing\LineModifiersParser.cs" />
     <Compile Include="src\parsing\ChatLineParser.cs" />
-    <Compile Include="src\ui\breakdown\BreakdownTable.cs" />
+    <Compile Include="src\ui\control\BreakdownTable.cs" />
     <Compile Include="src\ui\summary\DamageSummary.xaml.cs">
       <DependentUpon>DamageSummary.xaml</DependentUpon>
     </Compile>

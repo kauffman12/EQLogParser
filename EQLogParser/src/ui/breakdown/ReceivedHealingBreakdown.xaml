@@ -21,25 +21,45 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="0,0,4,0" x:Name="choicesList" Height="24" SelectionChanged="ListSelectionChanged" />
+      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
+      <ComboBox x:Name="selectedColumns" Tag="ReceivedHealingBreakdownColumns" Height="26" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns" BorderBrush="#FF707070">
+        <ComboBox.ItemTemplateSelector>
+          <local:ComboBoxItemTemplateSelector>
+            <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
+              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
+                <TextBlock Text="{Binding SelectedText}" />
+              </DataTemplate>
+            </local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
+            <local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
+              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
+                <StackPanel Orientation="Horizontal">
+                  <CheckBox IsChecked="{Binding IsChecked}" Width="20" />
+                  <TextBlock Text="{Binding Text}" IsHitTestVisible="false" />
+                </StackPanel>
+              </DataTemplate>
+            </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
+          </local:ComboBoxItemTemplateSelector>
+        </ComboBox.ItemTemplateSelector>
+      </ComboBox>      
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="playerDamageDataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="CustomSorting" LoadingRow="LoadingRow">
+    <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="CustomSorting" LoadingRow="LoadingRow">
       <DataGrid.Columns>
         <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="150" Width="150*"/>
-        <DataGridTextColumn Binding="{Binding Percent, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource PlayerTotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
-        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Heal" IsReadOnly="True" CanUserReorder="False" MinWidth="90" Width="90*"/>
-        <DataGridTextColumn Binding="{Binding Extra, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource OverHealColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Over Healed" IsReadOnly="True" CanUserReorder="False" MinWidth="94" Width="94*"/>
-        <DataGridTextColumn Binding="{Binding DPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource HPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="HPS" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding SDPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource SHPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SHPS" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding TotalSeconds, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
-        <DataGridTextColumn Binding="{Binding Hits, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Heals" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding Max, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Heal" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
-        <DataGridTextColumn Binding="{Binding Avg, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Heal" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding AvgCrit, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding AvgLucky, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="False" MinWidth="70" Width="70*"/>
-        <DataGridTextColumn Binding="{Binding ExtraRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource OverHealPercentColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Over" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
-        <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="False" MinWidth="55" Width="55*"/>
-        <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="False" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding TwincastRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% TC" IsReadOnly="True" CanUserReorder="False" MinWidth="50" Width="50*"/>
+        <DataGridTextColumn Binding="{Binding Percent, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource PlayerTotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="True" MinWidth="70" Width="70*"/>
+        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Heal" IsReadOnly="True" CanUserReorder="True" MinWidth="90" Width="90*"/>
+        <DataGridTextColumn Binding="{Binding Extra, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource OverHealColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Over Healed" IsReadOnly="True" CanUserReorder="True" MinWidth="94" Width="94*"/>
+        <DataGridTextColumn Binding="{Binding DPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource HPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="HPS" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
+        <DataGridTextColumn Binding="{Binding SDPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource SHPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SHPS" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
+        <DataGridTextColumn Binding="{Binding TotalSeconds, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="True" MinWidth="55" Width="55*"/>
+        <DataGridTextColumn Binding="{Binding Hits, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Heals" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
+        <DataGridTextColumn Binding="{Binding Max, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Heal" IsReadOnly="True" CanUserReorder="True" MinWidth="70" Width="70*"/>
+        <DataGridTextColumn Binding="{Binding Avg, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Heal" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
+        <DataGridTextColumn Binding="{Binding AvgCrit, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
+        <DataGridTextColumn Binding="{Binding AvgLucky, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="True" MinWidth="70" Width="70*"/>
+        <DataGridTextColumn Binding="{Binding ExtraRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource OverHealPercentColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Over" IsReadOnly="True" CanUserReorder="True" MinWidth="55" Width="55*"/>
+        <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="True" MinWidth="55" Width="55*"/>
+        <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
+        <DataGridTextColumn Binding="{Binding TwincastRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% TC" IsReadOnly="True" CanUserReorder="True" MinWidth="50" Width="50*"/>
       </DataGrid.Columns>
     </datagrid:ThemedDataGrid>
   </Grid>      

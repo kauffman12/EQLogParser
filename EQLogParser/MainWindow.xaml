@@ -247,6 +247,11 @@
               <fa:ImageAwesome x:Name="deleteChatIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Close"  Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem x:Name="restoreTableColumns" Header="_Restore Default Table Columns" Click="RestoreTableColumnsClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="restoreTableColumnsIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Undo"  Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLogClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="viewErrorLogIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="File"  Foreground="#FF4F9FE2" />

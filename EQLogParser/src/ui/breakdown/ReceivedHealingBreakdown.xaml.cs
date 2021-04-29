@@ -22,6 +22,7 @@ namespace EQLogParser
     internal ReceivedHealingBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
+      InitBreakdownTable(dataGrid, selectedColumns);
       titleLabel.Content = currentStats?.ShortTitle;
       choicesList.ItemsSource = ChoicesList;
       choicesList.SelectedIndex = 0;
@@ -78,7 +79,7 @@ namespace EQLogParser
                 });
               }
 
-              Dispatcher.InvokeAsync(() => playerDamageDataGrid.ItemsSource = list);
+              Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
 
               if (CurrentColumn != null)
               {

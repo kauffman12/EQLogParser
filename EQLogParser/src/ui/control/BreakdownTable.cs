@@ -1,4 +1,5 @@
 ﻿using ActiproSoftware.Windows.Themes;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -13,8 +14,36 @@ namespace EQLogParser
     private protected string CurrentSortKey = "Total";
     private protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     private protected DataGridTextColumn CurrentColumn = null;
+    private DataGrid TheDataGrid;
+    private ComboBox TheSelectedColumns;
+
+    internal void InitBreakdownTable(DataGrid dataGrid, ComboBox columns)
+    {
+      TheDataGrid = dataGrid;
+      TheSelectedColumns = columns;
+
+      if (TheDataGrid != null)
+      {
+        TheDataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
+
+        PropertyDescriptor orderPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn));
+        foreach (var column in dataGrid.Columns)
+        {
+          orderPd.AddValueChanged(column, new EventHandler(ColumnDisplayIndexPropertyChanged));
+        }
+
+        if (TheSelectedColumns != null)
+        {
+          DataGridUtils.LoadColumns(TheSelectedColumns, TheDataGrid);
+        }
+      }
+    }
 
     internal abstract void Display(List<PlayerStats> selectedStats = null);
+
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtils.ShowColumns(TheSelectedColumns, TheDataGrid);
+
+    internal void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtils.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
 
     internal void CustomSorting(object sender, DataGridSortingEventArgs e)
     {
@@ -69,6 +98,14 @@ namespace EQLogParser
       }
 
       return query.ToList();
+    }
+
+    private void DataGrid_Sorting(object sender, DataGridSortingEventArgs e)
+    {
+      if (e.Column.Header != null && e.Column.Header.ToString() != "Name")
+      {
+        e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
+      }
     }
   }
 }

@@ -22,7 +22,7 @@ namespace EQLogParser
     internal List<List<ActionBlock>> CurrentGroups;
     internal Dictionary<string, bool> TheShownColumns;
 
-    internal void InitSummaryTable(Label title, DataGrid dataGrid, Dictionary<string, bool> defaultHiddenColumns, ComboBox columns)
+    internal void InitSummaryTable(Label title, DataGrid dataGrid, ComboBox columns)
     {
       TheDataGrid = dataGrid;
       TheSelectedColumns = columns;
@@ -41,11 +41,6 @@ namespace EQLogParser
         foreach (var column in dataGrid.Columns)
         {
           orderPd.AddValueChanged(column, new EventHandler(ColumnDisplayIndexPropertyChanged));
-
-          if (defaultHiddenColumns != null && column.Header != null && defaultHiddenColumns.ContainsKey(column.Header as string))
-          {
-            column.Visibility = Visibility.Hidden;
-          }
         }
 
         if (TheSelectedColumns != null)
@@ -72,7 +67,7 @@ namespace EQLogParser
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtils.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
     internal void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtils.ShowColumns(TheSelectedColumns, TheDataGrid);
-    internal void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtils.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
+    private void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtils.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
 
     internal void CreateImageClick(object sender, RoutedEventArgs e)
     {

@@ -259,6 +259,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Default Table Columns Restored!.
+        /// </summary>
+        internal static string RESTORE_TABLE_COLUMNS {
+            get {
+                return ResourceManager.GetString("RESTORE_TABLE_COLUMNS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Ranger.
         /// </summary>
         internal static string RNG {

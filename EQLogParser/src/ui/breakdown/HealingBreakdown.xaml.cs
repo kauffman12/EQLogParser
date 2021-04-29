@@ -24,6 +24,7 @@ namespace EQLogParser
     internal HealBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
+      InitBreakdownTable(dataGrid, selectedColumns);
       titleLabel.Content = currentStats?.ShortTitle;
       choicesList.ItemsSource = ChoicesList;
       choicesList.SelectedIndex = 0;

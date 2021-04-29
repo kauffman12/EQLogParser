@@ -79,6 +79,15 @@ namespace EQLogParser
       return setting;
     }
 
+    internal static void RemoveSetting(string key)
+    {
+      Init();
+      if (!string.IsNullOrEmpty(key))
+      {
+        ApplicationSettings.TryRemove(key, out string _);
+      }
+    }
+
     internal static void SetSetting(string key, string value)
     {
       Init();

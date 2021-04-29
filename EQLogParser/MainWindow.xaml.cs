@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.1";
+    private const string VERSION = "v1.8.2";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -376,6 +376,26 @@ namespace EQLogParser
       {
         _ = MessageBox.Show("Nothing to Save. Display a Summary View and Try Again.", Properties.Resources.FILEMENU_EXPORT_SUMMARY, MessageBoxButton.OK, MessageBoxImage.Exclamation);
       }
+    }
+
+    private void RestoreTableColumnsClick(object sender, RoutedEventArgs e)
+    {
+      ConfigUtil.RemoveSetting("DamageSummaryColumns");
+      ConfigUtil.RemoveSetting("HealingSummaryColumns");
+      ConfigUtil.RemoveSetting("TankingSummaryColumns");
+      ConfigUtil.RemoveSetting("DamageSummaryColumnsDisplayIndex");
+      ConfigUtil.RemoveSetting("HealingSummaryColumnsDisplayIndex");
+      ConfigUtil.RemoveSetting("TankingSummaryColumnsDisplayIndex");
+      ConfigUtil.RemoveSetting("DamageBreakdownColumns");
+      ConfigUtil.RemoveSetting("HealingBreakdownColumns");
+      ConfigUtil.RemoveSetting("ReceivedHealingBreakdownColumns");
+      ConfigUtil.RemoveSetting("TankingBreakdownColumns");
+      ConfigUtil.RemoveSetting("DamageBreakdownColumnsDisplayIndex");
+      ConfigUtil.RemoveSetting("HealingBreakdownColumnsDisplayIndex");
+      ConfigUtil.RemoveSetting("ReceivedHealingBreakdownColumnsDisplayIndex");
+      ConfigUtil.RemoveSetting("TankingBreakdownColumnsDisplayIndex");
+      ConfigUtil.Save();
+      _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.", Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e)
