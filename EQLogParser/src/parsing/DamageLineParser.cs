@@ -587,17 +587,26 @@ namespace EQLogParser
       string key = Helpers.CreateRecordKey(type, name);
       if (string.IsNullOrEmpty(key) || !SpellTypeCache.TryGetValue(key, out string result))
       {
+        result = type;
         if (!string.IsNullOrEmpty(key))
         {
           string spellName = DataManager.Instance.AbbreviateSpellName(name);
           SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
-          result = (data != null && data.IsProc) ? Labels.PROC : type;
-          SpellTypeCache[key] = result;
+          if (data != null)
+          {
+            switch (data.Proc)
+            {
+              case 1:
+                result = Labels.PROC;
+                break;
+              case 2:
+                result = Labels.BANE;
+                break;
+            }
+          }
         }
-        else
-        {
-          result = type;
-        }
+
+        SpellTypeCache[key] = result;
       }
       return result;
     }

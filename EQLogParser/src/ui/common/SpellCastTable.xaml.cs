@@ -182,7 +182,7 @@ namespace EQLogParser
 
         if (spellData != null)
         {
-          valid = !spellData.IsProc && (CurrentShowSelfOnly || (spell is SpellCast || !string.IsNullOrEmpty(spellData.LandsOnOther)));
+          valid = spellData.Proc == 0 && (CurrentShowSelfOnly || (spell is SpellCast || !string.IsNullOrEmpty(spellData.LandsOnOther)));
           valid = valid && (CurrentSpellType == 0 || CurrentSpellType == 1 && spellData.IsBeneficial || CurrentSpellType == 2 && !spellData.IsBeneficial);
         }
       }

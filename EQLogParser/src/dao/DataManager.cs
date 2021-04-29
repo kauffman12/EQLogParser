@@ -593,7 +593,7 @@ namespace EQLogParser
             duration = 0;
           }
 
-          spellData = new SpellData()
+          spellData = new SpellData
           {
             ID = string.Intern(data[0]),
             Name = string.Intern(data[1]),
@@ -612,7 +612,7 @@ namespace EQLogParser
             LandsOnYou = string.Intern(data[13]),
             LandsOnOther = string.Intern(data[14]),
             WearOff = string.Intern(data[15]),
-            IsProc = byte.Parse(data[16], CultureInfo.CurrentCulture) == 1
+            Proc = byte.Parse(data[16], CultureInfo.CurrentCulture)
           };
         }
       }
