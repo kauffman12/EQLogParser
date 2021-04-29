@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Controls;
 
 namespace EQLogParser
 {
@@ -22,6 +21,7 @@ namespace EQLogParser
     internal TankingBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
+      InitBreakdownTable(dataGrid, selectedColumns);
       titleLabel.Content = currentStats?.ShortTitle;
       RaidStats = currentStats?.RaidStats;
     }
@@ -54,7 +54,7 @@ namespace EQLogParser
                 SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
               }
 
-              Dispatcher.InvokeAsync(() => playerDamageDataGrid.ItemsSource = list);
+              Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
 
               if (CurrentColumn != null)
               {

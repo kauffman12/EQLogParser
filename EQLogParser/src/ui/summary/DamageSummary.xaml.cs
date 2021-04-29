@@ -27,18 +27,19 @@ namespace EQLogParser
     private int CurrentGroupCount = 0;
     private int CurrentPetOrPlayerOption = 0;
     private readonly DispatcherTimer SelectionTimer;
-    private Dictionary<string, bool> DefaultHiddenColumns = new Dictionary<string, bool>()
-    { { "# Bane", true } };
 
     public DamageSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid, DefaultHiddenColumns, selectedColumns);
+      InitSummaryTable(title, dataGrid, selectedColumns);
 
       PropertyDescriptor widthPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
+      PropertyDescriptor orderPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn));
+
       foreach (var column in dataGrid.Columns)
       {
         widthPd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
+        orderPd.AddValueChanged(column, new EventHandler(ColumnDisplayIndexPropertyChanged));
       }
 
       var list = PlayerManager.Instance.GetClassList();
@@ -145,10 +146,24 @@ namespace EQLogParser
       }
     }
 
-    internal void ColumnWidthPropertyChanged(object sender, EventArgs e)
+    private void ColumnWidthPropertyChanged(object sender, EventArgs e)
     {
       var column = sender as DataGridColumn;
       ChildGrids.ForEach(grid => grid.Columns[column.DisplayIndex].Width = column.ActualWidth);
+    }
+
+    private void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e)
+    {
+      ChildGrids.ForEach(grid =>
+      {
+        for (int i = 0; i < dataGrid.Columns.Count; i++)
+        {
+          if (dataGrid.Columns[i].DisplayIndex != grid.Columns[i].DisplayIndex)
+          {
+            grid.Columns[i].DisplayIndex = dataGrid.Columns[i].DisplayIndex;
+          }
+        }
+      });
     }
 
     private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
@@ -258,20 +273,35 @@ namespace EQLogParser
           {
             var column = dataGrid.Columns[i];
             var childColumn = childrenDataGrid.Columns[i];
-            childColumn.Width = column.ActualWidth;
+
+            if (childColumn.Width != column.ActualWidth)
+            {
+              childColumn.Width = column.ActualWidth;
+            }
+
+            if (childColumn.DisplayIndex != column.DisplayIndex)
+            {
+              childColumn.DisplayIndex = column.DisplayIndex;
+            }
 
             if (TheShownColumns != null && TheShownColumns.Count > 0)
             {
               // never let users hide the first two columns
               if (i > 1)
               {
-                childColumn.Visibility = TheShownColumns.ContainsKey(column.Header as string) ? Visibility.Visible : Visibility.Hidden;
-                Console.WriteLine("C" + i + " = " + (childColumn.Visibility == Visibility.Visible ? "Visible" : "Hidden"));
+                var vis = TheShownColumns.ContainsKey(column.Header as string) ? Visibility.Visible : Visibility.Hidden;
+                if (vis != childColumn.Visibility)
+                {
+                  childColumn.Visibility = vis;
+                }
               }
             }
             else
             {
-              childColumn.Visibility = Visibility.Visible;
+              if (childColumn.Visibility != dataGrid.Columns[i].Visibility)
+              {
+                childColumn.Visibility = dataGrid.Columns[i].Visibility;
+              }
             }
           }
         }

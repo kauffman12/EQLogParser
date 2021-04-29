@@ -146,7 +146,7 @@
         <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="True" MinWidth="58" Width="58*"/>
         <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="True" MinWidth="64" Width="64*"/>
         <DataGridTextColumn Binding="{Binding Special}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Special" IsReadOnly="True" CanUserReorder="True" MinWidth="64" Width="64*"/>
-        <DataGridTextColumn Binding="{Binding BaneHits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="True" MinWidth="54" Width="54*"/>
+        <DataGridTextColumn Visibility="Hidden" Binding="{Binding BaneHits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="True" MinWidth="54" Width="54*"/>
         <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="True" MinWidth="90" Width="90*" />
       </DataGrid.Columns>
       <DataGrid.RowDetailsTemplate>
@@ -170,7 +170,7 @@
               <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
               <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
               <DataGridTextColumn Binding="{Binding Special}" ClipboardContentBinding="{x:Null}" Header="# Slain" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding BaneHits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="False"/>
+              <DataGridTextColumn Visibility="Hidden" Binding="{Binding BaneHits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="False"/>
               <DataGridTextColumn Binding="{Binding ClassName}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
             </DataGrid.Columns>
           </datagrid:ThemedDataGrid>

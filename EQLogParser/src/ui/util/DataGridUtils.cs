@@ -189,7 +189,7 @@ namespace EQLogParser
             selectedCount += visible ? 1 : 0;
             list.Add(new ComboBoxItemDetails { Text = column.Header as string, IsChecked = visible });
 
-            if (indexesCache.ContainsKey(header))
+            if (indexesCache.ContainsKey(header) && column.DisplayIndex != indexesCache[header])
             {
               column.DisplayIndex = indexesCache[header];
             }
@@ -225,18 +225,38 @@ namespace EQLogParser
           {
             if (cache.ContainsKey(header))
             {
-              dataGrid.Columns[i].Visibility = Visibility.Visible;
+              if (dataGrid.Columns[i].Visibility != Visibility.Visible)
+              {
+                dataGrid.Columns[i].Visibility = Visibility.Visible;
+              }
+
               if (children != null)
               {
-                children.ForEach(child => child.Columns[i].Visibility = Visibility.Visible);
+                children.ForEach(child =>
+                {
+                  if (child.Columns[i].Visibility != Visibility.Visible)
+                  {
+                    child.Columns[i].Visibility = Visibility.Visible;
+                  }
+                });
               }
             }
             else
             {
-              dataGrid.Columns[i].Visibility = Visibility.Hidden;
+              if (dataGrid.Columns[i].Visibility != Visibility.Hidden)
+              {
+                dataGrid.Columns[i].Visibility = Visibility.Hidden;
+              }
+
               if (children != null)
               {
-                children.ForEach(child => child.Columns[i].Visibility = Visibility.Hidden);
+                children.ForEach(child =>
+                {
+                  if (child.Columns[i].Visibility != Visibility.Hidden)
+                  {
+                    child.Columns[i].Visibility = Visibility.Hidden;
+                  }
+                });
               }
             }
           }

@@ -217,7 +217,12 @@ namespace EQLogParser
     public uint Max { get; set; }
     public uint BaneHits { get; set; }
     public uint Hits { get; set; }
+    public uint AssHits { get; set; }
     public uint CritHits { get; set; }
+    public uint DoubleBowHits { get; set; }
+    public uint FlurryHits { get; set; }
+
+    public uint HeadHits { get; set; }
     public uint LuckyHits { get; set; }
     public uint MeleeAttempts { get; set; }
     public uint MeleeHits { get; set; }
@@ -227,7 +232,9 @@ namespace EQLogParser
     public uint SlayHits { get; set; }
     public uint TwincastHits { get; set; }
     public long Total { get; set; }
+    public long TotalAss { get; set; }
     public long TotalCrit { get; set; }
+    public long TotalHead { get; set; }
     public long TotalLucky { get; set; }
     public long TotalRiposte { get; set; }
     public long TotalSlay { get; set; }
@@ -385,7 +392,9 @@ namespace EQLogParser
     public long AvgCrit { get; set; }
     public long AvgLucky { get; set; }
     public double CritRate { get; set; }
+    public double DoubleBowRate { get; set; }
     public double ExtraRate { get; set; }
+    public double FlurryRate { get; set; }
     public double MeleeAccRate { get; set; }
     public double MeleeHitRate { get; set; }
     public double LuckRate { get; set; }

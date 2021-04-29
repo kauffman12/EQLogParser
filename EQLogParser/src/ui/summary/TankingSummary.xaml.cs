@@ -20,7 +20,7 @@ namespace EQLogParser
     public TankingSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid, null, selectedColumns);
+      InitSummaryTable(title, dataGrid, selectedColumns);
 
       CurrentPetValue = showPets.IsChecked.Value;
       var list = PlayerManager.Instance.GetClassList();

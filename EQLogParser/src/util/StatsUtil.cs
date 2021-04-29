@@ -320,14 +320,20 @@ namespace EQLogParser
         to.MeleeAttempts += from.MeleeAttempts;
         to.MeleeHits += from.MeleeHits;
         to.Total += from.Total;
+        to.TotalAss += from.TotalAss;
         to.TotalCrit += from.TotalCrit;
+        to.TotalHead += from.TotalHead;
         to.TotalLucky += from.TotalLucky;
         to.TotalRiposte += from.TotalRiposte;
         to.TotalSlay += from.TotalSlay;
         to.Hits += from.Hits;
         to.Max = Math.Max(to.Max, from.Max);
         to.Extra += from.Extra;
+        to.AssHits += from.AssHits;
         to.CritHits += from.CritHits;
+        to.DoubleBowHits = from.DoubleBowHits;
+        to.FlurryHits += from.FlurryHits;
+        to.HeadHits += from.HeadHits;
         to.LuckyHits += from.LuckyHits;
         to.TwincastHits += from.TwincastHits;
         to.Resists += from.Resists;
@@ -367,6 +373,8 @@ namespace EQLogParser
 
         if (stats.MeleeHits > 0)
         {
+          stats.DoubleBowRate = Math.Round(Convert.ToDouble(stats.DoubleBowHits) / stats.MeleeHits * 100, 2);
+          stats.FlurryRate = Math.Round(Convert.ToDouble(stats.FlurryHits) / stats.MeleeHits * 100, 2);
           stats.StrikethroughRate = Math.Round(Convert.ToDouble(stats.StrikethroughHits) / stats.MeleeHits * 100, 2);
           stats.RiposteRate = Math.Round(Convert.ToDouble(stats.RiposteHits) / stats.MeleeHits * 100, 2);
           stats.RampageRate = Math.Round(Convert.ToDouble(stats.RampageHits) / stats.MeleeHits * 100, 2);

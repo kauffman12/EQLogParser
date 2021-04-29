@@ -183,6 +183,9 @@
   <data name="PAL" xml:space="preserve">
     <value>Paladin</value>
   </data>
+  <data name="RESTORE_TABLE_COLUMNS" xml:space="preserve">
+    <value>Default Table Columns Restored!</value>
+  </data>
   <data name="RNG" xml:space="preserve">
     <value>Ranger</value>
   </data>

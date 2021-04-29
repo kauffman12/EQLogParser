@@ -455,7 +455,7 @@
     
     <!-- Tooltips -->
     <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Based on Assassinate, Crippling Blow, Critical, Deadly Strike, Finishing Blow, and Headshot" />
+      <Setter Property="ToolTip" Value="Based on Crippling Blow, Critical, Deadly Strike, and Finishing Blow" />
     </Style>
     <Style x:Key="OverHealColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Amount of Healing in Excess of what was Needed" />

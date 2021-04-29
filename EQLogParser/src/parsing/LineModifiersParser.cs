@@ -26,7 +26,11 @@ namespace EQLogParser
     private const int RAMPAGE = 8;
     private const int STRIKETHROUGH = 16;
     private const int RIPOSTE = 32;
-    private const int SLAY = 64;
+    private const int ASSASSINATE = 64;
+    private const int HEADSHOT = 128;
+    private const int SLAY = 256;
+    private const int DOUBLEBOW = 512;
+    private const int FLURRY = 1024;
 
     private static readonly ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
 
@@ -54,6 +58,58 @@ namespace EQLogParser
     {
       if (record.ModifiersMask > -1)
       {
+        if ((record.ModifiersMask & ASSASSINATE) != 0)
+        {
+          playerStats.AssHits++;
+          playerStats.TotalAss += record.Total;
+
+          if (theHit != null)
+          {
+            theHit.AssHits++;
+          }
+        }
+
+        if ((record.ModifiersMask & DOUBLEBOW) != 0)
+        {
+          playerStats.DoubleBowHits++;
+
+          if (theHit != null)
+          {
+            theHit.DoubleBowHits++;
+          }
+        }
+
+        if ((record.ModifiersMask & FLURRY) != 0)
+        {
+          playerStats.FlurryHits++;
+
+          if (theHit != null)
+          {
+            theHit.FlurryHits++;
+          }
+        }
+
+        if ((record.ModifiersMask & HEADSHOT) != 0)
+        {
+          playerStats.HeadHits++;
+          playerStats.TotalHead += record.Total;
+
+          if (theHit != null)
+          {
+            theHit.HeadHits++;
+          }
+        }
+
+        if ((record.ModifiersMask & TWINCAST) != 0)
+        {
+          playerStats.TwincastHits++;
+
+          if (theHit != null)
+          {
+            theHit.TwincastHits++;
+          }
+        }
+
         if ((record.ModifiersMask & RAMPAGE) != 0)
         {
           playerStats.RampageHits++;
@@ -61,16 +117,6 @@ namespace EQLogParser
           if (theHit != null)
           {
             theHit.RampageHits++;
-          }
-        }
-
-        if ((record.ModifiersMask & STRIKETHROUGH) != 0)
-        {
-          playerStats.StrikethroughHits++;
-
-          if (theHit != null)
-          {
-            theHit.StrikethroughHits++;
           }
         }
 
@@ -86,6 +132,16 @@ namespace EQLogParser
           }
         }
 
+        if ((record.ModifiersMask & STRIKETHROUGH) != 0)
+        {
+          playerStats.StrikethroughHits++;
+
+          if (theHit != null)
+          {
+            theHit.StrikethroughHits++;
+          }
+        }
+
         if ((record.ModifiersMask & SLAY) != 0)
         {
           playerStats.SlayHits++;
@@ -94,16 +150,6 @@ namespace EQLogParser
           if (theHit != null)
           {
             theHit.SlayHits++;
-          }
-        }
-
-        if ((record.ModifiersMask & TWINCAST) != 0)
-        {
-          playerStats.TwincastHits++;
-
-          if (theHit != null)
-          {
-            theHit.TwincastHits++;
           }
         }
 
@@ -182,17 +228,29 @@ namespace EQLogParser
 
           switch (temp)
           {
+            case "Assassinate":
+              result |= ASSASSINATE;
+              break;
+            case "Double Bow Shot":
+              result |= DOUBLEBOW;
+              break;
+            case "Flurry":
+              result |= FLURRY;
+              break;
+            case "Headshot":
+              result |= HEADSHOT;
+              break;
             case "Twincast":
               result |= TWINCAST;
               break;
             case "Rampage":
               result |= RAMPAGE;
               break;
-            case "Strikethrough":
-              result |= STRIKETHROUGH;
-              break;
             case "Riposte":
               result |= RIPOSTE;
+              break;
+            case "Strikethrough":
+              result |= STRIKETHROUGH;
               break;
             case "Slay Undead":
               result |= SLAY;

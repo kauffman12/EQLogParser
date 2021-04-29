@@ -33,6 +33,7 @@ namespace EQLogParser
     internal DamageBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
+      InitBreakdownTable(dataGrid, selectedColumns);
       titleLabel.Content = currentStats?.ShortTitle;
       RaidStats = currentStats.RaidStats;
       ChildStats = currentStats.Children;
@@ -102,7 +103,7 @@ namespace EQLogParser
                 });
               }
 
-              Dispatcher.InvokeAsync(() => playerDamageDataGrid.ItemsSource = list);
+              Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
 
               if (CurrentColumn != null)
               {
