@@ -254,7 +254,7 @@ namespace EQLogParser
 
       var spellTypeCheck = CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.IsBeneficial) || (CurrentSpellType == 2 && !spellData.IsBeneficial);
       var selfOnlyCheck = !received || CurrentShowSelfOnly == true || !string.IsNullOrEmpty(spellData.LandsOnOther);
-      var procCheck = received || CurrentShowProcs == true || !spellData.IsProc;
+      var procCheck = received || CurrentShowProcs == true || spellData.Proc == 0;
 
       if (spellTypeCheck && selfOnlyCheck && procCheck)
       {

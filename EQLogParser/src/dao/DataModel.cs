@@ -318,8 +318,7 @@ namespace EQLogParser
     public string LandsOnOther { get; set; }
     public bool SongWindow { get; set; }
     public string WearOff { get; set; }
-
-    public bool IsProc { get; set; }
+    public ushort Proc { get; set; }
     public ushort Adps { get; set; }
   }
 
