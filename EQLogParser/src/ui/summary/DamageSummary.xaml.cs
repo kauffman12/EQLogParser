@@ -107,7 +107,6 @@ namespace EQLogParser
             {
               title.Content = CurrentStats.FullTitle;
               UpdateView();
-              timeChooser.IsEnabled = CurrentGroupCount == 1;
               timeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds);
               timeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
             }
@@ -387,7 +386,7 @@ namespace EQLogParser
     {
       if (dataGrid != null && CurrentStats?.ExpandedStatsList != null)
       {
-        petOrPlayerList.IsEnabled = classesList.IsEnabled = false;
+        petOrPlayerList.IsEnabled = classesList.IsEnabled = timeChooser.IsEnabled = false;
         Task.Delay(20).ContinueWith(task =>
         {
           // until i figure out something better just re-rank everything
@@ -402,6 +401,7 @@ namespace EQLogParser
             var view = CollectionViewSource.GetDefaultView(statsList);
             dataGrid.ItemsSource = SetFilter(view);
             petOrPlayerList.IsEnabled = true;
+            timeChooser.IsEnabled = CurrentGroupCount == 1;
             classesList.IsEnabled = CurrentPetOrPlayerOption != 2;
           });
         }, TaskScheduler.Default);

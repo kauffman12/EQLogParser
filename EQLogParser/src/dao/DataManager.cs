@@ -61,10 +61,10 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static DataManager Instance = new DataManager();
-    internal event EventHandler<Fight> EventsNewInactiveFight;
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
     internal event EventHandler<Fight> EventsNewNonTankingFight;
+    internal event EventHandler<Fight> EventsNewOverlayFight;
     internal event EventHandler<Fight> EventsUpdateFight;
     internal event EventHandler<bool> EventsClearedActiveData;
 
@@ -104,6 +104,8 @@ namespace EQLogParser
 
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<int, Fight> OverlayFights = new ConcurrentDictionary<int, Fight>();
+
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     private readonly ConcurrentDictionary<string, string> RanksCache = new ConcurrentDictionary<string, string>();
 
@@ -262,6 +264,7 @@ namespace EQLogParser
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
     internal List<Fight> GetActiveFights() => ActiveFights.Values.ToList();
+    internal List<Fight> GetOverlayFights() => OverlayFights.Values.ToList();
     internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
     internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
     internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
@@ -681,12 +684,10 @@ namespace EQLogParser
     internal bool RemoveActiveFight(string name)
     {
       bool removed = ActiveFights.TryRemove(name, out Fight fight);
-
       if (removed)
       {
-        EventsNewInactiveFight?.Invoke(this, fight);
+        fight.Dead = true;
       }
-
       return removed;
     }
 
@@ -712,6 +713,24 @@ namespace EQLogParser
       {
         EventsNewNonTankingFight?.Invoke(this, fight);
       }
+
+      if (fight.DamageHits > 0)
+      {
+        lock (OverlayFights)
+        {
+          OverlayFights[fight.Id] = fight;
+          EventsNewOverlayFight?.Invoke(this, fight);
+        }
+      }
+    }
+
+    internal void ResetOverlayFights()
+    {
+      lock (OverlayFights)
+      {
+        OverlayFights.Values.ToList().ForEach(fight => fight.PlayerTotals.Clear());
+        OverlayFights.Clear();
+      }
     }
 
     internal void Clear()
@@ -721,6 +740,7 @@ namespace EQLogParser
         LastSpellIndex = -1;
         ActiveFights.Clear();
         LifetimeFights.Clear();
+        OverlayFights.Clear();
         AllDeathBlocks.Clear();
         AllMiscBlocks.Clear();
         AllSpellCastBlocks.Clear();
@@ -764,12 +784,26 @@ namespace EQLogParser
 
     private void RemoveFight(string name)
     {
-      bool removed = ActiveFights.TryRemove(name, out Fight npc);
-      removed = LifetimeFights.TryRemove(name, out byte bnpc) || removed;
-
-      if (removed)
+      if (!string.IsNullOrEmpty(name))
       {
-        EventsRemovedFight?.Invoke(this, name);
+        bool removed = ActiveFights.TryRemove(name, out Fight npc);
+        removed = LifetimeFights.TryRemove(name, out byte bnpc) || removed;
+
+        if (removed)
+        {
+          EventsRemovedFight?.Invoke(this, name);
+        }
+
+        lock (OverlayFights)
+        {
+          OverlayFights.Values.ToList().ForEach(fight =>
+          {
+            if (fight.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+              OverlayFights.TryRemove(fight.Id, out Fight _);
+            }
+          });
+        }
       }
     }
 

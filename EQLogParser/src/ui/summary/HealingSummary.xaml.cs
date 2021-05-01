@@ -23,7 +23,7 @@ namespace EQLogParser
       InitSummaryTable(title, dataGrid, selectedColumns);
 
       var list = PlayerManager.Instance.GetClassList();
-      list.Insert(0, "All Classes");
+      list.Insert(0, Properties.Resources.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
@@ -53,7 +53,7 @@ namespace EQLogParser
             dataGrid.ItemsSource = null;
             break;
           case "COMPLETED":
-            CurrentStats = e.CombinedStats as CombinedStats;
+            CurrentStats = e.CombinedStats;
             CurrentGroups = e.Groups;
 
             if (CurrentStats == null)
