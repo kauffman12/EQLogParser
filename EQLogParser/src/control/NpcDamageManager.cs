@@ -1,39 +1,34 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace EQLogParser
 {
   class NpcDamageManager
   {
-    public static event EventHandler<DamageProcessedEvent> EventsPlayerAttackProcessed;
-
     internal double LastFightProcessTime = double.NaN;
     private int CurrentNpcID = 0;
+    private static Dictionary<string, bool> ValidCombo = new Dictionary<string, bool>();
 
-    public NpcDamageManager()
-    {
-      DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
-    }
+    public NpcDamageManager() => DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
 
-    ~NpcDamageManager()
-    {
-      DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
-    }
+    ~NpcDamageManager() => DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
 
-    internal void ResetTime()
-    {
-      LastFightProcessTime = double.NaN;
-    }
+    internal void ResetTime() => LastFightProcessTime = double.NaN;
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
       if (LastFightProcessTime != processed.BeginTime)
       {
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
+        ValidCombo.Clear();
       }
 
-      if (IsValidAttack(processed.Record, out bool defender))
+      bool defender;
+      string comboKey = processed.Record.Attacker + "=" + processed.Record.Defender;
+      if (ValidCombo.TryGetValue(comboKey, out defender) || IsValidAttack(processed.Record, out defender))
       {
+        ValidCombo[comboKey] = defender;
         bool isNonTankingFight = false;
         string origTimeString = processed.OrigTimeString.Substring(4, 15);
 
@@ -95,11 +90,6 @@ namespace EQLogParser
         fight.TooltipText = string.Format(CultureInfo.CurrentCulture, "#Hits To Players: {0}, #Hits From Players: {1}, Time Alive: {2}s", fight.TankHits, fight.DamageHits, ttl);
 
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
-
-        if (defender)
-        {
-          EventsPlayerAttackProcessed?.Invoke(processed.Record, processed);
-        }
       }
   }
 
@@ -147,7 +137,7 @@ namespace EQLogParser
         var attackerSpell = DataManager.Instance.GetSpellByName(record.Attacker);
         var defenderSpell = DataManager.Instance.GetSpellByName(record.Defender);
 
-        var isAttackerPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
+        var isAttackerPlayer =  record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
         var isDefenderPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Defender);
         var isAttackerNpc = !isAttackerPlayer && (DataManager.Instance.IsKnownNpc(record.Attacker) 
           || (attackerSpell != null && attackerSpell.IsBeneficial == false));

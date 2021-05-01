@@ -96,7 +96,7 @@ namespace EQLogParser
         SearchTextTimer.Stop();
       };
 
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       UpdateTimer.Tick += (sender, e) => ProcessFights();
       UpdateTimer.Start();
 
