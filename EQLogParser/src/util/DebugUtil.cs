@@ -6,11 +6,11 @@ namespace EQLogParser
 {
   class DebugUtil
   {
-    private static Dictionary<long, LineInfo> UnprocessedLines = new Dictionary<long, LineInfo>();
-    private static object LockObject = new object();
-    private static string UNPROCESSED_LINES_FILE = "UnprocessedLines.log";
+    private static readonly Dictionary<long, LineInfo> UnprocessedLines = new Dictionary<long, LineInfo>();
+    private static readonly object LockObject = new object();
+    private const string UNPROCESSED_LINES_FILE = "UnprocessedLines.log";
     private static StreamWriter Output;
-    private static ConcurrentDictionary<long, string> LineTypes= new ConcurrentDictionary<long, string>();
+    private static readonly ConcurrentDictionary<long, string> LineTypes = new ConcurrentDictionary<long, string>();
 
     private DebugUtil()
     {
@@ -60,7 +60,7 @@ namespace EQLogParser
         lock (LockObject)
         {
           if (handled)
-          {           
+          {
             UnprocessedLines.Remove(lineNum);
           }
           else
@@ -84,7 +84,7 @@ namespace EQLogParser
     {
       if (ConfigUtil.Debug)
       {
-        lock(LockObject)
+        lock (LockObject)
         {
           Output.WriteLine(line);
         }

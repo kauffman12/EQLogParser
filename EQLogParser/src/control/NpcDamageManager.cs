@@ -8,7 +8,7 @@ namespace EQLogParser
   {
     internal double LastFightProcessTime = double.NaN;
     private int CurrentNpcID = 0;
-    private static Dictionary<string, bool> ValidCombo = new Dictionary<string, bool>();
+    private readonly static Dictionary<string, bool> ValidCombo = new Dictionary<string, bool>();
 
     public NpcDamageManager() => DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
 
@@ -24,9 +24,8 @@ namespace EQLogParser
         ValidCombo.Clear();
       }
 
-      bool defender;
       string comboKey = processed.Record.Attacker + "=" + processed.Record.Defender;
-      if (ValidCombo.TryGetValue(comboKey, out defender) || IsValidAttack(processed.Record, out defender))
+      if (ValidCombo.TryGetValue(comboKey, out bool defender) || IsValidAttack(processed.Record, out defender))
       {
         ValidCombo[comboKey] = defender;
         bool isNonTankingFight = false;
@@ -47,7 +46,7 @@ namespace EQLogParser
             fight.Total += processed.Record.Total;
             isNonTankingFight = fight.DamageHits == 1;
 
-            var attacker = processed.Record.AttackerOwner == null ? processed.Record.Attacker : processed.Record.AttackerOwner;
+            var attacker = processed.Record.AttackerOwner ?? processed.Record.Attacker;
             if (fight.PlayerTotals.TryGetValue(attacker, out FightTotalDamage total))
             {
               total.Damage += (processed.Record.Type == Labels.BANE) ? 0 : processed.Record.Total;
@@ -91,7 +90,7 @@ namespace EQLogParser
 
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
       }
-  }
+    }
 
     private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender)
     {
@@ -137,11 +136,11 @@ namespace EQLogParser
         var attackerSpell = DataManager.Instance.GetSpellByName(record.Attacker);
         var defenderSpell = DataManager.Instance.GetSpellByName(record.Defender);
 
-        var isAttackerPlayer =  record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
+        var isAttackerPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
         var isDefenderPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Defender);
-        var isAttackerNpc = !isAttackerPlayer && (DataManager.Instance.IsKnownNpc(record.Attacker) 
+        var isAttackerNpc = !isAttackerPlayer && (DataManager.Instance.IsKnownNpc(record.Attacker)
           || (attackerSpell != null && attackerSpell.IsBeneficial == false));
-        var isDefenderNpc = !isDefenderPlayer && (DataManager.Instance.IsKnownNpc(record.Defender) 
+        var isDefenderNpc = !isDefenderPlayer && (DataManager.Instance.IsKnownNpc(record.Defender)
           || (defenderSpell != null && defenderSpell.IsBeneficial == false));
 
         if (isDefenderNpc && !isAttackerNpc)

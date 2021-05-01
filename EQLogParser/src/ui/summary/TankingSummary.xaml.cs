@@ -115,7 +115,7 @@ namespace EQLogParser
               dataGrid.ItemsSource = null;
               break;
             case "COMPLETED":
-              CurrentStats = e.CombinedStats as CombinedStats;
+              CurrentStats = e.CombinedStats;
               CurrentGroups = e.Groups;
 
               if (CurrentStats == null)

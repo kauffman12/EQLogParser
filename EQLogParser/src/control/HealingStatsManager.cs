@@ -54,7 +54,7 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options, bool updatedAoEOption = false)
     {
-      lock(HealingGroups)
+      lock (HealingGroups)
       {
         if (HealingGroups.Count > 0)
         {
@@ -86,7 +86,7 @@ namespace EQLogParser
           Title = options.Name;
 
           Selected.ForEach(fight => RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime)));
-  
+
           if (RaidTotals.Ranges.TimeSegments.Count > 0)
           {
             // calculate totals first since it can modify the ranges
@@ -228,7 +228,7 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateStats(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> calc, 
+    private void UpdateStats(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> calc,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> secondary)
     {
       if (calc.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> ranges))
@@ -409,7 +409,7 @@ namespace EQLogParser
 
           details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
           var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-          title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
+          title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
         }
         else if (type == Labels.TOPHEALSPARSE)
         {
@@ -427,7 +427,7 @@ namespace EQLogParser
             string totalTitle = selected[0].Name + "'s Top Heals";
             details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
             var timeTitle = showTime ? currentStats.TimeTitle : "";
-            title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, totalTitle);
+            title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, totalTitle);
           }
         }
       }

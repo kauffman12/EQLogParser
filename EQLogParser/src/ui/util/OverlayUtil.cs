@@ -54,7 +54,7 @@ namespace EQLogParser
     {
       IsDamageOverlayEnabled = !IsDamageOverlayEnabled;
       ConfigUtil.SetSetting("IsDamageOverlayEnabled", IsDamageOverlayEnabled.ToString(CultureInfo.CurrentCulture));
- 
+
       if (IsDamageOverlayEnabled)
       {
         OpenOverlay(dispatcher, true, false);

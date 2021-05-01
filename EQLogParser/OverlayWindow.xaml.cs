@@ -311,7 +311,7 @@ namespace EQLogParser
           else if (Active)
           {
             TitleBlock.Text = Stats.TargetTitle;
-            TitleDamageBlock.Text = string.Format(CultureInfo.CurrentCulture, "{0} [{1}s @{2}]", 
+            TitleDamageBlock.Text = string.Format(CultureInfo.CurrentCulture, "{0} [{1}s @{2}]",
               StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
 
             long total = 0;
@@ -383,7 +383,7 @@ namespace EQLogParser
                   me = Stats.StatsList[i].Total;
                 }
 
-                var damage = StatsUtil.FormatTotals(Stats.StatsList[i].Total) + " [" + Stats.StatsList[i].TotalSeconds.ToString(CultureInfo.CurrentCulture) 
+                var damage = StatsUtil.FormatTotals(Stats.StatsList[i].Total) + " [" + Stats.StatsList[i].TotalSeconds.ToString(CultureInfo.CurrentCulture)
                   + "s @" + StatsUtil.FormatTotals(Stats.StatsList[i].DPS) + "]";
                 DamageBlockList[i].Text = damage;
                 goodRowCount++;
@@ -647,7 +647,7 @@ namespace EQLogParser
         SetFont(size);
       }
     }
-   
+
     private void SaveClick(object sender, RoutedEventArgs e)
     {
       if (!double.IsNaN(overlayCanvas.ActualHeight) && overlayCanvas.ActualHeight > 0)

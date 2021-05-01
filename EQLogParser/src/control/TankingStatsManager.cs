@@ -296,7 +296,7 @@ namespace EQLogParser
 
           details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
           var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-          title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
+          title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
         }
         else if (type == Labels.RECEIVEDHEALPARSE)
         {
@@ -316,7 +316,7 @@ namespace EQLogParser
             string totalTitle = showTotals ? (selected[0].Name + " Received " + StatsUtil.FormatTotals(totals) + " Healing") : (selected[0].Name + " Received Healing");
             details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
             var timeTitle = showTime ? currentStats.TimeTitle : "";
-            title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, totalTitle);
+            title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, totalTitle);
           }
         }
       }

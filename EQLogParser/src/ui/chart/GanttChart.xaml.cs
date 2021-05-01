@@ -1,5 +1,4 @@
 ﻿using FontAwesome.WPF;
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -240,7 +239,7 @@ namespace EQLogParser
       {
         int paddingTop = 4;
         int padding = 8;
-        
+
         var titleHeight = titleLabel1.ActualHeight - titleLabel1.Padding.Top * 2;
         var height = (int)content.ActualHeight + (int)contentHeader.ActualHeight + (int)titleHeight;
         var width = (int)contentLabels.ActualWidth + (int)content.ActualWidth;

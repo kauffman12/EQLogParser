@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace EQLogParser
@@ -39,9 +38,9 @@ namespace EQLogParser
 
     private static readonly Dictionary<string, SpellResist> SpellResistMap = new Dictionary<string, SpellResist>
     {
-      { "fire", SpellResist.FIRE }, { "cold", SpellResist.COLD }, { "poison", SpellResist.POISON }, 
+      { "fire", SpellResist.FIRE }, { "cold", SpellResist.COLD }, { "poison", SpellResist.POISON },
       { "magic", SpellResist.MAGIC }, { "disease", SpellResist.DISEASE }, { "unresistable", SpellResist.UNRESISTABLE },
-      { "chromatic", SpellResist.LOWEST }, { "physical", SpellResist.PHYSICAL }, { "corruption", SpellResist.CORRUPTION }, 
+      { "chromatic", SpellResist.LOWEST }, { "physical", SpellResist.PHYSICAL }, { "corruption", SpellResist.CORRUPTION },
       { "prismatic", SpellResist.AVERAGE },
     };
 
@@ -54,7 +53,7 @@ namespace EQLogParser
 
     public static void CheckSlainQueue(double currentTime)
     {
-      lock(SlainQueue)
+      lock (SlainQueue)
       {
         // handle Slain queue
         if (!double.IsNaN(SlainTime) && (currentTime > SlainTime))
@@ -106,7 +105,7 @@ namespace EQLogParser
               handled = true;
             }
           }
-        
+
           if (!handled)
           {
             int byIndex = -1, forIndex = -1, pointsOfIndex = -1, endDamage = -1, byDamage = -1, extraIndex = -1;
@@ -192,7 +191,7 @@ namespace EQLogParser
                     break;
                   case "shield!":
                   case "staff!":
-                    missType = (i > 5 && stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "with" && 
+                    missType = (i > 5 && stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "with" &&
                       split[i - 3].StartsWith("block", StringComparison.OrdinalIgnoreCase)) ? 0 : missType;
                     break;
                   case "dodge!":
@@ -463,7 +462,7 @@ namespace EQLogParser
       return handled;
     }
 
-    private static bool CreateDamageRecord(LineData lineData, string[] split, int stop, string attacker, string defender, 
+    private static bool CreateDamageRecord(LineData lineData, string[] split, int stop, string attacker, string defender,
       uint damage, string type, string subType, SpellResist resist = SpellResist.UNDEFINED)
     {
       bool success = false;
@@ -522,7 +521,7 @@ namespace EQLogParser
         EventsDamageProcessed?.Invoke(record, e);
         success = true;
 
-        if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) && record.SubType.Contains(special)) is string key 
+        if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) && record.SubType.Contains(special)) is string key
           && !string.IsNullOrEmpty(key))
         {
           DataManager.Instance.AddSpecial(new SpecialSpell() { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
@@ -625,7 +624,7 @@ namespace EQLogParser
 
     private static bool InIgnoreList(string name)
     {
-      return name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || CheckEyeRegex.IsMatch(name) || 
+      return name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || CheckEyeRegex.IsMatch(name) ||
         ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
     }
   }

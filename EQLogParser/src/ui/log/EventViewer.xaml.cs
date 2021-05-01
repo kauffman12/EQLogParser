@@ -18,16 +18,16 @@ namespace EQLogParser
   public partial class EventViewer : UserControl, IDisposable
   {
     private static bool Running = false;
-    private static object CollectionLock = new object();
+    private static readonly object CollectionLock = new object();
     private const string ZONE_EVENT = "Entered Area";
     private const string KILLSHOT_EVENT = "Kill Shot";
     private const string PLAYERSLAIN_EVENT = "Player Slain";
     private const string PLAYERKILL_EVENT = "Player Killing";
     private const string MEZBREAK_EVENT = "Mez Break";
 
-    private ObservableCollection<EventRow> EventRows = new ObservableCollection<EventRow>();
-    private ICollectionView EventView;
-    private DispatcherTimer FilterTimer;
+    private readonly ObservableCollection<EventRow> EventRows = new ObservableCollection<EventRow>();
+    private readonly ICollectionView EventView;
+    private readonly DispatcherTimer FilterTimer;
     private bool CurrentShowMezBreaks = true;
     private bool CurrentShowEnterZone = true;
     private bool CurrentShowKillShots = true;
@@ -45,7 +45,7 @@ namespace EQLogParser
         bool result = false;
         if (obj is EventRow row)
         {
-          result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots && 
+          result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots &&
             row.Event == KILLSHOT_EVENT || CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT || CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT;
 
           if (result && !string.IsNullOrEmpty(eventFilter.Text) && eventFilter.Text != Properties.Resources.EVENT_FILTER_TEXT)

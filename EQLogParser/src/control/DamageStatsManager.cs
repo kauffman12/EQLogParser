@@ -29,7 +29,7 @@ namespace EQLogParser
 
     internal DamageStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) => 
+      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
       {
         lock (DamageGroupIds)
         {
@@ -48,7 +48,7 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      lock(DamageGroups)
+      lock (DamageGroups)
       {
         if (DamageGroups.Count > 0)
         {
@@ -412,7 +412,7 @@ namespace EQLogParser
                             childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
                           }
 
-                          
+
                           childrenStats[aggregateName][stats.Name] = stats;
                           stats.IsTopLevel = false;
                         }
@@ -651,7 +651,7 @@ namespace EQLogParser
 
         details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
         var timeTitle = showTime ? currentStats.TimeTitle : "";
-        title = StatsUtil.FormatTitle(customTitle == null ? currentStats.TargetTitle : customTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
+        title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
       }
 
       return new StatsSummary { Title = title, RankedPlayers = details };

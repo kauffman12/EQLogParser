@@ -5,27 +5,25 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class ActionProcessor<T>
+  class ActionProcessor
   {
-    public delegate void ProcessActionCallback(T data);
-    private List<T> Queue = new List<T>();
-    private List<T> temp = null;
+    public delegate void ProcessActionCallback(LineData data);
+    private List<LineData> Queue = new List<LineData>();
+    private List<LineData> temp = null;
     private readonly object QueueLock = new object();
     private readonly ProcessActionCallback callback;
     private bool Stopped = false;
     private readonly int DelayTime = 10;
-    private string Name;
     private long LinesAdded = 0;
     private long LinesProcessed = 0;
 
-    public ActionProcessor(string name, ProcessActionCallback callback)
+    public ActionProcessor(ProcessActionCallback callback)
     {
-      Name = name;
       this.callback = callback;
       Task.Run(() => Process());
     }
 
-    public void Add(T data)
+    public void Add(LineData data)
     {
       lock (QueueLock)
       {
@@ -65,7 +63,7 @@ namespace EQLogParser
           if (Queue.Count > 0)
           {
             temp = Queue;
-            Queue = new List<T>();
+            Queue = new List<LineData>();
           }
           else
           {

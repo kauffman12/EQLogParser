@@ -133,8 +133,8 @@ namespace EQLogParser
       return y;
     }
 
-    internal static void UpdateRaidTimeRanges(Fight fight, ConcurrentDictionary<string, TimeRange> playerTimeRanges, 
-      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges,  bool includeInitialTanking = false)
+    internal static void UpdateRaidTimeRanges(Fight fight, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, bool includeInitialTanking = false)
     {
       if (includeInitialTanking)
       {
@@ -160,7 +160,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void AddSubTimeEntry(ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, 
+    internal static void AddSubTimeEntry(ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges,
       KeyValuePair<string, Dictionary<string, TimeSegment>> subEntry)
     {
       if (!playerSubTimeRanges.TryGetValue(subEntry.Key, out ConcurrentDictionary<string, TimeRange> ranges))
@@ -188,7 +188,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges, 
+    internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double maxTime = -1)
     {
       if (playerTimeRanges.TryGetValue(stats.Name, out TimeRange range))

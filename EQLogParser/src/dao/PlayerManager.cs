@@ -111,7 +111,7 @@ namespace EQLogParser
           }
         }
         else if (!PetToPlayer.ContainsKey(name))
-        {     
+        {
           AddPetToPlayer(name, Labels.UNASSIGNED);
         }
 
@@ -182,7 +182,7 @@ namespace EQLogParser
 
       return player;
     }
-    
+
     internal bool IsVerifiedPet(string name)
     {
       bool found = false;

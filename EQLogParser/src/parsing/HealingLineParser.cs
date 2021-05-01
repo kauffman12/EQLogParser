@@ -223,7 +223,7 @@ namespace EQLogParser
           {
             healer = Labels.UNK;
           }
-          
+
           if (!string.IsNullOrEmpty(healer) && heal != 0)
           {
             record = new HealRecord()

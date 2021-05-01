@@ -391,7 +391,7 @@ namespace EQLogParser
         {
           // until i figure out something better just re-rank everything
           var statsList = CurrentPetOrPlayerOption == 0 ? CurrentStats.StatsList : CurrentStats.ExpandedStatsList;
-          for (int i=0; i<statsList.Count; i++)
+          for (int i = 0; i < statsList.Count; i++)
           {
             statsList[i].Rank = Convert.ToUInt16(i + 1);
           }

@@ -22,13 +22,12 @@ namespace EQLogParser
   public partial class FightTable : UserControl
   {
     // events
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1009:DeclareEventHandlersCorrectly")]
     public event EventHandler<IList> EventsSelectionChange;
 
     // brushes
-    private static SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
-    private static SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(35, 35, 37));
-    private static SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
+    private static readonly SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
+    private static readonly SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(35, 35, 37));
+    private static readonly SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
 
     // time before creating new group
     public const int GROUPTIMEOUT = 120;
@@ -39,21 +38,21 @@ namespace EQLogParser
     private static DataGridRow CurrentSearchRow = null;
     private static bool NeedSelectionChange = false;
 
-    private ICollectionView View;
-    private ICollectionView NonTankingView;
-    private ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
-    private ObservableCollection<Fight> NonTankingFights = new ObservableCollection<Fight>();
+    private readonly ICollectionView View;
+    private readonly ICollectionView NonTankingView;
+    private readonly ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
+    private readonly ObservableCollection<Fight> NonTankingFights = new ObservableCollection<Fight>();
     private bool CurrentShowBreaks;
     private int CurrentGroup = 1;
     private int CurrentNonTankingGroup = 1;
     private bool NeedRefresh = false;
     private bool IsEveryOther = false;
 
-    private List<Fight> FightsToProcess = new List<Fight>();
-    private List<Fight> NonTankingFightsToProcess = new List<Fight>();
-    private DispatcherTimer SelectionTimer;
-    private DispatcherTimer SearchTextTimer;
-    private DispatcherTimer UpdateTimer;
+    private readonly List<Fight> FightsToProcess = new List<Fight>();
+    private readonly List<Fight> NonTankingFightsToProcess = new List<Fight>();
+    private readonly DispatcherTimer SelectionTimer;
+    private readonly DispatcherTimer SearchTextTimer;
+    private readonly DispatcherTimer UpdateTimer;
 
     public FightTable()
     {
@@ -63,7 +62,7 @@ namespace EQLogParser
       fightSearchBox.FontStyle = FontStyles.Italic;
       fightSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
 
-      fightMenuItemClear.IsEnabled = fightMenuItemSelectAll.IsEnabled = fightMenuItemUnselectAll.IsEnabled = 
+      fightMenuItemClear.IsEnabled = fightMenuItemSelectAll.IsEnabled = fightMenuItemUnselectAll.IsEnabled =
       fightMenuItemSelectFight.IsEnabled = fightMenuItemUnselectFight.IsEnabled = fightMenuItemSetPet.IsEnabled = fightMenuItemSetPlayer.IsEnabled = false;
 
       View = CollectionViewSource.GetDefaultView(Fights);
@@ -136,7 +135,7 @@ namespace EQLogParser
 
     private void AddFight(Fight fight)
     {
-      lock(FightsToProcess)
+      lock (FightsToProcess)
       {
         FightsToProcess.Add(fight);
       }
@@ -226,7 +225,7 @@ namespace EQLogParser
       if (processNonTankingList != null)
       {
         double lastNonTankingTime = double.NaN;
-        
+
         int searchAttempts = 0;
         foreach (var fight in NonTankingFights.Reverse())
         {
@@ -364,7 +363,7 @@ namespace EQLogParser
 
       var selected = callingDataGrid.SelectedItem as Fight;
       fightMenuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && !selected.IsInactivity;
-      fightMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && !selected.IsInactivity && 
+      fightMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && !selected.IsInactivity &&
         PlayerManager.Instance.IsPossiblePlayerName((callingDataGrid.SelectedItem as Fight)?.Name);
     }
 

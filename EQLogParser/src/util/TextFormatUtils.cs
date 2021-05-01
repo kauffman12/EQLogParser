@@ -26,7 +26,7 @@ namespace EQLogParser
 
     private const string BB_GAMPARSE_SPELL_COUNT = "   --- {0} - {1}";
 
-    private static Dictionary<int, string> ROMAN = new Dictionary<int, string>()
+    private static readonly Dictionary<int, string> ROMAN = new Dictionary<int, string>()
     {
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };
@@ -136,8 +136,8 @@ namespace EQLogParser
         SaveFileDialog saveFileDialog = new SaveFileDialog();
         string filter = "EQLogParser Summary (*.html)|*.html";
         saveFileDialog.Filter = filter;
-        
-        var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " " + tables.Values.First().GetTargetTitle();     
+
+        var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " " + tables.Values.First().GetTargetTitle();
         saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
 
         if (saveFileDialog.ShowDialog().Value)

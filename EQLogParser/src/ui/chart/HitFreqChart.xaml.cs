@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -22,7 +21,7 @@ namespace EQLogParser
     private const string CRIT_HITTYPE = "Critical";
     private const string NON_CRIT_HITTYPE = "Non-Critical";
     private Dictionary<string, List<HitFreqChartData>> ChartData = null;
-    private List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
+    private readonly List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
     private static bool Updating = false;
     private int PageSize = 24;
     private List<int> YValues;

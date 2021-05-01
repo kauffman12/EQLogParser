@@ -18,12 +18,13 @@ namespace EQLogParser
   /// </summary>
   public partial class EQLogViewer : UserControl, IDisposable
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static readonly List<string> Times = new List<string>() { "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Everything" };
     private static readonly DateUtil DateUtil = new DateUtil();
     private static bool Complete = true;
     private static bool Running = false;
-    private DispatcherTimer FilterTimer;
+    private readonly DispatcherTimer FilterTimer;
     private int UnFilteredCount;
     private Paragraph UnFiltered;
 
@@ -88,7 +89,7 @@ namespace EQLogParser
           {
             if (inline is Run run && run.Text != Environment.NewLine)
             {
-              if (logFilterModifier.SelectedIndex == 0 && run.Text.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 || 
+              if (logFilterModifier.SelectedIndex == 0 && run.Text.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 ||
               logFilterModifier.SelectedIndex == 1 && run.Text.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0)
               {
                 count++;
@@ -286,11 +287,11 @@ namespace EQLogParser
         }
         catch (IOException ioe)
         {
-          // do nothing
+          LOG.Error("Problem searching log file", ioe);
         }
         catch (OutOfMemoryException ome)
         {
-          // do nothing
+          LOG.Debug("Out of memory", ome);
         }
       }
       else if (f.Position != good)

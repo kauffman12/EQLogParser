@@ -246,9 +246,11 @@ namespace EQLogParser
 
     private void LoadChannels(string playerAndServer)
     {
-      List<ComboBoxItemDetails> items = new List<ComboBoxItemDetails>();
-      items.Add(new ComboBoxItemDetails { Text = "Select All" });
-      items.Add(new ComboBoxItemDetails { Text = "Unselect All" });
+      List<ComboBoxItemDetails> items = new List<ComboBoxItemDetails>
+      {
+        new ComboBoxItemDetails { Text = Properties.Resources.SELECT_ALL },
+        new ComboBoxItemDetails { Text = Properties.Resources.UNSELECT_ALL }
+      };
 
       int selectedCount = 0;
       ChatManager.GetChannels(playerAndServer).ForEach(chan =>
