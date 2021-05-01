@@ -137,7 +137,7 @@ namespace EQLogParser
         var defenderSpell = DataManager.Instance.GetSpellByName(record.Defender);
 
         var isAttackerPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
-        var isDefenderPlayer = record.Attacker == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Defender);
+        var isDefenderPlayer = record.Defender == Labels.UNK || PlayerManager.Instance.IsPetOrPlayer(record.Defender);
         var isAttackerNpc = !isAttackerPlayer && (DataManager.Instance.IsKnownNpc(record.Attacker)
           || (attackerSpell != null && attackerSpell.IsBeneficial == false));
         var isDefenderNpc = !isDefenderPlayer && (DataManager.Instance.IsKnownNpc(record.Defender)
