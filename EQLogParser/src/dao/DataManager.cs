@@ -69,7 +69,7 @@ namespace EQLogParser
     internal event EventHandler<bool> EventsClearedActiveData;
 
     internal const int MAXTIMEOUT = 60;
-    internal const int FIGHTTIMEOUT = 24;
+    internal const int FIGHTTIMEOUT = 30;
     internal const double BUFFS_OFFSET = 90;
     internal uint MyNukeCritRateMod { get; private set; } = 0;
     internal uint MyDoTCritRateMod { get; private set; } = 0;

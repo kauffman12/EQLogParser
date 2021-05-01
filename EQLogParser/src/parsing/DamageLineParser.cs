@@ -83,11 +83,6 @@ namespace EQLogParser
 
         if (split != null && split.Length >= 2)
         {
-          var timeString = lineData.Line.Substring(1, 24);
-          var currentTime = DateUtil.ParseDate(timeString);
-
-          CheckSlainQueue(currentTime);
-
           int stop = split.Length - 1;
           if (!string.IsNullOrEmpty(split[stop]) && split[stop][split[stop].Length - 1] == ')')
           {
@@ -107,7 +102,7 @@ namespace EQLogParser
             var test = string.Join(" ", split, 0, stop);
             if (!string.IsNullOrEmpty(test))
             {
-              UpdateSlain(test, "", currentTime);
+              UpdateSlain(test, "", lineData);
               handled = true;
             }
           }
@@ -264,7 +259,7 @@ namespace EQLogParser
                 {
                   string defender = string.Join(" ", split, 0, isIndex);
                   uint damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-                  handled = CreateDamageRecord(timeString, currentTime, split, stop, attacker, defender, damage, Labels.DS, Labels.DS);
+                  handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DS, Labels.DS);
                 }
               }
             }
@@ -279,7 +274,7 @@ namespace EQLogParser
                 string spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
                 var spellData = DataManager.Instance.GetSpellByName(spell);
                 SpellResist resist = spellData != null ? spellData.Resist : SpellResist.UNDEFINED;
-                handled = CreateDamageRecord(timeString, currentTime, split, stop, attacker, defender, damage, Labels.BANE, spell, resist);
+                handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.BANE, spell, resist);
               }
             }
             // [Sun Apr 18 21:26:15 2021] Astralx crushes Sontalak for 126225 points of damage. (Strikethrough Critical)
@@ -291,7 +286,7 @@ namespace EQLogParser
               string defender = string.Join(" ", split, hitType + hitTypeMod + 1, forIndex - hitType - hitTypeMod - 1);
               subType = TextFormatUtils.ToUpper(subType);
               uint damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-              handled = CreateDamageRecord(timeString, currentTime, split, stop, attacker, defender, damage, Labels.MELEE, subType);
+              handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.MELEE, subType);
             }
             // [Sun Apr 18 20:24:56 2021] Sonozen hit Jortreva the Crusader for 38948 points of fire damage by Burst of Flames. (Lucky Critical Twincast)
             else if (byDamage > 3 && pointsOfIndex == (byDamage - 3) && byIndex == (byDamage + 1) && forIndex > -1 &&
@@ -314,7 +309,7 @@ namespace EQLogParser
                   PlayerManager.Instance.AddVerifiedPet(defender);
                 }
 
-                handled = CreateDamageRecord(timeString, currentTime, split, stop, attacker, defender, damage, type, spell, resist);
+                handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell, resist);
               }
             }
             // [Sun Apr 18 20:32:39 2021] Dovhesi has taken 173674 damage from Curse of the Shrine by Grendish the Crusader.
@@ -345,7 +340,7 @@ namespace EQLogParser
                 string type = GetTypeFromSpell(spell, Labels.DOT);
                 var spellData = DataManager.Instance.GetSpellByName(spell);
                 SpellResist resist = spellData != null ? spellData.Resist : SpellResist.UNDEFINED;
-                handled = CreateDamageRecord(timeString, currentTime, split, stop, attacker, defender, damage, type, spell, resist);
+                handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell, resist);
               }
             }
             // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but misses! (Strikethrough)
@@ -389,7 +384,7 @@ namespace EQLogParser
                   defender = defender.Substring(0, defender.Length - 1);
                   string attacker = string.Join(" ", split, 0, tryIndex);
                   subType = TextFormatUtils.ToUpper(subType);
-                  handled = CreateDamageRecord(timeString, currentTime, split, stop, attacker, defender, 0, label, subType);
+                  handled = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, label, subType);
                 }
               }
             }
@@ -399,7 +394,7 @@ namespace EQLogParser
               string killer = string.Join(" ", split, byIndex + 1, stop - byIndex);
               killer = killer.Length > 1 && killer[killer.Length - 1] == '!' ? killer.Substring(0, killer.Length - 1) : killer;
               string slain = string.Join(" ", split, 0, hasIndex);
-              handled = UpdateSlain(slain, killer, currentTime);
+              handled = UpdateSlain(slain, killer, lineData);
               HasOwner(slain, out string t1);
               HasOwner(killer, out string t2);
             }
@@ -409,7 +404,7 @@ namespace EQLogParser
               string killer = string.Join(" ", split, 5, stop - 4);
               killer = killer.Length > 1 && killer[killer.Length - 1] == '!' ? killer.Substring(0, killer.Length - 1) : killer;
               string slain = ConfigUtil.PlayerName;
-              handled = UpdateSlain(slain, killer, currentTime);
+              handled = UpdateSlain(slain, killer, lineData);
             }
             // [Mon Apr 19 02:22:09 2021] You have slain a failed bodyguard!
             else if (slainIndex == 2 && split[0] == "You" && split[1] == "have")
@@ -417,7 +412,7 @@ namespace EQLogParser
               string killer = ConfigUtil.PlayerName;
               string slain = string.Join(" ", split, 3, stop - 2);
               slain = slain.Length > 1 && slain[slain.Length - 1] == '!' ? slain.Substring(0, slain.Length - 1) : slain;
-              handled = UpdateSlain(slain, killer, currentTime);
+              handled = UpdateSlain(slain, killer, lineData);
             }
           }
         }
@@ -435,7 +430,7 @@ namespace EQLogParser
       DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
-    private static bool UpdateSlain(string slain, string killer, double currentTime)
+    private static bool UpdateSlain(string slain, string killer, LineData lineData)
     {
       bool handled = false;
       if (!string.IsNullOrEmpty(slain) && killer != null && !InIgnoreList(slain)) // killer may not be known so empty string is OK
@@ -449,7 +444,10 @@ namespace EQLogParser
           DataManager.Instance.ClearActiveAdps();
         }
 
-        lock(SlainQueue)
+        double currentTime = DateUtil.ParseLogDate(lineData.Line, out _);
+        CheckSlainQueue(currentTime);
+
+        lock (SlainQueue)
         {
           if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
           {
@@ -465,7 +463,7 @@ namespace EQLogParser
       return handled;
     }
 
-    private static bool CreateDamageRecord(string timeString, double currentTime, string[] split, int stop, string attacker, string defender, 
+    private static bool CreateDamageRecord(LineData lineData, string[] split, int stop, string attacker, string defender, 
       uint damage, string type, string subType, SpellResist resist = SpellResist.UNDEFINED)
     {
       bool success = false;
@@ -516,6 +514,9 @@ namespace EQLogParser
           string modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
           record.ModifiersMask = LineModifiersParser.Parse(modifiers.Substring(1, modifiers.Length - 2));
         }
+
+        var currentTime = DateUtil.ParseLogDate(lineData.Line, out string timeString);
+        CheckSlainQueue(currentTime);
 
         DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
         EventsDamageProcessed?.Invoke(record, e);

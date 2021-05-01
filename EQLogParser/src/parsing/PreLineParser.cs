@@ -4,7 +4,7 @@ namespace EQLogParser
 {
   class PreLineParser
   {
-    private const int MIN_LINE_LENGTH = 33;
+    private const int MIN_LINE_LENGTH = 30;
 
     internal static bool NeedProcessing(string line, out string action)
     {

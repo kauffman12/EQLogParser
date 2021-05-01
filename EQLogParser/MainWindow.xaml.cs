@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.5";
+    private const string VERSION = "v1.8.6";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -776,7 +776,7 @@ namespace EQLogParser
         {
           OverlayUtil.CloseOverlay();
 
-          var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds, 1);
+          var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
           statusText.Text = "Reading Log... " + filePercent + "% in " + seconds + " seconds";
           statusText.Foreground = LOADING_BRUSH;
@@ -925,9 +925,9 @@ namespace EQLogParser
 
     private void FileLoadingCallback(string line, long position)
     {
-      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 10000) is int sleep && sleep > 10)
+      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 15000) is int sleep && sleep > 10)
       {
-        Thread.Sleep(4 * (sleep - 10));
+        Thread.Sleep(3 * (sleep - 10));
       }
 
       Interlocked.Exchange(ref FilePosition, position);

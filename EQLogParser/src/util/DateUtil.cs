@@ -89,7 +89,11 @@ namespace EQLogParser
       return found;
     }
 
-    internal double ParseLogDate(string line) => ParseDate(line.Substring(1, 24));
+    internal double ParseLogDate(string line, out string timeString)
+    {
+      timeString = line.Substring(1, 24);
+      return ParseDate(timeString);
+    }
 
     internal double ParseDate(string timeString) => ParseDate(timeString, out double _);
 

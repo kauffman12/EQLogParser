@@ -272,7 +272,7 @@ namespace EQLogParser
           foreach (var total in playerTotals.Values.OrderByDescending(total => total.Damage))
           {
             var time = total.Range.GetTotal();
-            if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= (timeout * 2))
+            if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MAXTIMEOUT)
             {
               PlayerStats playerStats = new PlayerStats()
               {

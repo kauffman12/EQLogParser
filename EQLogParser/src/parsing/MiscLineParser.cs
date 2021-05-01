@@ -94,7 +94,7 @@ namespace EQLogParser
                     PlayerManager.Instance.AddVerifiedPlayer(looter);
 
                     LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Won Roll (Not Looted)" };
-                    DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                    DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line, out _));
                     handled = true;
                   }
                   break;
@@ -113,7 +113,7 @@ namespace EQLogParser
                   {
                     string npc = string.Join(" ", split, 0, resistedIndex);
                     string spell = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('!');
-                    DataManager.Instance.AddResistRecord(new ResistRecord() { Defender = npc, Spell = spell }, DateUtil.ParseLogDate(lineData.Line));
+                    DataManager.Instance.AddResistRecord(new ResistRecord() { Defender = npc, Spell = spell }, DateUtil.ParseLogDate(lineData.Line, out _));
                     handled = true;
                   }
                   break;
@@ -122,7 +122,7 @@ namespace EQLogParser
                   {
                     string awakened = string.Join(" ", split, 0, i - 3);
                     string breaker = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('.');
-                    DataManager.Instance.AddMiscRecord(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, DateUtil.ParseLogDate(lineData.Line));
+                    DataManager.Instance.AddMiscRecord(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, DateUtil.ParseLogDate(lineData.Line, out _));
                     handled = true;
                   }
                   else if (isIndex > 0 && StruckByTypes.ContainsKey(split[i-1]))
@@ -139,7 +139,7 @@ namespace EQLogParser
                     {
                       PlayerManager.Instance.AddVerifiedPlayer(name);
                       LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = true };
-                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line, out _));
                       handled = true;
                     }
                   }
@@ -154,7 +154,7 @@ namespace EQLogParser
                     {
                       PlayerManager.Instance.AddVerifiedPlayer(looter);
                       LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = npc };
-                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line, out _));
                       handled = true;
                     }
                   }
@@ -171,7 +171,7 @@ namespace EQLogParser
 
                       string item = string.Join(" ", split, 1, i - 2);
                       LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Given (Not Looted)" };
-                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line, out _));
                       handled = true;
                     }
                   }
@@ -183,7 +183,7 @@ namespace EQLogParser
                     if (ParseCurrency(split, 2, i - 2, out string item, out uint count))
                     {
                       LootRecord record = new LootRecord() { Item = item, Player = ConfigUtil.PlayerName, Quantity = count, IsCurrency = true };
-                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line));
+                      DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line, out _));
                       handled = true;
                     }
                   }

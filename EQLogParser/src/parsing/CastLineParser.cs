@@ -64,7 +64,7 @@ namespace EQLogParser
             if (split[1] == "have" && split[2] == "entered")
             {
               string zone = string.Join(" ", split, 3, split.Length - 3).TrimEnd('.');
-              DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, DateUtil.ParseLogDate(lineData.Line));
+              DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, DateUtil.ParseLogDate(lineData.Line, out _));
               handled = true;
 
               if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
@@ -201,6 +201,14 @@ namespace EQLogParser
                 if (result != null)
                 {
                   player = ConfigUtil.PlayerName;
+                }
+              }
+              else
+              {
+                // valid lands on other. check for pet receiving DPS AA
+                if ("enters an accelerated frenzy." == landsOnMessage || "enters a bloodrage." == landsOnMessage || "wishes to show its obedience." == landsOnMessage)
+                {
+                  PlayerManager.Instance.AddVerifiedPet(player);
                 }
               }
 
