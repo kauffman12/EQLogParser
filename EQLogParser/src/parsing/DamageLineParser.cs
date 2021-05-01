@@ -143,7 +143,7 @@ namespace EQLogParser
                     {
                       found = true; // short circut
                     }
-                    else if (i > 7 && split[i - 1] == "damage")
+                    else if (i > 4 && split[i - 1] == "damage")
                     {
                       byDamage = i - 1;
                     }
@@ -341,6 +341,31 @@ namespace EQLogParser
                 SpellResist resist = spellData != null ? spellData.Resist : SpellResist.UNDEFINED;
                 handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell, resist);
               }
+            }
+            // [Mon Apr 26 21:07:21 2021] Lawlstryke has taken 216717 damage by Wisp Explosion.
+            else if (byDamage > -1 && takenIndex == (byDamage - 3))
+            {
+              string defender = string.Join(" ", split, 0, takenIndex);
+              uint damage = StatsUtil.ParseUInt(split[byDamage - 1]);
+              string spell = string.Join(" ", split, byDamage + 2, stop - byDamage - 1);
+              if (!string.IsNullOrEmpty(spell) && spell[spell.Length - 1] == '.')
+              {
+                spell = spell.Substring(0, spell.Length - 1);
+              }
+
+              string attacker = spell;
+              SpellResist resist = SpellResist.UNDEFINED;
+              var spellData = DataManager.Instance.GetSpellByName(spell);
+              if (spellData != null)
+              {
+                resist = spellData.Resist;
+                if (spellData.ClassMask > 0 && spellData.Level < 255)
+                {
+                  attacker = Labels.UNK;
+                }
+              }
+
+              handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DOT, spell, resist);
             }
             // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but misses! (Strikethrough)
             // [Sat Aug 03 00:20:57 2019] You try to crush a Kar`Zok soldier, but miss! (Riposte Strikethrough)
