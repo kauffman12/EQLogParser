@@ -18,9 +18,9 @@ namespace EQLogParser
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
       double result = 0;
-      if (value is string)
+      if (value is string s)
       {
-        result = DateUtil.ParseSimpleDate((string)value);
+        result = DateUtil.ParseSimpleDate(s);
       }
       return result;
     }

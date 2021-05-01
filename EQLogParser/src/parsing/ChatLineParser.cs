@@ -49,7 +49,7 @@ namespace EQLogParser
 
           }
         }
-       
+
         if (index < 0)
         {
           int criteriaIndex = -1;

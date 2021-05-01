@@ -1,7 +1,6 @@
 ﻿
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
@@ -15,7 +14,7 @@ namespace EQLogParser
     public enum Theme { Light, Dark };
 
     // https://www.materialpalette.com/colors
-    private static List<string> DarkColors = new List<string>()
+    private static readonly List<string> DarkColors = new List<string>()
     {
       "#b71c1c", "#c62828", "#d32f2f", "#e53935", "#f44336",
       "#880e4f", "#ad1457", "#c2185b", "#d81b60", "#e91e63",
@@ -38,7 +37,7 @@ namespace EQLogParser
       "#263238", "#37474f", "#455a64", "#546e7a", "#607d8b"
     };
 
-    private static List<string> LightColors = new List<string>()
+    private static readonly List<string> LightColors = new List<string>()
     {
       "#ffcdd2", "#ef9a9a", "#e57373", "#ef5350", "#f44336",
       "#f8bbd0", "#f48fb1", "#f06292", "#ec407a", "#e91e63",

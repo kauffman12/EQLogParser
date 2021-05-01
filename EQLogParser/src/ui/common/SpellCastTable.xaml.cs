@@ -4,14 +4,10 @@ using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -50,7 +46,7 @@ namespace EQLogParser
 
     internal void Display()
     {
-      lock(LockObject)
+      lock (LockObject)
       {
         if (Running == false)
         {
@@ -68,7 +64,7 @@ namespace EQLogParser
                   Header = name,
                   Width = DataGridLength.Auto,
                   Binding = new Binding(name)
-               };
+                };
 
                 var columnStyle = new Style(typeof(TextBlock));
                 columnStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding(name) { Converter = new ReceivedSpellColorConverter() }));
@@ -196,7 +192,7 @@ namespace EQLogParser
       {
         var row = new ExpandoObject() as IDictionary<string, object>;
         row.Add("Time", beginTime);
-        row.Add("Seconds", (int) (beginTime - startTime));
+        row.Add("Seconds", (int)(beginTime - startTime));
 
         foreach (var player in UniqueNames.Keys)
         {

@@ -32,7 +32,7 @@ namespace EQLogParser
             result += diff.Days + " days";
             break;
         }
-      }      
+      }
       else if (diff.Hours >= 1)
       {
         switch (diff.Hours)

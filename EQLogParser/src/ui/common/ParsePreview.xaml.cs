@@ -17,8 +17,8 @@ namespace EQLogParser
   {
     private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
     private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
-    private bool initialized = false;
-    private DispatcherTimer TitleTimer;
+    private readonly bool initialized = false;
+    private readonly DispatcherTimer TitleTimer;
 
     public ParsePreview()
     {

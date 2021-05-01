@@ -33,13 +33,13 @@ namespace EQLogParser
 
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
-    private ObservableCollection<IDictionary<string, object>> SpellRowsView = new ObservableCollection<IDictionary<string, object>>();
-    private DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
-    private Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
-    private List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
-    private List<string> CountTypes = new List<string>() { "Show By Count", "Show By Percent" };
-    private List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
-    private List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
+    private readonly ObservableCollection<IDictionary<string, object>> SpellRowsView = new ObservableCollection<IDictionary<string, object>>();
+    private readonly DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
+    private readonly Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
+    private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
+    private readonly List<string> CountTypes = new List<string>() { "Show By Count", "Show By Percent" };
+    private readonly List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
+    private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
     private int CurrentCastType = 0;
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
@@ -97,7 +97,7 @@ namespace EQLogParser
 
     private void Display()
     {
-      lock(LockObject)
+      lock (LockObject)
       {
         if (Running == false)
         {
@@ -182,7 +182,7 @@ namespace EQLogParser
               int existingIndex = 0;
               foreach (var spell in sortedSpellList)
               {
-                var row = ((SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new ExpandoObject()) as IDictionary<string, object>;
+                var row = (SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new ExpandoObject();
 
                 row.Add("Spell", spell);
                 //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);

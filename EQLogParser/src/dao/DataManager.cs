@@ -326,7 +326,7 @@ namespace EQLogParser
             found = block.Actions.FindLastIndex(item => item is LootRecord loot && loot.Player == record.Player && loot.Item == record.Item && loot.Quantity == 0);
             if (found > -1)
             {
-              lock(block.Actions)
+              lock (block.Actions)
               {
                 block.Actions.RemoveAt(found);
               }
@@ -511,7 +511,7 @@ namespace EQLogParser
     {
       string lower = npc.ToLower(CultureInfo.CurrentCulture);
 
-      lock(NpcResistStats)
+      lock (NpcResistStats)
       {
         if (!NpcResistStats.TryGetValue(lower, out Dictionary<SpellResist, ResistCount> stats))
         {
@@ -625,7 +625,7 @@ namespace EQLogParser
 
     private void RecalculateAdps()
     {
-      lock(this)
+      lock (this)
       {
         MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
         MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);

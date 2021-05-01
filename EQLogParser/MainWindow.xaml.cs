@@ -47,16 +47,16 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.6";
+    private const string VERSION = "v1.8.7";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
-    private static ActionProcessor<LineData> CastProcessor = null;
-    private static ActionProcessor<LineData> DamageProcessor = null;
-    private static ActionProcessor<LineData> HealingProcessor = null;
-    private static ActionProcessor<LineData> MiscProcessor = null;
+    private static ActionProcessor CastProcessor = null;
+    private static ActionProcessor DamageProcessor = null;
+    private static ActionProcessor HealingProcessor = null;
+    private static ActionProcessor MiscProcessor = null;
 
     // progress window
     private static DateTime StartLoadTime;
@@ -88,7 +88,7 @@ namespace EQLogParser
         var dpi = VisualTreeHelper.GetDpi(this);
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
         Width = resolution.Width * 0.85 / dpi.DpiScaleX;
-        Height = resolution.Height * 0.75 / dpi.DpiScaleY;       
+        Height = resolution.Height * 0.75 / dpi.DpiScaleY;
         InitializeComponent();
 
         // update titles
@@ -251,7 +251,7 @@ namespace EQLogParser
       }
     }
 
-   internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
+    internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -512,7 +512,7 @@ namespace EQLogParser
       }
     }
 
-    private bool OpenLineChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title, 
+    private bool OpenLineChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title,
       List<string> choices, bool includePets, out DocumentWindow newWindow)
     {
       bool updated = false;
@@ -694,14 +694,14 @@ namespace EQLogParser
       if (preview.parseList.SelectedItem?.ToString() == Labels.TOPHEALSPARSE)
       {
         preview?.UpdateParse(Labels.HEALPARSE, data.Selected);
-        if (data.Selected?.Count == 1 && (data.Selected[0] as PlayerStats).SubStats?.Count > 0)
+        if (data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0)
         {
           preview?.AddParse(Labels.TOPHEALSPARSE, HealingStatsManager.Instance, data.CurrentStats, data.Selected);
         }
       }
       else
       {
-        if (data.Selected?.Count == 1 && (data.Selected[0] as PlayerStats).SubStats?.Count > 0)
+        if (data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0)
         {
           preview?.AddParse(Labels.TOPHEALSPARSE, HealingStatsManager.Instance, data.CurrentStats, data.Selected);
         }
@@ -718,14 +718,14 @@ namespace EQLogParser
       if (preview.parseList.SelectedItem?.ToString() == Labels.RECEIVEDHEALPARSE)
       {
         preview?.UpdateParse(Labels.TANKPARSE, data.Selected);
-        if (data.Selected?.Count == 1 && (data.Selected[0] as PlayerStats).SubStats2?.ContainsKey("receivedHealing") == true)
+        if (data.Selected?.Count == 1 && data.Selected[0].SubStats2?.ContainsKey("receivedHealing") == true)
         {
           preview?.AddParse(Labels.RECEIVEDHEALPARSE, TankingStatsManager.Instance, data.CurrentStats, data.Selected);
         }
       }
       else
       {
-        if (data.Selected?.Count == 1 && (data.Selected[0] as PlayerStats).SubStats2?.ContainsKey("receivedHealing") == true)
+        if (data.Selected?.Count == 1 && data.Selected[0].SubStats2?.ContainsKey("receivedHealing") == true)
         {
           preview?.AddParse(Labels.RECEIVEDHEALPARSE, TankingStatsManager.Instance, data.CurrentStats, data.Selected);
         }
@@ -848,10 +848,10 @@ namespace EQLogParser
         if (success)
         {
           StopProcessing();
-          CastProcessor = new ActionProcessor<LineData>("CastProcessor", CastLineParser.Process);
-          DamageProcessor = new ActionProcessor<LineData>("DamageProcessor", DamageLineParser.Process);
-          HealingProcessor = new ActionProcessor<LineData>("HealProcessor", HealingLineParser.Process);
-          MiscProcessor = new ActionProcessor<LineData>("MiscProcessor", MiscLineParser.Process);
+          CastProcessor = new ActionProcessor(CastLineParser.Process);
+          DamageProcessor = new ActionProcessor(DamageLineParser.Process);
+          HealingProcessor = new ActionProcessor(HealingLineParser.Process);
+          MiscProcessor = new ActionProcessor(MiscLineParser.Process);
 
           fileText.Text = "-- " + theFile;
           StartLoadTime = DateTime.Now;
@@ -925,9 +925,9 @@ namespace EQLogParser
 
     private void FileLoadingCallback(string line, long position)
     {
-      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 15000) is int sleep && sleep > 10)
+      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 12000) is int sleep && sleep > 10)
       {
-        Thread.Sleep(3 * (sleep - 10));
+        Thread.Sleep(5 * (sleep - 10));
       }
 
       Interlocked.Exchange(ref FilePosition, position);
@@ -935,7 +935,7 @@ namespace EQLogParser
 
       if (PreLineParser.NeedProcessing(line, out string action))
       {
-        var lineData = new LineData() { Line = line, LineNumber = LineCount, Action = action };
+        var lineData = new LineData { Line = line, LineNumber = LineCount, Action = action };
 
         // avoid having other things parse chat by accident
         if (ChatLineParser.Process(lineData) is ChatType chatType)
@@ -947,9 +947,9 @@ namespace EQLogParser
           // 4 is for the number of processors
           DebugUtil.RegisterLine(LineCount, line, 4);
           CastProcessor.Add(lineData);
-          DamageProcessor.Add(lineData);
           HealingProcessor.Add(lineData);
           MiscProcessor.Add(lineData);
+          DamageProcessor.Add(lineData);
         }
       }
     }

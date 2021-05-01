@@ -19,7 +19,7 @@ namespace EQLogParser
     private bool CurrentShowSpellsChoice = true;
     private List<PlayerStats> PlayerStats = null;
 
-    private List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
+    private readonly List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
 
     internal HealBreakdown(CombinedStats currentStats)
     {

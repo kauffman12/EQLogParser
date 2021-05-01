@@ -295,6 +295,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Select All.
+        /// </summary>
+        internal static string SELECT_ALL {
+            get {
+                return ResourceManager.GetString("SELECT_ALL", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to No Players Selected.
         /// </summary>
         internal static string SHARE_DPS_SELECTED {
@@ -327,6 +336,15 @@ namespace EQLogParser.Properties {
         internal static string SHM {
             get {
                 return ResourceManager.GetString("SHM", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unselect All.
+        /// </summary>
+        internal static string UNSELECT_ALL {
+            get {
+                return ResourceManager.GetString("UNSELECT_ALL", resourceCulture);
             }
         }
         

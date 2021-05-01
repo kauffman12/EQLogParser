@@ -195,6 +195,9 @@
   <data name="ROG" xml:space="preserve">
     <value>Rogue</value>
   </data>
+  <data name="SELECT_ALL" xml:space="preserve">
+    <value>Select All</value>
+  </data>
   <data name="SHARE_DPS_SELECTED" xml:space="preserve">
     <value>No Players Selected</value>
   </data>
@@ -206,6 +209,9 @@
   </data>
   <data name="SHM" xml:space="preserve">
     <value>Shaman</value>
+  </data>
+  <data name="UNSELECT_ALL" xml:space="preserve">
+    <value>Unselect All</value>
   </data>
   <data name="WAR" xml:space="preserve">
     <value>Warrior</value>

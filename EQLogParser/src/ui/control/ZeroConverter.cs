@@ -17,9 +17,9 @@ namespace EQLogParser
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      if (value is string)
+      if (value is string s)
       {
-        if (!double.TryParse((string)value, out double decValue))
+        if (!double.TryParse(s, out double decValue))
         {
           decValue = 0;
         }

@@ -47,7 +47,7 @@ namespace EQLogParser
 
     internal static IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
     {
-      IntPtr result = IntPtr.Zero;
+      IntPtr result;
       // Win32 SetWindowLong doesn't clear error on success
       SetLastError(0);
 

@@ -43,8 +43,7 @@ namespace EQLogParser
 
       for (int i = 0; i < dataGrid.Columns.Count; i++)
       {
-        var bound = dataGrid.Columns[i] as DataGridBoundColumn;
-        if (bound != null && bound.Visibility == Visibility.Visible)
+        if (dataGrid.Columns[i] is DataGridBoundColumn bound && bound.Visibility == Visibility.Visible)
         {
           headers.Add(bound.Header as string);
           headerKeys.Add(((System.Windows.Data.Binding)bound.Binding).Path.Path);
@@ -71,7 +70,7 @@ namespace EQLogParser
             if (property != null)
             {
               var value = property.GetValue(item, null);
-              row.Add(value == null ? "" : value);
+              row.Add(value ?? "");
             }
           }
         }

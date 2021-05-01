@@ -419,7 +419,7 @@ namespace EQLogParser
       foreach (var keyvalue in ChannelIndex)
       {
         var channels = new List<string>();
-        foreach (var channel in (keyvalue.Value as Dictionary<string, byte>).Keys)
+        foreach (var channel in keyvalue.Value.Keys)
         {
           channels.Add(channel);
         }

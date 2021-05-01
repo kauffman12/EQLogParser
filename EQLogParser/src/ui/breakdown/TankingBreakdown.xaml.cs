@@ -15,7 +15,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private List<PlayerStats> PlayerStats;
-    private PlayerStats RaidStats;
+    private readonly PlayerStats RaidStats;
     private static bool Running = false;
 
     internal TankingBreakdown(CombinedStats currentStats)

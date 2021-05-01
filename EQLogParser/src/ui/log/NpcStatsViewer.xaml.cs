@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
@@ -197,8 +196,8 @@ namespace EQLogParser
 
   public class NpcStatsRowComparer : IComparer<NpcStatsRow>
   {
-    private bool Ascending;
-    private string Column;
+    private readonly bool Ascending;
+    private readonly string Column;
 
     public NpcStatsRowComparer(string column, bool ascending)
     {

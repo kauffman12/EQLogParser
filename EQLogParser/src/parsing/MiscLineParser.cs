@@ -99,8 +99,8 @@ namespace EQLogParser
                   }
                   break;
                 case "reflected":
-                  if (split.Length > 6 && i >= 6 && i + 2 < split.Length && split[0].StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal) 
-                    && split[i-1] == "been" && split[i - 2] == "has" && split[i - 3] == "spell" && split[i + 1] == "by")
+                  if (split.Length > 6 && i >= 6 && i + 2 < split.Length && split[0].StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal)
+                    && split[i - 1] == "been" && split[i - 2] == "has" && split[i - 3] == "spell" && split[i + 1] == "by")
                   {
                     // var spell = string.Join(" ", split, 1, i - 4);
                     var npc = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('.');
@@ -125,7 +125,7 @@ namespace EQLogParser
                     DataManager.Instance.AddMiscRecord(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, DateUtil.ParseLogDate(lineData.Line, out _));
                     handled = true;
                   }
-                  else if (isIndex > 0 && StruckByTypes.ContainsKey(split[i-1]))
+                  else if (isIndex > 0 && StruckByTypes.ContainsKey(split[i - 1]))
                   {
                     // ignore common lines like: is struck by
                     handled = true;
@@ -160,7 +160,7 @@ namespace EQLogParser
                   }
                   break;
                 case "given":
-                  if (split[i - 1] == "was" && split.Length == (i+3) && split[i + 1] == "to")
+                  if (split[i - 1] == "was" && split.Length == (i + 3) && split[i + 1] == "to")
                   {
                     string player = split[i + 2];
                     if (player.Length > 3)

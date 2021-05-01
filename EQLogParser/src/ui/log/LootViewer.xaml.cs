@@ -54,7 +54,7 @@ namespace EQLogParser
         if (obj is LootRow row)
         {
           found = (CurrentSelectedItem == ALLITEMS || row.IsCurrency && CurrentSelectedItem == ONLYCURR ||
-          !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) && 
+          !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) &&
           (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
         }
 
@@ -117,7 +117,7 @@ namespace EQLogParser
           DataManager.Instance.GetAllLoot().ForEach(block =>
           {
             // lock since actions can be removed by the parsing thread
-            lock(block.Actions)
+            lock (block.Actions)
             {
               block.Actions.ForEach(record =>
               {
@@ -247,7 +247,7 @@ namespace EQLogParser
           {
             if (dataGrid.Columns[col].Visibility == Visibility.Visible)
             {
-              switch(dataGrid.Columns[col].Header.ToString())
+              switch (dataGrid.Columns[col].Header.ToString())
               {
                 case "Time":
                   row.Add(DateUtil.FormatSimpleDate(looted.Time));
