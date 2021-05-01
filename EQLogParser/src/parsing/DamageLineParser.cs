@@ -52,6 +52,27 @@ namespace EQLogParser
 
     static DamageLineParser() => HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]); // add two way mapping
 
+    public static void CheckSlainQueue(double currentTime)
+    {
+      lock(SlainQueue)
+      {
+        // handle Slain queue
+        if (!double.IsNaN(SlainTime) && (currentTime > SlainTime))
+        {
+          SlainQueue.ForEach(slain =>
+          {
+            if (!DataManager.Instance.RemoveActiveFight(slain) && char.IsUpper(slain[0]))
+            {
+              DataManager.Instance.RemoveActiveFight(char.ToLower(slain[0], CultureInfo.CurrentCulture) + slain.Substring(1));
+            }
+          });
+
+          SlainQueue.Clear();
+          SlainTime = double.NaN;
+        }
+      }
+    }
+
     public static void Process(LineData lineData)
     {
       bool handled = false;
@@ -65,20 +86,7 @@ namespace EQLogParser
           var timeString = lineData.Line.Substring(1, 24);
           var currentTime = DateUtil.ParseDate(timeString);
 
-          // handle Slain queue
-          if (!double.IsNaN(SlainTime) && currentTime > SlainTime)
-          {
-            SlainQueue.ForEach(slain =>
-            {
-              if (!DataManager.Instance.RemoveActiveFight(slain) && char.IsUpper(slain[0]))
-              {
-                DataManager.Instance.RemoveActiveFight(char.ToLower(slain[0], CultureInfo.CurrentCulture) + slain.Substring(1));
-              }
-            });
-
-            SlainQueue.Clear();
-            SlainTime = double.NaN;
-          }
+          CheckSlainQueue(currentTime);
 
           int stop = split.Length - 1;
           if (!string.IsNullOrEmpty(split[stop]) && split[stop][split[stop].Length - 1] == ')')
@@ -441,10 +449,13 @@ namespace EQLogParser
           DataManager.Instance.ClearActiveAdps();
         }
 
-        if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
+        lock(SlainQueue)
         {
-          SlainQueue.Add(slain);
-          SlainTime = currentTime;
+          if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
+          {
+            SlainQueue.Add(slain);
+            SlainTime = currentTime;
+          }
         }
 
         var death = new DeathRecord() { Killed = string.Intern(slain), Killer = killer };

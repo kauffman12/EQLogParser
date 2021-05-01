@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Windows.Media;
 
@@ -245,6 +246,7 @@ namespace EQLogParser
 
   internal class Fight : FullTimedAction
   {
+    public bool Dead { get; set; } = false;
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
     public double LastDamageTime { get; set; }
@@ -262,12 +264,23 @@ namespace EQLogParser
     public long DamageHits { get; set; }
     public long TankHits { get; set; }
     public string TooltipText { get; set; }
+    public ConcurrentDictionary<string, FightTotalDamage> PlayerTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
     public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
     public Dictionary<string, TimeSegment> DamageSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
     public Dictionary<string, TimeSegment> InitialTankSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> InitialTankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
+  }
+
+  internal class FightTotalDamage
+  {
+    public long DamageWithBane { get; set; }
+    public long Damage { get; set; }
+    public string Name { get; set; }
+    public string PetOwner { get; set; }
+    public double UpdateTime { get; set; }
+    public double BeginTime { get; set; }
   }
 
   internal class PetMapping
@@ -337,6 +350,14 @@ namespace EQLogParser
     public SpellCountData TheSpellData { get; set; }
   }
 
+  internal class OverlayPlayerTotal
+  {
+    internal long Damage { get; set; }
+    internal TimeRange Range { get; set; }
+    internal string Name { get; set; }
+    internal double UpdateTime { get; set; }
+  }
+
   internal class CombinedStats
   {
     public string TargetTitle { get; set; }
@@ -349,17 +370,6 @@ namespace EQLogParser
     public PlayerStats RaidStats { get; set; }
     public Dictionary<string, byte> UniqueClasses { get; } = new Dictionary<string, byte>();
     public Dictionary<string, List<PlayerStats>> Children { get; } = new Dictionary<string, List<PlayerStats>>();
-  }
-
-  internal class OverlayDamageStats : CombinedStats
-  {
-    public double BeginTime { get; set; }
-    public double LastTime { get; set; }
-    public Dictionary<string, PlayerStats> TopLevelStats { get; } = new Dictionary<string, PlayerStats>();
-    public Dictionary<string, PlayerStats> AggregateStats { get; } = new Dictionary<string, PlayerStats>();
-    public Dictionary<string, PlayerStats> IndividualStats { get; } = new Dictionary<string, PlayerStats>();
-    public List<Fight> InactiveFights { get; } = new List<Fight>();
-    public List<Fight> ActiveFights { get; set; }
   }
 
   internal class HitFreqChartData

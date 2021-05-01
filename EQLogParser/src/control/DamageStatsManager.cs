@@ -150,145 +150,6 @@ namespace EQLogParser
       }
     }
 
-    internal void ComputeOverlayDamageStats(DamageRecord record, double beginTime, int timeout, OverlayDamageStats overlayStats = null)
-    {
-      try
-      {
-        // set current time
-        overlayStats.LastTime = beginTime;
-
-        if (record != null && (record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled))
-        {
-          overlayStats.RaidStats.Total += record.Total;
-
-          var raidTimeRange = new TimeRange();
-          overlayStats.InactiveFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginDamageTime, overlayStats.BeginTime), fight.LastDamageTime)));
-          overlayStats.ActiveFights.ForEach(fight => raidTimeRange.Add(new TimeSegment(Math.Max(fight.BeginDamageTime, overlayStats.BeginTime), fight.LastDamageTime)));
-          overlayStats.RaidStats.TotalSeconds = Math.Max(raidTimeRange.GetTotal(), overlayStats.RaidStats.TotalSeconds);
-
-           // update pets
-          UpdatePetMapping(record);
-
-          bool isPet = PetToPlayer.TryGetValue(record.Attacker, out string player);
-          bool needAggregate = isPet || (!isPet && PlayerPets.ContainsKey(record.Attacker) && overlayStats.TopLevelStats.ContainsKey(record.Attacker + " +Pets"));
-
-          if (!needAggregate)
-          {
-            // not a pet
-            PlayerStats stats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, record.Attacker);
-            overlayStats.TopLevelStats[record.Attacker] = stats;
-            StatsUtil.UpdateStats(stats, record);
-            stats.LastTime = beginTime;
-          }
-          else
-          {
-            string origName = player ?? record.Attacker;
-            string aggregateName = origName + " +Pets";
-
-            PlayerStats aggregatePlayerStats;
-            aggregatePlayerStats = StatsUtil.CreatePlayerStats(overlayStats.IndividualStats, aggregateName, origName);
-            overlayStats.TopLevelStats[aggregateName] = aggregatePlayerStats;
-
-            if (overlayStats.TopLevelStats.ContainsKey(origName))
-            {
-              var origPlayer = overlayStats.TopLevelStats[origName];
-              StatsUtil.MergeStats(aggregatePlayerStats, origPlayer);
-              overlayStats.TopLevelStats.Remove(origName);
-              overlayStats.IndividualStats.Remove(origName);
-            }
-
-            if (record.Attacker != origName && overlayStats.TopLevelStats.ContainsKey(record.Attacker))
-            {
-              var origPet = overlayStats.TopLevelStats[record.Attacker];
-              StatsUtil.MergeStats(aggregatePlayerStats, origPet);
-              overlayStats.TopLevelStats.Remove(record.Attacker);
-              overlayStats.IndividualStats.Remove(record.Attacker);
-            }
-
-            StatsUtil.UpdateStats(aggregatePlayerStats, record);
-            aggregatePlayerStats.LastTime = beginTime;
-          }
-
-          overlayStats.RaidStats.DPS = (long)Math.Round(overlayStats.RaidStats.Total / overlayStats.RaidStats.TotalSeconds, 2);
-
-          var list = overlayStats.TopLevelStats.Values.OrderByDescending(item => item.Total).ToList();
-          int found = list.FindIndex(stats => stats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal));
-          var you = found > -1 ? list[found] : null;
-
-          int renumber;
-          if (found > 4)
-          {
-            you.Rank = Convert.ToUInt16(found + 1);
-            overlayStats.StatsList.Clear();
-            overlayStats.StatsList.AddRange(list.Where(stats => (stats != null && stats == you) || beginTime - stats.LastTime <= timeout).Take(4));
-            overlayStats.StatsList.Add(you);
-            renumber = overlayStats.StatsList.Count - 1;
-          }
-          else
-          {
-            overlayStats.StatsList.Clear();
-            overlayStats.StatsList.AddRange(list.Where(stats => (stats != null && stats == you) || beginTime - stats.LastTime <= timeout).Take(5));
-            renumber = overlayStats.StatsList.Count;
-          }
-
-          for (int i=0; i<overlayStats.StatsList.Count; i++)
-          {
-            if (i < renumber)
-            {
-              overlayStats.StatsList[i].Rank = Convert.ToUInt16(i + 1);
-            }
-
-            // only update time if damage changed
-            if (overlayStats.StatsList[i].LastTime == beginTime && overlayStats.StatsList[i].CalcTime != beginTime)
-            {
-              var timeRange = new TimeRange();
-              if (PlayerPets.TryGetValue(overlayStats.StatsList[i].OrigName, out ConcurrentDictionary<string, byte> mapping))
-              {
-                mapping.Keys.ToList().ForEach(key =>
-                {
-                  AddSegments(timeRange, overlayStats.InactiveFights, key, overlayStats.BeginTime);
-                  AddSegments(timeRange, overlayStats.ActiveFights, key, overlayStats.BeginTime);
-                });
-              }
-
-              AddSegments(timeRange, overlayStats.InactiveFights, overlayStats.StatsList[i].OrigName, overlayStats.BeginTime);
-              AddSegments(timeRange, overlayStats.ActiveFights, overlayStats.StatsList[i].OrigName, overlayStats.BeginTime);
-              overlayStats.StatsList[i].TotalSeconds = Math.Max(timeRange.GetTotal(), overlayStats.StatsList[i].TotalSeconds);
-              overlayStats.StatsList[i].CalcTime = beginTime;
-            }
-
-            StatsUtil.UpdateCalculations(overlayStats.StatsList[i], overlayStats.RaidStats);
-          }
-
-          var count = overlayStats.InactiveFights.Count + overlayStats.ActiveFights.Count;
-          overlayStats.TargetTitle = (count > 1 ? "C(" + count + "): " : "") + record.Defender;
-          overlayStats.TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, overlayStats.RaidStats.TotalSeconds);
-          overlayStats.TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(overlayStats.RaidStats.Total), 
-            " Damage ", StatsUtil.FormatTotals(overlayStats.RaidStats.DPS));
-        }
-      }
-#pragma warning disable CA1031 // Do not catch general exception types
-      catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
-      {
-        if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
-        {
-          LOG.Error(ex);
-        }
-      }
-
-      void AddSegments(TimeRange range, List<Fight> fights, string key, double start)
-      {
-        fights.ForEach(fight =>
-        {
-          if (fight.DamageSegments.TryGetValue(key, out TimeSegment segment) && segment.EndTime >= start)
-          {
-            range.Add(new TimeSegment(Math.Max(segment.BeginTime, start), segment.EndTime));
-          }
-        });
-      }
-    }
-
     internal Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
     {
       Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
@@ -322,6 +183,143 @@ namespace EQLogParser
           results[stats.Name].Add(chartData);
         }
       }
+    }
+
+    internal CombinedStats ComputeOverlayStats(int mode, int maxRows, string selectedClass)
+    {
+      CombinedStats combined = null;
+
+      var allDamage = 0L;
+      var allTime = new TimeRange();
+      var playerTotals = new Dictionary<string, OverlayPlayerTotal>();
+      var playerHasPet = new Dictionary<string, bool>();
+      var updateTime = 0d;
+      var oldestTime = 0d;
+      var fights = DataManager.Instance.GetOverlayFights();
+      Fight oldestFight = null;
+      bool baneEnabled = MainWindow.IsBaneDamageEnabled;
+
+      // clear out anything pending in the queue
+      DamageLineParser.CheckSlainQueue(DateUtil.ToDouble(DateTime.Now.AddSeconds(-3)));
+
+      if (fights.Count > 0)
+      {
+        oldestFight = fights[0];
+        foreach (var fight in fights.Where(fight => !fight.Dead || mode > 0))
+        {
+          foreach (var keypair in fight.PlayerTotals)
+          {
+            var player = keypair.Key;
+            if (!string.IsNullOrEmpty(keypair.Value.PetOwner))
+            {
+              player = keypair.Value.PetOwner;
+              playerHasPet[player] = true;
+            }
+            else if (PlayerManager.Instance.GetPlayerFromPet(player) is string owner && owner != Labels.UNASSIGNED)
+            {
+              player = owner;
+              playerHasPet[player] = true;
+            }
+
+
+            allDamage += baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage;
+            allTime.Add(new TimeSegment(keypair.Value.BeginTime, fight.LastDamageTime));
+
+            if (updateTime == 0)
+            {
+              updateTime = keypair.Value.UpdateTime;
+              oldestTime = keypair.Value.UpdateTime;
+              oldestFight = fight;
+            }
+            else
+            {
+              updateTime = Math.Max(updateTime, keypair.Value.UpdateTime);
+              if (oldestTime > keypair.Value.UpdateTime)
+              {
+                oldestTime = keypair.Value.UpdateTime;
+                oldestFight = fight;
+              }
+            }
+
+            if (playerTotals.TryGetValue(player, out OverlayPlayerTotal total))
+            {
+              total.Damage += baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage;
+              total.Range.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
+              total.UpdateTime = Math.Max(total.UpdateTime, keypair.Value.UpdateTime);
+            }
+            else
+            {
+              playerTotals[player] = new OverlayPlayerTotal
+              {
+                Name = player,
+                Damage = baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage,
+                Range = new TimeRange(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime)),
+                UpdateTime = keypair.Value.UpdateTime
+              };
+            }
+          }
+        }
+
+        var timeout = mode == 0 ? DataManager.FIGHTTIMEOUT : mode;
+        var totalSeconds = allTime.GetTotal();
+        if (oldestFight != null && totalSeconds > 0 && allDamage > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(updateTime)).TotalSeconds <= timeout)
+        {
+          int rank = 1;
+          var list = new List<PlayerStats>();
+          var totalDps = (long)Math.Round(allDamage / totalSeconds, 2);
+          int myIndex = -1;
+
+          foreach (var total in playerTotals.Values.OrderByDescending(total => total.Damage))
+          {
+            var time = total.Range.GetTotal();
+            if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= (timeout * 2))
+            {
+              PlayerStats playerStats = new PlayerStats()
+              {
+                Name = playerHasPet.ContainsKey(total.Name) ? total.Name + " +Pets" : total.Name,
+                Total = total.Damage,
+                DPS = (long)Math.Round(total.Damage / time, 2),
+                TotalSeconds = time,
+                Rank = (ushort)rank++,
+                ClassName = PlayerManager.Instance.GetPlayerClass(total.Name)
+              };
+
+              if (playerStats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal))
+              {
+                myIndex = list.Count;
+              }
+
+              if (myIndex == list.Count || selectedClass == Properties.Resources.ANY_CLASS || selectedClass == playerStats.ClassName)
+              {
+                list.Add(playerStats);
+              }
+            }
+          }
+
+          if (myIndex > (maxRows - 1))
+          {
+            var me = list[myIndex];
+            list = list.Take(maxRows - 1).ToList();
+            list.Add(me);
+          }
+          else
+          {
+            list = list.Take(maxRows).ToList();
+          }
+
+          combined = new CombinedStats();
+          combined.StatsList.AddRange(list);
+          combined.RaidStats = new PlayerStats { Total = allDamage, DPS = totalDps, TotalSeconds = totalSeconds };
+          combined.TargetTitle = (fights.Count > 1 ? "C(" + fights.Count + "): " : "") + oldestFight.Name;
+
+          // these are here to support copy/paste of the parse
+          combined.TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, combined.RaidStats.TotalSeconds);
+          combined.TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(combined.RaidStats.Total),
+            " Damage ", StatsUtil.FormatTotals(combined.RaidStats.DPS));
+        }
+      }
+
+      return combined;
     }
 
     private void ComputeDamageStats(GenerateStatsOptions options)

@@ -43,14 +43,36 @@ namespace EQLogParser
         {
           Helpers.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
           AddPlayerTime(fight, processed.Record, processed.Record.Attacker, processed.BeginTime);
-          fight.Total += processed.Record.Total;
           fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
           fight.LastDamageTime = processed.BeginTime;
 
           if (StatsUtil.IsHitType(processed.Record.Type))
           {
             fight.DamageHits++;
+            fight.Total += processed.Record.Total;
             isNonTankingFight = fight.DamageHits == 1;
+
+            var attacker = processed.Record.AttackerOwner == null ? processed.Record.Attacker : processed.Record.AttackerOwner;
+            if (fight.PlayerTotals.TryGetValue(attacker, out FightTotalDamage total))
+            {
+              total.Damage += (processed.Record.Type == Labels.BANE) ? 0 : processed.Record.Total;
+              total.DamageWithBane += processed.Record.Total;
+              total.Name = processed.Record.Attacker;
+              total.PetOwner = processed.Record.AttackerOwner;
+              total.UpdateTime = processed.BeginTime;
+            }
+            else
+            {
+              fight.PlayerTotals[attacker] = new FightTotalDamage
+              {
+                Damage = (processed.Record.Type == Labels.BANE) ? 0 : processed.Record.Total,
+                DamageWithBane = processed.Record.Total,
+                Name = processed.Record.Attacker,
+                PetOwner = processed.Record.AttackerOwner,
+                UpdateTime = processed.BeginTime,
+                BeginTime = processed.BeginTime
+              };
+            }
           }
         }
         else

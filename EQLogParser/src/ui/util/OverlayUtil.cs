@@ -42,6 +42,7 @@ namespace EQLogParser
     internal static void ResetOverlay(Dispatcher dispatcher)
     {
       Overlay?.Close();
+      DataManager.Instance.ResetOverlayFights();
 
       if (IsDamageOverlayEnabled)
       {

@@ -25,21 +25,22 @@
         <ComboBoxItem Tag="17">17pt</ComboBoxItem>
         <ComboBoxItem Tag="18">18pt</ComboBoxItem>
       </ComboBox>
-      <ComboBox x:Name="showNameSelection" SelectedIndex="0" FontSize="12" Width="94" MaxHeight="22" Margin="0,0,0,0" SelectionChanged="ShowNamesSelectionChanged" Background="#FF040000">
+      <ComboBox x:Name="showNameSelection" SelectedIndex="0" FontSize="12" MaxWidth="94" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="ShowNamesSelectionChanged">
         <ComboBoxItem Tag="10">Show Names</ComboBoxItem>
         <ComboBoxItem Tag="10">Hide Names</ComboBoxItem>
       </ComboBox>
-      <ComboBox x:Name="showCritRateSelection" SelectedIndex="0" FontSize="12" Width="93" MaxHeight="22" Margin="0,0,0,0" SelectionChanged="ShowCritRateSelectionChanged" Background="#FF040000">
+      <ComboBox x:Name="showCritRateSelection" SelectedIndex="0" FontSize="12" MaxWidth="93" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="ShowCritRateSelectionChanged">
         <ComboBoxItem Tag="10">Crit Rate Off</ComboBoxItem>
         <ComboBoxItem Tag="10">Crit Rate On</ComboBoxItem>
       </ComboBox>
-      <ComboBox x:Name="damageModeSelection" SelectedIndex="0" FontSize="12" Width="134" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" ToolTip="Choose NPC Death for the Overlay to reset damage and dps after all NPCs are dead. Otherwise the selected timeout is used.">
-        <ComboBoxItem Tag="0">Reset On NPC Death</ComboBoxItem>
+      <ComboBox x:Name="damageModeSelection" SelectedIndex="0" FontSize="12" MaxWidth="100" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" ToolTip="Choose On Kill for the Overlay to reset damage and dps after all NPCs are dead. Otherwise the selected timeout is used.">
+        <ComboBoxItem Tag="0">Reset On Kill</ComboBoxItem>
         <ComboBoxItem Tag="30">Reset After 30s</ComboBoxItem>
         <ComboBoxItem Tag="40">Reset After 40s</ComboBoxItem>
         <ComboBoxItem Tag="50">Reset After 50s</ComboBoxItem>
         <ComboBoxItem Tag="60">Reset After 60s</ComboBoxItem>
       </ComboBox>
+      <ComboBox x:Name="classesList" FontSize="12" MaxWidth="110" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="SelectPlayerClassChanged"/>
     </StackPanel>
     <DockPanel x:Name="savePanel" HorizontalAlignment="Center">
       <Button x:Name="saveButton" Width="100" MaxHeight="22" FontSize="12" Click="SaveClick" HorizontalAlignment="Center" Content="Save"/>

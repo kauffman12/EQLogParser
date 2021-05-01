@@ -61,6 +61,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to All Classes.
+        /// </summary>
+        internal static string ANY_CLASS {
+            get {
+                return ResourceManager.GetString("ANY_CLASS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Berserker.
         /// </summary>
         internal static string BER {

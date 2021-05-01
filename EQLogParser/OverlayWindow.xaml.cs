@@ -48,7 +48,7 @@ namespace EQLogParser
     private readonly Popup ButtonPopup;
     private readonly StackPanel ButtonsPanel;
 
-    private OverlayDamageStats Stats = null;
+    private CombinedStats Stats = null;
     private bool ProcessDirection = false;
     private TextBlock TitleBlock;
     private StackPanel TitlePanel;
@@ -58,6 +58,7 @@ namespace EQLogParser
     private Dictionary<int, double> PrevList = null;
     private bool IsHideOverlayOtherPlayersEnabled = false;
     private bool IsShowOverlayCritRateEnabled = false;
+    private string SelectedClass = Properties.Resources.ANY_CLASS;
 
     public OverlayWindow(bool configure = false)
     {
@@ -76,6 +77,13 @@ namespace EQLogParser
       // Hide/Show crit rate
       IsShowOverlayCritRateEnabled = ConfigUtil.IfSet("ShowOverlayCritRate");
       showCritRateSelection.SelectedIndex = IsShowOverlayCritRateEnabled ? 1 : 0;
+
+      // selected class
+      string savedClass = ConfigUtil.GetSetting("SelectedOverlayClass");
+      if (!string.IsNullOrEmpty(savedClass) && PlayerManager.Instance.GetClassList().Contains(savedClass))
+      {
+        SelectedClass = savedClass;
+      }
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
       bool offsetSize = configure || width == null || height == null || top == null || left == null;
@@ -101,6 +109,10 @@ namespace EQLogParser
         AllowsTransparency = false;
         WindowStyle = WindowStyle.SingleBorderWindow;
         SetVisible(true);
+        var list = PlayerManager.Instance.GetClassList();
+        list.Insert(0, Properties.Resources.ANY_CLASS);
+        classesList.ItemsSource = list;
+        classesList.SelectedItem = SelectedClass;
         LoadTestData();
       }
 
@@ -169,15 +181,13 @@ namespace EQLogParser
 
       if (!offsetSize)
       {
-        NpcDamageManager.EventsPlayerAttackProcessed += NpcDamageManager_EventsPlayerAttackProcessed;
-        DataManager.Instance.EventsNewInactiveFight += Instance_EventsNewInactiveFight;
+        DataManager.Instance.EventsNewOverlayFight += Instance_NewOverlayFight;
         Active = true;
       }
       else
       {
         // remove when configuring
-        NpcDamageManager.EventsPlayerAttackProcessed -= NpcDamageManager_EventsPlayerAttackProcessed;
-        DataManager.Instance.EventsNewInactiveFight -= Instance_EventsNewInactiveFight;
+        DataManager.Instance.EventsNewOverlayFight -= Instance_NewOverlayFight;
       }
 
       if (!configure)
@@ -189,7 +199,7 @@ namespace EQLogParser
         var copyButton = CreateButton("Copy Parse", "\xE8C8", currentFontSize - 1);
         copyButton.Click += (object sender, RoutedEventArgs e) =>
         {
-          lock (Stats)
+          lock (StatsLock)
           {
             (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
           }
@@ -222,6 +232,11 @@ namespace EQLogParser
             ButtonsPanel.Height = TitlePanel.ActualHeight;
           }
         };
+
+        if (DataManager.Instance.GetOverlayFights().Count > 0)
+        {
+          UpdateTimer.Start();
+        }
       }
     }
 
@@ -261,44 +276,17 @@ namespace EQLogParser
       }
     }
 
-    private void NpcDamageManager_EventsPlayerAttackProcessed(object sender, DamageProcessedEvent e)
+    private void Instance_NewOverlayFight(object sender, Fight fight)
     {
-      lock (StatsLock)
+      if (UpdateTimer != null && !UpdateTimer.IsEnabled)
       {
-        var activeFights = DataManager.Instance.GetActiveFights();
-
-        // reset if stats if first time or first new damage is received
-        if (Stats == null || (activeFights.Count == 1 && activeFights[0].DamageBlocks.Count == 1 &&
-          activeFights[0].DamageBlocks[0].Actions.Count == 1 && CurrentDamageSelectionMode == 0))
-        {
-          Stats = new OverlayDamageStats { BeginTime = e.BeginTime, RaidStats = new PlayerStats() };
-        }
-
-        Stats.ActiveFights = activeFights;
-        var timeout = CurrentDamageSelectionMode == 0 ? DataManager.FIGHTTIMEOUT : CurrentDamageSelectionMode;
-        DamageStatsManager.Instance.ComputeOverlayDamageStats(e.Record, e.BeginTime, timeout, Stats);
-
-        if (UpdateTimer != null && !UpdateTimer.IsEnabled)
-        {
-          UpdateTimer.Start();
-        }
-      }
-    }
-
-    private void Instance_EventsNewInactiveFight(object sender, Fight e)
-    {
-      lock(StatsLock)
-      {
-        if (Stats != null && e.LastDamageTime >= Stats.BeginTime)
-        {
-          Stats.InactiveFights.Add(e);
-        }
+        UpdateTimer.Start();
       }
     }
 
     private void UpdateTimerTick(object sender, EventArgs e)
     {
-      lock(StatsLock)
+      lock (StatsLock)
       {
         try
         {
@@ -308,165 +296,163 @@ namespace EQLogParser
           // so this limits it to 1/2 the current time value
           ProcessDirection = !ProcessDirection;
 
-          var timeout = CurrentDamageSelectionMode == 0 ? DataManager.FIGHTTIMEOUT : CurrentDamageSelectionMode;
-          if (Stats == null || (DateTime.Now - DateTime.MinValue.AddSeconds(Stats.LastTime)).TotalSeconds > timeout)
+          Stats = DamageStatsManager.Instance.ComputeOverlayStats(CurrentDamageSelectionMode, MAX_ROWS, SelectedClass);
+
+          if (Stats == null)
           {
             windowBrush.Opacity = 0.0;
             ButtonPopup.IsOpen = false;
             SetVisible(false);
             Height = 0;
-            Stats = null;
             PrevList = null;
             UpdateTimer.Stop();
+            DataManager.Instance.ResetOverlayFights();
           }
-          else if (Active && Stats != null)
+          else if (Active)
           {
-            var list = Stats.StatsList.Take(MAX_ROWS).ToList();
-            if (list.Count > 0)
+            TitleBlock.Text = Stats.TargetTitle;
+            TitleDamageBlock.Text = string.Format(CultureInfo.CurrentCulture, "{0} [{1}s @{2}]", 
+              StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
+
+            long total = 0;
+            int goodRowCount = 0;
+            long me = 0;
+            var topList = new Dictionary<int, long>();
+            for (int i = 0; i < MAX_ROWS; i++)
             {
-              TitleBlock.Text = Stats.TargetTitle;
-              TitleDamageBlock.Text = string.Format(CultureInfo.CurrentCulture, "{0} [{1}s @{2}]", 
-                StatsUtil.FormatTotals(Stats.RaidStats.Total), Stats.RaidStats.TotalSeconds, StatsUtil.FormatTotals(Stats.RaidStats.DPS));
-
-              long total = 0;
-              int goodRowCount = 0;
-              long me = 0;
-              var topList = new Dictionary<int, long>();
-              for (int i = 0; i < MAX_ROWS; i++)
+              if (Stats.StatsList.Count > i)
               {
-                if (list.Count > i)
+                if (ProcessDirection)
                 {
-                  if (ProcessDirection)
-                  {
-                    DamageRateList[i].Opacity = 0.0;
-                  }
-
-                  if (i == 0)
-                  {
-                    total = list[i].Total;
-                    RectangleList[i].Width = Width;
-                  }
-                  else
-                  {
-                    RectangleList[i].Visibility = Visibility.Hidden; // maybe it calculates width better
-                    RectangleList[i].Width = Convert.ToDouble(list[i].Total) / total * Width;
-                  }
-
-                  string playerName = ConfigUtil.PlayerName;
-                  var isMe = !string.IsNullOrEmpty(playerName) && list[i].Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
-                    (playerName.Length >= list[i].Name.Length || list[i].Name[playerName.Length] == ' ');
-
-                  string updateText;
-                  if (IsHideOverlayOtherPlayersEnabled && !isMe)
-                  {
-                    updateText = string.Format(CultureInfo.CurrentCulture, "{0}. Hidden Player", list[i].Rank);
-                  }
-                  else
-                  {
-                    updateText = string.Format(CultureInfo.CurrentCulture, "{0}. {1}", list[i].Rank, list[i].Name);
-                  }
-
-                  if (IsShowOverlayCritRateEnabled)
-                  {
-                    List<string> critMods = new List<string>();
-
-                    if (isMe && PlayerManager.Instance.IsDoTClass(list[i].ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
-                    {
-                      critMods.Add(string.Format(CultureInfo.CurrentCulture, "DoT CR +{0}", doTCritRate));
-                    }
-
-                    if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
-                    {
-                      critMods.Add(string.Format(CultureInfo.CurrentCulture, "Nuke CR +{0}", nukeCritRate));
-                    }
-
-                    if (critMods.Count > 0)
-                    {
-                      updateText = string.Format(CultureInfo.CurrentCulture, "{0} [{1}]", updateText, string.Join(", ", critMods));
-                    }
-                  }
-
-                  NameBlockList[i].Text = updateText;
-
-                  if (i <= 4 && !isMe && list[i].Total > 0)
-                  {
-                    topList[i] = list[i].Total;
-                  }
-                  else if (isMe)
-                  {
-                    me = list[i].Total;
-                  }
-
-                  var damage = StatsUtil.FormatTotals(list[i].Total) + " [" + list[i].TotalSeconds.ToString(CultureInfo.CurrentCulture) + "s @" + StatsUtil.FormatTotals(list[i].DPS) + "]";
-                  DamageBlockList[i].Text = damage;
-                  goodRowCount++;
+                  DamageRateList[i].Opacity = 0.0;
                 }
-              }
 
-              if (ProcessDirection)
-              {
-                if (me > 0 && topList.Count > 0)
+                if (i == 0)
                 {
-                  var updatedList = new Dictionary<int, double>();
-                  foreach (int i in topList.Keys)
-                  {
-                    if (i != me)
-                    {
-                      var diff = topList[i] / (double)me;
-                      updatedList[i] = diff;
-                      if (PrevList != null && PrevList.ContainsKey(i))
-                      {
-                        if (PrevList[i] > diff)
-                        {
-                          DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
-                          DamageRateList[i].Foreground = DOWNBRUSH;
-                          DamageRateList[i].Opacity = DATA_OPACITY;
-                        }
-                        else if (PrevList[i] < diff)
-                        {
-                          DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
-                          DamageRateList[i].Foreground = UPBRUSH;
-                          DamageRateList[i].Opacity = DATA_OPACITY;
-                        }
-                      }
-                    }
-                  }
-
-                  PrevList = updatedList;
+                  total = Stats.StatsList[i].Total;
+                  RectangleList[i].Width = Width;
                 }
                 else
                 {
-                  PrevList = null;
+                  RectangleList[i].Visibility = Visibility.Hidden; // maybe it calculates width better
+                  RectangleList[i].Width = Convert.ToDouble(Stats.StatsList[i].Total) / total * Width;
                 }
-              }
 
-              var requested = (goodRowCount + 1) * CalculatedRowHeight;
-              if (ActualHeight != requested)
-              {
-                Height = requested;
-              }
+                string playerName = ConfigUtil.PlayerName;
+                var isMe = !string.IsNullOrEmpty(playerName) && Stats.StatsList[i].Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
+                  (playerName.Length >= Stats.StatsList[i].Name.Length || Stats.StatsList[i].Name[playerName.Length] == ' ');
 
-              if (overlayCanvas.Visibility != Visibility.Visible)
-              {
-                overlayCanvas.Visibility = Visibility.Hidden;
-                TitleRectangle.Visibility = Visibility.Hidden;
-                TitlePanel.Visibility = Visibility.Hidden;
-                TitleDamagePanel.Visibility = Visibility.Hidden;
-                TitleRectangle.Height = CalculatedRowHeight;
-                TitleDamagePanel.Height = CalculatedRowHeight;
-                TitlePanel.Height = CalculatedRowHeight;
-                overlayCanvas.Visibility = Visibility.Visible;
-                TitleRectangle.Visibility = Visibility.Visible;
-                TitlePanel.Visibility = Visibility.Visible;
-                TitleDamagePanel.Visibility = Visibility.Visible;
-                windowBrush.Opacity = OPACITY;
-                ButtonPopup.IsOpen = true;
-              }
+                string updateText;
+                if (IsHideOverlayOtherPlayersEnabled && !isMe)
+                {
+                  updateText = string.Format(CultureInfo.CurrentCulture, "{0}. Hidden Player", Stats.StatsList[i].Rank);
+                }
+                else
+                {
+                  updateText = string.Format(CultureInfo.CurrentCulture, "{0}. {1}", Stats.StatsList[i].Rank, Stats.StatsList[i].Name);
+                }
 
-              for (int i = 0; i < MAX_ROWS; i++)
-              {
-                SetRowVisible(i < goodRowCount, i);
+                if (IsShowOverlayCritRateEnabled)
+                {
+                  List<string> critMods = new List<string>();
+
+                  if (isMe && PlayerManager.Instance.IsDoTClass(Stats.StatsList[i].ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
+                  {
+                    critMods.Add(string.Format(CultureInfo.CurrentCulture, "DoT CR +{0}", doTCritRate));
+                  }
+
+                  if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
+                  {
+                    critMods.Add(string.Format(CultureInfo.CurrentCulture, "Nuke CR +{0}", nukeCritRate));
+                  }
+
+                  if (critMods.Count > 0)
+                  {
+                    updateText = string.Format(CultureInfo.CurrentCulture, "{0} [{1}]", updateText, string.Join(", ", critMods));
+                  }
+                }
+
+                NameBlockList[i].Text = updateText;
+
+                if (i <= 4 && !isMe && Stats.StatsList[i].Total > 0)
+                {
+                  topList[i] = Stats.StatsList[i].Total;
+                }
+                else if (isMe)
+                {
+                  me = Stats.StatsList[i].Total;
+                }
+
+                var damage = StatsUtil.FormatTotals(Stats.StatsList[i].Total) + " [" + Stats.StatsList[i].TotalSeconds.ToString(CultureInfo.CurrentCulture) 
+                  + "s @" + StatsUtil.FormatTotals(Stats.StatsList[i].DPS) + "]";
+                DamageBlockList[i].Text = damage;
+                goodRowCount++;
               }
+            }
+
+            if (ProcessDirection)
+            {
+              if (me > 0 && topList.Count > 0)
+              {
+                var updatedList = new Dictionary<int, double>();
+                foreach (int i in topList.Keys)
+                {
+                  if (i != me)
+                  {
+                    var diff = topList[i] / (double)me;
+                    updatedList[i] = diff;
+                    if (PrevList != null && PrevList.ContainsKey(i))
+                    {
+                      if (PrevList[i] > diff)
+                      {
+                        DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
+                        DamageRateList[i].Foreground = DOWNBRUSH;
+                        DamageRateList[i].Opacity = DATA_OPACITY;
+                      }
+                      else if (PrevList[i] < diff)
+                      {
+                        DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
+                        DamageRateList[i].Foreground = UPBRUSH;
+                        DamageRateList[i].Opacity = DATA_OPACITY;
+                      }
+                    }
+                  }
+                }
+
+                PrevList = updatedList;
+              }
+              else
+              {
+                PrevList = null;
+              }
+            }
+
+            var requested = (goodRowCount + 1) * CalculatedRowHeight;
+            if (ActualHeight != requested)
+            {
+              Height = requested;
+            }
+
+            if (overlayCanvas.Visibility != Visibility.Visible)
+            {
+              overlayCanvas.Visibility = Visibility.Hidden;
+              TitleRectangle.Visibility = Visibility.Hidden;
+              TitlePanel.Visibility = Visibility.Hidden;
+              TitleDamagePanel.Visibility = Visibility.Hidden;
+              TitleRectangle.Height = CalculatedRowHeight;
+              TitleDamagePanel.Height = CalculatedRowHeight;
+              TitlePanel.Height = CalculatedRowHeight;
+              overlayCanvas.Visibility = Visibility.Visible;
+              TitleRectangle.Visibility = Visibility.Visible;
+              TitlePanel.Visibility = Visibility.Visible;
+              TitleDamagePanel.Visibility = Visibility.Visible;
+              windowBrush.Opacity = OPACITY;
+              ButtonPopup.IsOpen = true;
+            }
+
+            for (int i = 0; i < MAX_ROWS; i++)
+            {
+              SetRowVisible(i < goodRowCount, i);
             }
           }
         }
@@ -652,6 +638,7 @@ namespace EQLogParser
     private void PanelSizeChanged(object sender, SizeChangedEventArgs e) => Resize(e.NewSize.Height, e.NewSize.Width);
     private void ShowNamesSelectionChanged(object sender, SelectionChangedEventArgs e) => IsHideOverlayOtherPlayersEnabled = showNameSelection.SelectedIndex == 1;
     private void ShowCritRateSelectionChanged(object sender, SelectionChangedEventArgs e) => IsShowOverlayCritRateEnabled = showCritRateSelection.SelectedIndex == 1;
+    private void SelectPlayerClassChanged(object sender, SelectionChangedEventArgs e) => SelectedClass = classesList.SelectedValue.ToString();
 
     private void FontSizeSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -690,6 +677,7 @@ namespace EQLogParser
         ConfigUtil.SetSetting("OverlayDamageMode", (string)(damageModeSelection.SelectedItem as ComboBoxItem).Tag);
         ConfigUtil.SetSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
         ConfigUtil.SetSetting("ShowOverlayCritRate", IsShowOverlayCritRateEnabled.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("SelectedOverlayClass", SelectedClass);
 
         ColorComboBoxList.ForEach(colorChoice =>
         {
@@ -704,8 +692,7 @@ namespace EQLogParser
     {
       if (Active)
       {
-        NpcDamageManager.EventsPlayerAttackProcessed -= NpcDamageManager_EventsPlayerAttackProcessed;
-        DataManager.Instance.EventsNewInactiveFight -= Instance_EventsNewInactiveFight;
+        DataManager.Instance.EventsNewOverlayFight -= Instance_NewOverlayFight;
         ButtonPopup.IsOpen = false;
 
         if (UpdateTimer?.IsEnabled == true)
