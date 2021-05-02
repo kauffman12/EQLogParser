@@ -300,7 +300,7 @@ namespace EQLogParser
       }
     }
 
-    private bool TimeCheck(string line, int index)
+    private static bool TimeCheck(string line, int index)
     {
       bool pass = true;
 

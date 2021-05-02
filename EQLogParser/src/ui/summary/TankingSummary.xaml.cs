@@ -22,9 +22,9 @@ namespace EQLogParser
       InitializeComponent();
       InitSummaryTable(title, dataGrid, selectedColumns);
 
-      CurrentPetValue = showPets.IsChecked.Value;
+      showPets.IsChecked = CurrentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", null, true);
       var list = PlayerManager.Instance.GetClassList();
-      list.Insert(0, "All Classes");
+      list.Insert(0, Properties.Resources.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
@@ -219,8 +219,12 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-      CurrentPetValue = showPets.IsChecked.Value;
-      SetFilter(dataGrid?.ItemsSource as ICollectionView);
+      if (dataGrid != null)
+      {
+        CurrentPetValue = showPets.IsChecked.Value;
+        ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue.ToString(CultureInfo.CurrentCulture));
+        SetFilter(dataGrid?.ItemsSource as ICollectionView);
+      }
     }
 
     private void CopyToEQClick(object sender, RoutedEventArgs e)

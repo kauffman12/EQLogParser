@@ -140,6 +140,7 @@ namespace EQLogParser
     public string AttackerOwner { get; set; }
     public string Defender { get; set; }
     public string DefenderOwner { get; set; }
+    public bool AttackerIsSpell { get; set; }
   }
 
   internal class LootRecord : IAction
@@ -239,7 +240,6 @@ namespace EQLogParser
     public long TotalLucky { get; set; }
     public long TotalRiposte { get; set; }
     public long TotalSlay { get; set; }
-    public double LastTime { get; set; }
     public Dictionary<long, int> CritFreqValues { get; } = new Dictionary<long, int>();
     public Dictionary<long, int> NonCritFreqValues { get; } = new Dictionary<long, int>();
   }

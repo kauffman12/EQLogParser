@@ -353,19 +353,13 @@ namespace EQLogParser
                 spell = spell.Substring(0, spell.Length - 1);
               }
 
-              string attacker = spell;
               SpellResist resist = SpellResist.UNDEFINED;
-              var spellData = DataManager.Instance.GetSpellByName(spell);
-              if (spellData != null)
+              if (DataManager.Instance.GetSpellByName(spell) is SpellData spellData && spellData != null)
               {
                 resist = spellData.Resist;
-                if (spellData.ClassMask > 0 && spellData.Level < 255)
-                {
-                  attacker = Labels.UNK;
-                }
               }
 
-              handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DOT, spell, resist);
+              handled = CreateDamageRecord(lineData, split, stop, "", defender, damage, Labels.DOT, spell, resist, true);
             }
             // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but misses! (Strikethrough)
             // [Sat Aug 03 00:20:57 2019] You try to crush a Kar`Zok soldier, but miss! (Riposte Strikethrough)
@@ -488,7 +482,7 @@ namespace EQLogParser
     }
 
     private static bool CreateDamageRecord(LineData lineData, string[] split, int stop, string attacker, string defender,
-      uint damage, string type, string subType, SpellResist resist = SpellResist.UNDEFINED)
+      uint damage, string type, string subType, SpellResist resist = SpellResist.UNDEFINED, bool attackerIsSpell = false)
     {
       bool success = false;
 
@@ -529,7 +523,8 @@ namespace EQLogParser
           Total = damage,
           AttackerOwner = attackerOwner != null ? string.Intern(attackerOwner) : null,
           DefenderOwner = defenderOwner != null ? string.Intern(defenderOwner) : null,
-          ModifiersMask = -1
+          ModifiersMask = -1,
+          AttackerIsSpell = attackerIsSpell
         };
 
         if (split.Length > stop + 1)

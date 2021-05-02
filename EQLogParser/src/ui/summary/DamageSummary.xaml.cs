@@ -43,7 +43,7 @@ namespace EQLogParser
       }
 
       var list = PlayerManager.Instance.GetClassList();
-      list.Insert(0, "All Classes");
+      list.Insert(0, Properties.Resources.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 

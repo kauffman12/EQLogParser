@@ -113,6 +113,17 @@ namespace EQLogParser
     internal IEnumerable<Fight> GetSelectedItems() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
     internal bool HasSelected() => fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => !item.IsInactivity) != null;
 
+    private static void RemoveFight(ObservableCollection<Fight> fights, string name)
+    {
+      for (int i = fights.Count - 1; i >= 0; i--)
+      {
+        if (!fights[i].IsInactivity && !string.IsNullOrEmpty(fights[i].Name) && fights[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+        {
+          fights.RemoveAt(i);
+        }
+      }
+    }
+
     private void RightClickClosed(object sender, RoutedEventArgs e)
     {
       if (NeedSelectionChange)
@@ -286,17 +297,6 @@ namespace EQLogParser
         RemoveFight(Fights, name);
         RemoveFight(NonTankingFights, name);
       }, DispatcherPriority.DataBind);
-    }
-
-    private void RemoveFight(ObservableCollection<Fight> fights, string name)
-    {
-      for (int i = fights.Count - 1; i >= 0; i--)
-      {
-        if (!fights[i].IsInactivity && !string.IsNullOrEmpty(fights[i].Name) && fights[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-        {
-          fights.RemoveAt(i);
-        }
-      }
     }
 
     private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();

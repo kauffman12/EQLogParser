@@ -32,12 +32,17 @@ namespace EQLogParser
 
     private static T GetVisualParent<T>(DependencyObject child) where T : Visual
     {
-      while (child != null && !(child is T))
+      T result = null;
+      while (child != null)
       {
+        if (child is T found)
+        {
+          result = found;
+          break;
+        }
         child = VisualTreeHelper.GetParent(child);
       }
-
-      return child as T;
+      return result;
     }
   }
 }
