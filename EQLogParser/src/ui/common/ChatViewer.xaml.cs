@@ -336,11 +336,11 @@ namespace EQLogParser
         string text = (textFilter.Text.Length != 0 && textFilter.Text != Properties.Resources.CHAT_TEXT_FILTER) ? textFilter.Text : null;
         string to = (toFilter.Text.Length != 0 && toFilter.Text != Properties.Resources.CHAT_TO_FILTER) ? toFilter.Text : null;
         string from = (fromFilter.Text.Length != 0 && fromFilter.Text != Properties.Resources.CHAT_FROM_FILTER) ? fromFilter.Text : null;
-        double startDate = GetStartDate();
-        double endDate = GetEndDate();
-        if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || LastStartDate != startDate || LastEndDate != endDate)
+        double startDateValue = GetStartDate();
+        double endDateValue = GetEndDate();
+        if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || LastStartDate != startDateValue || LastEndDate != endDateValue)
         {
-          CurrentChatFilter = new ChatFilter(name, channelList, startDate, endDate, to, from, text);
+          CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
           CurrentIterator?.Close();
           CurrentIterator = new ChatIterator(name, CurrentChatFilter);
           CurrentLineCount = 0;
@@ -349,8 +349,8 @@ namespace EQLogParser
           LastTextFilter = text;
           LastToFilter = to;
           LastFromFilter = from;
-          LastStartDate = startDate;
-          LastEndDate = endDate;
+          LastStartDate = startDateValue;
+          LastEndDate = endDateValue;
 
           chatScroller.ScrollChanged -= Chat_ScrollChanged;
           Connected = false;

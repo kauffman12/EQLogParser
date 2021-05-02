@@ -28,7 +28,7 @@ namespace EQLogParser
       return TimeSegments.Sum(segment => segment.GetTotal());
     }
 
-    public void Add(List<TimeSegment> list) => list?.ForEach(segment => Add(segment));
+    public void Add(IReadOnlyCollection<TimeSegment> collection) => collection?.ToList().ForEach(segment => Add(segment));
 
     public TimeRange() { }
 
