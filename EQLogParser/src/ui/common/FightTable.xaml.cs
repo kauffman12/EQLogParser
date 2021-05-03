@@ -95,7 +95,7 @@ namespace EQLogParser
         SearchTextTimer.Stop();
       };
 
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
       UpdateTimer.Tick += (sender, e) => ProcessFights();
       UpdateTimer.Start();
 
@@ -284,9 +284,11 @@ namespace EQLogParser
         }
       }
 
-      if (NeedRefresh && (processList == null && fightDataGrid.ItemsSource == View || processNonTankingList == null && fightDataGrid.ItemsSource == NonTankingView))
+      if (NeedRefresh && (processList == null && fightDataGrid.ItemsSource == View || processNonTankingList == null && fightDataGrid.ItemsSource == NonTankingView) &&
+        (Keyboard.GetKeyStates(Key.LeftShift) & KeyStates.Down) == 0 && (Keyboard.GetKeyStates(Key.LeftCtrl) & KeyStates.Down) == 0)
       {
         (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+        NeedRefresh = false;
       }
     }
 
