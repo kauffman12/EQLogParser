@@ -79,7 +79,7 @@ namespace EQLogParser
           {
             foreach (var action in block.Actions)
             {
-              if (action is SpellCast cast && cast.Caster == player && cast.SpellData != null && cast.SpellData.Target == (int)SpellTarget.SELF &&
+              if (action is SpellCast cast && !cast.Interrupted && cast.Caster == player && cast.SpellData != null && cast.SpellData.Target == (int)SpellTarget.SELF &&
                 cast.SpellData.Adps > 0 && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800))
               {
                 if (string.IsNullOrEmpty(cast.SpellData.LandsOnOther))

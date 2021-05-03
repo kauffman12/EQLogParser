@@ -46,6 +46,7 @@ namespace EQLogParser
     private int CurrentSpellType = 0;
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowProcs = false;
+    private bool CurrentShowInterrupts = false;
 
     public SpellCountTable(string title)
     {
@@ -102,7 +103,7 @@ namespace EQLogParser
         if (Running == false)
         {
           Running = true;
-          showSelfOnly.IsEnabled = showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
+          showInterrupts.IsEnabled = showSelfOnly.IsEnabled = showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
 
           Task.Delay(50).ContinueWith(task =>
           {
@@ -198,11 +199,12 @@ namespace EQLogParser
                     {
                       if (CurrentCountType == 0)
                       {
-                        row.Add(sortedPlayers[i], filteredPlayerMap[sortedPlayers[i]][spell]);
+                        AddPlayerRow(sortedPlayers[i], spell, filteredPlayerMap[sortedPlayers[i]][spell].ToString(CultureInfo.CurrentCulture), row);
                       }
                       else
                       {
-                        row.Add(sortedPlayers[i], Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2));
+                        var percent = Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2);
+                        AddPlayerRow(sortedPlayers[i], spell, percent.ToString(CultureInfo.CurrentCulture), row);
                       }
                     }
                     else
@@ -214,7 +216,7 @@ namespace EQLogParser
 
                 row.Add("totalColumn", CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2));
 
-                if ((SpellRowsView.Count <= existingIndex))
+                if (SpellRowsView.Count <= existingIndex)
                 {
                   Dispatcher.InvokeAsync(() => SpellRowsView.Add(row));
                 }
@@ -232,7 +234,7 @@ namespace EQLogParser
             {
               Dispatcher.InvokeAsync(() =>
               {
-                showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
+                showInterrupts.IsEnabled = showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
                 showSelfOnly.IsEnabled = PlayerList.Contains(ConfigUtil.PlayerName);
                 exportClick.IsEnabled = copyOptions.IsEnabled = removeRowClick.IsEnabled = SpellRowsView.Count > 0;
 
@@ -245,6 +247,17 @@ namespace EQLogParser
           }, TaskScheduler.Default);
         }
       }
+    }
+
+    private void AddPlayerRow(string player, string spell, string value, IDictionary<string, Object> row)
+    {
+      string count = value.ToString(CultureInfo.CurrentCulture);
+      if (CurrentShowInterrupts && TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) && 
+        TheSpellCounts.PlayerInterruptedCounts[player].TryGetValue(spell, out uint interrupts) && interrupts > 0)
+      {
+        count = count + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
+      }
+      row.Add(player, count);
     }
 
     private uint UpdateMaps(string id, string player, uint playerCount, Dictionary<string, uint> maxCounts, Dictionary<string, uint> totalCountMap,
@@ -297,6 +310,7 @@ namespace EQLogParser
         CurrentSpellType = spellTypes.SelectedIndex;
         CurrentShowSelfOnly = showSelfOnly.IsChecked.Value;
         CurrentShowProcs = showProcs.IsChecked.Value;
+        CurrentShowInterrupts = showInterrupts.IsChecked.Value;
         Display();
       }
     }
@@ -373,6 +387,11 @@ namespace EQLogParser
             TheSpellCounts.PlayerCastCounts[player] = data.TheSpellData.PlayerCastCounts[player];
           }
 
+          foreach (var player in data.TheSpellData.PlayerInterruptedCounts.Keys)
+          {
+            TheSpellCounts.PlayerInterruptedCounts[player] = data.TheSpellData.PlayerInterruptedCounts[player];
+          }
+
           foreach (var player in data.TheSpellData.PlayerReceivedCounts.Keys)
           {
             TheSpellCounts.PlayerReceivedCounts[player] = data.TheSpellData.PlayerReceivedCounts[player];
@@ -400,7 +419,7 @@ namespace EQLogParser
             {
               TheSpellCounts.UniqueSpells[spellData] = data.TheSpellData.UniqueSpells[spellData];
             }
-          }
+          }         
 
           OptionsChanged(true);
         }
