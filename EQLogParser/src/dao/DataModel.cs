@@ -313,6 +313,7 @@ namespace EQLogParser
   {
     public string Spell { get; set; }
     public string Caster { get; set; }
+    public bool Interrupted { get; set; } = false;
   }
 
   internal class SpellData
@@ -338,6 +339,7 @@ namespace EQLogParser
   internal class SpellCountData
   {
     public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
+    public Dictionary<string, Dictionary<string, uint>> PlayerInterruptedCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
     public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
     public Dictionary<string, uint> MaxCastCounts { get; } = new Dictionary<string, uint>();
     public Dictionary<string, uint> MaxReceivedCounts { get; } = new Dictionary<string, uint>();

@@ -392,9 +392,9 @@ namespace EQLogParser
       for (int i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
       {
         int index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => ((SpellCast)action).Spell == spell && ((SpellCast)action).Caster == player);
-        if (index > -1)
+        if (index > -1 && AllSpellCastBlocks[i].Actions[index] is SpellCast cast)
         {
-          AllSpellCastBlocks[i].Actions.RemoveAt(index);
+          cast.Interrupted = true;
           break;
         }
       }

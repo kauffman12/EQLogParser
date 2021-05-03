@@ -118,7 +118,7 @@ namespace EQLogParser
                 int size = 0;
                 if ((CurrentCastType == 0 || CurrentCastType == 1) && block.Actions[0] is SpellCast)
                 {
-                  foreach (var cast in block.Actions.Cast<SpellCast>().Where(cast => IsValid(cast, UniqueNames, cast.Caster, out _)))
+                  foreach (var cast in block.Actions.Cast<SpellCast>().Where(cast => !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, out _)))
                   {
                     size = helper.AddToList(playerSpells, cast.Caster, cast.Spell);
                   }

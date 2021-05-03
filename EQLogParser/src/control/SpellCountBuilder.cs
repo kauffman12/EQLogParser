@@ -42,7 +42,7 @@ namespace EQLogParser
         var spellData = DataManager.Instance.GetSpellByAbbrv(DataManager.Instance.AbbreviateSpellName(cast.Spell));
         if (spellData != null)
         {
-          UpdateMaps(spellData, cast.Caster, result.PlayerCastCounts, result.MaxCastCounts, result.UniqueSpells);
+          UpdateMaps(spellData, cast.Caster, result.PlayerCastCounts, result.PlayerInterruptedCounts, result.MaxCastCounts, result.UniqueSpells, cast.Interrupted);
         }
       }
 
@@ -59,7 +59,7 @@ namespace EQLogParser
         // dont include detrimental received spells since they're mostly things like being nuked
         if (spellData != null && spellData.IsBeneficial)
         {
-          UpdateMaps(spellData, received.Receiver, result.PlayerReceivedCounts, result.MaxReceivedCounts, result.UniqueSpells);
+          UpdateMaps(spellData, received.Receiver, result.PlayerReceivedCounts, null, result.MaxReceivedCounts, result.UniqueSpells);
         }
       }
 
@@ -67,7 +67,7 @@ namespace EQLogParser
     }
 
     private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, uint>> playerCounts,
-      Dictionary<string, uint> maxSpellCounts, Dictionary<string, SpellData> spellMap)
+      Dictionary<string, Dictionary<string, uint>> interruptedCounts, Dictionary<string, uint> maxSpellCounts, Dictionary<string, SpellData> spellMap, bool interrupted = false)
     {
       if (!playerCounts.ContainsKey(thePlayer))
       {
@@ -79,7 +79,22 @@ namespace EQLogParser
         playerCounts[thePlayer][theSpell.ID] = 0;
       }
 
-      playerCounts[thePlayer][theSpell.ID]++;
+      playerCounts[thePlayer][theSpell.ID] += interrupted ? 0u : 1;
+
+      if (interruptedCounts != null)
+      {
+        if (!interruptedCounts.ContainsKey(thePlayer))
+        {
+          interruptedCounts[thePlayer] = new Dictionary<string, uint>();
+        }
+
+        if (!interruptedCounts[thePlayer].ContainsKey(theSpell.NameAbbrv))
+        {
+          interruptedCounts[thePlayer][theSpell.NameAbbrv] = 0;
+        }
+
+        interruptedCounts[thePlayer][theSpell.NameAbbrv] += interrupted ? 1u : 0;
+      }
 
       if (!maxSpellCounts.ContainsKey(theSpell.ID))
       {
