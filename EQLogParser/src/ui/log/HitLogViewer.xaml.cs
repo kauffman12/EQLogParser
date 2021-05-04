@@ -21,7 +21,7 @@ namespace EQLogParser
     private readonly ObservableCollection<string> Actions = new ObservableCollection<string>();
     private readonly ObservableCollection<string> Types = new ObservableCollection<string>();
 
-    private readonly string ActedOption = "Unknown";
+    private readonly string ActedOption = Labels.UNK;
     private readonly List<List<ActionBlock>> CurrentGroups;
     private readonly Dictionary<string, double> LastSeenCache = new Dictionary<string, double>();
     private readonly bool Defending;
@@ -115,10 +115,7 @@ namespace EQLogParser
           Dictionary<string, byte> uniqueActions = new Dictionary<string, byte>();
           Dictionary<string, byte> uniqueTypes = new Dictionary<string, byte>();
 
-          ObservableCollection<string> acted = new ObservableCollection<string>
-          {
-            ActedOption
-          };
+          ObservableCollection<string> acted = new ObservableCollection<string> { ActedOption };
 
           lock (CollectionLock)
           {
@@ -238,14 +235,14 @@ namespace EQLogParser
           (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(damage.Attacker), StringComparison.OrdinalIgnoreCase) ||
           (!string.IsNullOrEmpty(damage.AttackerOwner) && damage.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
           {
-            row = new HitLogRow() { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
+            row = new HitLogRow { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
           }
         }
         else if (defending && !string.IsNullOrEmpty(damage.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && StatsUtil.IsHitType(damage.Type))
         {
           if (damage.Defender.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
           {
-            row = new HitLogRow() { Actor = damage.Defender, Acted = damage.Attacker, IsPet = false, TimeSince = "-" };
+            row = new HitLogRow { Actor = damage.Defender, Acted = damage.Attacker, IsPet = false, TimeSince = "-" };
           }
         }
       }
@@ -253,7 +250,7 @@ namespace EQLogParser
       {
         if (heal.Healer.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
         {
-          row = new HitLogRow() { Actor = heal.Healer, Acted = heal.Healed, IsPet = false, TimeSince = "-" };
+          row = new HitLogRow { Actor = heal.Healer, Acted = heal.Healed, IsPet = false, TimeSince = "-" };
         }
       }
 

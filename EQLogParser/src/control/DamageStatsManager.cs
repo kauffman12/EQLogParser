@@ -333,7 +333,6 @@ namespace EQLogParser
           ConcurrentDictionary<string, PlayerStats> topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
           ConcurrentDictionary<string, PlayerStats> aggregateStats = new ConcurrentDictionary<string, PlayerStats>();
           Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
-          PlayerStats unknown = null;
 
           // always start over
           RaidTotals.Total = 0;
@@ -378,68 +377,55 @@ namespace EQLogParser
                   {
                     if (action is DamageRecord record)
                     {
-                      if (record.AttackerIsSpell)
+                      var stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
+
+                      if (!MainWindow.IsBaneDamageEnabled && record.Type == Labels.BANE)
                       {
-                        unknown = unknown ?? StatsUtil.CreatePlayerStats(Labels.UNK);
-                        StatsUtil.UpdateStats(unknown, record);
-                        var subStats = StatsUtil.CreatePlayerSubStats(unknown.SubStats, record.SubType, record.Type);
-                        StatsUtil.UpdateStats(subStats, record);
+                        stats.BaneHits++;
+
+                        if (individualStats.TryGetValue(stats.OrigName + " +Pets", out PlayerStats temp))
+                        {
+                          temp.BaneHits++;
+                        }
                       }
                       else
                       {
-                        var stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
-                        
-                        if (!MainWindow.IsBaneDamageEnabled && record.Type == Labels.BANE)
-                        {
-                          stats.BaneHits++;
+                        RaidTotals.Total += record.Total;
+                        StatsUtil.UpdateStats(stats, record);
 
-                          if (individualStats.TryGetValue(stats.OrigName + " +Pets", out PlayerStats temp))
-                          {
-                            temp.BaneHits++;
-                          }
+                        if ((!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerPets.ContainsKey(record.Attacker)) || player == Labels.UNASSIGNED)
+                        {
+                          topLevelStats[record.Attacker] = stats;
+                          stats.IsTopLevel = true;
                         }
                         else
                         {
-                          RaidTotals.Total += record.Total;
-                          StatsUtil.UpdateStats(stats, record);
+                          string origName = player ?? record.Attacker;
+                          string aggregateName = origName + " +Pets";
 
-                          if ((!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerPets.ContainsKey(record.Attacker)) || player == Labels.UNASSIGNED)
+                          PlayerStats aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
+                          StatsUtil.UpdateStats(aggregatePlayerStats, record);
+                          topLevelStats[aggregateName] = aggregatePlayerStats;
+
+                          if (!childrenStats.TryGetValue(aggregateName, out Dictionary<string, PlayerStats> children))
                           {
-                            if (!record.AttackerIsSpell)
-                            {
-                              topLevelStats[record.Attacker] = stats;
-                              stats.IsTopLevel = true;
-                            }
-                          }
-                          else
-                          {
-                            string origName = player ?? record.Attacker;
-                            string aggregateName = origName + " +Pets";
-
-                            PlayerStats aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
-                            StatsUtil.UpdateStats(aggregatePlayerStats, record);
-                            topLevelStats[aggregateName] = aggregatePlayerStats;
-
-                            if (!childrenStats.TryGetValue(aggregateName, out Dictionary<string, PlayerStats> children))
-                            {
-                              childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
-                            }
-
-                            childrenStats[aggregateName][stats.Name] = stats;
-                            stats.IsTopLevel = false;
+                            childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
                           }
 
-                          PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                          childrenStats[aggregateName][stats.Name] = stats;
+                          stats.IsTopLevel = false;
+                        }
 
-                          uint critHits = subStats.CritHits;
-                          StatsUtil.UpdateStats(subStats, record);
+                        PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
 
-                          // dont count misses/dodges or where no damage was done
-                          if (record.Total > 0)
-                          {
-                            Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
-                            Helpers.LongIntAddHelper.Add(values, record.Total, 1);
-                          }
+                        uint critHits = subStats.CritHits;
+                        StatsUtil.UpdateStats(subStats, record);
+
+                        // dont count misses/dodges or where no damage was done
+                        if (record.Total > 0)
+                        {
+                          Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
+                          Helpers.LongIntAddHelper.Add(values, record.Total, 1);
                         }
                       }
                     }
@@ -451,26 +437,6 @@ namespace EQLogParser
               var resistCounts = Resists.Cast<ResistRecord>().GroupBy(x => x.Spell).ToDictionary(g => g.Key, g => g.ToList().Count);
               var specials = StatsUtil.GetSpecials(RaidTotals);
               var expandedStats = new ConcurrentBag<PlayerStats>();
-
-              // workaround for unknown spells
-              if (unknown != null)
-              {
-                expandedStats.Add(unknown);
-                var timeRange = new TimeRange();
-
-                unknown.SubStats.Values.ToList().ForEach(stats =>
-                {
-                  if (PlayerTimeRanges.TryGetValue(stats.Name, out TimeRange range))
-                  {
-                    var filteredRange = StatsUtil.FilterMaxTime(range, stopTime);
-                    stats.TotalSeconds = filteredRange.GetTotal();
-                    timeRange.Add(range.TimeSegments);
-                  }
-                });
-
-                unknown.TotalSeconds = timeRange.GetTotal();
-                StatsUtil.UpdateCalculations(unknown, RaidTotals, resistCounts);
-              }
 
               individualStats.Values.AsParallel().Where(stats => topLevelStats.ContainsKey(stats.Name)).ForAll(stats =>
               {
@@ -515,11 +481,6 @@ namespace EQLogParser
                   stats.Special = special2;
                 }
               });
-
-              if (unknown != null)
-              {
-                topLevelStats[Labels.UNK] = unknown;
-              }
 
               combined = new CombinedStats
               {

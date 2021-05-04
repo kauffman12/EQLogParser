@@ -8,6 +8,8 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private static readonly DateUtil DateUtil = new DateUtil();
+
     private static readonly List<string> YouCriteria = new List<string>
     {
       "You say,", "You told ", "You tell ", "You say to ", "You shout,", "You say out of", "You auction,"
@@ -25,7 +27,7 @@ namespace EQLogParser
       {
         if (chatType.Channel == ChatChannels.GUILD || chatType.Channel == ChatChannels.RAID || chatType.Channel == ChatChannels.FELLOWSHIP)
         {
-          PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender);
+          PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, DateUtil.ParseLogDate(lineData.Line, out _));
         }
       }
 
