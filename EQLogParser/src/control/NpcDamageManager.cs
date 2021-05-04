@@ -8,7 +8,9 @@ namespace EQLogParser
   {
     internal double LastFightProcessTime = double.NaN;
     private int CurrentNpcID = 0;
+    private readonly static Dictionary<string, bool> RecentSpellCache = new Dictionary<string, bool>();
     private readonly static Dictionary<string, bool> ValidCombo = new Dictionary<string, bool>();
+    private const int RECENTSPELLTIME = 300;
 
     public NpcDamageManager() => DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
 
@@ -22,14 +24,32 @@ namespace EQLogParser
       {
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
         ValidCombo.Clear();
+
+        if (processed.BeginTime - LastFightProcessTime > RECENTSPELLTIME)
+        {
+          RecentSpellCache.Clear();
+        }
+      }
+
+      // cache recent player spells to help determine who the caster was
+      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayer(processed.Record.Attacker);
+      if (isAttackerPlayer && (processed.Record.Type == Labels.DD || processed.Record.Type == Labels.DOT || processed.Record.Type == Labels.PROC))
+      {
+        RecentSpellCache[processed.Record.SubType] = true;
       }
 
       string comboKey = processed.Record.Attacker + "=" + processed.Record.Defender;
-      if (ValidCombo.TryGetValue(comboKey, out bool defender) || IsValidAttack(processed.Record, out defender))
+      if (ValidCombo.TryGetValue(comboKey, out bool defender) || IsValidAttack(processed.Record, isAttackerPlayer, out defender))
       {
         ValidCombo[comboKey] = defender;
         bool isNonTankingFight = false;
         string origTimeString = processed.OrigTimeString.Substring(4, 15);
+
+        // fix for unknown spells having a good name to work from
+        if (processed.Record.AttackerIsSpell && defender)
+        {
+          processed.Record.Attacker = Labels.UNK;
+        }
 
         Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
 
@@ -126,17 +146,18 @@ namespace EQLogParser
       StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
     }
 
-    private static bool IsValidAttack(DamageRecord record, out bool npcDefender)
+    private static bool IsValidAttack(DamageRecord record, bool isAttackerPlayer, out bool npcDefender)
     {
       bool valid = false;
       npcDefender = false;
 
       if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))
       {
-        var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayer(record.Attacker);
+        var isAttackerPlayerSpell = record.AttackerIsSpell && RecentSpellCache.ContainsKey(record.Attacker);
+        isAttackerPlayer = isAttackerPlayer || isAttackerPlayerSpell;
         var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayer(record.Defender);
-        var isAttackerNpc = !isAttackerPlayer && (DataManager.Instance.IsKnownNpc(record.Attacker) || record.AttackerIsSpell);
-        var isDefenderNpc = !isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender);
+        var isAttackerNpc = (!isAttackerPlayer && DataManager.Instance.IsKnownNpc(record.Attacker)) || (record.AttackerIsSpell && !isAttackerPlayerSpell);
+        var isDefenderNpc = (!isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender)) || isAttackerPlayerSpell;
 
         if (isDefenderNpc && !isAttackerNpc)
         {
@@ -145,7 +166,7 @@ namespace EQLogParser
         }
         else if (!isDefenderNpc && isAttackerNpc)
         {
-          valid = true;
+          valid = isDefenderPlayer || PlayerManager.Instance.IsPossiblePlayerName(record.Defender);
           npcDefender = false;
         }
         else if (!isDefenderNpc && !isAttackerNpc)

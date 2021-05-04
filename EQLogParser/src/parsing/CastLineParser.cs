@@ -21,6 +21,11 @@ namespace EQLogParser
       { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
     };
 
+    private static readonly Dictionary<string, byte> PetCheck = new Dictionary<string, byte>()
+    {
+      { "body is covered in slithering runes.", 1 }, { "enters an accelerated frenzy.", 1 }, { "enters a bloodrage.", 1 }, { "wishes to show its obedience.", 1 }
+    };
+
     public static void Process(LineData lineData)
     {
       bool handled = false;
@@ -161,7 +166,8 @@ namespace EQLogParser
             if (split[0].Length > 3 && split[0][split[0].Length - 1] == 's' && split[0][split[0].Length - 2] == '\'')
             {
               player = string.Intern(split[0].Substring(0, split[0].Length - 2));
-              List<SpellData> result = DataManager.Instance.GetPosessiveLandsOnOther(player, string.Join(" ", split, 1, split.Length - 1), out _);
+              var landsOnPosessiveMessage = string.Join(" ", split, 1, split.Length - 1);
+              List<SpellData> result = DataManager.Instance.GetPosessiveLandsOnOther(player, landsOnPosessiveMessage, out _);
               if (result != null)
               {
                 double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
@@ -175,6 +181,12 @@ namespace EQLogParser
                 else
                 {
                   newSpell.Ambiguity.AddRange(result);
+                }
+
+                // valid lands on other. check for pet receiving DPS AA
+                if (PetCheck.ContainsKey(landsOnPosessiveMessage))
+                {
+                  PlayerManager.Instance.AddVerifiedPet(player);
                 }
 
                 DataManager.Instance.AddReceivedSpell(newSpell, currentTime);
@@ -206,7 +218,7 @@ namespace EQLogParser
               else
               {
                 // valid lands on other. check for pet receiving DPS AA
-                if ("enters an accelerated frenzy." == landsOnMessage || "enters a bloodrage." == landsOnMessage || "wishes to show its obedience." == landsOnMessage)
+                if (PetCheck.ContainsKey(landsOnMessage))
                 {
                   PlayerManager.Instance.AddVerifiedPet(player);
                 }

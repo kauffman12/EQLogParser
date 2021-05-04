@@ -26,13 +26,12 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
     private readonly ConcurrentDictionary<string, byte> TakenPetOrPlayerAction = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> VerifiedPlayers = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, double> VerifiedPlayers = new ConcurrentDictionary<string, double>();
     private readonly ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
     private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> CharmPets = new ConcurrentDictionary<string, byte>();
 
     private bool PetMappingUpdated = false;
-    private bool PlayersUpdated = false;
 
     private PlayerManager()
     {
@@ -62,7 +61,8 @@ namespace EQLogParser
 
     internal bool IsDoTClass(string name) => !string.IsNullOrEmpty(name) && DoTClasses.ContainsKey(name);
 
-    internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name) || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
+    internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name) 
+      || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
 
     internal bool IsPetOrPlayer(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || TakenPetOrPlayerAction.ContainsKey(name));
 
@@ -125,18 +125,25 @@ namespace EQLogParser
       }
     }
 
-    internal void AddVerifiedPlayer(string name, bool initialLoad = false)
+    internal void AddVerifiedPlayer(string name, double playerTime)
     {
       if (!string.IsNullOrEmpty(name) && IsPossiblePlayerName(name))
       {
+        if (VerifiedPlayers.TryGetValue(name, out double lastTime))
+        {
+          if (playerTime > lastTime)
+          {
+            VerifiedPlayers[name] = playerTime;
+          }
+        }
+        else
+        {
+          VerifiedPlayers[name] = playerTime;
+          EventsNewVerifiedPlayer?.Invoke(this, name);
+        }
+
         TakenPetOrPlayerAction.TryRemove(name, out _);
         VerifiedPets.TryRemove(name, out _);
-
-        if (VerifiedPlayers.TryAdd(name, 1))
-        {
-          EventsNewVerifiedPlayer?.Invoke(this, name);
-          PlayersUpdated = !initialLoad;
-        }
       }
     }
 
@@ -234,7 +241,6 @@ namespace EQLogParser
           PetMappingUpdated = true;
         }
 
-        PlayersUpdated = true;
         EventsRemoveVerifiedPlayer?.Invoke(this, name);
       }
     }
@@ -266,17 +272,37 @@ namespace EQLogParser
         VerifiedPlayers.Clear();
         PossiblePlayerCache.Clear();
 
-        AddVerifiedPlayer(ConfigUtil.PlayerName);
+        AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDouble(DateTime.Now));
+
+        ConfigUtil.ReadPlayers().ForEach(player =>
+        {
+          if (!string.IsNullOrEmpty(player) && player.Length > 2)
+          {
+            var split = player.Split('=');
+            if (split.Length == 2 && double.TryParse(split[1], out double parsed))
+            {
+              AddVerifiedPlayer(split[0], parsed);
+            }
+            else
+            {
+              AddVerifiedPlayer(split[0], 0d);
+            }
+          }
+        });
+
         var mapping = ConfigUtil.ReadPetMapping();
         foreach (var key in mapping.Keys)
         {
-          AddVerifiedPlayer(mapping[key], true);
+          if (!VerifiedPlayers.ContainsKey(mapping[key]))
+          {
+            AddVerifiedPlayer(mapping[key], 0d);
+          }
+
           AddVerifiedPet(key);
           AddPetToPlayer(key, mapping[key], true);
         }
 
-        ConfigUtil.ReadPlayers().ForEach(player => AddVerifiedPlayer(player));
-        PetMappingUpdated = PlayersUpdated = false;
+        PetMappingUpdated = false;
       }
     }
 
@@ -289,11 +315,16 @@ namespace EQLogParser
         PetMappingUpdated = false;
       }
 
-      if (PlayersUpdated)
+      var list = new List<string>();
+      foreach (var keypair in VerifiedPlayers)
       {
-        ConfigUtil.SavePlayers(VerifiedPlayers.Keys.ToList().Where(key => IsPossiblePlayerName(key)).ToList());
-        PlayersUpdated = false;
+        if (IsPossiblePlayerName(keypair.Key))
+        {
+          list.Add(keypair.Key + "=" + Math.Round(keypair.Value));
+        }
       }
+
+      ConfigUtil.SavePlayers(list);
     }
 
     internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass)

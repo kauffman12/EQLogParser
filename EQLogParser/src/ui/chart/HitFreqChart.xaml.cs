@@ -337,7 +337,14 @@ namespace EQLogParser
         }
 
         hitTypeList.ItemsSource = hitTypes;
-        hitTypeList.SelectedItem = (hitTypeList?.SelectedItem is string selectedHitType && hitTypes.Contains(selectedHitType)) ? selectedHitType : hitTypes[0];
+        if (hitTypeList?.SelectedItem is string selectedHitType && hitTypes.Contains(selectedHitType))
+        {
+          hitTypeList.SelectedItem = selectedHitType;
+        }
+        else if (hitTypes.Count > 0)
+        {
+          hitTypeList.SelectedItem = hitTypes.First();
+        }
       }
     }
 

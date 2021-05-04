@@ -325,7 +325,7 @@ namespace EQLogParser
       DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
       {
-        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(npc.Name), TaskScheduler.Default);
+        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(npc.Name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
       }
     }
 

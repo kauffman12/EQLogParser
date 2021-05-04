@@ -247,7 +247,7 @@ namespace EQLogParser
                 record.ModifiersMask = LineModifiersParser.Parse(part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1));
                 if (LineModifiersParser.IsTwincast(record.ModifiersMask))
                 {
-                  PlayerManager.Instance.AddVerifiedPlayer(record.Healer);
+                  PlayerManager.Instance.AddVerifiedPlayer(record.Healer, pline.CurrentTime);
                 }
               }
             }

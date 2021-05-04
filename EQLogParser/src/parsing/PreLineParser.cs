@@ -6,6 +6,8 @@ namespace EQLogParser
   {
     private const int MIN_LINE_LENGTH = 30;
 
+    private static readonly DateUtil DateUtil = new DateUtil();
+
     internal static bool NeedProcessing(string line, out string action)
     {
       action = null;
@@ -13,7 +15,7 @@ namespace EQLogParser
       if (line != null && line.Length > MIN_LINE_LENGTH)
       {
         action = line.Substring(LineParsing.ACTIONINDEX);
-        valid = !(CheckForPlayersOrNPCs(action) || CheckForPetLeader(action));
+        valid = !(CheckForPlayersOrNPCs(line, action) || CheckForPetLeader(line, action));
       }
       else if (line != null)
       {
@@ -23,7 +25,7 @@ namespace EQLogParser
       return valid;
     }
 
-    private static bool CheckForPetLeader(string action)
+    private static bool CheckForPetLeader(string line, string action)
     {
       bool handled = false;
       if (action.Length >= 28 && action.Length < 75)
@@ -38,7 +40,7 @@ namespace EQLogParser
             if (period > -1)
             {
               string owner = action.Substring(index + 21, period - index - 21);
-              PlayerManager.Instance.AddVerifiedPlayer(owner);
+              PlayerManager.Instance.AddVerifiedPlayer(owner, DateUtil.ParseLogDate(line, out _));
               PlayerManager.Instance.AddVerifiedPet(pet);
               PlayerManager.Instance.AddPetToPlayer(pet, owner);
             }
@@ -51,7 +53,7 @@ namespace EQLogParser
       return handled;
     }
 
-    private static bool CheckForPlayersOrNPCs(string action)
+    private static bool CheckForPlayersOrNPCs(string line, string action)
     {
       bool found = false;
 
@@ -61,7 +63,7 @@ namespace EQLogParser
         {
           if (action[10] == 'P' && action[11] == 'l') // Player
           {
-            PlayerManager.Instance.AddVerifiedPlayer(action.Substring(19));
+            PlayerManager.Instance.AddVerifiedPlayer(action.Substring(19), DateUtil.ParseLogDate(line, out _));
           }
 
           found = true; // ignore anything that starts with Targeted
@@ -75,31 +77,31 @@ namespace EQLogParser
         else if (action.EndsWith(" joined the raid.", StringComparison.Ordinal) && !action.StartsWith("You have", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 17);
-          PlayerManager.Instance.AddVerifiedPlayer(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
           found = true;
         }
         else if (action.EndsWith(" has joined the group.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 22);
-          PlayerManager.Instance.AddVerifiedPlayer(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
           found = true;
         }
         else if (action.EndsWith(" has left the raid.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 19);
-          PlayerManager.Instance.AddVerifiedPlayer(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
           found = true;
         }
         else if (action.EndsWith(" has left the group.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 20);
-          PlayerManager.Instance.AddVerifiedPlayer(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
           found = true;
         }
         else if (action.EndsWith(" is now the leader of your raid.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 32);
-          PlayerManager.Instance.AddVerifiedPlayer(test);
+          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
           found = true;
         }
         // handle junk line to avoid it being written to debug
