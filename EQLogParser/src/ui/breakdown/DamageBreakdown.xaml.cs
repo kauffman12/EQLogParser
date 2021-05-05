@@ -47,7 +47,7 @@ namespace EQLogParser
       }
     }
 
-    override internal void Display(List<PlayerStats> selectedStats = null)
+    internal override void Display(List<PlayerStats> selectedStats = null)
     {
       if (Running == false && ChildStats != null && RaidStats != null)
       {

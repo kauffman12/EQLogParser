@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.12";
+    private const string VERSION = "v1.8.13";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -92,9 +92,7 @@ namespace EQLogParser
         InitializeComponent();
 
         // update titles
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
         versionText.Text = VERSION;
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
 
         // used for setting menu icons based on open windows
         IconToWindow = new Dictionary<string, DockingWindow>()
@@ -324,25 +322,26 @@ namespace EQLogParser
       var filtered = (npcWindow?.Content as FightTable)?.GetSelectedItems().OrderBy(npc => npc.Id);
       string name = filtered?.FirstOrDefault()?.Name;
 
-      var damageOptions = new GenerateStatsOptions() { Name = name, RequestChartData = DamageChartWindow?.IsOpen == true };
+      var damageOptions = new GenerateStatsOptions { Name = name, RequestChartData = DamageChartWindow?.IsOpen == true };
       damageOptions.Npcs.AddRange(filtered);
       if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
       {
         damageOptions.RequestSummaryData = true;
       }
 
-      var healingOptions = new GenerateStatsOptions() { Name = name, RequestChartData = HealingChartWindow?.IsOpen == true };
+      var healingOptions = new GenerateStatsOptions { Name = name, RequestChartData = HealingChartWindow?.IsOpen == true };
       healingOptions.Npcs.AddRange(filtered);
       if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
       {
         healingOptions.RequestSummaryData = true;
       }
 
-      var tankingOptions = new GenerateStatsOptions() { Name = name, RequestChartData = TankingChartWindow?.IsOpen == true };
+      var tankingOptions = new GenerateStatsOptions { Name = name, RequestChartData = TankingChartWindow?.IsOpen == true };
       tankingOptions.Npcs.AddRange(filtered);
       if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
       {
         tankingOptions.RequestSummaryData = true;
+        tankingOptions.DamageType = tankingSummary.CurrentDamageType;
       }
 
       Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
@@ -585,10 +584,7 @@ namespace EQLogParser
       }
       else
       {
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var damageSummary = new DamageSummary();
-#pragma warning restore CA2000 // Dispose objects before losing scope
-
         damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
         DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
@@ -618,10 +614,7 @@ namespace EQLogParser
       }
       else
       {
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var healingSummary = new HealingSummary();
-#pragma warning restore CA2000 // Dispose objects before losing scope
-
         healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
         HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         IconToWindow[healingSummaryIcon.Name] = HealingWindow;
@@ -651,10 +644,7 @@ namespace EQLogParser
       }
       else
       {
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var tankingSummary = new TankingSummary();
-#pragma warning restore CA2000 // Dispose objects before losing scope
-
         tankingSummary.EventsSelectionChange += TankingSummary_SelectionChanged;
         TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
         IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
@@ -670,7 +660,7 @@ namespace EQLogParser
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true };
+          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true, DamageType = tankingSummary.CurrentDamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }

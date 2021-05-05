@@ -296,7 +296,7 @@ namespace EQLogParser
           // so this limits it to 1/2 the current time value
           ProcessDirection = !ProcessDirection;
 
-          Stats = DamageStatsManager.Instance.ComputeOverlayStats(CurrentDamageSelectionMode, MAX_ROWS, SelectedClass);
+          Stats = DamageStatsManager.ComputeOverlayStats(CurrentDamageSelectionMode, MAX_ROWS, SelectedClass);
 
           if (Stats == null)
           {

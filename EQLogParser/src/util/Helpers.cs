@@ -169,18 +169,12 @@ namespace EQLogParser
 
     private class SortableNameComparer : IComparer<SortableName>
     {
-      public int Compare(SortableName x, SortableName y)
-      {
-        return string.CompareOrdinal(x.Name, y.Name);
-      }
+      public int Compare(SortableName x, SortableName y) => string.CompareOrdinal(x?.Name, y?.Name);
     }
 
     private class SortablePetMappingComparer : IComparer<PetMapping>
     {
-      public int Compare(PetMapping x, PetMapping y)
-      {
-        return string.CompareOrdinal(x.Owner, y.Owner);
-      }
+      public int Compare(PetMapping x, PetMapping y) => string.CompareOrdinal(x?.Owner, y?.Owner);
     }
   }
 

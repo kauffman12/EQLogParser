@@ -24,6 +24,11 @@ namespace EQLogParser
     private List<Fight> Selected;
     private string Title;
 
+    internal static bool IsMelee(DamageRecord record)
+    {
+      return record.Type == Labels.MELEE || record.Type == Labels.MISS || record.Type == Labels.PARRY || record.Type == Labels.DODGE || record.Type == Labels.BLOCK;
+    }
+
     internal TankingStatsManager()
     {
       lock (TankingGroups)
@@ -142,7 +147,7 @@ namespace EQLogParser
         if (options.RequestChartData)
         {
           // send update
-          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups), Filter = filter };
+          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups, options.DamageType), Filter = filter };
 
           if (selected != null)
           {
@@ -200,11 +205,14 @@ namespace EQLogParser
                   {
                     if (action is DamageRecord record)
                     {
-                      RaidTotals.Total += record.Total;
-                      PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
-                      StatsUtil.UpdateStats(stats, record);
-                      PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
-                      StatsUtil.UpdateStats(subStats, record);
+                      if (options.DamageType == 0 || (options.DamageType == 1 && IsMelee(record)) || (options.DamageType == 2 && !IsMelee(record)))
+                      {
+                        RaidTotals.Total += record.Total;
+                        PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
+                        StatsUtil.UpdateStats(stats, record);
+                        PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                        StatsUtil.UpdateStats(subStats, record);
+                      }
                     }
                   });
                 });

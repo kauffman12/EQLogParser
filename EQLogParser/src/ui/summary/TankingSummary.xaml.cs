@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -14,6 +15,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TankingSummary : SummaryTable, IDisposable
   {
+    public int CurrentDamageType = 0;
     private string CurrentClass = null;
     private bool CurrentPetValue;
 
@@ -22,7 +24,18 @@ namespace EQLogParser
       InitializeComponent();
       InitSummaryTable(title, dataGrid, selectedColumns);
 
+      // if pets are shown
       showPets.IsChecked = CurrentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", null, true);
+
+      // default damage types to display
+      string damageType = ConfigUtil.GetSetting("TankingSummaryDamageType");
+      if (!string.IsNullOrEmpty(damageType) && int.TryParse(damageType, out int type) && type > -1 && type < 3)
+      {
+        damageTypes.SelectedIndex = type;
+      }
+
+      CurrentDamageType = damageTypes.SelectedIndex;
+
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, Properties.Resources.ANY_CLASS);
       classesList.ItemsSource = list;
@@ -219,11 +232,20 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid != null)
+      if (dataGrid?.ItemsSource != null)
       {
+        var needRequery = CurrentDamageType != damageTypes.SelectedIndex;
         CurrentPetValue = showPets.IsChecked.Value;
+        CurrentDamageType = damageTypes.SelectedIndex;
         ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("TankingSummaryDamageType", CurrentDamageType.ToString(CultureInfo.CurrentCulture));
         SetFilter(dataGrid?.ItemsSource as ICollectionView);
+
+        if (needRequery)
+        {
+          var tankingOptions = new GenerateStatsOptions { RequestSummaryData = true, RequestChartData = true, DamageType = CurrentDamageType };
+          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
+        }
       }
     }
 

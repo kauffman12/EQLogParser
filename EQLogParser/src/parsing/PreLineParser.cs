@@ -8,6 +8,11 @@ namespace EQLogParser
 
     private static readonly DateUtil DateUtil = new DateUtil();
 
+    private PreLineParser()
+    {
+
+    }
+
     internal static bool NeedProcessing(string line, out string action)
     {
       action = null;

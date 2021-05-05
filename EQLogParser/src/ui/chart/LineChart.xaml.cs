@@ -23,20 +23,20 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private readonly static CartesianMapper<DataPoint> CONFIG_VPS = Mappers.Xy<DataPoint>()
+    private static readonly CartesianMapper<DataPoint> CONFIG_VPS = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.VPS);
-    private readonly static CartesianMapper<DataPoint> CONFIG_TOTAL = Mappers.Xy<DataPoint>()
+    private static readonly CartesianMapper<DataPoint> CONFIG_TOTAL = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.Total);
-    private readonly static CartesianMapper<DataPoint> CONFIG_CRIT_RATE = Mappers.Xy<DataPoint>()
+    private static readonly CartesianMapper<DataPoint> CONFIG_CRIT_RATE = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.CritRate);
-    private readonly static CartesianMapper<DataPoint> CONFIG_AVG = Mappers.Xy<DataPoint>()
+    private static readonly CartesianMapper<DataPoint> CONFIG_AVG = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.Avg);
 
-    private readonly static List<CartesianMapper<DataPoint>> CHOICES = new List<CartesianMapper<DataPoint>>()
+    private static readonly List<CartesianMapper<DataPoint>> CHOICES = new List<CartesianMapper<DataPoint>>()
     {
       CONFIG_VPS, CONFIG_TOTAL, CONFIG_AVG, CONFIG_CRIT_RATE
     };
@@ -132,8 +132,6 @@ namespace EQLogParser
 
     private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      DateTime newTaskTime = DateTime.Now;
-
       Task.Run(() =>
       {
         double lastTime = double.NaN;
@@ -293,58 +291,62 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         Reset();
-
         titleLabel.Content = label;
-        SeriesCollection collection = new SeriesCollection(CurrentConfig);
-        bool fixStillNeeded = true;
+        lvcChart.Series = BuildCollection(sortedValues);
+      });
+    }
 
-        foreach (var value in sortedValues)
+    private SeriesCollection BuildCollection(List<ChartValues<DataPoint>> sortedValues)
+    {
+      bool fixStillNeeded = true;
+      SeriesCollection collection = new SeriesCollection(CurrentConfig);
+
+      foreach (var value in sortedValues)
+      {
+        var name = value.First().Name;
+        name = CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION && !HasPets.ContainsKey(name) ? name.Split(' ')[0] : name;
+        var series = new LineSeries() { Title = name, Values = value };
+
+        if (value.Count > 1)
         {
-          var name = value.First().Name;
-          name = CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION && !HasPets.ContainsKey(name) ? name.Split(' ')[0] : name;
-          var series = new LineSeries() { Title = name, Values = value };
-
-          if (value.Count > 1)
+          series.PointGeometry = null;
+          fixStillNeeded = false;
+        }
+        else if (value.Count == 1 && fixStillNeeded) // handles if everything is 1 point
+        {
+          if (!double.IsNaN(lvcChart.AxisX[0].MinValue))
           {
-            series.PointGeometry = null;
-            fixStillNeeded = false;
-          }
-          else if (value.Count == 1 && fixStillNeeded) // handles if everything is 1 point
-          {
-            if (!double.IsNaN(lvcChart.AxisX[0].MinValue))
-            {
-              lvcChart.AxisX[0].MinValue = Math.Min(lvcChart.AxisX[0].MinValue, value[0].CurrentTime - 3.0);
-            }
-            else
-            {
-              lvcChart.AxisX[0].MinValue = value[0].CurrentTime - 3.0;
-            }
-
-            if (!double.IsNaN(lvcChart.AxisX[0].MaxValue))
-            {
-              lvcChart.AxisX[0].MaxValue = Math.Max(lvcChart.AxisX[0].MaxValue, value[0].CurrentTime + 3.0);
-            }
-            else
-            {
-              lvcChart.AxisX[0].MaxValue = value[0].CurrentTime + 3.0;
-            }
+            lvcChart.AxisX[0].MinValue = Math.Min(lvcChart.AxisX[0].MinValue, value[0].CurrentTime - 3.0);
           }
           else
           {
-            fixStillNeeded = false;
+            lvcChart.AxisX[0].MinValue = value[0].CurrentTime - 3.0;
           }
 
-          if (!fixStillNeeded)
+          if (!double.IsNaN(lvcChart.AxisX[0].MaxValue))
           {
-            lvcChart.AxisX[0].MinValue = double.NaN;
-            lvcChart.AxisX[0].MaxValue = double.NaN;
+            lvcChart.AxisX[0].MaxValue = Math.Max(lvcChart.AxisX[0].MaxValue, value[0].CurrentTime + 3.0);
           }
-
-          collection.Add(series);
+          else
+          {
+            lvcChart.AxisX[0].MaxValue = value[0].CurrentTime + 3.0;
+          }
+        }
+        else
+        {
+          fixStillNeeded = false;
         }
 
-        lvcChart.Series = collection;
-      });
+        if (!fixStillNeeded)
+        {
+          lvcChart.AxisX[0].MinValue = double.NaN;
+          lvcChart.AxisX[0].MaxValue = double.NaN;
+        }
+
+        collection.Add(series);
+      }
+
+      return collection;
     }
 
     private void ChartDoubleClick(object sender, MouseButtonEventArgs e) => Helpers.ChartResetView(lvcChart);

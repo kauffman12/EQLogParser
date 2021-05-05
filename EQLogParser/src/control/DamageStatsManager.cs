@@ -27,165 +27,7 @@ namespace EQLogParser
     private List<Fight> Selected;
     private string Title;
 
-    internal DamageStatsManager()
-    {
-      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
-      {
-        lock (DamageGroupIds)
-        {
-          Reset();
-        }
-      };
-    }
-
-    internal int GetGroupCount()
-    {
-      lock (DamageGroupIds)
-      {
-        return DamageGroups.Count;
-      }
-    }
-
-    internal void RebuildTotalStats(GenerateStatsOptions options)
-    {
-      lock (DamageGroups)
-      {
-        if (DamageGroups.Count > 0)
-        {
-          FireNewStatsEvent(options);
-          ComputeDamageStats(options);
-        }
-      }
-    }
-
-    internal void BuildTotalStats(GenerateStatsOptions options)
-    {
-      lock (DamageGroupIds)
-      {
-        try
-        {
-          FireNewStatsEvent(options);
-          Reset();
-
-          Selected = options.Npcs;
-          Title = options.Name;
-          var damageBlocks = new List<ActionBlock>();
-
-          Selected.ForEach(fight =>
-          {
-            damageBlocks.AddRange(fight.DamageBlocks);
-
-            if (fight.GroupId > -1)
-            {
-              DamageGroupIds[fight.GroupId] = 1;
-            }
-
-            RaidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
-            StatsUtil.UpdateRaidTimeRanges(fight, PlayerTimeRanges, PlayerSubTimeRanges);
-          });
-
-          damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
-
-          if (damageBlocks.Count > 0)
-          {
-            RaidTotals.TotalSeconds = RaidTotals.Ranges.GetTotal();
-            RaidTotals.MaxTime = RaidTotals.TotalSeconds;
-
-            int rangeIndex = 0;
-            double lastTime = 0;
-            var newBlock = new List<ActionBlock>();
-            damageBlocks.ForEach(block =>
-            {
-              if (RaidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > RaidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
-              {
-                rangeIndex++;
-
-                if (newBlock.Count > 0)
-                {
-                  DamageGroups.Add(newBlock);
-                }
-
-                newBlock = new List<ActionBlock>();
-              }
-
-              if (lastTime != block.BeginTime)
-              {
-                var copy = new ActionBlock();
-                copy.Actions.AddRange(block.Actions);
-                copy.BeginTime = block.BeginTime;
-                newBlock.Add(copy);
-              }
-              else
-              {
-                newBlock.Last().Actions.AddRange(block.Actions);
-              }
-
-              // update pet mapping
-              block.Actions.ForEach(action => UpdatePetMapping(action as DamageRecord));
-              lastTime = block.BeginTime;
-            });
-
-            DamageGroups.Add(newBlock);
-            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block => Resists.AddRange(block.Actions)));
-            ComputeDamageStats(options);
-          }
-          else if (Selected == null || Selected.Count == 0)
-          {
-            FireNoDataEvent(options, "NONPC");
-          }
-          else
-          {
-            FireNoDataEvent(options, "NODATA");
-          }
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
-        {
-          if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
-          {
-            LOG.Error(ex);
-          }
-        }
-      }
-    }
-
-    internal Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
-    {
-      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
-
-      // get chart data for player and pets if available
-      if (damageStats?.Children.ContainsKey(selected.Name) == true)
-      {
-        damageStats?.Children[selected.Name].ForEach(stats => AddStats(stats));
-      }
-      else
-      {
-        AddStats(selected);
-      }
-
-      return results;
-
-      void AddStats(PlayerStats stats)
-      {
-        results[stats.Name] = new List<HitFreqChartData>();
-        foreach (string type in stats.SubStats.Keys)
-        {
-          HitFreqChartData chartData = new HitFreqChartData() { HitType = stats.SubStats[type].Name };
-
-          // add crits
-          chartData.CritXValues.AddRange(stats.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
-          chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stats.SubStats[type].CritFreqValues[damage]));
-
-          // add non crits
-          chartData.NonCritXValues.AddRange(stats.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
-          chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stats.SubStats[type].NonCritFreqValues[damage]));
-          results[stats.Name].Add(chartData);
-        }
-      }
-    }
-
-    internal CombinedStats ComputeOverlayStats(int mode, int maxRows, string selectedClass)
+    internal static CombinedStats ComputeOverlayStats(int mode, int maxRows, string selectedClass)
     {
       CombinedStats combined = null;
 
@@ -320,6 +162,164 @@ namespace EQLogParser
       }
 
       return combined;
+    }
+
+    internal static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
+    {
+      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
+
+      // get chart data for player and pets if available
+      if (damageStats?.Children.ContainsKey(selected.Name) == true)
+      {
+        damageStats?.Children[selected.Name].ForEach(stats => AddStats(stats));
+      }
+      else
+      {
+        AddStats(selected);
+      }
+
+      return results;
+
+      void AddStats(PlayerStats stats)
+      {
+        results[stats.Name] = new List<HitFreqChartData>();
+        foreach (string type in stats.SubStats.Keys)
+        {
+          HitFreqChartData chartData = new HitFreqChartData() { HitType = stats.SubStats[type].Name };
+
+          // add crits
+          chartData.CritXValues.AddRange(stats.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
+          chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stats.SubStats[type].CritFreqValues[damage]));
+
+          // add non crits
+          chartData.NonCritXValues.AddRange(stats.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
+          chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stats.SubStats[type].NonCritFreqValues[damage]));
+          results[stats.Name].Add(chartData);
+        }
+      }
+    }
+
+    internal DamageStatsManager()
+    {
+      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
+      {
+        lock (DamageGroupIds)
+        {
+          Reset();
+        }
+      };
+    }
+
+    internal int GetGroupCount()
+    {
+      lock (DamageGroupIds)
+      {
+        return DamageGroups.Count;
+      }
+    }
+
+    internal void RebuildTotalStats(GenerateStatsOptions options)
+    {
+      lock (DamageGroups)
+      {
+        if (DamageGroups.Count > 0)
+        {
+          FireNewStatsEvent(options);
+          ComputeDamageStats(options);
+        }
+      }
+    }
+
+    internal void BuildTotalStats(GenerateStatsOptions options)
+    {
+      lock (DamageGroupIds)
+      {
+        try
+        {
+          FireNewStatsEvent(options);
+          Reset();
+
+          Selected = options.Npcs;
+          Title = options.Name;
+          var damageBlocks = new List<ActionBlock>();
+
+          Selected.ForEach(fight =>
+          {
+            damageBlocks.AddRange(fight.DamageBlocks);
+
+            if (fight.GroupId > -1)
+            {
+              DamageGroupIds[fight.GroupId] = 1;
+            }
+
+            RaidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
+            StatsUtil.UpdateRaidTimeRanges(fight, PlayerTimeRanges, PlayerSubTimeRanges);
+          });
+
+          damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
+
+          if (damageBlocks.Count > 0)
+          {
+            RaidTotals.TotalSeconds = RaidTotals.Ranges.GetTotal();
+            RaidTotals.MaxTime = RaidTotals.TotalSeconds;
+
+            int rangeIndex = 0;
+            double lastTime = 0;
+            var newBlock = new List<ActionBlock>();
+            damageBlocks.ForEach(block =>
+            {
+              if (RaidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > RaidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
+              {
+                rangeIndex++;
+
+                if (newBlock.Count > 0)
+                {
+                  DamageGroups.Add(newBlock);
+                }
+
+                newBlock = new List<ActionBlock>();
+              }
+
+              if (lastTime != block.BeginTime)
+              {
+                var copy = new ActionBlock();
+                copy.Actions.AddRange(block.Actions);
+                copy.BeginTime = block.BeginTime;
+                newBlock.Add(copy);
+              }
+              else
+              {
+                newBlock.Last().Actions.AddRange(block.Actions);
+              }
+
+              // update pet mapping
+              block.Actions.ForEach(action => UpdatePetMapping(action as DamageRecord));
+              lastTime = block.BeginTime;
+            });
+
+            DamageGroups.Add(newBlock);
+            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block => Resists.AddRange(block.Actions)));
+            ComputeDamageStats(options);
+          }
+          else if (Selected == null || Selected.Count == 0)
+          {
+            FireNoDataEvent(options, "NONPC");
+          }
+          else
+          {
+            FireNoDataEvent(options, "NODATA");
+          }
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
+        {
+          if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
+          {
+            LOG.Error(ex);
+          }
+        }
+      }
     }
 
     private void ComputeDamageStats(GenerateStatsOptions options)

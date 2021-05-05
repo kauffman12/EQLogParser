@@ -305,9 +305,9 @@ namespace EQLogParser
       for (int i = 0; i < dataGrid.Items.Count; i++)
       {
         var row = dataGrid.ItemContainerGenerator.ContainerFromIndex(i);
-        if (row != null && row is DataGridRow)
+        if (row != null && row is DataGridRow gRow)
         {
-          height = (row as DataGridRow).ActualHeight;
+          height = gRow.ActualHeight;
           count++;
         }
         else if (count > 0)

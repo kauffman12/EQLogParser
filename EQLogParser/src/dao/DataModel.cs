@@ -93,6 +93,7 @@ namespace EQLogParser
     public bool RequestSummaryData { get; set; }
 
     public long MaxSeconds { get; set; } = -1;
+    public int DamageType { get; set; }
   }
 
   internal class StatsGenerationEvent
