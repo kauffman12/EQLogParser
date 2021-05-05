@@ -9,13 +9,13 @@ namespace EQLogParser
     {
     }
 
-    override protected bool IsValid(RecordWrapper wrapper)
+    protected override bool IsValid(RecordWrapper wrapper)
     {
       DamageRecord record = wrapper?.Record as DamageRecord;
       return record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled;
     }
 
-    override protected DataPoint Create(RecordWrapper wrapper)
+    protected override DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
 
@@ -41,12 +41,12 @@ namespace EQLogParser
     {
     }
 
-    override protected bool IsValid(RecordWrapper wrapper)
+    protected override bool IsValid(RecordWrapper wrapper)
     {
       return true; // validated when healing groups are initially built in the manager
     }
 
-    override protected DataPoint Create(RecordWrapper wrapper)
+    protected override DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
 
@@ -61,16 +61,23 @@ namespace EQLogParser
 
   internal class TankGroupCollection : RecordGroupCollection
   {
-    internal TankGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
+    int DamageType = 0;
+    internal TankGroupCollection(List<List<ActionBlock>> recordGroups, int damageType) : base(recordGroups)
     {
+      DamageType = damageType;
     }
 
-    override protected bool IsValid(RecordWrapper wrapper)
+    protected override bool IsValid(RecordWrapper wrapper)
     {
-      return true; // validated when damage groups are initially built in the manager
+      bool valid = false;
+      if (wrapper.Record is DamageRecord damage)
+      {
+        valid = DamageType == 0 || (DamageType == 1 && TankingStatsManager.IsMelee(damage)) || (DamageType == 2 && !TankingStatsManager.IsMelee(damage));
+      }
+      return valid;
     }
 
-    override protected DataPoint Create(RecordWrapper wrapper)
+    protected override DataPoint Create(RecordWrapper wrapper)
     {
       DataPoint dataPoint = null;
 

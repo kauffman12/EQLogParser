@@ -25,7 +25,7 @@ namespace EQLogParser
       var chatType = ParseChatType(lineData.Line);
       if (chatType != null && chatType.SenderIsYou == false && chatType.Sender != null)
       {
-        if (chatType.Channel == ChatChannels.GUILD || chatType.Channel == ChatChannels.RAID || chatType.Channel == ChatChannels.FELLOWSHIP)
+        if (chatType.Channel == ChatChannels.Guild || chatType.Channel == ChatChannels.Raid || chatType.Channel == ChatChannels.Fellowship)
         {
           PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, DateUtil.ParseLogDate(lineData.Line, out _));
         }
@@ -85,7 +85,7 @@ namespace EQLogParser
                 {
                   string sender = line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX);
                   string receiver = line.Substring(index + 4, lastIndex - index - 4);
-                  chatType = new ChatType { Channel = ChatChannels.TELL, Sender = sender, Receiver = receiver, Line = line, AfterSenderIndex = lastIndex };
+                  chatType = new ChatType { Channel = ChatChannels.Tell, Sender = sender, Receiver = receiver, Line = line, AfterSenderIndex = lastIndex };
 
                   if (ConfigUtil.PlayerName == sender)
                   {
@@ -104,30 +104,30 @@ namespace EQLogParser
             switch (index)
             {
               case 0:
-                chatType.Channel = ChatChannels.SAY;
+                chatType.Channel = ChatChannels.Say;
                 break;
               case 1:
                 start = criteriaIndex + 7;
                 if (line.IndexOf("you, ", start, 5, StringComparison.Ordinal) > -1)
                 {
-                  chatType.Channel = ChatChannels.TELL;
+                  chatType.Channel = ChatChannels.Tell;
                   chatType.Receiver = "You";
                 }
                 else if (line.IndexOf("the guild", start, 9, StringComparison.Ordinal) > -1)
                 {
-                  chatType.Channel = ChatChannels.GUILD;
+                  chatType.Channel = ChatChannels.Guild;
                 }
                 else if (line.IndexOf("the group", start, 9, StringComparison.Ordinal) > -1)
                 {
-                  chatType.Channel = ChatChannels.GROUP;
+                  chatType.Channel = ChatChannels.Group;
                 }
                 else if (line.IndexOf("the raid", start, 8, StringComparison.Ordinal) > -1)
                 {
-                  chatType.Channel = ChatChannels.RAID;
+                  chatType.Channel = ChatChannels.Raid;
                 }
                 else if (line.IndexOf("the fellowship", start, 14, StringComparison.Ordinal) > -1)
                 {
-                  chatType.Channel = ChatChannels.FELLOWSHIP;
+                  chatType.Channel = ChatChannels.Fellowship;
                 }
                 else if ((end = line.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
                 {
@@ -136,19 +136,19 @@ namespace EQLogParser
                 }
                 break;
               case 2:
-                chatType.Channel = ChatChannels.SHOUT;
+                chatType.Channel = ChatChannels.Shout;
                 break;
               case 3:
-                chatType.Channel = ChatChannels.OOC;
+                chatType.Channel = ChatChannels.Ooc;
                 break;
               case 4:
-                chatType.Channel = ChatChannels.AUCTION;
+                chatType.Channel = ChatChannels.Auction;
                 break;
               case 5:
                 // check if it's an old cross server tell and not an NPC
                 if (line.IndexOf(" told you,", criteriaIndex, 10, StringComparison.Ordinal) > -1 && chatType.Sender.IndexOf(".", StringComparison.Ordinal) > -1)
                 {
-                  chatType.Channel = ChatChannels.TELL;
+                  chatType.Channel = ChatChannels.Tell;
                   chatType.Receiver = "You";
                 }
                 break;
@@ -162,10 +162,10 @@ namespace EQLogParser
           switch (index)
           {
             case 0:
-              chatType.Channel = ChatChannels.SAY;
+              chatType.Channel = ChatChannels.Say;
               break;
             case 1:
-              chatType.Channel = ChatChannels.TELL;
+              chatType.Channel = ChatChannels.Tell;
 
               start = LineParsing.ACTIONINDEX + 9;
               if ((end = line.IndexOf(",", start, StringComparison.Ordinal)) > -1)
@@ -178,11 +178,11 @@ namespace EQLogParser
 
               if (line.IndexOf("your party", start, 10, StringComparison.Ordinal) > -1)
               {
-                chatType.Channel = ChatChannels.GROUP;
+                chatType.Channel = ChatChannels.Group;
               }
               else if (line.IndexOf("your raid", start, 9, StringComparison.Ordinal) > -1)
               {
-                chatType.Channel = ChatChannels.RAID;
+                chatType.Channel = ChatChannels.Raid;
               }
               else
               {
@@ -197,21 +197,21 @@ namespace EQLogParser
               start = LineParsing.ACTIONINDEX + 11;
               if (line.IndexOf("your guild", start, 10, StringComparison.Ordinal) > -1)
               {
-                chatType.Channel = ChatChannels.GUILD;
+                chatType.Channel = ChatChannels.Guild;
               }
               else if (line.IndexOf("your fellowship", start, 15, StringComparison.Ordinal) > -1)
               {
-                chatType.Channel = ChatChannels.FELLOWSHIP;
+                chatType.Channel = ChatChannels.Fellowship;
               }
               break;
             case 4:
-              chatType.Channel = ChatChannels.SHOUT;
+              chatType.Channel = ChatChannels.Shout;
               break;
             case 5:
-              chatType.Channel = ChatChannels.OOC;
+              chatType.Channel = ChatChannels.Ooc;
               break;
             case 6:
-              chatType.Channel = ChatChannels.AUCTION;
+              chatType.Channel = ChatChannels.Auction;
               break;
           }
         }
@@ -229,16 +229,16 @@ namespace EQLogParser
       return chatType;
     }
   }
-  public static class ChatChannels
+  internal static class ChatChannels
   {
-    public const string AUCTION = "Auction";
-    public const string SAY = "Say";
-    public const string GUILD = "Guild";
-    public const string FELLOWSHIP = "Fellowship";
-    public const string TELL = "Tell";
-    public const string SHOUT = "Shout";
-    public const string GROUP = "Group";
-    public const string RAID = "Raid";
-    public const string OOC = "OOC";
+    public const string Auction = "Auction";
+    public const string Say = "Say";
+    public const string Guild = "Guild";
+    public const string Fellowship = "Fellowship";
+    public const string Tell = "Tell";
+    public const string Shout = "Shout";
+    public const string Group = "Group";
+    public const string Raid = "Raid";
+    public const string Ooc = "OOC";
   }
 }

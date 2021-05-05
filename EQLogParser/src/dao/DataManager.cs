@@ -263,7 +263,6 @@ namespace EQLogParser
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
-    internal List<Fight> GetActiveFights() => ActiveFights.Values.ToList();
     internal List<Fight> GetOverlayFights() => OverlayFights.Values.ToList();
     internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
     internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
@@ -391,7 +390,7 @@ namespace EQLogParser
     {
       for (int i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
       {
-        int index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => ((SpellCast)action).Spell == spell && ((SpellCast)action).Caster == player);
+        int index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => action is SpellCast sc && sc.Spell == spell && sc.Caster == player);
         if (index > -1 && AllSpellCastBlocks[i].Actions[index] is SpellCast cast)
         {
           cast.Interrupted = true;
@@ -830,7 +829,7 @@ namespace EQLogParser
 
     private class SpellAbbrvComparer : IEqualityComparer<SpellData>
     {
-      public bool Equals(SpellData x, SpellData y) => x.NameAbbrv == y.NameAbbrv;
+      public bool Equals(SpellData x, SpellData y) => x?.NameAbbrv == y?.NameAbbrv;
       public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
     }
 

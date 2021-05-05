@@ -39,7 +39,7 @@ namespace EQLogParser
       }
     }
 
-    override internal void Display(List<PlayerStats> _ = null)
+    internal override void Display(List<PlayerStats> _ = null)
     {
       if (Running == false && PlayerStats != null)
       {

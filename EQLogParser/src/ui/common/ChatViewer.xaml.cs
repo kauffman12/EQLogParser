@@ -587,7 +587,7 @@ namespace EQLogParser
 
     private void TextFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(textFilter, Properties.Resources.CHAT_TEXT_FILTER);
 
-    private void Filter_LostFocus(TextBox filter, string text)
+    private static void Filter_LostFocus(TextBox filter, string text)
     {
       if (filter.Text.Length == 0)
       {

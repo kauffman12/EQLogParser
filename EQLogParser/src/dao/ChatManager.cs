@@ -556,10 +556,7 @@ namespace EQLogParser
 
     private class ReverseTimedActionComparer : IComparer<TimedAction>
     {
-      public int Compare(TimedAction x, TimedAction y)
-      {
-        return y.BeginTime.CompareTo(x.BeginTime);
-      }
+      public int Compare(TimedAction x, TimedAction y) => x != null && y != null ? y.BeginTime.CompareTo(x.BeginTime) : 0;
     }
 
     #region IDisposable Support

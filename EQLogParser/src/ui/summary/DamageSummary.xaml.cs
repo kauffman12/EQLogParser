@@ -18,8 +18,8 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageSummary : SummaryTable, IDisposable
   {
-    private readonly static BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
-    private readonly static BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
+    private static readonly BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
+    private static readonly BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
 
     // workaround for adjusting column withs of player datagrid
     private List<DataGrid> ChildGrids = new List<DataGrid>();
@@ -191,7 +191,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var chart = new HitFreqChart();
-        var results = DamageStatsManager.Instance.GetHitFreqValues(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
+        var results = DamageStatsManager.GetHitFreqValues(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
 
         var main = Application.Current.MainWindow as MainWindow;
         var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "freqChart", "Hit Frequency", chart, 400, 300);

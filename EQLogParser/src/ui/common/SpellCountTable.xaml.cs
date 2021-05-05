@@ -189,9 +189,7 @@ namespace EQLogParser
                 //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
                 row.Add("IconColor", ACTIVEICON);
 
-                int i;
-                double[] values = new double[sortedPlayers.Count + 1];
-                for (i = 0; i < sortedPlayers.Count; i++)
+                for (int i = 0; i < sortedPlayers.Count; i++)
                 {
                   if (filteredPlayerMap.ContainsKey(sortedPlayers[i]))
                   {
@@ -252,7 +250,7 @@ namespace EQLogParser
     private void AddPlayerRow(string player, string spell, string value, IDictionary<string, Object> row)
     {
       string count = value.ToString(CultureInfo.CurrentCulture);
-      if (CurrentShowInterrupts && TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) && 
+      if (CurrentShowInterrupts && TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) &&
         TheSpellCounts.PlayerInterruptedCounts[player].TryGetValue(spell, out uint interrupts) && interrupts > 0)
       {
         count = count + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
@@ -419,7 +417,7 @@ namespace EQLogParser
             {
               TheSpellCounts.UniqueSpells[spellData] = data.TheSpellData.UniqueSpells[spellData];
             }
-          }         
+          }
 
           OptionsChanged(true);
         }
