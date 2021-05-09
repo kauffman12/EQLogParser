@@ -220,7 +220,7 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      lock (DamageGroups)
+      lock (DamageGroupIds)
       {
         if (DamageGroups.Count > 0)
         {

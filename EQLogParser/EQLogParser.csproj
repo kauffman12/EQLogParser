@@ -272,7 +272,8 @@
     <Compile Include="src\ui\summary\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\ui\util\DataGridUtils.cs" />
+    <Compile Include="src\ui\util\DataGridUtil.cs" />
+    <Compile Include="src\ui\util\UIElementUtil.cs" />
     <Compile Include="src\util\DebugUtil.cs" />
     <Compile Include="src\ui\util\OverlayUtil.cs" />
     <Compile Include="src\util\ConfigUtil.cs" />

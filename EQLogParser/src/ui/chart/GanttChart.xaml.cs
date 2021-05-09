@@ -29,6 +29,7 @@ namespace EQLogParser
     private const int LABELS_WIDTH = 180;
     private const ushort CASTER_ADPS = 1;
     private const ushort MELEE_ADPS = 2;
+    private const ushort TANK_ADPS = 4;
 
     private readonly Dictionary<string, SpellRange> SpellRanges = new Dictionary<string, SpellRange>();
     private readonly List<Rectangle> Dividers = new List<Rectangle>();
@@ -40,32 +41,42 @@ namespace EQLogParser
     private readonly double Length;
     private readonly List<PlayerStats> Selected;
     private readonly Dictionary<string, byte> Ignore = new Dictionary<string, byte>();
+    private readonly bool TankingMode;
 
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowCasterAdps = true;
     private bool CurrentShowMeleeAdps = true;
 
-    internal GanttChart(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups)
+    internal GanttChart(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups, bool tanking = false)
     {
       InitializeComponent();
 
       if (selected != null && selected.Count > 0)
       {
+        TankingMode = tanking;
         Selected = selected;
         StartTime = groups.Min(block => block.First().BeginTime) - DataManager.BUFFS_OFFSET;
         EndTime = groups.Max(block => block.Last().BeginTime) + 1;
         Length = EndTime - StartTime;
 
+        string type = TankingMode ? "Defensive Skills" : "ADPS";
         switch (Selected.Count)
         {
           case 1:
-            titleLabel1.Content = Selected[0].OrigName + "'s ADPS | " + currentStats?.ShortTitle;
+            titleLabel1.Content = Selected[0].OrigName + "'s " + type + " | " + currentStats?.ShortTitle;
             break;
           case 2:
             titleLabel1.Content = Selected[0].OrigName + " vs ";
             titleLabel2.Content = Selected[1].OrigName + "'s ";
-            titleLabel3.Content = "ADPS | " + currentStats?.ShortTitle;
+            titleLabel3.Content = type + " | " + currentStats?.ShortTitle;
             break;
+        }
+
+        if (tanking)
+        {
+          showSelfOnly.Visibility = Visibility.Hidden;
+          showMeleeAdps.Visibility = Visibility.Hidden;
+          showCasterAdps.Visibility = Visibility.Hidden;
         }
 
         for (int i = 0; i < Selected.Count; i++)
@@ -80,7 +91,7 @@ namespace EQLogParser
             foreach (var action in block.Actions)
             {
               if (action is SpellCast cast && !cast.Interrupted && cast.Caster == player && cast.SpellData != null && cast.SpellData.Target == (int)SpellTarget.SELF &&
-                cast.SpellData.Adps > 0 && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800))
+                cast.SpellData.Adps > 0 && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
               {
                 if (string.IsNullOrEmpty(cast.SpellData.LandsOnOther))
                 {
@@ -103,7 +114,7 @@ namespace EQLogParser
                   spellData = replaced;
                 }
 
-                if (spellData != null && spellData.Adps > 0 && (spellData.MaxHits > 0 || spellData.Duration <= 1800))
+                if (spellData != null && spellData.Adps > 0 && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
                 {
                   if (string.IsNullOrEmpty(spellData.LandsOnOther) && !SelfOnlyOverride.ContainsKey(spellData.NameAbbrv))
                   {
@@ -134,11 +145,16 @@ namespace EQLogParser
       Display();
     }
 
+    private bool ClassFilter(SpellData data)
+    {
+      return (TankingMode && (data.Adps & TANK_ADPS) == TANK_ADPS) || (!TankingMode && (data.Adps & TANK_ADPS) != TANK_ADPS);
+    }
+
     private void UpdateSpellRange(SpellData spellData, double beginTime, Brush brush)
     {
       if (!SpellRanges.TryGetValue(spellData.NameAbbrv, out SpellRange spellRange))
       {
-        spellRange = new SpellRange() { Adps = spellData.Adps };
+        spellRange = new SpellRange { Adps = spellData.Adps };
         var duration = GetDuration(spellData, EndTime, beginTime);
         spellRange.Ranges.Add(new TimeRange() { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
         SpellRanges[spellData.NameAbbrv] = spellRange;
@@ -277,9 +293,10 @@ namespace EQLogParser
       foreach (var key in SpellRanges.Keys.OrderBy(key => key))
       {
         var spellRange = SpellRanges[key];
-        if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
+        if ((CurrentShowSelfOnly || TankingMode || !SelfOnly.ContainsKey(key))
           && (CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS)
-          || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)) && !Ignore.ContainsKey(key))
+          || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)
+          || TankingMode && ((spellRange.Adps & TANK_ADPS) == TANK_ADPS)) && !Ignore.ContainsKey(key))
         {
           int hPos = ROW_HEIGHT * row;
           AddGridRow(hPos, key);
@@ -480,27 +497,30 @@ namespace EQLogParser
       };
     }
 
-    private static int GetDuration(SpellData spell, double endTime, double currentTime)
+    private int GetDuration(SpellData spell, double endTime, double currentTime)
     {
       int duration = spell.Duration > 0 ? spell.Duration : 6;
+
+      // tanking hits happen a lot faster than spell casting so have our guesses be 1/3 as long
+      var mod = TankingMode ? 3 : 1;
 
       if (spell.MaxHits > 0)
       {
         if (spell.MaxHits == 1)
         {
-          duration = duration > 6 ? 6 : duration;
+          duration = duration > 6 ? 6 / mod  : duration;
         }
         else if (spell.MaxHits <= 3)
         {
-          duration = duration > 12 ? 12 : duration;
+          duration = duration > 12 ? 12 / mod : duration;
         }
         else if (spell.MaxHits == 4)
         {
-          duration = duration > 18 ? 18 : duration;
+          duration = duration > 18 ? 18 / mod : duration;
         }
         else
         {
-          var guess = (spell.MaxHits / 5) * 18;
+          var guess = (spell.MaxHits / 5) * 18 / mod;
           duration = duration > guess ? guess : duration;
         }
       }

@@ -34,16 +34,16 @@ namespace EQLogParser
 
         if (TheSelectedColumns != null)
         {
-          DataGridUtils.LoadColumns(TheSelectedColumns, TheDataGrid);
+          DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
         }
       }
     }
 
     internal abstract void Display(List<PlayerStats> selectedStats = null);
 
-    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtils.ShowColumns(TheSelectedColumns, TheDataGrid);
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
 
-    internal void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtils.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
+    internal void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtil.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
 
     internal void CustomSorting(object sender, DataGridSortingEventArgs e)
     {

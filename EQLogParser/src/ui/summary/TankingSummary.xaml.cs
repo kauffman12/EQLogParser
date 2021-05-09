@@ -18,6 +18,7 @@ namespace EQLogParser
     public int CurrentDamageType = 0;
     private string CurrentClass = null;
     private bool CurrentPetValue;
+    private int CurrentGroupCount = 0;
 
     public TankingSummary()
     {
@@ -130,6 +131,7 @@ namespace EQLogParser
             case "COMPLETED":
               CurrentStats = e.CombinedStats;
               CurrentGroups = e.Groups;
+              CurrentGroupCount = e.UniqueGroupCount;
 
               if (CurrentStats == null)
               {
@@ -173,6 +175,7 @@ namespace EQLogParser
         menuItemShowTankingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyTankingParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
         copyReceivedHealingParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats2?.ContainsKey("receivedHealing") == true;
+        menuItemShowDefensiveTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
 
         if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
         {
@@ -189,7 +192,7 @@ namespace EQLogParser
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
            menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
-           copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
+           copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowDefensiveTimeline.IsEnabled = false;
       }
 
       menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);
@@ -263,6 +266,15 @@ namespace EQLogParser
     {
       CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
       SetFilter(dataGrid?.ItemsSource as ICollectionView);
+    }
+
+    private void DataGridDefensiveTimelineClick(object sender, RoutedEventArgs e)
+    {
+      var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, true);
+      var main = Application.Current.MainWindow as MainWindow;
+      var window = Helpers.OpenNewTab(main.dockSite, "defensiveTimeline", "Defensive Timeline", timeline, 400, 300);
+      window.CanFloat = true;
+      window.CanClose = true;
     }
 
     #region IDisposable Support

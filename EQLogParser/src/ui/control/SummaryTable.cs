@@ -45,7 +45,7 @@ namespace EQLogParser
 
         if (TheSelectedColumns != null)
         {
-          TheShownColumns = DataGridUtils.LoadColumns(TheSelectedColumns, TheDataGrid);
+          TheShownColumns = DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
         }
       }
     }
@@ -54,8 +54,8 @@ namespace EQLogParser
     internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
     internal string GetTitle() => TheTitle.Content as string;
     internal List<PlayerStats> GetSelectedStats() => TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.SelectAll(sender as FrameworkElement);
-    internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.UnselectAll(sender as FrameworkElement);
+    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.SelectAll(sender as FrameworkElement);
+    internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
     internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetSelectedStats());
     internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e) => ShowBreakdown2(GetSelectedStats());
     internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
@@ -65,9 +65,9 @@ namespace EQLogParser
     internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetSelectedStats());
     internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
-    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtils.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
-    internal void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtils.ShowColumns(TheSelectedColumns, TheDataGrid);
-    private void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtils.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
+    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
+    internal void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
+    private void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtil.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
 
     internal void CreateImageClick(object sender, RoutedEventArgs e)
     {
@@ -84,7 +84,7 @@ namespace EQLogParser
           TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
           TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
           TheDataGrid.Items.Refresh();
-          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtils.CreateImage(TheDataGrid, TheTitle)), TaskScheduler.Default);
+          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(TheDataGrid, TheTitle)), TaskScheduler.Default);
         });
       }, TaskScheduler.Default);
     }
