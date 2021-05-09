@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.13";
+    private const string VERSION = "v1.8.14";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -177,9 +177,9 @@ namespace EQLogParser
         });
 
         (npcWindow.Content as FightTable).EventsSelectionChange += (sender, data) => ComputeStats();
-        DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(DamageChartWindow, sender, data);
-        HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(HealingChartWindow, sender, data);
-        TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => HandleChartUpdateEvent(TankingChartWindow, sender, data);
+        DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, DamageChartWindow, sender, data);
+        HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, HealingChartWindow, sender, data);
+        TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, TankingChartWindow, sender, data);
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -251,6 +251,8 @@ namespace EQLogParser
 
     internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
 
+    private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
+
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
@@ -304,17 +306,6 @@ namespace EQLogParser
       (DamageChartWindow?.Content as LineChart)?.Clear();
       (HealingChartWindow?.Content as LineChart)?.Clear();
       (TankingChartWindow?.Content as LineChart)?.Clear();
-    }
-
-    private void HandleChartUpdateEvent(DocumentWindow window, object _, DataPointEvent e)
-    {
-      Dispatcher.InvokeAsync(() =>
-      {
-        if (window?.IsOpen == true)
-        {
-          (window.Content as LineChart)?.HandleUpdateEvent(e);
-        }
-      });
     }
 
     private void ComputeStats()
@@ -375,26 +366,6 @@ namespace EQLogParser
       {
         _ = MessageBox.Show("Nothing to Save. Display a Summary View and Try Again.", Properties.Resources.FILEMENU_EXPORT_SUMMARY, MessageBoxButton.OK, MessageBoxImage.Exclamation);
       }
-    }
-
-    private void RestoreTableColumnsClick(object sender, RoutedEventArgs e)
-    {
-      ConfigUtil.RemoveSetting("DamageSummaryColumns");
-      ConfigUtil.RemoveSetting("HealingSummaryColumns");
-      ConfigUtil.RemoveSetting("TankingSummaryColumns");
-      ConfigUtil.RemoveSetting("DamageSummaryColumnsDisplayIndex");
-      ConfigUtil.RemoveSetting("HealingSummaryColumnsDisplayIndex");
-      ConfigUtil.RemoveSetting("TankingSummaryColumnsDisplayIndex");
-      ConfigUtil.RemoveSetting("DamageBreakdownColumns");
-      ConfigUtil.RemoveSetting("HealingBreakdownColumns");
-      ConfigUtil.RemoveSetting("ReceivedHealingBreakdownColumns");
-      ConfigUtil.RemoveSetting("TankingBreakdownColumns");
-      ConfigUtil.RemoveSetting("DamageBreakdownColumnsDisplayIndex");
-      ConfigUtil.RemoveSetting("HealingBreakdownColumnsDisplayIndex");
-      ConfigUtil.RemoveSetting("ReceivedHealingBreakdownColumnsDisplayIndex");
-      ConfigUtil.RemoveSetting("TankingBreakdownColumnsDisplayIndex");
-      ConfigUtil.Save();
-      _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.", Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e)
@@ -595,7 +566,7 @@ namespace EQLogParser
           DamageWindow.MoveToPreviousContainer();
         }
 
-        RepositionCharts(DamageWindow);
+        Helpers.RepositionCharts(DamageWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
 
         if (DamageStatsManager.Instance.GetGroupCount() > 0)
         {
@@ -625,7 +596,7 @@ namespace EQLogParser
           HealingWindow.MoveToPreviousContainer();
         }
 
-        RepositionCharts(HealingWindow);
+        Helpers.RepositionCharts(HealingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
 
         if (HealingStatsManager.Instance.GetGroupCount() > 0)
         {
@@ -655,7 +626,7 @@ namespace EQLogParser
           TankingWindow.MoveToPreviousContainer();
         }
 
-        RepositionCharts(TankingWindow);
+        Helpers.RepositionCharts(TankingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow); ;
 
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
@@ -723,30 +694,6 @@ namespace EQLogParser
       }
     }
 
-    private void RepositionCharts(DocumentWindow window)
-    {
-      if (window.ParentContainer is TabbedMdiContainer tabControl)
-      {
-        bool moved = false;
-        foreach (var child in tabControl.Windows.Reverse().ToList())
-        {
-          if (child == DamageChartWindow || child == HealingChartWindow || child == TankingChartWindow)
-          {
-            if (child.IsOpen && !moved)
-            {
-              moved = true;
-              child.MoveToNewHorizontalContainer();
-            }
-            else if (child.IsOpen && moved)
-            {
-              child.MoveToNextContainer();
-            }
-
-            (child.Content as LineChart)?.FixSize();
-          }
-        }
-      }
-    }
     private void MenuItemSelectLogFileClick(object sender, RoutedEventArgs e)
     {
       int lastMins = -1;
@@ -965,8 +912,7 @@ namespace EQLogParser
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      var cell = sender as DataGridCell;
-      if (cell.DataContext is SortableName sortable)
+      if (sender is DataGridCell cell && cell.DataContext is SortableName sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPet(sortable.Name);
       }
@@ -974,8 +920,7 @@ namespace EQLogParser
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      var cell = sender as DataGridCell;
-      if (cell.DataContext is SortableName sortable)
+      if (sender is DataGridCell cell && cell.DataContext is SortableName sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPlayer(sortable.Name);
       }
@@ -1011,14 +956,7 @@ namespace EQLogParser
 
     public void WindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-      if (WindowState == WindowState.Maximized)
-      {
-        BorderThickness = new Thickness(6);
-      }
-      else
-      {
-        BorderThickness = new Thickness(0);
-      }
+      BorderThickness = (WindowState == WindowState.Maximized) ? new Thickness(6) : new Thickness(0);
     }
 
     private void WindowClosed(object sender, EventArgs e)

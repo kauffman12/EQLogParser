@@ -155,6 +155,42 @@ namespace EQLogParser
       return window;
     }
 
+    internal static void HandleChartUpdate(Dispatcher dispatcher, DocumentWindow window, object _, DataPointEvent e)
+    {
+      dispatcher.InvokeAsync(() =>
+      {
+        if (window?.IsOpen == true)
+        {
+          (window.Content as LineChart)?.HandleUpdateEvent(e);
+        }
+      });
+    }
+
+    internal static void RepositionCharts(DocumentWindow window, params DocumentWindow[] charts)
+    {
+      if (window.ParentContainer is TabbedMdiContainer tabControl)
+      {
+        bool moved = false;
+        foreach (var child in tabControl.Windows.Reverse().ToList())
+        {
+          if (charts.Contains(child))
+          {
+            if (child.IsOpen && !moved)
+            {
+              moved = true;
+              child.MoveToNewHorizontalContainer();
+            }
+            else if (child.IsOpen && moved)
+            {
+              child.MoveToNextContainer();
+            }
+
+            (child.Content as LineChart)?.FixSize();
+          }
+        }
+      }
+    }
+
     internal static string CreateRecordKey(string type, string subType)
     {
       string key = subType;

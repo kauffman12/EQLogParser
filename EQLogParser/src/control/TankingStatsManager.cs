@@ -16,7 +16,7 @@ namespace EQLogParser
 
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
-
+    private readonly Dictionary<int, byte> TankingGroupIds = new Dictionary<int, byte>();
     private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new ConcurrentDictionary<string, TimeRange>();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
     private readonly List<List<ActionBlock>> TankingGroups = new List<List<ActionBlock>>();
@@ -31,7 +31,7 @@ namespace EQLogParser
 
     internal TankingStatsManager()
     {
-      lock (TankingGroups)
+      lock (TankingGroupIds)
       {
         DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
         {
@@ -42,7 +42,7 @@ namespace EQLogParser
 
     internal int GetGroupCount()
     {
-      lock (TankingGroups)
+      lock (TankingGroupIds)
       {
         return TankingGroups.Count;
       }
@@ -50,7 +50,7 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      lock (TankingGroups)
+      lock (TankingGroupIds)
       {
         if (TankingGroups.Count > 0)
         {
@@ -62,7 +62,7 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock (TankingGroups)
+      lock (TankingGroupIds)
       {
         try
         {
@@ -76,6 +76,12 @@ namespace EQLogParser
           Selected.ForEach(fight =>
           {
             damageBlocks.AddRange(fight.TankingBlocks);
+
+            if (fight.GroupId > -1)
+            {
+              TankingGroupIds[fight.GroupId] = 1;
+            }
+
             RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime));
             StatsUtil.UpdateRaidTimeRanges(fight, PlayerTimeRanges, PlayerSubTimeRanges, true);
           });
@@ -142,7 +148,7 @@ namespace EQLogParser
 
     internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
-      lock (TankingGroups)
+      lock (TankingGroupIds)
       {
         if (options.RequestChartData)
         {
@@ -181,7 +187,7 @@ namespace EQLogParser
 
     private void ComputeTankingStats(GenerateStatsOptions options)
     {
-      lock (TankingGroups)
+      lock (TankingGroupIds)
       {
         CombinedStats combined = null;
         Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
@@ -265,6 +271,7 @@ namespace EQLogParser
             };
 
             genEvent.Groups.AddRange(TankingGroups);
+            genEvent.UniqueGroupCount = TankingGroupIds.Count;
             EventsGenerationStatus?.Invoke(this, genEvent);
           }
         }
@@ -276,6 +283,7 @@ namespace EQLogParser
       PlayerTimeRanges.Clear();
       PlayerSubTimeRanges.Clear();
       TankingGroups.Clear();
+      TankingGroupIds.Clear();
       RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAIDTOTALS);
       Selected = null;
       Title = "";

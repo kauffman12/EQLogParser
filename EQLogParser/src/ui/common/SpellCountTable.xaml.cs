@@ -93,8 +93,8 @@ namespace EQLogParser
 
     private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e) => OptionsChanged(true);
     private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged(true);
-    private void SelectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.SelectAll(sender as FrameworkElement);
-    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtils.UnselectAll(sender as FrameworkElement);
+    private void SelectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.SelectAll(sender as FrameworkElement);
+    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
 
     private void Display()
     {
@@ -340,7 +340,7 @@ namespace EQLogParser
           dataGrid.Items.Refresh();
           Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() =>
           {
-            DataGridUtils.CreateImage(dataGrid, titleLabel);
+            DataGridUtil.CreateImage(dataGrid, titleLabel);
             SpellRowsView.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
           }), TaskScheduler.Default);
         });
@@ -473,14 +473,14 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
-      DataGridUtils.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+      DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     }
 
     private void CopyBBCodeClick(object sender, RoutedEventArgs e)
     {
       try
       {
-        var export = DataGridUtils.BuildExportData(dataGrid);
+        var export = DataGridUtil.BuildExportData(dataGrid);
         string result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
@@ -499,7 +499,7 @@ namespace EQLogParser
     {
       try
       {
-        var export = DataGridUtils.BuildExportData(dataGrid);
+        var export = DataGridUtil.BuildExportData(dataGrid);
         string result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }

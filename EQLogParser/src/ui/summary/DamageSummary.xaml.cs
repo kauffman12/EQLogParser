@@ -66,7 +66,7 @@ namespace EQLogParser
       };
     }
 
-    internal new void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtils.ShowColumns(selectedColumns, dataGrid, ChildGrids);
+    internal new void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtil.ShowColumns(selectedColumns, dataGrid, ChildGrids);
 
     private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.DAMAGEPARSE);
 

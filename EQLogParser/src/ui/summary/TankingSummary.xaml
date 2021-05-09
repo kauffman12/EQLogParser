@@ -84,6 +84,11 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="menuItemShowDefensiveTimeline" IsEnabled="False" Header="Defensive Chart" Click="DataGridDefensiveTimelineClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showDefensiveTimelineIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Bars" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Spell Cast Timeline">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="ClockOutline" Foreground="#FF4F9FE2" />
