@@ -82,7 +82,7 @@ namespace EQLogParser
           FireNewStatsEvent(options);
           Reset();
 
-          Selected = options.Npcs;
+          Selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
           Title = options.Name;
 
           Selected.ForEach(fight => RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime)));
