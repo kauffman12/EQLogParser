@@ -69,7 +69,7 @@ namespace EQLogParser
           FireNewStatsEvent(options);
           Reset();
 
-          Selected = options.Npcs;
+          Selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
           Title = options.Name;
           var damageBlocks = new List<ActionBlock>();
 

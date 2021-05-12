@@ -239,11 +239,11 @@ namespace EQLogParser
           FireNewStatsEvent(options);
           Reset();
 
-          Selected = options.Npcs;
+          Selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
           Title = options.Name;
           var damageBlocks = new List<ActionBlock>();
 
-          foreach (var fight in Selected.OrderBy(sel => sel.Id))
+          Selected.ForEach(fight =>
           {
             damageBlocks.AddRange(fight.DamageBlocks);
 
@@ -254,7 +254,7 @@ namespace EQLogParser
 
             RaidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
             StatsUtil.UpdateRaidTimeRanges(fight, PlayerTimeRanges, PlayerSubTimeRanges);
-          }
+          });
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
 
