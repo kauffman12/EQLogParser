@@ -26,7 +26,8 @@ namespace EQLogParser
 
     internal static bool IsMelee(DamageRecord record)
     {
-      return record.Type == Labels.MELEE || record.Type == Labels.MISS || record.Type == Labels.PARRY || record.Type == Labels.DODGE || record.Type == Labels.BLOCK;
+      return record.Type == Labels.MELEE || record.Type == Labels.MISS || record.Type == Labels.PARRY || record.Type == Labels.DODGE || 
+        record.Type == Labels.BLOCK || record.Type == Labels.INVULNERABLE;
     }
 
     internal TankingStatsManager()

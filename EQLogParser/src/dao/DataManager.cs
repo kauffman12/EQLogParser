@@ -28,6 +28,7 @@ namespace EQLogParser
     public const string DD = "Direct Damage";
     public const string DOT = "DoT Tick";
     public const string DS = "Damage Shield";
+    public const string RS = "Reverse DS";
     public const string BANE = "Bane Damage";
     public const string PROC = "Proc";
     public const string HOT = "HoT Tick";
@@ -54,6 +55,7 @@ namespace EQLogParser
     public const string DODGE = "Dodge";
     public const string PARRY = "Parry";
     public const string BLOCK = "Block";
+    public const string INVULNERABLE = "Invulnerable";
   }
 
   class DataManager

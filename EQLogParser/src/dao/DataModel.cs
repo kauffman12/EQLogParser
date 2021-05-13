@@ -217,6 +217,7 @@ namespace EQLogParser
     public uint Dodges { get; set; }
     public uint Misses { get; set; }
     public uint Parries { get; set; }
+    public uint Invulnerable { get; set; }
     public uint Max { get; set; }
     public uint BaneHits { get; set; }
     public uint Hits { get; set; }
