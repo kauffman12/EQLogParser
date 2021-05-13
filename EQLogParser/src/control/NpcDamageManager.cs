@@ -32,7 +32,7 @@ namespace EQLogParser
       }
 
       // cache recent player spells to help determine who the caster was
-      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayer(processed.Record.Attacker);
+      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayer(processed.Record.Attacker) || processed.Record.Attacker == Labels.RS;
       if (isAttackerPlayer && (processed.Record.Type == Labels.DD || processed.Record.Type == Labels.DOT || processed.Record.Type == Labels.PROC))
       {
         RecentSpellCache[processed.Record.SubType] = true;

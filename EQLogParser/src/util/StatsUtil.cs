@@ -279,6 +279,10 @@ namespace EQLogParser
           stats.Parries++;
           stats.MeleeAttempts += 1;
           break;
+        case Labels.INVULNERABLE:
+          stats.Invulnerable++;
+          stats.MeleeAttempts += 1;
+          break;
         case Labels.PROC:
         case Labels.DOT:
         case Labels.DD:
@@ -383,7 +387,7 @@ namespace EQLogParser
         if (stats.MeleeAttempts > 0)
         {
           stats.MeleeHitRate = Math.Round(Convert.ToDouble(stats.MeleeHits) / stats.MeleeAttempts * 100, 2);
-          stats.MeleeAccRate = Math.Round(Convert.ToDouble(stats.MeleeHits) / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks) * 100, 2);
+          stats.MeleeAccRate = Math.Round(Convert.ToDouble(stats.MeleeHits) / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks - stats.Invulnerable) * 100, 2);
         }
 
         var tcMult = stats.Type == Labels.DD ? 2 : 1;
@@ -541,6 +545,7 @@ namespace EQLogParser
           case Labels.MISS:
           case Labels.DODGE:
           case Labels.PARRY:
+          case Labels.INVULNERABLE:
             isHitType = false;
             break;
         }

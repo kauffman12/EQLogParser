@@ -128,6 +128,7 @@ namespace EQLogParser
                     butIndex = i;
                     break;
                   case "is":
+                  case "was":
                     isIndex = i;
                     break;
                   case "has":
@@ -205,6 +206,9 @@ namespace EQLogParser
                   case "parries!":
                     missType = (stop == i && butIndex > -1 && i > tryIndex) ? 3 : missType;
                     break;
+                  case "INVULNERABLE!":
+                    missType = (stop == i && butIndex > -1 && i > tryIndex) ? 4 : missType;
+                    break;
                   case "slain":
                     slainIndex = i;
                     break;
@@ -261,6 +265,13 @@ namespace EQLogParser
                   handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DS, Labels.DS);
                 }
               }
+            }
+            // [Mon May 10 22:18:46 2021] A dendridic shard was chilled to the bone for 410 points of non-melee damage.
+            else if (dsIndex > -1 && pointsOfIndex > dsIndex && isIndex > -1 && isIndex < dsIndex && byIndex == -1)
+            {
+              string defender = string.Join(" ", split, 0, isIndex);
+              uint damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
+              handled = CreateDamageRecord(lineData, split, stop, Labels.RS, defender, damage, Labels.DS, Labels.DS);
             }
             // [Tue Mar 26 22:43:47 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Kazint's Greater Fetter spell.
             else if (extraIndex > -1 && pointsOfIndex == (extraIndex + 2) && fromDamage == (pointsOfIndex + 3) && split[stop] == "spell.")
@@ -374,6 +385,7 @@ namespace EQLogParser
             // [Mon Apr 26 22:40:10 2021] An ancient warden tries to hit Reisil, but Reisil blocks with his shield!
             // [Sun Mar 21 00:11:31 2021] A carrion bat tries to bite YOU, but YOU block with your shield!
             // [Mon Apr 26 14:51:01 2021] A windchill sprite tries to smash YOU, but YOU block with your staff!
+            // [Mon May 10 22:18:46 2021] Tolzol tries to crush Dendritic Golem, but Dendritic Golem is INVULNERABLE!
             else if (tryIndex > -1 && butIndex > tryIndex && missType > -1)
             {
               string label = null;
@@ -390,6 +402,9 @@ namespace EQLogParser
                   break;
                 case 3:
                   label = Labels.PARRY;
+                  break;
+                case 4:
+                  label = Labels.INVULNERABLE;
                   break;
               }
 
