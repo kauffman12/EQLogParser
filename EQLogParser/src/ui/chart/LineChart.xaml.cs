@@ -25,7 +25,7 @@ namespace EQLogParser
 
     private static readonly CartesianMapper<DataPoint> CONFIG_VPS = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
-     .Y(dateModel => dateModel.VPS);
+     .Y(dateModel => dateModel.Vps);
     private static readonly CartesianMapper<DataPoint> CONFIG_TOTAL = Mappers.Xy<DataPoint>()
      .X(dateModel => dateModel.CurrentTime)
      .Y(dateModel => dateModel.Total);
@@ -460,7 +460,7 @@ namespace EQLogParser
               }
               else if (CurrentConfig == CONFIG_VPS)
               {
-                chartValue = chartData.VPS;
+                chartValue = chartData.Vps;
               }
 
               data.Add(new List<object> { chartData.CurrentTime, chartValue, chartData.Name });
@@ -545,7 +545,7 @@ namespace EQLogParser
       };
 
       double totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
-      newEntry.VPS = (long)Math.Round(aggregate.RollingTotal / totalSeconds, 2);
+      newEntry.Vps = (long)Math.Round(aggregate.RollingTotal / totalSeconds, 2);
 
       if (aggregate.RollingHits > 0)
       {
@@ -598,7 +598,7 @@ namespace EQLogParser
               {
                 one.CurrentTime = Math.Truncate((one.CurrentTime + two.CurrentTime + three.CurrentTime) / 3);
                 one.Total = (one.Total + two.Total + three.Total) / 3;
-                one.VPS = (one.VPS + two.VPS + three.VPS) / 3;
+                one.Vps = (one.Vps + two.Vps + three.Vps) / 3;
                 one.Avg = (one.Avg + two.Avg + three.Avg) / 3;
                 one.CritRate = (one.CritRate + two.CritRate + three.CritRate) / 3;
                 updatedValues.Add(one);
@@ -637,7 +637,7 @@ namespace EQLogParser
     public long RollingTotal { get; set; }
     public uint RollingHits { get; set; }
     public uint RollingCritHits { get; set; }
-    public long VPS { get; set; }
+    public long Vps { get; set; }
     public double CritRate { get; set; }
     public double BeginTime { get; set; }
     public double CurrentTime { get; set; }

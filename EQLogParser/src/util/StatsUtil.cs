@@ -104,15 +104,15 @@ namespace EQLogParser
       }
       else if (total < 1000000)
       {
-        result = Math.Round((decimal)total / 1000, roundTo) + "K";
+        result = string.Format("{0}K", Math.Round((decimal)total / 1000, roundTo));
       }
       else if (total < 1000000000)
       {
-        result = Math.Round((decimal)total / 1000 / 1000, roundTo) + "M";
+        result = string.Format("{0}M", Math.Round((decimal)total / 1000 / 1000, roundTo));
       }
       else
       {
-        result = Math.Round((decimal)total / 1000 / 1000 / 1000, roundTo) + "B";
+        result = string.Format("{0}B", Math.Round((decimal)total / 1000 / 1000 / 1000, roundTo));
       }
 
       return result;

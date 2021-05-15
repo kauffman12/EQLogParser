@@ -48,6 +48,8 @@ namespace EQLogParser
     private bool IsHideOverlayOtherPlayersEnabled = false;
     private bool IsShowOverlayCritRateEnabled = false;
     private string SelectedClass = Properties.Resources.ANY_CLASS;
+    private int CurrentMaxRows = 5;
+    private int CurrentFontSize = 13;
 
     public OverlayWindow(bool configure = false)
     {
@@ -66,6 +68,13 @@ namespace EQLogParser
       // Hide/Show crit rate
       IsShowOverlayCritRateEnabled = ConfigUtil.IfSet("ShowOverlayCritRate");
       showCritRateSelection.SelectedIndex = IsShowOverlayCritRateEnabled ? 1 : 0;
+
+      // Max Rows
+      string maxRows = ConfigUtil.GetSetting("MaxOverlayRows");
+      if (!string.IsNullOrEmpty(maxRows) && int.TryParse(maxRows, out int max) && max >= 5 && max <= 10)
+      {
+        CurrentMaxRows = max;
+      }
 
       // selected class
       string savedClass = ConfigUtil.GetSetting("SelectedOverlayClass");
@@ -102,6 +111,7 @@ namespace EQLogParser
         list.Insert(0, Properties.Resources.ANY_CLASS);
         classesList.ItemsSource = list;
         classesList.SelectedItem = SelectedClass;
+        maxRowsSelection.SelectedItem = maxRowsSelection.Items[CurrentMaxRows - 5];
         LoadTestData();
       }
 
@@ -115,7 +125,7 @@ namespace EQLogParser
         Height = offsetSize ? dvalue + margin.Top + margin.Bottom : 0;
         if (!offsetSize)
         {
-          CalculatedRowHeight = dvalue / (OverlayUtil.MAX_ROWS + 1);
+          CalculatedRowHeight = dvalue / (CurrentMaxRows + 1);
         }
       }
 
@@ -149,15 +159,15 @@ namespace EQLogParser
 
       string fontSize = ConfigUtil.GetSetting("OverlayFontSize");
       bool fontHasBeenSet = false;
-      int currentFontSize = OverlayUtil.DEFAULT_TEXT_FONT_SIZE;
-      if (fontSize != null && int.TryParse(fontSize, out currentFontSize) && currentFontSize >= 0 && currentFontSize <= 64)
+
+      if (fontSize != null && int.TryParse(fontSize, out CurrentFontSize) && CurrentFontSize >= 0 && CurrentFontSize <= 64)
       {
         foreach (var item in fontSizeSelection.Items)
         {
           if ((item as ComboBoxItem).Tag as string == fontSize)
           {
             fontSizeSelection.SelectedItem = item;
-            SetFont(currentFontSize);
+            SetFont();
             fontHasBeenSet = true;
           }
         }
@@ -165,7 +175,7 @@ namespace EQLogParser
 
       if (!fontHasBeenSet)
       {
-        SetFont(currentFontSize);
+        SetFont();
       }
 
       if (!offsetSize)
@@ -181,11 +191,11 @@ namespace EQLogParser
 
       if (!configure)
       {
-        var settingsButton = OverlayUtil.CreateButton("Change Settings", "\xE713", currentFontSize - 1);
+        var settingsButton = OverlayUtil.CreateButton("Change Settings", "\xE713", CurrentFontSize - 1);
         settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(Dispatcher, true, false);
         settingsButton.Margin = new Thickness(4, 0, 0, 0);
 
-        var copyButton = OverlayUtil.CreateButton("Copy Parse", "\xE8C8", currentFontSize - 1);
+        var copyButton = OverlayUtil.CreateButton("Copy Parse", "\xE8C8", CurrentFontSize - 1);
         copyButton.Click += (object sender, RoutedEventArgs e) =>
         {
           lock (StatsLock)
@@ -194,7 +204,7 @@ namespace EQLogParser
           }
         };
 
-        var refreshButton = OverlayUtil.CreateButton("Cancel Current Parse", "\xE8BB", currentFontSize - 1);
+        var refreshButton = OverlayUtil.CreateButton("Cancel Current Parse", "\xE8BB", CurrentFontSize - 1);
         refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay(Dispatcher);
 
         ButtonPopup = new Popup();
@@ -237,6 +247,11 @@ namespace EQLogParser
       ColorList.Add((Color)ColorConverter.ConvertFromString("#006064"));
       ColorList.Add((Color)ColorConverter.ConvertFromString("#673ab7"));
       ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
 
       for (int i = 0; i < ColorList.Count; i++)
       {
@@ -257,12 +272,16 @@ namespace EQLogParser
 
     private void LoadTestData()
     {
-      for (int i = 0; i < OverlayUtil.MAX_ROWS - 1; i++)
+      for (int i = 0; i < CurrentMaxRows - 1; i++)
       {
         NameBlockList[i].Text = i + 1 + ". Example Player Name";
         NameBlockList[i].FontStyle = FontStyles.Italic;
         NameBlockList[i].FontWeight = FontWeights.Light;
       }
+
+      NameBlockList[CurrentMaxRows - 1].Text = CurrentMaxRows + ". ...";
+      NameBlockList[CurrentMaxRows - 1].FontStyle = FontStyles.Italic;
+      NameBlockList[CurrentMaxRows - 1].FontWeight = FontWeights.Light;
     }
 
     private void Instance_NewOverlayFight(object sender, Fight fight)
@@ -285,7 +304,7 @@ namespace EQLogParser
           // so this limits it to 1/2 the current time value
           ProcessDirection = !ProcessDirection;
 
-          Stats = DamageStatsManager.ComputeOverlayStats(CurrentDamageSelectionMode, OverlayUtil.MAX_ROWS, SelectedClass);
+          Stats = DamageStatsManager.ComputeOverlayStats(CurrentDamageSelectionMode, CurrentMaxRows, SelectedClass);
 
           if (Stats == null)
           {
@@ -307,7 +326,7 @@ namespace EQLogParser
             int goodRowCount = 0;
             long me = 0;
             var topList = new Dictionary<int, long>();
-            for (int i = 0; i < OverlayUtil.MAX_ROWS; i++)
+            for (int i = 0; i < CurrentMaxRows; i++)
             {
               if (Stats.StatsList.Count > i)
               {
@@ -347,17 +366,17 @@ namespace EQLogParser
 
                   if (isMe && PlayerManager.Instance.IsDoTClass(Stats.StatsList[i].ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
                   {
-                    critMods.Add(string.Format(CultureInfo.CurrentCulture, "DoT CR +{0}", doTCritRate));
+                    critMods.Add(string.Format("DoT CR +{0}", doTCritRate));
                   }
 
                   if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
                   {
-                    critMods.Add(string.Format(CultureInfo.CurrentCulture, "Nuke CR +{0}", nukeCritRate));
+                    critMods.Add(string.Format("Nuke CR +{0}", nukeCritRate));
                   }
 
                   if (critMods.Count > 0)
                   {
-                    updateText = string.Format(CultureInfo.CurrentCulture, "{0} [{1}]", updateText, string.Join(", ", critMods));
+                    updateText = string.Format("{0} [{1}]", updateText, string.Join(", ", critMods));
                   }
                 }
 
@@ -439,7 +458,7 @@ namespace EQLogParser
               ButtonPopup.IsOpen = true;
             }
 
-            for (int i = 0; i < OverlayUtil.MAX_ROWS; i++)
+            for (int i = 0; i < CurrentMaxRows; i++)
             {
               SetRowVisible(i < goodRowCount, i);
             }
@@ -485,7 +504,7 @@ namespace EQLogParser
 
     private void Resize(double height, double width)
     {
-      double rowHeight = CalculatedRowHeight > 0 ? CalculatedRowHeight : height / (OverlayUtil.MAX_ROWS + 1);
+      double rowHeight = CalculatedRowHeight > 0 ? CalculatedRowHeight : height / (CurrentMaxRows + 1);
 
       UIElementUtil.SetSize(TitleRectangle, rowHeight, width);
       UIElementUtil.SetSize(TitlePanel, rowHeight, double.NaN);
@@ -496,10 +515,11 @@ namespace EQLogParser
 
       if (!Active)
       {
-        for (int i = 0; i < OverlayUtil.MAX_ROWS; i++)
+        for (int i = 0; i < CurrentMaxRows; i++)
         {
           // should only effect test data
-          var percent = Convert.ToDouble(65 - 10 * i) / 100;
+          var percent = Convert.ToDouble(70 - 10 * i) / 100;
+          percent = percent > 0.0 ? percent: 0.0;
           UIElementUtil.SetSize(RectangleList[i], rowHeight, width * percent);
           UIElementUtil.SetSize(NamePanels[i], rowHeight, double.NaN);
           UIElementUtil.SetSize(DamagePanels[i], rowHeight, double.NaN);
@@ -539,7 +559,7 @@ namespace EQLogParser
         TitleDamagePanel.SizeChanged += TitleResizing;
       }
 
-      for (int i = 0; i < OverlayUtil.MAX_ROWS; i++)
+      for (int i = 0; i < CurrentMaxRows; i++)
       {
         var rectangle = OverlayUtil.CreateRectangle(ColorList[i]);
         RectangleList.Add(rectangle);
@@ -603,12 +623,13 @@ namespace EQLogParser
       }
     }
 
-    private void SetFont(int size)
+    private void SetFont()
     {
+      int size = CurrentFontSize;
       TitleBlock.FontSize = size;
       TitleDamageBlock.FontSize = size;
 
-      for (int i = 0; i < OverlayUtil.MAX_ROWS; i++)
+      for (int i = 0; i < CurrentMaxRows; i++)
       {
         NameBlockList[i].FontSize = size;
 
@@ -633,7 +654,34 @@ namespace EQLogParser
     {
       if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Tag as string, out int size))
       {
-        SetFont(size);
+        CurrentFontSize = size;
+        SetFont();
+      }
+    }
+
+    private void MaxRowsSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (TitleBlock != null && int.TryParse((maxRowsSelection.SelectedValue as ComboBoxItem).Tag as string, out int maxRows))
+      {
+        // clear out old rows
+        overlayCanvas.Children.Remove(TitleRectangle);
+        overlayCanvas.Children.Remove(TitlePanel);
+        overlayCanvas.Children.Remove(TitleDamagePanel);
+        RectangleList.ForEach(rectangle => overlayCanvas.Children.Remove(rectangle));
+        NamePanels.ForEach(nameStack => overlayCanvas.Children.Remove(nameStack));
+        DamagePanels.ForEach(damageStack => overlayCanvas.Children.Remove(damageStack));
+        RectangleList.Clear();
+        NamePanels.Clear();
+        DamagePanels.Clear();
+        NameBlockList.Clear();
+
+        CurrentMaxRows = maxRows;
+        ConfigUtil.SetSetting("MaxOverlayRows", CurrentMaxRows.ToString(CultureInfo.CurrentCulture));
+        CreateRows(true);
+        SetVisible(true);
+        SetFont();
+        LoadTestData();
+        Resize(overlayCanvas.ActualHeight, overlayCanvas.ActualWidth);
       }
     }
 

@@ -152,7 +152,7 @@ namespace EQLogParser
         copyToEQButton.Foreground = MainWindow.LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_SELECTED;
         sharePlayerParseLabel.Foreground = MainWindow.BRIGHT_TEXT_BRUSH;
-        sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + "/" + 509;
+        sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
       }
       else if (playerParseTextBox.Text.Length > 509)
@@ -161,7 +161,7 @@ namespace EQLogParser
         copyToEQButton.Foreground = MainWindow.LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_TOO_BIG;
         sharePlayerParseLabel.Foreground = MainWindow.WARNING_BRUSH;
-        sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + "/" + 509;
+        sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Foreground = MainWindow.WARNING_BRUSH;
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }

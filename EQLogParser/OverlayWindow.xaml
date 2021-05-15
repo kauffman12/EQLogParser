@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Height="198" Width="500"
-        MinWidth="375"
+        MinWidth="400"
         Topmost="True"
         Title="Configure Overlay (Set Position/Size Before Saving)"
         Style="{StaticResource OverlayStyle}" Closing="WindowClosing" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False">
@@ -13,8 +13,16 @@
     <SolidColorBrush x:Name="windowBrush" Opacity="0.0" Color="Black" />
   </Window.Background>
   <Canvas x:Name="overlayCanvas" SizeChanged="PanelSizeChanged">
-    <StackPanel x:Name="configPanel" Orientation="Horizontal">
-      <ComboBox x:Name="fontSizeSelection" SelectedIndex="2" FontSize="12" MaxHeight="22" Margin="0,0,0,0" SelectionChanged="FontSizeSelectionChanged" Background="#FF040000">
+    <StackPanel x:Name="configPanel" Orientation="Horizontal" Margin="0,0,0,0">
+      <ComboBox x:Name="maxRowsSelection" SelectedIndex="0" ToolTip="Select number of rows to display on the Overlay." FontSize="11" MaxHeight="22" Margin="0,0,0,0" SelectionChanged="MaxRowsSelectionChanged" Background="#FF040000">
+        <ComboBoxItem Tag="5">5</ComboBoxItem>
+        <ComboBoxItem Tag="6">6</ComboBoxItem>
+        <ComboBoxItem Tag="7">7</ComboBoxItem>
+        <ComboBoxItem Tag="8">8</ComboBoxItem>
+        <ComboBoxItem Tag="9">9</ComboBoxItem>
+        <ComboBoxItem Tag="10">10</ComboBoxItem>
+      </ComboBox>      
+      <ComboBox x:Name="fontSizeSelection" SelectedIndex="2" ToolTip="Select font size." FontSize="11" MaxHeight="22" Margin="0,0,0,0" SelectionChanged="FontSizeSelectionChanged" Background="#FF040000">
         <ComboBoxItem Tag="10">10pt</ComboBoxItem>
         <ComboBoxItem Tag="11">11pt</ComboBoxItem>
         <ComboBoxItem Tag="12">12pt</ComboBoxItem>
@@ -25,25 +33,25 @@
         <ComboBoxItem Tag="17">17pt</ComboBoxItem>
         <ComboBoxItem Tag="18">18pt</ComboBoxItem>
       </ComboBox>
-      <ComboBox x:Name="showNameSelection" SelectedIndex="0" FontSize="12" MaxWidth="94" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="ShowNamesSelectionChanged">
-        <ComboBoxItem Tag="10">Show Names</ComboBoxItem>
-        <ComboBoxItem Tag="10">Hide Names</ComboBoxItem>
+      <ComboBox x:Name="showNameSelection" SelectedIndex="0" ToolTip="Show or Hide the names of other players." FontSize="11" MaxWidth="84" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="ShowNamesSelectionChanged">
+        <ComboBoxItem Tag="10">Names On</ComboBoxItem>
+        <ComboBoxItem Tag="10">Names Off</ComboBoxItem>
       </ComboBox>
-      <ComboBox x:Name="showCritRateSelection" SelectedIndex="0" FontSize="12" MaxWidth="93" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="ShowCritRateSelectionChanged">
-        <ComboBoxItem Tag="10">Crit Rate Off</ComboBoxItem>
-        <ComboBoxItem Tag="10">Crit Rate On</ComboBoxItem>
+      <ComboBox x:Name="showCritRateSelection" SelectedIndex="0" ToolTip="Enable Crit Rate infomration if available." FontSize="11" MaxWidth="80" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="ShowCritRateSelectionChanged">
+        <ComboBoxItem Tag="10">% Crit Off</ComboBoxItem>
+        <ComboBoxItem Tag="10">% Crit On</ComboBoxItem>
       </ComboBox>
-      <ComboBox x:Name="damageModeSelection" SelectedIndex="0" FontSize="12" MaxWidth="100" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" ToolTip="Choose On Kill for the Overlay to reset damage and dps after all NPCs are dead. Otherwise the selected timeout is used.">
+      <ComboBox x:Name="damageModeSelection" SelectedIndex="0" FontSize="11" MaxWidth="90" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" ToolTip="Choose On Kill for the Overlay to reset damage and dps after all NPCs are dead. Otherwise the selected timeout is used.">
         <ComboBoxItem Tag="0">Reset On Kill</ComboBoxItem>
-        <ComboBoxItem Tag="30">Reset After 30s</ComboBoxItem>
-        <ComboBoxItem Tag="40">Reset After 40s</ComboBoxItem>
-        <ComboBoxItem Tag="50">Reset After 50s</ComboBoxItem>
-        <ComboBoxItem Tag="60">Reset After 60s</ComboBoxItem>
+        <ComboBoxItem Tag="30">Reset At 30s</ComboBoxItem>
+        <ComboBoxItem Tag="40">Reset At 40s</ComboBoxItem>
+        <ComboBoxItem Tag="50">Reset At 50s</ComboBoxItem>
+        <ComboBoxItem Tag="60">Reset At 60s</ComboBoxItem>
       </ComboBox>
-      <ComboBox x:Name="classesList" FontSize="12" MaxWidth="110" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="SelectPlayerClassChanged"/>
+      <ComboBox x:Name="classesList" FontSize="12" ToolTip="Select the player class to show on the Overlay in addition to your own parse." MaxWidth="75" MaxHeight="22" Margin="0,0,0,0" Background="#FF040000" SelectionChanged="SelectPlayerClassChanged"/>
     </StackPanel>
     <DockPanel x:Name="savePanel" HorizontalAlignment="Center">
-      <Button x:Name="saveButton" Width="100" MaxHeight="22" FontSize="12" Click="SaveClick" HorizontalAlignment="Center" Content="Save"/>
+      <Button x:Name="saveButton" Width="100" MaxHeight="22" FontSize="11" Click="SaveClick" HorizontalAlignment="Center" Content="Save"/>
     </DockPanel>
   </Canvas>
 </Window>
