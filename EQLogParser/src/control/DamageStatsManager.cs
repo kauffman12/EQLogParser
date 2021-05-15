@@ -310,14 +310,9 @@ namespace EQLogParser
             FireNoDataEvent(options, "NODATA");
           }
         }
-#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
         {
-          if (ex is ArgumentNullException || ex is NullReferenceException || ex is ArgumentOutOfRangeException || ex is ArgumentException || ex is OutOfMemoryException)
-          {
-            LOG.Error(ex);
-          }
+          LOG.Error(ex);
         }
       }
     }
@@ -331,7 +326,6 @@ namespace EQLogParser
           CombinedStats combined = null;
           ConcurrentDictionary<string, Dictionary<string, PlayerStats>> childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
           ConcurrentDictionary<string, PlayerStats> topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
-          ConcurrentDictionary<string, PlayerStats> aggregateStats = new ConcurrentDictionary<string, PlayerStats>();
           Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
           // always start over
@@ -511,14 +505,9 @@ namespace EQLogParser
               }
             }
           }
-#pragma warning disable CA1031 // Do not catch general exception types
           catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
           {
-            if (ex is ArgumentNullException || ex is AggregateException || ex is NullReferenceException || ex is OutOfMemoryException)
-            {
-              LOG.Error(ex);
-            }
+            LOG.Error(ex);
           }
 
           if (options.RequestSummaryData)

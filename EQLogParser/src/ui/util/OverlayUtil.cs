@@ -11,8 +11,6 @@ namespace EQLogParser
 {
   class OverlayUtil
   {
-    internal const int DEFAULT_TEXT_FONT_SIZE = 13;
-    internal const int MAX_ROWS = 5;
     internal const double OPACITY = 0.40;
     internal const double DATA_OPACITY = 0.70;
     internal static readonly SolidColorBrush TEXTBRUSH = new SolidColorBrush(Colors.White);

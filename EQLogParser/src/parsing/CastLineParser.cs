@@ -246,14 +246,9 @@ namespace EQLogParser
           }
         }
       }
-#pragma warning disable CA1031 // Do not catch general exception types
       catch (Exception e)
-#pragma warning restore CA1031 // Do not catch general exception types
       {
-        if (e is ArgumentException || e is NullReferenceException || e is ArgumentOutOfRangeException || e is ArgumentException)
-        {
-          LOG.Error(e);
-        }
+        LOG.Error(e);
       }
 
       DebugUtil.UnregisterLine(lineData.LineNumber, handled);

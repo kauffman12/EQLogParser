@@ -17,12 +17,6 @@ namespace EQLogParser
 
     }
 
-    public static string GetLineType(long lineNum)
-    {
-      LineTypes.TryGetValue(lineNum, out string value);
-      return value;
-    }
-
     public static void Reset()
     {
       if (ConfigUtil.Debug)

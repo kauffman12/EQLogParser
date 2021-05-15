@@ -695,10 +695,9 @@ namespace EQLogParser
 
     private void DateChooser_GotFocus(object sender, RoutedEventArgs e)
     {
-      var text = (sender as TextBox)?.Text;
-      if (text.Contains("Date"))
+      if (sender is TextBox box && box.Text.Contains("Date"))
       {
-        (sender as TextBox).Text = "";
+        box.Text = "";
       }
     }
 

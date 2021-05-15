@@ -109,14 +109,9 @@ namespace EQLogParser
         Clipboard.SetImage(rtb);
         dataGrid.Items.Refresh();
       }
-#pragma warning disable CA1031 // Do not catch general exception types
       catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
       {
-        if (ex is ExternalException || ex is ThreadStateException || ex is ArgumentNullException || ex is NullReferenceException)
-        {
-          LOG.Error("Could not Copy Image", ex);
-        }
+        LOG.Error("Could not Copy Image", ex);
       }
       finally
       {
