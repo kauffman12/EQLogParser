@@ -19,7 +19,7 @@ namespace EQLogParser
       bool valid = false;
       if (line != null && line.Length > MIN_LINE_LENGTH)
       {
-        action = line.Substring(LineParsing.ACTIONINDEX);
+        action = line.Substring(LineParsing.ActionIndex);
         valid = !(CheckForPlayersOrNPCs(line, action) || CheckForPetLeader(line, action));
       }
       else if (line != null)

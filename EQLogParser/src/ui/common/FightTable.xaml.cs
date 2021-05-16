@@ -30,7 +30,7 @@ namespace EQLogParser
     private static readonly SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
 
     // time before creating new group
-    public const int GROUPTIMEOUT = 120;
+    public const int GroupTimeout = 120;
 
     // NPC Search
     private static int CurrentFightSearchIndex = 0;
@@ -200,7 +200,7 @@ namespace EQLogParser
 
         processList.ForEach(fight =>
         {
-          if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GROUPTIMEOUT)
+          if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GroupTimeout)
           {
             CurrentGroup++;
 
@@ -250,7 +250,7 @@ namespace EQLogParser
 
         processNonTankingList.ForEach(fight =>
         {
-          if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GROUPTIMEOUT)
+          if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GroupTimeout)
           {
             CurrentNonTankingGroup++;
 

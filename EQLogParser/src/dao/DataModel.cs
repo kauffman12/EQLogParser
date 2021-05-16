@@ -7,7 +7,7 @@ namespace EQLogParser
 {
   public static class LineParsing
   {
-    public const int ACTIONINDEX = 27;
+    public const int ActionIndex = 27;
   }
 
   internal interface ISummaryBuilder

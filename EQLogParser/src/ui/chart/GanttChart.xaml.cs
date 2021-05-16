@@ -535,7 +535,7 @@ namespace EQLogParser
 
     private class SpellRange
     {
-      public List<TimeRange> Ranges { get; set; } = new List<TimeRange>();
+      public List<TimeRange> Ranges { get; } = new List<TimeRange>();
       public ushort Adps { get; set; }
     }
 

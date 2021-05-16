@@ -832,12 +832,12 @@ namespace EQLogParser
     private class SpellAbbrvComparer : IEqualityComparer<SpellData>
     {
       public bool Equals(SpellData x, SpellData y) => x?.NameAbbrv == y?.NameAbbrv;
-      public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
+      public int GetHashCode(SpellData obj) => obj == null ? 0 : obj.NameAbbrv.GetHashCode();
     }
 
     private class TimedActionComparer : IComparer<TimedAction>
     {
-      public int Compare(TimedAction x, TimedAction y) => x.BeginTime.CompareTo(y.BeginTime);
+      public int Compare(TimedAction x, TimedAction y) => (x != null && y != null) ? x.BeginTime.CompareTo(y.BeginTime) : 0;
     }
 
     public class ResistCount

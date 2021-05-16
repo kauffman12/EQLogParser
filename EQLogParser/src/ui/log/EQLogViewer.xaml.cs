@@ -1,6 +1,7 @@
 ﻿using FontAwesome.WPF;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -105,7 +106,7 @@ namespace EQLogParser
             filtered.Inlines.Remove(filtered.Inlines.LastInline);
           }
 
-          statusCount.Text = count + " Lines (Filtered)";
+          statusCount.Text = string.Format(CultureInfo.CurrentCulture, "{0} {1}", count, Properties.Resources.LINES_FILTERED);
           logBox.Document.Blocks.Clear();
           logBox.Document.Blocks.Add(filtered);
           logScroller.ScrollToEnd();

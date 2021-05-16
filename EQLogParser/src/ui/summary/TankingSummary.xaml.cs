@@ -15,10 +15,12 @@ namespace EQLogParser
   /// </summary>
   public partial class TankingSummary : SummaryTable, IDisposable
   {
-    public int CurrentDamageType = 0;
+    private int CurrentDamageType = 0;
     private string CurrentClass = null;
     private bool CurrentPetValue;
     private int CurrentGroupCount = 0;
+    // Made property since it's used outside this class
+    public int DamageType { get => CurrentDamageType; set => CurrentDamageType = value; }
 
     public TankingSummary()
     {
@@ -35,7 +37,7 @@ namespace EQLogParser
         damageTypes.SelectedIndex = type;
       }
 
-      CurrentDamageType = damageTypes.SelectedIndex;
+      DamageType = damageTypes.SelectedIndex;
 
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, Properties.Resources.ANY_CLASS);
@@ -237,16 +239,16 @@ namespace EQLogParser
     {
       if (dataGrid?.ItemsSource != null)
       {
-        var needRequery = CurrentDamageType != damageTypes.SelectedIndex;
+        var needRequery = DamageType != damageTypes.SelectedIndex;
         CurrentPetValue = showPets.IsChecked.Value;
-        CurrentDamageType = damageTypes.SelectedIndex;
+        DamageType = damageTypes.SelectedIndex;
         ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("TankingSummaryDamageType", CurrentDamageType.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType.ToString(CultureInfo.CurrentCulture));
         SetFilter(dataGrid?.ItemsSource as ICollectionView);
 
         if (needRequery)
         {
-          var tankingOptions = new GenerateStatsOptions { RequestSummaryData = true, RequestChartData = true, DamageType = CurrentDamageType };
+          var tankingOptions = new GenerateStatsOptions { RequestSummaryData = true, RequestChartData = true, DamageType = DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
