@@ -61,7 +61,7 @@ namespace EQLogParser
 
   internal class TankGroupCollection : RecordGroupCollection
   {
-    int DamageType = 0;
+    readonly int DamageType = 0;
     internal TankGroupCollection(List<List<ActionBlock>> recordGroups, int damageType) : base(recordGroups)
     {
       DamageType = damageType;

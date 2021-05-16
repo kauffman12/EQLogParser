@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.18";
+    private const string VERSION = "v1.8.19";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -177,9 +177,9 @@ namespace EQLogParser
         });
 
         (npcWindow.Content as FightTable).EventsSelectionChange += (sender, data) => ComputeStats();
-        DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, DamageChartWindow, sender, data);
-        HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, HealingChartWindow, sender, data);
-        TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, TankingChartWindow, sender, data);
+        DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, DamageChartWindow, data);
+        HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, HealingChartWindow, data);
+        TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, TankingChartWindow, data);
 
         // Setup themes
         ThemeManager.BeginUpdate();
@@ -332,7 +332,7 @@ namespace EQLogParser
       if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
       {
         tankingOptions.RequestSummaryData = true;
-        tankingOptions.DamageType = tankingSummary.CurrentDamageType;
+        tankingOptions.DamageType = tankingSummary.DamageType;
       }
 
       Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
@@ -631,7 +631,7 @@ namespace EQLogParser
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true, DamageType = tankingSummary.CurrentDamageType };
+          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true, DamageType = tankingSummary.DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
@@ -715,7 +715,7 @@ namespace EQLogParser
 
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          statusText.Text = "Reading Log... " + filePercent + "% in " + seconds + " seconds";
+          statusText.Text = string.Format(CultureInfo.CurrentCulture, "Reading Log... {0}% in {1} seconds", filePercent, seconds);
           statusText.Foreground = LOADING_BRUSH;
 
           if (EQLogReader.FileLoadComplete)
@@ -996,7 +996,7 @@ namespace EQLogParser
 
     // This is where closing summary tables and line charts will get disposed
     private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e) => (e.Window.Content as IDisposable)?.Dispose();
-    private void PlayerParseTextWindow_Loaded(object sender, RoutedEventArgs e) => playerParseTextWindow.State = DockingWindowState.AutoHide;
+
     private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
     private void WindowClose(object sender, EventArgs e) => Close();
 

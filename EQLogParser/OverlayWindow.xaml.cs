@@ -519,7 +519,7 @@ namespace EQLogParser
         {
           // should only effect test data
           var percent = Convert.ToDouble(70 - 10 * i) / 100;
-          percent = percent > 0.0 ? percent: 0.0;
+          percent = percent > 0.0 ? percent : 0.0;
           UIElementUtil.SetSize(RectangleList[i], rowHeight, width * percent);
           UIElementUtil.SetSize(NamePanels[i], rowHeight, double.NaN);
           UIElementUtil.SetSize(DamagePanels[i], rowHeight, double.NaN);
