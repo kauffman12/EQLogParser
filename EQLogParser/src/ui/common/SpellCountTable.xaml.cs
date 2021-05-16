@@ -74,7 +74,6 @@ namespace EQLogParser
 
     internal void ShowSpells(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
-      var childStats = currentStats?.Children;
       var raidStats = currentStats?.RaidStats;
 
       if (selectedStats != null && raidStats != null)

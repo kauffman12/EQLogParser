@@ -19,10 +19,10 @@ namespace EQLogParser
       try
       {
         int index;
-        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - LineParsing.ACTIONINDEX, StringComparison.Ordinal)) > -1)
+        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - LineParsing.ActionIndex, StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ACTIONINDEX) };
-          pline.OptionalIndex = index - LineParsing.ACTIONINDEX;
+          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ActionIndex) };
+          pline.OptionalIndex = index - LineParsing.ActionIndex;
           pline.TimeString = pline.Line.Substring(1, 24);
           pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
 

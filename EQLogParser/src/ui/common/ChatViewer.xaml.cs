@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -493,7 +494,7 @@ namespace EQLogParser
           selected = channels.Items[2] as ComboBoxItemDetails;
         }
 
-        selected.SelectedText = count + " Channels Selected";
+        selected.SelectedText = string.Format(CultureInfo.CurrentCulture, "{0} {1}", count, Properties.Resources.CHANNELS_SELECTED);
         channels.SelectedIndex = -1;
         channels.SelectedItem = selected;
       }

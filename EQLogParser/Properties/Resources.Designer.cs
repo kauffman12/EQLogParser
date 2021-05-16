@@ -97,6 +97,15 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Channels Selected.
+        /// </summary>
+        internal static string CHANNELS_SELECTED {
+            get {
+                return ResourceManager.GetString("CHANNELS_SELECTED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to End Date.
         /// </summary>
         internal static string CHAT_END_DATE {
@@ -201,6 +210,15 @@ namespace EQLogParser.Properties {
         internal static string FILEMENU_EXPORT_SUMMARY {
             get {
                 return ResourceManager.GetString("FILEMENU_EXPORT_SUMMARY", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Lines (Filtered).
+        /// </summary>
+        internal static string LINES_FILTERED {
+            get {
+                return ResourceManager.GetString("LINES_FILTERED", resourceCulture);
             }
         }
         

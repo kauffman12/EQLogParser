@@ -155,7 +155,7 @@ namespace EQLogParser
       return window;
     }
 
-    internal static void HandleChartUpdate(Dispatcher dispatcher, DocumentWindow window, object _, DataPointEvent e)
+    internal static void HandleChartUpdate(Dispatcher dispatcher, DocumentWindow window, DataPointEvent e)
     {
       dispatcher.InvokeAsync(() =>
       {

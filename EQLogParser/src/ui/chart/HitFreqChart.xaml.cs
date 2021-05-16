@@ -292,7 +292,6 @@ namespace EQLogParser
 
     private void PlayerListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      string selectedCritType = critTypeList?.SelectedItem as string;
       string player = playerList?.SelectedItem as string;
 
       if (ChartData.ContainsKey(player))

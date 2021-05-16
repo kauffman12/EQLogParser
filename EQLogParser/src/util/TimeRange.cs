@@ -25,7 +25,7 @@ namespace EQLogParser
       }
 
       additional.ForEach(segment => Add(segment));
-      return TimeSegments.Sum(segment => segment.GetTotal());
+      return TimeSegments.Sum(segment => segment.Total);
     }
 
     public void Add(IReadOnlyCollection<TimeSegment> collection) => collection?.ToList().ForEach(segment => Add(segment));
@@ -169,6 +169,6 @@ namespace EQLogParser
     }
 
     public bool Equals(TimeSegment check) => check?.BeginTime == BeginTime && check?.EndTime == EndTime;
-    public double GetTotal() => EndTime - BeginTime + 1;
+    public double Total => EndTime - BeginTime + 1;
   }
 }

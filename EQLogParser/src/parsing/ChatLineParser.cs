@@ -38,26 +38,26 @@ namespace EQLogParser
     {
       ChatType chatType = null;
 
-      if (!string.IsNullOrEmpty(line) && line.Length > (LineParsing.ACTIONINDEX + 3))
+      if (!string.IsNullOrEmpty(line) && line.Length > (LineParsing.ActionIndex + 3))
       {
         try
         {
           int count;
-          int max = Math.Min(16, line.Length - LineParsing.ACTIONINDEX);
-          int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, LineParsing.ACTIONINDEX, max, StringComparison.Ordinal) > -1);
+          int max = Math.Min(16, line.Length - LineParsing.ActionIndex);
+          int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, LineParsing.ActionIndex, max, StringComparison.Ordinal) > -1);
 
           if (index < 0)
           {
             int criteriaIndex = -1;
             for (int i = 0; i < OtherCriteria.Count; i++)
             {
-              int lastIndex = line.IndexOf("'", LineParsing.ACTIONINDEX, StringComparison.Ordinal);
+              int lastIndex = line.IndexOf("'", LineParsing.ActionIndex, StringComparison.Ordinal);
               if (lastIndex > -1)
               {
-                count = lastIndex - LineParsing.ACTIONINDEX;
-                if (count > 0 && line.Length >= (LineParsing.ACTIONINDEX + count))
+                count = lastIndex - LineParsing.ActionIndex;
+                if (count > 0 && line.Length >= (LineParsing.ActionIndex + count))
                 {
-                  criteriaIndex = line.IndexOf(OtherCriteria[i], LineParsing.ACTIONINDEX, count, StringComparison.Ordinal);
+                  criteriaIndex = line.IndexOf(OtherCriteria[i], LineParsing.ActionIndex, count, StringComparison.Ordinal);
                   if (criteriaIndex > -1)
                   {
                     index = i;
@@ -69,7 +69,7 @@ namespace EQLogParser
 
             if (index < 0)
             {
-              index = line.IndexOf(" ", LineParsing.ACTIONINDEX, StringComparison.Ordinal);
+              index = line.IndexOf(" ", LineParsing.ActionIndex, StringComparison.Ordinal);
               if (index > -1 && index + 5 < line.Length)
               {
                 if (line[index + 1] == '-' && line[index + 2] == '>' && line.Length >= (index + 4))
@@ -77,7 +77,7 @@ namespace EQLogParser
                   int lastIndex = line.IndexOf(":", index + 4, StringComparison.Ordinal);
                   if (lastIndex > -1)
                   {
-                    string sender = line.Substring(LineParsing.ACTIONINDEX, index - LineParsing.ACTIONINDEX);
+                    string sender = line.Substring(LineParsing.ActionIndex, index - LineParsing.ActionIndex);
                     string receiver = line.Substring(index + 4, lastIndex - index - 4);
                     chatType = new ChatType { Channel = ChatChannels.Tell, Sender = sender, Receiver = receiver, Line = line, AfterSenderIndex = lastIndex };
 
@@ -92,8 +92,8 @@ namespace EQLogParser
             else if (index > -1 && criteriaIndex > -1)
             {
               int start, end;
-              int senderLen = criteriaIndex - LineParsing.ACTIONINDEX;
-              chatType = new ChatType { SenderIsYou = false, Sender = line.Substring(LineParsing.ACTIONINDEX, senderLen), AfterSenderIndex = criteriaIndex, Line = line };
+              int senderLen = criteriaIndex - LineParsing.ActionIndex;
+              chatType = new ChatType { SenderIsYou = false, Sender = line.Substring(LineParsing.ActionIndex, senderLen), AfterSenderIndex = criteriaIndex, Line = line };
 
               switch (index)
               {
@@ -152,7 +152,7 @@ namespace EQLogParser
           else
           {
             int start, end;
-            chatType = new ChatType { SenderIsYou = true, Sender = "You", AfterSenderIndex = LineParsing.ACTIONINDEX + 4, Line = line };
+            chatType = new ChatType { SenderIsYou = true, Sender = "You", AfterSenderIndex = LineParsing.ActionIndex + 4, Line = line };
             switch (index)
             {
               case 0:
@@ -161,14 +161,14 @@ namespace EQLogParser
               case 1:
                 chatType.Channel = ChatChannels.Tell;
 
-                start = LineParsing.ACTIONINDEX + 9;
+                start = LineParsing.ActionIndex + 9;
                 if ((end = line.IndexOf(",", start, StringComparison.Ordinal)) > -1)
                 {
                   chatType.Receiver = line.Substring(start, end - start);
                 }
                 break;
               case 2:
-                start = LineParsing.ACTIONINDEX + 9;
+                start = LineParsing.ActionIndex + 9;
 
                 if (line.Length >= (start + 10) && line.IndexOf("your party", start, 10, StringComparison.Ordinal) > -1)
                 {
@@ -188,7 +188,7 @@ namespace EQLogParser
                 }
                 break;
               case 3:
-                start = LineParsing.ACTIONINDEX + 11;
+                start = LineParsing.ActionIndex + 11;
                 if (line.Length >= (start + 10) && line.IndexOf("your guild", start, 10, StringComparison.Ordinal) > -1)
                 {
                   chatType.Channel = ChatChannels.Guild;

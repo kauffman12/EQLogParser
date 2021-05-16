@@ -366,17 +366,17 @@ namespace EQLogParser
 
                   if (isMe && PlayerManager.Instance.IsDoTClass(Stats.StatsList[i].ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
                   {
-                    critMods.Add(string.Format("DoT CR +{0}", doTCritRate));
+                    critMods.Add(string.Format(CultureInfo.CurrentCulture, "DoT CR +{0}", doTCritRate));
                   }
 
                   if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
                   {
-                    critMods.Add(string.Format("Nuke CR +{0}", nukeCritRate));
+                    critMods.Add(string.Format(CultureInfo.CurrentCulture, "Nuke CR +{0}", nukeCritRate));
                   }
 
                   if (critMods.Count > 0)
                   {
-                    updateText = string.Format("{0} [{1}]", updateText, string.Join(", ", critMods));
+                    updateText = string.Format(CultureInfo.CurrentCulture, "{0} [{1}]", updateText, string.Join(", ", critMods));
                   }
                 }
 

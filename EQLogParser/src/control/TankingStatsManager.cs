@@ -319,7 +319,6 @@ namespace EQLogParser
               totals += stats.Total;
             }
 
-            var hps = (long)Math.Round(totals / currentStats.RaidStats.TotalSeconds, 2);
             string totalTitle = showTotals ? (selected[0].Name + " Received " + StatsUtil.FormatTotals(totals) + " Healing") : (selected[0].Name + " Received Healing");
             details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
             var timeTitle = showTime ? currentStats.TimeTitle : "";
