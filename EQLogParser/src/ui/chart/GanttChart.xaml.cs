@@ -508,7 +508,7 @@ namespace EQLogParser
       {
         if (spell.MaxHits == 1)
         {
-          duration = duration > 6 ? 6 / mod  : duration;
+          duration = duration > 6 ? 6 / mod : duration;
         }
         else if (spell.MaxHits <= 3)
         {
