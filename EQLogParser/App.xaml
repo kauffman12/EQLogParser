@@ -454,14 +454,17 @@
     </Style>
     
     <!-- Tooltips -->
+    <Style x:Key="AvgNonTwincastColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Average Damage for all Hits that were not a Twincast" />
+    </Style>    
     <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Based on Crippling Blow, Critical, Deadly Strike, and Finishing Blow" />
     </Style>
     <Style x:Key="OverHealColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Amount of Healing in Excess of what was Needed" />
+      <Setter Property="ToolTip" Value="Amount of Healing in Excess of what could be Healed" />
     </Style>
     <Style x:Key="OverHealPercentColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Healing in Excess of what was Needed" />
+      <Setter Property="ToolTip" Value="Percent of Healing in Excess of what could be Healed" />
     </Style>    
     <Style x:Key="TotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Percent of Total (raid total)" />

@@ -30,7 +30,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
     private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> CharmPets = new ConcurrentDictionary<string, byte>();
-
+    private static readonly object LockObject = new object();
     private bool PetMappingUpdated = false;
 
     private PlayerManager()
@@ -263,7 +263,7 @@ namespace EQLogParser
 
     internal void Init()
     {
-      lock (this)
+      lock (LockObject)
       {
         PetToPlayer.Clear();
         PlayerToClass.Clear();

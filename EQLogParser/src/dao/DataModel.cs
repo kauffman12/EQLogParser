@@ -240,6 +240,7 @@ namespace EQLogParser
     public long TotalCrit { get; set; }
     public long TotalHead { get; set; }
     public long TotalLucky { get; set; }
+    public long TotalNonTwincast { get; set; }
     public long TotalRiposte { get; set; }
     public long TotalSlay { get; set; }
     public Dictionary<long, int> CritFreqValues { get; } = new Dictionary<long, int>();
@@ -404,6 +405,7 @@ namespace EQLogParser
     public long Avg { get; set; }
     public long AvgCrit { get; set; }
     public long AvgLucky { get; set; }
+    public long AvgNonTwincast { get; set; }
     public double CritRate { get; set; }
     public double DoubleBowRate { get; set; }
     public double ExtraRate { get; set; }

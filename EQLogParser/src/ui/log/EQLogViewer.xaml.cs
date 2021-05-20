@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -135,12 +136,18 @@ namespace EQLogParser
           {
             using (var f = File.OpenRead(MainWindow.CurrentLogFile))
             {
+              StreamReader s;
               if (!f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) && f.Length > 100000000)
               {
                 SetStartingPosition(f, logTimeIndex);
+                s = new StreamReader(f);
+              }
+              else
+              {
+                var gs = new GZipStream(f, CompressionMode.Decompress);
+                s = new StreamReader(gs, System.Text.Encoding.UTF8, true, 4096);
               }
 
-              var s = new StreamReader(f);
               var list = new List<string>();
               int lastPercent = -1;
 

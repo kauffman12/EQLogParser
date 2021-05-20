@@ -183,10 +183,10 @@ namespace EQLogParser
               foreach (var spell in sortedSpellList)
               {
                 var row = (SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new ExpandoObject();
+                row["Spell"] = spell;
 
-                row.Add("Spell", spell);
                 //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
-                row.Add("IconColor", ACTIVEICON);
+                row["IconColor"] = ACTIVEICON;
 
                 for (int i = 0; i < sortedPlayers.Count; i++)
                 {
@@ -206,12 +206,13 @@ namespace EQLogParser
                     }
                     else
                     {
-                      row.Add(sortedPlayers[i], CurrentCountType == 0 ? 0 : 0.0);
+                      row[sortedPlayers[i]] = CurrentCountType == 0 ? 0 : 0.0;
                     }
                   }
                 }
 
-                row.Add("totalColumn", CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2));
+                
+                row["totalColumn"] = CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
 
                 if (SpellRowsView.Count <= existingIndex)
                 {
@@ -254,7 +255,7 @@ namespace EQLogParser
       {
         count = count + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
       }
-      row.Add(player, count);
+      row[player] = count;
     }
 
     private uint UpdateMaps(string id, string player, uint playerCount, Dictionary<string, uint> maxCounts, Dictionary<string, uint> totalCountMap,
