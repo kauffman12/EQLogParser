@@ -78,6 +78,7 @@ namespace EQLogParser
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
+    private static readonly object LockObject = new object();
 
     private readonly List<ActionBlock> AllMiscBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllDeathBlocks = new List<ActionBlock>();
@@ -626,7 +627,7 @@ namespace EQLogParser
 
     private void RecalculateAdps()
     {
-      lock (this)
+      lock (LockObject)
       {
         MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
         MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
@@ -694,12 +695,9 @@ namespace EQLogParser
 
     internal void UpdateIfNewFightMap(string name, Fight fight, bool isNonTankingFight)
     {
-      if (!LifetimeFights.ContainsKey(name))
-      {
-        LifetimeFights[name] = 1;
-      }
+      LifetimeFights[name] = 1;
 
-      if (!ActiveFights.ContainsKey(name))
+      if (ActiveFights.TryAdd(name, fight))
       {
         ActiveFights[name] = fight;
         EventsNewFight?.Invoke(this, fight);
@@ -736,7 +734,7 @@ namespace EQLogParser
 
     internal void Clear()
     {
-      lock (this)
+      lock (LockObject)
       {
         LastSpellIndex = -1;
         ActiveFights.Clear();
@@ -760,7 +758,7 @@ namespace EQLogParser
 
     internal void ClearActiveAdps()
     {
-      lock (this)
+      lock (LockObject)
       {
         AdpsKeys.ForEach(key => AdpsActive[key].Clear());
         MyDoTCritRateMod = 0;

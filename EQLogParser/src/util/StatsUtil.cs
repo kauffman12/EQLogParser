@@ -328,6 +328,7 @@ namespace EQLogParser
         to.TotalCrit += from.TotalCrit;
         to.TotalHead += from.TotalHead;
         to.TotalLucky += from.TotalLucky;
+        to.TotalNonTwincast += from.TotalNonTwincast;
         to.TotalRiposte += from.TotalRiposte;
         to.TotalSlay += from.TotalSlay;
         to.Hits += from.Hits;
@@ -357,9 +358,9 @@ namespace EQLogParser
         stats.SDPS = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
         stats.Avg = (long)Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
 
-        if ((stats.CritHits - stats.LuckyHits) > 0)
+        if ((stats.CritHits - stats.LuckyHits) is uint nonLucky && nonLucky > 0)
         {
-          stats.AvgCrit = (long)Math.Round(Convert.ToDecimal(stats.TotalCrit) / (stats.CritHits - stats.LuckyHits), 2);
+          stats.AvgCrit = (long)Math.Round(Convert.ToDecimal(stats.TotalCrit) / nonLucky, 2);
         }
 
         if (stats.LuckyHits > 0)
@@ -370,6 +371,11 @@ namespace EQLogParser
         if (stats.Total > 0)
         {
           stats.ExtraRate = Math.Round(Convert.ToDouble(stats.Extra) / stats.Total * 100, 2);
+        }
+
+        if ((stats.Hits - stats.TwincastHits) is uint nonTwincast && nonTwincast > 0)
+        {
+          stats.AvgNonTwincast = (long)Math.Round(Convert.ToDecimal(stats.TotalNonTwincast) / nonTwincast, 2);
         }
 
         stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
@@ -392,6 +398,7 @@ namespace EQLogParser
 
         var tcMult = stats.Type == Labels.DD ? 2 : 1;
         stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
+        stats.TwincastRate = stats.TwincastRate > 100.0 ? 100.0 : stats.TwincastRate;
         stats.ResistRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
 
         if (superStats != null && superStats.Total > 0)

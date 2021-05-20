@@ -109,6 +109,10 @@ namespace EQLogParser
             theHit.TwincastHits++;
           }
         }
+        else
+        {
+          playerStats.TotalNonTwincast += record.Total;
+        }
 
         if ((record.ModifiersMask & RAMPAGE) != 0)
         {

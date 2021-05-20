@@ -39,7 +39,7 @@ namespace EQLogParser
 
     public void Add(TimeSegment segment)
     {
-      if (segment?.BeginTime <= segment?.EndTime)
+      if (segment != null && segment.BeginTime <= segment.EndTime)
       {
         if (TimeSegments.Count == 0)
         {
