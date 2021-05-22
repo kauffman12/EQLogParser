@@ -33,11 +33,12 @@ namespace EQLogParser
 
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
+    private double Time;
     private readonly ObservableCollection<IDictionary<string, object>> SpellRowsView = new ObservableCollection<IDictionary<string, object>>();
     private readonly DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
     private readonly Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
     private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
-    private readonly List<string> CountTypes = new List<string>() { "Show By Count", "Show By Percent" };
+    private readonly List<string> CountTypes = new List<string>() { "Show Counts", "Show Percent", "Show Counts/Minute" };
     private readonly List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
     private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
     private int CurrentCastType = 0;
@@ -48,10 +49,11 @@ namespace EQLogParser
     private bool CurrentShowProcs = false;
     private bool CurrentShowInterrupts = false;
 
-    public SpellCountTable(string title)
+    public SpellCountTable(string title, double seconds)
     {
       InitializeComponent();
       titleLabel.Content = title;
+      Time = seconds;
 
       dataGrid.Sorting += (s, e2) =>
       {
@@ -156,7 +158,22 @@ namespace EQLogParser
               {
                 string colBinding = name; // dont use colCount directly since it will change during Dispatch
                 double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
-                string header = name + " = " + ((CurrentCountType == 0) ? total.ToString(CultureInfo.CurrentCulture) : Math.Round(total / totalCasts * 100, 2).ToString(CultureInfo.CurrentCulture));
+
+                double amount = 0.0;
+                switch (CurrentCountType)
+                {
+                  case 0:
+                    amount = total;
+                    break;
+                  case 1:
+                    amount = totalCasts > 0 ? Math.Round(total / totalCasts * 100, 2) : 0;
+                    break;
+                  case 2:
+                    amount = Time > 0 ? Math.Round(total / Time * 60, 2) : 0;
+                    break;
+                }
+
+                string header = string.Format("{0} = {1}", name, amount.ToString(CultureInfo.CurrentCulture));
 
                 Dispatcher.InvokeAsync(() =>
                 {
@@ -170,7 +187,22 @@ namespace EQLogParser
                 colCount++;
               }
 
-              string totalHeader = CurrentCountType == 0 ? "Totals = " + totalCasts : "Totals = 100";
+              string headerAmount = "";
+              switch (CurrentCountType)
+              {
+                case 0:
+                  headerAmount = totalCasts.ToString(CultureInfo.CurrentCulture);
+                  break;
+                case 1:
+                  headerAmount = "100";
+                  break;
+                case 2:
+                  headerAmount = Time > 0 ? Math.Round(totalCasts / Time * 60, 2).ToString(CultureInfo.CurrentCulture) : "0";
+                  break;
+              }
+
+              string totalHeader = string.Format("Total = {0}", headerAmount);
+
               Dispatcher.InvokeAsync(() =>
               {
                 DataGridTextColumn col = new DataGridTextColumn() { Header = totalHeader, Binding = new Binding("totalColumn") };
@@ -194,14 +226,19 @@ namespace EQLogParser
                   {
                     if (filteredPlayerMap[sortedPlayers[i]].ContainsKey(spell))
                     {
-                      if (CurrentCountType == 0)
+                      switch (CurrentCountType)
                       {
-                        AddPlayerRow(sortedPlayers[i], spell, filteredPlayerMap[sortedPlayers[i]][spell].ToString(CultureInfo.CurrentCulture), row);
-                      }
-                      else
-                      {
-                        var percent = Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2);
-                        AddPlayerRow(sortedPlayers[i], spell, percent.ToString(CultureInfo.CurrentCulture), row);
+                        case 0:
+                          AddPlayerRow(sortedPlayers[i], spell, filteredPlayerMap[sortedPlayers[i]][spell].ToString(CultureInfo.CurrentCulture), row);
+                          break;
+                        case 1:
+                          var percent = totalCountMap[sortedPlayers[i]] > 0 ? Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2) : 0.0;
+                          AddPlayerRow(sortedPlayers[i], spell, percent.ToString(CultureInfo.CurrentCulture), row);
+                          break;
+                        case 2:
+                          var rate = Time > 0 ? Math.Round(filteredPlayerMap[sortedPlayers[i]][spell] / Time * 60, 2) : 0.0;
+                          AddPlayerRow(sortedPlayers[i], spell, rate.ToString(CultureInfo.CurrentCulture), row);
+                          break;
                       }
                     }
                     else
@@ -211,9 +248,19 @@ namespace EQLogParser
                   }
                 }
 
+                switch (CurrentCountType)
+                {
+                  case 0:
+                    row["totalColumn"] = uniqueSpellsMap[spell];
+                    break;
+                  case 1:
+                    row["totalColumn"] = Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
+                    break;
+                  case 2:
+                    row["totalColumn"] = Time > 0 ? Math.Round((double)uniqueSpellsMap[spell] / Time * 60, 2) : 0.0;
+                    break;
+                }
                 
-                row["totalColumn"] = CurrentCountType == 0 ? uniqueSpellsMap[spell] : Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
-
                 if (SpellRowsView.Count <= existingIndex)
                 {
                   Dispatcher.InvokeAsync(() => SpellRowsView.Add(row));
