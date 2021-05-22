@@ -217,7 +217,7 @@ namespace EQLogParser
     {
       if (selected?.Count > 0)
       {
-        var spellTable = new SpellCountTable(CurrentStats?.ShortTitle ?? "");
+        var spellTable = new SpellCountTable(CurrentStats?.ShortTitle ?? "", CurrentStats.RaidStats.TotalSeconds);
         spellTable.ShowSpells(selected, CurrentStats);
         var main = Application.Current.MainWindow as MainWindow;
         Helpers.OpenNewTab(main.dockSite, "spellCountsWindow", "Spell Counts", spellTable);
