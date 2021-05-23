@@ -24,6 +24,7 @@ namespace EQLogParser
     private static readonly Color TITLECOLOR = Color.FromRgb(30, 30, 30);
     private readonly List<ColorComboBox> ColorComboBoxList = new List<ColorComboBox>();
     private readonly List<StackPanel> NamePanels = new List<StackPanel>();
+    private readonly List<Image> NameIconList = new List<Image>();
     private readonly List<TextBlock> NameBlockList = new List<TextBlock>();
     private readonly List<StackPanel> DamagePanels = new List<StackPanel>();
     private readonly List<TextBlock> DamageBlockList = new List<TextBlock>();
@@ -277,11 +278,35 @@ namespace EQLogParser
         NameBlockList[i].Text = i + 1 + ". Example Player Name";
         NameBlockList[i].FontStyle = FontStyles.Italic;
         NameBlockList[i].FontWeight = FontWeights.Light;
+
+        switch(i)
+        {
+          case 0:
+          case 1:
+            NameIconList[i].Source = PlayerManager.NEC_ICON;
+            break;
+          case 2:
+          case 3:
+            NameIconList[i].Source = PlayerManager.MAG_ICON;
+            break;
+          case 4:
+          case 5:
+            NameIconList[i].Source = PlayerManager.BER_ICON;
+            break;
+          case 6:
+          case 7:
+            NameIconList[i].Source = PlayerManager.SHD_ICON;
+            break;
+          default:
+            NameIconList[i].Source = PlayerManager.DRU_ICON;
+            break;
+        }
       }
 
       NameBlockList[CurrentMaxRows - 1].Text = CurrentMaxRows + ". ...";
       NameBlockList[CurrentMaxRows - 1].FontStyle = FontStyles.Italic;
       NameBlockList[CurrentMaxRows - 1].FontWeight = FontWeights.Light;
+      NameIconList[CurrentMaxRows - 1].Source = PlayerManager.WIZ_ICON;
     }
 
     private void Instance_NewOverlayFight(object sender, Fight fight)
@@ -354,10 +379,12 @@ namespace EQLogParser
                 if (IsHideOverlayOtherPlayersEnabled && !isMe)
                 {
                   updateText = string.Format(CultureInfo.CurrentCulture, "{0}. Hidden Player", Stats.StatsList[i].Rank);
+                  NameIconList[i].Source = PlayerManager.UNK_ICON;
                 }
                 else
                 {
                   updateText = string.Format(CultureInfo.CurrentCulture, "{0}. {1}", Stats.StatsList[i].Rank, Stats.StatsList[i].Name);
+                  NameIconList[i].Source = PlayerManager.Instance.GetPlayerIcon(Stats.StatsList[i].Name);
                 }
 
                 if (IsShowOverlayCritRateEnabled)
@@ -485,6 +512,7 @@ namespace EQLogParser
 
       NamePanels[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       NameBlockList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+      NameIconList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       DamagePanels[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       DamageRateList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       DamageBlockList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
@@ -568,8 +596,11 @@ namespace EQLogParser
         var nameStack = OverlayUtil.CreateNameStackPanel();
         NamePanels.Add(nameStack);
 
+        var classImage = OverlayUtil.CreateImage();
+        NameIconList.Add(classImage);
+        nameStack.Children.Add(classImage);
+
         var nameBlock = OverlayUtil.CreateTextBlock();
-        nameBlock.SetValue(Canvas.LeftProperty, 4.0);
         NameBlockList.Add(nameBlock);
         nameStack.Children.Add(nameBlock);
         overlayCanvas.Children.Add(nameStack);
@@ -632,6 +663,8 @@ namespace EQLogParser
       for (int i = 0; i < CurrentMaxRows; i++)
       {
         NameBlockList[i].FontSize = size;
+        NameIconList[i].Height = size + 4;
+        NameIconList[i].MaxHeight = size + 4;
 
         // empty during configure
         if (DamageRateList.Count > 0)
@@ -674,6 +707,7 @@ namespace EQLogParser
         NamePanels.Clear();
         DamagePanels.Clear();
         NameBlockList.Clear();
+        NameIconList.Clear();
 
         CurrentMaxRows = maxRows;
         ConfigUtil.SetSetting("MaxOverlayRows", CurrentMaxRows.ToString(CultureInfo.CurrentCulture));
