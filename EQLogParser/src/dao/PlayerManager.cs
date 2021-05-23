@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -17,7 +18,26 @@ namespace EQLogParser
 
     internal static PlayerManager Instance = new PlayerManager();
 
+    internal static readonly BitmapImage BER_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Ber.png"));
+    internal static readonly BitmapImage BRD_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Brd.png"));
+    internal static readonly BitmapImage BST_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Bst.png"));
+    internal static readonly BitmapImage CLR_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Clr.png"));
+    internal static readonly BitmapImage DRU_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Dru.png"));
+    internal static readonly BitmapImage ENC_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Enc.png"));
+    internal static readonly BitmapImage MAG_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Mag.png"));
+    internal static readonly BitmapImage MNK_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Mnk.png"));
+    internal static readonly BitmapImage NEC_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Nec.png"));
+    internal static readonly BitmapImage PAL_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Pal.png"));
+    internal static readonly BitmapImage RNG_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Rng.png"));
+    internal static readonly BitmapImage ROG_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Rog.png"));
+    internal static readonly BitmapImage SHD_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Shd.png"));
+    internal static readonly BitmapImage UNK_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Unk.png"));
+    internal static readonly BitmapImage SHM_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Shm.png"));
+    internal static readonly BitmapImage WAR_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/War.png"));
+    internal static readonly BitmapImage WIZ_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Wiz.png"));
+
     // static data
+    private readonly ConcurrentDictionary<string, BitmapImage> ClassIcons = new ConcurrentDictionary<string, BitmapImage>();
     private readonly ConcurrentDictionary<SpellClass, string> ClassNames = new ConcurrentDictionary<SpellClass, string>();
     private readonly ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> SecondPerson = new ConcurrentDictionary<string, byte>();
@@ -164,6 +184,68 @@ namespace EQLogParser
       }
 
       return className;
+    }
+
+    internal BitmapImage GetPlayerIcon(string name)
+    {
+      BitmapImage icon = UNK_ICON;
+
+      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+      {
+        switch (counter.CurrentClass)
+        {
+          case SpellClass.BER:
+            icon = BER_ICON;
+            break;
+          case SpellClass.BRD:
+            icon = BRD_ICON;
+            break;
+          case SpellClass.BST:
+            icon = BST_ICON;
+            break;
+          case SpellClass.CLR:
+            icon = CLR_ICON;
+            break;
+          case SpellClass.DRU:
+            icon = DRU_ICON;
+            break;
+          case SpellClass.ENC:
+            icon = ENC_ICON;
+            break;
+          case SpellClass.MAG:
+            icon = MAG_ICON;
+            break;
+          case SpellClass.MNK:
+            icon = MNK_ICON;
+            break;
+          case SpellClass.NEC:
+            icon = NEC_ICON;
+            break;
+          case SpellClass.PAL:
+            icon = PAL_ICON;
+            break;
+          case SpellClass.RNG:
+            icon = RNG_ICON;
+            break;
+          case SpellClass.ROG:
+            icon = ROG_ICON;
+            break;
+          case SpellClass.SHD:
+            icon = SHD_ICON;
+            break;
+          case SpellClass.SHM:
+            icon = SHM_ICON;
+            break;
+          case SpellClass.WAR:
+            icon = WAR_ICON;
+            break;
+          case SpellClass.WIZ:
+            icon = WIZ_ICON;
+            break;
+        }
+      }
+
+      return icon;
     }
 
     internal SpellClass GetPlayerClassEnum(string name)
@@ -333,7 +415,7 @@ namespace EQLogParser
       {
         lock (PlayerToClass)
         {
-          counter = new SpellClassCounter() { ClassCounts = new Dictionary<SpellClass, int>() };
+          counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, int>() };
           PlayerToClass.TryAdd(cast.Caster, counter);
         }
       }

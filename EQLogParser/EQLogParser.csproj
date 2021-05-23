@@ -495,6 +495,23 @@
     <Content Include="data\petnames.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Resource Include="icons\Unk.png" />
+    <Resource Include="icons\Mag.png" />
+    <Resource Include="icons\Mnk.png" />
+    <Resource Include="icons\Nec.png" />
+    <Resource Include="icons\Pal.png" />
+    <Resource Include="icons\Rng.png" />
+    <Resource Include="icons\Rog.png" />
+    <Resource Include="icons\Shd.png" />
+    <Resource Include="icons\Shm.png" />
+    <Resource Include="icons\War.png" />
+    <Resource Include="icons\Dru.png" />
+    <Resource Include="icons\Enc.png" />
+    <Resource Include="icons\Brd.png" />
+    <Resource Include="icons\Bst.png" />
+    <Resource Include="icons\Clr.png" />
+    <Resource Include="icons\Ber.png" />
+    <Resource Include="icons\Wiz.png" />
     <Resource Include="EQLogParser.ico" />
   </ItemGroup>
   <ItemGroup>

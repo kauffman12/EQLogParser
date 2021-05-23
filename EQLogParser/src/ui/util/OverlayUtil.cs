@@ -142,7 +142,7 @@ namespace EQLogParser
       textBlock.UseLayoutRounding = true;
       textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
       textBlock.FontFamily = new FontFamily("Lucidia Console");
-      textBlock.Margin = new Thickness() { };
+      textBlock.Margin = new Thickness(0);
       textBlock.VerticalAlignment = VerticalAlignment.Center;
       return textBlock;
     }
@@ -163,6 +163,13 @@ namespace EQLogParser
       return image;
     }
 
+    internal static Image CreateImage()
+    {
+      var image = new Image { Margin = new Thickness(0, 0, 4, 1) };
+      image.SetValue(Panel.ZIndexProperty, 3);
+      image.VerticalAlignment = VerticalAlignment.Center;
+      return image;
+    }
     internal static StackPanel CreateNameStackPanel()
     {
       var stack = new StackPanel { Orientation = Orientation.Horizontal };

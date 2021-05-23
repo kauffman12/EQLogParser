@@ -204,7 +204,7 @@ namespace EQLogParser
 
     private void DataGridExpanderLoaded(object sender, RoutedEventArgs e)
     {
-      Image image = (sender as Image);
+      Image image = sender as Image;
       var children = CurrentStats?.Children;
 
       if (image.DataContext is PlayerStats stats && children != null && children.ContainsKey(stats.Name))
