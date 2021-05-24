@@ -190,59 +190,56 @@ namespace EQLogParser
     {
       BitmapImage icon = UNK_ICON;
 
-      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
-      {
-        switch (counter.CurrentClass)
+        switch (GetPlayerClassEnum(name))
         {
-          case SpellClass.BER:
-            icon = BER_ICON;
-            break;
-          case SpellClass.BRD:
-            icon = BRD_ICON;
-            break;
-          case SpellClass.BST:
-            icon = BST_ICON;
-            break;
-          case SpellClass.CLR:
-            icon = CLR_ICON;
-            break;
-          case SpellClass.DRU:
-            icon = DRU_ICON;
-            break;
-          case SpellClass.ENC:
-            icon = ENC_ICON;
-            break;
-          case SpellClass.MAG:
-            icon = MAG_ICON;
-            break;
-          case SpellClass.MNK:
-            icon = MNK_ICON;
-            break;
-          case SpellClass.NEC:
-            icon = NEC_ICON;
-            break;
-          case SpellClass.PAL:
-            icon = PAL_ICON;
-            break;
-          case SpellClass.RNG:
-            icon = RNG_ICON;
-            break;
-          case SpellClass.ROG:
-            icon = ROG_ICON;
-            break;
-          case SpellClass.SHD:
-            icon = SHD_ICON;
-            break;
-          case SpellClass.SHM:
-            icon = SHM_ICON;
-            break;
-          case SpellClass.WAR:
-            icon = WAR_ICON;
-            break;
-          case SpellClass.WIZ:
-            icon = WIZ_ICON;
-            break;
-        }
+        case SpellClass.BER:
+          icon = BER_ICON;
+          break;
+        case SpellClass.BRD:
+          icon = BRD_ICON;
+          break;
+        case SpellClass.BST:
+          icon = BST_ICON;
+          break;
+        case SpellClass.CLR:
+          icon = CLR_ICON;
+          break;
+        case SpellClass.DRU:
+          icon = DRU_ICON;
+          break;
+        case SpellClass.ENC:
+          icon = ENC_ICON;
+          break;
+        case SpellClass.MAG:
+          icon = MAG_ICON;
+          break;
+        case SpellClass.MNK:
+          icon = MNK_ICON;
+          break;
+        case SpellClass.NEC:
+          icon = NEC_ICON;
+          break;
+        case SpellClass.PAL:
+          icon = PAL_ICON;
+          break;
+        case SpellClass.RNG:
+          icon = RNG_ICON;
+          break;
+        case SpellClass.ROG:
+          icon = ROG_ICON;
+          break;
+        case SpellClass.SHD:
+          icon = SHD_ICON;
+          break;
+        case SpellClass.SHM:
+          icon = SHM_ICON;
+          break;
+        case SpellClass.WAR:
+          icon = WAR_ICON;
+          break;
+        case SpellClass.WIZ:
+          icon = WIZ_ICON;
+          break;
       }
 
       return icon;

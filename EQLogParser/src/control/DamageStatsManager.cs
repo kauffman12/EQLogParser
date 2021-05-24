@@ -63,7 +63,6 @@ namespace EQLogParser
               playerHasPet[player] = true;
             }
 
-
             allDamage += baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage;
             allTime.Add(new TimeSegment(keypair.Value.BeginTime, fight.LastDamageTime));
 
@@ -123,7 +122,8 @@ namespace EQLogParser
                 DPS = (long)Math.Round(total.Damage / time, 2),
                 TotalSeconds = time,
                 Rank = (ushort)rank++,
-                ClassName = PlayerManager.Instance.GetPlayerClass(total.Name)
+                ClassName = PlayerManager.Instance.GetPlayerClass(total.Name),
+                OrigName = total.Name
               };
 
               if (playerStats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal))

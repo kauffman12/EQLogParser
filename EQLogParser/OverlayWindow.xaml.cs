@@ -384,7 +384,7 @@ namespace EQLogParser
                 else
                 {
                   updateText = string.Format(CultureInfo.CurrentCulture, "{0}. {1}", Stats.StatsList[i].Rank, Stats.StatsList[i].Name);
-                  NameIconList[i].Source = PlayerManager.Instance.GetPlayerIcon(Stats.StatsList[i].Name);
+                  NameIconList[i].Source = PlayerManager.Instance.GetPlayerIcon(Stats.StatsList[i].OrigName);
                 }
 
                 if (IsShowOverlayCritRateEnabled)
