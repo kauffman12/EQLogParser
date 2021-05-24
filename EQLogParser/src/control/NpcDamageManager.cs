@@ -72,7 +72,7 @@ namespace EQLogParser
               total.Damage += (processed.Record.Type == Labels.BANE) ? 0 : processed.Record.Total;
               total.DamageWithBane += processed.Record.Total;
               total.Name = processed.Record.Attacker;
-              total.PetOwner = processed.Record.AttackerOwner;
+              total.PetOwner = total.PetOwner ?? processed.Record.AttackerOwner;
               total.UpdateTime = processed.BeginTime;
             }
             else
