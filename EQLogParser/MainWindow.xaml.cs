@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.23";
+    private const string VERSION = "v1.8.24";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -78,7 +78,8 @@ namespace EQLogParser
     private DocumentWindow EventWindow = null;
     private DocumentWindow EQLogWindow = null;
     private DocumentWindow LootWindow = null;
-    private DocumentWindow NpcStatsWindow = null;
+    private DocumentWindow SpellResistsWindow = null;
+    private DocumentWindow SpellDamageWindow = null;
     private LogReader EQLogReader = null;
 
     public MainWindow()
@@ -468,10 +469,15 @@ namespace EQLogParser
         EQLogWindow = Helpers.OpenWindow(dockSite, EQLogWindow, typeof(EQLogViewer), "eqLogWindow", "Full Log Search");
         IconToWindow[eqLogIcon.Name] = EQLogWindow;
       }
-      else if (e.Source == npcStatsMenuItem)
+      else if (e.Source == spellResistsMenuItem)
       {
-        NpcStatsWindow = Helpers.OpenWindow(dockSite, NpcStatsWindow, typeof(NpcStatsViewer), "npcStatsWindow", "NPC Spell Stats");
-        IconToWindow[npcStatsIcon.Name] = NpcStatsWindow;
+        SpellResistsWindow = Helpers.OpenWindow(dockSite, SpellResistsWindow, typeof(NpcStatsViewer), "spellResistsWindow", "Spell Resists");
+        IconToWindow[spellResistsIcon.Name] = SpellResistsWindow;
+      }
+      else if (e.Source == spellDamageStatsMenuItem)
+      {
+        SpellDamageWindow = Helpers.OpenWindow(dockSite, SpellDamageWindow, typeof(SpellDamageStatsViewer), "spellDamageWindow", "Spell Damage");
+        IconToWindow[npcSpellDamageIcon.Name] = SpellDamageWindow;
       }
       else
       {

@@ -14,7 +14,7 @@ namespace EQLogParser
   /// </summary>
   public partial class NpcStatsViewer : UserControl, IDisposable
   {
-    private const string NODATA = "No NPC Stats Found";
+    private const string NODATA = "No Spell Resist Data Found";
 
     public NpcStatsViewer()
     {
@@ -104,7 +104,7 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
-      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Your Spell Stats for " + npcStatsRows.Count + " Unique NPCs";
+      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Your Spell Resists against " + npcStatsRows.Count + " Unique NPCs";
 
       Tuple<double, string> GetRate(uint landed, uint notLanded)
       {

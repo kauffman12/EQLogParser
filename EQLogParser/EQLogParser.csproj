@@ -277,6 +277,9 @@
     <Compile Include="src\ui\log\NpcStatsViewer.xaml.cs">
       <DependentUpon>NpcStatsViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ui\log\SpellDamageStatsViewer.xaml.cs">
+      <DependentUpon>SpellDamageStatsViewer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ui\summary\TankingSummary.xaml.cs">
       <DependentUpon>TankingSummary.xaml</DependentUpon>
     </Compile>
@@ -382,6 +385,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ui\log\NpcStatsViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ui\log\SpellDamageStatsViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -95,15 +95,18 @@ namespace EQLogParser
     private readonly Dictionary<string, Dictionary<string, uint>> AdpsValues = new Dictionary<string, Dictionary<string, uint>>();
     private readonly Dictionary<string, HashSet<SpellData>> AdpsLandsOn = new Dictionary<string, HashSet<SpellData>>();
     private readonly Dictionary<string, HashSet<SpellData>> AdpsWearOff = new Dictionary<string, HashSet<SpellData>>();
-    private readonly Dictionary<string, byte> AllNpcs = new Dictionary<string, byte>();
     private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
-    private readonly Dictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new Dictionary<string, Dictionary<SpellResist, ResistCount>>();
-    private readonly Dictionary<string, TotalCount> NpcTotalSpellCounts = new Dictionary<string, TotalCount>();
-    private readonly Dictionary<string, SpellData> SpellsNameDB = new Dictionary<string, SpellData>();
-    private readonly Dictionary<string, SpellData> SpellsAbbrvDB = new Dictionary<string, SpellData>();
-    private readonly Dictionary<string, SpellClass> SpellsToClass = new Dictionary<string, SpellClass>();
+
+    private readonly ConcurrentDictionary<string, byte> AllNpcs = new ConcurrentDictionary<string, byte>();
+    private readonly ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>>();
+    private readonly ConcurrentDictionary<string, TotalCount> NpcTotalSpellCounts = new ConcurrentDictionary<string, TotalCount>();
+    private readonly ConcurrentDictionary<string, SpellData> SpellsNameDB = new ConcurrentDictionary<string, SpellData>();
+    private readonly ConcurrentDictionary<string, SpellData> SpellsAbbrvDB = new ConcurrentDictionary<string, SpellData>();
+    private readonly ConcurrentDictionary<string, SpellClass> SpellsToClass = new ConcurrentDictionary<string, SpellClass>();
+    private readonly ConcurrentDictionary<string, SpellDamageStats> SpellDDStats = new ConcurrentDictionary<string, SpellDamageStats>();
+    private readonly ConcurrentDictionary<string, SpellDamageStats> SpellDoTStats = new ConcurrentDictionary<string, SpellDamageStats>();
 
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
@@ -186,7 +189,7 @@ namespace EQLogParser
           // these need to be unique and keep track if a conflict is found
           if (SpellsToClass.ContainsKey(spell.Name))
           {
-            SpellsToClass.Remove(spell.Name);
+            SpellsToClass.TryRemove(spell.Name, out SpellClass _);
             keepOut[spell.Name] = 1;
           }
           else if (!keepOut.ContainsKey(spell.Name))
@@ -272,12 +275,14 @@ namespace EQLogParser
     internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
     internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
     internal List<ActionBlock> GetMiscDuring(double beginTime, double endTime) => SearchActions(AllMiscBlocks, beginTime, endTime);
-    internal Dictionary<string, Dictionary<SpellResist, ResistCount>> GetNpcResistStats() => NpcResistStats;
-    internal Dictionary<string, TotalCount> GetNpcTotalSpellCounts() => NpcTotalSpellCounts;
+    internal ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> GetNpcResistStats() => NpcResistStats;
+    internal ConcurrentDictionary<string, TotalCount> GetNpcTotalSpellCounts() => NpcTotalSpellCounts;
     internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
     internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     internal SpellData GetSpellByAbbrv(string abbrv) => (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv)) ? SpellsAbbrvDB[abbrv] : null;
     internal SpellData GetSpellByName(string name) => (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.ContainsKey(name)) ? SpellsNameDB[name] : null;
+    internal List<SpellDamageStats> GetSpellDDStats() => SpellDDStats.Values.ToList();
+    internal List<SpellDamageStats> GetSpellDoTStats() => SpellDoTStats.Values.ToList();
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(TextFormatUtils.FlipCase(name));
@@ -349,6 +354,24 @@ namespace EQLogParser
       if (SpellsNameDB.TryGetValue(record.Spell, out SpellData spellData))
       {
         UpdateNpcSpellResistStats(record.Defender, spellData.Resist, true);
+      }
+    }
+
+    internal void AddSpellDamage(DamageRecord record)
+    {
+      if (record.Type == Labels.DOT || record.Type == Labels.DD)
+      {
+        var dict = record.Type == Labels.DOT ? SpellDoTStats : SpellDDStats;
+        if (dict.TryGetValue(record.SubType, out SpellDamageStats value))
+        {
+          value.Count++;
+          value.Total += record.Total;
+          value.Max = Math.Max(value.Max, record.Total);
+        }
+        else
+        {
+          dict[record.SubType] = new SpellDamageStats { Name = record.SubType, Count = 1, Max = record.Total, Total = record.Total };
+        }
       }
     }
 
@@ -751,6 +774,7 @@ namespace EQLogParser
         SpellAbbrvCache.Clear();
         NpcTotalSpellCounts.Clear();
         NpcResistStats.Clear();
+        SpellDDStats.Clear();
         ClearActiveAdps();
         EventsClearedActiveData?.Invoke(this, true);
       }
@@ -848,6 +872,14 @@ namespace EQLogParser
     {
       internal uint Landed { get; set; }
       internal uint Reflected { get; set; }
+    }
+
+    public class SpellDamageStats
+    {
+      internal uint Count { get; set; }
+      internal ulong Total { get; set; }
+      internal uint Max { get; set; }
+      internal string Name { get; set; }
     }
   }
 }

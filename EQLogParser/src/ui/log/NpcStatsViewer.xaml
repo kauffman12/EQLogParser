@@ -7,7 +7,7 @@
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+  <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
@@ -35,5 +35,5 @@
         <DataGridTextColumn Binding="{Binding ReflectedText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Reflected %" IsReadOnly="True" CanUserReorder="True"/>
       </DataGrid.Columns>
     </datagrid:ThemedDataGrid>            
-    </Grid>
+  </Grid>
 </UserControl>

@@ -146,53 +146,6 @@
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="npcView" Header="_NPCs" Height="24">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="npcViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Desktop" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-            <MenuItem x:Name="npcWindowMenuitem" Header="Fight List" Click="MenuItemWindowClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="npcIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="npcStatsMenuItem" Header="Spell Stats" Click="MenuItemWindowClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="npcStatsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-              </MenuItem.Icon>
-            </MenuItem>
-          </MenuItem>
-          <MenuItem x:Name="petsView" Header="_Pets" Height="24">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="petsViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Paw" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-            <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Pet _List" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="verifiedPetsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="petMappingIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-              </MenuItem.Icon>
-            </MenuItem>
-          </MenuItem>
-          <MenuItem x:Name="playersView" Header="P_layers" Height="24">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="playersViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="User" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-            <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="playerParseIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Player _List" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="verifiedPlayersIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <Separator />
-          </MenuItem>
-          <Separator />
           <MenuItem x:Name="searchView" Header="_Search" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="searchViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Search" Foreground="#FF4F9FE2" />
@@ -215,6 +168,54 @@
             <MenuItem x:Name="eventMenuItem" Header="_Special Events" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="eventIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>          
+          <MenuItem x:Name="statsView" Header="_Statistics" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="statsViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calculator"  Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+            <MenuItem x:Name="spellDamageStatsMenuItem" Header="Spell Damage" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="npcSpellDamageIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>            
+            <MenuItem x:Name="spellResistsMenuItem" Header="Spell Resists" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="spellResistsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+          <Separator />
+          <MenuItem x:Name="windowList" Header="_Windows" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="windowListIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="WindowRestore"  Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+            <Separator />
+            <MenuItem x:Name="npcWindowMenuitem" Header="Fight List" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="npcIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="playerParseIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="petMappingIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Pet _List" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="verifiedPetsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>            
+            <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Player _List" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="verifiedPlayersIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>

@@ -20,6 +20,8 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
+      DataManager.Instance.AddSpellDamage(processed.Record);
+
       if (LastFightProcessTime != processed.BeginTime)
       {
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
