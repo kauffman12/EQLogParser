@@ -775,6 +775,7 @@ namespace EQLogParser
         NpcTotalSpellCounts.Clear();
         NpcResistStats.Clear();
         SpellDDStats.Clear();
+        SpellDoTStats.Clear();
         ClearActiveAdps();
         EventsClearedActiveData?.Invoke(this, true);
       }
