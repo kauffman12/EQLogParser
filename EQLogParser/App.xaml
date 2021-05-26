@@ -431,6 +431,7 @@
     <Style x:Key="CenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
       <Setter Property="HorizontalContentAlignment"  Value="Center"/>
     </Style>
+    <!-- Also SpellGridDataCellStyle is used by the spell damage stats viewer -->
     <Style x:Key="SpellGridDataCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
       <Setter Property="TextBlock.TextAlignment" Value="Right" />
     </Style>
