@@ -18,6 +18,9 @@ namespace EQLogParser
     internal const int SPECIAL_OFFSET = 15;
     internal const int DEATH_OFFSET = 15;
 
+    private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new ConcurrentDictionary<string, byte>(new Dictionary<string, byte>()
+    { { "Bites", 1 }, { "Claws", 1 },  { "Crushes", 1 }, { "Pierces", 1 }, { "Punches", 1 }, { "Slashes", 1 } });
+
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
       PlayerStats stats = null;
@@ -255,8 +258,10 @@ namespace EQLogParser
       }
     }
 
-    internal static void UpdateStats(PlayerSubStats stats, HitRecord record)
+    internal static void UpdateStats(PlayerSubStats stats, HitRecord record, bool isPet = false)
     {
+      var newMeleeHit = false;
+
       switch (record.Type)
       {
         case Labels.BANE:
@@ -265,37 +270,59 @@ namespace EQLogParser
           break;
         case Labels.BLOCK:
           stats.Blocks++;
-          stats.MeleeAttempts += 1;
+          stats.MeleeAttempts++;
           break;
         case Labels.DODGE:
           stats.Dodges++;
-          stats.MeleeAttempts += 1;
+          stats.MeleeAttempts++;
           break;
         case Labels.MISS:
           stats.Misses++;
-          stats.MeleeAttempts += 1;
+          stats.MeleeAttempts++;
           break;
         case Labels.PARRY:
           stats.Parries++;
-          stats.MeleeAttempts += 1;
+          stats.MeleeAttempts++;
           break;
         case Labels.INVULNERABLE:
           stats.Invulnerable++;
-          stats.MeleeAttempts += 1;
+          stats.MeleeAttempts++;
           break;
         case Labels.PROC:
         case Labels.DOT:
         case Labels.DD:
+          stats.SpellHits++;
+          stats.Hits++;
+          break;
         case Labels.HOT:
         case Labels.HEAL:
         case Labels.DS:
+        case Labels.RS:
           stats.Hits += 1;
           break;
         default:
           stats.Hits += 1;
-          stats.MeleeHits++;
-          stats.MeleeAttempts += 1;
+          stats.MeleeAttempts++;
+          newMeleeHit = true;
           break;
+      }
+
+      if (newMeleeHit)
+      {
+        // regular hit from a player OR Hits from a pet can do things like Flurry
+        if (record.Type == Labels.MELEE)
+        {
+          if (RegularMeleeTypes.ContainsKey(record.SubType) || (record.SubType == "Hits" && isPet))
+          {
+            stats.RegularMeleeHits++;
+          }
+          else if (record.SubType == "Shoots")
+          {
+            stats.BowHits++;
+          }
+        }
+
+        stats.MeleeHits++;
       }
 
       if (record.Total > 0)
@@ -318,6 +345,7 @@ namespace EQLogParser
       {
         to.BaneHits += from.BaneHits;
         to.Blocks += from.Blocks;
+        to.BowHits += from.BowHits;
         to.Dodges += from.Dodges;
         to.Misses += from.Misses;
         to.Parries += from.Parries;
@@ -342,10 +370,12 @@ namespace EQLogParser
         to.LuckyHits += from.LuckyHits;
         to.TwincastHits += from.TwincastHits;
         to.Resists += from.Resists;
+        to.SpellHits += from.SpellHits;
         to.StrikethroughHits += from.StrikethroughHits;
         to.RiposteHits += from.RiposteHits;
         to.SlayHits += from.SlayHits;
         to.RampageHits += from.RampageHits;
+        to.RegularMeleeHits += from.RegularMeleeHits;
         to.TotalSeconds = Math.Max(to.TotalSeconds, from.TotalSeconds);
       }
     }
@@ -381,13 +411,18 @@ namespace EQLogParser
         stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
         stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
 
-        if (stats.MeleeHits > 0)
+        // All Regulary Melee Hits are MeleeHits but not the reverse
+        if (stats.RegularMeleeHits > 0)
         {
-          stats.DoubleBowRate = Math.Round(Convert.ToDouble(stats.DoubleBowHits) / stats.MeleeHits * 100, 2);
-          stats.FlurryRate = Math.Round(Convert.ToDouble(stats.FlurryHits) / stats.MeleeHits * 100, 2);
+          stats.FlurryRate = Math.Round(Convert.ToDouble(stats.FlurryHits) / stats.RegularMeleeHits * 100, 2);
           stats.StrikethroughRate = Math.Round(Convert.ToDouble(stats.StrikethroughHits) / stats.MeleeHits * 100, 2);
           stats.RiposteRate = Math.Round(Convert.ToDouble(stats.RiposteHits) / stats.MeleeHits * 100, 2);
           stats.RampageRate = Math.Round(Convert.ToDouble(stats.RampageHits) / stats.MeleeHits * 100, 2);
+        }
+
+        if (stats.BowHits > 0)
+        {
+          stats.DoubleBowRate = Math.Round(Convert.ToDouble(stats.DoubleBowHits) / stats.BowHits * 100, 2);
         }
 
         if (stats.MeleeAttempts > 0)
@@ -396,10 +431,13 @@ namespace EQLogParser
           stats.MeleeAccRate = Math.Round(Convert.ToDouble(stats.MeleeHits) / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks - stats.Invulnerable) * 100, 2);
         }
 
-        var tcMult = stats.Type == Labels.DD ? 2 : 1;
-        stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.Hits * tcMult * 100, 2);
-        stats.TwincastRate = stats.TwincastRate > 100.0 ? 100.0 : stats.TwincastRate;
-        stats.ResistRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.Hits + stats.Resists) * 100, 2);
+        if (stats.SpellHits > 0)
+        {
+          var tcMult = stats.Type == Labels.DD ? 2 : 1;
+          stats.TwincastRate = Math.Round(Convert.ToDouble(stats.TwincastHits) / stats.SpellHits * tcMult * 100, 2);
+          stats.TwincastRate = stats.TwincastRate > 100.0 ? 100.0 : stats.TwincastRate;
+          stats.ResistRate = Math.Round(Convert.ToDouble(stats.Resists) / (stats.SpellHits + stats.Resists) * 100, 2);
+        }
 
         if (superStats != null && superStats.Total > 0)
         {

@@ -385,7 +385,8 @@ namespace EQLogParser
                       else
                       {
                         RaidTotals.Total += record.Total;
-                        StatsUtil.UpdateStats(stats, record);
+                        bool isAttackerPet = PlayerManager.Instance.IsVerifiedPet(record.Attacker);
+                        StatsUtil.UpdateStats(stats, record, isAttackerPet);
 
                         if ((!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerPets.ContainsKey(record.Attacker)) || player == Labels.UNASSIGNED)
                         {
@@ -398,7 +399,7 @@ namespace EQLogParser
                           string aggregateName = origName + " +Pets";
 
                           PlayerStats aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
-                          StatsUtil.UpdateStats(aggregatePlayerStats, record);
+                          StatsUtil.UpdateStats(aggregatePlayerStats, record, isAttackerPet);
                           topLevelStats[aggregateName] = aggregatePlayerStats;
 
                           if (!childrenStats.TryGetValue(aggregateName, out Dictionary<string, PlayerStats> children))
@@ -413,7 +414,7 @@ namespace EQLogParser
                         PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
 
                         uint critHits = subStats.CritHits;
-                        StatsUtil.UpdateStats(subStats, record);
+                        StatsUtil.UpdateStats(subStats, record, isAttackerPet);
 
                         // dont count misses/dodges or where no damage was done
                         if (record.Total > 0)

@@ -1,5 +1,4 @@
-﻿
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace EQLogParser
@@ -42,6 +41,11 @@ namespace EQLogParser
     internal static bool IsCrit(int mask)
     {
       return mask > -1 && (mask & CRIT) != 0;
+    }
+
+    internal static bool IsFlurry(int mask)
+    {
+      return mask > -1 && (mask & FLURRY) != 0;
     }
 
     internal static bool IsLucky(int mask)

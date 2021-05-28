@@ -225,14 +225,16 @@ namespace EQLogParser
     public uint CritHits { get; set; }
     public uint DoubleBowHits { get; set; }
     public uint FlurryHits { get; set; }
-
+    public uint BowHits { get; set; }
     public uint HeadHits { get; set; }
     public uint LuckyHits { get; set; }
     public uint MeleeAttempts { get; set; }
     public uint MeleeHits { get; set; }
+    public uint SpellHits { get; set; }
     public uint StrikethroughHits { get; set; }
-    public uint RiposteHits { get; set; }
     public uint RampageHits { get; set; }
+    public uint RegularMeleeHits { get; set; }
+    public uint RiposteHits { get; set; }
     public uint SlayHits { get; set; }
     public uint TwincastHits { get; set; }
     public long Total { get; set; }
