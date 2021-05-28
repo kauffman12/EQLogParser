@@ -116,38 +116,43 @@ namespace EQLogParser
 
     internal void AddVerifiedPet(string name)
     {
-      if (!string.IsNullOrEmpty(name))
+      if (!string.IsNullOrEmpty(name) && !VerifiedPets.ContainsKey(name))
       {
-        if (!IsPossiblePlayerName(name))
+        if (!VerifiedPlayers.ContainsKey(name) || string.IsNullOrEmpty(GetPlayerClass(name)))
         {
-          if (name.StartsWith("A ", StringComparison.Ordinal) || name.StartsWith("An ", StringComparison.Ordinal))
+          VerifiedPlayers.TryRemove(name, out _);
+
+          if (!IsPossiblePlayerName(name))
           {
-            name = name.ToLower(CultureInfo.CurrentCulture);
+            if (name.StartsWith("A ", StringComparison.Ordinal) || name.StartsWith("An ", StringComparison.Ordinal))
+            {
+              name = name.ToLower(CultureInfo.CurrentCulture);
+            }
+
+            if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase))
+            {
+              CharmPets[name] = 1;
+            }
+          }
+          else if (!PetToPlayer.ContainsKey(name))
+          {
+            AddPetToPlayer(name, Labels.UNASSIGNED);
           }
 
-          if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase))
+          TakenPetOrPlayerAction.TryRemove(name, out _);
+
+          if (VerifiedPets.TryAdd(name, 1))
           {
-            CharmPets[name] = 1;
+            EventsNewVerifiedPet?.Invoke(this, name);
           }
-        }
-        else if (!PetToPlayer.ContainsKey(name))
-        {
-          AddPetToPlayer(name, Labels.UNASSIGNED);
-        }
 
-        TakenPetOrPlayerAction.TryRemove(name, out _);
-        VerifiedPlayers.TryRemove(name, out _);
-
-        if (VerifiedPets.TryAdd(name, 1))
-        {
-          EventsNewVerifiedPet?.Invoke(this, name);
         }
       }
     }
 
     internal void AddVerifiedPlayer(string name, double playerTime)
     {
-      if (!string.IsNullOrEmpty(name) && IsPossiblePlayerName(name))
+      if (!string.IsNullOrEmpty(name) && !VerifiedPlayers.ContainsKey(name) && IsPossiblePlayerName(name))
       {
         if (VerifiedPlayers.TryGetValue(name, out double lastTime))
         {
