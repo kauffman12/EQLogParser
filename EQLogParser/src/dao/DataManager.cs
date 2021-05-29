@@ -359,10 +359,11 @@ namespace EQLogParser
 
     internal void AddSpellDamage(DamageRecord record)
     {
-      if (record.Type == Labels.DOT || record.Type == Labels.DD)
+      if ((record.Type == Labels.DOT || record.Type == Labels.DD) && !record.AttackerIsSpell)
       {
+        var key = record.Attacker + "=" + record.SubType;
         var dict = record.Type == Labels.DOT ? SpellDoTStats : SpellDDStats;
-        if (dict.TryGetValue(record.SubType, out SpellDamageStats value))
+        if (dict.TryGetValue(key, out SpellDamageStats value))
         {
           value.Count++;
           value.Total += record.Total;
@@ -370,7 +371,14 @@ namespace EQLogParser
         }
         else
         {
-          dict[record.SubType] = new SpellDamageStats { Name = record.SubType, Count = 1, Max = record.Total, Total = record.Total };
+          dict[key] = new SpellDamageStats
+          {
+            Caster = record.Attacker,
+            Spell = record.SubType,
+            Count = 1,
+            Max = record.Total,
+            Total = record.Total
+          };
         }
       }
     }
@@ -880,7 +888,8 @@ namespace EQLogParser
       internal uint Count { get; set; }
       internal ulong Total { get; set; }
       internal uint Max { get; set; }
-      internal string Name { get; set; }
+      internal string Caster { get; set; }
+      internal string Spell { get; set; }
     }
   }
 }
