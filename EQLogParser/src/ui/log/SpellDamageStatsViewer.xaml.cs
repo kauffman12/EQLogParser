@@ -15,7 +15,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for SpellDamageStatsViewer.xaml
   /// </summary>
-  public partial class SpellDamageStatsViewer : UserControl
+  public partial class SpellDamageStatsViewer : UserControl, IDisposable
   {
     private readonly object LockObject = new object();
     private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
@@ -159,5 +159,33 @@ namespace EQLogParser
           (player == null || (((IDictionary<string, object>)item)["Caster"] is string test3 && test3 == player)));
       }
     }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        if (disposing)
+        {
+          // TODO: dispose managed state (managed objects).
+          Records.Clear();
+        }
+
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= SpellDamageStatsViewer_EventsLogLoadingComplete;
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }

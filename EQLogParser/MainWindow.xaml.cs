@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.28";
+    private const string VERSION = "v1.8.29";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -1001,7 +1001,10 @@ namespace EQLogParser
     private void Close_MouseClick(object sender, RoutedEventArgs e) => Close();
 
     // This is where closing summary tables and line charts will get disposed
-    private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e) => (e.Window.Content as IDisposable)?.Dispose();
+    private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e)
+    {
+      (e.Window.Content as IDisposable)?.Dispose();
+    }
 
     private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
     private void WindowClose(object sender, EventArgs e) => Close();
