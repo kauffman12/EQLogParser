@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Dynamic;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -18,6 +19,8 @@ namespace EQLogParser
   {
     private readonly object LockObject = new object();
     private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
+    private readonly ObservableCollection<string> Players = new ObservableCollection<string>();
+    private readonly ObservableCollection<string> Spells = new ObservableCollection<string>();
     private readonly ObservableCollection<string> Types = new ObservableCollection<string>();
     private const string NODATA = "No Spell Damage Data Found";
 
@@ -26,8 +29,12 @@ namespace EQLogParser
       InitializeComponent();
       dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(Records);
       BindingOperations.EnableCollectionSynchronization(Records, LockObject);
+      BindingOperations.EnableCollectionSynchronization(Players, LockObject);
+      BindingOperations.EnableCollectionSynchronization(Spells, LockObject);
       BindingOperations.EnableCollectionSynchronization(Types, LockObject);
       typeList.ItemsSource = Types;
+      spellList.ItemsSource = Spells;
+      playerList.ItemsSource = Players;
       Types.Add("All Types");
       Types.Add(Labels.DD);
       Types.Add(Labels.DOT);
@@ -44,16 +51,44 @@ namespace EQLogParser
 
     private void Load()
     {
+      var uniqueSpells = new Dictionary<string, byte>();
+      var uniquePlayers = new Dictionary<string, byte>();
+
+      string selectedSpell = spellList.SelectedItem as string;
+      string selectedPlayer = playerList.SelectedItem as string;
+
       Records.Clear();
+      Spells.Clear();
+      Spells.Add("All Spells");
+      Players.Clear();
+      Players.Add("All Casters");
+
       foreach (var stats in DataManager.Instance.GetSpellDoTStats())
       {
         AddRow(stats, Labels.DOT);
+        uniqueSpells[stats.Spell] = 1;
+        uniquePlayers[stats.Caster] = 1;
       }
 
       foreach (var stats in DataManager.Instance.GetSpellDDStats())
       {
         AddRow(stats, Labels.DD);
+        uniqueSpells[stats.Spell] = 1;
+        uniquePlayers[stats.Caster] = 1;
       }
+
+      foreach (var key in uniqueSpells.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
+      {
+        Spells.Add(key);
+      }
+
+      foreach (var key in uniquePlayers.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
+      {
+        Players.Add(key);
+      }
+
+      spellList.SelectedIndex = (Spells.IndexOf(selectedSpell) is int s && s > -1) ? s : 0;
+      playerList.SelectedIndex = (Players.IndexOf(selectedPlayer) is int p && p > -1) ? p : 0;
 
       if (dataGrid.ItemsSource is ListCollectionView view)
       {
@@ -61,13 +96,14 @@ namespace EQLogParser
         view.SortDescriptions.Add(new SortDescription("Avg", ListSortDirection.Descending));
       }
 
-      titleLabel.Content = Records.Count == 0 ? NODATA : "Spell Damage Stats for " + Records.Count + " Unique Spells";
+      titleLabel.Content = Records.Count == 0 ? NODATA : "Spell Damage Stats for " + uniqueSpells.Count + " Unique Spells";
     }
 
     private void AddRow(DataManager.SpellDamageStats stats, string type)
     {
       var row = new ExpandoObject() as IDictionary<string, object>;
-      row["Name"] = stats.Name;
+      row["Caster"] = stats.Caster;
+      row["Spell"] = stats.Spell;
       row["Max"] = stats.Max;
       row["Hits"] = stats.Count;
       row["Avg"] = stats.Total / stats.Count;
@@ -116,7 +152,11 @@ namespace EQLogParser
       {
         int index = typeList.SelectedIndex;
         string type = typeList.SelectedItem as string;
-        view.Filter = new Predicate<object>(item => index == 0 || (((IDictionary<string, object>)item)["Type"] is string test && test == type));
+        string spell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
+        string player = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
+        view.Filter = new Predicate<object>(item => (index == 0 || (((IDictionary<string, object>)item)["Type"] is string test && test == type)) &&
+          (spell == null || (((IDictionary<string, object>)item)["Spell"] is string test2 && test2 == spell)) &&
+          (player == null || (((IDictionary<string, object>)item)["Caster"] is string test3 && test3 == player)));
       }
     }
   }

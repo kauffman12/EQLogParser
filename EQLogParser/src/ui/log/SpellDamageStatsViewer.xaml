@@ -25,11 +25,14 @@
         <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Refresh" ToolTip="Refresh Results" Foreground="#5191c1"/>
       </Button>
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <ComboBox Margin="4,0,4,0" x:Name="typeList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="4,0,0,0" x:Name="playerList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,0" x:Name="spellList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,4,0" x:Name="typeList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="30" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Single">
       <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="True" Width="220"/>
+        <DataGridTextColumn Binding="{Binding Spell}" ClipboardContentBinding="{x:Null}" Header="Spell" IsReadOnly="True" CanUserReorder="True" Width="220"/>
+        <DataGridTextColumn Binding="{Binding Caster}" ClipboardContentBinding="{x:Null}" Header="Caster" IsReadOnly="True" CanUserReorder="True" MinWidth="70" />
         <DataGridTextColumn Binding="{Binding Type}" ClipboardContentBinding="{x:Null}" Header="Type" IsReadOnly="True" CanUserReorder="True" MinWidth="80" />
         <DataGridTextColumn Binding="{Binding Avg, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource SpellGridDataCellStyle}"  SortDirection="Descending" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="80" Width="80"/>
         <DataGridTextColumn Binding="{Binding Max, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource SpellGridDataCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="85" Width="85"/>
