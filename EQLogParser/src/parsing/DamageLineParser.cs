@@ -19,7 +19,7 @@ namespace EQLogParser
 
     private static readonly Dictionary<string, string> HitMap = new Dictionary<string, string>
     {
-      { "bash", "bashes" }, { "backstab", "backstabs" }, { "bit", "bites" }, { "claw", "claws" }, { "crush", "crushes" },
+      { "bash", "bashes" }, { "backstab", "backstabs" }, { "bite", "bites" }, { "claw", "claws" }, { "crush", "crushes" },
       { "frenzy", "frenzies" }, { "gore", "gores" }, { "hit", "hits" }, { "kick", "kicks" }, { "learn", "learns" },
       { "maul", "mauls" }, { "punch", "punches" }, { "pierce", "pierces" }, { "rend", "rends" }, { "shoot", "shoots" },
       { "slash", "slashes" }, { "slam", "slams" }, { "slice", "slices" }, { "smash", "smashes" }, { "sting", "stings" },
@@ -103,6 +103,14 @@ namespace EQLogParser
             {
               UpdateSlain(test, "", lineData);
               handled = true;
+            }
+          }
+
+          if (lineData.Line.Contains("Vandil parries!"))
+          {
+            if (true)
+            {
+
             }
           }
 
@@ -379,6 +387,7 @@ namespace EQLogParser
             // [Sat Apr 24 01:10:17 2021] Test One Hundred Three tries to punch YOU, but YOU dodge!
             // [Sat Apr 24 01:10:17 2021] Kazint tries to crush Test One Hundred Three, but Test One Hundred Three dodges!
             // [Sun Apr 18 19:45:21 2021] You try to crush a primal guardian, but a primal guardian parries!
+            // [Mon May 31 20:29:49 2021] A bloodthirsty gnawer tries to bite Vandil, but Vandil parries!
             // [Sun Apr 25 22:56:22 2021] Romance tries to bash Vulak`Aerr, but Vulak`Aerr parries!
             // [Sun Jul 28 20:12:46 2019] Drogbaa tries to slash Whirlrender Scout, but misses! (Strikethrough)
             // [Tue Mar 30 16:43:54 2021] You try to crush a desert madman, but a desert madman blocks!
@@ -473,20 +482,23 @@ namespace EQLogParser
         }
 
         double currentTime = DateUtil.ParseLogDate(lineData.Line, out _);
-        CheckSlainQueue(currentTime);
-
-        lock (SlainQueue)
+        if (!double.IsNaN(currentTime))
         {
-          if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
-          {
-            SlainQueue.Add(slain);
-            SlainTime = currentTime;
-          }
-        }
+          CheckSlainQueue(currentTime);
 
-        var death = new DeathRecord() { Killed = string.Intern(slain), Killer = killer };
-        DataManager.Instance.AddDeathRecord(death, currentTime);
-        handled = true;
+          lock (SlainQueue)
+          {
+            if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
+            {
+              SlainQueue.Add(slain);
+              SlainTime = currentTime;
+            }
+          }
+
+          var death = new DeathRecord() { Killed = string.Intern(slain), Killer = killer };
+          DataManager.Instance.AddDeathRecord(death, currentTime);
+          handled = true;
+        }
       }
       return handled;
     }
@@ -545,16 +557,19 @@ namespace EQLogParser
         }
 
         var currentTime = DateUtil.ParseLogDate(lineData.Line, out string timeString);
-        CheckSlainQueue(currentTime);
-
-        DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
-        EventsDamageProcessed?.Invoke(record, e);
-        success = true;
-
-        if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) && record.SubType.Contains(special)) is string key
-          && !string.IsNullOrEmpty(key))
+        if (!double.IsNaN(currentTime))
         {
-          DataManager.Instance.AddSpecial(new SpecialSpell() { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
+          CheckSlainQueue(currentTime);
+
+          DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
+          EventsDamageProcessed?.Invoke(record, e);
+          success = true;
+
+          if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) && record.SubType.Contains(special)) is string key
+            && !string.IsNullOrEmpty(key))
+          {
+            DataManager.Instance.AddSpecial(new SpecialSpell() { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
+          }
         }
       }
 
