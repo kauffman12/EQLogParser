@@ -152,7 +152,7 @@ namespace EQLogParser
 
     internal void AddVerifiedPlayer(string name, double playerTime)
     {
-      if (!string.IsNullOrEmpty(name) && !VerifiedPlayers.ContainsKey(name) && IsPossiblePlayerName(name))
+      if (!string.IsNullOrEmpty(name) && !VerifiedPlayers.ContainsKey(name))
       {
         if (VerifiedPlayers.TryGetValue(name, out double lastTime))
         {
@@ -394,7 +394,7 @@ namespace EQLogParser
     {
       if (PetMappingUpdated)
       {
-        var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Key) && IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
+        var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
         ConfigUtil.SavePetMapping(filtered);
         PetMappingUpdated = false;
       }
@@ -402,7 +402,7 @@ namespace EQLogParser
       var list = new List<string>();
       foreach (var keypair in VerifiedPlayers)
       {
-        if (IsPossiblePlayerName(keypair.Key))
+        if (!string.IsNullOrEmpty(keypair.Key))
         {
           list.Add(keypair.Key + "=" + Math.Round(keypair.Value));
         }
