@@ -5,6 +5,8 @@ namespace EQLogParser
 {
   internal class DateUtil
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     // counting this thing is really slow
     private string LastDateTimeString = null;
     private double LastDateTime;
@@ -132,6 +134,12 @@ namespace EQLogParser
 
       LastDateTimeString = timeString;
       precise = result;
+
+      if (double.IsNaN(result))
+      {
+        LOG.Error("Invalid Date: " + timeString);
+      }
+
       return result;
     }
   }
