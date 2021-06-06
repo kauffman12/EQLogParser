@@ -129,7 +129,8 @@ namespace EQLogParser
               name = name.ToLower(CultureInfo.CurrentCulture);
             }
 
-            if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase))
+            if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) && 
+              !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase))
             {
               CharmPets[name] = 1;
             }

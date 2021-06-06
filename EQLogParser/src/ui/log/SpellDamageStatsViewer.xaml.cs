@@ -56,6 +56,7 @@ namespace EQLogParser
 
       string selectedSpell = spellList.SelectedItem as string;
       string selectedPlayer = playerList.SelectedItem as string;
+      bool isPlayerOnly = showPlayers.IsChecked.Value;
 
       Records.Clear();
       Spells.Clear();
@@ -65,16 +66,22 @@ namespace EQLogParser
 
       foreach (var stats in DataManager.Instance.GetSpellDoTStats())
       {
-        AddRow(stats, Labels.DOT);
-        uniqueSpells[stats.Spell] = 1;
-        uniquePlayers[stats.Caster] = 1;
+        if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(stats.Caster))
+        {
+          AddRow(stats, Labels.DOT);
+          uniqueSpells[stats.Spell] = 1;
+          uniquePlayers[stats.Caster] = 1;
+        }
       }
 
       foreach (var stats in DataManager.Instance.GetSpellDDStats())
       {
-        AddRow(stats, Labels.DD);
-        uniqueSpells[stats.Spell] = 1;
-        uniquePlayers[stats.Caster] = 1;
+        if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(stats.Caster))
+        {
+          AddRow(stats, Labels.DD);
+          uniqueSpells[stats.Spell] = 1;
+          uniquePlayers[stats.Caster] = 1;
+        }
       }
 
       foreach (var key in uniqueSpells.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
@@ -150,13 +157,26 @@ namespace EQLogParser
     {
       if (dataGrid != null && Records.Count > 0 && dataGrid.ItemsSource is ListCollectionView view)
       {
-        int index = typeList.SelectedIndex;
-        string type = typeList.SelectedItem as string;
+        string type = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
         string spell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
         string player = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
-        view.Filter = new Predicate<object>(item => (index == 0 || (((IDictionary<string, object>)item)["Type"] is string test && test == type)) &&
-          (spell == null || (((IDictionary<string, object>)item)["Spell"] is string test2 && test2 == spell)) &&
-          (player == null || (((IDictionary<string, object>)item)["Caster"] is string test3 && test3 == player)));
+        bool isPlayerOnly = showPlayers.IsChecked.Value;
+
+        if (sender == showPlayers)
+        {
+          Load();
+        }
+
+        view.Filter = new Predicate<object>(item =>
+        {
+          bool pass = false;
+          if (item is IDictionary<string, object> dict)
+          {
+            pass = !isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string);
+            pass = pass && (type == null || type.Equals(dict["Type"])) && (spell == null || spell.Equals(dict["Spell"])) && (player == null || player.Equals(dict["Caster"]));
+          }
+          return pass;
+        });
       }
     }
 
