@@ -137,9 +137,13 @@ namespace EQLogParser
             using (var f = File.OpenRead(MainWindow.CurrentLogFile))
             {
               StreamReader s;
-              if (!f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) && f.Length > 100000000)
+              if (!f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
               {
-                SetStartingPosition(f, logTimeIndex);
+                if (f.Length > 100000000)
+                {
+                  SetStartingPosition(f, logTimeIndex);
+                }
+
                 s = new StreamReader(f);
               }
               else
