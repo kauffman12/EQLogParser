@@ -150,12 +150,12 @@ namespace EQLogParser
       if (e.Column.Header != null && e.Column.Header.ToString() != "Name" && dataGrid.ItemsSource != null)
       {
         e.Handled = true;
-        var direction = e.Column.SortDirection ?? ListSortDirection.Descending;
+        var direction = e.Column.SortDirection ?? ListSortDirection.Ascending;
 
         string field = (e.Column.Header as string).Split(' ')[0];
         if (dataGrid.ItemsSource is List<NpcStatsRow> data)
         {
-          data.Sort(new NpcStatsRowComparer(field, direction == ListSortDirection.Descending));
+          data.Sort(new NpcStatsRowComparer(field, direction == ListSortDirection.Ascending));
           dataGrid.Items.Refresh();
         }
 
