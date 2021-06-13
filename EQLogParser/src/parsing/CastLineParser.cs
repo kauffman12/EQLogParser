@@ -193,15 +193,18 @@ namespace EQLogParser
                 handled = true;
               }
             }
-            else
+            else if (split.Length > 0)
             {
               string landsOnMessage = string.Join(" ", split, 1, split.Length - 1);
               int midPeriod = -1;
 
               // some abilities like staunch show a lands on message followed by a heal. so search based on first sentence
-              if ((midPeriod = landsOnMessage.LastIndexOf('.', landsOnMessage.Length - 2)) > -1)
+              if (landsOnMessage.Length >= 2)
               {
-                landsOnMessage = landsOnMessage.Substring(0, midPeriod + 1);
+                if ((midPeriod = landsOnMessage.LastIndexOf('.', landsOnMessage.Length - 2)) > -1)
+                {
+                  landsOnMessage = landsOnMessage.Substring(0, midPeriod + 1);
+                }
               }
 
               player = split[0];

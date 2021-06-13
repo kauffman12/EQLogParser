@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -34,7 +35,7 @@ namespace EQLogParser
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
     private double Time;
-    private readonly ObservableCollection<IDictionary<string, object>> SpellRowsView = new ObservableCollection<IDictionary<string, object>>();
+    private readonly ObservableCollection<IDictionary<string, object>> SpellRows = new ObservableCollection<IDictionary<string, object>>();
     private readonly DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
     private readonly Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
     private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
@@ -55,15 +56,8 @@ namespace EQLogParser
       titleLabel.Content = title;
       Time = seconds;
 
-      dataGrid.Sorting += (s, e2) =>
-      {
-        if (!string.IsNullOrEmpty(e2.Column.Header as string))
-        {
-          e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Ascending;
-        }
-      };
-
-      dataGrid.ItemsSource = SpellRowsView;
+      var view = new ListCollectionView(SpellRows);
+      dataGrid.ItemsSource = view;
       castTypes.ItemsSource = CastTypes;
       castTypes.SelectedIndex = 0;
       countTypes.ItemsSource = CountTypes;
@@ -72,6 +66,18 @@ namespace EQLogParser
       minFreqList.SelectedIndex = 0;
       spellTypes.ItemsSource = SpellTypes;
       spellTypes.SelectedIndex = 0;
+
+      dataGrid.Sorting += (s, e2) =>
+      {
+        if (!string.IsNullOrEmpty(e2.Column.Header as string))
+        {
+          e2.Handled = true;
+          var direction = e2.Column.SortDirection ?? ListSortDirection.Ascending;
+          view.CustomSort = new SpellCountComparer(e2.Column.SortMemberPath, direction == ListSortDirection.Ascending);
+          e2.Column.SortDirection = direction == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
+        }
+      };
+
     }
 
     internal void ShowSpells(List<PlayerStats> selectedStats, CombinedStats currentStats)
@@ -112,7 +118,7 @@ namespace EQLogParser
             {
               Dispatcher.InvokeAsync(() =>
               {
-                var column = new DataGridTextColumn()
+                var column = new DataGridTextColumn
                 {
                   Header = "",
                   Binding = new Binding("Spell")
@@ -214,7 +220,7 @@ namespace EQLogParser
               int existingIndex = 0;
               foreach (var spell in sortedSpellList)
               {
-                var row = (SpellRowsView.Count > existingIndex) ? SpellRowsView[existingIndex] : new ExpandoObject();
+                var row = (SpellRows.Count > existingIndex) ? SpellRows[existingIndex] : new ExpandoObject();
                 row["Spell"] = spell;
 
                 //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
@@ -243,7 +249,7 @@ namespace EQLogParser
                     }
                     else
                     {
-                      row[sortedPlayers[i]] = CurrentCountType == 0 ? 0 : 0.0;
+                      row[sortedPlayers[i]] = CurrentCountType == 0 ? "0" : "0.0";
                     }
                   }
                 }
@@ -251,19 +257,19 @@ namespace EQLogParser
                 switch (CurrentCountType)
                 {
                   case 0:
-                    row["totalColumn"] = uniqueSpellsMap[spell];
+                    row["totalColumn"] = uniqueSpellsMap[spell].ToString(CultureInfo.CurrentCulture);
                     break;
                   case 1:
-                    row["totalColumn"] = Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
+                    row["totalColumn"] = Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2).ToString(CultureInfo.CurrentCulture);
                     break;
                   case 2:
-                    row["totalColumn"] = Time > 0 ? Math.Round((double)uniqueSpellsMap[spell] / Time * 60, 2) : 0.0;
+                    row["totalColumn"] = Time > 0 ? Math.Round(uniqueSpellsMap[spell] / Time * 60, 2).ToString(CultureInfo.CurrentCulture) : "0.0";
                     break;
                 }
-                
-                if (SpellRowsView.Count <= existingIndex)
+
+                if (SpellRows.Count <= existingIndex)
                 {
-                  Dispatcher.InvokeAsync(() => SpellRowsView.Add(row));
+                  Dispatcher.InvokeAsync(() => SpellRows.Add(row));
                 }
 
                 existingIndex++;
@@ -281,7 +287,7 @@ namespace EQLogParser
               {
                 showInterrupts.IsEnabled = showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
                 showSelfOnly.IsEnabled = PlayerList.Contains(ConfigUtil.PlayerName);
-                exportClick.IsEnabled = copyOptions.IsEnabled = removeRowClick.IsEnabled = SpellRowsView.Count > 0;
+                exportClick.IsEnabled = copyOptions.IsEnabled = removeRowClick.IsEnabled = SpellRows.Count > 0;
 
                 lock (LockObject)
                 {
@@ -294,7 +300,7 @@ namespace EQLogParser
       }
     }
 
-    private void AddPlayerRow(string player, string spell, string value, IDictionary<string, Object> row)
+    private void AddPlayerRow(string player, string spell, string value, IDictionary<string, object> row)
     {
       string count = value.ToString(CultureInfo.CurrentCulture);
       if (CurrentShowInterrupts && TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) &&
@@ -337,11 +343,11 @@ namespace EQLogParser
 
     private void OptionsChanged(bool clear = false)
     {
-      if (SpellRowsView.Count > 0)
+      if (SpellRows.Count > 0)
       {
         if (clear)
         {
-          SpellRowsView.Clear();
+          SpellRows.Clear();
         }
 
         for (int i = dataGrid.Columns.Count - 1; i > 0; i--)
@@ -383,12 +389,12 @@ namespace EQLogParser
         {
           dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
           dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          SpellRowsView.ToList().ForEach(spr => spr["IconColor"] = EMPTYICON);
+          SpellRows.ToList().ForEach(spr => spr["IconColor"] = EMPTYICON);
           dataGrid.Items.Refresh();
           Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() =>
           {
             DataGridUtil.CreateImage(dataGrid, titleLabel);
-            SpellRowsView.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
+            SpellRows.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
           }), TaskScheduler.Default);
         });
       }, TaskScheduler.Default);
@@ -573,7 +579,7 @@ namespace EQLogParser
           if (dataGrid.SelectedItem is IDictionary<string, object> spr)
           {
             HiddenSpells[spr["Spell"] as string] = 1;
-            SpellRowsView.Remove(spr);
+            SpellRows.Remove(spr);
             modified = true;
           }
         }
@@ -594,7 +600,7 @@ namespace EQLogParser
       if (!Running && cell.DataContext is IDictionary<string, object> spr)
       {
         HiddenSpells[spr["Spell"] as string] = 1;
-        SpellRowsView.Remove(spr);
+        SpellRows.Remove(spr);
         OptionsChanged();
       }
     }
@@ -612,6 +618,38 @@ namespace EQLogParser
       {
         titlePanel.Visibility = Visibility.Visible;
       }
+    }
+  }
+
+  public class SpellCountComparer : IComparer
+  {
+    private readonly bool Ascending;
+    private readonly string Column;
+
+    public SpellCountComparer(string column, bool ascending)
+    {
+      Ascending = ascending;
+      Column = column;
+    }
+
+    public int Compare(object x, object y)
+    {
+      int result = 0;
+
+      if (x is IDictionary<string, object> d1 && y is IDictionary<string, object> d2)
+      {
+        if (double.TryParse(d1[Column] as string, out double v1) && double.TryParse(d2[Column] as string, out double v2))
+        {
+          result = v1.CompareTo(v2);
+        }
+      }
+
+      if (Ascending)
+      {
+        result *= -1;
+      }
+
+      return result;
     }
   }
 }
