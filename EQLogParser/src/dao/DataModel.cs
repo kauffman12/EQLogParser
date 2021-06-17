@@ -276,6 +276,8 @@ namespace EQLogParser
     public Dictionary<string, TimeSegment> InitialTankSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> InitialTankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
+    public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new Dictionary<string, SpellDamageStats>();
+    public Dictionary<string, SpellDamageStats> DDDamage { get; } = new Dictionary<string, SpellDamageStats>();
   }
 
   internal class FightTotalDamage
@@ -286,6 +288,15 @@ namespace EQLogParser
     public string PetOwner { get; set; }
     public double UpdateTime { get; set; }
     public double BeginTime { get; set; }
+  }
+
+  public class SpellDamageStats
+  {
+    internal uint Count { get; set; }
+    internal ulong Total { get; set; }
+    internal uint Max { get; set; }
+    internal string Spell { get; set; }
+    internal string Caster { get; set; }
   }
 
   internal class PetMapping

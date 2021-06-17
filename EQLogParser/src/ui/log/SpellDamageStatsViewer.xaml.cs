@@ -41,8 +41,17 @@ namespace EQLogParser
       typeList.SelectedIndex = 0;
 
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += SpellDamageStatsViewer_EventsLogLoadingComplete;
+      (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SpellDamageStatsViewer_EventsSelectionChange;
       dataGrid.Sorting += CustomSorting;
       Load();
+    }
+
+    private void SpellDamageStatsViewer_EventsSelectionChange(object sender, System.Collections.IList e)
+    {
+      if (fightOption.SelectedIndex != 0)
+      {
+        Load();
+      }
     }
 
     private void SpellDamageStatsViewer_EventsLogLoadingComplete(object sender, bool e) => Load();
@@ -51,9 +60,6 @@ namespace EQLogParser
 
     private void Load()
     {
-      var uniqueSpells = new Dictionary<string, byte>();
-      var uniquePlayers = new Dictionary<string, byte>();
-
       string selectedSpell = spellList.SelectedItem as string;
       string selectedPlayer = playerList.SelectedItem as string;
       bool isPlayerOnly = showPlayers.IsChecked.Value;
@@ -64,24 +70,61 @@ namespace EQLogParser
       Players.Clear();
       Players.Add("All Casters");
 
-      foreach (var stats in DataManager.Instance.GetSpellDoTStats())
+      var playerDDTotals = new Dictionary<string, SpellDamageStats>();
+      var playerDoTTotals = new Dictionary<string, SpellDamageStats>();
+      var uniqueSpells = new Dictionary<string, byte>();
+      var uniquePlayers = new Dictionary<string, byte>();
+
+      var fights = fightOption.SelectedIndex == 0 ? (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetFights() : 
+        (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetSelectedFights();
+
+      foreach (var fight in fights)
       {
-        if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(stats.Caster))
+        foreach (var kv in fight.DDDamage)
         {
-          AddRow(stats, Labels.DOT);
-          uniqueSpells[stats.Spell] = 1;
-          uniquePlayers[stats.Caster] = 1;
+          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster))
+          {
+            if (!playerDDTotals.TryGetValue(kv.Key, out SpellDamageStats ddStats))
+            {
+              ddStats = new SpellDamageStats { Caster = kv.Value.Caster, Spell = kv.Value.Spell };
+              playerDDTotals[kv.Key] = ddStats;
+              uniqueSpells[kv.Value.Spell] = 1;
+              uniquePlayers[kv.Value.Caster] = 1;
+            }
+
+            ddStats.Max = Math.Max(ddStats.Max, kv.Value.Max);
+            ddStats.Total += kv.Value.Total;
+            ddStats.Count += kv.Value.Count;
+          }
+        }
+
+        foreach (var kv in fight.DoTDamage)
+        {
+          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster))
+          {
+            if (!playerDoTTotals.TryGetValue(kv.Key, out SpellDamageStats dotStats))
+            {
+              dotStats = new SpellDamageStats { Caster = kv.Value.Caster, Spell = kv.Value.Spell };
+              playerDoTTotals[kv.Key] = dotStats;
+              uniqueSpells[kv.Value.Spell] = 1;
+              uniquePlayers[kv.Value.Caster] = 1;
+            }
+
+            dotStats.Max = Math.Max(dotStats.Max, kv.Value.Max);
+            dotStats.Total += kv.Value.Total;
+            dotStats.Count += kv.Value.Count;
+          }
         }
       }
 
-      foreach (var stats in DataManager.Instance.GetSpellDDStats())
+      foreach (var stats in playerDoTTotals.Values)
       {
-        if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(stats.Caster))
-        {
-          AddRow(stats, Labels.DD);
-          uniqueSpells[stats.Spell] = 1;
-          uniquePlayers[stats.Caster] = 1;
-        }
+        AddRow(stats, Labels.DOT);
+      }
+
+      foreach (var stats in playerDDTotals.Values)
+      {
+        AddRow(stats, Labels.DD);
       }
 
       foreach (var key in uniqueSpells.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
@@ -106,7 +149,7 @@ namespace EQLogParser
       titleLabel.Content = Records.Count == 0 ? NODATA : "Spell Damage Stats for " + uniqueSpells.Count + " Unique Spells";
     }
 
-    private void AddRow(DataManager.SpellDamageStats stats, string type)
+    private void AddRow(SpellDamageStats stats, string type)
     {
       var row = new ExpandoObject() as IDictionary<string, object>;
       row["Caster"] = stats.Caster;
@@ -162,7 +205,7 @@ namespace EQLogParser
         string player = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
         bool isPlayerOnly = showPlayers.IsChecked.Value;
 
-        if (sender == showPlayers)
+        if (sender == showPlayers || sender == fightOption)
         {
           Load();
         }
@@ -194,6 +237,7 @@ namespace EQLogParser
         }
 
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= SpellDamageStatsViewer_EventsLogLoadingComplete;
+        (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SpellDamageStatsViewer_EventsSelectionChange;
         disposedValue = true;
       }
     }

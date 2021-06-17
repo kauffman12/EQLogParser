@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.34";
+    private const string VERSION = "v1.8.35";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -250,6 +250,7 @@ namespace EQLogParser
       }
     }
 
+    internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
 
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
@@ -311,7 +312,7 @@ namespace EQLogParser
 
     private void ComputeStats()
     {
-      var filtered = (npcWindow?.Content as FightTable)?.GetSelectedItems().OrderBy(npc => npc.Id);
+      var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id);
       string name = filtered?.FirstOrDefault()?.Name;
 
       var damageOptions = new GenerateStatsOptions { Name = name, RequestChartData = DamageChartWindow?.IsOpen == true };
@@ -790,6 +791,11 @@ namespace EQLogParser
 
         if (success)
         {
+          if (!npcWindow.IsOpen)
+          {
+            Helpers.OpenWindow(IconToWindow[npcIcon.Name]);
+          }
+
           StopProcessing();
           CastProcessor = new ActionProcessor(CastLineParser.Process);
           DamageProcessor = new ActionProcessor(DamageLineParser.Process);
