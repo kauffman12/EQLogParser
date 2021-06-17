@@ -105,8 +105,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, SpellData> SpellsNameDB = new ConcurrentDictionary<string, SpellData>();
     private readonly ConcurrentDictionary<string, SpellData> SpellsAbbrvDB = new ConcurrentDictionary<string, SpellData>();
     private readonly ConcurrentDictionary<string, SpellClass> SpellsToClass = new ConcurrentDictionary<string, SpellClass>();
-    private readonly ConcurrentDictionary<string, SpellDamageStats> SpellDDStats = new ConcurrentDictionary<string, SpellDamageStats>();
-    private readonly ConcurrentDictionary<string, SpellDamageStats> SpellDoTStats = new ConcurrentDictionary<string, SpellDamageStats>();
 
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
@@ -281,8 +279,6 @@ namespace EQLogParser
     internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     internal SpellData GetSpellByAbbrv(string abbrv) => (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv)) ? SpellsAbbrvDB[abbrv] : null;
     internal SpellData GetSpellByName(string name) => (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.ContainsKey(name)) ? SpellsNameDB[name] : null;
-    internal List<SpellDamageStats> GetSpellDDStats() => SpellDDStats.Values.ToList();
-    internal List<SpellDamageStats> GetSpellDoTStats() => SpellDoTStats.Values.ToList();
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(TextFormatUtils.FlipCase(name));
@@ -354,32 +350,6 @@ namespace EQLogParser
       if (SpellsNameDB.TryGetValue(record.Spell, out SpellData spellData))
       {
         UpdateNpcSpellResistStats(record.Defender, spellData.Resist, true);
-      }
-    }
-
-    internal void AddSpellDamage(DamageRecord record)
-    {
-      if ((record.Type == Labels.DOT || record.Type == Labels.DD) && !record.AttackerIsSpell)
-      {
-        var key = record.Attacker + "=" + record.SubType;
-        var dict = record.Type == Labels.DOT ? SpellDoTStats : SpellDDStats;
-        if (dict.TryGetValue(key, out SpellDamageStats value))
-        {
-          value.Count++;
-          value.Total += record.Total;
-          value.Max = Math.Max(value.Max, record.Total);
-        }
-        else
-        {
-          dict[key] = new SpellDamageStats
-          {
-            Caster = record.Attacker,
-            Spell = record.SubType,
-            Count = 1,
-            Max = record.Total,
-            Total = record.Total
-          };
-        }
       }
     }
 
@@ -782,8 +752,6 @@ namespace EQLogParser
         SpellAbbrvCache.Clear();
         NpcTotalSpellCounts.Clear();
         NpcResistStats.Clear();
-        SpellDDStats.Clear();
-        SpellDoTStats.Clear();
         ClearActiveAdps();
         EventsClearedActiveData?.Invoke(this, true);
       }
@@ -881,15 +849,6 @@ namespace EQLogParser
     {
       internal uint Landed { get; set; }
       internal uint Reflected { get; set; }
-    }
-
-    public class SpellDamageStats
-    {
-      internal uint Count { get; set; }
-      internal ulong Total { get; set; }
-      internal uint Max { get; set; }
-      internal string Caster { get; set; }
-      internal string Spell { get; set; }
     }
   }
 }

@@ -20,8 +20,6 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
-      DataManager.Instance.AddSpellDamage(processed.Record);
-
       if (LastFightProcessTime != processed.BeginTime)
       {
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
@@ -88,6 +86,32 @@ namespace EQLogParser
                 UpdateTime = processed.BeginTime,
                 BeginTime = processed.BeginTime
               };
+            }
+
+            SpellDamageStats stats = null;
+            var spellKey = processed.Record.Attacker + "++" + processed.Record.SubType;
+            if (processed.Record.Type == Labels.DD)
+            {
+              if (!fight.DDDamage.TryGetValue(spellKey, out stats))
+              {
+                stats = new SpellDamageStats { Caster = processed.Record.Attacker, Spell = processed.Record.SubType };
+                fight.DDDamage[spellKey] = stats;
+              }
+            }
+            else if (processed.Record.Type == Labels.DOT)
+            {
+              if (!fight.DoTDamage.TryGetValue(spellKey, out stats))
+              {
+                stats = new SpellDamageStats { Caster = processed.Record.Attacker, Spell = processed.Record.SubType };
+                fight.DoTDamage[spellKey] = stats;
+              }
+            }
+
+            if (stats != null)
+            {
+              stats.Count += 1;
+              stats.Max = Math.Max(processed.Record.Total, stats.Max);
+              stats.Total += processed.Record.Total;
             }
 
             // only a pet can 'hit' with a Flurry since players only crush/slash/punch/pierce with main hand weapons

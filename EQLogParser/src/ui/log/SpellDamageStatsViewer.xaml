@@ -26,6 +26,10 @@
       </Button>
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
       <CheckBox x:Name="showPlayers" IsChecked="True" Margin="4,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
+      <ComboBox Margin="0,0,0,0" x:Name="fightOption" SelectedIndex="0" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged">
+        <ComboBoxItem>All Fights</ComboBoxItem>
+        <ComboBoxItem>Selected Fights</ComboBoxItem>        
+      </ComboBox>
       <ComboBox Margin="0,0,0,0" x:Name="playerList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,0,0" x:Name="spellList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="typeList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />

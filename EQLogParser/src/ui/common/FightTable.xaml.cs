@@ -108,10 +108,17 @@ namespace EQLogParser
       fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", null, true);
 
       fightDataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
+
+      DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
+      DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
+      DataManager.Instance.EventsNewFight += Instance_EventsNewFight;
+      DataManager.Instance.EventsUpdateFight += Instance_EventsUpdateFight;
+      DataManager.Instance.EventsNewNonTankingFight += Instance_EventsNewNonTankingFight;
     }
 
-    internal IEnumerable<Fight> GetSelectedItems() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
+    internal IEnumerable<Fight> GetSelectedFights() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
     internal bool HasSelected() => fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => !item.IsInactivity) != null;
+    internal IEnumerable<Fight> GetFights() => Fights.Where(item => !item.IsInactivity);
 
     private static void RemoveFight(ObservableCollection<Fight> fights, string name)
     {
@@ -580,23 +587,5 @@ namespace EQLogParser
     private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
     private void Instance_EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
-
-    private void TableUnloaded(object sender, RoutedEventArgs e)
-    {
-      DataManager.Instance.EventsClearedActiveData -= Instance_EventsCleardActiveData;
-      DataManager.Instance.EventsRemovedFight -= Instance_EventsRemovedFight;
-      DataManager.Instance.EventsNewFight -= Instance_EventsNewFight;
-      DataManager.Instance.EventsUpdateFight -= Instance_EventsUpdateFight;
-      DataManager.Instance.EventsNewNonTankingFight -= Instance_EventsNewNonTankingFight;
-    }
-
-    private void TableLoaded(object sender, RoutedEventArgs e)
-    {
-      DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
-      DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
-      DataManager.Instance.EventsNewFight += Instance_EventsNewFight;
-      DataManager.Instance.EventsUpdateFight += Instance_EventsUpdateFight;
-      DataManager.Instance.EventsNewNonTankingFight += Instance_EventsNewNonTankingFight;
-    }
   }
 }
