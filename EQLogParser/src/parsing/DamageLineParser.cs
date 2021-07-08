@@ -290,7 +290,7 @@ namespace EQLogParser
                 string defender = string.Join(" ", split, 0, takenIndex);
                 uint damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
                 string spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
-                var spellData = DataManager.Instance.GetSpellByName(spell);
+                var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
                 SpellResist resist = spellData != null ? spellData.Resist : SpellResist.UNDEFINED;
                 handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.BANE, spell, resist);
               }
@@ -356,7 +356,7 @@ namespace EQLogParser
                 string defender = string.Join(" ", split, 0, takenIndex);
                 uint damage = StatsUtil.ParseUInt(split[fromDamage - 1]);
                 string type = GetTypeFromSpell(spell, Labels.DOT);
-                var spellData = DataManager.Instance.GetSpellByName(spell);
+                var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
                 SpellResist resist = spellData != null ? spellData.Resist : SpellResist.UNDEFINED;
                 handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell, resist);
               }
@@ -373,7 +373,7 @@ namespace EQLogParser
               }
 
               SpellResist resist = SpellResist.UNDEFINED;
-              if (DataManager.Instance.GetSpellByName(spell) is SpellData spellData && spellData != null)
+              if (DataManager.Instance.GetDamagingSpellByName(spell) is SpellData spellData && spellData != null)
               {
                 resist = spellData.Resist;
               }

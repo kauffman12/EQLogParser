@@ -98,11 +98,11 @@ namespace EQLogParser
     private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
+    private readonly Dictionary<string, List<SpellData>> SpellsNameDB = new Dictionary<string, List<SpellData>>();
 
     private readonly ConcurrentDictionary<string, byte> AllNpcs = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>>();
     private readonly ConcurrentDictionary<string, TotalCount> NpcTotalSpellCounts = new ConcurrentDictionary<string, TotalCount>();
-    private readonly ConcurrentDictionary<string, SpellData> SpellsNameDB = new ConcurrentDictionary<string, SpellData>();
     private readonly ConcurrentDictionary<string, SpellData> SpellsAbbrvDB = new ConcurrentDictionary<string, SpellData>();
     private readonly ConcurrentDictionary<string, SpellClass> SpellsToClass = new ConcurrentDictionary<string, SpellClass>();
 
@@ -117,7 +117,7 @@ namespace EQLogParser
 
     private DataManager()
     {
-      DictionaryListHelper<string, SpellData> helper = new DictionaryListHelper<string, SpellData>();
+      DictionaryUniqueListHelper<string, SpellData> helper = new DictionaryUniqueListHelper<string, SpellData>();
       var spellList = new List<SpellData>();
 
       // build ranks cache
@@ -135,7 +135,7 @@ namespace EQLogParser
           if (spellData != null)
           {
             spellList.Add(spellData);
-            SpellsNameDB[spellData.Name] = spellData;
+            helper.AddToList(SpellsNameDB, spellData.Name, spellData);
 
             if (!SpellsAbbrvDB.ContainsKey(spellData.NameAbbrv))
             {
@@ -217,7 +217,7 @@ namespace EQLogParser
               {
                 if (spellLine.Split('=') is string[] list && list.Length == 2 && uint.TryParse(list[1], out uint rate))
                 {
-                  if (SpellsAbbrvDB.TryGetValue(list[0], out SpellData spellData) || SpellsNameDB.TryGetValue(list[0], out spellData))
+                  if (GetAdpsByName(list[0]) is SpellData spellData)
                   {
                     AdpsValues[key][spellData.NameAbbrv] = rate;
 
@@ -278,7 +278,6 @@ namespace EQLogParser
     internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
     internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     internal SpellData GetSpellByAbbrv(string abbrv) => (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv)) ? SpellsAbbrvDB[abbrv] : null;
-    internal SpellData GetSpellByName(string name) => (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.ContainsKey(name)) ? SpellsNameDB[name] : null;
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(TextFormatUtils.FlipCase(name));
@@ -347,9 +346,12 @@ namespace EQLogParser
     {
       Helpers.AddAction(AllResistBlocks, record, beginTime);
 
-      if (SpellsNameDB.TryGetValue(record.Spell, out SpellData spellData))
+      if (SpellsNameDB.TryGetValue(record.Spell, out List<SpellData> spellList))
       {
-        UpdateNpcSpellResistStats(record.Defender, spellData.Resist, true);
+        if (spellList.Find(item => !item.IsBeneficial) is SpellData spellData)
+        {
+          UpdateNpcSpellResistStats(record.Defender, spellData.Resist, true);
+        }
       }
     }
 
@@ -360,6 +362,21 @@ namespace EQLogParser
         double diff = currentTime - fight.LastTime;
         return diff > MAXTIMEOUT || diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0;
       }).ToList().ForEach(fight => RemoveActiveFight(fight.CorrectMapKey));
+    }
+
+    internal SpellData GetAdpsByName(string name)
+    {
+      SpellData spellData = null;
+
+      if (!SpellsAbbrvDB.TryGetValue(name, out spellData))
+      {
+        if (SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
+        {
+          spellData = spellList.Find(item => item.Adps > 0);
+        }
+      }
+
+      return spellData;
     }
 
     internal Fight GetFight(string name)
@@ -373,6 +390,42 @@ namespace EQLogParser
         }
       }
       return result;
+    }
+
+    internal SpellData GetDamagingSpellByName(string name)
+    {
+      SpellData spellData = null;
+
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
+      {
+        spellData = spellList.Find(item => item.Damaging > 0);
+      }
+
+      return spellData;
+    }
+
+    internal SpellData GetHealingSpellByName(string name)
+    {
+      SpellData spellData = null;
+
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
+      {
+        spellData = spellList.Find(item => item.Damaging < 0);
+      }
+
+      return spellData;
+    }
+
+    internal SpellData GetSpellByName(string name)
+    {
+      SpellData spellData = null;
+
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
+      {
+        spellData = spellList.First();
+      }
+
+      return spellData;
     }
 
     internal void AddSpecial(TimedAction action)
@@ -457,7 +510,7 @@ namespace EQLogParser
         // check Adps
         if (AdpsLandsOn.TryGetValue(landsOn, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
         {
-          var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(ConfigUtil.PlayerName, spellDataSet.ToList());
+          var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(ConfigUtil.PlayerName, spellDataSet.ToList(), true);
 
           // this only handles latest versions of spells so an older one may have given us the landsOn string and then it wasn't found
           // for some spells this makes sense because of the level requirements and it wouldn't do anything but thats not true for all of them
@@ -610,7 +663,7 @@ namespace EQLogParser
             Target = target,
             MaxHits = ushort.Parse(data[5], CultureInfo.CurrentCulture),
             ClassMask = classMask,
-            //Damaging = byte.Parse(data[8], CultureInfo.CurrentCulture) == 1,
+            Damaging = short.Parse(data[8], CultureInfo.CurrentCulture),
             //CombatSkill = uint.Parse(data[9], CultureInfo.CurrentCulture),
             Resist = (SpellResist)int.Parse(data[10], CultureInfo.CurrentCulture),
             SongWindow = data[11] == "1",
@@ -635,7 +688,7 @@ namespace EQLogParser
       }
     }
 
-    private SpellData FindPreviousCast(string player, List<SpellData> output)
+    private SpellData FindPreviousCast(string player, List<SpellData> output, bool isAdps = false)
     {
       if (LastSpellIndex > -1)
       {
@@ -644,11 +697,11 @@ namespace EQLogParser
         {
           for (int j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
           {
-            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && output.Find(spellData => spellData == cast.SpellData) is SpellData found)
+            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && output.Find(spellData => spellData.Name == cast.Spell && (!isAdps || spellData.Adps > 0)) is SpellData found)
             {
               if (found.Target != (int)SpellTarget.SELF || cast.Caster == player)
               {
-                return cast.SpellData;
+                return found;
               }
             }
           }

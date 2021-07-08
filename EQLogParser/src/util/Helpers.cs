@@ -226,6 +226,25 @@ namespace EQLogParser
           dict[key] = new List<T2>();
         }
 
+        dict[key].Add(value);
+        size = dict[key].Count;
+      }
+      return size;
+    }
+  }
+
+  internal class DictionaryUniqueListHelper<T1, T2>
+  {
+    internal int AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
+    {
+      int size = 0;
+      lock (dict)
+      {
+        if (!dict.ContainsKey(key))
+        {
+          dict[key] = new List<T2>();
+        }
+
         if (!dict[key].Contains(value))
         {
           dict[key].Add(value);
