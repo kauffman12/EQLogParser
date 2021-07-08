@@ -341,6 +341,7 @@ namespace EQLogParser
     public ushort MaxHits { get; set; }
     public bool IsBeneficial { get; set; }
     public SpellResist Resist { get; set; }
+    public short Damaging { get; set; }
     public byte Target { get; set; }
     public ushort ClassMask { get; set; }
     public ushort Level { get; set; }

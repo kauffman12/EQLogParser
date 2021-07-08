@@ -188,7 +188,7 @@ namespace EQLogParser
           }
         }
 
-        DictionaryListHelper<string, Rectangle> helper = new DictionaryListHelper<string, Rectangle>();
+        DictionaryUniqueListHelper<string, Rectangle> helper = new DictionaryUniqueListHelper<string, Rectangle>();
         Dictionary<string, List<Rectangle>> player1 = new Dictionary<string, List<Rectangle>>();
         Dictionary<string, List<Rectangle>> player2 = new Dictionary<string, List<Rectangle>>();
 

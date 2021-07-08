@@ -108,7 +108,7 @@ namespace EQLogParser
                   {
                     bool valid = true;
                     SpellData spellData;
-                    if (record.SubType != null && (spellData = DataManager.Instance.GetSpellByName(record.SubType)) != null)
+                    if (record.SubType != null && (spellData = DataManager.Instance.GetHealingSpellByName(record.SubType)) != null)
                     {
                       if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
                         spellData.Target == (byte)SpellTarget.TARGETRINGAE)

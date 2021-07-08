@@ -115,7 +115,7 @@ namespace EQLogParser
                   {
                     string npc = string.Join(" ", split, 0, resistedIndex);
                     string spell = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('!');
-                    DataManager.Instance.AddResistRecord(new ResistRecord() { Defender = npc, Spell = spell }, DateUtil.ParseLogDate(lineData.Line, out _));
+                    DataManager.Instance.AddResistRecord(new ResistRecord { Defender = npc, Spell = spell }, DateUtil.ParseLogDate(lineData.Line, out _));
                     handled = true;
                   }
                   break;
