@@ -6,7 +6,7 @@ namespace EQLogParser
 {
   class SpellCountBuilder
   {
-    public const int BUFF_OFFSET = 15;
+    public const int BUFF_OFFSET = 30;
     public const int DMG_OFFSET = 5;
     internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
@@ -55,12 +55,12 @@ namespace EQLogParser
         maxTime = maxTime == -1 ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
         var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - DMG_OFFSET, segment.EndTime);
         AddBlocks(raidStats, blocks, maxTime, castsDuring, true);
-        blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + BUFF_OFFSET);
+        blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + BUFF_OFFSET / 2);
         AddBlocks(raidStats, blocks, maxTime, castsDuring);
 
-        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - DMG_OFFSET, segment.EndTime);
+        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - DMG_OFFSET, segment.EndTime + DMG_OFFSET);
         AddBlocks(raidStats, blocks, maxTime, receivedDuring, true);
-        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + BUFF_OFFSET);
+        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + BUFF_OFFSET / 2);
         AddBlocks(raidStats, blocks, maxTime, receivedDuring);
       });
 
