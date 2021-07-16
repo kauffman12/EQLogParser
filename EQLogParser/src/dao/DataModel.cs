@@ -317,7 +317,7 @@ namespace EQLogParser
     public string Player { get; set; }
   }
 
-  internal class ReceivedSpell : IAction
+  internal class ReceivedSpell : TimedAction
   {
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
