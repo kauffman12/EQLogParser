@@ -49,6 +49,7 @@ namespace EQLogParser
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowProcs = false;
     private bool CurrentShowInterrupts = false;
+    private bool Ready = false;
 
     public SpellCountTable(string title, double seconds)
     {
@@ -296,6 +297,8 @@ namespace EQLogParser
               });
             }
           }, TaskScheduler.Default);
+
+          Ready = true;
         }
       }
     }
@@ -343,7 +346,7 @@ namespace EQLogParser
 
     private void OptionsChanged(bool clear = false)
     {
-      if (SpellRows.Count > 0)
+      if (Ready)
       {
         if (clear)
         {

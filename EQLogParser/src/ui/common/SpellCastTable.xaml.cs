@@ -73,72 +73,44 @@ namespace EQLogParser
               }
             });
 
-            var allSpells = new HashSet<ActionBlock>();
-            double maxTime = -1;
-            var startTime = double.NaN;
-            RaidStats.Ranges.TimeSegments.ForEach(segment =>
-            {
-              startTime = double.IsNaN(startTime) ? segment.BeginTime : Math.Min(startTime, segment.BeginTime);
-              maxTime = maxTime == -1 ? segment.BeginTime + RaidStats.TotalSeconds : maxTime;
-              var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - SpellCountBuilder.COUNT_OFFSET, segment.EndTime);
-              blocks.ForEach(block =>
-              {
-                if (RaidStats.MaxTime == RaidStats.TotalSeconds || block.BeginTime <= maxTime)
-                {
-                  allSpells.Add(block);
-                }
-              });
-
-              blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - SpellCountBuilder.COUNT_OFFSET, segment.EndTime);
-              blocks.ForEach(block =>
-              {
-                if (RaidStats.MaxTime == RaidStats.TotalSeconds || block.BeginTime <= maxTime)
-                {
-                  allSpells.Add(block);
-                }
-              });
-            });
-
+            var allSpells = new HashSet<TimedAction>();
+            var startTime = SpellCountBuilder.QuerySpellBlocks(RaidStats, allSpells);
             var playerSpells = new Dictionary<string, List<string>>();
             var helper = new DictionaryListHelper<string, string>();
             int max = 0;
 
             double lastTime = double.NaN;
-            foreach (var block in allSpells.OrderBy(block => block.BeginTime).ThenBy(block => (block.Actions.Count > 0 && block.Actions[0] is ReceivedSpell) ? 1 : -1))
+            foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
             {
-              if (!double.IsNaN(lastTime) && block.BeginTime != lastTime)
+              if (!double.IsNaN(lastTime) && action.BeginTime != lastTime)
               {
                 AddRow(playerSpells, max, lastTime, startTime);
                 playerSpells.Clear();
                 max = 0;
               }
 
-              if (block.Actions.Count > 0)
+              int size = 0;
+              if ((CurrentCastType == 0 || CurrentCastType == 1) && action is SpellCast)
               {
-                int size = 0;
-                if ((CurrentCastType == 0 || CurrentCastType == 1) && block.Actions[0] is SpellCast)
+                if (action is SpellCast cast && !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, out _))
                 {
-                  foreach (var cast in block.Actions.Cast<SpellCast>().Where(cast => !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, out _)))
+                  size = helper.AddToList(playerSpells, cast.Caster, cast.Spell);
+                }
+              }
+              else if ((CurrentCastType == 0 || CurrentCastType == 2) && action is ReceivedSpell)
+              {
+                SpellData replaced = null;
+                if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, out replaced))
+                {
+                  if (replaced != null)
                   {
-                    size = helper.AddToList(playerSpells, cast.Caster, cast.Spell);
+                    size = helper.AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
                   }
                 }
-                else if ((CurrentCastType == 0 || CurrentCastType == 2) && block.Actions[0] is ReceivedSpell)
-                {
-                  SpellData replaced = null;
-                  foreach (var received in block.Actions.Cast<ReceivedSpell>().Where(received => IsValid(received, UniqueNames, received.Receiver, out replaced)))
-                  {
-                    if (replaced != null)
-                    {
-                      size = helper.AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
-                    }
-                  }
-                }
-
-                max = Math.Max(max, size);
               }
 
-              lastTime = block.BeginTime;
+              max = Math.Max(max, size);
+              lastTime = action.BeginTime;
             }
 
             if (playerSpells.Count > 0 && max > 0)

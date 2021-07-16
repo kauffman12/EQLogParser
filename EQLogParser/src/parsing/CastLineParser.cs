@@ -151,7 +151,7 @@ namespace EQLogParser
               }
 
               var spellData = DataManager.Instance.GetSpellByName(spellName);
-              DataManager.Instance.AddSpellCast(new SpellCast { Caster = player, Spell = string.Intern(spellName), SpellData = spellData}, currentTime);
+              DataManager.Instance.AddSpellCast(new SpellCast { Caster = player, Spell = string.Intern(spellName), SpellData = spellData, BeginTime = currentTime }, currentTime);
             }
             else
             {
@@ -171,7 +171,7 @@ namespace EQLogParser
               if (result != null)
               {
                 double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
-                var newSpell = new ReceivedSpell() { Receiver = player };
+                var newSpell = new ReceivedSpell { Receiver = player, BeginTime = currentTime };
 
                 if (result.Count == 1)
                 {
@@ -230,7 +230,7 @@ namespace EQLogParser
               if (result != null)
               {
                 double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
-                var newSpell = new ReceivedSpell() { Receiver = string.Intern(player) };
+                var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), BeginTime = currentTime };
 
                 if (result.Count == 1)
                 {
