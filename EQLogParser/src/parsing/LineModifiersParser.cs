@@ -33,34 +33,23 @@ namespace EQLogParser
 
     private static readonly ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
 
-    internal static bool IsRiposte(int mask)
-    {
-      return mask > -1 && (mask & RIPOSTE) != 0 && (mask & STRIKETHROUGH) == 0;
-    }
+    internal static bool IsCrit(int mask) => mask > -1 && (mask & CRIT) != 0;
 
-    internal static bool IsCrit(int mask)
-    {
-      return mask > -1 && (mask & CRIT) != 0;
-    }
+    internal static bool IsFlurry(int mask) => mask > -1 && (mask & FLURRY) != 0;
 
-    internal static bool IsFlurry(int mask)
-    {
-      return mask > -1 && (mask & FLURRY) != 0;
-    }
+    internal static bool IsLucky(int mask) => mask > -1 && (mask & LUCKY) != 0;
 
-    internal static bool IsLucky(int mask)
-    {
-      return mask > -1 && (mask & LUCKY) != 0;
-    }
+    internal static bool IsTwincast(int mask) => mask > -1 && (mask & TWINCAST) != 0;
 
-    internal static bool IsTwincast(int mask)
-    {
-      return mask > -1 && (mask & TWINCAST) != 0;
-    }
+    internal static bool IsRampage(int mask) => mask > -1 && (mask & RAMPAGE) != 0;
+
+    internal static bool IsRiposte(int mask) => mask > -1 && (mask & RIPOSTE) != 0 && (mask & STRIKETHROUGH) == 0;
+
+    internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & STRIKETHROUGH) != 0;
 
     internal static void Parse(HitRecord record, Attempt playerStats, Attempt theHit = null)
     {
-      if (record.ModifiersMask > -1)
+      if (record.ModifiersMask > -1 && record.Type != Labels.MISS)
       {
         if ((record.ModifiersMask & ASSASSINATE) != 0)
         {
@@ -252,6 +241,7 @@ namespace EQLogParser
               result |= TWINCAST;
               break;
             case "Rampage":
+            case "Wild Rampage":
               result |= RAMPAGE;
               break;
             case "Riposte":

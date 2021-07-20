@@ -56,6 +56,21 @@
             <local:CountCheckedTemplateSelector Header="Twincast" />
           </DataGridTemplateColumn.CellTemplateSelector>
         </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="Rampage" IsReadOnly="True" CanUserReorder="True">
+          <DataGridTemplateColumn.CellTemplateSelector>
+            <local:CountCheckedTemplateSelector Header="Rampage" />
+          </DataGridTemplateColumn.CellTemplateSelector>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="Riposte" IsReadOnly="True" CanUserReorder="True">
+          <DataGridTemplateColumn.CellTemplateSelector>
+            <local:CountCheckedTemplateSelector Header="Riposte" />
+          </DataGridTemplateColumn.CellTemplateSelector>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="Strikethrough" IsReadOnly="True" CanUserReorder="True">
+          <DataGridTemplateColumn.CellTemplateSelector>
+            <local:CountCheckedTemplateSelector Header="Strikethrough" />
+          </DataGridTemplateColumn.CellTemplateSelector>
+        </DataGridTemplateColumn>
         <DataGridTextColumn Binding="{Binding Actor}" ClipboardContentBinding="{x:Null}" Header="" IsReadOnly="True" CanUserReorder="True" MinWidth="100" />
         <DataGridTextColumn Binding="{Binding Acted}" ClipboardContentBinding="{x:Null}" Header="" IsReadOnly="True" CanUserReorder="True" Width="180*"/>
       </DataGrid.Columns>

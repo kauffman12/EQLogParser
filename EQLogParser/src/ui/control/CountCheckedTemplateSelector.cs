@@ -34,6 +34,18 @@ namespace EQLogParser
             value = row.TwincastCount;
             countTemplate = Application.Current.Resources["TwincastCountTemplate"] as DataTemplate;
             break;
+          case "Rampage":
+            value = row.RampageCount;
+            countTemplate = Application.Current.Resources["RampageCountTemplate"] as DataTemplate;
+            break;
+          case "Riposte":
+            value = row.RiposteCount;
+            countTemplate = Application.Current.Resources["RiposteCountTemplate"] as DataTemplate;
+            break;
+          case "Strikethrough":
+            value = row.StrikethroughCount;
+            countTemplate = Application.Current.Resources["StrikethroughCountTemplate"] as DataTemplate;
+            break;
         }
 
         if (value == 0)
