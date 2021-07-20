@@ -62,8 +62,11 @@ namespace EQLogParser
       {
         ActedOption = "All Defenders";
         dataGrid.Columns[4].Header = "Damage";
-        dataGrid.Columns[10].Header = "Attacker";
-        dataGrid.Columns[11].Header = "Defender";
+        dataGrid.Columns[10].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[11].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[12].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[13].Header = "Attacker";
+        dataGrid.Columns[14].Header = "Defender";
         showPets.Visibility = Visibility.Visible;
       }
       else if (firstAction is DamageRecord && defending)
@@ -73,8 +76,8 @@ namespace EQLogParser
         dataGrid.Columns[7].Visibility = Visibility.Collapsed;
         dataGrid.Columns[8].Visibility = Visibility.Collapsed;
         dataGrid.Columns[9].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[10].Header = "Defender";
-        dataGrid.Columns[11].Header = "Attacker";
+        dataGrid.Columns[13].Header = "Defender";
+        dataGrid.Columns[14].Header = "Attacker";
         showPets.Visibility = Visibility.Collapsed;
         petDivider.Visibility = Visibility.Collapsed;
       }
@@ -83,8 +86,11 @@ namespace EQLogParser
         ActedOption = "All Healed Players";
         dataGrid.Columns[4].Header = "Heal";
         dataGrid.Columns[5].Visibility = Visibility.Visible;
-        dataGrid.Columns[10].Header = "Healer";
-        dataGrid.Columns[11].Header = "Healed";
+        dataGrid.Columns[10].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[11].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[12].Visibility = Visibility.Collapsed;
+        dataGrid.Columns[13].Header = "Healer";
+        dataGrid.Columns[14].Header = "Healed";
         showPets.Visibility = Visibility.Collapsed;
         petDivider.Visibility = Visibility.Collapsed;
       }
@@ -284,6 +290,9 @@ namespace EQLogParser
         row.CritCount += (uint)(LineModifiersParser.IsCrit(hit.ModifiersMask) ? 1 : 0);
         row.LuckyCount += (uint)(LineModifiersParser.IsLucky(hit.ModifiersMask) ? 1 : 0);
         row.TwincastCount += (uint)(LineModifiersParser.IsTwincast(hit.ModifiersMask) ? 1 : 0);
+        row.RampageCount += (uint)(LineModifiersParser.IsRampage(hit.ModifiersMask) ? 1 : 0);
+        row.RiposteCount += (uint)(LineModifiersParser.IsRiposte(hit.ModifiersMask) ? 1 : 0);
+        row.StrikethroughCount += (uint)(LineModifiersParser.IsStrikethrough(hit.ModifiersMask) ? 1 : 0);
         row.Count++;
 
         if (LastSeenCache.TryGetValue(row.SubType, out double lastTime)) // 1 day

@@ -404,7 +404,16 @@
     <DataTemplate x:Key="TwincastCountTemplate">
       <TextBlock Text="{Binding TwincastCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
     </DataTemplate>
-    
+    <DataTemplate x:Key="RampageCountTemplate">
+      <TextBlock Text="{Binding RampageCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    </DataTemplate>
+    <DataTemplate x:Key="RiposteCountTemplate">
+      <TextBlock Text="{Binding RiposteCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    </DataTemplate>
+    <DataTemplate x:Key="StrikethroughCountTemplate">
+      <TextBlock Text="{Binding StrikethroughCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    </DataTemplate>
+
     <!-- DataGrid Row/Column Colors and Alignment -->
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
       <Setter Property="Background" Value="#3a543f" />
