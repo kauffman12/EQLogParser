@@ -343,20 +343,20 @@ if os.path.isfile(DBSpellsFile):
     recastTime = int(data[10])
     maxDuration = int(data[12])
     manaCost = int(data[14])
-    beneficial = int(data[30])
-    resist = int(data[31])
-    spellTarget = int(data[32])
-    skill = int(data[34])
-    recourse = data[83]
-    songWindow = int(data[86])
-    hateMod = int(data[94])
-    combatSkill = int(data[100])
-    hateOver = int(data[101])
-    maxHits = int(data[104])
-    dispellable = int(data[113])
-    focusable = int(data[124]) # focusable
-    blockable = int(data[132])
-    rank = int(data[135]) # AA rank
+    beneficial = int(data[28])
+    resist = int(data[29])
+    spellTarget = int(data[30])
+    skill = int(data[32])
+    recourse = data[81]
+    songWindow = int(data[84])
+    hateMod = int(data[92])
+    combatSkill = int(data[98])
+    hateOver = int(data[99])
+    maxHits = int(data[102])
+    dispellable = int(data[111])
+    focusable = int(data[122]) # focusable
+    blockable = int(data[130])
+    rank = int(data[133]) # AA rank
     origDuration = maxDuration
 
     # add focus AAs for additional hits
@@ -370,10 +370,10 @@ if os.path.isfile(DBSpellsFile):
     
     classMask = 0
     minLevel = 255
-    for i in range(38, 38+16):
+    for i in range(36, 36+16):
       level = int(data[i])
       if level <= 254:
-        classMask += (1 << (i - 38))
+        classMask += (1 << (i - 36))
         minLevel = min(minLevel, level)
 
     if origDuration == 1950:
