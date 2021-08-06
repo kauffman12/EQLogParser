@@ -336,7 +336,7 @@ namespace EQLogParser
         stats.Extra += (record.OverTotal - record.Total);
       }
 
-      LineModifiersParser.Parse(record, stats);
+      LineModifiersParser.UpdateStats(record, stats);
     }
 
     internal static void MergeStats(PlayerSubStats to, PlayerSubStats from)

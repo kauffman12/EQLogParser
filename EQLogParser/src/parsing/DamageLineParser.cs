@@ -553,7 +553,7 @@ namespace EQLogParser
         {
           // improve this later so maybe the string doesn't have to be re-joined
           string modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
-          record.ModifiersMask = LineModifiersParser.Parse(modifiers.Substring(1, modifiers.Length - 2));
+          record.ModifiersMask = LineModifiersParser.Parse(record.Attacker, modifiers.Substring(1, modifiers.Length - 2));
         }
 
         var currentTime = DateUtil.ParseLogDate(lineData.Line, out string timeString);
@@ -669,8 +669,12 @@ namespace EQLogParser
 
     private static bool InIgnoreList(string name)
     {
-      return name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || CheckEyeRegex.IsMatch(name) ||
-        ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
+      bool ignore = name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
+      if (!ignore && CheckEyeRegex.IsMatch(name))
+      {
+        ignore = !name.EndsWith("Veeshan") && !name.EndsWith("Despair");
+      }
+      return ignore;
     }
   }
 }
