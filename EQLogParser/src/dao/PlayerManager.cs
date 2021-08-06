@@ -412,6 +412,28 @@ namespace EQLogParser
       ConfigUtil.SavePlayers(list);
     }
 
+    internal void SetPlayerClass(string player, SpellClass theClass)
+    {
+      if (!PlayerToClass.TryGetValue(player, out SpellClassCounter counter))
+      {
+        lock (PlayerToClass)
+        {
+          counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, int>() };
+          PlayerToClass.TryAdd(player, counter);
+        }
+      }
+
+      lock(counter)
+      {
+        if (counter.CurrentClass != theClass && counter.CurrentMax != 1000000)
+        {
+          counter.CurrentClass = theClass;
+          counter.ClassCounts[theClass] = 1000000;
+          counter.CurrentMax = 1000000;
+        }
+      }
+    }
+
     internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass)
     {
       if (!PlayerToClass.TryGetValue(cast.Caster, out SpellClassCounter counter))

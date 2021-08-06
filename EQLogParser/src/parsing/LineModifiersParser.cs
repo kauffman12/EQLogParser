@@ -47,7 +47,7 @@ namespace EQLogParser
 
     internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & STRIKETHROUGH) != 0;
 
-    internal static void Parse(HitRecord record, Attempt playerStats, Attempt theHit = null)
+    internal static void UpdateStats(HitRecord record, Attempt playerStats, Attempt theHit = null)
     {
       if (record.ModifiersMask > -1 && record.Type != Labels.MISS)
       {
@@ -184,7 +184,7 @@ namespace EQLogParser
       }
     }
 
-    internal static int Parse(string modifiers)
+    internal static int Parse(string player, string modifiers)
     {
       int result = -1;
 
@@ -192,7 +192,7 @@ namespace EQLogParser
       {
         if (!MaskCache.TryGetValue(modifiers, out result))
         {
-          result = BuildVector(modifiers);
+          result = BuildVector(player, modifiers);
           MaskCache[modifiers] = result;
         }
       }
@@ -200,7 +200,7 @@ namespace EQLogParser
       return result;
     }
 
-    private static int BuildVector(string modifiers)
+    private static int BuildVector(string player, string modifiers)
     {
       int result = 0;
 
@@ -227,15 +227,18 @@ namespace EQLogParser
           {
             case "Assassinate":
               result |= ASSASSINATE;
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG);
               break;
             case "Double Bow Shot":
               result |= DOUBLEBOW;
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG);
               break;
             case "Flurry":
               result |= FLURRY;
               break;
             case "Headshot":
               result |= HEADSHOT;
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG);
               break;
             case "Twincast":
               result |= TWINCAST;
@@ -252,6 +255,7 @@ namespace EQLogParser
               break;
             case "Slay Undead":
               result |= SLAY;
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL);
               break;
           }
 
