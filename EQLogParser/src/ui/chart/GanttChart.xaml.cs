@@ -147,7 +147,7 @@ namespace EQLogParser
 
     private bool ClassFilter(SpellData data)
     {
-      return (TankingMode && (data.Adps & TANK_ADPS) == TANK_ADPS) || (!TankingMode && (data.Adps & TANK_ADPS) != TANK_ADPS);
+      return (TankingMode && (data.Adps & TANK_ADPS) != 0) || (!TankingMode && ((data.Adps & CASTER_ADPS) != 0 || (data.Adps & MELEE_ADPS) != 0));
     }
 
     private void UpdateSpellRange(SpellData spellData, double beginTime, Brush brush)
