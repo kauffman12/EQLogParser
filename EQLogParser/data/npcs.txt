@@ -1,3 +1,262 @@
+a basilica guardian
+a basilica sentry
+a beaten vampyre
+a blackened terror
+a broken vampyre
+a chanting centi
+a charred terror
+a confident shadow raven
+a dark assailant
+a dark guardian
+a dark whelp
+a defensive shadow
+a drifting shadow
+a fallen sergeant
+a familiar presence
+a fogfall lurker
+a forgotten aberrant
+a forlorn shade
+a free gorangan
+a fyr jen guardian
+a fyr jen keeper
+a fyr jen sentinel
+a gantru ralktran
+a giggling patroller
+a gleeful miscreant
+a gloaming bat
+a gloaming beetle
+a glooming bat
+a glooming beetle
+a gnarled terror
+a gorangan conductor
+a gorangan slave
+a gorangan slave patroller
+a grim lahar
+a grim shade
+a hardened lahar
+a hefty stone guardian
+a hungry grub
+a keeper of shadow
+a lost trickster
+a luclin pup
+a luclin scavenger
+a luclin stalker
+a luclin warder
+a manifested nightmare
+a mass of shadows
+a mislaid shadow
+a moon maggot
+a mudspate lurker
+a netherbian carrion
+a netherbian infester
+a netherbian ripper
+a newly freed slave
+a noctis lupine
+a normal brazier
+a pacified vampyre
+a patrolling scout
+a peckish vampyre
+a priest of shadow
+a repressed vampyre
+a ritual table
+a roaming gargoyle
+a rockfall lurker
+a ruinous wolf
+a scorched terror
+a shade guardian
+a shadow raven
+a shak dathor guard
+a shak dathor keeper
+a shak dathor shadeguard
+a shak dathor shawi
+a shak dathor thergrath
+a smokefall beetle
+a smoldering lahar
+a starving worm
+a storm of darkness
+a swarm of darkness
+a swarm of shadows
+a syl ren frost caller
+a syl ren keeper
+a syl ren sentinel
+a tenebrous shadow
+a tenebrous slight
+a vampyre bat 
+a vengeful shadow
+a vicious gloom bat
+a vicious shadow raven
+a wailing centi
+a wandering gargoyle
+a wandering shadow
+a well-fed rockbreaker
+a winged scavenger
+a worried escaped slave
+a worried shade
+a worrisome shade
+a worthy sacrifice
+a writhing shadow
+akhevan scrying bowl
+akhevan warder
+an armored terror
+an ashen shade
+an attacking shade
+an avaricious mass
+an avenging mass
+an avenging shadow
+an erased hero`s guard
+an illusive dim
+an illusive swarm
+an invading shade
+an obscured shade
+an oppressed vampyre
+an unsettled tumbler
+an unworthy sacrifice
+ander, wolf of shadows
+atulinae xi ial
+bynn the tormented
+captain resh sogran
+centi atulus
+centi draues
+centian xi datiar
+centien rashen xaui
+cissela regnar
+daerius jaegir
+darkmeat
+dead akheva
+dead shade
+diabo sivuela
+diabo tatrua
+diabo va thall
+diabo xi akuel
+diabo xi tavuel
+diabo xi va
+diabo xi va temariel
+diabo xi vereor
+diabo xi xakreum
+diabo xi xin thall
+diabo xin thall
+draues xean xirau
+drikwafer home security copter
+eliknot terrilon
+eom centien
+eom centien xakra
+eom liako xakra
+eom senshali xakra
+eom thall
+eom va dyn
+eom zethon
+eom zethon xakra
+fer`tatrua centi
+fer`temariel centi
+ferd banock
+gantru shojralen
+gel`temariel centi
+idla terrilon
+istoph banock
+itraer centien rashen
+kaas thox xi ans dyek
+kaas xakra
+kela senshali
+kela thall
+kela va
+kela xin dabo
+kela xin thall
+korah kai the gardener
+liako atulinae
+lucca brightfeld
+mulk mcmarrin
+namdrows
+nightfall
+pli centien
+pli centien xakra
+pli liako
+pli liako xakra
+pli senshali
+pli senshali sa rashen
+pli senshali xakra
+pli thall
+pli thall xakra
+pli torgarath xi va
+pli torgarath xi vex
+pli torgarath xi vius
+pli va dyn
+pli va liako
+pli va liako xakra
+pli zethon
+pli zethon xakra
+prisoner remains
+qua centien
+qua centien xakra
+qua kaas thox
+qua liako
+qua liako xakra
+qua senshali
+qua senshali xakra
+qua thall
+qua thall xakra
+qua va dyn
+qua va liako
+qua va liako xakra
+qua zethon
+qua zethon xakra
+quietus the forgotten
+raux xakra
+rienn banock
+rowain mckay
+samuel jezra
+selra's body
+senshali sa rashen
+senshali sa sivuela
+senshali tekar tavuel
+senshali va detra
+tearc, shade keeper
+teka`temariel centi
+telaris xeturisun
+temariel xi tetoracu
+terro kai
+tess zelinstein
+thall va kelun
+thall xi va
+thall zun ravali
+the protector
+the water
+the water is
+the water looks
+the water ripples
+thirs mcmill
+thox xakra
+torgarath renthais
+torgarath rulour thox
+torgarath va dyek
+torgarath xi va
+txiki
+va xakra
+vilk mclanis
+visus zethon
+vius atulus centi
+xaui xi ivas
+xenacious von deek
+xin thall
+zov centien
+zov centien xakra
+zov liako
+zov senshali
+zov senshali xakra
+zov thall
+zov thall xakra
+zov va laiko xakra
+zov zethon
+zun centien
+zun centien xakra
+zun liako
+zun senshali
+zun senshali xakra
+zun thall
+zun thall xakra
+zun va dyn
+zun va liako
+zun zethon
+zun zethon xakra
 aagron
 aanina rockfinder
 aaragurn

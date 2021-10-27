@@ -549,14 +549,15 @@ namespace EQLogParser
           AttackerIsSpell = attackerIsSpell
         };
 
+        var currentTime = DateUtil.ParseLogDate(lineData.Line, out string timeString);
+
         if (split.Length > stop + 1)
         {
           // improve this later so maybe the string doesn't have to be re-joined
           string modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
-          record.ModifiersMask = LineModifiersParser.Parse(record.Attacker, modifiers.Substring(1, modifiers.Length - 2));
+          record.ModifiersMask = LineModifiersParser.Parse(record.Attacker, modifiers.Substring(1, modifiers.Length - 2), currentTime);
         }
 
-        var currentTime = DateUtil.ParseLogDate(lineData.Line, out string timeString);
         if (!double.IsNaN(currentTime))
         {
           CheckSlainQueue(currentTime);

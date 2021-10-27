@@ -184,7 +184,7 @@ namespace EQLogParser
       }
     }
 
-    internal static int Parse(string player, string modifiers)
+    internal static int Parse(string player, string modifiers, double currentTime)
     {
       int result = -1;
 
@@ -192,7 +192,7 @@ namespace EQLogParser
       {
         if (!MaskCache.TryGetValue(modifiers, out result))
         {
-          result = BuildVector(player, modifiers);
+          result = BuildVector(player, modifiers, currentTime);
           MaskCache[modifiers] = result;
         }
       }
@@ -200,7 +200,7 @@ namespace EQLogParser
       return result;
     }
 
-    private static int BuildVector(string player, string modifiers)
+    private static int BuildVector(string player, string modifiers, double currentTime)
     {
       int result = 0;
 
@@ -227,18 +227,18 @@ namespace EQLogParser
           {
             case "Assassinate":
               result |= ASSASSINATE;
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG, currentTime);
               break;
             case "Double Bow Shot":
               result |= DOUBLEBOW;
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, currentTime);
               break;
             case "Flurry":
               result |= FLURRY;
               break;
             case "Headshot":
               result |= HEADSHOT;
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, currentTime);
               break;
             case "Twincast":
               result |= TWINCAST;
@@ -255,7 +255,7 @@ namespace EQLogParser
               break;
             case "Slay Undead":
               result |= SLAY;
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL, currentTime);
               break;
           }
 

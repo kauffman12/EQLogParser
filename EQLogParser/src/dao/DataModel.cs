@@ -354,6 +354,7 @@ namespace EQLogParser
     public string WearOff { get; set; }
     public ushort Proc { get; set; }
     public ushort Adps { get; set; }
+    public ushort Rank { get; set; }
   }
 
   internal class SpellCountData
