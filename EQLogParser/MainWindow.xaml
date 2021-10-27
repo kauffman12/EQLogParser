@@ -225,6 +225,11 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableAutoMonitorIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="ignoreCharmPets" Header="Ignore _Charm Pets" Click="ToggleIgnoreCharmPetsClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="ignoreCharmPetsIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
           </MenuItem>          
           <MenuItem x:Name="enableAoEHealing" Header="Show _AoE Heals" Click="ToggleAoEHealingClick" Height="24">
             <MenuItem.Icon>

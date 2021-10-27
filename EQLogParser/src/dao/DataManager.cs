@@ -182,7 +182,8 @@ namespace EQLogParser
       {
         // exact match meaning class-only spell that are of certain target types
         var tgt = (SpellTarget)spell.Target;
-        if ((tgt == SpellTarget.SELF || (spell.Level <= 250 && (tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS))) && classEnums.Contains((SpellClass)spell.ClassMask))
+        if ((tgt == SpellTarget.SELF || (spell.Level <= 250 && (tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS)) || spell.Rank > 1) &&
+          classEnums.Contains((SpellClass)spell.ClassMask))
         {
           // these need to be unique and keep track if a conflict is found
           if (SpellsToClass.ContainsKey(spell.Name))
@@ -465,7 +466,7 @@ namespace EQLogParser
 
         if (SpellsToClass.TryGetValue(cast.Spell, out SpellClass theClass))
         {
-          PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
+          PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass, beginTime);
         }
       }
     }
@@ -668,10 +669,11 @@ namespace EQLogParser
             Resist = (SpellResist)int.Parse(data[10], CultureInfo.CurrentCulture),
             SongWindow = data[11] == "1",
             Adps = ushort.Parse(data[12], CultureInfo.CurrentCulture),
-            LandsOnYou = string.Intern(data[13]),
-            LandsOnOther = string.Intern(data[14]),
-            WearOff = string.Intern(data[15]),
-            Proc = byte.Parse(data[16], CultureInfo.CurrentCulture)
+            Rank = ushort.Parse(data[13], CultureInfo.CurrentCulture),
+            LandsOnYou = string.Intern(data[14]),
+            LandsOnOther = string.Intern(data[15]),
+            WearOff = string.Intern(data[16]),
+            Proc = byte.Parse(data[17], CultureInfo.CurrentCulture)
           };
         }
       }

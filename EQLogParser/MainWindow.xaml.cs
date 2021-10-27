@@ -33,6 +33,7 @@ namespace EQLogParser
     internal static bool IsAoEHealingEnabled = true;
     internal static bool IsBaneDamageEnabled = false;
     internal static bool IsHideOnMinimizeEnabled = false;
+    internal static bool IsIgnoreCharmPetsEnabled = false;
     internal static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
     internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     internal static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
@@ -47,7 +48,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.43";
+    private const string VERSION = "v1.8.44";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -189,6 +190,10 @@ namespace EQLogParser
         ThemeManager.CurrentTheme = ThemeNames.Dark;
 
         UpdateDeleteChatMenu();
+
+        // Ignore Charm Pets
+        IsIgnoreCharmPetsEnabled = ConfigUtil.IfSet("IgnoreCharmPets");
+        ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Bane Damage
         IsBaneDamageEnabled = ConfigUtil.IfSet("IncludeBaneDamage");
@@ -421,6 +426,14 @@ namespace EQLogParser
 
       var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
+    }
+
+    private void ToggleIgnoreCharmPetsClick(object sender, RoutedEventArgs e)
+    {
+      IsIgnoreCharmPetsEnabled = !IsIgnoreCharmPetsEnabled;
+      ConfigUtil.SetSetting("IgnoreCharmPets", IsIgnoreCharmPetsEnabled.ToString(CultureInfo.CurrentCulture));
+      ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
+      MessageBox.Show("Restart EQLogParser when changing the Ignore Charm Pets setting for it to take effect.");
     }
 
     // Main Menu

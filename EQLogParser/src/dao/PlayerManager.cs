@@ -130,7 +130,7 @@ namespace EQLogParser
             }
 
             if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) && 
-              !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase))
+              !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) && !MainWindow.IsIgnoreCharmPetsEnabled)
             {
               CharmPets[name] = 1;
             }
@@ -412,14 +412,15 @@ namespace EQLogParser
       ConfigUtil.SavePlayers(list);
     }
 
-    internal void SetPlayerClass(string player, SpellClass theClass)
+    internal void SetPlayerClass(string player, SpellClass theClass, double currentTime)
     {
       if (!PlayerToClass.TryGetValue(player, out SpellClassCounter counter))
       {
         lock (PlayerToClass)
         {
-          counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, int>() };
+          counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, long>() };
           PlayerToClass.TryAdd(player, counter);
+          AddVerifiedPlayer(player, currentTime);
         }
       }
 
@@ -434,21 +435,27 @@ namespace EQLogParser
       }
     }
 
-    internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass)
+    internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass, double currentTime)
     {
       if (!PlayerToClass.TryGetValue(cast.Caster, out SpellClassCounter counter))
       {
         lock (PlayerToClass)
         {
-          counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, int>() };
+          counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, long>() };
           PlayerToClass.TryAdd(cast.Caster, counter);
         }
       }
 
       lock (counter)
       {
-        int newValue = 1;
-        if (counter.ClassCounts.TryGetValue(theClass, out int value))
+        long newValue = 1;
+        if (cast.SpellData.Rank > 1)
+        {
+          newValue = 10;
+          AddVerifiedPlayer(cast.Caster, currentTime);
+        }
+
+        if (counter.ClassCounts.TryGetValue(theClass, out long value))
         {
           newValue += value;
         }
@@ -457,7 +464,7 @@ namespace EQLogParser
 
         if (newValue > counter.CurrentMax)
         {
-          counter.CurrentMax = value;
+          counter.CurrentMax = newValue;
           counter.CurrentClass = theClass;
         }
       }
@@ -516,9 +523,9 @@ namespace EQLogParser
 
     private class SpellClassCounter
     {
-      internal int CurrentMax { get; set; }
+      internal long CurrentMax { get; set; }
       internal SpellClass CurrentClass { get; set; }
-      internal Dictionary<SpellClass, int> ClassCounts { get; set; }
+      internal Dictionary<SpellClass, long> ClassCounts { get; set; }
     }
   }
 }
