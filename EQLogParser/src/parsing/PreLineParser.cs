@@ -76,38 +76,56 @@ namespace EQLogParser
         else if (action.EndsWith(" shrinks.", StringComparison.Ordinal) && PlayerManager.Instance.IsPossiblePlayerName(action, action.Length - 9))
         {
           string test = action.Substring(0, action.Length - 9);
-          PlayerManager.Instance.AddPetOrPlayerAction(test);
-          found = true;
+          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          {
+            PlayerManager.Instance.AddPetOrPlayerAction(test);
+            found = true;
+          }
         }
         else if (action.EndsWith(" joined the raid.", StringComparison.Ordinal) && !action.StartsWith("You have", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 17);
-          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
-          found = true;
+          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          {
+            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            found = true;
+          }
         }
         else if (action.EndsWith(" has joined the group.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 22);
-          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
-          found = true;
+          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          {
+            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            found = true;
+          }
         }
         else if (action.EndsWith(" has left the raid.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 19);
-          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
-          found = true;
+          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          {
+            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            found = true;
+          }
         }
         else if (action.EndsWith(" has left the group.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 20);
-          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
-          found = true;
+          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          {
+            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            found = true;
+          }
         }
         else if (action.EndsWith(" is now the leader of your raid.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 32);
-          PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
-          found = true;
+          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          {
+            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            found = true;
+          }
         }
         // handle junk line to avoid it being written to debug
         else if (action.StartsWith("Your Irae Faycite Shard:", StringComparison.Ordinal))
