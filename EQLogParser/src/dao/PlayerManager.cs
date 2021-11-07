@@ -9,6 +9,8 @@ namespace EQLogParser
 {
   class PlayerManager
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     internal event EventHandler<PetMapping> EventsNewPetMapping;
     internal event EventHandler<string> EventsNewTakenPetOrPlayerAction;
     internal event EventHandler<string> EventsNewVerifiedPet;
@@ -146,7 +148,6 @@ namespace EQLogParser
           {
             EventsNewVerifiedPet?.Invoke(this, name);
           }
-
         }
       }
     }
@@ -426,11 +427,12 @@ namespace EQLogParser
 
       lock(counter)
       {
-        if (counter.CurrentClass != theClass && counter.CurrentMax != 1000000)
+        if (!theClass.Equals(counter.CurrentClass) && counter.CurrentMax != 1000000)
         {
           counter.CurrentClass = theClass;
           counter.ClassCounts[theClass] = 1000000;
           counter.CurrentMax = 1000000;
+          LOG.Debug("Assigning " + player + " as " + theClass.ToString() + " from class specific action");
         }
       }
     }
@@ -465,6 +467,10 @@ namespace EQLogParser
         if (newValue > counter.CurrentMax)
         {
           counter.CurrentMax = newValue;
+          if (!theClass.Equals(counter.CurrentClass))
+          {
+            LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
+          }
           counter.CurrentClass = theClass;
         }
       }

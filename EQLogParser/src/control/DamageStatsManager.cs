@@ -496,6 +496,7 @@ namespace EQLogParser
                 if (combined.StatsList.Count > i)
                 {
                   combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
+                  combined.StatsList[i].TooltipText = "Hello";
                   combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
 
                   if (childrenStats.TryGetValue(combined.StatsList[i].Name, out Dictionary<string, PlayerStats> children))
