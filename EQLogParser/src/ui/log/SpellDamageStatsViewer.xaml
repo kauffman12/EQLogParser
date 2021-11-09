@@ -34,7 +34,7 @@
       <ComboBox Margin="0,0,0,0" x:Name="spellList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="typeList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="30" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Single">
+    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="30" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Extended">
       <DataGrid.Columns>
         <DataGridTextColumn Binding="{Binding Spell}" ClipboardContentBinding="{x:Null}" Header="Spell" IsReadOnly="True" CanUserReorder="True" Width="220"/>
         <DataGridTextColumn Binding="{Binding Caster}" ClipboardContentBinding="{x:Null}" Header="Caster" IsReadOnly="True" CanUserReorder="True" MinWidth="70" />
