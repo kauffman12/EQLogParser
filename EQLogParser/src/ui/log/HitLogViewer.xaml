@@ -28,7 +28,7 @@
       <ComboBox Margin="0,0,4,0" x:Name="actionList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="actedList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="50" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Single">
+    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="50" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Extended">
       <DataGrid.Columns>
         <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="92" Width="92" />
         <DataGridTextColumn Binding="{Binding TimeSince}" ClipboardContentBinding="{x:Null}" CellStyle="{StaticResource CenterAlignGridCellStyle}" Header="Since" IsReadOnly="True" CanUserReorder="True" MinWidth="56" MaxWidth="56"/>
