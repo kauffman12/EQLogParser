@@ -185,15 +185,20 @@ namespace EQLogParser
         if ((tgt == SpellTarget.SELF || (spell.Level <= 250 && (tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS)) || spell.Rank > 1) &&
           classEnums.Contains((SpellClass)spell.ClassMask))
         {
-          // these need to be unique and keep track if a conflict is found
-          if (SpellsToClass.ContainsKey(spell.Name))
+          // Obviously illusions are bad to look for
+          // Call of Fire is Ranger only and self target but VT clickie lets warriors use it
+          if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 && spell.Name.IndexOf("Call of Fire", StringComparison.OrdinalIgnoreCase) == -1)
           {
-            SpellsToClass.TryRemove(spell.Name, out SpellClass _);
-            keepOut[spell.Name] = 1;
-          }
-          else if (!keepOut.ContainsKey(spell.Name))
-          {
-            SpellsToClass[spell.Name] = (SpellClass)spell.ClassMask;
+            // these need to be unique and keep track if a conflict is found
+            if (SpellsToClass.ContainsKey(spell.Name))
+            {
+              SpellsToClass.TryRemove(spell.Name, out SpellClass _);
+              keepOut[spell.Name] = 1;
+            }
+            else if (!keepOut.ContainsKey(spell.Name))
+            {
+              SpellsToClass[spell.Name] = (SpellClass)spell.ClassMask;
+            }
           }
         }
       });
