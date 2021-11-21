@@ -411,10 +411,14 @@ namespace EQLogParser
         stats.CritRate = Math.Round(Convert.ToDouble(stats.CritHits) / stats.Hits * 100, 2);
         stats.LuckRate = Math.Round(Convert.ToDouble(stats.LuckyHits) / stats.Hits * 100, 2);
 
-        // All Regulary Melee Hits are MeleeHits but not the reverse
+        // All Regular Melee Hits are MeleeHits but not the reverse
         if (stats.RegularMeleeHits > 0)
         {
           stats.FlurryRate = Math.Round(Convert.ToDouble(stats.FlurryHits) / stats.RegularMeleeHits * 100, 2);
+        }
+
+        if (stats.MeleeHits > 0)
+        {
           stats.StrikethroughRate = Math.Round(Convert.ToDouble(stats.StrikethroughHits) / stats.MeleeHits * 100, 2);
           stats.RiposteRate = Math.Round(Convert.ToDouble(stats.RiposteHits) / stats.MeleeHits * 100, 2);
           stats.RampageRate = Math.Round(Convert.ToDouble(stats.RampageHits) / stats.MeleeHits * 100, 2);

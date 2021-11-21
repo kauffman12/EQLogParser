@@ -640,6 +640,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(line))
       {
         string[] data = line.Split('^');
+
         if (data.Length >= 11)
         {
           int duration = int.Parse(data[3], CultureInfo.CurrentCulture) * 6; // as seconds

@@ -18,10 +18,11 @@ ADPS_B1_MIN = { 11: 100 }
 ADPS_B1_MAX = { 182: 0 }
 BASE1_PROC_LIST = [ 85, 406, 419, 427, 429 ]
 BASE2_PROC_LIST = [ 339, 340, 374, 383, 481 ]
-IGNORE = [ 'Test Shield', 'SummonTest', ' Test', 'test atk', 'PvPS', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
+IGNORE = [ 'Test Shield', 'SKU', 'SummonTest', ' Test', 'test atk', 'PvPS', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
 IS_NOT_PROC = [ 'Bifold Focus', 'Cloaked Blade', 'Journeyman Boots', 'Twincast', 'Prophet\'s Gift of the Ruchu', 'Spirit of Vesagran' ] # also appended to later
 IS_PROC = [ 'Arcane Fusion', 'Antipathetic Strike', 'Banestrike', 'Blessed Guardian Effect', 'Blessed Guardian Heal', 'Blessing of Life', 'Blessing of the Faithful', 'Bite of the Asp', 'Call of Fire Strike', 'Cascade of Decay Rot', 'Cascading Theft of Defense', 'Cascading Theft of Life', 'Color Shock Stun', 'Cryomancy', 'Decapitation', 'Distracting Strike', 'Divine Surge of Battle', 'Envenomed Blade', 'Eye Gouge', 'Feral Swipe', 'Fists of Fury', 'Flurry of Daggers', 'Frenzied Volley', 'Gelid Claw', 'Gorilla Smash', 'Gut Punch Strike', 'Healing Light', 'Heavy Arrow', 'Hunter\'s Fury', 'Nature\'s Reprieve', 'Languid Bite', 'Phalanx of Fury', 'Phantasmic Reflex', 'Recourse of Life', 'Sanctified Blessing', 'Uncontained Frenzy', 'Lethality', 'Massive Strike', 'Mortal Coil', 'Overdrive Punch', 'Presence of Fear', 'Pyromancy', 'Reluctant Lifeshare',
 'Resonant Kick', 'Resonant Strike', 'Soul Flay', 'Sincere Fury Strike', 'Spirit Strike', 'Steely Renewal', 'Strike of Ire', 'Strike Fury', 'Thunderfoot', 'Theft of Essence', 'Touch of the Cursed' ]
+
 RANKS = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Third', 'Fifth', 'Octave' ]
 ROMAN = [ (400, 'CD'), (100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'), (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I') ]
 
@@ -366,7 +367,11 @@ if os.path.isfile(DBSpellsFile):
     # ignore long term beneficial buffs like FIRE DAMAGE
     # howerver allow their SPAs to be checked for procs so continue at the end
     if origDuration == 1950 and castTime == 0 and lockoutTime == 0 and recastTime == 0 and beneficial != 0:
-      continue  
+      continue
+	  
+    # filter out obvious abilities that cant be from a player
+    #if blockable != 0 and dispellable != 0 and maxDuration < 1950 and adps > 0:
+    #  adps = 0	  
     
     classMask = 0
     minLevel = 255
@@ -483,7 +488,7 @@ if os.path.isfile(DBSpellsFile):
       info['wearOff'] = DBSTRINGS[id]['wearOff']
 
     # Overdrive Punch the proc and main spell have the same name. Just ignore the non-damaging versions
-    if name != 'Overdrive Punch' or beneficial == 0:
+    if name != 'Overdrive Punch' or beneficial == 1:
       spells[id] = info
 
   # update procs
@@ -554,6 +559,6 @@ if os.path.isfile(DBSpellsFile):
 
   output = open('output.txt', 'w')
   for key in sorted(final):
-    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s^%d' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'], final[key]['proc'])
+    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s^%d' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['rank'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'], final[key]['proc'])
     output.write(data)
     output.write('\n')
