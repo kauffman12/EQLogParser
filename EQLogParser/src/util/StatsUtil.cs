@@ -331,7 +331,7 @@ namespace EQLogParser
         stats.Max = Math.Max(stats.Max, record.Total);
       }
 
-      if (record.Total > 0 && record.OverTotal > 0)
+      if (record.OverTotal > 0)
       {
         stats.Extra += (record.OverTotal - record.Total);
       }

@@ -79,7 +79,7 @@ namespace EQLogParser
       string healed = "";
       string spell = null;
       string type = Labels.HEAL;
-      uint heal = 0;
+      uint heal = uint.MaxValue;
       uint overHeal = 0;
 
       int previous = test.Length >= 2 ? test.LastIndexOf(" ", test.Length - 2, StringComparison.Ordinal) : -1;
@@ -224,7 +224,7 @@ namespace EQLogParser
             healer = Labels.UNK;
           }
 
-          if (!string.IsNullOrEmpty(healer) && heal != 0)
+          if (!string.IsNullOrEmpty(healer) && heal != uint.MaxValue)
           {
             record = new HealRecord()
             {
