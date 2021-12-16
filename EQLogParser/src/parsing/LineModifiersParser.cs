@@ -16,7 +16,7 @@ namespace EQLogParser
 
     private static readonly Dictionary<string, byte> CRIT_MODIFIERS = new Dictionary<string, byte>()
     {
-      { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1 }
+      { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1}
     };
 
     private const int TWINCAST = 1;
@@ -30,6 +30,7 @@ namespace EQLogParser
     private const int SLAY = 256;
     private const int DOUBLEBOW = 512;
     private const int FLURRY = 1024;
+    private const int FINISHING = 2048;
 
     private static readonly ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
 
@@ -90,6 +91,17 @@ namespace EQLogParser
           if (theHit != null)
           {
             theHit.HeadHits++;
+          }
+        }
+
+        if ((record.ModifiersMask & FINISHING) != 0)
+        {
+          playerStats.FinishingHits++;
+          playerStats.TotalFinishing += record.Total;
+
+          if (theHit != null)
+          {
+            theHit.FinishingHits++;
           }
         }
 
@@ -232,6 +244,9 @@ namespace EQLogParser
             case "Double Bow Shot":
               result |= DOUBLEBOW;
               PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, currentTime);
+              break;
+            case "Finishing Blow":
+              result |= FINISHING;
               break;
             case "Flurry":
               result |= FLURRY;
