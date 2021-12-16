@@ -230,6 +230,7 @@ namespace EQLogParser
     public uint FlurryHits { get; set; }
     public uint BowHits { get; set; }
     public uint HeadHits { get; set; }
+    public uint FinishingHits { get; set; }
     public uint LuckyHits { get; set; }
     public uint MeleeAttempts { get; set; }
     public uint MeleeHits { get; set; }
@@ -243,6 +244,7 @@ namespace EQLogParser
     public long Total { get; set; }
     public long TotalAss { get; set; }
     public long TotalCrit { get; set; }
+    public long TotalFinishing { get; set; }
     public long TotalHead { get; set; }
     public long TotalLucky { get; set; }
     public long TotalNonTwincast { get; set; }

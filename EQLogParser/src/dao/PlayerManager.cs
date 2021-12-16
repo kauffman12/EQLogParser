@@ -469,7 +469,10 @@ namespace EQLogParser
           counter.CurrentMax = newValue;
           if (!theClass.Equals(counter.CurrentClass))
           {
-            LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
+            if (LOG.IsDebugEnabled)
+            {
+              LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
+            }
           }
           counter.CurrentClass = theClass;
         }

@@ -354,6 +354,7 @@ namespace EQLogParser
         to.Total += from.Total;
         to.TotalAss += from.TotalAss;
         to.TotalCrit += from.TotalCrit;
+        to.TotalFinishing += from.TotalFinishing;
         to.TotalHead += from.TotalHead;
         to.TotalLucky += from.TotalLucky;
         to.TotalNonTwincast += from.TotalNonTwincast;
@@ -365,6 +366,7 @@ namespace EQLogParser
         to.AssHits += from.AssHits;
         to.CritHits += from.CritHits;
         to.DoubleBowHits = from.DoubleBowHits;
+        to.FinishingHits += from.FinishingHits;
         to.FlurryHits += from.FlurryHits;
         to.HeadHits += from.HeadHits;
         to.LuckyHits += from.LuckyHits;
