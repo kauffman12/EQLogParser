@@ -1,9 +1,9 @@
 #NukeCritRate
 Apex of Enchantment=9
 Auspice of the Hunter=33
-Fierce Eye=15
+Fierce Eye=17
 Glyph of Destruction=15
-Group Spirit of the Great Wolf=12|Spirit of the Great Wolf=18
+Group Spirit of the Great Wolf=14|Spirit of the Great Wolf=20
 Illusions of Grandeur=13
 Intensity of the Resolute=50
 Mana Charge=175
@@ -17,7 +17,7 @@ Spirit of Vesagran=12
 
 #DoTCritRate
 Auspice of the Hunter=33
-Fierce Eye=15
+Fierce Eye=17
 Glyph of Destruction=15
 Illusions of Grandeur=13
 Intensity of the Resolute=50

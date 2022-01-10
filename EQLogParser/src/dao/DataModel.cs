@@ -234,6 +234,8 @@ namespace EQLogParser
     public uint LuckyHits { get; set; }
     public uint MeleeAttempts { get; set; }
     public uint MeleeHits { get; set; }
+    public uint NonTwincastCritHits { get; set; }
+    public uint NonTwincastLuckyHits { get; set; }
     public uint SpellHits { get; set; }
     public uint StrikethroughHits { get; set; }
     public uint RampageHits { get; set; }
@@ -248,6 +250,8 @@ namespace EQLogParser
     public long TotalHead { get; set; }
     public long TotalLucky { get; set; }
     public long TotalNonTwincast { get; set; }
+    public long TotalNonTwincastCrit { get; set; }
+    public long TotalNonTwincastLucky { get; set; }
     public long TotalRiposte { get; set; }
     public long TotalSlay { get; set; }
     public Dictionary<long, int> CritFreqValues { get; } = new Dictionary<long, int>();
@@ -426,6 +430,8 @@ namespace EQLogParser
     public long AvgCrit { get; set; }
     public long AvgLucky { get; set; }
     public long AvgNonTwincast { get; set; }
+    public long AvgNonTwincastCrit { get; set; }
+    public long AvgNonTwincastLucky { get; set; }
     public double CritRate { get; set; }
     public double DoubleBowRate { get; set; }
     public double ExtraRate { get; set; }

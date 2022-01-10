@@ -179,6 +179,18 @@ namespace EQLogParser
             {
               theHit.TotalCrit += record.Total;
             }
+
+            if ((record.ModifiersMask & TWINCAST) == 0)
+            {
+              playerStats.NonTwincastCritHits++;
+              playerStats.TotalNonTwincastCrit += record.Total;
+
+              if (theHit != null)
+              {
+                theHit.NonTwincastCritHits++;
+                theHit.TotalNonTwincastCrit += record.Total;
+              }
+            }
           }
         }
 
@@ -191,6 +203,18 @@ namespace EQLogParser
           {
             theHit.LuckyHits++;
             theHit.TotalLucky += record.Total;
+          }
+
+          if ((record.ModifiersMask & TWINCAST) == 0)
+          {
+            playerStats.NonTwincastLuckyHits++;
+            playerStats.TotalNonTwincastLucky += record.Total;
+
+            if (theHit != null)
+            {
+              theHit.NonTwincastLuckyHits++;
+              theHit.TotalNonTwincastLucky += record.Total;
+            }
           }
         }
       }
