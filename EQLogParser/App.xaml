@@ -466,6 +466,12 @@
     <!-- Tooltips -->
     <Style x:Key="AvgNonTwincastColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Average Damage for all Hits that were not a Twincast" />
+    </Style>
+    <Style x:Key="AvgNonTwincastCritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Average Crit Damage for all Hits that were not a Twincast" />
+    </Style>
+    <Style x:Key="AvgNonTwincastLuckyColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
+      <Setter Property="ToolTip" Value="Average Lucky Damage for all Hits that were not a Twincast" />
     </Style>    
     <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Based on Crippling Blow, Critical, Deadly Strike, and Finishing Blow" />

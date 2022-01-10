@@ -358,6 +358,8 @@ namespace EQLogParser
         to.TotalHead += from.TotalHead;
         to.TotalLucky += from.TotalLucky;
         to.TotalNonTwincast += from.TotalNonTwincast;
+        to.TotalNonTwincastCrit += from.TotalNonTwincastCrit;
+        to.TotalNonTwincastLucky += from.TotalNonTwincastLucky;
         to.TotalRiposte += from.TotalRiposte;
         to.TotalSlay += from.TotalSlay;
         to.Hits += from.Hits;
@@ -365,6 +367,8 @@ namespace EQLogParser
         to.Extra += from.Extra;
         to.AssHits += from.AssHits;
         to.CritHits += from.CritHits;
+        to.NonTwincastCritHits += from.NonTwincastCritHits;
+        to.NonTwincastLuckyHits += from.NonTwincastLuckyHits;
         to.DoubleBowHits = from.DoubleBowHits;
         to.FinishingHits += from.FinishingHits;
         to.FlurryHits += from.FlurryHits;
@@ -398,6 +402,16 @@ namespace EQLogParser
         if (stats.LuckyHits > 0)
         {
           stats.AvgLucky = (long)Math.Round(Convert.ToDecimal(stats.TotalLucky) / stats.LuckyHits, 2);
+        }
+
+        if (stats.NonTwincastCritHits > 0)
+        {
+          stats.AvgNonTwincastCrit = (long)Math.Round(Convert.ToDecimal(stats.TotalNonTwincastCrit) / stats.NonTwincastCritHits, 2);
+        }
+
+        if (stats.NonTwincastLuckyHits > 0)
+        {
+          stats.AvgNonTwincastLucky = (long)Math.Round(Convert.ToDecimal(stats.TotalNonTwincastLucky) / stats.NonTwincastLuckyHits, 2);
         }
 
         if (stats.Total > 0)

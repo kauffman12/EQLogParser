@@ -17,11 +17,10 @@ ADPS_LIST = ADPS_CASTER + ADPS_MELEE + ADPS_TANK
 ADPS_B1_MIN = { 11: 100 }
 ADPS_B1_MAX = { 182: 0 }
 BASE1_PROC_LIST = [ 85, 406, 419, 427, 429 ]
-BASE2_PROC_LIST = [ 339, 340, 374, 383, 481 ]
+BASE2_PROC_LIST = [ 339, 340, 360, 374, 383, 481 ]
 IGNORE = [ 'Test Shield', 'SKU', 'SummonTest', ' Test', 'test atk', 'PvPS', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
-IS_NOT_PROC = [ 'Bifold Focus', 'Cloaked Blade', 'Journeyman Boots', 'Frost Shock', 'Ice Shock', 'Lightning Shock', 'Twincast', 'Prophet\'s Gift of the Ruchu', 'Spirit of Vesagran' ] # also appended to later
-IS_PROC = [ 'Arcane Fusion', 'Antipathetic Strike', 'Banestrike', 'Blessed Guardian Effect', 'Blessed Guardian Heal', 'Blessing of Life', 'Blessing of the Faithful', 'Bite of the Asp', 'Call of Fire Strike', 'Cascade of Decay Rot', 'Cascading Theft of Defense', 'Cascading Theft of Life', 'Color Shock Stun', 'Cryomancy', 'Decapitation', 'Distracting Strike', 'Divine Surge of Battle', 'Envenomed Blade', 'Eye Gouge', 'Feral Swipe', 'Fists of Fury', 'Flurry of Daggers', 'Frenzied Volley', 'Gelid Claw', 'Gorilla Smash', 'Gut Punch Strike', 'Healing Light', 'Heavy Arrow', 'Hunter\'s Fury', 'Nature\'s Reprieve', 'Languid Bite', 'Phalanx of Fury', 'Phantasmic Reflex', 'Recourse of Life', 'Sanctified Blessing', 'Uncontained Frenzy', 'Lethality', 'Massive Strike', 'Mortal Coil', 'Overdrive Punch', 'Presence of Fear', 'Pyromancy', 'Reluctant Lifeshare',
-'Resonant Kick', 'Resonant Strike', 'Soul Flay', 'Sincere Fury Strike', 'Spirit Strike', 'Steely Renewal', 'Strike of Ire', 'Strike Fury', 'Thunderfoot', 'Theft of Essence', 'Touch of the Cursed' ]
+IS_NOT_PROC = [ 'Bifold Focus', 'Boastful Bellow', 'Cloaked Blade', 'Journeyman Boots', 'Frost Shock', 'Ice Shock', 'Lightning Shock', 'Twincast', 'Prophet\'s Gift of the Ruchu', 'Spirit of Vesagran' ] # also appended to later
+IS_PROC = [ 'Arcane Fusion', 'Antipathetic Strike', 'Banestrike', 'Blessed Guardian Effect', 'Blessed Guardian Heal', 'Blessing of Life', 'Blessing of the Faithful', 'Bite of the Asp', 'Boastful Conclusion', 'Call of Fire Strike', 'Cascade of Decay Rot', 'Cascading Theft of Defense', 'Cascading Theft of Life', 'Color Shock Stun', 'Cryomancy', 'Decapitation', 'Distracting Strike', 'Divine Surge of Battle', 'Envenomed Blade', 'Eye Gouge', 'Feral Swipe', 'Fists of Fury', 'Flurry of Daggers', 'Frenzied Volley', 'Gelid Claw', 'Gorilla Smash', 'Gut Punch Strike', 'Healing Light', 'Heavy Arrow', 'Hunter\'s Fury', 'Nature\'s Reprieve', 'Languid Bite', 'Phalanx of Fury', 'Phantasmic Reflex', 'Recourse of Life', 'Sanctified Blessing', 'Uncontained Frenzy', 'Lethality', 'Massive Strike', 'Mortal Coil', 'Overdrive Punch', 'Presence of Fear', 'Pyromancy', 'Reluctant Lifeshare', 'Resonant Kick', 'Resonant Strike', 'Soul Flay', 'Sincere Fury Strike', 'Spirit Strike', 'Steely Renewal', 'Strike of Ire', 'Strike Fury', 'Trigger', 'Thunderfoot', 'Theft of Essence', 'Touch of the Cursed' ]
 
 RANKS = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Third', 'Fifth', 'Octave' ]
 ROMAN = [ (400, 'CD'), (100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'), (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I') ]
@@ -350,6 +349,7 @@ if os.path.isfile(DBSpellsFile):
     skill = int(data[32])
     recourse = data[81]
     songWindow = int(data[84])
+    reflectable = int(data[91])
     hateMod = int(data[92])
     combatSkill = int(data[98])
     hateOver = int(data[99])
@@ -496,11 +496,11 @@ if os.path.isfile(DBSpellsFile):
     proc = 0
     if spells[id]['bane'] == True:
       proc = 2
-    elif (inProcList(spells[id]['abbrv'])):
-      proc = 1
     elif (id in procSPAs and not inNotProcList(spells[id]['abbrv']) and spells[id]['level'] > 250): # extra check for regular spells picked up
       proc = 1
-    elif spells[id]['level'] == 255 and not inNotProcList(spells[id]['abbrv']) and spells[id]['castTime'] == 0 and spells[id]['manaCost'] == 0 and spells[id]['combatSkill'] == 0:
+    elif spells[id]['level'] == 255 and not inNotProcList(spells[id]['abbrv']) and spells[id]['castTime'] == 0 and spells[id]['manaCost'] == 0 and spells[id]['combatSkill'] == 0 and spells[id]['rank'] < 1:
+      proc = 1
+    elif (inProcList(spells[id]['abbrv'])):
       proc = 1
     spells[id]['proc'] = proc
 
