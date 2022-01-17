@@ -21,6 +21,7 @@ BASE2_PROC_LIST = [ 339, 340, 360, 374, 383, 481 ]
 IGNORE = [ 'Test Shield', 'SKU', 'SummonTest', ' Test', 'test atk', 'PvPS', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
 IS_NOT_PROC = [ 'Bifold Focus', 'Boastful Bellow', 'Cloaked Blade', 'Journeyman Boots', 'Frost Shock', 'Ice Shock', 'Lightning Shock', 'Twincast', 'Prophet\'s Gift of the Ruchu', 'Spirit of Vesagran' ] # also appended to later
 IS_PROC = [ 'Arcane Fusion', 'Antipathetic Strike', 'Banestrike', 'Blessed Guardian Effect', 'Blessed Guardian Heal', 'Blessing of Life', 'Blessing of the Faithful', 'Bite of the Asp', 'Boastful Conclusion', 'Call of Fire Strike', 'Cascade of Decay Rot', 'Cascading Theft of Defense', 'Cascading Theft of Life', 'Color Shock Stun', 'Cryomancy', 'Decapitation', 'Distracting Strike', 'Divine Surge of Battle', 'Envenomed Blade', 'Eye Gouge', 'Feral Swipe', 'Fists of Fury', 'Flurry of Daggers', 'Frenzied Volley', 'Gelid Claw', 'Gorilla Smash', 'Gut Punch Strike', 'Healing Light', 'Heavy Arrow', 'Hunter\'s Fury', 'Nature\'s Reprieve', 'Languid Bite', 'Phalanx of Fury', 'Phantasmic Reflex', 'Recourse of Life', 'Sanctified Blessing', 'Uncontained Frenzy', 'Lethality', 'Massive Strike', 'Mortal Coil', 'Overdrive Punch', 'Presence of Fear', 'Pyromancy', 'Reluctant Lifeshare', 'Resonant Kick', 'Resonant Strike', 'Soul Flay', 'Sincere Fury Strike', 'Spirit Strike', 'Steely Renewal', 'Strike of Ire', 'Strike Fury', 'Trigger', 'Thunderfoot', 'Theft of Essence', 'Touch of the Cursed' ]
+IS_TARGETRING = [ 'Issuance' ]
 
 RANKS = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Third', 'Fifth', 'Octave' ]
 ROMAN = [ (400, 'CD'), (100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'), (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I') ]
@@ -277,6 +278,12 @@ def inNotProcList(name):
     if name == test:
       return True 
   return False  
+
+def isTargetRing(name):
+  for test in IS_TARGETRING:
+    if name.startswith(test):
+      return True
+  return False
   
 def intToRoman(number):
   result = ''
@@ -359,6 +366,9 @@ if os.path.isfile(DBSpellsFile):
     blockable = int(data[130])
     rank = int(data[133]) # AA rank
     origDuration = maxDuration
+
+    if isTargetRing(name):
+      spellTarget = 45  
 
     # add focus AAs for additional hits
     if intId in MAX_HITS:
