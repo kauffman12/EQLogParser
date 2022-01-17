@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.8.54" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.8.56" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -135,6 +135,9 @@
       </Component>
       <Component Win64="yes" Id="spells.txt" Guid="2FC00676-7C5D-4075-9BC7-2C49C977732B">
         <File Id="spells.txt" Name="spells.txt" Source="$(var.EQLogParser_TargetDir)\data\spells.txt" />
+      </Component>
+      <Component Win64="yes" Id="oldspells.txt" Guid="3F1F6373-8E8D-4C14-89EB-CD3AF3D6320A">
+        <File Id="oldspells.txt" Name="oldspells.txt" Source="$(var.EQLogParser_TargetDir)\data\oldspells.txt" />
       </Component>
       <Component Win64="yes" Id="npcs.txt" Guid="46C8209D-FDBA-4948-AB7C-699AFD8CDE8A">
         <File Id="npcs.txt" Name="npcs.txt" Source="$(var.EQLogParser_TargetDir)\data\npcs.txt" />

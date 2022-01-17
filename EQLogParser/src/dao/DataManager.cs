@@ -15,7 +15,7 @@ namespace EQLogParser
   internal enum SpellTarget
   {
     LOS = 1, CASTERAE = 2, CASTERGROUP = 3, CASTERPB = 4, SINGLETARGET = 5, SELF = 6, TARGETAE = 8,
-    NEARBYPLAYERSAE = 40, DIRECTIONAE = 42, TARGETRINGAE = 45
+    CASTERPBPLAYERS = 36, NEARBYPLAYERSAE = 40, DIRECTIONAE = 42, TARGETRINGAE = 45
   }
 
   internal enum SpellResist
@@ -99,6 +99,7 @@ namespace EQLogParser
     private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> SpellsNameDB = new Dictionary<string, List<SpellData>>();
+    private readonly Dictionary<string, bool> OldSpellNamesDB = new Dictionary<string, bool>();
 
     private readonly ConcurrentDictionary<string, byte> AllNpcs = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>>();
@@ -126,6 +127,9 @@ namespace EQLogParser
       RanksCache["Third"] = "Root";
       RanksCache["Fifth"] = "Root";
       RanksCache["Octave"] = "Root";
+
+      // Old Spell cache (EQEMU)
+      ConfigUtil.ReadList(@"data\oldspells.txt").ForEach(line => OldSpellNamesDB[line] = true);
 
       ConfigUtil.ReadList(@"data\spells.txt").ForEach(line =>
       {
@@ -285,6 +289,7 @@ namespace EQLogParser
     internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     internal SpellData GetSpellByAbbrv(string abbrv) => (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv)) ? SpellsAbbrvDB[abbrv] : null;
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
+    internal bool IsOldSpell(string name) => OldSpellNamesDB.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(TextFormatUtils.FlipCase(name));
 

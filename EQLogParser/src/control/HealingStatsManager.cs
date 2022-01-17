@@ -111,7 +111,7 @@ namespace EQLogParser
                     if (record.SubType != null && (spellData = DataManager.Instance.GetHealingSpellByName(record.SubType)) != null)
                     {
                       if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
-                        spellData.Target == (byte)SpellTarget.TARGETRINGAE)
+                        spellData.Target == (byte)SpellTarget.TARGETRINGAE || spellData.Target == (byte)SpellTarget.CASTERPBPLAYERS)
                       {
                         valid = MainWindow.IsAoEHealingEnabled;
                       }
