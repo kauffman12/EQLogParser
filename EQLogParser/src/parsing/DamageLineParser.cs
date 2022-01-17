@@ -49,6 +49,8 @@ namespace EQLogParser
       { "Mana Burn", "M" }, { "Harm Touch", "H" }, { "Life Burn", "L" }
     };
 
+    private static OldCritData LastCrit;
+
     static DamageLineParser() => HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]); // add two way mapping
 
     public static void CheckSlainQueue(double currentTime)
@@ -106,20 +108,12 @@ namespace EQLogParser
             }
           }
 
-          if (lineData.Line.Contains("Vandil parries!"))
-          {
-            if (true)
-            {
-
-            }
-          }
-
           if (!handled)
           {
             int byIndex = -1, forIndex = -1, pointsOfIndex = -1, endDamage = -1, byDamage = -1, extraIndex = -1;
             int fromDamage = -1, hasIndex = -1, haveIndex = -1, hitType = -1, hitTypeAdd = -1, slainIndex = -1;
             int takenIndex = -1, tryIndex = -1, yourIndex = -1, isIndex = -1, dsIndex = -1, butIndex = -1;
-            int missType = -1;
+            int missType = -1, nonMeleeIndex = -1;
             string subType = null;
 
             bool found = false;
@@ -178,6 +172,7 @@ namespace EQLogParser
                     }
                     break;
                   case "non-melee":
+                    nonMeleeIndex = i;
                     if (i > 9 && stop == (i + 1) && split[i + 1] == "damage." && pointsOfIndex == (i - 2) && forIndex == (i - 4))
                     {
                       dsIndex = i - 5;
@@ -229,6 +224,19 @@ namespace EQLogParser
                       {
                         extraIndex = i + 2;
                       }
+                    }
+                    break;
+                  // Old (EQEMU) crit and crippling blow handling
+                  case "hit!":
+                    if (stop == i && split.Length > 4 && split[i-1] == "critical" && split[i-3] == "scores")
+                    {
+                      LastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
+                    }
+                    break;
+                  case "Crippling":
+                    if (stop == (i + 1) && split.Length > 4 && split[i + 1].StartsWith("Blow!") && split[i - 2] == "lands")
+                    {
+                      LastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
                     }
                     break;
                   default:
@@ -297,7 +305,7 @@ namespace EQLogParser
             }
             // [Sun Apr 18 21:26:15 2021] Astralx crushes Sontalak for 126225 points of damage. (Strikethrough Critical)
             // [Sun Apr 18 20:20:32 2021] Susarrak the Crusader claws Villette for 27699 points of damage. (Strikethrough Wild Rampage)
-            if (!string.IsNullOrEmpty(subType) && endDamage > -1 && pointsOfIndex == (endDamage - 2) && forIndex > -1 && hitType < forIndex)
+            else if (!string.IsNullOrEmpty(subType) && endDamage > -1 && pointsOfIndex == (endDamage - 2) && forIndex > -1 && hitType < forIndex)
             {
               int hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
               string attacker = string.Join(" ", split, 0, hitType);
@@ -334,6 +342,7 @@ namespace EQLogParser
             // [Sun Apr 18 20:32:42 2021] Grendish the Crusader has taken 1003231 damage from Pyre of Klraggek Rk. III by Atvar. (Lucky Critical)
             // [Thu Mar 18 18:48:10 2021] You have taken 4852 damage from Nectar of Misery by Commander Gartik.
             // [Thu Mar 18 01:05:46 2021] A gnoll has taken 108790 damage from your Mind Coil Rk. II.
+            // Old (eqemu) [Sat Jan 15 21:09:10 2022] Pixtt Invi Mal has taken 189 damage from Goanna by Tuyen`s Chant of Fire.
             else if (fromDamage > 3 && takenIndex == (fromDamage - 3) && (byIndex > fromDamage || yourIndex > fromDamage))
             {
               string attacker = null;
@@ -353,10 +362,26 @@ namespace EQLogParser
 
               if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
               {
+                string type;
+                SpellData spellData = DataManager.Instance.GetDamagingSpellByName(spell);
+
+                // Old (eqemu) if attacker is actually a spell then swap attacker and spell
+                // Spells dont change on eqemu servers so this should always be a spell even with old spell data
+                if (spellData == null && DataManager.Instance.IsOldSpell(attacker))
+                {
+                  // check that we can't find a spell where the player name is
+                  var temp = attacker;
+                  attacker = spell;
+                  spell = temp;
+                  type = Labels.DOT;
+                }
+                else
+                {
+                  type = GetTypeFromSpell(spell, Labels.DOT);
+                }
+
                 string defender = string.Join(" ", split, 0, takenIndex);
                 uint damage = StatsUtil.ParseUInt(split[fromDamage - 1]);
-                string type = GetTypeFromSpell(spell, Labels.DOT);
-                var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
                 SpellResist resist = spellData != null ? spellData.Resist : SpellResist.UNDEFINED;
                 handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell, resist);
               }
@@ -379,6 +404,15 @@ namespace EQLogParser
               }
 
               handled = CreateDamageRecord(lineData, split, stop, "", defender, damage, Labels.DOT, spell, resist, true);
+            }
+            // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
+            else if (hitType > -1 && forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
+            {
+              int hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
+              string attacker = string.Join(" ", split, 0, hitType);
+              string defender = string.Join(" ", split, hitType + hitTypeMod + 1, forIndex - hitType - hitTypeMod - 1);
+              uint damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
+              handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DD, Labels.DD);
             }
             // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but misses! (Strikethrough)
             // [Sat Aug 03 00:20:57 2019] You try to crush a Kar`Zok soldier, but miss! (Riposte Strikethrough)
@@ -560,6 +594,18 @@ namespace EQLogParser
 
         if (!double.IsNaN(currentTime))
         {
+          // handle old style crits for eqemu
+          if (LastCrit != null && LastCrit.Attacker == record.Attacker && LastCrit.LineData.LineNumber == (lineData.LineNumber - 1))
+          {
+            var critTime = DateUtil.ParseLogDate(LastCrit.LineData.Line, out string _);
+            if (!double.IsNaN(critTime) && (currentTime - critTime) <= 1)
+            {
+              record.ModifiersMask = (record.ModifiersMask == -1) ? LineModifiersParser.CRIT : record.ModifiersMask | LineModifiersParser.CRIT;
+            }
+
+            LastCrit = null;
+          }
+
           CheckSlainQueue(currentTime);
 
           DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
@@ -676,6 +722,12 @@ namespace EQLogParser
         ignore = !name.EndsWith("Veeshan") && !name.EndsWith("Despair");
       }
       return ignore;
+    }
+
+    private class OldCritData
+    {
+      internal string Attacker { get; set; }
+      internal LineData LineData { get; set; }
     }
   }
 }

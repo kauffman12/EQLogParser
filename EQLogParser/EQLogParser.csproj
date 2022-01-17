@@ -499,6 +499,9 @@
     <Content Include="data\npcs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="data\oldspells.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="data\petnames.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

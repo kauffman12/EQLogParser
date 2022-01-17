@@ -19,8 +19,8 @@ namespace EQLogParser
       { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1}
     };
 
+    public const int CRIT = 2;
     private const int TWINCAST = 1;
-    private const int CRIT = 2;
     private const int LUCKY = 4;
     private const int RAMPAGE = 8;
     private const int STRIKETHROUGH = 16;
