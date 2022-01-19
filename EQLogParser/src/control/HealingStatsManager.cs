@@ -99,34 +99,94 @@ namespace EQLogParser
               var healedBySpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healerHealedTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healerSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
+
+              double currentTime = double.NaN;
+              Dictionary<string, int> currentSpellCounts = new Dictionary<string, int>();
+              Dictionary<string, int> previousSpellCounts = new Dictionary<string, int>();
+              Dictionary<string, byte> ignoreRecords = new Dictionary<string, byte>();
+              List<ActionBlock> filtered = new List<ActionBlock>();
               DataManager.Instance.GetHealsDuring(segment.BeginTime, segment.EndTime).ForEach(heal =>
               {
-                var updatedHeal = new ActionBlock() { BeginTime = heal.BeginTime };
+                // copy
+                var newBlock = new ActionBlock { BeginTime = heal.BeginTime };
+                filtered.Add(newBlock);
+
+                // need to keep track of two seconds worth of data
+                if (currentTime != double.NaN && currentTime == (heal.BeginTime - 1))
+                {
+                  previousSpellCounts = currentSpellCounts;
+                }
+                else
+                {
+                  previousSpellCounts.Clear();
+                }
+
+                currentTime = heal.BeginTime;
+                currentSpellCounts = new Dictionary<string, int>();
+
                 foreach (var record in heal.Actions.Cast<HealRecord>())
                 {
                   if (PlayerManager.Instance.IsPetOrPlayer(record.Healed) || PlayerManager.Instance.IsPossiblePlayerName(record.Healed))
                   {
-                    bool valid = true;
-                    SpellData spellData;
-                    if (record.SubType != null && (spellData = DataManager.Instance.GetHealingSpellByName(record.SubType)) != null)
+                    // if AOEHealing is disabled then filter out AEs
+                    if (!MainWindow.IsAoEHealingEnabled)
                     {
-                      if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
-                        spellData.Target == (byte)SpellTarget.TARGETRINGAE || spellData.Target == (byte)SpellTarget.CASTERPBPLAYERS)
+                      SpellData spellData;
+                      if (record.SubType != null && (spellData = DataManager.Instance.GetHealingSpellByName(record.SubType)) != null)
                       {
-                        valid = MainWindow.IsAoEHealingEnabled;
+                        if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
+                          spellData.Target == (byte)SpellTarget.TARGETRINGAE || spellData.Target == (byte)SpellTarget.CASTERPBPLAYERS)
+                        {
+                          // just skip these entirely if AOEs are turned off
+                          continue;
+                        }
+                        else if (spellData.Target == (byte)SpellTarget.CASTERGROUP && spellData.Mgb)
+                        {
+                          // need to count group AEs and if more than 6 are seen we need to ignore those
+                          // casts since they're from MGB and count as an AE
+                          var key = record.Healer + "|" + record.SubType;
+                          if (currentSpellCounts.TryGetValue(key, out int value))
+                          {
+                            currentSpellCounts[key] = value + 1;
+                          }
+                          else
+                          {
+                            currentSpellCounts[key] = 1;
+                          }
+
+                          int previousSpellCount = previousSpellCounts.ContainsKey(key) ? previousSpellCounts[key] : 0;
+                          if (currentSpellCounts[key] + previousSpellCount > 6)
+                          {
+                            ignoreRecords[heal.BeginTime + "|" + key] = 1;
+                            if (previousSpellCounts.ContainsKey(key))
+                            {
+                              ignoreRecords[(heal.BeginTime - 1) + "|" + key] = 1;
+                            }
+                          }
+                        }
                       }
                     }
 
-                    if (valid)
-                    {
-                      updatedHeal.Actions.Add(record);
-                      // store substats and substats2 which is based on the player that was healed
-                      var key = Helpers.CreateRecordKey(record.Type, record.SubType);
-                      StatsUtil.UpdateTimeSegments(null, healedByHealerTimeSegments, record.Healer, record.Healed, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healedBySpellTimeSegments, key, record.Healed, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healerHealedTimeSegments, record.Healed, record.Healer, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healerSpellTimeSegments, key, record.Healer, heal.BeginTime);
-                    }
+                    newBlock.Actions.Add(record);
+                  }
+                }
+              });
+
+              filtered.ForEach(heal =>
+              {
+                var updatedHeal = new ActionBlock() { BeginTime = heal.BeginTime };
+                foreach (var record in heal.Actions.Cast<HealRecord>())
+                {
+                  var ignoreKey = heal.BeginTime + "|" + record.Healer + "|" + record.SubType;
+                  if (!ignoreRecords.ContainsKey(ignoreKey))
+                  {
+                    updatedHeal.Actions.Add(record);
+                    // store substats and substats2 which is based on the player that was healed
+                    var key = Helpers.CreateRecordKey(record.Type, record.SubType);
+                    StatsUtil.UpdateTimeSegments(null, healedByHealerTimeSegments, record.Healer, record.Healed, heal.BeginTime);
+                    StatsUtil.UpdateTimeSegments(null, healedBySpellTimeSegments, key, record.Healed, heal.BeginTime);
+                    StatsUtil.UpdateTimeSegments(null, healerHealedTimeSegments, record.Healed, record.Healer, heal.BeginTime);
+                    StatsUtil.UpdateTimeSegments(null, healerSpellTimeSegments, key, record.Healer, heal.BeginTime);
                   }
                 }
 

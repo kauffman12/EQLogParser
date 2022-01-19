@@ -361,6 +361,7 @@ if os.path.isfile(DBSpellsFile):
     combatSkill = int(data[98])
     hateOver = int(data[99])
     maxHits = int(data[102])
+    mgb = int(data[110])
     dispellable = int(data[111])
     focusable = int(data[122]) # focusable
     blockable = int(data[130])
@@ -405,7 +406,7 @@ if os.path.isfile(DBSpellsFile):
         base1 = values[2]
         base2 = values[3]
         
-        if spa == 0 or spa == 79:
+        if spa == 0 or spa == 79 or spa == 100:
           if int(base1) > 0:
             damaging = -1
           else:
@@ -479,6 +480,7 @@ if os.path.isfile(DBSpellsFile):
     info['lockoutTime'] = lockoutTime
     info['manaCost'] = manaCost
     info['maxDuration'] = maxDuration
+    info['mgb'] = mgb
     info['origDuration'] = origDuration
     info['maxHits'] = maxHits
     info['name'] = name
@@ -569,6 +571,6 @@ if os.path.isfile(DBSpellsFile):
 
   output = open('output.txt', 'w')
   for key in sorted(final):
-    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s^%d' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['rank'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'], final[key]['proc'])
+    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s^%d' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['mgb'], final[key]['rank'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'], final[key]['proc'])
     output.write(data)
     output.write('\n')
