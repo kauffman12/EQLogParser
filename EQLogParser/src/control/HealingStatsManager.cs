@@ -102,7 +102,7 @@ namespace EQLogParser
 
               double currentTime = double.NaN;
               Dictionary<string, int> currentSpellCounts = new Dictionary<string, int>();
-              Dictionary<string, int> previousSpellCounts = new Dictionary<string, int>();
+              Dictionary<double, Dictionary<string, int>> previousSpellCounts = new Dictionary<double, Dictionary<string, int>>();
               Dictionary<string, byte> ignoreRecords = new Dictionary<string, byte>();
               List<ActionBlock> filtered = new List<ActionBlock>();
               DataManager.Instance.GetHealsDuring(segment.BeginTime, segment.EndTime).ForEach(heal =>
@@ -111,18 +111,24 @@ namespace EQLogParser
                 var newBlock = new ActionBlock { BeginTime = heal.BeginTime };
                 filtered.Add(newBlock);
 
-                // need to keep track of two seconds worth of data
-                if (currentTime != double.NaN && currentTime == (heal.BeginTime - 1))
+                if (currentSpellCounts.Count > 0)
                 {
-                  previousSpellCounts = currentSpellCounts;
-                }
-                else
-                {
-                  previousSpellCounts.Clear();
+                  previousSpellCounts[currentTime] = currentSpellCounts;
                 }
 
                 currentTime = heal.BeginTime;
                 currentSpellCounts = new Dictionary<string, int>();
+                
+                foreach (var timeKey in previousSpellCounts.Keys.ToList())
+                {
+                  if (previousSpellCounts.TryGetValue(timeKey, out Dictionary<string, int> spellCounts))
+                  {
+                    if (currentTime != double.NaN && (currentTime - timeKey) > 6)
+                    {
+                      previousSpellCounts.Remove(timeKey);
+                    }
+                  }
+                }
 
                 foreach (var record in heal.Actions.Cast<HealRecord>())
                 {
@@ -140,7 +146,7 @@ namespace EQLogParser
                           // just skip these entirely if AOEs are turned off
                           continue;
                         }
-                        else if (spellData.Target == (byte)SpellTarget.CASTERGROUP && spellData.Mgb)
+                        else if ((spellData.Target == (byte)SpellTarget.CASTERGROUP || spellData.Target == (byte)SpellTarget.TARGETGROUP) && spellData.Mgb)
                         {
                           // need to count group AEs and if more than 6 are seen we need to ignore those
                           // casts since they're from MGB and count as an AE
@@ -154,14 +160,24 @@ namespace EQLogParser
                             currentSpellCounts[key] = 1;
                           }
 
-                          int previousSpellCount = previousSpellCounts.ContainsKey(key) ? previousSpellCounts[key] : 0;
+                          int previousSpellCount = 0;
+                          List<double> temp = new List<double>();
+                          foreach (var timeKey in previousSpellCounts.Keys)
+                          {
+                            if (previousSpellCounts[timeKey].ContainsKey(key))
+                            {
+                              previousSpellCount += previousSpellCounts[timeKey][key];
+                              temp.Add(timeKey);
+                            }
+                          }
+
                           if (currentSpellCounts[key] + previousSpellCount > 6)
                           {
                             ignoreRecords[heal.BeginTime + "|" + key] = 1;
-                            if (previousSpellCounts.ContainsKey(key))
+                            temp.ForEach(timeKey =>
                             {
-                              ignoreRecords[(heal.BeginTime - 1) + "|" + key] = 1;
-                            }
+                              ignoreRecords[timeKey + "|" + key] = 1;
+                            });
                           }
                         }
                       }
