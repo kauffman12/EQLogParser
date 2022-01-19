@@ -361,6 +361,7 @@ namespace EQLogParser
     public ushort Proc { get; set; }
     public ushort Adps { get; set; }
     public ushort Rank { get; set; }
+    public bool Mgb { get; set; }
   }
 
   internal class SpellCountData

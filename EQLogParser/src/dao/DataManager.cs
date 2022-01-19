@@ -186,7 +186,7 @@ namespace EQLogParser
       {
         // exact match meaning class-only spell that are of certain target types
         var tgt = (SpellTarget)spell.Target;
-        if ((tgt == SpellTarget.SELF || (spell.Level <= 250 && (tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS)) || spell.Rank > 1) &&
+        if (spell.Level <= 250 && (tgt == SpellTarget.SELF || tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS || spell.Rank > 1) &&
           classEnums.Contains((SpellClass)spell.ClassMask))
         {
           // Obviously illusions are bad to look for
@@ -680,11 +680,12 @@ namespace EQLogParser
             Resist = (SpellResist)int.Parse(data[10], CultureInfo.CurrentCulture),
             SongWindow = data[11] == "1",
             Adps = ushort.Parse(data[12], CultureInfo.CurrentCulture),
-            Rank = ushort.Parse(data[13], CultureInfo.CurrentCulture),
-            LandsOnYou = string.Intern(data[14]),
-            LandsOnOther = string.Intern(data[15]),
-            WearOff = string.Intern(data[16]),
-            Proc = byte.Parse(data[17], CultureInfo.CurrentCulture)
+            Mgb = data[13] == "1",
+            Rank = ushort.Parse(data[14], CultureInfo.CurrentCulture),
+            LandsOnYou = string.Intern(data[15]),
+            LandsOnOther = string.Intern(data[16]),
+            WearOff = string.Intern(data[17]),
+            Proc = byte.Parse(data[18], CultureInfo.CurrentCulture)
           };
         }
       }
