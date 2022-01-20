@@ -659,7 +659,7 @@ namespace EQLogParser
       if (part.Length >= (start + ++end) && part.Substring(start, 3) == "pet" ||
         part.Length >= (start + ++end) && part.Substring(start, 4) == "ward" && !(part.Length > (start + 5) && part[start + 5] != 'e') ||
         part.Length >= (start + ++end) && part.Substring(start, 5) == "Mount" ||
-        part.Length >= (start + ++end) && part.Substring(start, 6) == "warder")
+        part.Length >= (start + ++end) && (part.Substring(start, 6) == "warder" || part.Substring(start, 6) == "Warder"))
       {
         found = true;
         len = end;

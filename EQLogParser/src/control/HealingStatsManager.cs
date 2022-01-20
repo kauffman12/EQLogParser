@@ -101,8 +101,8 @@ namespace EQLogParser
               var healerSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
 
               double currentTime = double.NaN;
-              Dictionary<string, int> currentSpellCounts = new Dictionary<string, int>();
-              Dictionary<double, Dictionary<string, int>> previousSpellCounts = new Dictionary<double, Dictionary<string, int>>();
+              Dictionary<string, HashSet<string>> currentSpellCounts = new Dictionary<string, HashSet<string>>();
+              Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts = new Dictionary<double, Dictionary<string, HashSet<string>>>();
               Dictionary<string, byte> ignoreRecords = new Dictionary<string, byte>();
               List<ActionBlock> filtered = new List<ActionBlock>();
               DataManager.Instance.GetHealsDuring(segment.BeginTime, segment.EndTime).ForEach(heal =>
@@ -117,13 +117,13 @@ namespace EQLogParser
                 }
 
                 currentTime = heal.BeginTime;
-                currentSpellCounts = new Dictionary<string, int>();
+                currentSpellCounts = new Dictionary<string, HashSet<string>>();
                 
                 foreach (var timeKey in previousSpellCounts.Keys.ToList())
                 {
-                  if (previousSpellCounts.TryGetValue(timeKey, out Dictionary<string, int> spellCounts))
+                  if (previousSpellCounts.ContainsKey(timeKey))
                   {
-                    if (currentTime != double.NaN && (currentTime - timeKey) > 6)
+                    if (currentTime != double.NaN && (currentTime - timeKey) > 7)
                     {
                       previousSpellCounts.Remove(timeKey);
                     }
@@ -151,27 +151,34 @@ namespace EQLogParser
                           // need to count group AEs and if more than 6 are seen we need to ignore those
                           // casts since they're from MGB and count as an AE
                           var key = record.Healer + "|" + record.SubType;
-                          if (currentSpellCounts.TryGetValue(key, out int value))
+                          if (!currentSpellCounts.TryGetValue(key, out HashSet<string> value))
                           {
-                            currentSpellCounts[key] = value + 1;
-                          }
-                          else
-                          {
-                            currentSpellCounts[key] = 1;
+                            value = new HashSet<string>();
+                            currentSpellCounts[key] = value;
                           }
 
-                          int previousSpellCount = 0;
+                          value.Add(record.Healed);
+
+                          HashSet<string> totals = new HashSet<string>();
                           List<double> temp = new List<double>();
                           foreach (var timeKey in previousSpellCounts.Keys)
                           {
                             if (previousSpellCounts[timeKey].ContainsKey(key))
                             {
-                              previousSpellCount += previousSpellCounts[timeKey][key];
+                              foreach (var item in previousSpellCounts[timeKey][key])
+                              {
+                                totals.Add(item);
+                              }
                               temp.Add(timeKey);
                             }
                           }
 
-                          if (currentSpellCounts[key] + previousSpellCount > 6)
+                          foreach (var item in currentSpellCounts[key])
+                          {
+                            totals.Add(item);
+                          }
+
+                          if (totals.Count > 6)
                           {
                             ignoreRecords[heal.BeginTime + "|" + key] = 1;
                             temp.ForEach(timeKey =>
