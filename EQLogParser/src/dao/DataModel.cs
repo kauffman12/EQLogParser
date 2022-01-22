@@ -98,6 +98,7 @@ namespace EQLogParser
 
   internal class StatsGenerationEvent
   {
+    public bool Limited { get; set; } = false;
     public string Type { get; set; }
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }

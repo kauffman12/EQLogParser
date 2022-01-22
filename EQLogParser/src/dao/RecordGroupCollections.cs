@@ -5,6 +5,8 @@ namespace EQLogParser
 {
   internal class DamageGroupCollection : RecordGroupCollection
   {
+    private DamageValidator DamageValidator = new DamageValidator();
+
     internal DamageGroupCollection(List<List<ActionBlock>> recordGroups) : base(recordGroups)
     {
     }
@@ -12,7 +14,7 @@ namespace EQLogParser
     protected override bool IsValid(RecordWrapper wrapper)
     {
       DamageRecord record = wrapper?.Record as DamageRecord;
-      return record.Type != Labels.BANE || MainWindow.IsBaneDamageEnabled;
+      return DamageValidator.IsValid(record);
     }
 
     protected override DataPoint Create(RecordWrapper wrapper)

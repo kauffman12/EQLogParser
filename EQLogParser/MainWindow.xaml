@@ -231,20 +231,46 @@
               <fa:ImageAwesome x:Name="ignoreCharmPetsIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>          
-          <MenuItem x:Name="enableAoEHealing" Header="Show _AoE Heals" Click="ToggleAoEHealingClick" Height="24">
+          <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableAoEHealingIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="enableBaneDamage" Header="Show _Bane Damage" Click="ToggleBaneDamageClick" Height="24">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableBaneDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="hideOnMinimize" Header="_Hide When Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
+          <MenuItem x:Name="hideOnMinimize" Header="_Hide Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
+          <MenuItem x:Name="damageOptions" Header="Damage" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="damageOptionsIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Gavel" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+            <MenuItem x:Name="enableAssassinateDamage" Header="Include _Assassinate" Click="ToggleAssassinateDamageClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableAssassinateDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="enableBaneDamage" Header="Include _Banes" Click="ToggleBaneDamageClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableBaneDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="enableHeahshotDamage" Header="Include _Headshots" Click="ToggleHeadshotDamageClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableHeadshotDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="enableFinishingBlowDamage" Header="Include _Finishing Blow" Click="ToggleFinishingBlowDamageClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableFinishingBlowDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="enableSlayUndeadDamage" Header="Include _Slay Undead" Click="ToggleSlayUndeadDamageClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableSlayUndeadDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>            
           </MenuItem>
         </MenuItem>
         <MenuItem Header="_Tools" Height="30" Width="55">

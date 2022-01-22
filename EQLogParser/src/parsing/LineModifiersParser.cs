@@ -34,13 +34,21 @@ namespace EQLogParser
 
     private static readonly ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
 
+    internal static bool IsAssassinate(int mask) => mask > -1 && (mask & ASSASSINATE) != 0;
+
     internal static bool IsCrit(int mask) => mask > -1 && (mask & CRIT) != 0;
 
+    internal static bool IsFinishingBlow(int mask) => mask > -1 && (mask & FINISHING) != 0;
+
     internal static bool IsFlurry(int mask) => mask > -1 && (mask & FLURRY) != 0;
+
+    internal static bool IsHeadshot(int mask) => mask > -1 && (mask & HEADSHOT) != 0;
 
     internal static bool IsLucky(int mask) => mask > -1 && (mask & LUCKY) != 0;
 
     internal static bool IsTwincast(int mask) => mask > -1 && (mask & TWINCAST) != 0;
+
+    internal static bool IsSlayUndead(int mask) => mask > -1 && (mask & SLAY) != 0;
 
     internal static bool IsRampage(int mask) => mask > -1 && (mask & RAMPAGE) != 0;
 

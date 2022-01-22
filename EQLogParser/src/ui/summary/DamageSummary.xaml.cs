@@ -111,9 +111,9 @@ namespace EQLogParser
               timeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
             }
 
-            if (!MainWindow.IsBaneDamageEnabled)
+            if (e.Limited)
             {
-              title.Content += " (Not Including Banes)";
+              title.Content += " (Not All Damage Opts Chosen)";
             }
 
             UpdateDataGridMenuItems();
