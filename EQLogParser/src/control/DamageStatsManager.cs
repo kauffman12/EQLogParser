@@ -326,6 +326,7 @@ namespace EQLogParser
           CombinedStats combined = null;
           ConcurrentDictionary<string, Dictionary<string, PlayerStats>> childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
           ConcurrentDictionary<string, PlayerStats> topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
+          DamageValidator damageValidator = new DamageValidator();
           Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
 
           // always start over
@@ -373,7 +374,7 @@ namespace EQLogParser
                     {
                       var stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
 
-                      if (!MainWindow.IsBaneDamageEnabled && record.Type == Labels.BANE)
+                      if (record.Type == Labels.BANE && !damageValidator.IsValid(record))
                       {
                         stats.BaneHits++;
 
@@ -382,7 +383,7 @@ namespace EQLogParser
                           temp.BaneHits++;
                         }
                       }
-                      else
+                      else if (damageValidator.IsValid(record))
                       {
                         RaidTotals.Total += record.Total;
                         bool isAttackerPet = PlayerManager.Instance.IsVerifiedPet(record.Attacker);
@@ -514,11 +515,12 @@ namespace EQLogParser
           if (options.RequestSummaryData)
           {
             // generating new stats
-            var genEvent = new StatsGenerationEvent()
+            var genEvent = new StatsGenerationEvent
             {
               Type = Labels.DAMAGEPARSE,
               State = "COMPLETED",
-              CombinedStats = combined
+              CombinedStats = combined,
+              Limited = damageValidator.IsDamageLimited()
             };
 
             genEvent.Groups.AddRange(DamageGroups);

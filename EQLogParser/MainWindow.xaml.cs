@@ -33,9 +33,15 @@ namespace EQLogParser
     // global settings
     internal static string CurrentLogFile;
     internal static bool IsAoEHealingEnabled = true;
-    internal static bool IsBaneDamageEnabled = false;
+    internal static bool IsAssassinateDamageEnabled = true;
+    internal static bool IsBaneDamageEnabled = true;
+    internal static bool IsFinishingBlowDamageEnabled = true;
+    internal static bool IsHeadshotDamageEnabled = true;
+    internal static bool IsSlayUndeadDamageEnabled = true;
+
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static bool IsIgnoreCharmPetsEnabled = false;
+
     internal static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
     internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     internal static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
@@ -50,7 +56,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.59";
+    private const string VERSION = "v1.8.60";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -197,20 +203,36 @@ namespace EQLogParser
         IsIgnoreCharmPetsEnabled = ConfigUtil.IfSet("IgnoreCharmPets");
         ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
 
+        // AoE healing
+        IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
+        enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
+        
+        // Assassinate Damage
+        IsAssassinateDamageEnabled = ConfigUtil.IfSetOrElse("IncludeAssassinateDamage", IsAssassinateDamageEnabled);
+        enableAssassinateDamageIcon.Visibility = IsAssassinateDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
         // Bane Damage
-        IsBaneDamageEnabled = ConfigUtil.IfSet("IncludeBaneDamage");
+        IsBaneDamageEnabled = ConfigUtil.IfSetOrElse("IncludeBaneDamage", IsBaneDamageEnabled);
         enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
-        // Damage Overlay
-        enableDamageOverlayIcon.Visibility = OverlayUtil.LoadSettings() ? Visibility.Visible : Visibility.Hidden;
+        // Finishing Blow Damage
+        IsFinishingBlowDamageEnabled = ConfigUtil.IfSetOrElse("IncludeFinishingBlowDamage", IsFinishingBlowDamageEnabled);
+        enableFinishingBlowDamageIcon.Visibility = IsFinishingBlowDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
-        // AoE healing
-        IsAoEHealingEnabled = ConfigUtil.IfSet("IncludeAoEHealing");
-        enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
+        // Headshot Damage
+        IsHeadshotDamageEnabled = ConfigUtil.IfSetOrElse("IncludeHeadshotDamage", IsHeadshotDamageEnabled);
+        enableHeadshotDamageIcon.Visibility = IsHeadshotDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // Slay Undead Damage
+        IsSlayUndeadDamageEnabled = ConfigUtil.IfSetOrElse("IncludeSlayUndeadDamage", IsSlayUndeadDamageEnabled);
+        enableSlayUndeadDamageIcon.Visibility = IsSlayUndeadDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Hide window when minimized
         IsHideOnMinimizeEnabled = ConfigUtil.IfSet("HideWindowOnMinimize");
         enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // Damage Overlay
+        enableDamageOverlayIcon.Visibility = OverlayUtil.LoadSettings() ? Visibility.Visible : Visibility.Hidden;
 
         // Show Tanking Summary at startup
         ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
@@ -422,14 +444,34 @@ namespace EQLogParser
       enableDamageOverlayIcon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
     }
 
+    private void ToggleAssassinateDamageClick(object sender, RoutedEventArgs e)
+    {
+      IsAssassinateDamageEnabled = !IsAssassinateDamageEnabled;
+      UpdateDamageOption(enableAssassinateDamageIcon, IsAssassinateDamageEnabled, "IncludeAssassinateDamage");
+    }
+
     private void ToggleBaneDamageClick(object sender, RoutedEventArgs e)
     {
       IsBaneDamageEnabled = !IsBaneDamageEnabled;
-      ConfigUtil.SetSetting("IncludeBaneDamage", IsBaneDamageEnabled.ToString(CultureInfo.CurrentCulture));
-      enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+      UpdateDamageOption(enableBaneDamageIcon, IsBaneDamageEnabled, "IncludeBaneDamage");
+    }
 
-      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
-      Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
+    private void ToggleFinishingBlowDamageClick(object sender, RoutedEventArgs e)
+    {
+      IsFinishingBlowDamageEnabled = !IsFinishingBlowDamageEnabled;
+      UpdateDamageOption(enableFinishingBlowDamageIcon, IsFinishingBlowDamageEnabled, "IncludeFinishingBlowDamage");
+    }
+
+    private void ToggleHeadshotDamageClick(object sender, RoutedEventArgs e)
+    {
+      IsHeadshotDamageEnabled = !IsHeadshotDamageEnabled;
+      UpdateDamageOption(enableHeadshotDamageIcon, IsHeadshotDamageEnabled, "IncludeHeadshotDamage");
+    }
+
+    private void ToggleSlayUndeadDamageClick(object sender, RoutedEventArgs e)
+    {
+      IsSlayUndeadDamageEnabled = !IsSlayUndeadDamageEnabled;
+      UpdateDamageOption(enableSlayUndeadDamageIcon, IsSlayUndeadDamageEnabled, "IncludeSlayUndeadDamage");
     }
 
     private void ToggleIgnoreCharmPetsClick(object sender, RoutedEventArgs e)
@@ -438,6 +480,14 @@ namespace EQLogParser
       ConfigUtil.SetSetting("IgnoreCharmPets", IsIgnoreCharmPetsEnabled.ToString(CultureInfo.CurrentCulture));
       ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
       MessageBox.Show("Restart EQLogParser when changing the Ignore Charm Pets setting for it to take effect.");
+    }
+
+    private void UpdateDamageOption(ImageAwesome icon, bool enabled, string option)
+    {
+      ConfigUtil.SetSetting(option, enabled.ToString(CultureInfo.CurrentCulture));
+      icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
+      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
     }
 
     // Main Menu

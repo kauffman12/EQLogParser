@@ -224,6 +224,7 @@
       <DependentUpon>OverlayWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Settings.cs" />
+    <Compile Include="src\control\DamageValidator.cs" />
     <Compile Include="src\control\TankingStatsManager.cs" />
     <Compile Include="src\dao\ChatFilter.cs" />
     <Compile Include="src\dao\ChatIterator.cs" />
