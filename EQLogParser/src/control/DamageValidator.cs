@@ -51,7 +51,7 @@ namespace EQLogParser
 
     public bool IsDamageLimited()
     {
-      return !assassinateEnabled || !baneEnabled || !finishingBlowEnabled || !headshotEnabled;
+      return !assassinateEnabled || !baneEnabled || !finishingBlowEnabled || !headshotEnabled || !slayUndeadEnabled;
     }
   }
 }
