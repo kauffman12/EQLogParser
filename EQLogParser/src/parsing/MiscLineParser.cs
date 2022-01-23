@@ -141,7 +141,7 @@ namespace EQLogParser
                     {
                       var currentTime = DateUtil.ParseLogDate(lineData.Line, out _);
                       PlayerManager.Instance.AddVerifiedPlayer(name, currentTime);
-                      LootRecord record = new LootRecord() { Item = item, Player = name, Quantity = count, IsCurrency = true };
+                      LootRecord record = new LootRecord { Item = item, Player = name, Quantity = count, IsCurrency = true };
                       DataManager.Instance.AddLootRecord(record, currentTime);
                       handled = true;
                     }
@@ -157,7 +157,7 @@ namespace EQLogParser
                     {
                       var currentTime = DateUtil.ParseLogDate(lineData.Line, out _);
                       PlayerManager.Instance.AddVerifiedPlayer(looter, currentTime);
-                      LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = npc };
+                      LootRecord record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = npc };
                       DataManager.Instance.AddLootRecord(record, currentTime);
                       handled = true;
                     }
@@ -194,6 +194,29 @@ namespace EQLogParser
                     }
                   }
                   break;
+              }
+            }
+          }
+
+          // old eqemu looted items
+          // [Fri Jan 14 21:05:46 2022] --Triplex has looted a Muramite Sleeve Armor.--
+          if (!handled)
+          {
+            if (!string.IsNullOrEmpty(looter) && lootedIndex == 2 && split.Length > 4)
+            {
+              string item = string.Join(" ", split, 4, split.Length - 4);
+              if (item.Length > 3 && item.EndsWith(".--"))
+              {
+                // covers "a" or "an"
+                uint count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]); item = item.Substring(0, item.Length - 3);
+                if (count > 0 && count != ushort.MaxValue)
+                {
+                  var currentTime = DateUtil.ParseLogDate(lineData.Line, out _);
+                  PlayerManager.Instance.AddVerifiedPlayer(looter, currentTime);
+                  LootRecord record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = "" };
+                  DataManager.Instance.AddLootRecord(record, currentTime);
+                }
+
               }
             }
           }

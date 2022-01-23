@@ -107,11 +107,18 @@ namespace EQLogParser
           pet = pet.ToLower(CultureInfo.CurrentCulture);
         }
 
-        if ((!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player) && !IsVerifiedPlayer(pet))
+        if (!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player)
         {
-          PetToPlayer[pet] = player;
-          EventsNewPetMapping?.Invoke(this, new PetMapping() { Pet = pet, Owner = player });
-          PetMappingUpdated = !initialLoad;
+          if (!IsVerifiedPlayer(pet))
+          {
+            PetToPlayer[pet] = player;
+            EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
+            PetMappingUpdated = !initialLoad;
+          }
+          else
+          {
+            LOG.Error("Error adding pet=" + pet + " to owner=" + player + ". The pet name exists as a verified player.");
+          }  
         }
       }
     }
@@ -154,7 +161,7 @@ namespace EQLogParser
 
     internal void AddVerifiedPlayer(string name, double playerTime)
     {
-      if (!string.IsNullOrEmpty(name) && !VerifiedPlayers.ContainsKey(name))
+      if (!string.IsNullOrEmpty(name))
       {
         if (VerifiedPlayers.TryGetValue(name, out double lastTime))
         {
@@ -401,12 +408,16 @@ namespace EQLogParser
         PetMappingUpdated = false;
       }
 
+      DateTime now = DateTime.Now;
       var list = new List<string>();
       foreach (var keypair in VerifiedPlayers)
       {
         if (!string.IsNullOrEmpty(keypair.Key))
         {
+          //if (keypair.Value != 0 && (now - DateUtil.FromDouble((long)keypair.Value)).TotalDays < 180)
+          //{
           list.Add(keypair.Key + "=" + Math.Round(keypair.Value));
+          //}
         }
       }
 
