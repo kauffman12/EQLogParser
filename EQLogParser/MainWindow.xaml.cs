@@ -56,7 +56,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.60";
+    private const string VERSION = "v1.8.61";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -821,10 +821,17 @@ namespace EQLogParser
 
     private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is ComboBox comboBox && comboBox.DataContext is PetMapping mapping && comboBox.SelectedItem is SortableName selected && selected.Name != mapping.Owner)
+      if (sender is ComboBox comboBox && comboBox.DataContext is PetMapping mapping && comboBox.SelectedItem is SortableName selected)
       {
-        PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selected.Name);
-        petMappingGrid.CommitEdit();
+        if (selected.Name != mapping.Owner)
+        {
+          PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selected.Name);
+          petMappingGrid.CommitEdit();
+        }
+        else
+        {
+          LOG.Error("Error adding pet=" + selected.Name + " to owner=" + mapping.Owner + ". The player name and pet name can not be the same.");
+        }
       }
     }
 

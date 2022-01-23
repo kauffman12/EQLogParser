@@ -20,7 +20,8 @@ namespace EQLogParser
       if (line != null && line.Length > MIN_LINE_LENGTH)
       {
         action = line.Substring(LineParsing.ActionIndex);
-        valid = !(CheckForPlayersOrNPCs(line, action) || CheckForPetLeader(line, action));
+        valid = !(CheckForPlayersOrNPCs(line, action) || CheckForPetLeader(line, action, " says, 'My leader is ")
+          || CheckForPetLeader(line, action, " says 'My leader is ")); // eqemu doesn't have the comma
       }
       else if (line != null)
       {
@@ -30,21 +31,21 @@ namespace EQLogParser
       return valid;
     }
 
-    private static bool CheckForPetLeader(string line, string action)
+    private static bool CheckForPetLeader(string line, string action, string search)
     {
       bool handled = false;
       if (action.Length >= 28 && action.Length < 75)
       {
-        int index = action.IndexOf(" says, 'My leader is ", StringComparison.Ordinal);
+        int index = action.IndexOf(search, StringComparison.Ordinal);
         if (index > -1)
         {
           string pet = action.Substring(0, index);
           if (!PlayerManager.Instance.IsVerifiedPlayer(pet)) // thanks idiots for this
           {
-            int period = action.IndexOf(".", index + 24, StringComparison.Ordinal);
+            int period = action.IndexOf(".", index + 23, StringComparison.Ordinal);
             if (period > -1)
             {
-              string owner = action.Substring(index + 21, period - index - 21);
+              string owner = action.Substring(index + search.Length, period - index - search.Length);
               PlayerManager.Instance.AddVerifiedPlayer(owner, DateUtil.ParseLogDate(line, out _));
               PlayerManager.Instance.AddVerifiedPet(pet);
               PlayerManager.Instance.AddPetToPlayer(pet, owner);
