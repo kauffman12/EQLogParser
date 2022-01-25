@@ -433,7 +433,20 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
       {
-        spellData = spellList.First();
+        if (spellList.Count <= 10)
+        {
+          foreach (var spell in spellList)
+          {
+            if (spellData == null || (spellData.Level < spell.Level && spell.Level <= 250) || (spellData.Level > 250 && spell.Level <= 250))
+            {
+              spellData = spell;
+            }
+          }
+        }
+        else
+        {
+          spellData = spellList.Last();
+        }
       }
 
       return spellData;
