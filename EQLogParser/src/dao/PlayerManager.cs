@@ -115,10 +115,6 @@ namespace EQLogParser
             EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
             PetMappingUpdated = !initialLoad;
           }
-          else
-          {
-            LOG.Error("Error adding pet=" + pet + " to owner=" + player + ". The pet name exists as a verified player.");
-          }  
         }
       }
     }
@@ -293,7 +289,7 @@ namespace EQLogParser
         found = VerifiedPets.ContainsKey(name);
         isGameGenerated = !found && GameGeneratedPets.ContainsKey(name);
 
-        if (isGameGenerated)
+        if (isGameGenerated && !PetToPlayer.ContainsKey(name))
         {
           AddPetToPlayer(name, Labels.UNASSIGNED);
         }

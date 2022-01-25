@@ -216,7 +216,6 @@ namespace EQLogParser
                   LootRecord record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = "" };
                   DataManager.Instance.AddLootRecord(record, currentTime);
                 }
-
               }
             }
           }
