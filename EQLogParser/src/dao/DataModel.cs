@@ -270,9 +270,10 @@ namespace EQLogParser
     public const string BREAKTIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
-    public int Id { get; set; }
+    public long Id { get; set; }
     public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
+    public long SortId { get; set; }
     public int NonTankingGroupId { get; set; }
     public bool IsInactivity { get; set; } = false;
     public long Total { get; set; }

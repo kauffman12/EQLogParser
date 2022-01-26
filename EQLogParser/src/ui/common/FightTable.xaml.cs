@@ -38,13 +38,14 @@ namespace EQLogParser
     private static DataGridRow CurrentSearchRow = null;
     private static bool NeedSelectionChange = false;
 
-    private readonly ICollectionView View;
-    private readonly ICollectionView NonTankingView;
+    private readonly ListCollectionView View;
+    private readonly ListCollectionView NonTankingView;
     private readonly ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
     private readonly ObservableCollection<Fight> NonTankingFights = new ObservableCollection<Fight>();
     private bool CurrentShowBreaks;
     private int CurrentGroup = 1;
     private int CurrentNonTankingGroup = 1;
+    private long CurrentSortId = 1;
     private bool NeedRefresh = false;
     private bool IsEveryOther = false;
 
@@ -65,11 +66,11 @@ namespace EQLogParser
       fightMenuItemClear.IsEnabled = fightMenuItemSelectAll.IsEnabled = fightMenuItemUnselectAll.IsEnabled =
       fightMenuItemSelectFight.IsEnabled = fightMenuItemUnselectFight.IsEnabled = fightMenuItemSetPet.IsEnabled = fightMenuItemSetPlayer.IsEnabled = false;
 
-      View = CollectionViewSource.GetDefaultView(Fights);
-      NonTankingView = CollectionViewSource.GetDefaultView(NonTankingFights);
+      View = (ListCollectionView) CollectionViewSource.GetDefaultView(Fights);
+      NonTankingView = (ListCollectionView) CollectionViewSource.GetDefaultView(NonTankingFights);
+      fightDataGrid.Sorting += CustomSorting;
 
       var filter = new Predicate<object>(item => !(CurrentShowBreaks == false && ((Fight)item).IsInactivity));
-
       View.Filter = filter;
       NonTankingView.Filter = filter;
 
@@ -106,7 +107,6 @@ namespace EQLogParser
       // read show breaks and spells setting
       fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
       fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", null, true);
-
       fightDataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
 
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
@@ -221,10 +221,12 @@ namespace EQLogParser
               Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
             };
 
+            divider.SortId = CurrentSortId++;
             Fights.Add(divider);
           }
 
           fight.GroupId = CurrentGroup;
+          fight.SortId = CurrentSortId++;
           Fights.Add(fight);
           lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
         });
@@ -272,10 +274,12 @@ namespace EQLogParser
               Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
             };
 
+            divider.SortId = CurrentSortId++;
             NonTankingFights.Add(divider);
           }
 
           fight.NonTankingGroupId = CurrentNonTankingGroup;
+          fight.SortId = CurrentSortId++;
           NonTankingFights.Add(fight);
           lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
         });
@@ -296,6 +300,29 @@ namespace EQLogParser
       {
         (fightDataGrid.ItemsSource as ICollectionView).Refresh();
         NeedRefresh = false;
+      }
+    }
+
+    private void CustomSorting(object sender, DataGridSortingEventArgs e)
+    {
+      if (e.Column.Header != null && fightDataGrid.ItemsSource != null)
+      {
+        var direction = e.Column.SortDirection ?? ListSortDirection.Ascending;
+
+        if (fightDataGrid.ItemsSource is ListCollectionView view)
+        {
+          if (e.Column.Header.ToString() == "Initial Hit Time")
+          {
+            e.Handled = true;
+            view.CustomSort = new FightTimeSorter(direction);
+            e.Column.SortDirection = direction == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
+            fightDataGrid.Items.Refresh();
+          }
+          else
+          {
+            view.CustomSort = null;
+          }
+        }
       }
     }
 
@@ -587,5 +614,29 @@ namespace EQLogParser
     private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
     private void Instance_EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
+  }
+
+  public class FightTimeSorter : IComparer
+  {
+    private int direction = 1;
+    public FightTimeSorter(ListSortDirection dir)
+    {
+      if (dir == ListSortDirection.Descending)
+      {
+        direction = -1;
+      }
+    }
+    public int Compare(object x, object y)
+    {
+      int result = 0;
+
+      if (x is Fight a && y is Fight b)
+      {
+        result = (a.SortId > b.SortId) ? -1 : 1;
+        result *= direction;
+      }
+
+      return result;
+    }
   }
 }

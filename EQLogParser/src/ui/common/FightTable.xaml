@@ -22,7 +22,7 @@
       <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="2,0,6,0" ToolTip="Add Breaks for Inactivity" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
       <CheckBox x:Name="fightShowTanking" IsChecked="True" Margin="2,0,6,0" ToolTip="Include Fights with only Tanking data" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowTankingChange" Unchecked="ShowTankingChange">Tanking</CheckBox>
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="fightDataGrid" Grid.Row="1" PreviewMouseDown="UpdateCurrentItem" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="False" CanUserResizeRows="False">
+    <datagrid:ThemedDataGrid x:Name="fightDataGrid" Grid.Row="1" PreviewMouseDown="UpdateCurrentItem" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="True" CanUserResizeRows="False">
       <DataGrid.ContextMenu>
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
           <MenuItem x:Name="fightMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
@@ -65,8 +65,8 @@
         </ContextMenu>
       </DataGrid.ContextMenu>
       <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="92" Width="92" />
-        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource TotalFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="HP" IsReadOnly="True" CanUserReorder="False" MinWidth="38" Width="38" />
+        <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="100" Width="100" />
+        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource TotalFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="HP" IsReadOnly="True" CanUserReorder="False" MinWidth="45" Width="45" />
         <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90*" />
       </DataGrid.Columns>
     </datagrid:ThemedDataGrid>

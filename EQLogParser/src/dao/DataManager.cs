@@ -109,7 +109,7 @@ namespace EQLogParser
 
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<int, Fight> OverlayFights = new ConcurrentDictionary<int, Fight>();
+    private readonly ConcurrentDictionary<long, Fight> OverlayFights = new ConcurrentDictionary<long, Fight>();
 
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     private readonly ConcurrentDictionary<string, string> RanksCache = new ConcurrentDictionary<string, string>();
