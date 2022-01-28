@@ -1,0 +1,16 @@
+Bard=Minstrel,Troubadour,Virtuoso,Maestro,Herald,Lyricist
+Beastlord=Primalist,Animist,Savage Lord,Feral Lord,Wildblood,Frostblood,Arch Animist
+Berserker=Brawler,Vehement,Rager,Fury,Ravager,Juggernaut
+Cleric=Vicar,Templar,High Priest,Archon,Prelate,Exemplar
+Druid=Wanderer,Preserver,Hierophant,Storm Warden,Natureguard,Storm Caller,Stormcaller
+Enchanter=Illusionist,Beguiler,Phantasmist,Coercer,Bedazzler,Entrancer
+Magician=Elementalist,Conjurer,Arch Mage,Arch Convoker,Arch Magus,Grand Summoner
+Monk=Disciple,Master,Grandmaster,Transcendent,Stone Fist,Ashenhand
+Necromancer=Heretic,Defiler,Warlock,Arch Lich,Wraith,Deathcaller
+Paladin=Cavalier,Knight,Crusader,Lord Protector,Saint,Lord,Holy Defender
+Ranger=Pathfinder,Outrider,Warder,Forest Stalker,Plainswalker,Huntmaster
+Rogue=Rake,Blackguard,Assassin,Deceiver,Nemesis,Shadowblade
+Shadow Knight=Reaver,Revenant,Grave Lord,Dread Lord,Scourge Knight,Bloodreaver
+Shaman=Mystic,Luminary,Oracle,Prophet,Soothsayer,Spiritwatcher
+Warrior=Champion,Myrmidon,Warlord,Overlord,Vanquisher,Imperator
+Wizard=Channeler,Evoker,Sorcerer,Arcanist,Grand Archanist,Pyromancer,Arch Arcanist

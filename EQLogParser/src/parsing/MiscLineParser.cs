@@ -42,6 +42,10 @@ namespace EQLogParser
           // [Mon Apr 27 20:51:22 2020] Kazint's Scorching Beam Rk. III spell has been reflected by a shadow reflection.
           // [Sun Mar 28 19:42:46 2021] A Draconic Lava Chain Feet Ornament was given to Aldryn.
           // [Mon Apr 05 19:42:24 2021] Hacket won the need roll on 1 item(s): Restless Velium Tainted Pelt with a roll of 996.
+          // [Thu Jan 27 16:32:01 2022] [1 Warrior] Spasiba(Gnome)  ZONE: The Bazaar(bazaar)
+          // [Thu Jan 27 16:32:01 2022] [120 Shadowblade (Rogue)] Bloodydagger(Iksar) < Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall
+          // [Wed Jan 26 22:41:48 2022] [65 Overlord (Warrior)] Jenfo (Halfling)
+
 
           string looter = null;
           int awakenedIndex = -1;
@@ -57,6 +61,38 @@ namespace EQLogParser
             if (i == 0 && split[0].StartsWith("--", StringComparison.OrdinalIgnoreCase))
             {
               looter = split[0] == "--You" ? ConfigUtil.PlayerName : split[0].TrimStart('-');
+            }
+            else if (i == 0 && split[0].StartsWith("[", StringComparison.Ordinal) && split[0].Length > 1 && split.Length > 4)
+            {
+              string level = split[0].Substring(1);
+              if (int.TryParse(level, out int intLevel))
+              {
+                string player = null;
+                string className = null;
+                if (split[1].EndsWith("]") && split[1].Length > 2)
+                {
+                  className = DataManager.Instance.GetClassFromTitle(split[1].Substring(0, split[1].Length - 1));
+                  player = split[2];
+                }
+                else if (split[2].EndsWith("]") && split[2].Length > 2)
+                {
+                  className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2].Substring(0, split[2].Length - 1));
+                  player = split[3];
+                }
+                else if (split[3].EndsWith("]") && split[3].Length > 2)
+                {
+                  className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2] + " " + split[3].Substring(0, split[3].Length - 1));
+                  player = split[4];
+                }
+
+                if (!string.IsNullOrEmpty(className) && !string.IsNullOrEmpty(player))
+                {
+                  var currentTime = DateUtil.ParseLogDate(lineData.Line, out _);
+                  PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+                  PlayerManager.Instance.SetPlayerClass(player, className);
+                  handled = true;
+                }
+              }
             }
             else
             {

@@ -271,11 +271,13 @@ namespace EQLogParser
           {
             case "Assassinate":
               result |= ASSASSINATE;
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG, currentTime);
+              PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG);
               break;
             case "Double Bow Shot":
               result |= DOUBLEBOW;
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, currentTime);
+              PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG);
               break;
             case "Finishing Blow":
               result |= FINISHING;
@@ -285,7 +287,8 @@ namespace EQLogParser
               break;
             case "Headshot":
               result |= HEADSHOT;
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, currentTime);
+              PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG);
               break;
             case "Twincast":
               result |= TWINCAST;
@@ -302,7 +305,8 @@ namespace EQLogParser
               break;
             case "Slay Undead":
               result |= SLAY;
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL, currentTime);
+              PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL);
               break;
           }
 

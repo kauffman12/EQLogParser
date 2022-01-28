@@ -41,6 +41,7 @@ namespace EQLogParser
     // static data
     private readonly ConcurrentDictionary<string, BitmapImage> ClassIcons = new ConcurrentDictionary<string, BitmapImage>();
     private readonly ConcurrentDictionary<SpellClass, string> ClassNames = new ConcurrentDictionary<SpellClass, string>();
+    private readonly ConcurrentDictionary<string, SpellClass> ClassesByName = new ConcurrentDictionary<string, SpellClass>();
     private readonly ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> SecondPerson = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> ThirdPerson = new ConcurrentDictionary<string, byte>();
@@ -63,7 +64,9 @@ namespace EQLogParser
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues(typeof(SpellClass)))
       {
-        ClassNames[(SpellClass)item] = Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item), CultureInfo.CurrentCulture);
+        string name = Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item), CultureInfo.CurrentCulture);
+        ClassNames[(SpellClass)item] = name;
+        ClassesByName[name] = (SpellClass)item;
       }
 
       DoTClasses[ClassNames[SpellClass.BRD]] = 1;
@@ -367,15 +370,31 @@ namespace EQLogParser
         {
           if (!string.IsNullOrEmpty(player) && player.Length > 2)
           {
+            double parsed = 0d;
+            string name;
+            string className = null;
             var split = player.Split('=');
-            if (split.Length == 2 && double.TryParse(split[1], out double parsed))
+            if (split.Length == 2)
             {
-              AddVerifiedPlayer(split[0], parsed);
+              name = split[0];
+              var split2 = split[1].Split(',');
+              if (split2.Length == 2)
+              {
+                double.TryParse(split2[0], out parsed);
+                className = split2[1];
+              }
+              else
+              {
+                double.TryParse(split[1], out parsed);
+              }
             }
             else
             {
-              AddVerifiedPlayer(split[0], 0d);
+              name = player;
             }
+
+            AddVerifiedPlayer(name, parsed);
+            SetPlayerClass(name, className);
           }
         });
 
@@ -412,7 +431,13 @@ namespace EQLogParser
         {
           //if (keypair.Value != 0 && (now - DateUtil.FromDouble((long)keypair.Value)).TotalDays < 180)
           //{
-          list.Add(keypair.Key + "=" + Math.Round(keypair.Value));
+          var output = keypair.Key + "=" + Math.Round(keypair.Value);
+          if (PlayerToClass.TryGetValue(keypair.Key, out SpellClassCounter value) && value.CurrentMax == long.MaxValue && 
+            ClassNames.TryGetValue(value.CurrentClass, out string className))
+          {
+            output += "," + className;
+          }
+          list.Add(output);
           //}
         }
       }
@@ -420,7 +445,15 @@ namespace EQLogParser
       ConfigUtil.SavePlayers(list);
     }
 
-    internal void SetPlayerClass(string player, SpellClass theClass, double currentTime)
+    internal void SetPlayerClass(string player, string className)
+    {
+      if (!string.IsNullOrEmpty(className) && ClassesByName.ContainsKey(className))
+      {
+        SetPlayerClass(player, ClassesByName[className]);
+      }
+    }
+
+    internal void SetPlayerClass(string player, SpellClass theClass)
     {
       if (!PlayerToClass.TryGetValue(player, out SpellClassCounter counter))
       {
@@ -428,17 +461,16 @@ namespace EQLogParser
         {
           counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, long>() };
           PlayerToClass.TryAdd(player, counter);
-          AddVerifiedPlayer(player, currentTime);
         }
       }
 
       lock(counter)
       {
-        if (!theClass.Equals(counter.CurrentClass) && counter.CurrentMax != 1000000)
+        if (!theClass.Equals(counter.CurrentClass) || counter.CurrentMax != long.MaxValue)
         {
           counter.CurrentClass = theClass;
-          counter.ClassCounts[theClass] = 1000000;
-          counter.CurrentMax = 1000000;
+          counter.ClassCounts[theClass] = long.MaxValue;
+          counter.CurrentMax = long.MaxValue;
           LOG.Debug("Assigning " + player + " as " + theClass.ToString() + " from class specific action");
         }
       }
@@ -457,31 +489,34 @@ namespace EQLogParser
 
       lock (counter)
       {
-        long newValue = 1;
-        if (cast.SpellData.Rank > 1)
+        if (counter.CurrentMax != long.MaxValue)
         {
-          newValue = 10;
-          AddVerifiedPlayer(cast.Caster, currentTime);
-        }
-
-        if (counter.ClassCounts.TryGetValue(theClass, out long value))
-        {
-          newValue += value;
-        }
-
-        counter.ClassCounts[theClass] = newValue;
-
-        if (newValue > counter.CurrentMax)
-        {
-          counter.CurrentMax = newValue;
-          if (!theClass.Equals(counter.CurrentClass))
+          long newValue = 1;
+          if (cast.SpellData.Rank > 1)
           {
-            if (LOG.IsDebugEnabled)
-            {
-              LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
-            }
+            newValue = 10;
+            AddVerifiedPlayer(cast.Caster, currentTime);
           }
-          counter.CurrentClass = theClass;
+
+          if (counter.ClassCounts.TryGetValue(theClass, out long value))
+          {
+            newValue += value;
+          }
+
+          counter.ClassCounts[theClass] = newValue;
+
+          if (newValue > counter.CurrentMax)
+          {
+            counter.CurrentMax = newValue;
+            if (!theClass.Equals(counter.CurrentClass))
+            {
+              if (LOG.IsDebugEnabled)
+              {
+                LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
+              }
+            }
+            counter.CurrentClass = theClass;
+          }
         }
       }
     }
