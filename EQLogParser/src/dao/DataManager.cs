@@ -113,6 +113,7 @@ namespace EQLogParser
 
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     private readonly ConcurrentDictionary<string, string> RanksCache = new ConcurrentDictionary<string, string>();
+    private readonly ConcurrentDictionary<string, string> TitleToClass = new ConcurrentDictionary<string, string>();
 
     private int LastSpellIndex = -1;
 
@@ -127,6 +128,20 @@ namespace EQLogParser
       RanksCache["Third"] = "Root";
       RanksCache["Fifth"] = "Root";
       RanksCache["Octave"] = "Root";
+
+      // Player title mapping for /who queries
+      ConfigUtil.ReadList(@"data\titles.txt").ForEach(line =>
+      {
+        string[] split = line.Split('=');
+        if (split.Length == 2)
+        {
+          TitleToClass[split[0]] = split[0];
+          foreach (var title in split[1].Split(','))
+          {
+            TitleToClass[title + " (" + split[0] + ")"] = split[0];
+          }
+        }
+      });
 
       // Old Spell cache (EQEMU)
       ConfigUtil.ReadList(@"data\oldspells.txt").ForEach(line => OldSpellNamesDB[line] = true);
@@ -279,6 +294,7 @@ namespace EQLogParser
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
     internal List<Fight> GetOverlayFights() => OverlayFights.Values.ToList();
     internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
+    internal string GetClassFromTitle(string title) => TitleToClass.ContainsKey(title) ? TitleToClass[title] : null;
     internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
     internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
     internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);

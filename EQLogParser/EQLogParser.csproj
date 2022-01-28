@@ -506,6 +506,9 @@
     <Content Include="data\petnames.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="data\titles.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Resource Include="icons\Unk.png" />
     <Resource Include="icons\Mag.png" />
     <Resource Include="icons\Mnk.png" />

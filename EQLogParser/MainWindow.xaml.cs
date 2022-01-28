@@ -56,7 +56,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.64";
+    private const string VERSION = "v1.8.65";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -912,7 +912,12 @@ namespace EQLogParser
             VerifiedPlayersProperty.Add(new SortableName { Name = Labels.UNASSIGNED });
             verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
             verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
-            PlayerManager.Instance.Save();
+
+            // save before switching
+            if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
+            {
+              PlayerManager.Instance.Save();
+            }
           }
 
           ConfigUtil.ServerName = server;
