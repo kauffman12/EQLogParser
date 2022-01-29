@@ -39,7 +39,7 @@ namespace EQLogParser
     private readonly StackPanel ButtonsPanel;
 
     private CombinedStats Stats = null;
-    private bool ProcessDirection = false;
+    private int ProcessDirection = 0;
     private TextBlock TitleBlock;
     private StackPanel TitlePanel;
     private TextBlock TitleDamageBlock;
@@ -327,7 +327,7 @@ namespace EQLogParser
 
           // people wanted shorter delays for damage updates but I don't want the indicator to change constantly
           // so this limits it to 1/2 the current time value
-          ProcessDirection = !ProcessDirection;
+          ProcessDirection = ProcessDirection >= 3 ? 0 : ProcessDirection + 1;
 
           Stats = DamageStatsManager.ComputeOverlayStats(CurrentDamageSelectionMode, CurrentMaxRows, SelectedClass);
 
@@ -349,13 +349,14 @@ namespace EQLogParser
 
             long total = 0;
             int goodRowCount = 0;
-            long me = 0;
+            int meIndex = 0;
+            long meDamage = 0;
             var topList = new Dictionary<int, long>();
             for (int i = 0; i < CurrentMaxRows; i++)
             {
               if (Stats.StatsList.Count > i)
               {
-                if (ProcessDirection)
+                if (ProcessDirection == 3)
                 {
                   DamageRateList[i].Opacity = 0.0;
                 }
@@ -409,13 +410,14 @@ namespace EQLogParser
 
                 NameBlockList[i].Text = updateText;
 
-                if (i <= 4 && !isMe && Stats.StatsList[i].Total > 0)
+                if (i <= (CurrentMaxRows - 1) && !isMe && Stats.StatsList[i].Total > 0)
                 {
                   topList[i] = Stats.StatsList[i].Total;
                 }
                 else if (isMe)
                 {
-                  me = Stats.StatsList[i].Total;
+                  meIndex = i;
+                  meDamage = Stats.StatsList[i].Total;
                 }
 
                 var damage = StatsUtil.FormatTotals(Stats.StatsList[i].Total) + " [" + Stats.StatsList[i].TotalSeconds.ToString(CultureInfo.CurrentCulture)
@@ -425,16 +427,16 @@ namespace EQLogParser
               }
             }
 
-            if (ProcessDirection)
+            if (ProcessDirection == 3)
             {
-              if (me > 0 && topList.Count > 0)
+              if (meIndex >= 0 && topList.Count > 0)
               {
                 var updatedList = new Dictionary<int, double>();
                 foreach (int i in topList.Keys)
                 {
-                  if (i != me)
+                  if (i != meIndex)
                   {
-                    var diff = topList[i] / (double)me;
+                    var diff = topList[i] / (double)meDamage;
                     updatedList[i] = diff;
                     if (PrevList != null && PrevList.ContainsKey(i))
                     {
