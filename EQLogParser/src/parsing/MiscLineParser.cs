@@ -42,10 +42,8 @@ namespace EQLogParser
           // [Mon Apr 27 20:51:22 2020] Kazint's Scorching Beam Rk. III spell has been reflected by a shadow reflection.
           // [Sun Mar 28 19:42:46 2021] A Draconic Lava Chain Feet Ornament was given to Aldryn.
           // [Mon Apr 05 19:42:24 2021] Hacket won the need roll on 1 item(s): Restless Velium Tainted Pelt with a roll of 996.
-          // [Thu Jan 27 16:32:01 2022] [1 Warrior] Spasiba(Gnome)  ZONE: The Bazaar(bazaar)
-          // [Thu Jan 27 16:32:01 2022] [120 Shadowblade (Rogue)] Bloodydagger(Iksar) < Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall
-          // [Wed Jan 26 22:41:48 2022] [65 Overlord (Warrior)] Jenfo (Halfling)
-
+          // [Thu Jan 27 22:33:54 2022] **A Magic Die is rolled by Kizant. It could have been any number from 1 to 1000, but this time it turned up a 11.
+          // [Thu Jan 27 22:34:03 2022] **A Magic Die is rolled by Incogitable. It could have been any number from 1 to 1000, but this time it turned up a 405.
 
           string looter = null;
           int awakenedIndex = -1;
@@ -62,6 +60,9 @@ namespace EQLogParser
             {
               looter = split[0] == "--You" ? ConfigUtil.PlayerName : split[0].TrimStart('-');
             }
+            // [Thu Jan 27 16:32:01 2022] [1 Warrior] Spasiba(Gnome)  ZONE: The Bazaar(bazaar)
+            // [Thu Jan 27 16:32:01 2022] [120 Shadowblade (Rogue)] Bloodydagger(Iksar) < Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall
+            // [Wed Jan 26 22:41:48 2022] [65 Overlord (Warrior)] Jenfo (Halfling)
             else if (i == 0 && split[0].StartsWith("[", StringComparison.Ordinal) && split[0].Length > 1 && split.Length > 4)
             {
               string level = split[0].Substring(1);
