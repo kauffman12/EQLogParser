@@ -8,7 +8,7 @@ namespace EQLogParser
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      if (value?.GetType() == typeof(uint) || value?.GetType() == typeof(double))
+      if (value?.GetType() == typeof(uint) || value?.GetType() == typeof(double) || value?.GetType() == typeof(float))
       {
         return System.Convert.ToDouble(value, CultureInfo.CurrentCulture) > 0 ? value.ToString() : "-";
       }

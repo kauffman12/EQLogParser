@@ -298,7 +298,8 @@ namespace EQLogParser
             });
 
             DamageGroups.Add(newBlock);
-            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block => Resists.AddRange(block.Actions)));
+            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block => 
+              Resists.AddRange(block.Actions)));
             ComputeDamageStats(options);
           }
           else if (Selected == null || Selected.Count == 0)
@@ -452,7 +453,7 @@ namespace EQLogParser
 
                     if (stats.Total > 0)
                     {
-                      child.Percent = Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
+                      child.Percent = (float) Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                     }
 
                     if (specials.TryGetValue(child.Name, out string special1))
@@ -506,26 +507,26 @@ namespace EQLogParser
                 }
               }
             }
+
+            if (options.RequestSummaryData)
+            {
+              // generating new stats
+              var genEvent = new StatsGenerationEvent
+              {
+                Type = Labels.DAMAGEPARSE,
+                State = "COMPLETED",
+                CombinedStats = combined,
+                Limited = damageValidator.IsDamageLimited()
+              };
+
+              genEvent.Groups.AddRange(DamageGroups);
+              genEvent.UniqueGroupCount = DamageGroupIds.Count;
+              EventsGenerationStatus?.Invoke(this, genEvent);
+            }
           }
           catch (Exception ex)
           {
             LOG.Error(ex);
-          }
-
-          if (options.RequestSummaryData)
-          {
-            // generating new stats
-            var genEvent = new StatsGenerationEvent
-            {
-              Type = Labels.DAMAGEPARSE,
-              State = "COMPLETED",
-              CombinedStats = combined,
-              Limited = damageValidator.IsDamageLimited()
-            };
-
-            genEvent.Groups.AddRange(DamageGroups);
-            genEvent.UniqueGroupCount = DamageGroupIds.Count;
-            EventsGenerationStatus?.Invoke(this, genEvent);
           }
         }
       }

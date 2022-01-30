@@ -45,7 +45,7 @@ namespace EQLogParser
     private bool CurrentShowBreaks;
     private int CurrentGroup = 1;
     private int CurrentNonTankingGroup = 1;
-    private long CurrentSortId = 1;
+    private uint CurrentSortId = 1;
     private bool NeedRefresh = false;
     private bool IsEveryOther = false;
 
