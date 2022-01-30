@@ -7,7 +7,7 @@ namespace EQLogParser
   class NpcDamageManager
   {
     internal double LastFightProcessTime = double.NaN;
-    private long CurrentNpcID = 0;
+    private int CurrentNpcID = 1;
     private static readonly Dictionary<string, bool> RecentSpellCache = new Dictionary<string, bool>();
     private static readonly Dictionary<string, bool> ValidCombo = new Dictionary<string, bool>();
     private const int RECENTSPELLTIME = 300;

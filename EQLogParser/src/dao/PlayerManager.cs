@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -55,6 +56,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> CharmPets = new ConcurrentDictionary<string, byte>();
     private static readonly object LockObject = new object();
     private bool PetMappingUpdated = false;
+    private bool PlayersUpdated = false;
 
     private PlayerManager()
     {
@@ -80,7 +82,14 @@ namespace EQLogParser
 
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
+
+      DispatcherTimer saveTimer = new DispatcherTimer();
+      saveTimer.Tick += SaveTimer_Tick;
+      saveTimer.Interval = new TimeSpan(0, 0, 30);
+      saveTimer.Start();
     }
+
+    private void SaveTimer_Tick(object sender, EventArgs e) => Save();
 
     internal bool IsCharmPet(string name) => !string.IsNullOrEmpty(name) && CharmPets.ContainsKey(name);
 
@@ -114,7 +123,11 @@ namespace EQLogParser
         {
           if (!IsVerifiedPlayer(pet))
           {
-            PetToPlayer[pet] = player;
+            lock (LockObject)
+            {
+              PetToPlayer[pet] = player;
+            }
+
             EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
             PetMappingUpdated = !initialLoad;
           }
@@ -128,7 +141,13 @@ namespace EQLogParser
       {
         if (!VerifiedPlayers.ContainsKey(name) || string.IsNullOrEmpty(GetPlayerClass(name)))
         {
-          VerifiedPlayers.TryRemove(name, out _);
+          lock (LockObject)
+          {
+            if (VerifiedPlayers.TryRemove(name, out _))
+            {
+              PlayersUpdated = true;
+            }
+          }
 
           if (!IsPossiblePlayerName(name))
           {
@@ -153,6 +172,7 @@ namespace EQLogParser
           if (VerifiedPets.TryAdd(name, 1))
           {
             EventsNewVerifiedPet?.Invoke(this, name);
+            PlayersUpdated = true;
           }
         }
       }
@@ -166,12 +186,19 @@ namespace EQLogParser
         {
           if (playerTime > lastTime)
           {
-            VerifiedPlayers[name] = playerTime;
+            lock (LockObject)
+            {
+              VerifiedPlayers[name] = playerTime;
+            }
           }
         }
         else
         {
-          VerifiedPlayers[name] = playerTime;
+          lock (LockObject)
+          {
+            VerifiedPlayers[name] = playerTime;
+          }
+
           EventsNewVerifiedPlayer?.Invoke(this, name);
         }
 
@@ -307,7 +334,10 @@ namespace EQLogParser
       {
         if (PetToPlayer.ContainsKey(name))
         {
-          PetToPlayer.TryRemove(name, out _);
+          lock (LockObject)
+          {
+            PetToPlayer.TryRemove(name, out _);
+          }
         }
 
         EventsRemoveVerifiedPet?.Invoke(this, name);
@@ -316,23 +346,37 @@ namespace EQLogParser
 
     internal void RemoveVerifiedPlayer(string name)
     {
-      if (!string.IsNullOrEmpty(name) && VerifiedPlayers.TryRemove(name, out _))
+      bool updated = false;
+      if (!string.IsNullOrEmpty(name))
       {
-        string found = null;
-        foreach (var keypair in PetToPlayer)
+        lock (LockObject)
         {
-          if (keypair.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
+          if (VerifiedPlayers.TryRemove(name, out _))
           {
-            found = keypair.Key;
+            string found = null;
+
+            foreach (var keypair in PetToPlayer)
+            {
+              if (keypair.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
+              {
+                found = keypair.Key;
+              }
+            }
+
+            if (!string.IsNullOrEmpty(found))
+            {
+              PetToPlayer.TryRemove(found, out _);
+              PetMappingUpdated = true;
+            }
+
+            updated = true;
+            PlayersUpdated = true;
           }
         }
+      }
 
-        if (!string.IsNullOrEmpty(found))
-        {
-          PetToPlayer.TryRemove(found, out _);
-          PetMappingUpdated = true;
-        }
-
+      if (updated)
+      {
         EventsRemoveVerifiedPlayer?.Invoke(this, name);
       }
     }
@@ -418,31 +462,45 @@ namespace EQLogParser
     {
       if (PetMappingUpdated)
       {
-        var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Value) && keypair.Value != Labels.UNASSIGNED);
-        ConfigUtil.SavePetMapping(filtered);
+        lock(PetToPlayer)
+        {
+          var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Value) && 
+            keypair.Value != Labels.UNASSIGNED);
+          ConfigUtil.SavePetMapping(filtered);
+        }
+
         PetMappingUpdated = false;
       }
 
-      DateTime now = DateTime.Now;
-      var list = new List<string>();
-      foreach (var keypair in VerifiedPlayers)
+      if (PlayersUpdated)
       {
-        if (!string.IsNullOrEmpty(keypair.Key))
+        lock (VerifiedPlayers)
         {
-          //if (keypair.Value != 0 && (now - DateUtil.FromDouble((long)keypair.Value)).TotalDays < 180)
-          //{
-          var output = keypair.Key + "=" + Math.Round(keypair.Value);
-          if (PlayerToClass.TryGetValue(keypair.Key, out SpellClassCounter value) && value.CurrentMax == long.MaxValue && 
-            ClassNames.TryGetValue(value.CurrentClass, out string className))
+          var list = new List<string>();
+          DateTime now = DateTime.Now;
+          foreach (var keypair in VerifiedPlayers)
           {
-            output += "," + className;
-          }
-          list.Add(output);
-          //}
-        }
-      }
+            if (!string.IsNullOrEmpty(keypair.Key))
+            {
+              //if (keypair.Value != 0 && (now - DateUtil.FromDouble((long)keypair.Value)).TotalDays < 180)
+              //{
+              var output = keypair.Key + "=" + Math.Round(keypair.Value);
+              if (PlayerToClass.TryGetValue(keypair.Key, out SpellClassCounter value) && value.CurrentMax == long.MaxValue &&
+                ClassNames.TryGetValue(value.CurrentClass, out string className))
+              {
+                output += "," + className;
+              }
 
-      ConfigUtil.SavePlayers(list);
+              list.Add(output);
+              //}
+            }
+          }
+
+          ConfigUtil.SavePlayers(list);
+        }
+
+        PlayersUpdated = false;
+      }
     }
 
     internal void SetPlayerClass(string player, string className)

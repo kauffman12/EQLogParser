@@ -270,10 +270,10 @@ namespace EQLogParser
     public const string BREAKTIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
-    public long Id { get; set; }
+    public int Id { get; set; }
     public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
-    public long SortId { get; set; }
+    public uint SortId { get; set; }
     public int NonTankingGroupId { get; set; }
     public bool IsInactivity { get; set; } = false;
     public long Total { get; set; }
@@ -355,14 +355,14 @@ namespace EQLogParser
     public short Damaging { get; set; }
     public byte Target { get; set; }
     public ushort ClassMask { get; set; }
-    public ushort Level { get; set; }
+    public byte Level { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
     public bool SongWindow { get; set; }
     public string WearOff { get; set; }
-    public ushort Proc { get; set; }
-    public ushort Adps { get; set; }
-    public ushort Rank { get; set; }
+    public byte Proc { get; set; }
+    public byte Adps { get; set; }
+    public byte Rank { get; set; }
     public bool Mgb { get; set; }
   }
 
@@ -435,20 +435,20 @@ namespace EQLogParser
     public long AvgNonTwincast { get; set; }
     public long AvgNonTwincastCrit { get; set; }
     public long AvgNonTwincastLucky { get; set; }
-    public double CritRate { get; set; }
-    public double DoubleBowRate { get; set; }
-    public double ExtraRate { get; set; }
-    public double FlurryRate { get; set; }
-    public double MeleeAccRate { get; set; }
-    public double MeleeHitRate { get; set; }
-    public double LuckRate { get; set; }
-    public double StrikethroughRate { get; set; }
-    public double RampageRate { get; set; }
-    public double RiposteRate { get; set; }
-    public double TwincastRate { get; set; }
-    public double ResistRate { get; set; }
-    public double Percent { get; set; }
-    public double PercentOfRaid { get; set; }
+    public float CritRate { get; set; }
+    public float DoubleBowRate { get; set; }
+    public float ExtraRate { get; set; }
+    public float FlurryRate { get; set; }
+    public float MeleeAccRate { get; set; }
+    public float MeleeHitRate { get; set; }
+    public float LuckRate { get; set; }
+    public float StrikethroughRate { get; set; }
+    public float RampageRate { get; set; }
+    public float RiposteRate { get; set; }
+    public float TwincastRate { get; set; }
+    public float ResistRate { get; set; }
+    public float Percent { get; set; }
+    public float PercentOfRaid { get; set; }
     public string Special { get; set; }
     public string ClassName { get; set; }
     public string TooltipText { get; set; } // referenced by cell style and could start using
@@ -461,7 +461,6 @@ namespace EQLogParser
     public Dictionary<string, PlayerSubStats> SubStats2 { get; } = new Dictionary<string, PlayerSubStats>();
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }
-    public double CalcTime { get; set; }
     public double MaxTime { get; set; }
   }
 }
