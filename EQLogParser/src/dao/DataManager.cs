@@ -86,6 +86,7 @@ namespace EQLogParser
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllResistBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllRolledBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
     private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
     private readonly List<LootRecord> AssignedLoot = new List<LootRecord>();
@@ -292,6 +293,7 @@ namespace EQLogParser
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
+    internal void AddRolledRecord(RolledRecord record, double beginTime) => Helpers.AddAction(AllRolledBlocks, record, beginTime);
     internal List<Fight> GetOverlayFights() => OverlayFights.Values.ToList();
     internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
     internal string GetClassFromTitle(string title) => TitleToClass.ContainsKey(title) ? TitleToClass[title] : null;
