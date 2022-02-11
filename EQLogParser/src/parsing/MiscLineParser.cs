@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -99,6 +98,20 @@ namespace EQLogParser
             {
               switch (split[i])
               {
+                case "**A":
+                  if (i == 0 && split.Length == 25 && split[1] == "Magic" && split[2] == "Die" && split[4] == "rolled" &&
+                    split[12] == "number" && split[6].Length > 2 && split[16].Length > 1 && split[24].Length > 1)
+                  {
+                    string player = split[6].Substring(0, split[6].Length - 1);
+                    string to = split[16].Substring(0, split[16].Length - 1);
+                    string rolled = split[24].Substring(0, split[24].Length - 1);
+                    if (int.TryParse(split[14], out int fromNumber) && int.TryParse(to, out int toNumber) && int.TryParse(rolled, out int rolledNumber))
+                    {
+                      DataManager.Instance.AddRolledRecord(new RolledRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber }, 
+                        DateUtil.ParseLogDate(lineData.Line, out _));
+                    }
+                  }
+                  break;
                 case "awakened":
                   awakenedIndex = i;
                   break;
@@ -132,7 +145,7 @@ namespace EQLogParser
                     var currentTime = DateUtil.ParseLogDate(lineData.Line, out _);
                     PlayerManager.Instance.AddVerifiedPlayer(looter, currentTime);
 
-                    LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Won Roll (Not Looted)" };
+                    LootRecord record = new LootRecord { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Won Roll (Not Looted)" };
                     DataManager.Instance.AddLootRecord(record, currentTime);
                     handled = true;
                   }
@@ -213,7 +226,7 @@ namespace EQLogParser
                       PlayerManager.Instance.AddVerifiedPlayer(looter, currentTime);
 
                       string item = string.Join(" ", split, 1, i - 2);
-                      LootRecord record = new LootRecord() { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Given (Not Looted)" };
+                      LootRecord record = new LootRecord { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Given (Not Looted)" };
                       DataManager.Instance.AddLootRecord(record, currentTime);
                       handled = true;
                     }
@@ -225,7 +238,7 @@ namespace EQLogParser
                   {
                     if (ParseCurrency(split, 2, i - 2, out string item, out uint count))
                     {
-                      LootRecord record = new LootRecord() { Item = item, Player = ConfigUtil.PlayerName, Quantity = count, IsCurrency = true };
+                      LootRecord record = new LootRecord { Item = item, Player = ConfigUtil.PlayerName, Quantity = count, IsCurrency = true };
                       DataManager.Instance.AddLootRecord(record, DateUtil.ParseLogDate(lineData.Line, out _));
                       handled = true;
                     }
