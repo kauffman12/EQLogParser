@@ -506,12 +506,6 @@
     <Style x:Key="SHPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Scaled Healing Per Second based on Total Time (raid time)" />
     </Style>
-    <Style x:Key="StrikethroughColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Melee hits received which were Strikethrough" />
-    </Style>
-    <Style x:Key="RiposteColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Melee hits received which were from Riposte" />
-    </Style>
     <Style x:Key="RampageColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Percent of Melee hits received which were from Rampage" />
     </Style>

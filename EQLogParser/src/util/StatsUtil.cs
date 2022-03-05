@@ -261,9 +261,16 @@ namespace EQLogParser
     internal static void UpdateStats(PlayerSubStats stats, HitRecord record, bool isPet = false)
     {
       var newMeleeHit = false;
+      var parseModifiers = true;
 
       switch (record.Type)
       {
+        // absorb isn't counted as a hit so don't parse whether it was a strikethrough, etc
+        case Labels.ABSORB:
+          stats.Absorbs++;
+          stats.MeleeAttempts++;
+          parseModifiers = false;
+          break;
         case Labels.BANE:
           stats.BaneHits++;
           stats.Hits += 1;
@@ -282,6 +289,10 @@ namespace EQLogParser
           break;
         case Labels.PARRY:
           stats.Parries++;
+          stats.MeleeAttempts++;
+          break;
+        case Labels.RIPOSTE:  // defensive riposte
+          stats.RiposteHits++;
           stats.MeleeAttempts++;
           break;
         case Labels.INVULNERABLE:
@@ -333,16 +344,20 @@ namespace EQLogParser
 
       if (record.OverTotal > 0)
       {
-        stats.Extra += (record.OverTotal - record.Total);
+        stats.Extra += record.OverTotal - record.Total;
       }
 
-      LineModifiersParser.UpdateStats(record, stats);
+      if (parseModifiers)
+      {
+        LineModifiersParser.UpdateStats(record, stats);
+      }
     }
 
     internal static void MergeStats(PlayerSubStats to, PlayerSubStats from)
     {
       if (to != null && from != null)
       {
+        to.Absorbs += from.Absorbs;
         to.BaneHits += from.BaneHits;
         to.Blocks += from.Blocks;
         to.BowHits += from.BowHits;
@@ -435,7 +450,6 @@ namespace EQLogParser
 
         if (stats.MeleeHits > 0)
         {
-          stats.StrikethroughRate = (float) Math.Round((float) stats.StrikethroughHits / stats.MeleeHits * 100, 2);
           stats.RiposteRate = (float) Math.Round((float) stats.RiposteHits / stats.MeleeHits * 100, 2);
           stats.RampageRate = (float) Math.Round((float) stats.RampageHits / stats.MeleeHits * 100, 2);
         }
@@ -448,7 +462,7 @@ namespace EQLogParser
         if (stats.MeleeAttempts > 0)
         {
           stats.MeleeHitRate = (float) Math.Round((float) stats.MeleeHits / stats.MeleeAttempts * 100, 2);
-          stats.MeleeAccRate = (float) Math.Round((float) stats.MeleeHits / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks - stats.Invulnerable) * 100, 2);
+          stats.MeleeAccRate = (float) Math.Round((float) stats.MeleeHits / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks - stats.Invulnerable - stats.Absorbs) * 100, 2);
         }
 
         if (stats.SpellHits > 0)
@@ -607,10 +621,12 @@ namespace EQLogParser
       {
         switch (type)
         {
-          case Labels.MISS:
+          case Labels.ABSORB:
           case Labels.DODGE:
-          case Labels.PARRY:
           case Labels.INVULNERABLE:
+          case Labels.MISS:
+          case Labels.PARRY:
+          case Labels.RIPOSTE:
             isHitType = false;
             break;
         }

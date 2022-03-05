@@ -154,22 +154,25 @@ namespace EQLogParser
       _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.", Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    internal static Dictionary<string, bool> LoadColumns(ComboBox columns, DataGrid dataGrid)
+    internal static Dictionary<string, bool> LoadColumns(ComboBox columns, DataGrid dataGrid, int start = 0)
     {
+      var columnNames = dataGrid.Columns.Select(col => col.Header as string).ToHashSet();
       var indexesCache = new Dictionary<string, int>();
       var indexString = ConfigUtil.GetSetting(columns.Tag as string + "DisplayIndex");
       if (!string.IsNullOrEmpty(indexString))
       {
-        foreach (var index in indexString.Split(','))
+        int index = start;
+        foreach (var col in indexString.Split(','))
         {
-          if (!string.IsNullOrEmpty(index))
+          if (!string.IsNullOrEmpty(col))
           {
-            var split = index.Split('|');
-            if (split != null && split.Length == 2 && !string.IsNullOrEmpty(split[0]) && !string.IsNullOrEmpty(split[1]))
+            var split = col.Split('|');
+            if (split != null && split.Length >= 1 && !string.IsNullOrEmpty(split[0]))
             {
-              if (int.TryParse(split[1], out int result))
+              // ignore the saved index
+              if (columnNames.Contains(split[0]))
               {
-                indexesCache[split[0]] = result;
+                indexesCache[split[0]] = index++;
               }
             }
           }
@@ -286,12 +289,12 @@ namespace EQLogParser
     internal static void SaveColumnIndexes(ComboBox columns, DataGrid dataGrid)
     {
       var columnIndexes = new List<string>();
-      for (int i = 0; i < dataGrid.Columns.Count; i++)
+      foreach (var column in dataGrid.Columns.OrderBy(column => column.DisplayIndex))
       {
-        string header = dataGrid.Columns[i].Header as string;
+        string header = column.Header as string;
         if (!string.IsNullOrEmpty(header))
         {
-          columnIndexes.Add(header + "|" + dataGrid.Columns[i].DisplayIndex);
+          columnIndexes.Add(header);
         }
       }
 
