@@ -149,7 +149,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & STRIKETHROUGH) != 0)
+        if (IsStrikethrough(record.ModifiersMask))
         {
           playerStats.StrikethroughHits++;
 

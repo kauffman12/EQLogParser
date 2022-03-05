@@ -225,6 +225,7 @@ namespace EQLogParser
 
   internal class Attempt
   {
+    public uint Absorbs { get; set; }
     public uint Blocks { get; set; }
     public uint Dodges { get; set; }
     public uint Misses { get; set; }

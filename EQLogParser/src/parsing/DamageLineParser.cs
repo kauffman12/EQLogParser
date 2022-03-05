@@ -206,11 +206,19 @@ namespace EQLogParser
                   case "misses!":
                     missType = (stop == i && butIndex > -1 && i > tryIndex) ? 2 : missType;
                     break;
+                  case "parry!":
                   case "parries!":
                     missType = (stop == i && butIndex > -1 && i > tryIndex) ? 3 : missType;
                     break;
                   case "INVULNERABLE!":
                     missType = (stop == i && butIndex > -1 && i > tryIndex) ? 4 : missType;
+                    break;
+                  case "riposte!":
+                  case "ripostes!":
+                    missType = (stop == i && butIndex > -1 && i > tryIndex && "(Strikethrough)" != split[split.Length - 1]) ? 5 : missType;
+                    break;
+                  case "blow!":
+                    missType = (stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "absorbs") ? 6 : missType;
                     break;
                   case "slain":
                     slainIndex = i;
@@ -414,6 +422,10 @@ namespace EQLogParser
               uint damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
               handled = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DD, Labels.DD);
             }
+            // [Fri Mar 04 21:28:19 2022] A failed reclaimer tries to punch YOU, but YOUR magical skin absorbs the blow!
+            // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but YOU parry!
+            // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but YOU riposte! (Strikethrough)
+            // [Sun Jan 30 18:37:55 2022] Zelnithak tries to hit Fllint, but Fllint ripostes! (Strikethrough)
             // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but misses! (Strikethrough)
             // [Sat Aug 03 00:20:57 2019] You try to crush a Kar`Zok soldier, but miss! (Riposte Strikethrough)
             // [Sat Apr 24 01:08:49 2021] Test One Hundred Three tries to punch Kazint, but misses!
@@ -448,6 +460,12 @@ namespace EQLogParser
                   break;
                 case 4:
                   label = Labels.INVULNERABLE;
+                  break;
+                case 5:
+                  label = Labels.RIPOSTE;
+                  break;
+                case 6:
+                  label = Labels.ABSORB;
                   break;
               }
 

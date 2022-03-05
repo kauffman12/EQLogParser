@@ -45,7 +45,7 @@ namespace EQLogParser
 
         if (TheSelectedColumns != null)
         {
-          TheShownColumns = DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
+          TheShownColumns = DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid, 1);
         }
       }
     }
