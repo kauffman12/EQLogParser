@@ -3,6 +3,7 @@ Apex of Enchantment=9
 Auspice of the Hunter=33
 Fierce Eye=17
 Glyph of Destruction=15
+Glyph of Ultimate Power V=15
 Group Spirit of the Great Wolf=14|Spirit of the Great Wolf=20
 Illusions of Grandeur=13
 Intensity of the Resolute=50
@@ -19,6 +20,7 @@ Spirit of Vesagran=12
 Auspice of the Hunter=33
 Fierce Eye=17
 Glyph of Destruction=15
+Glyph of Ultimate Power V=15
 Illusions of Grandeur=13
 Intensity of the Resolute=50
 Spire of Necromancy=25

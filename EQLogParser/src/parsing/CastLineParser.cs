@@ -13,12 +13,12 @@ namespace EQLogParser
 
     private static readonly Dictionary<string, string> SpecialLandsOnCodes = new Dictionary<string, string>()
     {
-      { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }, { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }
+      { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }, { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }
     };
 
     private static readonly Dictionary<string, string> SpecialYouCodes = new Dictionary<string, string>()
     {
-      { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
+      { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
     };
 
     private static readonly Dictionary<string, byte> PetCheck = new Dictionary<string, byte>()
