@@ -32,9 +32,9 @@ namespace EQLogParser
 
       try
       {
-        string[] split = lineData.Action.Split(' ');
+        List<string> sList = new List<string>(lineData.Action.Split(' '));
 
-        if (split != null && split.Length > 1 && !split[0].Contains("."))
+        if (sList.Count > 1 && !sList[0].Contains("."))
         {
           string player = null;
           string spellName = null;
@@ -55,20 +55,20 @@ namespace EQLogParser
           // [Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
           // [Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
           // [Sun Mar 01 22:34:58 2020] You have entered The Eastern Wastes.
-          if (split[0] == "You")
+          if (sList[0] == "You")
           {
             player = ConfigUtil.PlayerName;
             isYou = true;
 
-            if (split[1] == "activate")
+            if (sList[1] == "activate")
             {
-              spellName = ParseNewSpellName(split, 2);
+              spellName = ParseNewSpellName(sList, 2);
             }
 
             // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
-            if (split[1] == "have" && split[2] == "entered")
+            if (sList[1] == "have" && sList[2] == "entered")
             {
-              string zone = string.Join(" ", split, 3, split.Length - 3).TrimEnd('.');
+              string zone = string.Join(" ", sList.ToArray(), 3, sList.Count - 3).TrimEnd('.');
               DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, DateUtil.ParseLogDate(lineData.Line, out _));
               handled = true;
 
@@ -77,64 +77,64 @@ namespace EQLogParser
                 DataManager.Instance.ZoneChanged();
               }
             }
-            else if (split[1] == "begin")
+            else if (sList[1] == "begin")
             {
-              if (split[2] == "casting")
+              if (sList[2] == "casting")
               {
-                spellName = ParseNewSpellName(split, 3);
+                spellName = ParseNewSpellName(sList, 3);
                 isSpell = true;
               }
-              else if (split[2] == "singing")
+              else if (sList[2] == "singing")
               {
-                spellName = ParseNewSpellName(split, 3);
+                spellName = ParseNewSpellName(sList, 3);
               }
             }
           }
-          else if (split[1] == "activates")
+          else if (sList[1] == "activates")
           {
-            player = split[0];
-            spellName = ParseNewSpellName(split, 2);
+            player = sList[0];
+            spellName = ParseNewSpellName(sList, 2);
           }
-          else if (split[1] == "begins")
+          else if (sList.FindIndex(1, sList.Count - 1, s => s == "begins") is int bIndex && bIndex > -1)
           {
-            if (split[2] == "casting")
+            if (sList[bIndex + 1] == "casting")
             {
-              player = split[0];
-              spellName = ParseNewSpellName(split, 3);
+              player = string.Join(" ", sList.ToArray(), 0, bIndex);
+              spellName = ParseNewSpellName(sList, bIndex + 2);
               isSpell = true;
             }
-            else if (split[2] == "singing")
+            else if (sList[bIndex + 1] == "singing")
             {
-              player = split[0];
-              spellName = ParseNewSpellName(split, 3);
+              player = string.Join(" ", sList.ToArray(), 0, bIndex);
+              spellName = ParseNewSpellName(sList, bIndex + 2);
             }
-            else if (split.Length > 5 && split[2] == "to" && split[4] == "a")
+            else if (sList.Count > 5 && sList[2] == "to" && sList[4] == "a")
             {
-              if (split[3] == "cast" && split[5] == "spell.")
+              if (sList[3] == "cast" && sList[5] == "spell.")
               {
-                player = split[0];
-                spellName = ParseOldSpellName(split, 6);
+                player = sList[0];
+                spellName = ParseOldSpellName(sList, 6);
                 isSpell = true;
               }
-              else if (split[3] == "sing" && split[5] == "song.")
+              else if (sList[3] == "sing" && sList[5] == "song.")
               {
-                player = split[0];
-                spellName = ParseOldSpellName(split, 6);
+                player = sList[0];
+                spellName = ParseOldSpellName(sList, 6);
               }
             }
           }
-          else if (split.Length > 4 && split[split.Length - 1] == "interrupted." && split[split.Length - 2] == "is" && split[split.Length - 3] == "spell")
+          else if (sList.Count > 4 && sList[sList.Count - 1] == "interrupted." && sList[sList.Count - 2] == "is" && sList[sList.Count - 3] == "spell")
           {
             isInterrupted = true;
-            spellName = string.Join(" ", split, 1, split.Length - 4);
+            spellName = string.Join(" ", sList.ToArray(), 1, sList.Count - 4);
 
-            if (split[0] == "Your")
+            if (sList[0] == "Your")
             {
               player = ConfigUtil.PlayerName;
             }
-            else if (split[0].Length > 3 && split[0][split[0].Length - 1] == 's' && split[0][split[0].Length - 2] == '\'')
+            else if (sList[0].Length > 3 && sList[0][sList[0].Length - 1] == 's' && sList[0][sList[0].Length - 2] == '\'')
             {
-              player = split[0].Substring(0, split[0].Length - 2);
+              player = sList[0].Substring(0, sList[0].Length - 2);
             }
           }
 
@@ -163,10 +163,10 @@ namespace EQLogParser
 
           if (!handled && lineData.Line[lineData.Line.Length - 1] != ')')
           {
-            if (split[0].Length > 3 && split[0][split[0].Length - 1] == 's' && split[0][split[0].Length - 2] == '\'')
+            if (sList[0].Length > 3 && sList[0][sList[0].Length - 1] == 's' && sList[0][sList[0].Length - 2] == '\'')
             {
-              player = string.Intern(split[0].Substring(0, split[0].Length - 2));
-              var landsOnPosessiveMessage = string.Join(" ", split, 1, split.Length - 1);
+              player = string.Intern(sList[0].Substring(0, sList[0].Length - 2));
+              var landsOnPosessiveMessage = string.Join(" ", sList.ToArray(), 1, sList.Count - 1);
               List<SpellData> result = DataManager.Instance.GetPosessiveLandsOnOther(player, landsOnPosessiveMessage, out _);
               if (result != null)
               {
@@ -193,9 +193,9 @@ namespace EQLogParser
                 handled = true;
               }
             }
-            else if (split.Length > 0)
+            else if (sList.Count > 0)
             {
-              string landsOnMessage = string.Join(" ", split, 1, split.Length - 1);
+              string landsOnMessage = string.Join(" ", sList.ToArray(), 1, sList.Count - 1);
               int midPeriod = -1;
 
               // some abilities like staunch show a lands on message followed by a heal. so search based on first sentence
@@ -207,7 +207,7 @@ namespace EQLogParser
                 }
               }
 
-              player = split[0];
+              player = sList[0];
               List<SpellData> result = DataManager.Instance.GetNonPosessiveLandsOnOther(player, landsOnMessage, out _);
 
               if (result == null)
@@ -265,14 +265,14 @@ namespace EQLogParser
       }
     }
 
-    private static string ParseNewSpellName(string[] split, int spellIndex)
+    private static string ParseNewSpellName(List<string> split, int spellIndex)
     {
-      return string.Join(" ", split, spellIndex, split.Length - spellIndex).Trim('.');
+      return string.Join(" ", split.ToArray(), spellIndex, split.Count - spellIndex).Trim('.');
     }
 
-    private static string ParseOldSpellName(string[] split, int spellIndex)
+    private static string ParseOldSpellName(List<string> split, int spellIndex)
     {
-      return string.Join(" ", split, spellIndex, split.Length - spellIndex).Trim(OldSpellChars);
+      return string.Join(" ", split.ToArray(), spellIndex, split.Count - spellIndex).Trim(OldSpellChars);
     }
   }
 }

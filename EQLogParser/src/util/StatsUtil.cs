@@ -556,7 +556,7 @@ namespace EQLogParser
             string code = null;
             string player = null;
 
-            if (action is DeathRecord death && PlayerManager.Instance.IsVerifiedPlayer(death.Killed))
+            if (action is DeathRecord death && (PlayerManager.Instance.IsVerifiedPlayer(death.Killed) || PlayerManager.Instance.IsMerc(death.Killed)))
             {
               player = death.Killed;
               code = "X";
