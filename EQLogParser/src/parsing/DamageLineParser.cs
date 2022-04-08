@@ -687,20 +687,8 @@ namespace EQLogParser
 
     private static string FixName(string name)
     {
-      string result;
-      if (name.Length >= 2 && name[0] == 'A' && name[1] == ' ')
-      {
-        result = "a " + name.Substring(2);
-      }
-      else if (name.Length >= 3 && name[0] == 'A' && name[1] == 'n' && name[2] == ' ')
-      {
-        result = "an " + name.Substring(3);
-      }
-      else
-      {
-        result = name;
-      }
-      return result;
+      // changed to always be upper so merc/npc names match for spell counts and other things easier
+      return TextFormatUtils.ToUpper(name);
     }
 
     private static string GetTypeFromSpell(string name, string type)

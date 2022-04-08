@@ -106,7 +106,7 @@ namespace EQLogParser
                   var isActorNpc = DataManager.Instance.IsLifetimeNpc(death.Killer) || DataManager.Instance.IsKnownNpc(death.Killer);
                   var isTargetNpc = DataManager.Instance.IsLifetimeNpc(death.Killed) || DataManager.Instance.IsKnownNpc(death.Killed);
                   var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(death.Killer);
-                  var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayer(death.Killed);
+                  var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(death.Killed);
 
                   string text = KILLSHOT_EVENT;
                   if (isTargetPlayer && isActorPlayer)

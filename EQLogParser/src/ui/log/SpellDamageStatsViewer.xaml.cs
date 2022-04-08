@@ -82,7 +82,7 @@ namespace EQLogParser
       {
         foreach (var kv in fight.DDDamage)
         {
-          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster))
+          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
           {
             if (!playerDDTotals.TryGetValue(kv.Key, out SpellDamageStats ddStats))
             {
@@ -100,7 +100,7 @@ namespace EQLogParser
 
         foreach (var kv in fight.DoTDamage)
         {
-          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster))
+          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
           {
             if (!playerDoTTotals.TryGetValue(kv.Key, out SpellDamageStats dotStats))
             {
@@ -215,7 +215,7 @@ namespace EQLogParser
           bool pass = false;
           if (item is IDictionary<string, object> dict)
           {
-            pass = !isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string);
+            pass = !isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) || PlayerManager.Instance.IsMerc(dict["Caster"] as string);
             pass = pass && (type == null || type.Equals(dict["Type"])) && (spell == null || spell.Equals(dict["Spell"])) && (player == null || player.Equals(dict["Caster"]));
           }
           return pass;

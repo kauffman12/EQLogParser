@@ -51,6 +51,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> TakenPetOrPlayerAction = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, double> VerifiedPlayers = new ConcurrentDictionary<string, double>();
+    private readonly ConcurrentDictionary<string, byte> Mercs = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
     private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> CharmPets = new ConcurrentDictionary<string, byte>();
@@ -98,9 +99,9 @@ namespace EQLogParser
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name)
       || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
 
-    internal bool IsPetOrPlayer(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || TakenPetOrPlayerAction.ContainsKey(name));
+    internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || TakenPetOrPlayerAction.ContainsKey(name));
 
-    internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayer(name) || DataManager.Instance.IsPlayerSpell(name);
+    internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
 
     internal void AddPetOrPlayerAction(string name)
     {
@@ -133,6 +134,19 @@ namespace EQLogParser
           }
         }
       }
+    }
+
+    internal void AddMerc(string name)
+    {
+      if (!string.IsNullOrEmpty(name))
+      {       
+        Mercs[TextFormatUtils.ToUpper(name)] = 1;
+      }
+    }
+
+    internal bool IsMerc(string name)
+    {
+      return Mercs.TryGetValue(TextFormatUtils.ToUpper(name), out _);
     }
 
     internal void AddVerifiedPet(string name)
@@ -407,6 +421,7 @@ namespace EQLogParser
         VerifiedPets.Clear();
         VerifiedPlayers.Clear();
         PossiblePlayerCache.Clear();
+        Mercs.Clear();
 
         AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDouble(DateTime.Now));
 

@@ -98,8 +98,13 @@ namespace EQLogParser
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
           {
             PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
-            found = true;
           }
+          else
+          {
+            PlayerManager.Instance.AddMerc(test);
+          }
+
+          found = true;
         }
         else if (action.EndsWith(" has left the raid.", StringComparison.Ordinal))
         {
