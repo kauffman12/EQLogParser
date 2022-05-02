@@ -7,7 +7,7 @@ namespace EQLogParser
 {
   class LogReader
   {
-    public delegate void ParseLineCallback(string line, long position);
+    public delegate void ParseLineCallback(string line, long position, double dateTime);
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -43,6 +43,7 @@ namespace EQLogParser
           Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
           StreamReader reader;
           FileSize = fs.Length;
+          double dateTime = double.NaN;
 
           if (!isGzip) // fs.Length works and we can seek properly
           {
@@ -60,7 +61,7 @@ namespace EQLogParser
               while (!reader.EndOfStream && value != 0)
               {
                 string line = reader.ReadLine();
-                bool inRange = DateUtil.HasTimeInRange(now, line, LastMins);
+                bool inRange = DateUtil.HasTimeInRange(now, line, LastMins, out dateTime);
                 value = Math.Abs(lastPos - position) / 2;
 
                 lastPos = position;
@@ -80,7 +81,7 @@ namespace EQLogParser
             {
               fs.Seek(0, SeekOrigin.End);
               FileLoadComplete = true;
-              LoadingCallback(null, fs.Position);
+              LoadingCallback(null, fs.Position, dateTime);
             }
           }
           else
@@ -95,15 +96,15 @@ namespace EQLogParser
               {
                 // seek the slow way since we can't jump around a zip stream
                 string line = reader.ReadLine();
-                if (DateUtil.HasTimeInRange(now, line, LastMins))
+                if (DateUtil.HasTimeInRange(now, line, LastMins, out dateTime))
                 {
-                  LoadingCallback(line, fs.Position);
+                  LoadingCallback(line, fs.Position, dateTime);
                   break;
                 }
               }
 
               // complete
-              LoadingCallback(null, fs.Position);
+              LoadingCallback(null, fs.Position, dateTime);
             }
 
             if (MonitorOnly)
@@ -115,13 +116,14 @@ namespace EQLogParser
               }
 
               FileLoadComplete = true;
-              LoadingCallback(null, fs.Position);
+              LoadingCallback(null, fs.Position, DateUtil.ToDouble(DateTime.Now));
             }
           }
 
           while (!reader.EndOfStream && Running)
           {
-            LoadingCallback(reader.ReadLine(), fs.Position);
+            string line = reader.ReadLine();
+            LoadingCallback(line, fs.Position, DateUtil.ParseDate(line));
           }
 
           FileLoadComplete = true;
@@ -162,7 +164,8 @@ namespace EQLogParser
                 {
                   while (Running && !reader.EndOfStream)
                   {
-                    LoadingCallback(reader.ReadLine(), fs.Length);
+                    string line = reader.ReadLine();
+                    LoadingCallback(line, fs.Length, DateUtil.ParseDate(line));
                   }
                 }
                 break;

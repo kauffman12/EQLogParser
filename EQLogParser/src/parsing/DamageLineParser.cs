@@ -533,7 +533,7 @@ namespace EQLogParser
           DataManager.Instance.ClearActiveAdps();
         }
 
-        double currentTime = DateUtil.ParseLogDate(lineData.Line, out _);
+        double currentTime = lineData.BeginTime;
         if (!double.IsNaN(currentTime))
         {
           CheckSlainQueue(currentTime);
@@ -601,7 +601,7 @@ namespace EQLogParser
           AttackerIsSpell = attackerIsSpell
         };
 
-        var currentTime = DateUtil.ParseLogDate(lineData.Line, out string timeString);
+        var currentTime = lineData.BeginTime;
 
         if (split.Length > stop + 1)
         {
@@ -615,7 +615,7 @@ namespace EQLogParser
           // handle old style crits for eqemu
           if (LastCrit != null && LastCrit.Attacker == record.Attacker && LastCrit.LineData.LineNumber == (lineData.LineNumber - 1))
           {
-            var critTime = DateUtil.ParseLogDate(LastCrit.LineData.Line, out string _);
+            var critTime = DateUtil.ParseDate(LastCrit.LineData.Line);
             if (!double.IsNaN(critTime) && (currentTime - critTime) <= 1)
             {
               record.ModifiersMask = (record.ModifiersMask == -1) ? LineModifiersParser.CRIT : record.ModifiersMask | LineModifiersParser.CRIT;
@@ -626,7 +626,8 @@ namespace EQLogParser
 
           CheckSlainQueue(currentTime);
 
-          DamageProcessedEvent e = new DamageProcessedEvent() { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
+          var timeString = lineData.Line.Substring(5, 15);
+          DamageProcessedEvent e = new DamageProcessedEvent { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
           EventsDamageProcessed?.Invoke(record, e);
           success = true;
 

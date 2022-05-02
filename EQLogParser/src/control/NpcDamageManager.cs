@@ -43,7 +43,6 @@ namespace EQLogParser
       {
         ValidCombo[comboKey] = defender;
         bool isNonTankingFight = false;
-        string origTimeString = processed.OrigTimeString.Substring(4, 15);
 
         // fix for unknown spells having a good name to work from
         if (processed.Record.AttackerIsSpell && defender)
@@ -51,7 +50,7 @@ namespace EQLogParser
           processed.Record.Attacker = Labels.UNK;
         }
 
-        Fight fight = Get(processed.Record, processed.BeginTime, origTimeString, defender);
+        Fight fight = Get(processed.Record, processed.BeginTime, processed.OrigTimeString, defender);
 
         if (defender)
         {

@@ -56,7 +56,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.69";
+    private const string VERSION = "v1.8.70";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -952,8 +952,13 @@ namespace EQLogParser
       }
     }
 
-    private void FileLoadingCallback(string line, long position)
+    private void FileLoadingCallback(string line, long position, double dateTime)
     {
+      if (dateTime == double.NaN)
+      {
+        return;
+      }
+
       if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 12000) is int sleep && sleep > 10)
       {
         Thread.Sleep(5 * (sleep - 10));
@@ -962,10 +967,11 @@ namespace EQLogParser
       Interlocked.Exchange(ref FilePosition, position);
       Interlocked.Add(ref LineCount, 1);
 
-      if (PreLineParser.NeedProcessing(line, out string action))
-      {
-        var lineData = new LineData { Line = line, LineNumber = LineCount, Action = action };
+      var lineData = new LineData { Line = line, LineNumber = LineCount, BeginTime = dateTime };
 
+      // populates lineData.Action
+      if (PreLineParser.NeedProcessing(lineData))
+      {
         // avoid having other things parse chat by accident
         if (ChatLineParser.Process(lineData) is ChatType chatType)
         {
