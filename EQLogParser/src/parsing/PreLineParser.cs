@@ -6,34 +6,32 @@ namespace EQLogParser
   {
     private const int MIN_LINE_LENGTH = 30;
 
-    private static readonly DateUtil DateUtil = new DateUtil();
-
     private PreLineParser()
     {
 
     }
 
-    internal static bool NeedProcessing(string line, out string action)
+    internal static bool NeedProcessing(LineData lineData)
     {
-      action = null;
       bool valid = false;
-      if (line != null && line.Length > MIN_LINE_LENGTH)
+      if (lineData.Line != null && lineData.Line.Length > MIN_LINE_LENGTH)
       {
-        action = line.Substring(LineParsing.ActionIndex);
-        valid = !(CheckForPlayersOrNPCs(line, action) || CheckForPetLeader(line, action, " says, 'My leader is ")
-          || CheckForPetLeader(line, action, " says 'My leader is ")); // eqemu doesn't have the comma
+        lineData.Action = lineData.Line.Substring(LineParsing.ActionIndex);
+        valid = !(CheckForPlayersOrNPCs(lineData) || CheckForPetLeader(lineData, " says, 'My leader is ")
+          || CheckForPetLeader(lineData, " says 'My leader is ")); // eqemu doesn't have the comma
       }
-      else if (line != null)
+      else if (lineData.Line != null)
       {
-        DebugUtil.WriteLine(line);
+        DebugUtil.WriteLine(lineData.Line);
       }
 
       return valid;
     }
 
-    private static bool CheckForPetLeader(string line, string action, string search)
+    private static bool CheckForPetLeader(LineData lineData, string search)
     {
       bool handled = false;
+      string action = lineData.Action;
       if (action.Length >= 28 && action.Length < 75)
       {
         int index = action.IndexOf(search, StringComparison.Ordinal);
@@ -46,7 +44,7 @@ namespace EQLogParser
             if (period > -1)
             {
               string owner = action.Substring(index + search.Length, period - index - search.Length);
-              PlayerManager.Instance.AddVerifiedPlayer(owner, DateUtil.ParseLogDate(line, out _));
+              PlayerManager.Instance.AddVerifiedPlayer(owner, lineData.BeginTime);
               PlayerManager.Instance.AddVerifiedPet(pet);
               PlayerManager.Instance.AddPetToPlayer(pet, owner);
             }
@@ -59,17 +57,18 @@ namespace EQLogParser
       return handled;
     }
 
-    private static bool CheckForPlayersOrNPCs(string line, string action)
+    private static bool CheckForPlayersOrNPCs(LineData lineData)
     {
       bool found = false;
 
+      string action = lineData.Action;
       if (action.Length > 10)
       {
         if (action.Length > 20 && action.StartsWith("Targeted (", StringComparison.Ordinal))
         {
           if (action[10] == 'P' && action[11] == 'l') // Player
           {
-            PlayerManager.Instance.AddVerifiedPlayer(action.Substring(19), DateUtil.ParseLogDate(line, out _));
+            PlayerManager.Instance.AddVerifiedPlayer(action.Substring(19), lineData.BeginTime);
           }
 
           found = true; // ignore anything that starts with Targeted
@@ -88,7 +87,7 @@ namespace EQLogParser
           string test = action.Substring(0, action.Length - 17);
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
           {
-            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
             found = true;
           }
         }
@@ -97,7 +96,7 @@ namespace EQLogParser
           string test = action.Substring(0, action.Length - 22);
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
           {
-            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
           }
           else
           {
@@ -111,7 +110,7 @@ namespace EQLogParser
           string test = action.Substring(0, action.Length - 19);
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
           {
-            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
             found = true;
           }
         }
@@ -120,7 +119,7 @@ namespace EQLogParser
           string test = action.Substring(0, action.Length - 20);
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
           {
-            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
             found = true;
           }
         }
@@ -129,7 +128,7 @@ namespace EQLogParser
           string test = action.Substring(0, action.Length - 32);
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
           {
-            PlayerManager.Instance.AddVerifiedPlayer(test, DateUtil.ParseLogDate(line, out _));
+            PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
             found = true;
           }
         }

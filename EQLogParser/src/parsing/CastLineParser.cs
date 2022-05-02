@@ -7,8 +7,6 @@ namespace EQLogParser
   class CastLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly char[] OldSpellChars = new char[] { '<', '>' };
 
     private static readonly Dictionary<string, string> SpecialLandsOnCodes = new Dictionary<string, string>()
@@ -69,7 +67,7 @@ namespace EQLogParser
             if (sList[1] == "have" && sList[2] == "entered")
             {
               string zone = string.Join(" ", sList.ToArray(), 3, sList.Count - 3).TrimEnd('.');
-              DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, DateUtil.ParseLogDate(lineData.Line, out _));
+              DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, lineData.BeginTime);
               handled = true;
 
               if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
@@ -140,7 +138,7 @@ namespace EQLogParser
 
           if (!handled && !string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(spellName))
           {
-            double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
+            double currentTime = lineData.BeginTime;
 
             if (!isInterrupted)
             {
@@ -161,7 +159,7 @@ namespace EQLogParser
             handled = true;
           }
 
-          if (!handled && lineData.Line[lineData.Line.Length - 1] != ')')
+          if (!handled && lineData.Action[lineData.Action.Length - 1] != ')')
           {
             if (sList[0].Length > 3 && sList[0][sList[0].Length - 1] == 's' && sList[0][sList[0].Length - 2] == '\'')
             {
@@ -170,7 +168,7 @@ namespace EQLogParser
               List<SpellData> result = DataManager.Instance.GetPosessiveLandsOnOther(player, landsOnPosessiveMessage, out _);
               if (result != null)
               {
-                double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
+                double currentTime = lineData.BeginTime;
                 var newSpell = new ReceivedSpell { Receiver = player, BeginTime = currentTime };
 
                 if (result.Count == 1)
@@ -229,7 +227,7 @@ namespace EQLogParser
 
               if (result != null)
               {
-                double currentTime = DateUtil.ParseDate(lineData.Line.Substring(1, 24));
+                double currentTime = lineData.BeginTime;
                 var newSpell = new ReceivedSpell() { Receiver = string.Intern(player), BeginTime = currentTime };
 
                 if (result.Count == 1)

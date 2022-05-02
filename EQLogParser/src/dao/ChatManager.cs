@@ -542,8 +542,7 @@ namespace EQLogParser
 
     private static ChatLine CreateLine(DateUtil dateUtil, string line)
     {
-      string dateString = line.Substring(1, 24);
-      double precise = dateUtil.ParsePreciseDate(dateString);
+      double precise = dateUtil.ParsePreciseDate(line);
       return new ChatLine { Line = line, BeginTime = precise };
     }
 

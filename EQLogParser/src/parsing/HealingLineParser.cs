@@ -5,7 +5,7 @@ namespace EQLogParser
   class HealingLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly DateUtil DateUtil = new DateUtil();
+
     private HealingLineParser()
     {
 
@@ -13,23 +13,18 @@ namespace EQLogParser
 
     public static void Process(LineData lineData)
     {
-      string line = lineData.Line;
       bool handled = false;
 
+      string action = lineData.Action;
       try
       {
         int index;
-        if (line.Length >= 51 && (index = line.LastIndexOf(" healed ", line.Length, line.Length - LineParsing.ActionIndex, StringComparison.Ordinal)) > -1)
+        if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length,StringComparison.Ordinal)) > -1)
         {
-          ProcessLine pline = new ProcessLine() { Line = line, ActionPart = line.Substring(LineParsing.ActionIndex) };
-          pline.OptionalIndex = index - LineParsing.ActionIndex;
-          pline.TimeString = pline.Line.Substring(1, 24);
-          pline.CurrentTime = DateUtil.ParseDate(pline.TimeString);
-
-          HealRecord record = HandleHealed(pline);
+          HealRecord record = HandleHealed(action, index, lineData.BeginTime);
           if (record != null)
           {
-            DataManager.Instance.AddHealRecord(record, pline.CurrentTime);
+            DataManager.Instance.AddHealRecord(record, lineData.BeginTime);
             handled = true;
           }
         }
@@ -54,7 +49,7 @@ namespace EQLogParser
       DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
-    private static HealRecord HandleHealed(ProcessLine pline)
+    private static HealRecord HandleHealed(string part, int optional, double beginTime)
     {
       // [Sun Feb 24 21:00:58 2019] Foob's promised interposition is fulfilled Foob healed himself for 44238 hit points by Promised Interposition Heal V. (Lucky Critical)
       // [Sun Feb 24 21:01:01 2019] Rowanoak is soothed by Brell's Soothing Wave. Farzi healed Rowanoak for 524 hit points by Brell's Sacred Soothing Wave.
@@ -70,8 +65,6 @@ namespace EQLogParser
       // [Wed Nov 06 14:19:54 2019] Your ward heals you as it breaks! You healed Niktaza for 8970 (86306) hit points by Healing Ward. (Critical)
 
       HealRecord record = null;
-      string part = pline.ActionPart;
-      int optional = pline.OptionalIndex;
       string test = part.Substring(0, optional);
 
       bool done = false;
@@ -244,10 +237,10 @@ namespace EQLogParser
               int firstParen = part.LastIndexOf('(', part.Length - 4);
               if (firstParen > -1)
               {
-                record.ModifiersMask = LineModifiersParser.Parse(record.Healer, part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1), pline.CurrentTime);
+                record.ModifiersMask = LineModifiersParser.Parse(record.Healer, part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1), beginTime);
                 if (LineModifiersParser.IsTwincast(record.ModifiersMask))
                 {
-                  PlayerManager.Instance.AddVerifiedPlayer(record.Healer, pline.CurrentTime);
+                  PlayerManager.Instance.AddVerifiedPlayer(record.Healer, beginTime);
                 }
               }
             }

@@ -27,7 +27,7 @@ namespace EQLogParser
       {
         if (chatType.Channel == ChatChannels.Guild || chatType.Channel == ChatChannels.Raid || chatType.Channel == ChatChannels.Fellowship)
         {
-          PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, DateUtil.ParseLogDate(lineData.Line, out _));
+          PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, lineData.BeginTime);
         }
       }
 

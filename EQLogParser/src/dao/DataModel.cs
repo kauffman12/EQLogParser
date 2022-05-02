@@ -106,15 +106,6 @@ namespace EQLogParser
     public int UniqueGroupCount { get; set; }
   }
 
-  internal class ProcessLine
-  {
-    public string Line { get; set; }
-    public double CurrentTime { get; set; }
-    public string TimeString { get; set; }
-    public string ActionPart { get; set; }
-    public int OptionalIndex { get; set; }
-  }
-
   internal class ResistRecord : IAction
   {
     public string Spell { get; set; }
@@ -184,6 +175,7 @@ namespace EQLogParser
     public string Action { get; set; }
     public string Line { get; set; }
     public long LineNumber { get; set; }
+    public double BeginTime { get; set; }
   }
 
   internal class HitLogRow : HitRecord

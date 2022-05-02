@@ -63,12 +63,17 @@ namespace EQLogParser
       return result;
     }
 
+    // This doesn't currently get called so test if ever needed
     internal static double ParseSimpleDate(string timeString)
     {
       double result = 0;
-      if (!string.IsNullOrEmpty(timeString) && DateTime.TryParseExact(timeString, "MMM dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime dateTime))
+      if (!string.IsNullOrEmpty(timeString))
       {
-        result = ToDouble(dateTime);
+        var dateTime = CustomDateTimeParser("MMM dd HH:mm:ss", timeString);
+        if (dateTime != DateTime.MinValue)
+        {
+          result = ToDouble(dateTime);
+        }
       }
 
       return result;
@@ -78,12 +83,13 @@ namespace EQLogParser
 
     internal static DateTime FromDouble(long value) => new DateTime(value * TimeSpan.FromSeconds(1).Ticks);
 
-    internal bool HasTimeInRange(double now, string line, int lastMins)
+    internal bool HasTimeInRange(double now, string line, int lastMins, out double dateTime)
     {
       bool found = false;
+      dateTime = double.NaN;
       if (line.Length > 24)
       {
-        double dateTime = ParseDate(line.Substring(1, 24));
+        dateTime = ParseDate(line);
         if (!double.IsNaN(dateTime))
         {
           TimeSpan diff = TimeSpan.FromSeconds(now - dateTime);
@@ -96,18 +102,18 @@ namespace EQLogParser
     internal double ParseLogDate(string line, out string timeString)
     {
       timeString = line.Substring(1, 24);
-      return ParseDate(timeString);
+      return ParseDate(line);
     }
 
-    internal double ParseDate(string timeString) => ParseDate(timeString, out double _);
+    internal double ParseDate(string timeString) => ParseDateTime(timeString, out double _);
 
     internal double ParsePreciseDate(string timeString)
     {
-      ParseDate(timeString, out double precise);
+      ParseDateTime(timeString, out double precise);
       return precise;
     }
 
-    private double ParseDate(string timeString, out double precise)
+    private double ParseDateTime(string timeString, out double precise)
     {
       double result = double.NaN;
 
@@ -119,11 +125,7 @@ namespace EQLogParser
       }
 
       increment = 0.0;
-      DateTime.TryParseExact(timeString, "ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime dateTime);
-      if (dateTime == DateTime.MinValue)
-      {
-        DateTime.TryParseExact(timeString, "ddd MMM  d HH:mm:ss yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime);
-      }
+      DateTime dateTime = CustomDateTimeParser("MMM dd HH:mm:ss yyyy", timeString, 5);
 
       if (dateTime == DateTime.MinValue)
       {
@@ -139,7 +141,111 @@ namespace EQLogParser
 
       if (double.IsNaN(result))
       {
-        LOG.Error("Invalid Date: " + timeString);
+        LOG.Debug("Invalid Date: " + timeString);
+      }
+
+      return result;
+    }
+
+    private static DateTime CustomDateTimeParser(string dateFormat, string source, int offset = 0)
+    {
+      int year = 0;
+      int month = 0;
+      int day = 0;
+      int hour = 0;
+      int minute = 0;
+      int second = 0;
+      int letterMonth = 0;
+
+      if (source.Length - offset >= dateFormat.Length)
+      {
+        for (int i = 0; i < dateFormat.Length; i++)
+        {
+          char c = source[offset + i];
+          switch (dateFormat[i])
+          {
+            case 'y':
+              year = year * 10 + (c - '0');
+              break;
+            case 'M':
+              if (char.IsLetter(c))
+              {
+                if (++letterMonth == 3)
+                {
+                  int cur = offset + i;
+                  switch (source[cur - 2])
+                  {
+                    case 'J':
+                    case 'j':
+                      month = (source[cur - 1] == 'a') ? 1 : (source[cur] == 'n') ? 6 : 7;
+                      break;
+                    case 'F':
+                    case 'f':
+                      month = 2;
+                      break;
+                    case 'M':
+                    case 'm':
+                      month = (source[cur] == 'r') ? 3 : 5;
+                      break;
+                    case 'A':
+                    case 'a':
+                      month = (source[cur - 1] == 'p') ? 4 : 8;
+                      break;
+                    case 'S':
+                    case 's':
+                      month = 9;
+                      break;
+                    case 'O':
+                    case 'o':
+                      month = 10;
+                      break;
+                    case 'N':
+                    case 'n':
+                      month = 11;
+                      break;
+                    case 'D':
+                    case 'd':
+                      month = 12;
+                      break;
+                  }
+                }
+              }
+              else
+              {
+                month = month * 10 + (c - '0');
+              }
+              break;
+            case 'd':
+              if (char.IsDigit(c))
+              {
+                day = day * 10 + (c - '0');
+              }
+              break;
+            case 'H':
+              hour = hour * 10 + (c - '0');
+              break;
+            case 'm':
+              minute = minute * 10 + (c - '0');
+              break;
+            case 's':
+              second = second * 10 + (c - '0');
+              break;
+          }
+        }
+      }
+
+      DateTime result = DateTime.MinValue;
+
+      if (year > 0 && month > 0 && month < 13 && day > 0 && day < 32 && hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 60)
+      {
+        try
+        {
+          result = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Local);
+        }
+        catch (ArgumentException)
+        {
+          // do nothing
+        }
       }
 
       return result;
