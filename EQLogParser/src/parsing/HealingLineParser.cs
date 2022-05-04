@@ -13,8 +13,6 @@ namespace EQLogParser
 
     public static void Process(LineData lineData)
     {
-      bool handled = false;
-
       string action = lineData.Action;
       try
       {
@@ -25,7 +23,6 @@ namespace EQLogParser
           if (record != null)
           {
             DataManager.Instance.AddHealRecord(record, lineData.BeginTime);
-            handled = true;
           }
         }
       }
@@ -45,8 +42,6 @@ namespace EQLogParser
       {
         LOG.Error(ae);
       }
-
-      DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
     private static HealRecord HandleHealed(string part, int optional, double beginTime)

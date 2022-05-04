@@ -8,8 +8,6 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static readonly DateUtil DateUtil = new DateUtil();
-
     private static readonly List<string> YouCriteria = new List<string>
     {
       "You say,", "You told ", "You tell ", "You say to ", "You shout,", "You say out of", "You auction,"
@@ -20,66 +18,66 @@ namespace EQLogParser
       " says,", " tells ", " shouts,", " says out of", " auctions,", " told you,"
     };
 
-    internal static ChatType Process(LineData lineData)
+    internal static ChatType Process(LineData lineData, string fullLine)
     {
-      var chatType = ParseChatType(lineData.Line);
-      if (chatType != null && chatType.SenderIsYou == false && chatType.Sender != null)
+      var chatType = ParseChatType(lineData.Action);
+      if (chatType != null)
       {
-        if (chatType.Channel == ChatChannels.Guild || chatType.Channel == ChatChannels.Raid || chatType.Channel == ChatChannels.Fellowship)
+        chatType.BeginTime = lineData.BeginTime;
+        chatType.Text = fullLine; // workaround for now?
+
+        if (chatType.SenderIsYou == false && chatType.Sender != null)
         {
-          PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, lineData.BeginTime);
+          if (chatType.Channel == ChatChannels.Guild || chatType.Channel == ChatChannels.Raid || chatType.Channel == ChatChannels.Fellowship)
+          {
+            PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, lineData.BeginTime);
+          }
         }
       }
 
       return chatType;
     }
 
-    internal static ChatType ParseChatType(string line)
+    internal static ChatType ParseChatType(string action)
     {
       ChatType chatType = null;
 
-      if (!string.IsNullOrEmpty(line) && line.Length > (LineParsing.ActionIndex + 3))
+      if (!string.IsNullOrEmpty(action) && action.Length > 3)
       {
         try
         {
-          int count;
-          int max = Math.Min(16, line.Length - LineParsing.ActionIndex);
-          int index = YouCriteria.FindIndex(criteria => line.IndexOf(criteria, LineParsing.ActionIndex, max, StringComparison.Ordinal) > -1);
+          int index = YouCriteria.FindIndex(criteria => action.IndexOf(criteria, StringComparison.Ordinal) > -1);
 
           if (index < 0)
           {
             int criteriaIndex = -1;
             for (int i = 0; i < OtherCriteria.Count; i++)
             {
-              int lastIndex = line.IndexOf("'", LineParsing.ActionIndex, StringComparison.Ordinal);
+              int lastIndex = action.IndexOf("'", StringComparison.Ordinal);
               if (lastIndex > -1)
               {
-                count = lastIndex - LineParsing.ActionIndex;
-                if (count > 0 && line.Length >= (LineParsing.ActionIndex + count))
+                criteriaIndex = action.IndexOf(OtherCriteria[i], 0, lastIndex, StringComparison.Ordinal);
+                if (criteriaIndex > -1)
                 {
-                  criteriaIndex = line.IndexOf(OtherCriteria[i], LineParsing.ActionIndex, count, StringComparison.Ordinal);
-                  if (criteriaIndex > -1)
-                  {
-                    index = i;
-                    break;
-                  }
+                  index = i;
+                  break;
                 }
               }
             }
 
             if (index < 0)
             {
-              index = line.IndexOf(" ", LineParsing.ActionIndex, StringComparison.Ordinal);
-              if (index > -1 && index + 5 < line.Length)
+              index = action.IndexOf(" ", StringComparison.Ordinal);
+              if (index > -1 && index + 5 < action.Length)
               {
-                if (line[index + 1] == '-' && line[index + 2] == '>' && line.Length >= (index + 4))
+                if (action[index + 1] == '-' && action[index + 2] == '>' && action.Length >= (index + 4))
                 {
-                  int lastIndex = line.IndexOf(":", index + 4, StringComparison.Ordinal);
+                  int lastIndex = action.IndexOf(":", index + 4, StringComparison.Ordinal);
                   if (lastIndex > -1)
                   {
-                    string sender = line.Substring(LineParsing.ActionIndex, index - LineParsing.ActionIndex);
-                    string receiver = line.Substring(index + 4, lastIndex - index - 4);
-                    chatType = new ChatType { Channel = ChatChannels.Tell, Sender = sender, Receiver = receiver, Line = line, AfterSenderIndex = lastIndex };
+                    string sender = action.Substring(index);
+                    string receiver = action.Substring(index + 4, lastIndex - index - 4);
+                    chatType = new ChatType { Channel = ChatChannels.Tell, Sender = sender, Receiver = receiver, AfterSenderIndex = lastIndex };
 
                     if (ConfigUtil.PlayerName == sender)
                     {
@@ -92,8 +90,7 @@ namespace EQLogParser
             else if (index > -1 && criteriaIndex > -1)
             {
               int start, end;
-              int senderLen = criteriaIndex - LineParsing.ActionIndex;
-              chatType = new ChatType { SenderIsYou = false, Sender = line.Substring(LineParsing.ActionIndex, senderLen), AfterSenderIndex = criteriaIndex, Line = line };
+              chatType = new ChatType { SenderIsYou = false, Sender = action.Substring(0, criteriaIndex), AfterSenderIndex = criteriaIndex };
 
               switch (index)
               {
@@ -102,31 +99,32 @@ namespace EQLogParser
                   break;
                 case 1:
                   start = criteriaIndex + 7;
-                  if (line.Length >= (start + 5) && line.IndexOf("you, ", start, 5, StringComparison.Ordinal) > -1)
+                  if (action.Length >= (start + 5) && action.IndexOf("you, ", start, 5, StringComparison.Ordinal) > -1)
                   {
                     chatType.Channel = ChatChannels.Tell;
                     chatType.Receiver = "You";
                   }
-                  else if (line.Length >= (start + 9) && line.IndexOf("the guild", start, 9, StringComparison.Ordinal) > -1)
+                  else if (action.Length >= (start + 9) && action.IndexOf("the guild", start, 9, StringComparison.Ordinal) > -1)
                   {
                     chatType.Channel = ChatChannels.Guild;
                   }
-                  else if (line.Length >= (start + 9) && line.IndexOf("the group", start, 9, StringComparison.Ordinal) > -1)
+                  else if (action.Length >= (start + 9) && action.IndexOf("the group", start, 9, StringComparison.Ordinal) > -1)
                   {
                     chatType.Channel = ChatChannels.Group;
                   }
-                  else if (line.Length >= (start + 8) && line.IndexOf("the raid", start, 8, StringComparison.Ordinal) > -1)
+                  else if (action.Length >= (start + 8) && action.IndexOf("the raid", start, 8, StringComparison.Ordinal) > -1)
                   {
                     chatType.Channel = ChatChannels.Raid;
                   }
-                  else if (line.Length >= (start + 14) && line.IndexOf("the fellowship", start, 14, StringComparison.Ordinal) > -1)
+                  else if (action.Length >= (start + 14) && action.IndexOf("the fellowship", start, 14, StringComparison.Ordinal) > -1)
                   {
                     chatType.Channel = ChatChannels.Fellowship;
                   }
-                  else if ((end = line.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
+                  else if ((end = action.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
                   {
-                    chatType.Channel = line.Substring(start, end - start);
-                    chatType.Channel = char.ToUpper(chatType.Channel[0], CultureInfo.CurrentCulture) + chatType.Channel.Substring(1).ToLower(CultureInfo.CurrentCulture);
+                    chatType.Channel = action.Substring(start, end - start);
+                    chatType.Channel = char.ToUpper(chatType.Channel[0], CultureInfo.CurrentCulture) + 
+                      chatType.Channel.Substring(1).ToLower(CultureInfo.CurrentCulture);
                   }
                   break;
                 case 2:
@@ -140,7 +138,8 @@ namespace EQLogParser
                   break;
                 case 5:
                   // check if it's an old cross server tell and not an NPC
-                  if (line.Length >= (criteriaIndex + 10) && line.IndexOf(" told you,", criteriaIndex, 10, StringComparison.Ordinal) > -1 && chatType.Sender.IndexOf(".", StringComparison.Ordinal) > -1)
+                  if (action.Length >= (criteriaIndex + 10) && action.IndexOf(" told you,", criteriaIndex, 10, StringComparison.Ordinal) > -1 && 
+                    chatType.Sender.IndexOf(".", StringComparison.Ordinal) > -1)
                   {
                     chatType.Channel = ChatChannels.Tell;
                     chatType.Receiver = "You";
@@ -152,7 +151,7 @@ namespace EQLogParser
           else
           {
             int start, end;
-            chatType = new ChatType { SenderIsYou = true, Sender = "You", AfterSenderIndex = LineParsing.ActionIndex + 4, Line = line };
+            chatType = new ChatType { SenderIsYou = true, Sender = "You", AfterSenderIndex = 4 };
             switch (index)
             {
               case 0:
@@ -161,39 +160,39 @@ namespace EQLogParser
               case 1:
                 chatType.Channel = ChatChannels.Tell;
 
-                start = LineParsing.ActionIndex + 9;
-                if ((end = line.IndexOf(",", start, StringComparison.Ordinal)) > -1)
+                start = 9;
+                if ((end = action.IndexOf(",", start, StringComparison.Ordinal)) > -1)
                 {
-                  chatType.Receiver = line.Substring(start, end - start);
+                  chatType.Receiver = action.Substring(start, end - start);
                 }
                 break;
               case 2:
-                start = LineParsing.ActionIndex + 9;
+                start = 9;
 
-                if (line.Length >= (start + 10) && line.IndexOf("your party", start, 10, StringComparison.Ordinal) > -1)
+                if (action.Length >= (start + 10) && action.IndexOf("your party", start, 10, StringComparison.Ordinal) > -1)
                 {
                   chatType.Channel = ChatChannels.Group;
                 }
-                else if (line.Length >= (start + 9) && line.IndexOf("your raid", start, 9, StringComparison.Ordinal) > -1)
+                else if (action.Length >= (start + 9) && action.IndexOf("your raid", start, 9, StringComparison.Ordinal) > -1)
                 {
                   chatType.Channel = ChatChannels.Raid;
                 }
                 else
                 {
-                  if ((end = line.IndexOf(":", start, StringComparison.Ordinal)) > -1)
+                  if ((end = action.IndexOf(":", start, StringComparison.Ordinal)) > -1)
                   {
-                    chatType.Channel = line.Substring(start, end - start);
+                    chatType.Channel = action.Substring(start, end - start);
                     chatType.Channel = char.ToUpper(chatType.Channel[0], CultureInfo.CurrentCulture) + chatType.Channel.Substring(1).ToLower(CultureInfo.CurrentCulture);
                   }
                 }
                 break;
               case 3:
-                start = LineParsing.ActionIndex + 11;
-                if (line.Length >= (start + 10) && line.IndexOf("your guild", start, 10, StringComparison.Ordinal) > -1)
+                start = 11;
+                if (action.Length >= (start + 10) && action.IndexOf("your guild", start, 10, StringComparison.Ordinal) > -1)
                 {
                   chatType.Channel = ChatChannels.Guild;
                 }
-                else if (line.Length >= (start + 15) && line.IndexOf("your fellowship", start, 15, StringComparison.Ordinal) > -1)
+                else if (action.Length >= (start + 15) && action.IndexOf("your fellowship", start, 15, StringComparison.Ordinal) > -1)
                 {
                   chatType.Channel = ChatChannels.Fellowship;
                 }
@@ -212,8 +211,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          LOG.Error("Failed parsing line = " + line);
-          LOG.Error(ex);
+          LOG.Debug(ex);
         }
       }
 

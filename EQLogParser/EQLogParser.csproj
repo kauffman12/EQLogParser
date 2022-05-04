@@ -286,7 +286,6 @@
     </Compile>
     <Compile Include="src\ui\util\DataGridUtil.cs" />
     <Compile Include="src\ui\util\UIElementUtil.cs" />
-    <Compile Include="src\util\DebugUtil.cs" />
     <Compile Include="src\ui\util\OverlayUtil.cs" />
     <Compile Include="src\util\ConfigUtil.cs" />
     <Compile Include="src\util\TextFormatUtils.cs" />

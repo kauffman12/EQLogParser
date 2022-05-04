@@ -4,8 +4,6 @@ namespace EQLogParser
 {
   class PreLineParser
   {
-    private const int MIN_LINE_LENGTH = 30;
-
     private PreLineParser()
     {
 
@@ -13,19 +11,8 @@ namespace EQLogParser
 
     internal static bool NeedProcessing(LineData lineData)
     {
-      bool valid = false;
-      if (lineData.Line != null && lineData.Line.Length > MIN_LINE_LENGTH)
-      {
-        lineData.Action = lineData.Line.Substring(LineParsing.ActionIndex);
-        valid = !(CheckForPlayersOrNPCs(lineData) || CheckForPetLeader(lineData, " says, 'My leader is ")
-          || CheckForPetLeader(lineData, " says 'My leader is ")); // eqemu doesn't have the comma
-      }
-      else if (lineData.Line != null)
-      {
-        DebugUtil.WriteLine(lineData.Line);
-      }
-
-      return valid;
+      return !(CheckForPlayersOrNPCs(lineData) || CheckForPetLeader(lineData, " says, 'My leader is ")
+        || CheckForPetLeader(lineData, " says 'My leader is ")); // eqemu doesn't have the comma
     }
 
     private static bool CheckForPetLeader(LineData lineData, string search)

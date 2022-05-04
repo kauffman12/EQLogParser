@@ -276,8 +276,6 @@ namespace EQLogParser
       {
         LOG.Error(ae);
       }
-
-      DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
     private static bool ParseCurrency(string[] pieces, int startIndex, int toIndex, out string item, out uint count)

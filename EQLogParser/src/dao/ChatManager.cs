@@ -22,6 +22,7 @@ namespace EQLogParser
 
     private static readonly object LockObject = new object();
     private static string PLAYER_DIR;
+    private static DateUtil DateUtil = new DateUtil();
 
     private static readonly ReverseTimedActionComparer RTAComparer = new ReverseTimedActionComparer();
     private readonly Dictionary<string, byte> ChannelCache = new Dictionary<string, byte>();
@@ -248,8 +249,6 @@ namespace EQLogParser
       try
       {
         List<ChatType> working = null;
-        DateUtil dateUtil = new DateUtil();
-        DateUtil dateUtilSavedLines = new DateUtil();
 
         lock (LockObject)
         {
@@ -257,15 +256,27 @@ namespace EQLogParser
           ChatTypes = new List<ChatType>();
         }
 
+        double lastTime = double.NaN;
+        double increment = 0.0;
         for (int i = 0; i < working.Count; i++)
         {
           var chatType = working[i];
-          var chatLine = CreateLine(dateUtil, chatType.Line);
+          if (lastTime == chatType.BeginTime)
+          {
+            increment += 0.001;
+          }
+          else
+          {
+            increment = 0.0;
+          }
+
+          var chatLine = new ChatLine { Line = chatType.Text, BeginTime = chatType.BeginTime + increment };
           DateTime dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
           string year = dateTime.ToString("yyyy", CultureInfo.CurrentCulture);
           string month = dateTime.ToString("MM", CultureInfo.CurrentCulture);
           string day = dateTime.ToString("dd", CultureInfo.CurrentCulture);
-          AddToArchive(year, month, day, chatLine, chatType, dateUtilSavedLines);
+          AddToArchive(year, month, day, chatLine, chatType);
+          lastTime = chatType.BeginTime;
         }
 
         lock (LockObject)
@@ -306,7 +317,7 @@ namespace EQLogParser
       }
     }
 
-    private void AddToArchive(string year, string month, string day, ChatLine chatLine, ChatType chatType, DateUtil dateUtil)
+    private void AddToArchive(string year, string month, string day, ChatLine chatLine, ChatType chatType)
     {
       string entryKey = day;
       string archiveKey = year + "-" + month;
@@ -341,13 +352,27 @@ namespace EQLogParser
 
             // this is so the date precision numbers are calculated in the same order
             // as the new lines being added
+            double lastTime = double.NaN;
+            double increment = 0.0;
             temp.ForEach(line =>
             {
-              var existingLine = CreateLine(dateUtil, line);
+              var beginTime = DateUtil.ParseDate(line);
+              if (lastTime == chatType.BeginTime)
+              {
+                increment += 0.001;
+              }
+              else
+              {
+                increment = 0.0;
+              }
+
+              var existingLine = new ChatLine { Line = line, BeginTime = beginTime + increment };
               if (existingLine != null)
               {
                 CurrentList.Insert(0, existingLine); // reverse back
               }
+
+              lastTime = beginTime;
             });
           }
         }
@@ -538,12 +563,6 @@ namespace EQLogParser
     private ZipArchiveEntry GetEntry(string key)
     {
       return CurrentArchive.Mode == ZipArchiveMode.Create ? CurrentArchive.CreateEntry(key) : CurrentArchive.GetEntry(key) ?? CurrentArchive.CreateEntry(key);
-    }
-
-    private static ChatLine CreateLine(DateUtil dateUtil, string line)
-    {
-      double precise = dateUtil.ParsePreciseDate(line);
-      return new ChatLine { Line = line, BeginTime = precise };
     }
 
     private static string GetFileName(string year, string month)

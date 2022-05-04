@@ -95,7 +95,7 @@ namespace EQLogParser
         {
           Task.Run(() =>
           {
-            foreach (var chatType in newIterator.TakeWhile(chatType => chatType.Line != tempChat.Line).Reverse())
+            foreach (var chatType in newIterator.TakeWhile(chatType => chatType.Text != tempChat.Text).Reverse())
             {
               Dispatcher.Invoke(() =>
               {
@@ -110,7 +110,7 @@ namespace EQLogParser
                   }
 
                   var newItem = new Span(new Run(Environment.NewLine));
-                  newItem.Inlines.Add(new Run(chatType.Line));
+                  newItem.Inlines.Add(new Run(chatType.Text));
                   MainParagraph.Inlines.InsertAfter(MainParagraph.Inlines.LastInline, newItem);
                   statusCount.Text = ++CurrentLineCount + " Lines";
 
@@ -176,7 +176,7 @@ namespace EQLogParser
                     FirstChat = chatList[i];
                   }
 
-                  var text = chatList[i].Line;
+                  var text = chatList[i].Text;
 
                   Span span = new Span();
                   if (LastTextFilter != null && chatList[i].KeywordStart > -1)
