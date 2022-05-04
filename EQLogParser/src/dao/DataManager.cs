@@ -700,7 +700,7 @@ namespace EQLogParser
           {
             ID = string.Intern(data[0]),
             Name = string.Intern(data[1]),
-            NameAbbrv = AbbreviateSpellName(data[1]),
+            NameAbbrv = string.Intern(AbbreviateSpellName(data[1])),
             Level = byte.Parse(data[2], CultureInfo.CurrentCulture),
             Duration = (ushort)duration,
             IsBeneficial = beneficial != 0,
