@@ -139,7 +139,8 @@ namespace EQLogParser
     internal void AddMerc(string name)
     {
       if (!string.IsNullOrEmpty(name))
-      {       
+      {
+        name = string.Intern(name);
         Mercs[TextFormatUtils.ToUpper(name)] = 1;
       }
     }
@@ -153,6 +154,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name) && !VerifiedPets.ContainsKey(name))
       {
+        name = string.Intern(name);
         if (!VerifiedPlayers.ContainsKey(name) || string.IsNullOrEmpty(GetPlayerClass(name)))
         {
           lock (LockObject)
@@ -196,6 +198,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name))
       {
+        name = string.Intern(name);
         if (VerifiedPlayers.TryGetValue(name, out double lastTime))
         {
           if (playerTime > lastTime)

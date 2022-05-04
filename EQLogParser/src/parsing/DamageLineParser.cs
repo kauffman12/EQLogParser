@@ -11,7 +11,6 @@ namespace EQLogParser
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly Regex CheckEyeRegex = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
     private static readonly List<string> SlainQueue = new List<string>();
@@ -582,6 +581,16 @@ namespace EQLogParser
           DataManager.Instance.UpdateNpcSpellResistStats(defender, resist);
         }
 
+        var currentTime = lineData.BeginTime;
+
+        int modifiersMask = -1;
+        if (split.Length > stop + 1)
+        {
+          // improve this later so maybe the string doesn't have to be re-joined
+          string modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
+          modifiersMask = LineModifiersParser.Parse(attacker, modifiers.Substring(1, modifiers.Length - 2), currentTime);
+        }
+
         // check for pets
         HasOwner(attacker, out string attackerOwner);
         HasOwner(defender, out string defenderOwner);
@@ -595,18 +604,9 @@ namespace EQLogParser
           Total = damage,
           AttackerOwner = attackerOwner != null ? string.Intern(attackerOwner) : null,
           DefenderOwner = defenderOwner != null ? string.Intern(defenderOwner) : null,
-          ModifiersMask = -1,
+          ModifiersMask = modifiersMask,
           AttackerIsSpell = attackerIsSpell
         };
-
-        var currentTime = lineData.BeginTime;
-
-        if (split.Length > stop + 1)
-        {
-          // improve this later so maybe the string doesn't have to be re-joined
-          string modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
-          record.ModifiersMask = LineModifiersParser.Parse(record.Attacker, modifiers.Substring(1, modifiers.Length - 2), currentTime);
-        }
 
         if (!double.IsNaN(currentTime))
         {
@@ -625,13 +625,13 @@ namespace EQLogParser
 
           DamageProcessedEvent e = new DamageProcessedEvent { Record = record, BeginTime = currentTime };
           EventsDamageProcessed?.Invoke(record, e);
-          success = true;
 
-          if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) && 
+          if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
           record.SubType.Contains(special)) is string key && !string.IsNullOrEmpty(key))
           {
-            DataManager.Instance.AddSpecial(new SpecialSpell() { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
+            DataManager.Instance.AddSpecial(new SpecialSpell { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
           }
+          success = true;
         }
       }
 
