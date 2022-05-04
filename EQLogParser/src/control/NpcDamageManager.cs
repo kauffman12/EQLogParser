@@ -50,7 +50,7 @@ namespace EQLogParser
           processed.Record.Attacker = Labels.UNK;
         }
 
-        Fight fight = Get(processed.Record, processed.BeginTime, processed.OrigTimeString, defender);
+        Fight fight = Get(processed.Record, processed.BeginTime, defender);
 
         if (defender)
         {
@@ -144,25 +144,26 @@ namespace EQLogParser
       }
     }
 
-    private Fight Get(DamageRecord record, double currentTime, string origTimeString, bool defender)
+    private Fight Get(DamageRecord record, double currentTime, bool defender)
     {
       string npc = defender ? record.Defender : record.Attacker;
 
       Fight fight = DataManager.Instance.GetFight(npc);
       if (fight == null)
       {
-        fight = Create(npc, currentTime, origTimeString);
+        fight = Create(npc, currentTime);
       }
 
       return fight;
     }
 
-    private Fight Create(string defender, double currentTime, string origTimeString)
+    private Fight Create(string defender, double currentTime)
     {
+      string timeString = DateUtil.FormatSimpleDate(currentTime);
       return new Fight
       {
         Name = string.Intern(defender),
-        BeginTimeString = string.Intern(origTimeString),
+        BeginTimeString = string.Intern(timeString),
         BeginTime = currentTime,
         LastTime = currentTime,
         Id = CurrentNpcID++,

@@ -42,9 +42,10 @@ namespace EQLogParser
     public string Sender { get; set; }
     public string Receiver { get; set; }
     public bool SenderIsYou { get; set; }
-    public string Line { get; set; }
+    public string Text { get; set; }
     public int AfterSenderIndex { get; set; }
     public int KeywordStart { get; set; }
+    public double BeginTime { get; set; }
   }
 
   internal class ParseData
@@ -73,7 +74,6 @@ namespace EQLogParser
   internal class DamageProcessedEvent
   {
     public DamageRecord Record { get; set; }
-    public string OrigTimeString { get; set; }
     public double BeginTime { get; set; }
   }
 
@@ -173,9 +173,8 @@ namespace EQLogParser
   internal class LineData
   {
     public string Action { get; set; }
-    public string Line { get; set; }
-    public long LineNumber { get; set; }
     public double BeginTime { get; set; }
+    public long LineNumber { get; set; }
   }
 
   internal class HitLogRow : HitRecord

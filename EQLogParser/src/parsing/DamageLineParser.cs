@@ -515,8 +515,6 @@ namespace EQLogParser
       {
         LOG.Error(e);
       }
-
-      DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
     private static bool UpdateSlain(string slain, string killer, LineData lineData)
@@ -615,8 +613,7 @@ namespace EQLogParser
           // handle old style crits for eqemu
           if (LastCrit != null && LastCrit.Attacker == record.Attacker && LastCrit.LineData.LineNumber == (lineData.LineNumber - 1))
           {
-            var critTime = DateUtil.ParseDate(LastCrit.LineData.Line);
-            if (!double.IsNaN(critTime) && (currentTime - critTime) <= 1)
+            if (!double.IsNaN(LastCrit.LineData.BeginTime) && (currentTime - LastCrit.LineData.BeginTime) <= 1)
             {
               record.ModifiersMask = (record.ModifiersMask == -1) ? LineModifiersParser.CRIT : record.ModifiersMask | LineModifiersParser.CRIT;
             }
@@ -626,13 +623,12 @@ namespace EQLogParser
 
           CheckSlainQueue(currentTime);
 
-          var timeString = lineData.Line.Substring(5, 15);
-          DamageProcessedEvent e = new DamageProcessedEvent { Record = record, OrigTimeString = timeString, BeginTime = currentTime };
+          DamageProcessedEvent e = new DamageProcessedEvent { Record = record, BeginTime = currentTime };
           EventsDamageProcessed?.Invoke(record, e);
           success = true;
 
-          if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) && record.SubType.Contains(special)) is string key
-            && !string.IsNullOrEmpty(key))
+          if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) && 
+          record.SubType.Contains(special)) is string key && !string.IsNullOrEmpty(key))
           {
             DataManager.Instance.AddSpecial(new SpecialSpell() { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = currentTime });
           }

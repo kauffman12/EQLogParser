@@ -880,7 +880,6 @@ namespace EQLogParser
           fileText.Text = "-- " + theFile;
           StartLoadTime = DateTime.Now;
           FilePosition = LineCount = 0;
-          DebugUtil.Reset();
 
           string name = "You";
           string server = "Uknown";
@@ -959,32 +958,39 @@ namespace EQLogParser
         return;
       }
 
-      if ((int)((DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size()) / 12000) is int sleep && sleep > 10)
+      if (DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size() > 500000)
       {
-        Thread.Sleep(5 * (sleep - 10));
+        // give the parsing some time to catch up
+        Thread.Sleep(20);
       }
 
       Interlocked.Exchange(ref FilePosition, position);
       Interlocked.Add(ref LineCount, 1);
 
-      var lineData = new LineData { Line = line, LineNumber = LineCount, BeginTime = dateTime };
-
-      // populates lineData.Action
-      if (PreLineParser.NeedProcessing(lineData))
+      if (!string.IsNullOrEmpty(line) && line.Length > 30)
       {
-        // avoid having other things parse chat by accident
-        if (ChatLineParser.Process(lineData) is ChatType chatType)
+        var lineData = new LineData { Action = line.Substring(LineParsing.ActionIndex), LineNumber = LineCount, BeginTime = dateTime };
+
+        // populates lineData.Action
+        if (PreLineParser.NeedProcessing(lineData))
         {
-          PlayerChatManager.Add(chatType);
-        }
-        else
-        {
-          // 4 is for the number of processors
-          DebugUtil.RegisterLine(LineCount, line, 4);
-          CastProcessor.Add(lineData);
-          HealingProcessor.Add(lineData);
-          MiscProcessor.Add(lineData);
-          DamageProcessor.Add(lineData);
+          // avoid having other things parse chat by accident
+          if (ChatLineParser.Process(lineData, line) is ChatType chatType)
+          {
+            PlayerChatManager.Add(chatType);
+          }
+          else
+          {
+            // free up memory of the action and add the lines to a cache to reduce memory
+            // 4 is number of expected calls to query the line based on number of processors
+            if (lineData.Action != null)
+            {
+              CastProcessor.Add(lineData);
+              HealingProcessor.Add(lineData);
+              MiscProcessor.Add(lineData);
+              DamageProcessor.Add(lineData);
+            }
+          }
         }
       }
     }

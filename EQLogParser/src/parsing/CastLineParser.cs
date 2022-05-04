@@ -251,8 +251,6 @@ namespace EQLogParser
       {
         LOG.Error(e);
       }
-
-      DebugUtil.UnregisterLine(lineData.LineNumber, handled);
     }
 
     private static void CheckForSpecial(Dictionary<string, string> codes, string spellName, string player, double currentTime)

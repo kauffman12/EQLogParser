@@ -20,14 +20,7 @@ namespace EQLogParser
       if (player.Length > 0)
       {
         int index = player.IndexOf(".", StringComparison.Ordinal);
-        if (index > -1)
-        {
-          Player = player.Substring(0, index);
-        }
-        else
-        {
-          Player = player;
-        }
+        Player = (index > -1) ? player.Substring(0, index) : player;
       }
 
       if (channels != null)
@@ -47,7 +40,6 @@ namespace EQLogParser
     {
       double begin = DateUtil.ToDouble(year);
       double end = DateUtil.ToDouble(year.AddYears(1));
-
       return (StartDate == 0 || (StartDate < end)) && (EndDate == 0 || (EndDate >= begin));
     }
 
@@ -55,7 +47,6 @@ namespace EQLogParser
     {
       double begin = DateUtil.ToDouble(month);
       double end = DateUtil.ToDouble(month.AddMonths(1));
-
       return (StartDate == 0 || (StartDate < end)) && (EndDate == 0 || (EndDate >= begin));
     }
 
@@ -63,15 +54,13 @@ namespace EQLogParser
     {
       double begin = DateUtil.ToDouble(day);
       double end = DateUtil.ToDouble(day.AddDays(1));
-
       return (StartDate == 0 || (StartDate < end)) && (EndDate == 0 || (EndDate >= begin));
     }
 
     internal bool PastLiveFilter(ChatType chatType)
     {
       double endOfDay = EndDate + 86400;
-      var time = DateUtil.ParseDate(chatType.Line);
-      return (StartDate == 0 || time >= StartDate) && (EndDate == 0 || time < endOfDay) && PassFilter(chatType);
+      return (StartDate == 0 || chatType.BeginTime >= StartDate) && (EndDate == 0 || chatType.BeginTime < endOfDay) && PassFilter(chatType);
     }
 
     internal bool PassFilter(ChatType chatType)
@@ -94,7 +83,7 @@ namespace EQLogParser
             if (Keyword != null)
             {
               int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
-              int foundIndex = chatType.Line.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
+              int foundIndex = chatType.Text.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
               if (foundIndex > -1)
               {
                 passed = true;
