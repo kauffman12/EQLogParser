@@ -882,7 +882,7 @@ namespace EQLogParser
           FilePosition = LineCount = 0;
 
           string name = "You";
-          string server = "Uknown";
+          string server = "Unknown";
           if (theFile.Length > 0)
           {
             LOG.Info("Selected Log File: " + theFile);
@@ -958,7 +958,7 @@ namespace EQLogParser
         return;
       }
 
-      if (DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size() > 500000)
+      if (DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size() > 1000000)
       {
         // give the parsing some time to catch up
         Thread.Sleep(20);
