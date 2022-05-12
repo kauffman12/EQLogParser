@@ -1,26 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-
-namespace EQLogParser
+﻿namespace EQLogParser
 {
   class ChatLineParser
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    private static readonly List<string> YouCriteria = new List<string>
-    {
-      "You say,", "You told ", "You tell ", "You say to ", "You shout,", "You say out of", "You auction,"
-    };
-
-    private static readonly List<string> OtherCriteria = new List<string>
-    {
-      " says,", " tells ", " shouts,", " says out of", " auctions,", " told you,"
-    };
-
     internal static ChatType Process(LineData lineData, string fullLine)
     {
-      var chatType = ParseChatType(lineData.Action);
+      ChatType chatType = ParseChatType(lineData.Action);
+
       if (chatType != null)
       {
         chatType.BeginTime = lineData.BeginTime;
@@ -40,194 +25,218 @@ namespace EQLogParser
 
     internal static ChatType ParseChatType(string action)
     {
-      ChatType chatType = null;
-
-      if (!string.IsNullOrEmpty(action) && action.Length > 3)
+      if (!string.IsNullOrEmpty(action))
       {
-        try
+        return action.StartsWith("You ") ? CheckYouCriteria(action) : CheckOtherCriteria(action);
+      }
+
+      return null;
+    }
+
+    internal static ChatType CheckYouCriteria(string action)
+    {
+      ChatType chatType = null;
+      string you = ConfigUtil.PlayerName;
+
+      if (action.Length > 7 && action.IndexOf("say", 4, 3) == 4)
+      {
+        // "You say,"
+        if (action.Length > 9 && action[7] == ',')
         {
-          int index = YouCriteria.FindIndex(criteria => action.IndexOf(criteria, StringComparison.Ordinal) > -1);
-
-          if (index < 0)
+          chatType = new ChatType { Channel = ChatChannels.Say, SenderIsYou = true, Sender = you, TextStart = 9 };
+        }
+        // "You say to "
+        else if (action.Length > 23 && action.IndexOf(" to your ", 7, 9) == 7)
+        {
+          if (action.IndexOf("guild, ", 16, 7) == 16)
           {
-            int criteriaIndex = -1;
-            for (int i = 0; i < OtherCriteria.Count; i++)
+            chatType = new ChatType { Channel = ChatChannels.Guild, SenderIsYou = true, Sender = you };
+            chatType.TextStart = 23;
+          }
+          else if (action.Length > 27 && action.IndexOf("fellowship, ", 16, 12) == 16)
+          {
+            chatType = new ChatType { Channel = ChatChannels.Fellowship, SenderIsYou = true, Sender = you };
+            chatType.TextStart = 28;
+          }
+        }
+        // "You say out of"
+        else if (action.Length > 14 && action.IndexOf(" out of character, ", 7, 19) == 7)
+        {
+          chatType = new ChatType { Channel = ChatChannels.Ooc, SenderIsYou = true, Sender = you, TextStart = 26 };
+        }
+      }
+      else if (action.Length > 10 && action[3] == ' ')
+      {
+        // "You told "
+        if (action.IndexOf("told ", 4, 5) == 4)
+        {
+          // start at 11 since names have to be at least a few characters
+          if (action.IndexOf(",", 11) is int end && end > -1)
+          {
+            chatType = new ChatType { Channel = ChatChannels.Tell, SenderIsYou = true, Sender = you, TextStart = end + 2 };
+            chatType.Receiver = action.Substring(9, end - 9);
+          }
+        }
+        // "You tell "
+        else if (action.IndexOf("tell ", 4, 5) == 4)
+        {
+          if (action.Length > 20 && action.IndexOf("your ", 9, 5) == 9)
+          {
+            if (action.IndexOf("party, ", 14, 7) == 14)
             {
-              int lastIndex = action.IndexOf("'", StringComparison.Ordinal);
-              if (lastIndex > -1)
-              {
-                criteriaIndex = action.IndexOf(OtherCriteria[i], 0, lastIndex, StringComparison.Ordinal);
-                if (criteriaIndex > -1)
-                {
-                  index = i;
-                  break;
-                }
-              }
+              chatType = new ChatType { Channel = ChatChannels.Group, SenderIsYou = true, Sender = you, TextStart = 21 };
             }
-
-            if (index < 0)
+            else if (action.IndexOf("raid, ", 14, 6) == 14)
             {
-              index = action.IndexOf(" ", StringComparison.Ordinal);
-              if (index > -1 && index + 5 < action.Length)
-              {
-                if (action[index + 1] == '-' && action[index + 2] == '>' && action.Length >= (index + 4))
-                {
-                  int lastIndex = action.IndexOf(":", index + 4, StringComparison.Ordinal);
-                  if (lastIndex > -1)
-                  {
-                    string sender = action.Substring(index);
-                    string receiver = action.Substring(index + 4, lastIndex - index - 4);
-                    chatType = new ChatType { Channel = ChatChannels.Tell, Sender = sender, Receiver = receiver, AfterSenderIndex = lastIndex };
-
-                    if (ConfigUtil.PlayerName == sender)
-                    {
-                      chatType.SenderIsYou = true;
-                    }
-                  }
-                }
-              }
-            }
-            else if (index > -1 && criteriaIndex > -1)
-            {
-              int start, end;
-              chatType = new ChatType { SenderIsYou = false, Sender = action.Substring(0, criteriaIndex), AfterSenderIndex = criteriaIndex };
-
-              switch (index)
-              {
-                case 0:
-                  chatType.Channel = ChatChannels.Say;
-                  break;
-                case 1:
-                  start = criteriaIndex + 7;
-                  if (action.Length >= (start + 5) && action.IndexOf("you, ", start, 5, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.Tell;
-                    chatType.Receiver = "You";
-                  }
-                  else if (action.Length >= (start + 9) && action.IndexOf("the guild", start, 9, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.Guild;
-                  }
-                  else if (action.Length >= (start + 9) && action.IndexOf("the group", start, 9, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.Group;
-                  }
-                  else if (action.Length >= (start + 8) && action.IndexOf("the raid", start, 8, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.Raid;
-                  }
-                  else if (action.Length >= (start + 14) && action.IndexOf("the fellowship", start, 14, StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.Fellowship;
-                  }
-                  else if ((end = action.IndexOf(":", start + 1, StringComparison.Ordinal)) > -1)
-                  {
-                    chatType.Channel = action.Substring(start, end - start);
-                    chatType.Channel = char.ToUpper(chatType.Channel[0], CultureInfo.CurrentCulture) + 
-                      chatType.Channel.Substring(1).ToLower(CultureInfo.CurrentCulture);
-                  }
-                  break;
-                case 2:
-                  chatType.Channel = ChatChannels.Shout;
-                  break;
-                case 3:
-                  chatType.Channel = ChatChannels.Ooc;
-                  break;
-                case 4:
-                  chatType.Channel = ChatChannels.Auction;
-                  break;
-                case 5:
-                  // check if it's an old cross server tell and not an NPC
-                  if (action.Length >= (criteriaIndex + 10) && action.IndexOf(" told you,", criteriaIndex, 10, StringComparison.Ordinal) > -1 && 
-                    chatType.Sender.IndexOf(".", StringComparison.Ordinal) > -1)
-                  {
-                    chatType.Channel = ChatChannels.Tell;
-                    chatType.Receiver = "You";
-                  }
-                  break;
-              }
+              chatType = new ChatType { Channel = ChatChannels.Raid, SenderIsYou = true, Sender = you, TextStart = 20 };
             }
           }
-          else
+          else if (action.IndexOf(":", 11) is int end && end > -1)
           {
-            int start, end;
-            chatType = new ChatType { SenderIsYou = true, Sender = "You", AfterSenderIndex = 4 };
-            switch (index)
+            if (action.Length > end + 3 && (action[end + 2] == ',' || action[end + 3] == ','))
             {
-              case 0:
-                chatType.Channel = ChatChannels.Say;
-                break;
-              case 1:
-                chatType.Channel = ChatChannels.Tell;
-
-                start = 9;
-                if ((end = action.IndexOf(",", start, StringComparison.Ordinal)) > -1)
-                {
-                  chatType.Receiver = action.Substring(start, end - start);
-                }
-                break;
-              case 2:
-                start = 9;
-
-                if (action.Length >= (start + 10) && action.IndexOf("your party", start, 10, StringComparison.Ordinal) > -1)
-                {
-                  chatType.Channel = ChatChannels.Group;
-                }
-                else if (action.Length >= (start + 9) && action.IndexOf("your raid", start, 9, StringComparison.Ordinal) > -1)
-                {
-                  chatType.Channel = ChatChannels.Raid;
-                }
-                else
-                {
-                  if ((end = action.IndexOf(":", start, StringComparison.Ordinal)) > -1)
-                  {
-                    chatType.Channel = action.Substring(start, end - start);
-                    chatType.Channel = char.ToUpper(chatType.Channel[0], CultureInfo.CurrentCulture) + chatType.Channel.Substring(1).ToLower(CultureInfo.CurrentCulture);
-                  }
-                }
-                break;
-              case 3:
-                start = 11;
-                if (action.Length >= (start + 10) && action.IndexOf("your guild", start, 10, StringComparison.Ordinal) > -1)
-                {
-                  chatType.Channel = ChatChannels.Guild;
-                }
-                else if (action.Length >= (start + 15) && action.IndexOf("your fellowship", start, 15, StringComparison.Ordinal) > -1)
-                {
-                  chatType.Channel = ChatChannels.Fellowship;
-                }
-                break;
-              case 4:
-                chatType.Channel = ChatChannels.Shout;
-                break;
-              case 5:
-                chatType.Channel = ChatChannels.Ooc;
-                break;
-              case 6:
-                chatType.Channel = ChatChannels.Auction;
-                break;
+              chatType = new ChatType { SenderIsYou = true, Sender = you, TextStart = end + 3 };
+              chatType.Channel = action.Substring(9, end - 9).ToLower();
             }
           }
         }
-        catch (Exception ex)
+        // "You shout,"
+        else if (action.IndexOf("shout, ", 4, 7) == 4)
         {
-          LOG.Debug(ex);
+          new ChatType { Channel = ChatChannels.Shout, SenderIsYou = true, Sender = you, TextStart = 10 };
+        }
+        // "You auction,"
+        else if (action.Length > 12 && action.IndexOf("auction, ", 4, 9) == 4)
+        {
+          new ChatType { Channel = ChatChannels.Auction, SenderIsYou = true, Sender = you, TextStart = 12 };
         }
       }
 
       return chatType;
     }
-  }
-  internal static class ChatChannels
-  {
-    public const string Auction = "Auction";
-    public const string Say = "Say";
-    public const string Guild = "Guild";
-    public const string Fellowship = "Fellowship";
-    public const string Tell = "Tell";
-    public const string Shout = "Shout";
-    public const string Group = "Group";
-    public const string Raid = "Raid";
-    public const string Ooc = "OOC";
+
+    internal static ChatType CheckOtherCriteria(string action)
+    {
+      ChatType chatType = null;
+      string you = ConfigUtil.PlayerName;
+
+      // check if line starts with what looks like a player name followed by a space
+      // ignore NPC like names entirely
+      int end1 = PlayerManager.Instance.FindPossiblePlayerName(action, out bool isCrossServer, 0, -1, ' ');
+
+      if (end1 > -1 && action.Length > (end1 + 5))
+      {
+        // "Kant -> Kazint:
+        if (action.IndexOf("-> ", end1 + 1, 3) == (end1 + 1))
+        {
+          int end2 = PlayerManager.Instance.FindPossiblePlayerName(action, out bool _, end1 + 4, -1, ':');
+          if (end2 > -1)
+          {
+            chatType = new ChatType { Channel = ChatChannels.Tell, TextStart = end1 + 1 };
+            chatType.Sender = action.Substring(0, end1);
+            chatType.SenderIsYou = (you == chatType.Sender);
+            chatType.Receiver = action.Substring(end1 + 4, end2 - (end1 + 4));
+          }
+        }
+        else if (action.IndexOf("says", end1 + 1, 4) == (end1 + 1))
+        {
+          // Kizant says, 
+          if (action.Length > (end1 + 7) && action.IndexOf(", ", end1 + 5, 2) == (end1 + 5))
+          {
+            chatType = new ChatType { Channel = ChatChannels.Say, SenderIsYou = false, TextStart = end1 + 7 };
+            chatType.Sender = action.Substring(0, end1);
+          }
+          // Kizant says out of character,
+          else if (action.Length > (end1 + 24) && action.IndexOf(" out of character, ", end1 + 5, 19) == (end1 + 5))
+          {
+            chatType = new ChatType { Channel = ChatChannels.Ooc, SenderIsYou = false, TextStart = end1 + 24 };
+            chatType.Sender = action.Substring(0, end1);
+          }
+        }
+        else if (action.Length > (end1 + 9) && action.IndexOf("tells ", end1 + 1, 6) == (end1 + 1))
+        {
+          // Kizant tells you,
+          if (action.Length > (end1 + 12) && action.IndexOf("you, ", end1 + 7, 5) == (end1 + 7))
+          {
+            chatType = new ChatType { Channel = ChatChannels.Tell, SenderIsYou = false, Receiver = you, TextStart = end1 + 12 };
+            chatType.Sender = action.Substring(0, end1);
+          }
+          else if (action.Length > (end1 + 17) && action.IndexOf("the ", end1 + 7, 4) == end1 + 7)
+          {
+            // Kizant tells the raid,
+            if (action.IndexOf("raid, ", end1 + 11, 6) == end1 + 11)
+            {
+              chatType = new ChatType { Channel = ChatChannels.Raid, SenderIsYou = false, TextStart = end1 + 17 };
+              chatType.Sender = action.Substring(0, end1);
+            }
+            // Kizant tells the group,
+            else if (action.Length > (end1 + 18) && action.IndexOf("group, ", end1 + 11, 7) == end1 + 11)
+            {
+              chatType = new ChatType { Channel = ChatChannels.Group, SenderIsYou = false, TextStart = end1 + 18 };
+              chatType.Sender = action.Substring(0, end1);
+            }
+            // Kizant tells the guild,
+            else if (action.Length > (end1 + 18) && action.IndexOf("guild, ", end1 + 11, 7) == end1 + 11)
+            {
+              chatType = new ChatType { Channel = ChatChannels.Guild, SenderIsYou = false, TextStart = end1 + 18 };
+              chatType.Sender = action.Substring(0, end1);
+            }
+            // Kizant tells the fellowship,
+            else if (action.Length > (end1 + 23) && action.IndexOf("fellowship, ", end1 + 11, 12) == end1 + 11)
+            {
+              chatType = new ChatType { Channel = ChatChannels.Fellowship, SenderIsYou = false, TextStart = end1 + 23 };
+              chatType.Sender = action.Substring(0, end1);
+            }
+          }
+          // Kizant tells General:1,
+          else if (action.IndexOf(":", end1 + 7) is int end2 && end2 > -1)
+          {
+            if (action.Length > end2 + 3 && (action[end2 + 2] == ',' || action[end2 + 3] == ','))
+            {
+              chatType = new ChatType { SenderIsYou = false, Sender = action.Substring(0, end1), TextStart = end2 + 3 };
+              chatType.Channel = action.Substring(end1 + 7, end2 - (end1 + 7)).ToLower();
+            }
+          }
+        }
+        // Kizant told you,
+        else if (action.Length > (end1 + 11) && action.IndexOf("told you, ", end1 + 1, 10) == (end1 + 1))
+        {
+          chatType = new ChatType { Channel = ChatChannels.Tell, SenderIsYou = false, Receiver = you, TextStart = end1 + 11 };
+          chatType.Sender = action.Substring(0, end1);
+        }
+        // Kizant shouts,
+        else if (action.Length > (end1 + 9) && action.IndexOf("shouts, ", end1 + 1, 8) == (end1 + 1))
+        {
+          chatType = new ChatType { Channel = ChatChannels.Shout, SenderIsYou = false, TextStart = end1 + 9 };
+          chatType.Sender = action.Substring(0, end1);
+        }
+        // Kizant auctions,
+        else if (action.Length > (end1 + 11) && action.IndexOf("auctions, ", end1 + 1, 10) == (end1 + 1))
+        {
+          chatType = new ChatType { Channel = ChatChannels.Auction, SenderIsYou = false, TextStart = end1 + 11 };
+          chatType.Sender = action.Substring(0, end1);
+        }
+
+        if (chatType != null && isCrossServer && chatType.Sender.Contains("."))
+        {
+          chatType.Sender = chatType.Sender.Split('.')[1];
+        }
+      }
+
+      return chatType;
+    }
+
+    internal static class ChatChannels
+    {
+      public const string Auction = "auction";
+      public const string Say = "say";
+      public const string Guild = "guild";
+      public const string Fellowship = "fellowship";
+      public const string Tell = "tell";
+      public const string Shout = "shout";
+      public const string Group = "group";
+      public const string Raid = "raid";
+      public const string Ooc = "ooc";
+    }
   }
 }

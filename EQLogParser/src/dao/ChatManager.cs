@@ -18,6 +18,7 @@ namespace EQLogParser
     internal const string INDEX = "index";
 
     private const int TIMEOUT = 2000;
+    private const string CHANNELS_FILE = "channels.txt";
     private const string SELECTED_CHANNELS_FILE = "channels-selected.txt";
 
     private static readonly object LockObject = new object();
@@ -211,7 +212,7 @@ namespace EQLogParser
         channelList.Add(details);
       }
 
-      return channelList.OrderBy(key => key.Text).ToList();
+      return channelList;
     }
 
     internal static List<string> GetPlayers(string playerAndServer)
@@ -240,8 +241,9 @@ namespace EQLogParser
     private static List<string> GetSavedChannels(string playerAndServer)
     {
       string playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
-      var file = playerDir + @"\channels.txt";
-      return ConfigUtil.ReadList(file);
+      var file = playerDir + @"\" + CHANNELS_FILE;
+      var list = ConfigUtil.ReadList(file);
+      return list.ConvertAll(item => item.ToLower()).Distinct().OrderBy(item => item.ToLower()).ToList();
     }
 
     private void ArchiveChat(object state)
@@ -294,7 +296,7 @@ namespace EQLogParser
             if (ChannelCacheUpdated)
             {
               var current = ChannelCache.Keys.ToList();
-              ConfigUtil.SaveList(PLAYER_DIR + @"\channels.txt", current);
+              ConfigUtil.SaveList(PLAYER_DIR + @"\" + CHANNELS_FILE, current);
               ChannelCacheUpdated = false;
               EventsNewChannels?.Invoke(this, current);
             }
@@ -381,6 +383,7 @@ namespace EQLogParser
       if (CurrentList != null)
       {
         int index = CurrentList.BinarySearch(chatLine, RTAComparer);
+
         if (index < 0)
         {
           index = Math.Abs(index) - 1;
@@ -419,7 +422,7 @@ namespace EQLogParser
                   ChannelIndex[temp[0]] = new Dictionary<string, byte>();
                   foreach (var channel in temp[1].Split(','))
                   {
-                    ChannelIndex[temp[0]][channel] = 1;
+                    ChannelIndex[temp[0]][channel.ToLower()] = 1;
                     UpdateChannelCache(channel); // incase main cache is out of sync with archive
                   }
                 }

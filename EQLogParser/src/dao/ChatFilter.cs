@@ -69,8 +69,8 @@ namespace EQLogParser
 
       if (ValidChannels == null || (chatType.Channel != null && ValidChannels.ContainsKey(chatType.Channel)))
       {
-        string receiver = chatType.Receiver == "You" ? Player : chatType.Receiver;
-        string sender = chatType.Sender == "You" ? Player : chatType.Sender;
+        string receiver = chatType.Receiver;
+        string sender = chatType.Sender;
         bool receiverIsTo = receiver != null && To != null && receiver.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1;
         bool senderIsFrom = sender != null && From != null && sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
         bool receiverIsFrom = receiver != null && From != null && receiver.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
@@ -82,7 +82,7 @@ namespace EQLogParser
           {
             if (Keyword != null)
             {
-              int afterSender = chatType.AfterSenderIndex >= 0 ? chatType.AfterSenderIndex : 0;
+              int afterSender = chatType.TextStart >= 0 ? chatType.TextStart : 0;
               int foundIndex = chatType.Text.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
               if (foundIndex > -1)
               {
