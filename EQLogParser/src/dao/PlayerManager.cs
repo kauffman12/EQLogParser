@@ -52,7 +52,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, double> VerifiedPlayers = new ConcurrentDictionary<string, double>();
     private readonly ConcurrentDictionary<string, byte> Mercs = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, bool> PossiblePlayerCache = new ConcurrentDictionary<string, bool>();
     private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> CharmPets = new ConcurrentDictionary<string, byte>();
     private static readonly object LockObject = new object();
@@ -423,7 +422,6 @@ namespace EQLogParser
         TakenPetOrPlayerAction.Clear();
         VerifiedPets.Clear();
         VerifiedPlayers.Clear();
-        PossiblePlayerCache.Clear();
         Mercs.Clear();
 
         AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDouble(DateTime.Now));
@@ -597,40 +595,52 @@ namespace EQLogParser
       }
     }
 
-    internal bool IsPossiblePlayerName(string part, int stop = -1)
+    internal int FindPossiblePlayerName(string part, out bool isCrossServer, int start = 0, int stop = -1, char end = char.MaxValue)
     {
-      bool found = false;
+      isCrossServer = false;
+      int dotCount = 0;
 
       if (part != null)
       {
-        string key = part + "-" + stop;
-        if (PossiblePlayerCache.TryGetValue(key, out bool value))
+        if (stop == -1)
         {
-          found = value;
+          stop = part.Length;
         }
-        else
-        {
-          if (stop == -1)
-          {
-            stop = part.Length;
-          }
 
-          found = stop >= 3;
-          for (int i = 0; found != false && i < stop; i++)
+        if (start <= stop && (stop - start) >= 3)
+        {
+          for (int i = start; i < stop; i++)
           {
-            if (!char.IsLetter(part, i))
+            if (end != char.MaxValue && part[i] == end)
             {
-              found = false;
-              break;
+              return i;
+            }
+
+            if (i > 2 && part[i] == '.')
+            {
+              isCrossServer = true;
+              if (++dotCount > 1)
+              {
+                return -1;
+              }
+            }
+            else if (!char.IsLetter(part, i))
+            {
+              return -1;
             }
           }
 
-          PossiblePlayerCache.TryAdd(key, found);
+          if (end != char.MaxValue)
+          {
+            return stop;
+          }
         }
       }
 
-      return found;
+      return -1;
     }
+
+    internal bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out bool _, 0, stop) > -1;
 
     private static void AddMultiCase(string[] values, ConcurrentDictionary<string, byte> dict)
     {

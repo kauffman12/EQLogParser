@@ -793,7 +793,9 @@ namespace EQLogParser
           statusText.Text = string.Format(CultureInfo.CurrentCulture, "Reading Log... {0}% in {1} seconds", filePercent, seconds);
           statusText.Foreground = LOADING_BRUSH;
 
-          if (EQLogReader.FileLoadComplete)
+          if (((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
+            && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) ||
+            CurrentLogOption == LogOption.MONITOR) && EQLogReader.FileLoadComplete)
           {
             if (filePercent >= 100 || CurrentLogOption == LogOption.MONITOR)
             {
@@ -802,12 +804,6 @@ namespace EQLogParser
             }
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
-          }
-
-          if (((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
-            && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) ||
-            CurrentLogOption == LogOption.MONITOR) && EQLogReader.FileLoadComplete)
-          {
             OverlayUtil.OpenIfEnabled(Dispatcher);
             LOG.Info("Finished Loading Log File in " + seconds.ToString(CultureInfo.CurrentCulture) + " seconds.");
             EventsLogLoadingComplete?.Invoke(this, true);

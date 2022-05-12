@@ -43,7 +43,7 @@ namespace EQLogParser
     public string Receiver { get; set; }
     public bool SenderIsYou { get; set; }
     public string Text { get; set; }
-    public int AfterSenderIndex { get; set; }
+    public int TextStart { get; set; }
     public int KeywordStart { get; set; }
     public double BeginTime { get; set; }
   }

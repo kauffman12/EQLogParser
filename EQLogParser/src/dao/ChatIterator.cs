@@ -23,11 +23,13 @@ namespace EQLogParser
     private int CurrentDirectory = -1;
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
+    private DateUtil DateUtil;
 
     internal ChatIterator(string playerAndServer, ChatFilter ChatFilter)
     {
       Home = ConfigUtil.GetArchiveDir() + playerAndServer;
       CurrentChatFilter = ChatFilter;
+      DateUtil = new DateUtil();
 
       if (Directory.Exists(Home))
       {
@@ -96,15 +98,20 @@ namespace EQLogParser
         string nextLine;
         while (result == END_RESULT && (nextLine = CurrentReader.ReadLine()) != null)
         {
-          var chatType = ChatLineParser.ParseChatType(nextLine.Substring(LineParsing.ActionIndex));
+          string action = nextLine.Substring(LineParsing.ActionIndex);
+          var chatType = ChatLineParser.ParseChatType(action);
           if (chatType != null)
           {
             // fix  % chars
             // workaround to set full line text
             chatType.Text = nextLine.Replace("PCT;", "%");
-          }
+            chatType.BeginTime = DateUtil.ParsePreciseDate(action);
 
-          result = CurrentChatFilter.PassFilter(chatType) ? chatType : result;
+            if (CurrentChatFilter.PassFilter(chatType))
+            {
+              result = chatType;
+            }
+          }
         }
 
         if (result == END_RESULT)
