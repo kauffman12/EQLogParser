@@ -4,7 +4,7 @@
   {
     internal static ChatType Process(LineData lineData, string fullLine)
     {
-      ChatType chatType = ParseChatType(lineData.Action);
+      ChatType chatType = ParseChatType(lineData.Action, lineData.BeginTime);
 
       if (chatType != null)
       {
@@ -23,11 +23,11 @@
       return chatType;
     }
 
-    internal static ChatType ParseChatType(string action)
+    internal static ChatType ParseChatType(string action, double beginTime = double.NaN)
     {
       if (!string.IsNullOrEmpty(action))
       {
-        return action.StartsWith("You ") ? CheckYouCriteria(action) : CheckOtherCriteria(action);
+        return action.StartsWith("You ") ? CheckYouCriteria(action) : CheckOtherCriteria(action, beginTime);
       }
 
       return null;
@@ -115,7 +115,7 @@
       return chatType;
     }
 
-    internal static ChatType CheckOtherCriteria(string action)
+    internal static ChatType CheckOtherCriteria(string action, double beginTime = double.NaN)
     {
       ChatType chatType = null;
       string you = ConfigUtil.PlayerName;
@@ -141,16 +141,26 @@
         else if (action.IndexOf("says", end1 + 1, 4) == (end1 + 1))
         {
           // Kizant says, 
-          if (action.Length > (end1 + 7) && action.IndexOf(", ", end1 + 5, 2) == (end1 + 5))
+          if (action.Length > (end1 + 7) && (action[end1 + 5] == ',' || action[end1 + 6] == ' '))
           {
             chatType = new ChatType { Channel = ChatChannels.Say, SenderIsYou = false, TextStart = end1 + 7 };
             chatType.Sender = action.Substring(0, end1);
+
+            if (!double.IsNaN(beginTime))
+            {
+              CheckPetLeader(action, end1, beginTime, chatType.Sender);
+            }
           }
           // Kizant says out of character,
           else if (action.Length > (end1 + 24) && action.IndexOf(" out of character, ", end1 + 5, 19) == (end1 + 5))
           {
             chatType = new ChatType { Channel = ChatChannels.Ooc, SenderIsYou = false, TextStart = end1 + 24 };
             chatType.Sender = action.Substring(0, end1);
+          }
+          else if (!double.IsNaN(beginTime))
+          {
+            // EQEMU has pet leader say without the comma
+            CheckPetLeader(action, end1, beginTime);
           }
         }
         else if (action.Length > (end1 + 9) && action.IndexOf("tells ", end1 + 1, 6) == (end1 + 1))
@@ -224,6 +234,33 @@
       }
 
       return chatType;
+    }
+
+    private static void CheckPetLeader(string action, int petEnd, double beginTime, string pet = null)
+    {
+      if (!double.IsNaN(beginTime) && action.Length > (petEnd + 15))
+      {
+        int petLeaderIndex = action.IndexOf("'My leader is ", petEnd + 6);
+        if (petLeaderIndex > -1)
+        {
+          if (string.IsNullOrEmpty(pet))
+          {
+            pet = action.Substring(0, petEnd);
+          }
+
+          if (!PlayerManager.Instance.IsVerifiedPlayer(pet)) // thanks idiots for this
+          {
+            int period = action.IndexOf(".", petLeaderIndex + 16);
+            if (period > -1)
+            {
+              string owner = action.Substring(petLeaderIndex + 14, period - (petLeaderIndex + 14));
+              PlayerManager.Instance.AddVerifiedPlayer(owner, beginTime);
+              PlayerManager.Instance.AddVerifiedPet(pet);
+              PlayerManager.Instance.AddPetToPlayer(pet, owner);
+            }
+          }
+        }
+      }
     }
 
     internal static class ChatChannels

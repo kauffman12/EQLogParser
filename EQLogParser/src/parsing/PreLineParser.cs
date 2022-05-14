@@ -11,74 +11,32 @@ namespace EQLogParser
 
     internal static bool NeedProcessing(LineData lineData)
     {
-      return !(CheckForPlayersOrNPCs(lineData) || CheckForPetLeader(lineData, " says, 'My leader is ")
-        || CheckForPetLeader(lineData, " says 'My leader is ")); // eqemu doesn't have the comma
-    }
-
-    private static bool CheckForPetLeader(LineData lineData, string search)
-    {
-      bool handled = false;
-      string action = lineData.Action;
-      if (action.Length >= 28 && action.Length < 75)
-      {
-        int index = action.IndexOf(search, StringComparison.Ordinal);
-        if (index > -1)
-        {
-          string pet = action.Substring(0, index);
-          if (!PlayerManager.Instance.IsVerifiedPlayer(pet)) // thanks idiots for this
-          {
-            int period = action.IndexOf(".", index + 23, StringComparison.Ordinal);
-            if (period > -1)
-            {
-              string owner = action.Substring(index + search.Length, period - index - search.Length);
-              PlayerManager.Instance.AddVerifiedPlayer(owner, lineData.BeginTime);
-              PlayerManager.Instance.AddVerifiedPet(pet);
-              PlayerManager.Instance.AddPetToPlayer(pet, owner);
-            }
-          }
-
-          handled = true;
-        }
-      }
-
-      return handled;
-    }
-
-    private static bool CheckForPlayersOrNPCs(LineData lineData)
-    {
       bool found = false;
-
       string action = lineData.Action;
+
       if (action.Length > 10)
       {
-        if (action.Length > 20 && action.StartsWith("Targeted (", StringComparison.Ordinal))
+        if (action.Length > 20 && action.StartsWith("Targeted (Player)"))
         {
-          if (action[10] == 'P' && action[11] == 'l') // Player
-          {
-            PlayerManager.Instance.AddVerifiedPlayer(action.Substring(19), lineData.BeginTime);
-          }
-
+          PlayerManager.Instance.AddVerifiedPlayer(action.Substring(19), lineData.BeginTime);
           found = true; // ignore anything that starts with Targeted
         }
-        else if (action.EndsWith(" shrinks.", StringComparison.Ordinal) && PlayerManager.Instance.IsPossiblePlayerName(action, action.Length - 9))
+        else if (action.EndsWith(" shrinks.") && PlayerManager.Instance.IsPossiblePlayerName(action, action.Length - 9))
         {
           string test = action.Substring(0, action.Length - 9);
-          if (PlayerManager.Instance.IsPossiblePlayerName(test))
-          {
-            PlayerManager.Instance.AddPetOrPlayerAction(test);
-            found = true;
-          }
+          PlayerManager.Instance.AddPetOrPlayerAction(test);
+          found = true;
         }
-        else if (action.EndsWith(" joined the raid.", StringComparison.Ordinal) && !action.StartsWith("You have", StringComparison.Ordinal))
+        else if (action.EndsWith(" joined the raid.") && !action.StartsWith("You have"))
         {
-          string test = action.Substring(0, action.Length - 17);
-          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          if (PlayerManager.Instance.IsPossiblePlayerName(action, action.Length - 17))
           {
+            string test = action.Substring(0, action.Length - 17);
             PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
             found = true;
           }
         }
-        else if (action.EndsWith(" has joined the group.", StringComparison.Ordinal))
+        else if (action.EndsWith(" has joined the group."))
         {
           string test = action.Substring(0, action.Length - 22);
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
@@ -92,7 +50,7 @@ namespace EQLogParser
 
           found = true;
         }
-        else if (action.EndsWith(" has left the raid.", StringComparison.Ordinal))
+        else if (action.EndsWith(" has left the raid."))
         {
           string test = action.Substring(0, action.Length - 19);
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
@@ -101,14 +59,19 @@ namespace EQLogParser
             found = true;
           }
         }
-        else if (action.EndsWith(" has left the group.", StringComparison.Ordinal))
+        else if (action.EndsWith(" has left the group."))
         {
           string test = action.Substring(0, action.Length - 20);
           if (PlayerManager.Instance.IsPossiblePlayerName(test))
           {
             PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
-            found = true;
           }
+          else
+          {
+            PlayerManager.Instance.AddMerc(test);
+          }
+
+          found = true;
         }
         else if (action.EndsWith(" is now the leader of your raid.", StringComparison.Ordinal))
         {
@@ -119,24 +82,9 @@ namespace EQLogParser
             found = true;
           }
         }
-        // handle junk line to avoid it being written to debug
-        else if (action.StartsWith("Your Irae Faycite Shard:", StringComparison.Ordinal))
-        {
-          found = true;
-        }
-        else if (action.EndsWith("feels alive with power.", StringComparison.Ordinal))
-        {
-          // handle junk line to avoid it being written to debug
-          found = true;
-        }
-        else if (action.Equals("You cannot see your target.", StringComparison.Ordinal))
-        {
-          // handle junk line to avoid it being written to debug
-          found = true;
-        }
       }
 
-      return found;
+      return !found;
     }
   }
 }
