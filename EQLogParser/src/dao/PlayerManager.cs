@@ -630,7 +630,7 @@ namespace EQLogParser
             }
           }
 
-          if (end != char.MaxValue)
+          if (end == char.MaxValue)
           {
             return stop;
           }

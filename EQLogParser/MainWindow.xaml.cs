@@ -949,7 +949,7 @@ namespace EQLogParser
 
     private void FileLoadingCallback(string line, long position, double dateTime)
     {
-      if (dateTime == double.NaN)
+      if (double.IsNaN(dateTime))
       {
         return;
       }
@@ -957,7 +957,7 @@ namespace EQLogParser
       if (DamageProcessor.Size() + HealingProcessor.Size() + MiscProcessor.Size() + CastProcessor.Size() > 1000000)
       {
         // give the parsing some time to catch up
-        Thread.Sleep(20);
+        Thread.Sleep(10);
       }
 
       Interlocked.Exchange(ref FilePosition, position);
@@ -967,26 +967,18 @@ namespace EQLogParser
       {
         var lineData = new LineData { Action = line.Substring(LineParsing.ActionIndex), LineNumber = LineCount, BeginTime = dateTime };
 
-        // populates lineData.Action
-        if (PreLineParser.NeedProcessing(lineData))
+        // avoid having other things parse chat by accident
+        if (ChatLineParser.Process(lineData, line) is ChatType chatType)
         {
-          // avoid having other things parse chat by accident
-          if (ChatLineParser.Process(lineData, line) is ChatType chatType)
-          {
-            PlayerChatManager.Add(chatType);
-          }
-          else
-          {
-            // free up memory of the action and add the lines to a cache to reduce memory
-            // 4 is number of expected calls to query the line based on number of processors
-            if (lineData.Action != null)
-            {
-              CastProcessor.Add(lineData);
-              HealingProcessor.Add(lineData);
-              MiscProcessor.Add(lineData);
-              DamageProcessor.Add(lineData);
-            }
-          }
+          PlayerChatManager.Add(chatType);
+        }
+        // populates lineData.Action
+        else if (PreLineParser.NeedProcessing(lineData) && lineData.Action != null)
+        {
+          CastProcessor.Add(lineData);
+          HealingProcessor.Add(lineData);
+          MiscProcessor.Add(lineData);
+          DamageProcessor.Add(lineData);
         }
       }
     }
