@@ -908,8 +908,8 @@ namespace EQLogParser
 
     private static List<ActionBlock> SearchActions(List<ActionBlock> allActions, double beginTime, double endTime)
     {
-      ActionBlock startBlock = new ActionBlock() { BeginTime = beginTime };
-      ActionBlock endBlock = new ActionBlock() { BeginTime = endTime + 1 };
+      ActionBlock startBlock = new ActionBlock { BeginTime = beginTime };
+      ActionBlock endBlock = new ActionBlock { BeginTime = endTime + 1 };
 
       int startIndex = allActions.BinarySearch(startBlock, TAComparer);
       if (startIndex < 0)
