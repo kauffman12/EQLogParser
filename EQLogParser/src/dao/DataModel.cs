@@ -12,7 +12,8 @@ namespace EQLogParser
 
   internal interface ISummaryBuilder
   {
-    StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
+    StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, bool showTotals, 
+      bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
   }
 
   internal interface IAction { }

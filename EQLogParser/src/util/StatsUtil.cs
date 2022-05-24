@@ -88,9 +88,13 @@ namespace EQLogParser
 
     internal static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
     {
-      string result;
-      result = targetTitle + " " + timeTitle;
-      if (damageTitle.Length > 0)
+      string result = targetTitle;
+      if (!string.IsNullOrEmpty(timeTitle))
+      {
+        result += " " + timeTitle;
+      }
+
+      if (!string.IsNullOrEmpty(damageTitle))
       {
         result += ", " + damageTitle;
       }

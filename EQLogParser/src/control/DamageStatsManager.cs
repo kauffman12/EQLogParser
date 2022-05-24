@@ -155,8 +155,8 @@ namespace EQLogParser
           combined.TargetTitle = (fights.Count > 1 ? "C(" + fights.Count + "): " : "") + oldestFight.Name;
 
           // these are here to support copy/paste of the parse
-          combined.TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, combined.RaidStats.TotalSeconds);
-          combined.TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(combined.RaidStats.Total),
+          combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, combined.RaidStats.TotalSeconds);
+          combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(combined.RaidStats.Total),
             " Damage ", StatsUtil.FormatTotals(combined.RaidStats.DPS));
         }
       }
@@ -483,8 +483,8 @@ namespace EQLogParser
               {
                 RaidStats = RaidTotals,
                 TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
-                TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
-                TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Damage ", StatsUtil.FormatTotals(RaidTotals.DPS))
+                TimeTitle = string.Format(StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
+                TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Damage ", StatsUtil.FormatTotals(RaidTotals.DPS))
               };
 
               combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
@@ -608,7 +608,8 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, 
+      bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();
 
@@ -621,9 +622,11 @@ namespace EQLogParser
         {
           foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
           {
-            string playerFormat = rankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
-            string damageFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS));
-            string timeFormat = string.Format(CultureInfo.CurrentCulture, StatsUtil.TIME_FORMAT, stats.TotalSeconds);
+            string name = showPetLabel ? stats.Name : stats.Name.Replace(" +Pets", "");
+            string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, name) : string.Format(StatsUtil.PLAYER_FORMAT, name);
+            string damageFormat = showDPS ? string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS)) :
+              string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+            string timeFormat = string.Format(StatsUtil.TIME_FORMAT, stats.TotalSeconds);
 
             var dps = playerFormat + damageFormat;
 
@@ -643,7 +646,8 @@ namespace EQLogParser
 
         details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
         var timeTitle = showTime ? currentStats.TimeTitle : "";
-        title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? currentStats.TotalTitle : "");
+        var totals = showDPS ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new string[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
+        title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
       }
 
       return new StatsSummary { Title = title, RankedPlayers = details };
