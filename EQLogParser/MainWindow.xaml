@@ -17,8 +17,7 @@
         WindowStartupLocation="CenterScreen"
         StateChanged="WindowStateChanged">
   <WindowChrome.WindowChrome>
-    <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" 
-            UseAeroCaptionButtons="False" ResizeBorderThickness="7" />
+    <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" UseAeroCaptionButtons="False" ResizeBorderThickness="7" />
   </WindowChrome.WindowChrome>
   <Grid>
     <Grid.ColumnDefinitions>
@@ -150,14 +149,15 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="searchViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Search" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
+            <MenuItem x:Name="eqLogMenuItem" Header="_New Log Search" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="FileCodeOutline" Foreground="#FF4F9FE2" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
             <MenuItem x:Name="chatMenuItem" Click="MenuItemWindowClick" Header="_Chat Archive" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="chatIcon" Height="12" Width="12"  Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="eqLogMenuItem" Header="_Full Log Search" Click="MenuItemWindowClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="eqLogIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="playerLootMenuItem" Header="_Looted Items" Click="MenuItemWindowClick" Height="24">
