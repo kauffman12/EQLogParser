@@ -56,7 +56,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.71";
+    private const string VERSION = "v1.8.72";
     private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
     private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
 
@@ -85,11 +85,11 @@ namespace EQLogParser
     private DocumentWindow HealingChartWindow = null;
     private DocumentWindow TankingChartWindow = null;
     private DocumentWindow EventWindow = null;
-    private DocumentWindow EQLogWindow = null;
     private DocumentWindow LootWindow = null;
     private DocumentWindow SpellResistsWindow = null;
     private DocumentWindow SpellDamageWindow = null;
     private LogReader EQLogReader = null;
+    private List<bool> LogWindows = new List<bool>();
 
     public MainWindow()
     {
@@ -535,8 +535,19 @@ namespace EQLogParser
       }
       else if (e.Source == eqLogMenuItem)
       {
-        EQLogWindow = Helpers.OpenWindow(dockSite, EQLogWindow, typeof(EQLogViewer), "eqLogWindow", "Full Log Search");
-        IconToWindow[eqLogIcon.Name] = EQLogWindow;
+        int found = LogWindows.FindIndex(used => !used);
+        if (found == -1)
+        {
+          LogWindows.Add(true);
+          found = LogWindows.Count;
+        }
+        else
+        {
+          LogWindows[found] = true;
+          found += 1;
+        }
+
+        Helpers.OpenWindow(dockSite, null, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
       }
       else if (e.Source == spellResistsMenuItem)
       {
@@ -1089,7 +1100,20 @@ namespace EQLogParser
     // This is where closing summary tables and line charts will get disposed
     private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e)
     {
-      (e.Window.Content as IDisposable)?.Dispose();
+      var content = e.Window.Content;
+      if (content is EQLogViewer)
+      {
+        int last = e.Window.Title.LastIndexOf(" ");
+        if (last > -1)
+        {
+          string value = e.Window.Title.Substring(last, e.Window.Title.Length - last);
+          if (int.TryParse(value, out int result) && result > 0 && LogWindows.Count >= result)
+          {
+            LogWindows[result - 1] = false;
+          }
+        }
+      }
+      (content as IDisposable)?.Dispose();
     }
 
     private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
