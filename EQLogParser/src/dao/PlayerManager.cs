@@ -496,19 +496,19 @@ namespace EQLogParser
           DateTime now = DateTime.Now;
           foreach (var keypair in VerifiedPlayers)
           {
-            if (!string.IsNullOrEmpty(keypair.Key))
+            if (!string.IsNullOrEmpty(keypair.Key) && IsPossiblePlayerName(keypair.Key))
             {
-              //if (keypair.Value != 0 && (now - DateUtil.FromDouble((long)keypair.Value)).TotalDays < 180)
-              //{
-              var output = keypair.Key + "=" + Math.Round(keypair.Value);
-              if (PlayerToClass.TryGetValue(keypair.Key, out SpellClassCounter value) && value.CurrentMax == long.MaxValue &&
-                ClassNames.TryGetValue(value.CurrentClass, out string className))
+              if (keypair.Value != 0 && (now - DateUtil.FromDouble((long)keypair.Value)).TotalDays < 300)
               {
-                output += "," + className;
-              }
+                var output = keypair.Key + "=" + Math.Round(keypair.Value);
+                if (PlayerToClass.TryGetValue(keypair.Key, out SpellClassCounter value) && value.CurrentMax == long.MaxValue &&
+                  ClassNames.TryGetValue(value.CurrentClass, out string className))
+                {
+                  output += "," + className;
+                }
 
-              list.Add(output);
-              //}
+                list.Add(output);
+              }
             }
           }
 
@@ -569,7 +569,6 @@ namespace EQLogParser
           if (cast.SpellData.Rank > 1)
           {
             newValue = 10;
-            AddVerifiedPlayer(cast.Caster, currentTime);
           }
 
           if (counter.ClassCounts.TryGetValue(theClass, out long value))

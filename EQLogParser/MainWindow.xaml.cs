@@ -38,7 +38,6 @@ namespace EQLogParser
     internal static bool IsFinishingBlowDamageEnabled = true;
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
-
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static bool IsIgnoreCharmPetsEnabled = false;
 
@@ -56,10 +55,11 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.73";
-    private const string PLAYER_LIST_TITLE = "Verified Player List ({0})";
-    private const string PETS_LIST_TITLE = "Verified Pet List ({0})";
+    private const string VERSION = "v1.8.74";
+    private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
+    private const string PETS_LIST_TITLE = "Verified Pets ({0})";
 
+    private static bool NeedComputeStats = false;
     private static long LineCount = 0;
     private static long FilePosition = 0;
     private static ActionProcessor CastProcessor = null;
@@ -73,6 +73,7 @@ namespace EQLogParser
 
     private readonly ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
+    private readonly DispatcherTimer ComputeStatsTimer;
 
     private ChatManager PlayerChatManager = null;
     private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
@@ -262,6 +263,13 @@ namespace EQLogParser
           enableAutoMonitorIcon.Visibility = Visibility.Hidden;
         }
 
+        ComputeStatsTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 800) };
+        ComputeStatsTimer.Tick += (sender, e) =>
+        {
+          ComputeStats();
+          ComputeStatsTimer.Stop();
+        };
+
         if (ConfigUtil.IfSet("Debug"))
         {
           LOG.Info("Debug Enabled. Saving Unprocessed Lines to " + ConfigUtil.LogsDir);
@@ -323,13 +331,11 @@ namespace EQLogParser
 
     private void CheckComputeStats()
     {
-      Dispatcher.InvokeAsync(() =>
+      if (ComputeStatsTimer != null)
       {
-        if ((npcWindow?.Content as FightTable)?.HasSelected() == true)
-        {
-          ComputeStats();
-        }
-      });
+        ComputeStatsTimer.Stop();
+        ComputeStatsTimer.Start();
+      }
     }
 
     private void Instance_EventsClearedActiveData(object _, bool _2)
