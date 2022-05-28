@@ -165,22 +165,22 @@
                 <fa:ImageAwesome x:Name="playerLootIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="eventMenuItem" Header="_Special Events" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="eventMenuItem" Header="Special _Events" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="eventIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>          
-          <MenuItem x:Name="statsView" Header="_Statistics" Height="24">
+          <MenuItem x:Name="statsView" Header="S_tatistics" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="statsViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Calculator"  Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-            <MenuItem x:Name="spellDamageStatsMenuItem" Header="Spell Damage" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="spellDamageStatsMenuItem" Header="Spell _Damage" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="npcSpellDamageIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>            
-            <MenuItem x:Name="spellResistsMenuItem" Header="Spell Resists" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="spellResistsMenuItem" Header="Spell _Resists" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="spellResistsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
@@ -192,7 +192,7 @@
               <fa:ImageAwesome x:Name="windowListIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="WindowRestore"  Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
             <Separator />
-            <MenuItem x:Name="npcWindowMenuitem" Header="Fight List" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="npcWindowMenuitem" Header="_Fight List" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="npcIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
@@ -208,12 +208,12 @@
                 <fa:ImageAwesome x:Name="petMappingIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Pet _List" Height="24">
+            <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_ets" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="verifiedPetsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>            
-            <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified Player _List" Height="24">
+            <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_layers" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="verifiedPlayersIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
@@ -226,6 +226,11 @@
               <fa:ImageAwesome x:Name="enableAutoMonitorIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem x:Name="hideOnMinimize" Header="_Hide Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="ignoreCharmPets" Header="Ignore _Charm Pets" Click="ToggleIgnoreCharmPetsClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="ignoreCharmPetsIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
@@ -236,13 +241,8 @@
               <fa:ImageAwesome x:Name="enableAoEHealingIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="hideOnMinimize" Header="_Hide Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Check" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
           <Separator />
-          <MenuItem x:Name="damageOptions" Header="Damage" Height="24">
+          <MenuItem x:Name="damageOptions" Header="_Damage" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageOptionsIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Gavel" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
@@ -316,7 +316,7 @@
       </docking:SplitContainer>
       <docking:DockSite.AutoHideRightContainers>
         <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Player List" ContainerDockedSize="240,150">
+          <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Players" ContainerDockedSize="240,150">
             <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
               <DataGrid.Columns>
                 <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
@@ -335,7 +335,7 @@
               </DataGrid.Columns>
             </datagrid:ThemedDataGrid>
           </docking:ToolWindow>
-          <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Verified Pet List" ContainerDockedSize="240,150">
+          <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Verified Pets" ContainerDockedSize="240,150">
             <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
               <DataGrid.Columns>
                 <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
