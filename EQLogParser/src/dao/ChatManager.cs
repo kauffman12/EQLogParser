@@ -359,7 +359,7 @@ namespace EQLogParser
             temp.ForEach(line =>
             {
               var beginTime = DateUtil.ParseDate(line);
-              if (lastTime == chatType.BeginTime)
+              if (lastTime == beginTime)
               {
                 increment += 0.001;
               }
