@@ -1,6 +1,6 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
 using ActiproSoftware.Windows.Themes;
-using FontAwesome.WPF;
+using FontAwesome5;
 using log4net;
 using log4net.Core;
 using System;
@@ -55,11 +55,10 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.8.74";
+    private const string VERSION = "v1.8.75";
     private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
 
-    private static bool NeedComputeStats = false;
     private static long LineCount = 0;
     private static long FilePosition = 0;
     private static ActionProcessor CastProcessor = null;

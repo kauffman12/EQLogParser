@@ -1,4 +1,4 @@
-﻿using FontAwesome.WPF;
+﻿using FontAwesome5;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -157,7 +157,7 @@ namespace EQLogParser
 
     internal static ImageAwesome CreateImageAwesome()
     {
-      var image = new ImageAwesome { Margin = new Thickness { Bottom = 1, Right = 2 }, Opacity = 0.0, Foreground = UPBRUSH, Icon = FontAwesomeIcon.None };
+      var image = new ImageAwesome { Margin = new Thickness { Bottom = 1, Right = 2 }, Opacity = 0.0, Foreground = UPBRUSH, Icon = EFontAwesomeIcon.None };
       image.SetValue(Panel.ZIndexProperty, 3);
       image.VerticalAlignment = VerticalAlignment.Center;
       return image;

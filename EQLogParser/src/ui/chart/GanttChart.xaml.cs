@@ -1,4 +1,4 @@
-﻿using FontAwesome.WPF;
+﻿using FontAwesome5;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -330,7 +330,7 @@ namespace EQLogParser
         VerticalAlignment = VerticalAlignment.Top,
         Height = 12,
         Width = 12,
-        Icon = FontAwesomeIcon.Close,
+        Icon = EFontAwesomeIcon.Solid_Times,
         Foreground = new SolidColorBrush(Color.FromRgb(81, 145, 193)),
         Margin = new Thickness(4, hPos + 6, 4, 0)
       };

@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              mc:Ignorable="d"
@@ -27,39 +27,39 @@
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
           <MenuItem x:Name="fightMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPetIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Paw" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="setPetIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Paw"  Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="fightMenuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayerClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPlayerIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="User" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="setPlayerIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_User" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="fightMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="fightMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>          
           <MenuItem x:Name="fightMenuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectFightIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="selectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Clone" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="fightMenuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectFightIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="unselectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Regular_Clone" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>          
           <Separator />
           <MenuItem x:Name="fightMenuItemClear" IsEnabled="False" Header="Clear All" Click="ClearClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="clearAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Remove" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="clearAllIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
