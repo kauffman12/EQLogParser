@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d"
@@ -47,60 +47,60 @@
         <ContextMenu>
           <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="copyHealParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="copyHealParseIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="False" x:Name="copyTopHealsParseToEQClick" Header="Copy Top Heals Parse" Click="CopyTopHealsToEQClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="copyTopHealsParseIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="copyTopHealsParseIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Copy" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#5191c1" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#5191c1" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#5191c1" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Spell Cast Timeline">
+          <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Spell Cast Order">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="ClockOutline" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_ListOl" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemShowSpellCounts" IsEnabled="False" Header="Spell Counts">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showSpellCountsIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Calculator" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showSpellCountsIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Calculator" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemShowBreakdown" IsEnabled="False" Header="Healing Breakdown">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showBreakdownIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Heart" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showBreakdownIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Heart" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemShowHealingLog" IsEnabled="False" Header="Healing Log" Click="DataGridHealingLogClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showHealingLogIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="File" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showHealingLogIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_File" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>

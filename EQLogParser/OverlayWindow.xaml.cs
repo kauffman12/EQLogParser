@@ -1,4 +1,4 @@
-﻿using FontAwesome.WPF;
+﻿using FontAwesome5;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -442,13 +442,13 @@ namespace EQLogParser
                     {
                       if (PrevList[i] > diff)
                       {
-                        DamageRateList[i].Icon = FontAwesomeIcon.LongArrowDown;
+                        DamageRateList[i].Icon = EFontAwesomeIcon.Solid_LongArrowAltDown;
                         DamageRateList[i].Foreground = OverlayUtil.DOWNBRUSH;
                         DamageRateList[i].Opacity = OverlayUtil.DATA_OPACITY;
                       }
                       else if (PrevList[i] < diff)
                       {
-                        DamageRateList[i].Icon = FontAwesomeIcon.LongArrowUp;
+                        DamageRateList[i].Icon = EFontAwesomeIcon.Solid_LongArrowAltUp;
                         DamageRateList[i].Foreground = OverlayUtil.UPBRUSH;
                         DamageRateList[i].Opacity = OverlayUtil.DATA_OPACITY;
                       }

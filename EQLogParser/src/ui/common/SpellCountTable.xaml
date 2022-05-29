@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -30,60 +30,60 @@
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Copy" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#5191c1" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyBBCodeClick" Header="BBCode Table" Click="CopyBBCodeClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#5191c1" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Table" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#5191c1" />
               </MenuItem.Icon>
             </MenuItem>            
             <MenuItem IsEnabled="True" x:Name="copyGamparseClick" Header="Gamparse BBCode" Click="CopyGamparseClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Code" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Code" Foreground="#5191c1" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Image" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#5191c1" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem IsEnabled="True" x:Name="importClick" Header="Import Data (scf)" Click="ImportClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Upload" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Upload" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="True" x:Name="exportClick" Header="Export Data (scf)" Click="ExportClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Download" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Download" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="selectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Square" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="unselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="SquareOutline" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />          
           <MenuItem IsEnabled="True" x:Name="removeRowClick" Header="Clear Selected Rows" Click="RemoveSelectedRowsClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Remove" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Counts" Click="ReloadClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Database" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="#5191c1" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
@@ -97,7 +97,7 @@
           </DataGridTemplateColumn.CellStyle>
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Close" Foreground="{Binding IconColor}"  />
+              <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="{Binding IconColor}"  />
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>

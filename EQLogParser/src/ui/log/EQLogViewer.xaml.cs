@@ -1,4 +1,4 @@
-﻿using FontAwesome.WPF;
+﻿using FontAwesome5;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -124,7 +124,7 @@ namespace EQLogParser
         logBox.Document.Blocks.Clear();
         statusCount.Text = logBox.Document.Blocks.Count + " Lines";
         progress.Content = "Searching";
-        searchIcon.Icon = FontAwesomeIcon.Close;
+        searchIcon.Icon = EFontAwesomeIcon.Solid_TimesCircle;
         var logSearchText = logSearch.Text;
         var logSearchText2 = logSearch2.Text;
         var modifierIndex = logSearchModifier.SelectedIndex;
@@ -250,7 +250,7 @@ namespace EQLogParser
           Dispatcher.Invoke(() =>
           {
             searchButton.IsEnabled = true;
-            searchIcon.Icon = FontAwesomeIcon.Search;
+            searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
             progress.Visibility = Visibility.Hidden;
             logScroller.ScrollToEnd();
             Running = false;
