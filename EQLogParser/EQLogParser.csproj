@@ -179,9 +179,6 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Printing" />
-    <Reference Include="System.Web">
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System.Windows.Forms">
       <Private>False</Private>
     </Reference>
@@ -551,11 +548,6 @@
     </PackageReference>
     <PackageReference Include="log4net">
       <Version>2.0.14</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers">
-      <Version>6.0.0</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
