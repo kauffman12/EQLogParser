@@ -132,7 +132,7 @@ namespace EQLogParser
 
       if (top != null && double.TryParse(top, out dvalue) && !double.IsNaN(dvalue))
       {
-        var test = offsetSize ? dvalue - margin.Top : dvalue;
+        var test = dvalue - margin.Top;
         if (test >= SystemParameters.VirtualScreenTop && test < SystemParameters.VirtualScreenHeight)
         {
           Top = test;
