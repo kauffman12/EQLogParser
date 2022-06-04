@@ -508,7 +508,7 @@ namespace EQLogParser
 
         if (SpellsToClass.TryGetValue(cast.Spell, out SpellClass theClass))
         {
-          PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass, beginTime);
+          PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
         }
       }
     }
