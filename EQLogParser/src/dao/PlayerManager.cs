@@ -40,7 +40,6 @@ namespace EQLogParser
     internal static readonly BitmapImage WIZ_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Wiz.png"));
 
     // static data
-    private readonly ConcurrentDictionary<string, BitmapImage> ClassIcons = new ConcurrentDictionary<string, BitmapImage>();
     private readonly ConcurrentDictionary<SpellClass, string> ClassNames = new ConcurrentDictionary<SpellClass, string>();
     private readonly ConcurrentDictionary<string, SpellClass> ClassesByName = new ConcurrentDictionary<string, SpellClass>();
     private readonly ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
@@ -550,7 +549,7 @@ namespace EQLogParser
       }
     }
 
-    internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass, double currentTime)
+    internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass)
     {
       if (!PlayerToClass.TryGetValue(cast.Caster, out SpellClassCounter counter))
       {
