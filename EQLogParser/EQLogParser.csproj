@@ -1,22 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{7573C49A-27F2-4053-8E6C-B7687DD9CBDE}</ProjectGuid>
+    <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>EQLogParser</RootNamespace>
-    <AssemblyName>EQLogParser</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <WarningLevel>4</WarningLevel>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <TargetFrameworkProfile />
     <IsWebBootstrapper>false</IsWebBootstrapper>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
     <PublishUrl>C:\EQLogParser\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -32,28 +18,22 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>x64</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>
     </DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <PropertyGroup>
@@ -72,29 +52,16 @@
     <SignManifests>false</SignManifests>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\x86\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>true</Prefer32Bit>
     <RunCodeAnalysis>false</RunCodeAnalysis>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <OutputPath>bin\x86\Release\</OutputPath>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>true</Prefer32Bit>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
-  <PropertyGroup />
   <PropertyGroup>
     <TargetZone>LocalIntranet</TargetZone>
   </PropertyGroup>
@@ -105,26 +72,13 @@
     <ApplicationIcon>EQLogParser.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
-    <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\x64\Debug\</OutputPath>
     <DefineConstants>CODE_ANALYSIS;DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
     <RunCodeAnalysis>true</RunCodeAnalysis>
-    <LangVersion>7.3</LangVersion>
-    <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisIgnoreGeneratedCode>true</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>bin\x64\Release\</OutputPath>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
-    <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <PropertyGroup>
@@ -150,323 +104,42 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="NumericUpDownLib">
       <HintPath>..\Dependencies\NumericUpDownLib.dll</HintPath>
     </Reference>
-    <Reference Include="PresentationCore">
+    <Reference Update="System">
       <Private>False</Private>
     </Reference>
-    <Reference Include="PresentationFramework">
+    <Reference Update="System.Data">
       <Private>False</Private>
     </Reference>
-    <Reference Include="ReachFramework" />
-    <Reference Include="System">
+    <Reference Update="System.Drawing">
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.ComponentModel.DataAnnotations">
+    <Reference Update="System.Numerics">
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.Data">
+    <Reference Update="System.Xml">
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.Drawing">
+    <Reference Update="System.Core">
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.IO.Compression" />
-    <Reference Include="System.IO.Compression.FileSystem" />
-    <Reference Include="System.Numerics">
+    <Reference Update="System.Xml.Linq">
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.Printing" />
-    <Reference Include="System.Windows.Forms">
+    <Reference Update="UIAutomationProvider">
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.Xml">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="System.Core">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="System.Xml.Linq">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="System.Data.DataSetExtensions">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="System.Net.Http">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="System.Xaml">
-      <RequiredTargetFramework>4.0</RequiredTargetFramework>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UIAutomationProvider">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UIAutomationTypes">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="WindowsBase">
+    <Reference Update="UIAutomationTypes">
       <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ApplicationDefinition Include="App.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </ApplicationDefinition>
-    <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="OverlayWindow.xaml.cs">
-      <DependentUpon>OverlayWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Settings.cs" />
-    <Compile Include="src\control\DamageValidator.cs" />
-    <Compile Include="src\control\TankingStatsManager.cs" />
-    <Compile Include="src\dao\ChatFilter.cs" />
-    <Compile Include="src\dao\ChatIterator.cs" />
-    <Compile Include="src\dao\ChatManager.cs" />
-    <Compile Include="src\control\HealingStatsManager.cs" />
-    <Compile Include="src\dao\PlayerManager.cs" />
-    <Compile Include="src\parsing\MiscLineParser.cs" />
-    <Compile Include="src\parsing\PreLineParser.cs" />
-    <Compile Include="src\ui\chart\GanttChart.xaml.cs">
-      <DependentUpon>GanttChart.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\common\ChatViewer.xaml.cs">
-      <DependentUpon>ChatViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\common\SpellCastTable.xaml.cs">
-      <DependentUpon>SpellCastTable.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\control\ComboBoxItemTemplateSelector.cs" />
-    <Compile Include="src\ui\control\CountCheckedTemplateSelector.cs" />
-    <Compile Include="src\ui\control\DateTimeConverter.cs" />
-    <Compile Include="src\ui\control\LootQuantityTemplateSelector.cs" />
-    <Compile Include="src\ui\control\NumberFormatConverter.cs" />
-    <Compile Include="src\ui\control\ReceivedSpellColorConverter.cs" />
-    <Compile Include="src\ui\control\TextBoxBehavior.cs" />
-    <Compile Include="src\ui\control\TotalFormatConverter.cs" />
-    <Compile Include="src\ui\control\ZeroConverter.cs" />
-    <Compile Include="src\ui\log\EventViewer.xaml.cs">
-      <DependentUpon>EventViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\log\EQLogViewer.xaml.cs">
-      <DependentUpon>EQLogViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\log\HitLogViewer.xaml.cs">
-      <DependentUpon>HitLogViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\breakdown\ReceivedHealingBreakdown.xaml.cs">
-      <DependentUpon>ReceivedHealingBreakdown.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\breakdown\TankingBreakdown.xaml.cs">
-      <DependentUpon>TankingBreakdown.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\log\LootViewer.xaml.cs">
-      <DependentUpon>LootViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\common\ParsePreview.xaml.cs">
-      <DependentUpon>ParsePreview.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\control\ColorComboBox.xaml.cs">
-      <DependentUpon>ColorComboBox.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\log\NpcStatsViewer.xaml.cs">
-      <DependentUpon>NpcStatsViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\log\SpellDamageStatsViewer.xaml.cs">
-      <DependentUpon>SpellDamageStatsViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\summary\TankingSummary.xaml.cs">
-      <DependentUpon>TankingSummary.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\util\DataGridUtil.cs" />
-    <Compile Include="src\ui\util\UIElementUtil.cs" />
-    <Compile Include="src\ui\util\OverlayUtil.cs" />
-    <Compile Include="src\util\ConfigUtil.cs" />
-    <Compile Include="src\util\TextFormatUtils.cs" />
-    <Compile Include="src\util\DateUtil.cs" />
-    <Compile Include="src\util\StatsUtil.cs" />
-    <Compile Include="src\ui\control\SummaryTable.cs" />
-    <Compile Include="src\dao\RecordGroupCollections.cs" />
-    <Compile Include="src\parsing\CastLineParser.cs" />
-    <Compile Include="src\dao\DataManager.cs" />
-    <Compile Include="src\control\SpellCountBuilder.cs" />
-    <Compile Include="src\control\DamageStatsManager.cs" />
-    <Compile Include="src\parsing\HealingLineParser.cs" />
-    <Compile Include="src\parsing\LineModifiersParser.cs" />
-    <Compile Include="src\parsing\ChatLineParser.cs" />
-    <Compile Include="src\ui\control\BreakdownTable.cs" />
-    <Compile Include="src\ui\summary\DamageSummary.xaml.cs">
-      <DependentUpon>DamageSummary.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\breakdown\DamageBreakdown.xaml.cs">
-      <DependentUpon>DamageBreakdown.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\breakdown\HealingBreakdown.xaml.cs">
-      <DependentUpon>HealingBreakdown.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\summary\HealingSummary.xaml.cs">
-      <DependentUpon>HealingSummary.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\chart\LineChart.xaml.cs">
-      <DependentUpon>LineChart.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\chart\HitFreqChart.xaml.cs">
-      <DependentUpon>HitFreqChart.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\common\FightTable.xaml.cs">
-      <DependentUpon>FightTable.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\ui\common\SpellCountTable.xaml.cs">
-      <DependentUpon>SpellCountTable.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\util\ActionProcessor.cs" />
-    <Compile Include="src\util\Helpers.cs" />
-    <Compile Include="src\util\NativeMethods.cs" />
-    <Compile Include="src\util\TimeRange.cs" />
-    <Page Include="MainWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Compile Include="App.xaml.cs">
-      <DependentUpon>App.xaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="src\dao\DataModel.cs" />
-    <Compile Include="src\parsing\DamageLineParser.cs" />
-    <Compile Include="src\util\LogReader.cs" />
-    <Compile Include="MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
-    <Page Include="OverlayWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\chart\GanttChart.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="src\ui\common\ChatViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\common\SpellCastTable.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="src\ui\log\EventViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\log\EQLogViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\log\HitLogViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\log\LootViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\common\ParsePreview.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\control\ColorComboBox.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\log\NpcStatsViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\log\SpellDamageStatsViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\summary\DamageSummary.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\breakdown\DamageBreakdown.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\breakdown\HealingBreakdown.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\summary\HealingSummary.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\chart\LineChart.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\chart\HitFreqChart.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\common\FightTable.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\breakdown\ReceivedHealingBreakdown.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\common\SpellCountTable.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\breakdown\TankingBreakdown.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\ui\summary\TankingSummary.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="src\control\NpcDamageManager.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
     <EmbeddedResource Include="licenses.licx" />
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
-    <None Include="newsigner.pfx" />
-    <None Include="Properties\app.manifest" />
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.6.2">
@@ -481,30 +154,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="data\adpsMeter.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="data\html\content.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="data\html\footer.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="data\html\header.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="data\npcs.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="data\oldspells.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="data\petnames.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="data\titles.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Resource Include="icons\Unk.png" />
     <Resource Include="icons\Mag.png" />
     <Resource Include="icons\Mnk.png" />
@@ -529,12 +178,9 @@
     <Resource Include="icons\Expand_16x.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="data\spells.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="resources\" />
+    <None Include="data\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DotLiquid">
@@ -549,15 +195,18 @@
     <PackageReference Include="log4net">
       <Version>2.0.14</Version>
     </PackageReference>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
     </PackageReference>
+    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
     <PackageReference Include="WPFTextBoxAutoComplete">
       <Version>1.0.5</Version>
     </PackageReference>
+    <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\..\..\..\..\..\Program Files %28x86%29\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.IO.Compression.dll" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

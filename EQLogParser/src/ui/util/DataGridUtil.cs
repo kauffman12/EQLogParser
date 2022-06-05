@@ -151,14 +151,15 @@ namespace EQLogParser
       ConfigUtil.RemoveSetting("ReceivedHealingBreakdownColumnsDisplayIndex");
       ConfigUtil.RemoveSetting("TankingBreakdownColumnsDisplayIndex");
       ConfigUtil.Save();
-      _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.", Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
+      _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.", 
+        Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     internal static Dictionary<string, bool> LoadColumns(ComboBox columns, DataGrid dataGrid, int start = 0)
     {
       var columnNames = dataGrid.Columns.Select(col => col.Header as string).ToHashSet();
       var indexesCache = new Dictionary<string, int>();
-      var indexString = ConfigUtil.GetSetting(columns.Tag as string + "DisplayIndex");
+      var indexString = ConfigUtil.GetSetting((columns.Tag as string) + "DisplayIndex");
       if (!string.IsNullOrEmpty(indexString))
       {
         int index = start;
