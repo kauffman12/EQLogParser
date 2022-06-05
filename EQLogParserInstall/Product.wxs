@@ -89,9 +89,15 @@
 	    <Component Win64="yes" Id="EQLogParser.exe" Guid="77922c99-ebcd-4ef7-ae22-f2c31a9bb63f">
 	      <File Id="EQLogParser.exe" Name="EQLogParser.exe" Source="$(var.EQLogParser_TargetDir)EQLogParser.exe" />
 	    </Component>
-	    <Component Win64="yes" Id="EQLogParser.exe.config" Guid="40f27a01-f148-4628-89a9-9c4745ef9672">
-	      <File Id="EQLogParser.exe.config" Name="EQLogParser.exe.config" Source="$(var.EQLogParser_TargetDir)EQLogParser.exe.config" />
+      <Component Win64="yes" Id="EQLogParser.dll" Guid="A694871D-64ED-472D-9843-E01086C6F72A">
+        <File Id="EQLogParser.dll" Name="EQLogParser.dll" Source="$(var.EQLogParser_TargetDir)EQLogParser.dll" />
+      </Component>      
+	    <Component Win64="yes" Id="EQLogParser.dll.config" Guid="275FC19D-266E-4ADE-A836-AD99E1C40DF7">
+	      <File Id="EQLogParser.dll.config" Name="EQLogParser.dll.config" Source="$(var.EQLogParser_TargetDir)EQLogParser.dll.config" />
 	    </Component>
+      <Component Win64="yes" Id="EQLogParser.runtimeconfig.json" Guid="1E4DF525-40F2-43E2-9481-AA5D8E84E07A">
+        <File Id="EQLogParser.runtimeconfig.json" Name="EQLogParser.runtimeconfig.json" Source="$(var.EQLogParser_TargetDir)EQLogParser.runtimeconfig.json" />
+      </Component>      
 	    <Component Win64="yes" Id="ActiproSoftware.Docking.Wpf.dll" Guid="64f563f3-5c7e-45c8-a245-d04dd0ee8d0b">
 	      <File Id="ActiproSoftware.Docking.Wpf.dll" Name="ActiproSoftware.Docking.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.Docking.Wpf.dll" />
 	    </Component>
