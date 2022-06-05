@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension"><?define EQLogParser_TargetDir=$(var.EQLogParser.TargetDir)?>
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.0" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.1" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -11,18 +11,7 @@
 
     <Icon Id="icon.ico" SourceFile="$(var.EQLogParser.ProjectDir)\EQLogParser.ico"/>
     <Property Id="ARPPRODUCTICON" Value="icon.ico" />
-
-    <?define NetFx480MinRelease = 528040 ?>
-    <PropertyRef Id="WIXNETFX4RELEASEINSTALLED" />
-    <Property Id="WIX_IS_NETFRAMEWORK_480_OR_LATER_INSTALLED" Secure="yes" />
-    <SetProperty Id="WIX_IS_NETFRAMEWORK_480_OR_LATER_INSTALLED" Value="1" After="AppSearch">
-      WIXNETFX4RELEASEINSTALLED >= "#$(var.NetFx480MinRelease)"
-    </SetProperty>
-    <PropertyRef Id="WIX_IS_NETFRAMEWORK_480_OR_LATER_INSTALLED"/>
-
-    <Condition Message="[ProductName] Requires .NET Framework 4.8.0 or later to be installed. Please install from the `Pre-Reqs` folder.">
-      <![CDATA[Installed OR WIX_IS_NETFRAMEWORK_480_OR_LATER_INSTALLED]]>
-    </Condition>
+    <Property Id="DOTNET6INSTALLED">0</Property>
 
 		<Feature Id="ProductFeature" Title="EQLogParser" Level="1">
 			<ComponentGroupRef Id="ProductComponents" />
@@ -32,7 +21,7 @@
       <ComponentRef Id="ApplicationShortcutDesktop" />
       <ComponentRef Id="Logs" />
 		</Feature>
-
+  
     <UI Id="WixUI_Advanced">
       <UIRef Id="WixUI_InstallDir" />
       <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
@@ -40,10 +29,21 @@
       <!-- Skip license dialog -->
       <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
-    </UI>    
-	</Product>
- 
+    </UI>
+  </Product>
+
 	<Fragment>
+    <Binary Id="CABinary" SourceFile="$(var.WixCustom.TargetDir)WixCustom.CA.dll" />
+    <CustomAction Id="CAID1" BinaryKey="CABinary" DllEntry="CheckDotNetVersion" Execute="firstSequence" />
+
+    <InstallUISequence>
+      <Custom Action="CAID1" Before="LaunchConditions" />
+    </InstallUISequence>
+
+    <Condition Message="You must first install .NET 6.0 Runtime">
+      Installed OR DOTNET6INSTALLED="1"
+    </Condition>
+    
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="DesktopFolder" Name="Desktop" />
       <Directory Id="ProgramFiles64Folder">
@@ -87,86 +87,86 @@
 	<Fragment>
 	  <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
 	    <Component Win64="yes" Id="EQLogParser.exe" Guid="77922c99-ebcd-4ef7-ae22-f2c31a9bb63f">
-	      <File Id="EQLogParser.exe" Name="EQLogParser.exe" Source="$(var.EQLogParser_TargetDir)EQLogParser.exe" />
+	      <File Id="EQLogParser.exe" Name="EQLogParser.exe" Source="$(var.EQLogParser.TargetDir)EQLogParser.exe" />
 	    </Component>
       <Component Win64="yes" Id="EQLogParser.dll" Guid="A694871D-64ED-472D-9843-E01086C6F72A">
-        <File Id="EQLogParser.dll" Name="EQLogParser.dll" Source="$(var.EQLogParser_TargetDir)EQLogParser.dll" />
+        <File Id="EQLogParser.dll" Name="EQLogParser.dll" Source="$(var.EQLogParser.TargetDir)EQLogParser.dll" />
       </Component>      
 	    <Component Win64="yes" Id="EQLogParser.dll.config" Guid="275FC19D-266E-4ADE-A836-AD99E1C40DF7">
-	      <File Id="EQLogParser.dll.config" Name="EQLogParser.dll.config" Source="$(var.EQLogParser_TargetDir)EQLogParser.dll.config" />
+	      <File Id="EQLogParser.dll.config" Name="EQLogParser.dll.config" Source="$(var.EQLogParser.TargetDir)EQLogParser.dll.config" />
 	    </Component>
       <Component Win64="yes" Id="EQLogParser.runtimeconfig.json" Guid="1E4DF525-40F2-43E2-9481-AA5D8E84E07A">
-        <File Id="EQLogParser.runtimeconfig.json" Name="EQLogParser.runtimeconfig.json" Source="$(var.EQLogParser_TargetDir)EQLogParser.runtimeconfig.json" />
+        <File Id="EQLogParser.runtimeconfig.json" Name="EQLogParser.runtimeconfig.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.runtimeconfig.json" />
       </Component>      
 	    <Component Win64="yes" Id="ActiproSoftware.Docking.Wpf.dll" Guid="64f563f3-5c7e-45c8-a245-d04dd0ee8d0b">
-	      <File Id="ActiproSoftware.Docking.Wpf.dll" Name="ActiproSoftware.Docking.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.Docking.Wpf.dll" />
+	      <File Id="ActiproSoftware.Docking.Wpf.dll" Name="ActiproSoftware.Docking.Wpf.dll" Source="$(var.EQLogParser.TargetDir)ActiproSoftware.Docking.Wpf.dll" />
 	    </Component>
 	    <Component Win64="yes" Id="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Guid="c5f0c023-dcaf-43bb-9794-aab9856437cb">
-	      <File Id="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Name="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.DataGrid.Contrib.Wpf.dll" />
+	      <File Id="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Name="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Source="$(var.EQLogParser.TargetDir)ActiproSoftware.DataGrid.Contrib.Wpf.dll" />
 	    </Component>
 	    <Component Win64="yes" Id="ActiproSoftware.Shared.Wpf.dll" Guid="3c8d2f9f-a96b-4dd8-b709-68e47832b14e">
-	      <File Id="ActiproSoftware.Shared.Wpf.dll" Name="ActiproSoftware.Shared.Wpf.dll" Source="$(var.EQLogParser_TargetDir)ActiproSoftware.Shared.Wpf.dll" />
+	      <File Id="ActiproSoftware.Shared.Wpf.dll" Name="ActiproSoftware.Shared.Wpf.dll" Source="$(var.EQLogParser.TargetDir)ActiproSoftware.Shared.Wpf.dll" />
 	    </Component>
       <Component Win64="yes" Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F">
-        <File Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser_TargetDir)log4net.dll" />
+        <File Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser.TargetDir)log4net.dll" />
       </Component>
       <Component Win64="yes" Id="FontAwesome5.dll" Guid="8416E883-7350-4D80-B3D1-2965E4C01DB8">
-        <File Id="FontAwesome5.dll" Name="FontAwesome5.dll" Source="$(var.EQLogParser_TargetDir)FontAwesome5.dll" />
+        <File Id="FontAwesome5.dll" Name="FontAwesome5.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.dll" />
       </Component>
 	  <Component Win64="yes" Id="FontAwesome5.Net.dll" Guid="57EB460B-BA13-4DA0-9036-DC113FE8635B">
-	    <File Id="FontAwesome5.Net.dll" Name="FontAwesome5.Net.dll" Source="$(var.EQLogParser_TargetDir)FontAwesome5.Net.dll" />
+	    <File Id="FontAwesome5.Net.dll" Name="FontAwesome5.Net.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.Net.dll" />
 	  </Component>		  
       <Component Win64="yes" Id="LiveCharts.dll" Guid="301B6781-24FD-4534-801B-B3CBE2A01927">
-        <File Id="LiveCharts.dll" Name="LiveCharts.dll" Source="$(var.EQLogParser_TargetDir)LiveCharts.dll" />
+        <File Id="LiveCharts.dll" Name="LiveCharts.dll" Source="$(var.EQLogParser.TargetDir)LiveCharts.dll" />
       </Component>
       <Component Win64="yes" Id="LiveCharts.Wpf.dll" Guid="DC2B7F21-1FF6-44F8-A496-2DACBBCA7AB4">
-        <File Id="LiveCharts.Wpf.dll" Name="LiveCharts.Wpf.dll" Source="$(var.EQLogParser_TargetDir)LiveCharts.Wpf.dll" />
+        <File Id="LiveCharts.Wpf.dll" Name="LiveCharts.Wpf.dll" Source="$(var.EQLogParser.TargetDir)LiveCharts.Wpf.dll" />
       </Component>
       <Component Win64="yes" Id="WPFTextBoxAutoComplete.dll" Guid="2AE4D9AC-7BB6-4239-88B0-37E94A1B6944">
-        <File Id="WPFTextBoxAutoComplete.dll" Name="WPFTextBoxAutoComplete.dll" Source="$(var.EQLogParser_TargetDir)WPFTextBoxAutoComplete.dll" />
+        <File Id="WPFTextBoxAutoComplete.dll" Name="WPFTextBoxAutoComplete.dll" Source="$(var.EQLogParser.TargetDir)WPFTextBoxAutoComplete.dll" />
       </Component>
       <Component Win64="yes" Id="Newtonsoft.Json.dll" Guid="6D0CCBFE-C08A-492C-8583-800E5E35D846">
-        <File Id="Newtonsoft.Json.dll" Name="Newtonsoft.Json.dll" Source="$(var.EQLogParser_TargetDir)Newtonsoft.Json.dll" />
+        <File Id="Newtonsoft.Json.dll" Name="Newtonsoft.Json.dll" Source="$(var.EQLogParser.TargetDir)Newtonsoft.Json.dll" />
       </Component>
       <Component Win64="yes" Id="Hardcodet.Wpf.TaskbarNotification.dll" Guid="D79C74F8-96A9-4C61-8125-7AA5AA5670DC">
-        <File Id="Hardcodet.Wpf.TaskbarNotification.dll" Name="Hardcodet.Wpf.TaskbarNotification.dll" Source="$(var.EQLogParser_TargetDir)Hardcodet.Wpf.TaskbarNotification.dll" />
+        <File Id="Hardcodet.Wpf.TaskbarNotification.dll" Name="Hardcodet.Wpf.TaskbarNotification.dll" Source="$(var.EQLogParser.TargetDir)Hardcodet.Wpf.TaskbarNotification.dll" />
       </Component>
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
-        <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser_TargetDir)DotLiquid.dll" />
+        <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
       </Component>
       <Component Win64="yes" Id="NumericUpDownLib2.dll" Guid="831B4CF2-8B97-4C4A-A865-71A0DA79C9CA">
-        <File Id="NumericUpDownLib2.dll" Name="NumericUpDownLib.dll" Source="$(var.EQLogParser_TargetDir)NumericUpDownLib.dll" />
+        <File Id="NumericUpDownLib2.dll" Name="NumericUpDownLib.dll" Source="$(var.EQLogParser.TargetDir)NumericUpDownLib.dll" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
-        <File Id="petnames.txt" Name="petnames.txt" Source="$(var.EQLogParser_TargetDir)\data\petnames.txt" />
+        <File Id="petnames.txt" Name="petnames.txt" Source="$(var.EQLogParser.TargetDir)\data\petnames.txt" />
       </Component>
       <Component Win64="yes" Id="spells.txt" Guid="2FC00676-7C5D-4075-9BC7-2C49C977732B">
-        <File Id="spells.txt" Name="spells.txt" Source="$(var.EQLogParser_TargetDir)\data\spells.txt" />
+        <File Id="spells.txt" Name="spells.txt" Source="$(var.EQLogParser.TargetDir)\data\spells.txt" />
       </Component>
       <Component Win64="yes" Id="oldspells.txt" Guid="3F1F6373-8E8D-4C14-89EB-CD3AF3D6320A">
-        <File Id="oldspells.txt" Name="oldspells.txt" Source="$(var.EQLogParser_TargetDir)\data\oldspells.txt" />
+        <File Id="oldspells.txt" Name="oldspells.txt" Source="$(var.EQLogParser.TargetDir)\data\oldspells.txt" />
       </Component>
       <Component Win64="yes" Id="npcs.txt" Guid="46C8209D-FDBA-4948-AB7C-699AFD8CDE8A">
-        <File Id="npcs.txt" Name="npcs.txt" Source="$(var.EQLogParser_TargetDir)\data\npcs.txt" />
+        <File Id="npcs.txt" Name="npcs.txt" Source="$(var.EQLogParser.TargetDir)\data\npcs.txt" />
       </Component>
       <Component Win64="yes" Id="titles.txt" Guid="AF032020-55D7-4476-8763-9CF2A3171907">
-        <File Id="titles.txt" Name="titles.txt" Source="$(var.EQLogParser_TargetDir)\data\titles.txt" />
+        <File Id="titles.txt" Name="titles.txt" Source="$(var.EQLogParser.TargetDir)\data\titles.txt" />
       </Component>
       <Component Win64="yes" Id="adpsMeter.txt" Guid="F1428697-7A90-4E37-8894-289D81A5D32E">
-        <File Id="adpsMeter.txt" Name="adpsMeter.txt" Source="$(var.EQLogParser_TargetDir)\data\adpsMeter.txt" />
+        <File Id="adpsMeter.txt" Name="adpsMeter.txt" Source="$(var.EQLogParser.TargetDir)\data\adpsMeter.txt" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductHtmlDataComponents" Directory="HTMLDATAFOLDER">
       <Component Win64="yes" Id="content.html" Guid="689B76E0-571D-4F27-B909-B18ABF902346">
-        <File Id="content.html" Name="content.html" Source="$(var.EQLogParser_TargetDir)\data\html\content.html" />
+        <File Id="content.html" Name="content.html" Source="$(var.EQLogParser.TargetDir)\data\html\content.html" />
       </Component>
       <Component Win64="yes" Id="header.html" Guid="73FA53BC-9C50-4992-AFC6-EF583AAE5EC0">
-        <File Id="header.html" Name="header.html" Source="$(var.EQLogParser_TargetDir)\data\html\header.html" />
+        <File Id="header.html" Name="header.html" Source="$(var.EQLogParser.TargetDir)\data\html\header.html" />
       </Component>
       <Component Win64="yes" Id="footer.html" Guid="5BEC871D-91DA-436B-8D6E-656FDA973A33">
-        <File Id="footer.html" Name="footer.html" Source="$(var.EQLogParser_TargetDir)\data\html\footer.html" />
+        <File Id="footer.html" Name="footer.html" Source="$(var.EQLogParser.TargetDir)\data\html\footer.html" />
       </Component>
     </ComponentGroup>
   </Fragment>

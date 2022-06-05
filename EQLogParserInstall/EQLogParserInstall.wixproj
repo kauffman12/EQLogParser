@@ -33,10 +33,6 @@
     <Content Include="EQLogParserInstall.wax" />
   </ItemGroup>
   <ItemGroup>
-    <WixExtension Include="WixNetFxExtension">
-      <HintPath>$(WixExtDir)\WixNetFxExtension.dll</HintPath>
-      <Name>WixNetFxExtension</Name>
-    </WixExtension>
     <WixExtension Include="WixUIExtension">
       <HintPath>$(WixExtDir)\WixUIExtension.dll</HintPath>
       <Name>WixUIExtension</Name>
@@ -46,6 +42,14 @@
     <ProjectReference Include="..\EQLogParser\EQLogParser.csproj">
       <Name>EQLogParser</Name>
       <Project>{7573c49a-27f2-4053-8e6c-b7687dd9cbde}</Project>
+      <Private>True</Private>
+      <DoNotHarvest>True</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
+    </ProjectReference>
+    <ProjectReference Include="..\WixCustom\WixCustom.csproj">
+      <Name>WixCustom</Name>
+      <Project>{c8306b69-9b59-4a69-a2ff-59062e796b0f}</Project>
       <Private>True</Private>
       <DoNotHarvest>True</DoNotHarvest>
       <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
