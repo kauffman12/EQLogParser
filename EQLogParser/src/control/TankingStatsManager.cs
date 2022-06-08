@@ -298,7 +298,7 @@ namespace EQLogParser
             {
               string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
               string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + damageFormat + " ");
+              list.Add(playerFormat + damageFormat);
             }
           }
 
@@ -317,7 +317,7 @@ namespace EQLogParser
             {
               string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
               string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + damageFormat + " ");
+              list.Add(playerFormat + damageFormat);
               totals += stats.Total;
             }
 

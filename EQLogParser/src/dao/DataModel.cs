@@ -181,6 +181,7 @@ namespace EQLogParser
   internal class HitLogRow : HitRecord
   {
     public string Actor { get; set; }
+    public string ActorClass { get; set; }
     public string Acted { get; set; }
     public uint Count { get; set; }
     public uint CritCount { get; set; }

@@ -145,23 +145,23 @@ namespace EQLogParser
     {
       if (includeInitialTanking)
       {
-        foreach (var entry in fight.InitialTankSegments)
+        foreach (ref var entry in fight.InitialTankSegments.ToArray().AsSpan())
         {
           AddTimeEntry(playerTimeRanges, entry);
         }
 
-        foreach (var subEntry in fight.InitialTankSubSegments)
+        foreach (ref var subEntry in fight.InitialTankSubSegments.ToArray().AsSpan())
         {
           AddSubTimeEntry(playerSubTimeRanges, subEntry);
         }
       }
 
-      foreach (var entry in fight.DamageSegments)
+      foreach (ref var entry in fight.DamageSegments.ToArray().AsSpan())
       {
         AddTimeEntry(playerTimeRanges, entry);
       }
 
-      foreach (var subEntry in fight.DamageSubSegments)
+      foreach (ref var subEntry in fight.DamageSubSegments.ToArray().AsSpan())
       {
         AddSubTimeEntry(playerSubTimeRanges, subEntry);
       }
@@ -176,7 +176,7 @@ namespace EQLogParser
         playerSubTimeRanges[subEntry.Key] = ranges;
       }
 
-      foreach (var typeEntry in subEntry.Value)
+      foreach (ref var typeEntry in subEntry.Value.ToArray().AsSpan())
       {
         AddTimeEntry(ranges, typeEntry);
       }
@@ -211,7 +211,7 @@ namespace EQLogParser
     {
       if (playerSubTimeRanges.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> subRanges))
       {
-        foreach (var kv in stats.SubStats)
+        foreach (ref var kv in stats.SubStats.ToArray().AsSpan())
         {
           if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
           {
@@ -220,7 +220,7 @@ namespace EQLogParser
           }
         }
 
-        foreach (var kv in stats.SubStats2)
+        foreach (ref var kv in stats.SubStats2.ToArray().AsSpan())
         {
           if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
           {
@@ -527,7 +527,7 @@ namespace EQLogParser
       var allSpecials = DataManager.Instance.GetSpecials();
       int specialStart = 0;
 
-      raidStats.Ranges.TimeSegments.ForEach(segment =>
+      foreach (ref var segment in raidStats.Ranges.TimeSegments.ToArray().AsSpan())
       {
         double offsetBegin = segment.BeginTime - SPECIAL_OFFSET;
         var actions = new List<IAction>();
@@ -553,7 +553,7 @@ namespace EQLogParser
           actions.AddRange(deaths);
         }
 
-        actions.ForEach(action =>
+        foreach (ref var action in actions.ToArray().AsSpan())
         {
           if (!temp.ContainsKey(action))
           {
@@ -585,8 +585,8 @@ namespace EQLogParser
 
             temp.TryAdd(action, true);
           }
-        });
-      });
+        }
+      }
 
       return playerSpecials;
     }
