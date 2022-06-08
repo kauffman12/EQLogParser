@@ -151,7 +151,7 @@ namespace EQLogParser
       ConfigUtil.RemoveSetting("ReceivedHealingBreakdownColumnsDisplayIndex");
       ConfigUtil.RemoveSetting("TankingBreakdownColumnsDisplayIndex");
       ConfigUtil.Save();
-      _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.", 
+      _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.",
         Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 

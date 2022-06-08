@@ -279,7 +279,7 @@ namespace EQLogParser
         NameBlockList[i].FontStyle = FontStyles.Italic;
         NameBlockList[i].FontWeight = FontWeights.Light;
 
-        switch(i)
+        switch (i)
         {
           case 0:
           case 1:

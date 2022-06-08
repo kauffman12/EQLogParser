@@ -298,7 +298,7 @@ namespace EQLogParser
             });
 
             DamageGroups.Add(newBlock);
-            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block => 
+            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block =>
               Resists.AddRange(block.Actions)));
             ComputeDamageStats(options);
           }
@@ -453,7 +453,7 @@ namespace EQLogParser
 
                     if (stats.Total > 0)
                     {
-                      child.Percent = (float) Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
+                      child.Percent = (float)Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                     }
 
                     if (specials.TryGetValue(child.Name, out string special1))
@@ -608,7 +608,7 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, 
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS,
       bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();

@@ -17,7 +17,7 @@ namespace EQLogParser
       try
       {
         int index;
-        if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length,StringComparison.Ordinal)) > -1)
+        if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length, StringComparison.Ordinal)) > -1)
         {
           HealRecord record = HandleHealed(action, index, lineData.BeginTime);
           if (record != null)

@@ -339,7 +339,7 @@ namespace EQLogParser
         string from = (fromFilter.Text.Length != 0 && fromFilter.Text != Properties.Resources.CHAT_FROM_FILTER) ? fromFilter.Text : null;
         double startDateValue = GetStartDate();
         double endDateValue = GetEndDate();
-        if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from || 
+        if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
           LastStartDate != startDateValue || LastEndDate != endDateValue)
         {
           CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
