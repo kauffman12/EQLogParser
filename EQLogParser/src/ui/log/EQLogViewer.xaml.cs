@@ -1,14 +1,12 @@
 ﻿using FontAwesome5;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -20,6 +18,7 @@ namespace EQLogParser
   /// </summary>
   public partial class EQLogViewer : UserControl, IDisposable
   {
+    private const int MAX_ROWS = 250000;
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static readonly List<string> Times = new List<string>() { "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Everything" };
@@ -27,8 +26,7 @@ namespace EQLogParser
     private static bool Complete = true;
     private static bool Running = false;
     private readonly DispatcherTimer FilterTimer;
-    private int UnFilteredCount;
-    private Paragraph UnFiltered;
+    private List<string> UnFiltered = new List<string>();
 
     public EQLogViewer()
     {
@@ -69,49 +67,32 @@ namespace EQLogParser
       };
     }
 
+    private void LogCopyClick(object sender, RoutedEventArgs e)
+    {
+      
+    }
+
     private void UpdateUI()
     {
-      if (logBox.Document.Blocks.FirstBlock is Paragraph para)
+      if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT)
       {
-        if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT && para != UnFiltered)
+        logBox.Text = string.Join(Environment.NewLine, UnFiltered);
+        UpdateStatusCount(UnFiltered.Count);
+      }
+      else if (logFilter.Text != Properties.Resources.LOG_FILTER_TEXT && logFilter.Text.Length > 1)
+      {
+        var filtered = new List<string>();
+        foreach (ref string line in UnFiltered.ToArray().AsSpan())
         {
-          logBox.Document.Blocks.Clear();
-          logBox.Document.Blocks.Add(UnFiltered);
-          statusCount.Text = UnFilteredCount + " Lines";
-          if (UnFilteredCount == 5000)
+          if (logFilterModifier.SelectedIndex == 0 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 ||
+          logFilterModifier.SelectedIndex == 1 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0)
           {
-            statusCount.Text += " (Maximum Reached)";
+            filtered.Add(line);
           }
         }
-        else if (logFilter.Text != Properties.Resources.LOG_FILTER_TEXT && logFilter.Text.Length > 1)
-        {
-          int count = 0;
-          var filtered = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
-          UnFiltered.Inlines.ToList().ForEach(inline =>
-          {
-            if (inline is Run run && run.Text != Environment.NewLine)
-            {
-              if (logFilterModifier.SelectedIndex == 0 && run.Text.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 ||
-              logFilterModifier.SelectedIndex == 1 && run.Text.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0)
-              {
-                count++;
-                filtered.Inlines.Add(new Run(run.Text));
-                filtered.Inlines.Add(new Run(Environment.NewLine));
-              }
-            }
-          });
 
-          // get rid of last new line character
-          if (filtered.Inlines.Count > 0)
-          {
-            filtered.Inlines.Remove(filtered.Inlines.LastInline);
-          }
-
-          statusCount.Text = string.Format(CultureInfo.CurrentCulture, "{0} {1}", count, Properties.Resources.LINES_FILTERED);
-          logBox.Document.Blocks.Clear();
-          logBox.Document.Blocks.Add(filtered);
-          logScroller.ScrollToEnd();
-        }
+        logBox.Text = string.Join(Environment.NewLine, filtered);
+        UpdateStatusCount(filtered.Count);
       }
     }
 
@@ -121,10 +102,10 @@ namespace EQLogParser
       {
         Running = true;
         progress.Visibility = Visibility.Visible;
-        logBox.Document.Blocks.Clear();
-        statusCount.Text = logBox.Document.Blocks.Count + " Lines";
+        UpdateStatusCount(0);
         progress.Content = "Searching";
         searchIcon.Icon = EFontAwesomeIcon.Solid_TimesCircle;
+        logBox.ClearAllText();
         var logSearchText = logSearch.Text;
         var logSearchText2 = logSearch2.Text;
         var modifierIndex = logSearchModifier.SelectedIndex;
@@ -209,38 +190,20 @@ namespace EQLogParser
               }
 
               list.Reverse();
-              list = list.Take(5000).ToList();
-              list.Reverse();
+              UnFiltered = list.Take(MAX_ROWS).ToList();
+              var allData = string.Join(Environment.NewLine, UnFiltered);
 
               Dispatcher.Invoke(() =>
               {
-                var paragraph = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
-
-                int lines = 0;
-                list.ForEach(line =>
+                if (!string.IsNullOrEmpty(allData))
                 {
-                  lines++;
-                  paragraph.Inlines.Add(line);
-
-                  if (lines < list.Count)
-                  {
-                    paragraph.Inlines.Add(Environment.NewLine);
-                  }
-                });
-
-                logBox.Document.Blocks.Add(paragraph);
-                statusCount.Text = list.Count + " Lines";
-                UnFilteredCount = list.Count;
-                if (list.Count == 5000)
-                {
-                  statusCount.Text += " (Maximum Reached)";
+                  logBox.Text = allData;
                 }
-
-                UnFiltered = paragraph;
 
                 // reset filter
                 logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
                 logFilter.FontStyle = FontStyles.Italic;
+                UpdateStatusCount(UnFiltered.Count);
               });
 
               f.Close();
@@ -252,7 +215,6 @@ namespace EQLogParser
             searchButton.IsEnabled = true;
             searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
             progress.Visibility = Visibility.Hidden;
-            logScroller.ScrollToEnd();
             Running = false;
             Complete = true;
           });
@@ -312,6 +274,21 @@ namespace EQLogParser
       }
     }
 
+    private void UpdateStatusCount(int count)
+    {
+      statusCount.Text = count + " Lines";
+      if (count == MAX_ROWS)
+      {
+        statusCount.Text += " (Maximum Reached)";
+      }
+
+      if (logBox.Lines.Count > 0)
+      {
+        logBox.GoToLine(logBox.Lines.Count);
+        logBox.Lines[logBox.Lines.Count - 1].BringIntoView();
+      }
+    }
+
     private static bool TimeCheck(string line, int index)
     {
       bool pass = true;
@@ -346,17 +323,17 @@ namespace EQLogParser
       return pass;
     }
 
-    private void LogKeyDown(object sender, KeyEventArgs e)
+    private void LogPreviewKeyDown(object sender, KeyEventArgs e)
     {
-      if (e.Key == Key.PageDown)
+      // ignore these keys that open the save/options window
+      if (e.Key == Key.O && (e.KeyboardDevice.Modifiers & ModifierKeys.Control) != 0)
       {
-        var offset = Math.Min(logScroller.ExtentHeight, logScroller.VerticalOffset + logScroller.ViewportHeight);
-        logScroller.ScrollToVerticalOffset(offset);
+        e.Handled = true;
       }
-      else if (e.Key == Key.PageUp)
+
+      if (e.Key == Key.S && (e.KeyboardDevice.Modifiers & ModifierKeys.Control) != 0)
       {
-        var offset = Math.Max(0, logScroller.VerticalOffset - logScroller.ViewportHeight);
-        logScroller.ScrollToVerticalOffset(offset);
+        e.Handled = true;
       }
     }
 
@@ -372,6 +349,8 @@ namespace EQLogParser
         {
           fontSize.SelectedIndex++;
         }
+
+        e.Handled = true;
       }
     }
 

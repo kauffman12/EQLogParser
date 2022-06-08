@@ -57,16 +57,16 @@
           </MenuItem>
           <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>

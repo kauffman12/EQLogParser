@@ -21,7 +21,7 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <Button Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="RefreshMouseClick">
-        <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Redo" ToolTip="Refresh Results" Foreground="#5191c1"/>
+        <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Redo" ToolTip="Refresh Results" Foreground="#FF4F9FE2"/>
       </Button>
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
       <ComboBox Margin="4,0,0,0" x:Name="playersList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
@@ -33,11 +33,11 @@
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#5191c1" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV Table" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#5191c1" />
+                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
