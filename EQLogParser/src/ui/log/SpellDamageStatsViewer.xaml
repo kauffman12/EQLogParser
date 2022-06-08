@@ -22,7 +22,7 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <Button Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="RefreshMouseClick">
-        <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Redo" ToolTip="Refresh Results" Foreground="#5191c1"/>
+        <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Redo" ToolTip="Refresh Results" Foreground="#FF4F9FE2"/>
       </Button>
       <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
       <CheckBox x:Name="showPlayers" IsChecked="True" Margin="4,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.1" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.2" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -137,6 +137,18 @@
       <Component Win64="yes" Id="NumericUpDownLib2.dll" Guid="831B4CF2-8B97-4C4A-A865-71A0DA79C9CA">
         <File Id="NumericUpDownLib2.dll" Name="NumericUpDownLib.dll" Source="$(var.EQLogParser.TargetDir)NumericUpDownLib.dll" />
       </Component>
+      <Component Win64="yes" Id="Syncfusion.Edit.WPF.dll" Guid="016CD15D-58FD-4DBE-8030-C2335976A080">
+        <File Id="Syncfusion.Edit.WPF.dll" Name="Syncfusion.Edit.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Edit.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.GridCommon.WPF.dll" Guid="FD6E7B0D-868C-4D6E-A211-057D973D622D">
+        <File Id="Syncfusion.GridCommon.WPF.dll" Name="Syncfusion.GridCommon.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.GridCommon.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="197A0E8A-FAEC-41C1-BA86-F62C3B8E7947">
+        <File Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
+        <File Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
+      </Component>      
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">

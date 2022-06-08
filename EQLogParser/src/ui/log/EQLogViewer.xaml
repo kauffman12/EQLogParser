@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -29,7 +30,7 @@
       <TextBox x:Name="logSearch2" Margin="0,0,0,0" Height="24" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown" BorderBrush="#FF707070"/>
       <ComboBox x:Name="logSearchTime" Margin="0,0,0,0" Height="24" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" />
       <Button x:Name="searchButton" Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="SearchClick">
-        <fa:ImageAwesome x:Name="searchIcon" Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Search" ToolTip="Search Log" Foreground="#5191c1"/>
+        <fa:ImageAwesome x:Name="searchIcon" Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Search" ToolTip="Search Log" Foreground="#FF4F9FE2"/>
       </Button>
       <Label x:Name="progress" Visibility="Hidden" Height="24" FontStyle="Italic" />
     </StackPanel>
@@ -40,12 +41,24 @@
       </ComboBox>
       <TextBox x:Name="logFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" BorderBrush="#FF707070"/>
     </StackPanel>
-    <ScrollViewer x:Name="logScroller" Grid.Row="1" BorderThickness="1" BorderBrush="Black">
-      <RichTextBox x:Name="logBox" FontSize="16" Margin="0,0,0,0" Foreground="White" IsInactiveSelectionHighlightEnabled="True" Style="{x:Null}" PreviewKeyDown="LogKeyDown" IsReadOnly="True" PreviewMouseWheel="LogMouseWheel" BorderThickness="0" BorderBrush="{x:Null}" Background="#FF202020">
-        <FlowDocument>
-        </FlowDocument>
-      </RichTextBox>
-    </ScrollViewer>
+    <syncfusion:EditControl Grid.Row="1" x:Name="logBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,0" Foreground="White" Background="#FF202020" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
+      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" SelectionBackground="#134369" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <syncfusion:EditControl.ContextMenu>
+        <ContextMenu>
+          <MenuItem IsEnabled="True" x:Name="copy" Header="Copy" Command="Copy">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
+          <MenuItem IsEnabled="True" x:Name="selectAll" Header="Select All" Command="SelectAll">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </ContextMenu>
+      </syncfusion:EditControl.ContextMenu>
+    </syncfusion:EditControl>
     <StatusBar Grid.Row="2" FontSize="11" Background="#151515">
       <TextBlock x:Name="statusCount">0 Lines</TextBlock>
     </StatusBar>
