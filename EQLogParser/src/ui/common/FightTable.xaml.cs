@@ -66,8 +66,8 @@ namespace EQLogParser
       fightMenuItemClear.IsEnabled = fightMenuItemSelectAll.IsEnabled = fightMenuItemUnselectAll.IsEnabled =
       fightMenuItemSelectFight.IsEnabled = fightMenuItemUnselectFight.IsEnabled = fightMenuItemSetPet.IsEnabled = fightMenuItemSetPlayer.IsEnabled = false;
 
-      View = (ListCollectionView) CollectionViewSource.GetDefaultView(Fights);
-      NonTankingView = (ListCollectionView) CollectionViewSource.GetDefaultView(NonTankingFights);
+      View = (ListCollectionView)CollectionViewSource.GetDefaultView(Fights);
+      NonTankingView = (ListCollectionView)CollectionViewSource.GetDefaultView(NonTankingFights);
       fightDataGrid.Sorting += CustomSorting;
 
       var filter = new Predicate<object>(item => !(CurrentShowBreaks == false && ((Fight)item).IsInactivity));

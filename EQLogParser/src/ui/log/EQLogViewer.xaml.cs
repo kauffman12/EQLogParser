@@ -69,7 +69,7 @@ namespace EQLogParser
 
     private void LogCopyClick(object sender, RoutedEventArgs e)
     {
-      
+
     }
 
     private void UpdateUI()

@@ -235,7 +235,7 @@ namespace EQLogParser
                     break;
                   // Old (EQEMU) crit and crippling blow handling
                   case "hit!":
-                    if (stop == i && split.Length > 4 && split[i-1] == "critical" && split[i-3] == "scores")
+                    if (stop == i && split.Length > 4 && split[i - 1] == "critical" && split[i - 3] == "scores")
                     {
                       LastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
                     }

@@ -170,7 +170,7 @@ namespace EQLogParser
               name = name.ToLower(CultureInfo.CurrentCulture);
             }
 
-            if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) && 
+            if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) &&
               !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) && !MainWindow.IsIgnoreCharmPetsEnabled)
             {
               CharmPets[name] = 1;
@@ -245,8 +245,8 @@ namespace EQLogParser
     {
       BitmapImage icon = UNK_ICON;
 
-        switch (GetPlayerClassEnum(name))
-        {
+      switch (GetPlayerClassEnum(name))
+      {
         case SpellClass.BER:
           icon = BER_ICON;
           break;
@@ -477,9 +477,9 @@ namespace EQLogParser
     {
       if (PetMappingUpdated)
       {
-        lock(PetToPlayer)
+        lock (PetToPlayer)
         {
-          var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Value) && 
+          var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Value) &&
             keypair.Value != Labels.UNASSIGNED);
           ConfigUtil.SavePetMapping(filtered);
         }
@@ -537,7 +537,7 @@ namespace EQLogParser
         }
       }
 
-      lock(counter)
+      lock (counter)
       {
         if (!theClass.Equals(counter.CurrentClass) || counter.CurrentMax != long.MaxValue)
         {

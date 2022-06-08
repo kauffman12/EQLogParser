@@ -280,7 +280,7 @@ namespace EQLogParser
       Title = "";
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals, 
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals,
       bool rankPlayers, bool __, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();
