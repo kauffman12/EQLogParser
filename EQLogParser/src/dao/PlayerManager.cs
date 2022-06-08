@@ -584,7 +584,7 @@ namespace EQLogParser
             {
               if (LOG.IsDebugEnabled)
               {
-                LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
+                LOG.Warn("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
               }
             }
             counter.CurrentClass = theClass;

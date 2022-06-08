@@ -203,12 +203,15 @@ namespace EQLogParser
       {
         // exact match meaning class-only spell that are of certain target types
         var tgt = (SpellTarget)spell.Target;
-        if (spell.Level <= 250 && (tgt == SpellTarget.SELF || tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS || spell.Rank > 1) &&
+        if (spell.Level <= 254 && spell.Proc == 0 && (tgt == SpellTarget.SELF || tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS || spell.Rank > 1) &&
           classEnums.Contains((SpellClass)spell.ClassMask))
         {
           // Obviously illusions are bad to look for
           // Call of Fire is Ranger only and self target but VT clickie lets warriors use it
-          if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 && spell.Name.IndexOf("Call of Fire", StringComparison.OrdinalIgnoreCase) == -1)
+          if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 && 
+          !spell.Name.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
+          spell.Name.IndexOf(" Synergy", StringComparison.OrdinalIgnoreCase) == -1 &&
+          spell.Name.IndexOf("Call of Fire", StringComparison.OrdinalIgnoreCase) == -1)
           {
             // these need to be unique and keep track if a conflict is found
             if (SpellsToClass.ContainsKey(spell.Name))
@@ -387,11 +390,14 @@ namespace EQLogParser
 
     internal void CheckExpireFights(double currentTime)
     {
-      ActiveFights.Values.Where(fight =>
+      foreach (ref Fight fight in ActiveFights.Values.ToArray().AsSpan())
       {
         double diff = currentTime - fight.LastTime;
-        return diff > MAXTIMEOUT || diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0;
-      }).ToList().ForEach(fight => RemoveActiveFight(fight.CorrectMapKey));
+        if (diff > MAXTIMEOUT || diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0)
+        {
+          RemoveActiveFight(fight.CorrectMapKey);
+        }
+      }
     }
 
     internal SpellData GetAdpsByName(string name)
@@ -454,7 +460,7 @@ namespace EQLogParser
       {
         if (spellList.Count <= 10)
         {
-          foreach (var spell in spellList)
+          foreach (ref SpellData spell in spellList.ToArray().AsSpan())
           {
             if (spellData == null || (spellData.Level < spell.Level && spell.Level <= 250) || (spellData.Level > 250 && spell.Level <= 250))
             {

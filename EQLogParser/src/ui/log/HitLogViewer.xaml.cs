@@ -66,7 +66,8 @@ namespace EQLogParser
         dataGrid.Columns[11].Visibility = Visibility.Collapsed;
         dataGrid.Columns[12].Visibility = Visibility.Collapsed;
         dataGrid.Columns[13].Header = "Attacker";
-        dataGrid.Columns[14].Header = "Defender";
+        dataGrid.Columns[14].Header = "Attacker Class";
+        dataGrid.Columns[15].Header = "Defender";
         showPets.Visibility = Visibility.Visible;
       }
       else if (firstAction is DamageRecord && defending)
@@ -77,7 +78,8 @@ namespace EQLogParser
         dataGrid.Columns[8].Visibility = Visibility.Collapsed;
         dataGrid.Columns[9].Visibility = Visibility.Collapsed;
         dataGrid.Columns[13].Header = "Defender";
-        dataGrid.Columns[14].Header = "Attacker";
+        dataGrid.Columns[14].Header = "Defender Class";
+        dataGrid.Columns[15].Header = "Attacker";
         showPets.Visibility = Visibility.Collapsed;
         petDivider.Visibility = Visibility.Collapsed;
       }
@@ -90,7 +92,8 @@ namespace EQLogParser
         dataGrid.Columns[11].Visibility = Visibility.Collapsed;
         dataGrid.Columns[12].Visibility = Visibility.Collapsed;
         dataGrid.Columns[13].Header = "Healer";
-        dataGrid.Columns[14].Header = "Healed";
+        dataGrid.Columns[14].Header = "Healer Class";
+        dataGrid.Columns[15].Header = "Healed";
         showPets.Visibility = Visibility.Collapsed;
         petDivider.Visibility = Visibility.Collapsed;
       }
@@ -241,14 +244,16 @@ namespace EQLogParser
           (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(damage.Attacker), StringComparison.OrdinalIgnoreCase) ||
           (!string.IsNullOrEmpty(damage.AttackerOwner) && damage.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
           {
-            row = new HitLogRow { Actor = damage.Attacker, Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
+            row = new HitLogRow { Actor = damage.Attacker, ActorClass = PlayerManager.Instance.GetPlayerClass(damage.Attacker),
+              Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
           }
         }
         else if (defending && !string.IsNullOrEmpty(damage.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && StatsUtil.IsHitType(damage.Type))
         {
           if (damage.Defender.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
           {
-            row = new HitLogRow { Actor = damage.Defender, Acted = damage.Attacker, IsPet = false, TimeSince = "-" };
+            row = new HitLogRow { Actor = damage.Defender, ActorClass = PlayerManager.Instance.GetPlayerClass(damage.Defender),
+              Acted = damage.Attacker, IsPet = false, TimeSince = "-" };
           }
         }
       }
@@ -256,7 +261,8 @@ namespace EQLogParser
       {
         if (heal.Healer.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
         {
-          row = new HitLogRow { Actor = heal.Healer, Acted = heal.Healed, IsPet = false, TimeSince = "-" };
+          row = new HitLogRow { Actor = heal.Healer, ActorClass = PlayerManager.Instance.GetPlayerClass(heal.Healer),
+            Acted = heal.Healed, IsPet = false, TimeSince = "-" };
         }
       }
 
