@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.SfSkinManager;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -31,6 +32,7 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
+      SfSkinManager.SetTheme(timeChooser, new Theme("FluentDark", new string[] { "UpDown" }));
       InitSummaryTable(title, dataGrid, selectedColumns);
 
       PropertyDescriptor widthPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
@@ -60,7 +62,7 @@ namespace EQLogParser
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1200) };
       SelectionTimer.Tick += (sender, e) =>
       {
-        var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true, MaxSeconds = timeChooser.Value };
+        var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true, MaxSeconds = (long) timeChooser.Value };
         Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
         SelectionTimer.Stop();
       };
@@ -92,7 +94,6 @@ namespace EQLogParser
             ChildGrids.Clear();
             timeChooser.Value = 0;
             timeChooser.MaxValue = 0;
-            timeChooser.IsEnabled = false;
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;
@@ -106,9 +107,9 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              UpdateView();
-              timeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds);
               timeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+              timeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds);
+              UpdateView();
             }
 
             if (e.Limited)
@@ -400,8 +401,7 @@ namespace EQLogParser
           {
             var view = CollectionViewSource.GetDefaultView(statsList);
             dataGrid.ItemsSource = SetFilter(view);
-            petOrPlayerList.IsEnabled = true;
-            timeChooser.IsEnabled = CurrentGroupCount == 1;
+            petOrPlayerList.IsEnabled = timeChooser.IsEnabled = true;
             classesList.IsEnabled = CurrentPetOrPlayerOption != 2;
           });
         }, TaskScheduler.Default);
@@ -415,9 +415,9 @@ namespace EQLogParser
       UpdateView();
     }
 
-    private void MaxTimeChanged(object sender, RoutedPropertyChangedEventArgs<long> e)
+    private void MaxTimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (timeChooser.IsEnabled && e.OldValue != 0 && e.NewValue != 0)
+      if (timeChooser.IsEnabled && e.OldValue.ToString() != "0" && e.NewValue.ToString() != "0")
       {
         SelectionTimer.Stop();
         SelectionTimer.Start();

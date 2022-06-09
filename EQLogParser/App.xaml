@@ -3,19 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
-             xmlns:options="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
-             xmlns:reskeys="clr-namespace:NumericUpDownLib.Themes;assembly=NumericUpDownLib"
              xmlns:local="clr-namespace:EQLogParser"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-
-    <!-- Number Up Down control -->
-    <SolidColorBrush x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=ControlAccentBrushKey}" options:Freeze="true" Color="{DynamicResource {x:Static reskeys:ResourceKeys.ControlAccentColorKey}}" />
-    <SolidColorBrush x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=GlyphNormalForegroundKey}"	options:Freeze="true"	Color="#FFFFFF" />
-    <SolidColorBrush x:Key="{x:Static reskeys:ResourceKeys.GlyphMouseOverForegroundKey}" options:Freeze="true" Color="{DynamicResource {x:Static reskeys:ResourceKeys.ControlAccentColorKey}}" />
-    <SolidColorBrush x:Key="{x:Static reskeys:ResourceKeys.GlyphDisabledForegroundKey}"	options:Freeze="true"	Color="#FF4e4e50" />
-    <SolidColorBrush x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type reskeys:ResourceKeys}, ResourceId=GlyphPressedBackroundKey}"	options:Freeze="true"	Color="{DynamicResource {x:Static reskeys:ResourceKeys.ControlAccentColorKey}}" />
-
     <!-- Overriding Actipro DarkMetro Colors -->
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemForegroundHoverBrushKey}" Color="#c2c2c0" />
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemBorderHoverBrushKey}" Color="#101010" />

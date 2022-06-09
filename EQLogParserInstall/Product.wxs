@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.3" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.4" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -134,9 +134,6 @@
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
       </Component>
-      <Component Win64="yes" Id="NumericUpDownLib2.dll" Guid="831B4CF2-8B97-4C4A-A865-71A0DA79C9CA">
-        <File Id="NumericUpDownLib2.dll" Name="NumericUpDownLib.dll" Source="$(var.EQLogParser.TargetDir)NumericUpDownLib.dll" />
-      </Component>
       <Component Win64="yes" Id="Syncfusion.Edit.WPF.dll" Guid="016CD15D-58FD-4DBE-8030-C2335976A080">
         <File Id="Syncfusion.Edit.WPF.dll" Name="Syncfusion.Edit.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Edit.WPF.dll" />
       </Component>
@@ -145,6 +142,12 @@
       </Component>
       <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="197A0E8A-FAEC-41C1-BA86-F62C3B8E7947">
         <File Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
+      </Component>   
+      <Component Win64="yes" Id="Syncfusion.SfSkinManager.WPF.dll" Guid="33F08F96-DA5F-471D-88F0-C4E7A5A50621">
+        <File Id="Syncfusion.SfSkinManager.WPF.dll" Name="Syncfusion.SfSkinManager.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfSkinManager.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Themes.FluentDark.WPF.dll" Guid="29DA2539-32C2-467B-B287-8220449773FD">
+        <File Id="Syncfusion.Themes.FluentDark.WPF.dll" Name="Syncfusion.Themes.FluentDark.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.FluentDark.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
         <File Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
