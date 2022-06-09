@@ -95,9 +95,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll</HintPath>
     </Reference>
-    <Reference Include="NumericUpDownLib">
-      <HintPath>..\Dependencies\NumericUpDownLib.dll</HintPath>
-    </Reference>
     <Reference Update="System">
       <Private>False</Private>
     </Reference>
@@ -172,6 +169,9 @@
     <None Include="data\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\Dependencies\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>    
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DotLiquid">
