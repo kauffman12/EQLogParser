@@ -55,7 +55,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.9.4";
+    private const string VERSION = "v1.9.5";
     private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
 
@@ -806,7 +806,17 @@ namespace EQLogParser
 
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
-          statusText.Text = string.Format(CultureInfo.CurrentCulture, "Reading Log... {0}% in {1} seconds", filePercent, seconds);
+
+          if (filePercent < 100)
+          {
+            statusText.Text = string.Format(CultureInfo.CurrentCulture, "Reading Log.. {0}% in {1} seconds", filePercent, seconds);
+          }
+          else
+          {
+            var procPercent = Convert.ToInt32(Math.Min(CastProcessor.GetPercentComplete(), DamageProcessor.GetPercentComplete()));
+            statusText.Text = string.Format(CultureInfo.CurrentCulture, "Processing... {0}% in {1} seconds", procPercent, seconds);
+          }
+
           statusText.Foreground = LOADING_BRUSH;
 
           if (((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100

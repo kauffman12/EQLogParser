@@ -29,7 +29,7 @@ namespace EQLogParser
         ReceivedSpell received = action as ReceivedSpell;
 
         // dont include detrimental received spells since they're mostly things like being nuked
-        if (received.SpellData != null && received.SpellData.IsBeneficial)
+        if (received.SpellData != null)
         {
           UpdateMaps(received.SpellData, received.Receiver, result.PlayerReceivedCounts, null, result.MaxReceivedCounts, result.UniqueSpells);
         }

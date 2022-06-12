@@ -14,7 +14,7 @@ namespace EQLogParser
 
   internal enum SpellTarget
   {
-    LOS = 1, CASTERAE = 2, CASTERGROUP = 3, CASTERPB = 4, SINGLETARGET = 5, SELF = 6, TARGETAE = 8,
+    LOS = 1, CASTERAE = 2, CASTERGROUP = 3, CASTERPB = 4, SINGLETARGET = 5, SELF = 6, TARGETAE = 8, PET = 14,
     CASTERPBPLAYERS = 36, NEARBYPLAYERSAE = 40, TARGETGROUP = 41, DIRECTIONAE = 42, TARGETRINGAE = 45
   }
 
@@ -97,11 +97,11 @@ namespace EQLogParser
     private readonly Dictionary<string, Dictionary<string, uint>> AdpsValues = new Dictionary<string, Dictionary<string, uint>>();
     private readonly Dictionary<string, HashSet<SpellData>> AdpsLandsOn = new Dictionary<string, HashSet<SpellData>>();
     private readonly Dictionary<string, HashSet<SpellData>> AdpsWearOff = new Dictionary<string, HashSet<SpellData>>();
-    private readonly Dictionary<string, List<SpellData>> LandsOnYou = new Dictionary<string, List<SpellData>>();
-    private readonly Dictionary<string, List<SpellData>> NonPosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
-    private readonly Dictionary<string, List<SpellData>> PosessiveLandsOnOthers = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, List<SpellData>> SpellsNameDB = new Dictionary<string, List<SpellData>>();
     private readonly Dictionary<string, bool> OldSpellNamesDB = new Dictionary<string, bool>();
+    private readonly SpellTreeNode LandsOnOtherTree = new SpellTreeNode();
+    private readonly SpellTreeNode LandsOnYouTree = new SpellTreeNode();
+    private readonly SpellTreeNode WearOffTree = new SpellTreeNode();
 
     private readonly ConcurrentDictionary<string, byte> AllNpcs = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>>();
@@ -168,20 +168,20 @@ namespace EQLogParser
               SpellsAbbrvDB[spellData.NameAbbrv] = spellData;
             }
 
-            if (spellData.LandsOnOther.StartsWith("'s ", StringComparison.Ordinal))
+            // restricted received spells to only ADPS related
+            if (!string.IsNullOrEmpty(spellData.LandsOnOther) && (spellData.Adps > 0 || spellData.IsBeneficial))
             {
-              spellData.LandsOnOther = spellData.LandsOnOther.Substring(3);
-              helper.AddToList(PosessiveLandsOnOthers, spellData.LandsOnOther, spellData);
-            }
-            else if (!string.IsNullOrEmpty(spellData.LandsOnOther))
-            {
-              spellData.LandsOnOther = spellData.LandsOnOther.Substring(1);
-              helper.AddToList(NonPosessiveLandsOnOthers, spellData.LandsOnOther, spellData);
+              BuildSpellPath(spellData.LandsOnOther.Trim().Split(' ').ToList(), LandsOnOtherTree, spellData);
             }
 
-            if (!string.IsNullOrEmpty(spellData.LandsOnYou)) // just do stuff in common
+            if (!string.IsNullOrEmpty(spellData.LandsOnYou) && (spellData.Adps > 0 || spellData.IsBeneficial))
             {
-              helper.AddToList(LandsOnYou, spellData.LandsOnYou, spellData);
+              BuildSpellPath(spellData.LandsOnYou.Trim().Split(' ').ToList(), LandsOnYouTree, spellData);
+            }
+
+            if (!string.IsNullOrEmpty(spellData.WearOff) && (spellData.Adps > 0 || spellData.IsBeneficial))
+            {
+              BuildSpellPath(spellData.WearOff.Trim().Split(' ').ToList(), WearOffTree, spellData);
             }
           }
         }
@@ -190,11 +190,6 @@ namespace EQLogParser
           LOG.Error("Error reading spell data", ex);
         }
       });
-
-      // sort by duration for the timeline to pick better options
-      NonPosessiveLandsOnOthers.Values.ToList().ForEach(value => value.Sort((a, b) => DurationCompare(a, b)));
-      PosessiveLandsOnOthers.Values.ToList().ForEach(value => value.Sort((a, b) => DurationCompare(a, b)));
-      LandsOnYou.Values.ToList().ForEach(value => value.Sort((a, b) => DurationCompare(a, b)));
 
       var keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
@@ -279,19 +274,6 @@ namespace EQLogParser
       PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => RemoveFight(name);
-
-      int DurationCompare(SpellData a, SpellData b)
-      {
-        if (b.Duration.CompareTo(a.Duration) is int result && result == 0)
-        {
-          if (int.TryParse(a.ID, out int aInt) && int.TryParse(b.ID, out int bInt) && aInt != bInt)
-          {
-            result = aInt > bInt ? -1 : 1;
-          }
-        }
-
-        return result;
-      }
     }
 
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
@@ -527,37 +509,36 @@ namespace EQLogParser
       }
     }
 
-    internal List<SpellData> GetNonPosessiveLandsOnOther(string player, string value, out List<SpellData> output)
+    internal SpellTreeResult GetLandsOnOther(List<string> data, out string player)
     {
-      List<SpellData> result = null;
-      if (NonPosessiveLandsOnOthers.TryGetValue(value, out output))
+      player = null;
+      var found = SearchSpellPath(LandsOnOtherTree, data);
+
+      if (found.SpellData.Count > 0 && found.DataIndex > -1)
       {
-        result = FindByLandsOn(player, output);
+        player = string.Join(" ", data.ToArray(), 0, found.DataIndex + 1);
+        if (player.EndsWith("'s"))
+        {
+          // if string is only 2 then it must be invalid
+          player = (player.Length > 2) ? player.Substring(0, player.Length - 2) : null;
+        }
+
+        found.SpellData = FindByLandsOn(player, found.SpellData);
       }
 
-      return result;
+      return found;
     }
 
-    internal List<SpellData> GetPosessiveLandsOnOther(string player, string value, out List<SpellData> output)
+    internal SpellTreeResult GetLandsOnYou(List<string> data)
     {
-      List<SpellData> result = null;
-      if (PosessiveLandsOnOthers.TryGetValue(value, out output))
-      {
-        result = FindByLandsOn(player, output);
-      }
+      var found = SearchSpellPath(LandsOnYouTree, data);
 
-      return result;
-    }
-
-    internal List<SpellData> GetLandsOnYou(string player, string landsOn, out List<SpellData> output)
-    {
-      List<SpellData> result = null;
-      if (LandsOnYou.TryGetValue(landsOn, out output))
+      if (found.DataIndex == 0 && found.SpellData.Count > 0)
       {
-        result = FindByLandsOn(player, output);
+        found.SpellData = FindByLandsOn(ConfigUtil.PlayerName, found.SpellData);
 
         // check Adps
-        if (AdpsLandsOn.TryGetValue(landsOn, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
+        if (AdpsLandsOn.TryGetValue(found.SpellData[0].LandsOnYou, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
         {
           var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(ConfigUtil.PlayerName, spellDataSet.ToList(), true);
 
@@ -577,21 +558,35 @@ namespace EQLogParser
           }
         }
       }
-      else if (AdpsWearOff.TryGetValue(landsOn, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
-      {
-        var spellData = spellDataSet.First();
 
-        AdpsKeys.ForEach(key =>
+      return found;
+    }
+
+    internal SpellTreeResult GetWearOff(List<string> data)
+    {
+      var found = SearchSpellPath(WearOffTree, data);
+
+      if (found.DataIndex == 0 && found.SpellData.Count > 0)
+      {
+        found.SpellData = FindByLandsOn(data[0], found.SpellData);
+
+        // check Adps
+        if (AdpsWearOff.TryGetValue(found.SpellData[0].WearOff, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
         {
-          if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+          var spellData = spellDataSet.First();
+
+          AdpsKeys.ForEach(key =>
           {
-            AdpsActive[key].Remove(spellData.LandsOnYou);
-            RecalculateAdps();
-          }
-        });
+            if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+            {
+              AdpsActive[key].Remove(spellData.LandsOnYou);
+              RecalculateAdps();
+            }
+          });
+        }
       }
 
-      return result;
+      return found;
     }
 
     internal void UpdateNpcSpellReflectStats(string npc)
@@ -749,12 +744,11 @@ namespace EQLogParser
         {
           for (int j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
           {
-            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && output.Find(spellData => spellData.Name == cast.Spell && (!isAdps || spellData.Adps > 0)) is SpellData found)
+            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && !cast.Interrupted && 
+              output.Find(spellData => (spellData.Target != (int)SpellTarget.SELF || cast.Caster == player) && 
+              spellData.Name == cast.Spell && (!isAdps || spellData.Adps > 0)) is SpellData found)
             {
-              if (found.Target != (int)SpellTarget.SELF || cast.Caster == player)
-              {
-                return found;
-              }
+              return found;
             }
           }
         }
@@ -833,7 +827,11 @@ namespace EQLogParser
     {
       lock (OverlayFights)
       {
-        OverlayFights.Values.ToList().ForEach(fight => fight.PlayerTotals.Clear());
+        foreach (ref var fight in OverlayFights.Values.ToArray().AsSpan())
+        {
+          fight.PlayerTotals.Clear();
+        }
+
         OverlayFights.Clear();
       }
     }
@@ -933,6 +931,73 @@ namespace EQLogParser
       return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionBlock>();
     }
 
+    public static SpellTreeResult SearchSpellPath(SpellTreeNode node, List<string> data, int lastIndex = -1)
+    {
+      if (lastIndex == -1)
+      {
+        lastIndex = data.Count - 1;
+      }
+
+      if (node.Words.TryGetValue(data[lastIndex], out SpellTreeNode child))
+      {
+        if (lastIndex > 0)
+        {
+          return SearchSpellPath(child, data, lastIndex - 1);
+        }
+        else
+        {
+          return new SpellTreeResult { SpellData = child.SpellData, DataIndex = lastIndex };
+        }
+      }
+
+      return new SpellTreeResult { SpellData = node.SpellData, DataIndex = lastIndex };
+    }
+
+    private static void BuildSpellPath(List<string> data, SpellTreeNode node, SpellData spellData, int lastIndex = -1)
+    {
+      if (lastIndex == -1)
+      {
+        lastIndex = data.Count - 1;
+      }
+
+      if (data[lastIndex] == "'s")
+      {
+        node.SpellData.Add(spellData);
+        node.SpellData.Sort((a, b) => DurationCompare(a, b));
+      }
+      else
+      {
+        if (!node.Words.TryGetValue(data[lastIndex], out SpellTreeNode child))
+        {
+          child = new SpellTreeNode();
+          node.Words[data[lastIndex]] = child;
+        }
+
+        if (lastIndex == 0)
+        {
+          child.SpellData.Add(spellData);
+          child.SpellData.Sort((a, b) => DurationCompare(a, b));
+        }
+        else
+        {
+          BuildSpellPath(data, child, spellData, lastIndex - 1);
+        }
+      }
+    }
+
+    static int DurationCompare(SpellData a, SpellData b)
+    {
+      if (b.Duration.CompareTo(a.Duration) is int result && result == 0)
+      {
+        if (int.TryParse(a.ID, out int aInt) && int.TryParse(b.ID, out int bInt) && aInt != bInt)
+        {
+          result = aInt > bInt ? -1 : 1;
+        }
+      }
+
+      return result;
+    }
+
     private class SpellAbbrvComparer : IEqualityComparer<SpellData>
     {
       public bool Equals(SpellData x, SpellData y) => x?.NameAbbrv == y?.NameAbbrv;
@@ -954,6 +1019,18 @@ namespace EQLogParser
     {
       internal uint Landed { get; set; }
       internal uint Reflected { get; set; }
+    }
+
+    public class SpellTreeNode
+    {
+      internal List<SpellData> SpellData { get; set; } = new List<SpellData>();
+      internal Dictionary<string, SpellTreeNode> Words { get; set; } = new Dictionary<string, SpellTreeNode>();
+    }
+
+    public class SpellTreeResult
+    {
+      internal List<SpellData> SpellData { get; set; }
+      internal int DataIndex { get; set; }
     }
   }
 }
