@@ -153,41 +153,38 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(name) && !VerifiedPets.ContainsKey(name))
       {
         name = string.Intern(name);
-        if (!VerifiedPlayers.ContainsKey(name) || string.IsNullOrEmpty(GetPlayerClass(name)))
+        lock (LockObject)
         {
-          lock (LockObject)
+          if (VerifiedPlayers.TryRemove(name, out _))
           {
-            if (VerifiedPlayers.TryRemove(name, out _))
-            {
-              PlayersUpdated = true;
-            }
-          }
-
-          if (!IsPossiblePlayerName(name))
-          {
-            if (name.StartsWith("A ", StringComparison.Ordinal) || name.StartsWith("An ", StringComparison.Ordinal))
-            {
-              name = name.ToLower(CultureInfo.CurrentCulture);
-            }
-
-            if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) &&
-              !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) && !MainWindow.IsIgnoreCharmPetsEnabled)
-            {
-              CharmPets[name] = 1;
-            }
-          }
-          else if (!PetToPlayer.ContainsKey(name))
-          {
-            AddPetToPlayer(name, Labels.UNASSIGNED);
-          }
-
-          TakenPetOrPlayerAction.TryRemove(name, out _);
-
-          if (VerifiedPets.TryAdd(name, 1))
-          {
-            EventsNewVerifiedPet?.Invoke(this, name);
             PlayersUpdated = true;
           }
+        }
+
+        if (!IsPossiblePlayerName(name))
+        {
+          if (name.StartsWith("A ", StringComparison.Ordinal) || name.StartsWith("An ", StringComparison.Ordinal))
+          {
+            name = name.ToLower(CultureInfo.CurrentCulture);
+          }
+
+          if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) &&
+            !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) && !MainWindow.IsIgnoreCharmPetsEnabled)
+          {
+            CharmPets[name] = 1;
+          }
+        }
+        else if (!PetToPlayer.ContainsKey(name))
+        {
+          AddPetToPlayer(name, Labels.UNASSIGNED);
+        }
+
+        TakenPetOrPlayerAction.TryRemove(name, out _);
+
+        if (VerifiedPets.TryAdd(name, 1))
+        {
+          EventsNewVerifiedPet?.Invoke(this, name);
+          PlayersUpdated = true;
         }
       }
     }

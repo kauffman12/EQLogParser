@@ -192,7 +192,6 @@
     </PackageReference>
     <PackageReference Include="syncfusion.ui.wpf.net" Version="20.1.0.55" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
     <PackageReference Include="WPFTextBoxAutoComplete">
       <Version>1.0.5</Version>
     </PackageReference>
