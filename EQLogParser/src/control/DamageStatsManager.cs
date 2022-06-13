@@ -65,7 +65,7 @@ namespace EQLogParser
                 playerHasPet[player] = true;
               }
 
-              allDamage += baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage;
+              allDamage += keypair.Value.Damage;
               allTime.Add(new TimeSegment(keypair.Value.BeginTime, fight.LastDamageTime));
 
               if (updateTime == 0)
@@ -86,7 +86,7 @@ namespace EQLogParser
 
               if (playerTotals.TryGetValue(player, out OverlayPlayerTotal total))
               {
-                total.Damage += baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage;
+                total.Damage += keypair.Value.Damage;
                 total.Range.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
                 total.UpdateTime = Math.Max(total.UpdateTime, keypair.Value.UpdateTime);
               }
@@ -95,7 +95,7 @@ namespace EQLogParser
                 playerTotals[player] = new OverlayPlayerTotal
                 {
                   Name = player,
-                  Damage = baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage,
+                  Damage = keypair.Value.Damage,
                   Range = new TimeRange(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime)),
                   UpdateTime = keypair.Value.UpdateTime
                 };

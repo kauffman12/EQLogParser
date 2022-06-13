@@ -295,7 +295,6 @@ namespace EQLogParser
 
   internal class FightTotalDamage
   {
-    public long DamageWithBane { get; set; }
     public long Damage { get; set; }
     public string Name { get; set; }
     public string PetOwner { get; set; }

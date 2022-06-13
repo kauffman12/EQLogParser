@@ -195,7 +195,6 @@ namespace EQLogParser
                 }
               }
 
-              list.Reverse();
               UnFiltered = list.Take(MAX_ROWS).ToList();
               var allData = string.Join(Environment.NewLine, UnFiltered);
 
