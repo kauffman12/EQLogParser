@@ -1,4 +1,5 @@
 ﻿using FontAwesome5;
+using Syncfusion.SfSkinManager;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -31,13 +32,18 @@ namespace EQLogParser
     public EQLogViewer()
     {
       InitializeComponent();
+      SfSkinManager.SetTheme(colorPicker, new Theme("FluentDark", new string[] { "ColorPicker" }));
       fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
 
-      string fgColor = ConfigUtil.GetSetting("EQLogViewerFontFgColor");
-      if (fontFgColor.ItemsSource is List<ColorItem> colors)
+      try
       {
-        fontFgColor.SelectedItem = (colors.Find(item => item.Name == fgColor) is ColorItem found) ? found : colors.Find(item => item.Name == "#ffffff");
+        string fgColor = ConfigUtil.GetSetting("EQLogViewerFontFgColor");
+        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
+      }
+      catch (FormatException)
+      {
+        colorPicker.Color = Colors.White;
       }
 
       string family = ConfigUtil.GetSetting("EQLogViewerFontFamily");
@@ -397,15 +403,10 @@ namespace EQLogParser
         textBox.FontStyle = FontStyles.Italic;
       }
     }
-
-    private void FontFgColor_Changed(object sender, SelectionChangedEventArgs e)
+    private void FontFgColor_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (fontFgColor.SelectedItem != null)
-      {
-        var item = fontFgColor.SelectedItem as ColorItem;
-        logBox.Foreground = item.Brush;
-        ConfigUtil.SetSetting("EQLogViewerFontFgColor", item.Name);
-      }
+      logBox.Foreground = new SolidColorBrush(colorPicker.Color);
+      ConfigUtil.SetSetting("EQLogViewerFontFgColor", TextFormatUtils.GetHexString(colorPicker.Color));
     }
 
     private void FontSize_Changed(object sender, SelectionChangedEventArgs e)
@@ -488,5 +489,6 @@ namespace EQLogParser
       GC.SuppressFinalize(this);
     }
     #endregion
+
   }
 }

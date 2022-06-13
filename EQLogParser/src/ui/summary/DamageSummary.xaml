@@ -14,6 +14,11 @@
     <Grid.Resources>
       <local:ZeroConverter x:Key="ZeroConverter" />
       <local:NumberFormatConverter x:Key="NumberFormatConverter" />
+      <DataTemplate x:Key="ModifiedHeaderTemplate" DataType="local:ColorPicker">
+        <StackPanel Orientation="Horizontal">
+          <Border x:Name="selectedColorRect" Width="20" Height="20" Margin="2" HorizontalAlignment="Left" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
+        </StackPanel>
+      </DataTemplate>
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30" />
