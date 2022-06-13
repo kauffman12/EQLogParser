@@ -66,10 +66,10 @@ namespace EQLogParser
             isNonTankingFight = fight.DamageHits == 1;
 
             var attacker = processed.Record.AttackerOwner ?? processed.Record.Attacker;
+            var validator = new DamageValidator();
             if (fight.PlayerTotals.TryGetValue(attacker, out FightTotalDamage total))
             {
-              total.Damage += (processed.Record.Type == Labels.BANE) ? 0 : processed.Record.Total;
-              total.DamageWithBane += processed.Record.Total;
+              total.Damage += validator.IsValid(processed.Record) ? processed.Record.Total : 0;
               total.Name = processed.Record.Attacker;
               total.PetOwner = total.PetOwner ?? processed.Record.AttackerOwner;
               total.UpdateTime = processed.BeginTime;
@@ -78,8 +78,7 @@ namespace EQLogParser
             {
               fight.PlayerTotals[attacker] = new FightTotalDamage
               {
-                Damage = (processed.Record.Type == Labels.BANE) ? 0 : processed.Record.Total,
-                DamageWithBane = processed.Record.Total,
+                Damage = validator.IsValid(processed.Record) ? processed.Record.Total : 0,
                 Name = processed.Record.Attacker,
                 PetOwner = processed.Record.AttackerOwner,
                 UpdateTime = processed.BeginTime,

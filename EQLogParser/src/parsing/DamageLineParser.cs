@@ -59,14 +59,7 @@ namespace EQLogParser
         // handle Slain queue
         if (!double.IsNaN(SlainTime) && (currentTime > SlainTime))
         {
-          SlainQueue.ForEach(slain =>
-          {
-            if (!DataManager.Instance.RemoveActiveFight(slain) && char.IsUpper(slain[0]))
-            {
-              DataManager.Instance.RemoveActiveFight(char.ToLower(slain[0], CultureInfo.CurrentCulture) + slain.Substring(1));
-            }
-          });
-
+          SlainQueue.ForEach(slain => DataManager.Instance.RemoveActiveFight(slain));
           SlainQueue.Clear();
           SlainTime = double.NaN;
         }
@@ -537,6 +530,8 @@ namespace EQLogParser
 
           lock (SlainQueue)
           {
+            // we also use upper case now
+            slain = TextFormatUtils.ToUpper(slain);
             if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
