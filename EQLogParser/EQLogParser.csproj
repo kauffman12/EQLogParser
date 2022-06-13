@@ -174,9 +174,7 @@
     </None>    
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="DotLiquid">
-      <Version>2.2.656</Version>
-    </PackageReference>
+    <PackageReference Include="DotLiquid" Version="2.2.656" />
     <PackageReference Include="FontAwesome5">
       <Version>2.1.6</Version>
     </PackageReference>

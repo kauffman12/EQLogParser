@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
   	         xmlns:behaviors="clr-namespace:WPFTextBoxAutoComplete;assembly=WPFTextBoxAutoComplete"
              x:Class="EQLogParser.ChatViewer"
              mc:Ignorable="d"
@@ -77,7 +78,8 @@
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"  Margin="0,0,0,0">
       <ComboBox x:Name="fontFamily" Height="20" FontSize="11" Width="120" ItemsSource="{x:Static Fonts.SystemFontFamilies}" SelectionChanged="FontFamily_Changed" />
       <ComboBox x:Name="fontSize" Height="20" FontSize="11" SelectionChanged="FontSize_Changed" />
-      <local:ColorComboBox x:Name="fontFgColor" Height="20" FontSize="11" SelectionChanged="FontFgColor_Changed" />
+      <syncfusion:ColorPicker x:Name="colorPicker" Width="35" Height="12" BorderThickness="0" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
+        HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColor_Changed" />
     </StackPanel>
   </Grid>
 </UserControl>

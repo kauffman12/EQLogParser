@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.SfSkinManager;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -44,7 +45,7 @@ namespace EQLogParser
     public ChatViewer()
     {
       InitializeComponent();
-
+      SfSkinManager.SetTheme(colorPicker, new Theme("FluentDark", new string[] { "ColorPicker" }));
       fontSize.ItemsSource = FontSizeList;
       startDate.Text = Properties.Resources.CHAT_START_DATE;
       endDate.Text = Properties.Resources.CHAT_END_DATE;
@@ -58,10 +59,14 @@ namespace EQLogParser
       context.Items.AddRange(PlayerAutoCompleteList);
       fromFilter.DataContext = context;
 
-      string fgColor = ConfigUtil.GetSetting("ChatFontFgColor");
-      if (fontFgColor.ItemsSource is List<ColorItem> colors)
+      try
       {
-        fontFgColor.SelectedItem = (colors.Find(item => item.Name == fgColor) is ColorItem found) ? found : colors.Find(item => item.Name == "#ffffff");
+        string fgColor = ConfigUtil.GetSetting("ChatFontFgColor");
+        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
+      }
+      catch (FormatException)
+      {
+        colorPicker.Color = Colors.White;
       }
 
       string family = ConfigUtil.GetSetting("ChatFontFamily");
@@ -506,14 +511,10 @@ namespace EQLogParser
       }
     }
 
-    private void FontFgColor_Changed(object sender, SelectionChangedEventArgs e)
+    private void FontFgColor_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (fontFgColor.SelectedItem != null)
-      {
-        var item = fontFgColor.SelectedItem as ColorItem;
-        chatBox.Foreground = item.Brush;
-        ConfigUtil.SetSetting("ChatFontFgColor", item.Name);
-      }
+      chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
+      ConfigUtil.SetSetting("ChatFontFgColor", TextFormatUtils.GetHexString(colorPicker.Color));
     }
 
     private void FontSize_Changed(object sender, SelectionChangedEventArgs e)

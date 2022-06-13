@@ -1,4 +1,6 @@
 ﻿using FontAwesome5;
+using Syncfusion.SfSkinManager;
+using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -22,7 +24,7 @@ namespace EQLogParser
 
     private static readonly object StatsLock = new object();
     private static readonly Color TITLECOLOR = Color.FromRgb(30, 30, 30);
-    private readonly List<ColorComboBox> ColorComboBoxList = new List<ColorComboBox>();
+    private readonly List<ColorPicker> ColorPickerList = new List<ColorPicker>();
     private readonly List<StackPanel> NamePanels = new List<StackPanel>();
     private readonly List<Image> NameIconList = new List<Image>();
     private readonly List<TextBlock> NameBlockList = new List<TextBlock>();
@@ -583,10 +585,15 @@ namespace EQLogParser
       TitleDamagePanel.Children.Add(TitleDamageBlock);
       overlayCanvas.Children.Add(TitleDamagePanel);
 
+      Theme theme = null;
       if (!configure)
       {
         TitlePanel.SizeChanged += TitleResizing;
         TitleDamagePanel.SizeChanged += TitleResizing;
+      }
+      else
+      {
+        theme = new Theme("FluentDark", new string[] { "ColorPicker" });
       }
 
       for (int i = 0; i < CurrentMaxRows; i++)
@@ -612,19 +619,17 @@ namespace EQLogParser
 
         if (configure)
         {
-          var colorChoice = new ColorComboBox(ColorComboBox.Theme.Dark) { Tag = string.Format(CultureInfo.CurrentCulture, "OverlayRankColor{0}", i + 1) };
-          colorChoice.SelectionChanged += (object sender, SelectionChangedEventArgs e) =>
+          var colorPicker = new ColorPicker { Width = 35, Height= 12, Color = ColorList[i], IsGradientPropertyEnabled = false, EnableSolidToGradientSwitch = false,
+            Tag = string.Format(CultureInfo.CurrentCulture, "OverlayRankColor{0}", i + 1), BorderThickness = new Thickness(0) };
+          colorPicker.HeaderTemplate = Application.Current.Resources["ColorPickerMinHeaderTemplate"] as DataTemplate;
+          SfSkinManager.SetTheme(colorPicker, theme);
+          colorPicker.ColorChanged += (DependencyObject d, DependencyPropertyChangedEventArgs e) =>
           {
-            rectangle.Fill = OverlayUtil.CreateBrush((colorChoice.SelectedValue as ColorItem).Brush.Color);
+            rectangle.Fill = OverlayUtil.CreateBrush(colorPicker.Color);
           };
 
-          if (colorChoice.ItemsSource is List<ColorItem> colors)
-          {
-            colorChoice.SelectedItem = colors.Find(item => item.Brush.Color == ColorList[i]);
-          }
-
-          ColorComboBoxList.Add(colorChoice);
-          damageStack.Children.Add(colorChoice);
+          ColorPickerList.Add(colorPicker);
+          damageStack.Children.Add(colorPicker);
         }
         else
         {
@@ -752,9 +757,9 @@ namespace EQLogParser
         ConfigUtil.SetSetting("ShowOverlayCritRate", IsShowOverlayCritRateEnabled.ToString(CultureInfo.CurrentCulture));
         ConfigUtil.SetSetting("SelectedOverlayClass", SelectedClass);
 
-        ColorComboBoxList.ForEach(colorChoice =>
+        ColorPickerList.ForEach(colorPicker =>
         {
-          ConfigUtil.SetSetting(colorChoice.Tag as string, (colorChoice.SelectedValue as ColorItem).Name);
+          ConfigUtil.SetSetting(colorPicker.Tag as string, TextFormatUtils.GetHexString(colorPicker.Color));
         });
       }
 
