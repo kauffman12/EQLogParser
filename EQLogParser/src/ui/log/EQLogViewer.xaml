@@ -41,24 +41,50 @@
       </ComboBox>
       <TextBox x:Name="logFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" BorderBrush="#FF707070"/>
     </StackPanel>
-    <syncfusion:EditControl Grid.Row="1" x:Name="logBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,0" Foreground="White" Background="#FF202020" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
+    <syncfusion:TabControlExt x:Name="tabControl" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
+      <syncfusion:TabItemExt Header="Search Results" CloseButtonState="Hidden" CanClose="False">
+        <syncfusion:EditControl x:Name="logBox" SelectedTextChanged="logBox_SelectedTextChanged" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,0" Foreground="White" Background="#FF202020" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
       ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" SelectionBackground="#134369" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-      <syncfusion:EditControl.ContextMenu>
-        <ContextMenu>
-          <MenuItem IsEnabled="True" x:Name="copy" Header="Copy" Command="Copy">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <Separator />
-          <MenuItem IsEnabled="True" x:Name="selectAll" Header="Select All" Command="SelectAll">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
-        </ContextMenu>
-      </syncfusion:EditControl.ContextMenu>
-    </syncfusion:EditControl>
+          <syncfusion:EditControl.ContextMenu>
+            <ContextMenu>
+              <MenuItem IsEnabled="True" Header="Copy" Command="Copy">
+                <MenuItem.Icon>
+                  <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <Separator />
+              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Click="SelectedContext" ></MenuItem>
+              <Separator />
+              <MenuItem IsEnabled="True" Header="Select All" Command="SelectAll">
+                <MenuItem.Icon>
+                  <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
+                </MenuItem.Icon>
+              </MenuItem>
+            </ContextMenu>
+          </syncfusion:EditControl.ContextMenu>
+        </syncfusion:EditControl>
+      </syncfusion:TabItemExt>
+      <syncfusion:TabItemExt x:Name="contextTab" Header="Context" CanClose="True" Visibility="Hidden">
+        <syncfusion:EditControl x:Name="contextBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,0" Foreground="White" Background="#FF202020" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
+      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" SelectionBackground="#134369" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+          <syncfusion:EditControl.ContextMenu>
+            <ContextMenu>
+              <MenuItem IsEnabled="True" Header="Copy" Command="Copy">
+                <MenuItem.Icon>
+                  <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <Separator />
+              <MenuItem IsEnabled="True" Header="Select All" Command="SelectAll">
+                <MenuItem.Icon>
+                  <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
+                </MenuItem.Icon>
+              </MenuItem>
+            </ContextMenu>
+          </syncfusion:EditControl.ContextMenu>
+        </syncfusion:EditControl>
+      </syncfusion:TabItemExt>      
+    </syncfusion:TabControlExt>
     <StatusBar Grid.Row="2" FontSize="11" Background="#151515">
       <TextBlock x:Name="statusCount">0 Lines</TextBlock>
     </StatusBar>

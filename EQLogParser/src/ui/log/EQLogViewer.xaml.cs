@@ -1,5 +1,6 @@
 ﻿using FontAwesome5;
 using Syncfusion.SfSkinManager;
+using Syncfusion.Windows.Edit;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,6 +20,7 @@ namespace EQLogParser
   /// </summary>
   public partial class EQLogViewer : UserControl, IDisposable
   {
+    private const int CONTEXT = 30000;
     private const int MAX_ROWS = 250000;
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
@@ -28,11 +30,15 @@ namespace EQLogParser
     private static bool Running = false;
     private readonly DispatcherTimer FilterTimer;
     private List<string> UnFiltered = new List<string>();
+    private Dictionary<long, long> FilteredLinePositionMap = new Dictionary<long, long>();
+    private Dictionary<long, long> LinePositions = new Dictionary<long, long>();
+    private static SolidColorBrush ORANGE_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
 
     public EQLogViewer()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(colorPicker, new Theme("FluentDark", new string[] { "ColorPicker" }));
+      SfSkinManager.SetTheme(colorPicker, new Theme("FluentDark"));
+      SfSkinManager.SetTheme(tabControl, new Theme("FluentDark"));
       fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
 
@@ -73,33 +79,104 @@ namespace EQLogParser
       };
     }
 
-    private void LogCopyClick(object sender, RoutedEventArgs e)
-    {
-
-    }
-
     private void UpdateUI()
     {
+      FilteredLinePositionMap.Clear();
+      
       if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT)
       {
-        logBox.Text = string.Join(Environment.NewLine, UnFiltered);
+        logBox.Text = string.Join(Environment.NewLine, UnFiltered) + Environment.NewLine;
         UpdateStatusCount(UnFiltered.Count);
       }
       else if (logFilter.Text != Properties.Resources.LOG_FILTER_TEXT && logFilter.Text.Length > 1)
       {
         var filtered = new List<string>();
+        int lineCount = -1;
         foreach (ref string line in UnFiltered.ToArray().AsSpan())
         {
+          lineCount++;
           if (logFilterModifier.SelectedIndex == 0 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 ||
           logFilterModifier.SelectedIndex == 1 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0)
           {
+            FilteredLinePositionMap[filtered.Count] = LinePositions[lineCount];
             filtered.Add(line);
           }
         }
 
-        logBox.Text = string.Join(Environment.NewLine, filtered);
+        logBox.Text = string.Join(Environment.NewLine, filtered) + Environment.NewLine;
         UpdateStatusCount(filtered.Count);
       }
+    }
+
+    private void LoadContext(long pos, string text)
+    {
+      Task.Delay(50).ContinueWith(task =>
+      {
+        if (MainWindow.CurrentLogFile != null)
+        {
+          using (var f = File.OpenRead(MainWindow.CurrentLogFile))
+          {
+            f.Seek(Math.Max(0, pos - CONTEXT), SeekOrigin.Begin);
+            StreamReader s = GetStreamReader(f);
+            var list = new List<string>();
+
+            if (!s.EndOfStream)
+            {
+              // since position is not the start of a line just read one as junk
+              s.ReadLine();
+            }
+
+            List<int> FoundLines = new List<int>();
+            while (!s.EndOfStream)
+            {
+              var line = s.ReadLine();
+              list.Add(line);
+
+              if (line.Contains(text))
+              {
+                FoundLines.Add(list.Count);
+              }
+
+              if (f.Position >= (pos + CONTEXT))
+              {
+                break;
+              }
+            }
+
+            var allText = string.Join(Environment.NewLine, list) + Environment.NewLine;
+            Dispatcher.Invoke(() =>
+            {
+              contextBox.Text = allText;
+              contextTab.Visibility = Visibility.Visible;
+              FoundLines.ForEach(line => contextBox.SetLineBackground(line, false, ORANGE_BRUSH));
+              tabControl.SelectedItem = contextTab;
+
+              if (FoundLines.Count > 0)
+              {
+                GoToLine(contextBox, FoundLines[0] + 3);
+              }
+            });
+
+            f.Close();
+          }
+        }
+      }, TaskScheduler.Default);
+    }
+
+    private void GoToLine(EditControl control, int line)
+    {
+      // GoToLine just doesnt work until UI is fully rendered
+      Task.Delay(250).ContinueWith(task => Dispatcher.Invoke(() =>
+      {
+        try
+        {
+          control.GoToLine(Math.Min(line, control.Lines.Count));
+        }
+        catch (NullReferenceException)
+        {
+
+        }
+      }));
     }
 
     private void SearchClick(object sender, MouseButtonEventArgs e)
@@ -116,6 +193,7 @@ namespace EQLogParser
         var logSearchText2 = logSearch2.Text;
         var modifierIndex = logSearchModifier.SelectedIndex;
         var logTimeIndex = logSearchTime.SelectedIndex;
+        LinePositions.Clear();
 
         Task.Delay(75).ContinueWith(task =>
         {
@@ -123,22 +201,7 @@ namespace EQLogParser
           {
             using (var f = File.OpenRead(MainWindow.CurrentLogFile))
             {
-              StreamReader s;
-              if (!f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
-              {
-                if (f.Length > 100000000)
-                {
-                  SetStartingPosition(f, logTimeIndex);
-                }
-
-                s = new StreamReader(f);
-              }
-              else
-              {
-                var gs = new GZipStream(f, CompressionMode.Decompress);
-                s = new StreamReader(gs, System.Text.Encoding.UTF8, true, 4096);
-              }
-
+              StreamReader s = GetStreamReader(f, logTimeIndex);
               var list = new List<string>();
               int lastPercent = -1;
 
@@ -180,6 +243,7 @@ namespace EQLogParser
 
                   if (match)
                   {
+                    LinePositions[list.Count] = f.Position;
                     list.Add(line);
                   }
                 }
@@ -196,7 +260,8 @@ namespace EQLogParser
               }
 
               UnFiltered = list.Take(MAX_ROWS).ToList();
-              var allData = string.Join(Environment.NewLine, UnFiltered);
+              var allData = string.Join(Environment.NewLine, UnFiltered) + Environment.NewLine;
+              // adding extra new line to be away from scrollbar
 
               Dispatcher.Invoke(() =>
               {
@@ -230,6 +295,27 @@ namespace EQLogParser
         searchButton.IsEnabled = false;
         Running = false;
       }
+    }
+
+    private StreamReader GetStreamReader(FileStream f, int logTimeIndex = -1)
+    {
+      StreamReader s;
+      if (!f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+      {
+        if (f.Length > 100000000 && logTimeIndex > -1)
+        {
+          SetStartingPosition(f, logTimeIndex);
+        }
+
+        s = new StreamReader(f);
+      }
+      else
+      {
+        var gs = new GZipStream(f, CompressionMode.Decompress);
+        s = new StreamReader(gs, System.Text.Encoding.UTF8, true, 4096);
+      }
+
+      return s;
     }
 
     private void SetStartingPosition(FileStream f, int index, long left = 0, long right = 0, long good = 0, int count = 0)
@@ -289,8 +375,7 @@ namespace EQLogParser
 
       if (logBox.Lines.Count > 0)
       {
-        logBox.GoToLine(logBox.Lines.Count);
-        logBox.Lines[logBox.Lines.Count - 1].BringIntoView();
+        GoToLine(logBox, logBox.Lines.Count);
       }
     }
 
@@ -413,6 +498,7 @@ namespace EQLogParser
       if (fontSize.SelectedItem != null)
       {
         logBox.FontSize = (double)fontSize.SelectedItem;
+        contextBox.FontSize = (double)fontSize.SelectedItem;
         ConfigUtil.SetSetting("EQLogViewerFontSize", fontSize.SelectedItem.ToString());
       }
     }
@@ -461,6 +547,29 @@ namespace EQLogParser
       FilterTimer?.Start();
     }
 
+    private void logBox_SelectedTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      selectedContext.IsEnabled = !string.IsNullOrEmpty(logBox.SelectedText);
+    }
+
+    private void SelectedContext(object sender, RoutedEventArgs e)
+    {
+      if (logBox.SelectedTextPointer != null && LinePositions.ContainsKey(logBox.SelectedTextPointer.StartLine))
+      {
+        long start;
+        if (FilteredLinePositionMap.ContainsKey(logBox.SelectedTextPointer.StartLine))
+        {
+          start = FilteredLinePositionMap[logBox.SelectedTextPointer.StartLine];
+        }
+        else
+        {
+          start = LinePositions[logBox.SelectedTextPointer.StartLine];
+        }  
+        
+        LoadContext(start, logBox.Lines[logBox.SelectedTextPointer.StartLine].Text);
+      }
+    }
+
     private void OptionsChange(object sender, EventArgs e) => UpdateUI();
 
     #region IDisposable Support
@@ -488,6 +597,5 @@ namespace EQLogParser
       GC.SuppressFinalize(this);
     }
     #endregion
-
   }
 }
