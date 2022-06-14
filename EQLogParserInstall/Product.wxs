@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.7" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.8" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -24,26 +24,48 @@
   
     <UI Id="WixUI_Advanced">
       <UIRef Id="WixUI_InstallDir" />
+      <DialogRef Id="CheckDotNetDlg" />
       <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
 
       <!-- Skip license dialog -->
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CheckDotNetDlg" Order="1">DOTNET6INSTALLED="0"</Publish>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="1">DOTNET6INSTALLED="1"</Publish>
+      <Publish Dialog="SetupTypeDlg" Control="Back" Event="NewDialog" Value="CheckDotNetDlg">1</Publish>
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
     </UI>
   </Product>
 
-	<Fragment>
+  <Fragment>
     <Binary Id="CABinary" SourceFile="$(var.WixCustom.TargetDir)WixCustom.CA.dll" />
     <CustomAction Id="CAID1" BinaryKey="CABinary" DllEntry="CheckDotNetVersion" Execute="firstSequence" />
-
     <InstallUISequence>
       <Custom Action="CAID1" Before="LaunchConditions" />
     </InstallUISequence>
-
-    <Condition Message="You must first install .NET 6.0 Runtime">
-      Installed OR DOTNET6INSTALLED="1"
-    </Condition>
-    
+    <UI>
+      <Dialog Id="CheckDotNetDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
+        <Control Id="Text1" Type="Text" X="40" Y="74" Width="280" Height="40" TabSkip="no" Text="Microsoft .Net 6.0 Desktop Runtime is now required. It may be downloaded from the link below. After it is installed, try EQLogParser again." />
+        <Control Id="Link1" Type="Hyperlink" X="40" Y="116" Width="290" Height="40" Transparent="yes">
+          <Text><![CDATA[<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.6-windows-x64-installer">https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.6-windows-x64-installer</a>]]></Text>
+        </Control>     
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+          <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Please Install .Net 6.0 and Try Again</Text>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}Missing Required Software</Text>
+        </Control>
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+      </Dialog>
+    </UI>
+  </Fragment>
+	<Fragment>   
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="DesktopFolder" Name="Desktop" />
       <Directory Id="ProgramFiles64Folder">

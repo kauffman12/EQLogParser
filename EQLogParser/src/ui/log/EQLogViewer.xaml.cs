@@ -87,6 +87,10 @@ namespace EQLogParser
       {
         logBox.Text = string.Join(Environment.NewLine, UnFiltered) + Environment.NewLine;
         UpdateStatusCount(UnFiltered.Count);
+        if (logBox.Lines.Count > 0)
+        {
+          GoToLine(logBox, logBox.Lines.Count);
+        }
       }
       else if (logFilter.Text != Properties.Resources.LOG_FILTER_TEXT && logFilter.Text.Length > 1)
       {
@@ -105,6 +109,10 @@ namespace EQLogParser
 
         logBox.Text = string.Join(Environment.NewLine, filtered) + Environment.NewLine;
         UpdateStatusCount(filtered.Count);
+        if (logBox.Lines.Count > 0)
+        {
+          GoToLine(logBox, logBox.Lines.Count);
+        }
       }
     }
 
@@ -150,6 +158,7 @@ namespace EQLogParser
               contextTab.Visibility = Visibility.Visible;
               FoundLines.ForEach(line => contextBox.SetLineBackground(line, false, ORANGE_BRUSH));
               tabControl.SelectedItem = contextTab;
+              UpdateStatusCount(contextBox.Lines.Count);
 
               if (FoundLines.Count > 0)
               {
@@ -185,7 +194,6 @@ namespace EQLogParser
       {
         Running = true;
         progress.Visibility = Visibility.Visible;
-        UpdateStatusCount(0);
         progress.Content = "Searching";
         searchIcon.Icon = EFontAwesomeIcon.Solid_TimesCircle;
         logBox.ClearAllText();
@@ -271,9 +279,14 @@ namespace EQLogParser
                 }
 
                 // reset filter
+                tabControl.SelectedItem = resultsTab;
                 logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
                 logFilter.FontStyle = FontStyles.Italic;
                 UpdateStatusCount(UnFiltered.Count);
+                if (logBox.Lines.Count > 0)
+                {
+                  GoToLine(logBox, logBox.Lines.Count);
+                }
               });
 
               f.Close();
@@ -371,11 +384,6 @@ namespace EQLogParser
       if (count == MAX_ROWS)
       {
         statusCount.Text += " (Maximum Reached)";
-      }
-
-      if (logBox.Lines.Count > 0)
-      {
-        GoToLine(logBox, logBox.Lines.Count);
       }
     }
 
@@ -568,6 +576,24 @@ namespace EQLogParser
         
         LoadContext(start, logBox.Lines[logBox.SelectedTextPointer.StartLine].Text);
       }
+    }
+
+    private void tabControl_PreviewSelectedItemChangedEvent(object sender, Syncfusion.Windows.Tools.Controls.PreviewSelectedItemChangedEventArgs e)
+    {
+      if (e.NewSelectedItem == resultsTab)
+      {
+        UpdateStatusCount(logBox.Lines.Count - 1);
+      }
+      else if (e.NewSelectedItem == contextTab)
+      {
+        UpdateStatusCount(contextBox.Lines.Count - 1);
+      }
+    }
+
+    private void tabControl_TabClosed(object sender, Syncfusion.Windows.Tools.Controls.CloseTabEventArgs e)
+    {
+      // can only close the context and display the results
+      UpdateStatusCount(logBox.Lines.Count - 1);
     }
 
     private void OptionsChange(object sender, EventArgs e) => UpdateUI();

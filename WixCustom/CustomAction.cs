@@ -11,9 +11,7 @@ namespace WixCustom
   {
     static readonly List<string> runtimes = new List<string>()
     {
-        "Microsoft.NETCore.App",//.NET Runtime
-        "Microsoft.AspNetCore.App",//ASP.NET Core Runtime
-        "Microsoft.WindowsDesktop.App",//.NET Desktop Runtime
+      "Microsoft.WindowsDesktop.App"//.NET Desktop Runtime
     };
 
     [CustomAction]
