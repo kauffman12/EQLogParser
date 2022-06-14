@@ -41,8 +41,8 @@
       </ComboBox>
       <TextBox x:Name="logFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" BorderBrush="#FF707070"/>
     </StackPanel>
-    <syncfusion:TabControlExt x:Name="tabControl" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
-      <syncfusion:TabItemExt Header="Search Results" CloseButtonState="Hidden" CanClose="False">
+    <syncfusion:TabControlExt x:Name="tabControl" TabClosed="tabControl_TabClosed" PreviewSelectedItemChangedEvent="tabControl_PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
+      <syncfusion:TabItemExt x:Name="resultsTab" Header="Search Results" CloseButtonState="Hidden" CanClose="False">
         <syncfusion:EditControl x:Name="logBox" SelectedTextChanged="logBox_SelectedTextChanged" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,0" Foreground="White" Background="#FF202020" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
       ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" SelectionBackground="#134369" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
