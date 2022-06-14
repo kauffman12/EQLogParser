@@ -32,7 +32,7 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(timeChooser, new Theme("FluentDark", new string[] { "UpDown" }));
+      SfSkinManager.SetTheme(timeChooser, new Theme("FluentDark"));
       InitSummaryTable(title, dataGrid, selectedColumns);
 
       PropertyDescriptor widthPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
