@@ -1,10 +1,9 @@
-﻿<UserControl x:Class="EQLogParser.LineChart"
+﻿<UserControl xmlns:syncfusion="http://schemas.syncfusion.com/wpf"  x:Class="EQLogParser.LineChart"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="250" d:DesignWidth="800">
   <Grid Background="#232325">
@@ -20,8 +19,8 @@
       <ComboBox Margin="0,0,0,0" x:Name="petOrPlayerList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="choicesList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
-    <lvc:CartesianChart x:Name="lvcChart" Grid.Row="1" Zoom="X" Pan="X" LegendLocation="Right" MouseDoubleClick="ChartDoubleClick">
-      <lvc:CartesianChart.ContextMenu>
+    <syncfusion:SfChart x:Name="sfLineChart" Grid.Row="2">
+      <syncfusion:SfChart.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
@@ -38,23 +37,26 @@
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <Separator />
-          <MenuItem IsEnabled="True" x:Name="recenterClick" Header="Recenter" Click="RecenterClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Bullseye" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
         </ContextMenu>
-      </lvc:CartesianChart.ContextMenu>
-      <lvc:CartesianChart.AxisY>
-        <lvc:Axis MinValue="0"></lvc:Axis>
-      </lvc:CartesianChart.AxisY>
-      <lvc:CartesianChart.AxisX>
-        <lvc:Axis MinValue="0"></lvc:Axis>
-      </lvc:CartesianChart.AxisX>
-      <lvc:CartesianChart.Series>
-        <lvc:LineSeries Title="Player" PointGeometry="" ></lvc:LineSeries>
-      </lvc:CartesianChart.Series>
-    </lvc:CartesianChart>
+      </syncfusion:SfChart.ContextMenu>
+      <syncfusion:SfChart.Resources>
+        <Style TargetType="TextBlock" x:Key="labelStyle">
+          <Setter Property="FontSize" Value="16"/>
+        </Style>
+      </syncfusion:SfChart.Resources>
+      <syncfusion:SfChart.Legend>
+        <syncfusion:ChartLegend FontSize="14"/>
+      </syncfusion:SfChart.Legend>
+      <syncfusion:SfChart.Behaviors>
+        <syncfusion:ChartZoomPanBehavior EnableMouseWheelZooming="True" EnablePanning="True" ResetOnDoubleTap="True" />
+        <syncfusion:ChartTooltipBehavior LabelStyle = "{StaticResource labelStyle}" EnableAnimation="False" />
+      </syncfusion:SfChart.Behaviors>
+      <syncfusion:SfChart.PrimaryAxis>
+        <syncfusion:DateTimeAxis LabelFormat="hh:mm:ss"/>
+      </syncfusion:SfChart.PrimaryAxis>
+      <syncfusion:SfChart.SecondaryAxis>
+        <syncfusion:NumericalAxis/>
+      </syncfusion:SfChart.SecondaryAxis>
+    </syncfusion:SfChart>
   </Grid>
 </UserControl>

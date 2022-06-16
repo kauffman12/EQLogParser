@@ -1,7 +1,5 @@
-﻿using ActiproSoftware.Windows.Themes;
-using LiveCharts;
-using LiveCharts.Configurations;
-using LiveCharts.Wpf;
+﻿using Syncfusion.SfSkinManager;
+using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -10,8 +8,6 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -23,52 +19,25 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static readonly CartesianMapper<DataPoint> CONFIG_VPS = Mappers.Xy<DataPoint>()
-     .X(dateModel => dateModel.CurrentTime)
-     .Y(dateModel => dateModel.Vps);
-    private static readonly CartesianMapper<DataPoint> CONFIG_TOTAL = Mappers.Xy<DataPoint>()
-     .X(dateModel => dateModel.CurrentTime)
-     .Y(dateModel => dateModel.Total);
-    private static readonly CartesianMapper<DataPoint> CONFIG_CRIT_RATE = Mappers.Xy<DataPoint>()
-     .X(dateModel => dateModel.CurrentTime)
-     .Y(dateModel => dateModel.CritRate);
-    private static readonly CartesianMapper<DataPoint> CONFIG_AVG = Mappers.Xy<DataPoint>()
-     .X(dateModel => dateModel.CurrentTime)
-     .Y(dateModel => dateModel.Avg);
-
-    private static readonly List<CartesianMapper<DataPoint>> CHOICES = new List<CartesianMapper<DataPoint>>()
-    {
-      CONFIG_VPS, CONFIG_TOTAL, CONFIG_AVG, CONFIG_CRIT_RATE
-    };
-
-    private readonly Dictionary<string, ChartValues<DataPoint>> PlayerPetValues = new Dictionary<string, ChartValues<DataPoint>>();
-    private readonly Dictionary<string, ChartValues<DataPoint>> PlayerValues = new Dictionary<string, ChartValues<DataPoint>>();
-    private readonly Dictionary<string, ChartValues<DataPoint>> PetValues = new Dictionary<string, ChartValues<DataPoint>>();
-    private readonly Dictionary<string, ChartValues<DataPoint>> RaidValues = new Dictionary<string, ChartValues<DataPoint>>();
+    private readonly Dictionary<string, List<DataPoint>> PlayerPetValues = new Dictionary<string, List<DataPoint>>();
+    private readonly Dictionary<string, List<DataPoint>> PlayerValues = new Dictionary<string, List<DataPoint>>();
+    private readonly Dictionary<string, List<DataPoint>> PetValues = new Dictionary<string, List<DataPoint>>();
+    private readonly Dictionary<string, List<DataPoint>> RaidValues = new Dictionary<string, List<DataPoint>>();
     private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new Dictionary<string, Dictionary<string, byte>>();
 
     private string CurrentChoice = "";
-    private CartesianMapper<DataPoint> CurrentConfig;
+    private int CurrentConfig;
     private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected = null;
     private Predicate<object> LastFilter = null;
-    private List<ChartValues<DataPoint>> LastSortedValues = null;
+    private List<List<DataPoint>> LastSortedValues = null;
 
     public LineChart(List<string> choices, bool includePets = false)
     {
       InitializeComponent();
+      SfSkinManager.SetTheme(sfLineChart, new Theme("FluentDark"));
 
-      lvcChart.Hoverable = false;
-      lvcChart.DisableAnimations = true;
-      lvcChart.DataTooltip = null;
-
-      // reverse regular tooltip
-      //lvcChart.DataTooltip.Foreground = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
-      //lvcChart.DataTooltip.Background = (SolidColorBrush) Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
-      lvcChart.ChartLegend.Foreground = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipBackgroundNormalBrushKey);
-      lvcChart.ChartLegend.Background = (SolidColorBrush)Application.Current.FindResource(AssetResourceKeys.ToolTipForegroundNormalBrushKey);
-
-      CurrentConfig = CONFIG_VPS;
+      CurrentConfig = 0;
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
       CurrentChoice = choicesList.SelectedValue as string;
@@ -124,8 +93,8 @@ namespace EQLogParser
       {
         Dispatcher.InvokeAsync(() =>
         {
-          lvcChart.UpdateLayout();
-          lvcChart.Update();
+          //lvcChart.UpdateLayout();
+          //lvcChart.Update();
         });
       }, TaskScheduler.Default);
     }
@@ -217,7 +186,7 @@ namespace EQLogParser
       LastFilter = filter;
       LastSelected = selected;
 
-      Dictionary<string, ChartValues<DataPoint>> workingData = null;
+      Dictionary<string, List<DataPoint>> workingData = null;
 
       string selectedLabel = "Selected Player(s)";
       string nonSelectedLabel = " Player(s)";
@@ -240,12 +209,12 @@ namespace EQLogParser
           workingData = RaidValues;
           break;
         default:
-          workingData = new Dictionary<string, ChartValues<DataPoint>>();
+          workingData = new Dictionary<string, List<DataPoint>>();
           break;
       }
 
       string label;
-      List<ChartValues<DataPoint>> sortedValues;
+      List<List<DataPoint>> sortedValues;
       if (CurrentPetOrPlayerOption == Labels.RAIDOPTION)
       {
         sortedValues = workingData.Values.ToList();
@@ -286,74 +255,50 @@ namespace EQLogParser
         label += " " + CurrentChoice;
       }
 
-      LastSortedValues = sortedValues = Smoothing(sortedValues);
-
       Dispatcher.InvokeAsync(() =>
       {
         Reset();
         titleLabel.Content = label;
-        lvcChart.Series = BuildCollection(sortedValues);
+        sfLineChart.Series = BuildCollection(sortedValues);
       });
     }
 
-    private SeriesCollection BuildCollection(List<ChartValues<DataPoint>> sortedValues)
+    private ChartSeriesCollection BuildCollection(List<List<DataPoint>> sortedValues)
     {
-      bool fixStillNeeded = true;
-      SeriesCollection collection = new SeriesCollection(CurrentConfig);
+      ChartSeriesCollection collection = new ChartSeriesCollection();
 
-      foreach (var value in sortedValues)
+      string yPath = "Avg";
+      switch (CurrentConfig)
+      {
+        case 0:
+          yPath = "Vps";
+          break;
+        case 1:
+          yPath = "Total";
+          break;
+        case 2:
+          yPath = "Avg";
+          break;
+        case 3:
+          yPath = "CritRate";
+          break;
+      }
+
+      foreach (ref var value in sortedValues.ToArray().AsSpan())
       {
         var name = value.First().Name;
-        name = CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION && !HasPets.ContainsKey(name) ? name.Split(' ')[0] : name;
-        var series = new LineSeries() { Title = name, Values = value };
-
-        if (value.Count > 1)
-        {
-          series.PointGeometry = null;
-          fixStillNeeded = false;
-        }
-        else if (value.Count == 1 && fixStillNeeded) // handles if everything is 1 point
-        {
-          if (!double.IsNaN(lvcChart.AxisX[0].MinValue))
-          {
-            lvcChart.AxisX[0].MinValue = Math.Min(lvcChart.AxisX[0].MinValue, value[0].CurrentTime - 3.0);
-          }
-          else
-          {
-            lvcChart.AxisX[0].MinValue = value[0].CurrentTime - 3.0;
-          }
-
-          if (!double.IsNaN(lvcChart.AxisX[0].MaxValue))
-          {
-            lvcChart.AxisX[0].MaxValue = Math.Max(lvcChart.AxisX[0].MaxValue, value[0].CurrentTime + 3.0);
-          }
-          else
-          {
-            lvcChart.AxisX[0].MaxValue = value[0].CurrentTime + 3.0;
-          }
-        }
-        else
-        {
-          fixStillNeeded = false;
-        }
-
-        if (!fixStillNeeded)
-        {
-          lvcChart.AxisX[0].MinValue = double.NaN;
-          lvcChart.AxisX[0].MaxValue = double.NaN;
-        }
-
+        name = ((CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION) && !HasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
+        var series = new FastLineSeries { Label = name, XBindingPath = "DateTime", YBindingPath = yPath, 
+          ItemsSource = value, ShowTooltip = true };
         collection.Add(series);
       }
 
       return collection;
     }
 
-    private void ChartDoubleClick(object sender, MouseButtonEventArgs e) => Helpers.ChartResetView(lvcChart);
-    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CopyImage(Dispatcher, lvcChart, titleLabel);
-    private void RecenterClick(object sender, RoutedEventArgs e) => Helpers.ChartResetView(lvcChart);
+    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CopyImage(Dispatcher, sfLineChart, titleLabel);
 
-    private bool PassFilter(Predicate<object> filter, ChartValues<DataPoint> values)
+    private bool PassFilter(Predicate<object> filter, List<DataPoint> values)
     {
       bool pass = filter == null;
 
@@ -412,13 +357,7 @@ namespace EQLogParser
 
     private void Reset()
     {
-      if (lvcChart.Series != null)
-      {
-        Helpers.ChartResetView(lvcChart);
-        lvcChart.AxisX[0].LabelFormatter = GetLabelFormat;
-        lvcChart.Series = null;
-        titleLabel.Content = Labels.NODATA;
-      }
+      titleLabel.Content = Labels.NODATA;
     }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -426,7 +365,7 @@ namespace EQLogParser
       if (PlayerPetValues.Count > 0)
       {
         CurrentChoice = choicesList.SelectedValue as string;
-        CurrentConfig = CHOICES[choicesList.SelectedIndex];
+        CurrentConfig = choicesList.SelectedIndex;
         CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
         Plot(LastSelected, LastFilter);
       }
@@ -446,19 +385,19 @@ namespace EQLogParser
             foreach (var chartData in sortedValue)
             {
               double chartValue = 0;
-              if (CurrentConfig == CONFIG_AVG)
+              if (CurrentConfig == 2)
               {
                 chartValue = chartData.Avg;
               }
-              else if (CurrentConfig == CONFIG_CRIT_RATE)
+              else if (CurrentConfig == 3)
               {
                 chartValue = chartData.CritRate;
               }
-              else if (CurrentConfig == CONFIG_TOTAL)
+              else if (CurrentConfig == 1)
               {
                 chartValue = chartData.Total;
               }
-              else if (CurrentConfig == CONFIG_VPS)
+              else if (CurrentConfig == 0)
               {
                 chartValue = chartData.Vps;
               }
@@ -475,13 +414,13 @@ namespace EQLogParser
       }
     }
 
-    private static void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, ChartValues<DataPoint>> theValues,
+    private static void Aggregate(Dictionary<string, DataPoint> playerData, Dictionary<string, List<DataPoint>> theValues,
       Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate, double firstTime, double lastTime, double diff)
     {
       if (diff > DataManager.FIGHTTIMEOUT)
       {
         UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
-        foreach (var value in playerData.Values)
+        foreach (ref var value in playerData.Values.ToArray().AsSpan())
         {
           value.RollingTotal = 0;
           value.RollingCritHits = 0;
@@ -490,6 +429,7 @@ namespace EQLogParser
           Insert(value, theValues);
           value.CurrentTime = firstTime - 6;
           Insert(value, theValues);
+          value.DateTime = DateUtil.FromDouble(value.CurrentTime);
         }
       }
 
@@ -499,6 +439,7 @@ namespace EQLogParser
       aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
       aggregate.BeginTime = firstTime;
       aggregate.CurrentTime = dataPoint.CurrentTime;
+      aggregate.DateTime = DateUtil.FromDouble(dataPoint.CurrentTime);
 
       if (diff >= 1)
       {
@@ -511,10 +452,10 @@ namespace EQLogParser
       }
     }
 
-    private static void UpdateRemaining(Dictionary<string, ChartValues<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
+    private static void UpdateRemaining(Dictionary<string, List<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
       double firstTime, double currentTime, string ignore = null)
     {
-      foreach (var remaining in needAccounting.Values)
+      foreach (ref var remaining in needAccounting.Values.ToArray().AsSpan())
       {
         if (ignore != remaining.Name)
         {
@@ -527,6 +468,7 @@ namespace EQLogParser
           }
 
           remaining.CurrentTime = currentTime;
+          remaining.DateTime = DateUtil.FromDouble(currentTime);
           Insert(remaining, chartValues);
         }
       }
@@ -534,13 +476,14 @@ namespace EQLogParser
       needAccounting.Clear();
     }
 
-    private static void Insert(DataPoint aggregate, Dictionary<string, ChartValues<DataPoint>> chartValues)
+    private static void Insert(DataPoint aggregate, Dictionary<string, List<DataPoint>> chartValues)
     {
       DataPoint newEntry = new DataPoint
       {
         Name = aggregate.Name,
         PlayerName = aggregate.PlayerName,
         CurrentTime = aggregate.CurrentTime,
+        DateTime = DateUtil.FromDouble(aggregate.CurrentTime),
         Total = aggregate.Total
       };
 
@@ -553,9 +496,9 @@ namespace EQLogParser
         newEntry.CritRate = Math.Round(Convert.ToDouble(aggregate.RollingCritHits) / aggregate.RollingHits * 100, 2);
       }
 
-      if (!chartValues.TryGetValue(aggregate.Name, out ChartValues<DataPoint> playerValues))
+      if (!chartValues.TryGetValue(aggregate.Name, out List<DataPoint> playerValues))
       {
-        playerValues = new ChartValues<DataPoint>();
+        playerValues = new List<DataPoint>();
         chartValues[aggregate.Name] = playerValues;
       }
 
@@ -569,64 +512,8 @@ namespace EQLogParser
         playerValues.Add(newEntry);
       }
     }
-
-    private static List<ChartValues<DataPoint>> Smoothing(List<ChartValues<DataPoint>> data)
-    {
-      List<ChartValues<DataPoint>> smoothed = new List<ChartValues<DataPoint>>();
-
-      data.ForEach(points =>
-      {
-        if (points.Count > 750)
-        {
-          int tries = 1;
-          int rate = 0;
-          var current = points;
-          ChartValues<DataPoint> updatedValues;
-
-          do
-          {
-            updatedValues = new ChartValues<DataPoint>();
-            rate += (6 * tries);
-
-            for (int i = 0; i < current.Count - 2; i++)
-            {
-              var one = current[i];
-              var two = current[i + 1];
-              var three = current[i + 2];
-
-              if (two.CurrentTime - one.CurrentTime <= rate && three.CurrentTime - one.CurrentTime <= rate)
-              {
-                one.CurrentTime = Math.Truncate((one.CurrentTime + two.CurrentTime + three.CurrentTime) / 3);
-                one.Total = (one.Total + two.Total + three.Total) / 3;
-                one.Vps = (one.Vps + two.Vps + three.Vps) / 3;
-                one.Avg = (one.Avg + two.Avg + three.Avg) / 3;
-                one.CritRate = (one.CritRate + two.CritRate + three.CritRate) / 3;
-                updatedValues.Add(one);
-                i += 2;
-              }
-              else
-              {
-                updatedValues.Add(one);
-                updatedValues.Add(two);
-                i += 1;
-              }
-            }
-
-            current = updatedValues;
-          }
-          while (++tries < 12 && updatedValues.Count > 750);
-
-          smoothed.Add(updatedValues);
-        }
-        else
-        {
-          smoothed.Add(points);
-        }
-      });
-
-      return smoothed;
-    }
   }
+
   public class DataPoint
   {
     public long Avg { get; set; }
@@ -641,5 +528,6 @@ namespace EQLogParser
     public double CritRate { get; set; }
     public double BeginTime { get; set; }
     public double CurrentTime { get; set; }
+    public DateTime DateTime { get; set; }
   }
 }

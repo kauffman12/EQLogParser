@@ -83,7 +83,7 @@ namespace EQLogParser
 
     internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
 
-    internal static DateTime FromDouble(long value) => new DateTime(value * TimeSpan.FromSeconds(1).Ticks);
+    internal static DateTime FromDouble(double value) => new DateTime((long)value * TimeSpan.FromSeconds(1).Ticks);
 
     internal bool HasTimeInRange(double now, string line, int lastMins, out double dateTime)
     {

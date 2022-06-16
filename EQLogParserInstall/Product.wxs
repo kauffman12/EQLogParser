@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.9" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.10" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -166,6 +166,9 @@
       <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="197A0E8A-FAEC-41C1-BA86-F62C3B8E7947">
         <File Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
       </Component>   
+      <Component Win64="yes" Id="Syncfusion.SfChart.WPF.dll" Guid="EB9F99E6-52B6-4CB0-BB4A-C18AEA3182B3">
+        <File Id="Syncfusion.SfChart.WPF.dll" Name="Syncfusion.SfChart.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfChart.WPF.dll" />
+      </Component>      
       <Component Win64="yes" Id="Syncfusion.SfSkinManager.WPF.dll" Guid="33F08F96-DA5F-471D-88F0-C4E7A5A50621">
         <File Id="Syncfusion.SfSkinManager.WPF.dll" Name="Syncfusion.SfSkinManager.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfSkinManager.WPF.dll" />
       </Component>

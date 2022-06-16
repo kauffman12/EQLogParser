@@ -494,7 +494,7 @@ namespace EQLogParser
           {
             if (!string.IsNullOrEmpty(keypair.Key) && IsPossiblePlayerName(keypair.Key))
             {
-              if (keypair.Value != 0 && (now - DateUtil.FromDouble((long)keypair.Value)).TotalDays < 300)
+              if (keypair.Value != 0 && (now - DateUtil.FromDouble(keypair.Value)).TotalDays < 300)
               {
                 var output = keypair.Key + "=" + Math.Round(keypair.Value);
                 if (PlayerToClass.TryGetValue(keypair.Key, out SpellClassCounter value) && value.CurrentMax == long.MaxValue &&
