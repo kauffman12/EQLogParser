@@ -82,7 +82,7 @@ namespace EQLogParser
     private void UpdateUI()
     {
       FilteredLinePositionMap.Clear();
-      
+
       if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT)
       {
         logBox.Text = string.Join(Environment.NewLine, UnFiltered) + Environment.NewLine;
@@ -572,8 +572,8 @@ namespace EQLogParser
         else
         {
           start = LinePositions[logBox.SelectedTextPointer.StartLine];
-        }  
-        
+        }
+
         LoadContext(start, logBox.Lines[logBox.SelectedTextPointer.StartLine].Text);
       }
     }

@@ -244,16 +244,28 @@ namespace EQLogParser
           (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(damage.Attacker), StringComparison.OrdinalIgnoreCase) ||
           (!string.IsNullOrEmpty(damage.AttackerOwner) && damage.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
           {
-            row = new HitLogRow { Actor = damage.Attacker, ActorClass = PlayerManager.Instance.GetPlayerClass(damage.Attacker),
-              Acted = damage.Defender, IsPet = isPet, TimeSince = "-" };
+            row = new HitLogRow
+            {
+              Actor = damage.Attacker,
+              ActorClass = PlayerManager.Instance.GetPlayerClass(damage.Attacker),
+              Acted = damage.Defender,
+              IsPet = isPet,
+              TimeSince = "-"
+            };
           }
         }
         else if (defending && !string.IsNullOrEmpty(damage.Defender) && !string.IsNullOrEmpty(playerStats.OrigName) && StatsUtil.IsHitType(damage.Type))
         {
           if (damage.Defender.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
           {
-            row = new HitLogRow { Actor = damage.Defender, ActorClass = PlayerManager.Instance.GetPlayerClass(damage.Defender),
-              Acted = damage.Attacker, IsPet = false, TimeSince = "-" };
+            row = new HitLogRow
+            {
+              Actor = damage.Defender,
+              ActorClass = PlayerManager.Instance.GetPlayerClass(damage.Defender),
+              Acted = damage.Attacker,
+              IsPet = false,
+              TimeSince = "-"
+            };
           }
         }
       }
@@ -261,8 +273,14 @@ namespace EQLogParser
       {
         if (heal.Healer.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))
         {
-          row = new HitLogRow { Actor = heal.Healer, ActorClass = PlayerManager.Instance.GetPlayerClass(heal.Healer),
-            Acted = heal.Healed, IsPet = false, TimeSince = "-" };
+          row = new HitLogRow
+          {
+            Actor = heal.Healer,
+            ActorClass = PlayerManager.Instance.GetPlayerClass(heal.Healer),
+            Acted = heal.Healed,
+            IsPet = false,
+            TimeSince = "-"
+          };
         }
       }
 

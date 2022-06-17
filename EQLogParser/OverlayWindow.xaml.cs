@@ -619,8 +619,16 @@ namespace EQLogParser
 
         if (configure)
         {
-          var colorPicker = new ColorPicker { Width = 35, Height= 12, Color = ColorList[i], IsGradientPropertyEnabled = false, EnableSolidToGradientSwitch = false,
-            Tag = string.Format(CultureInfo.CurrentCulture, "OverlayRankColor{0}", i + 1), BorderThickness = new Thickness(0) };
+          var colorPicker = new ColorPicker
+          {
+            Width = 35,
+            Height = 12,
+            Color = ColorList[i],
+            IsGradientPropertyEnabled = false,
+            EnableSolidToGradientSwitch = false,
+            Tag = string.Format(CultureInfo.CurrentCulture, "OverlayRankColor{0}", i + 1),
+            BorderThickness = new Thickness(0)
+          };
           colorPicker.HeaderTemplate = Application.Current.Resources["ColorPickerMinHeaderTemplate"] as DataTemplate;
           SfSkinManager.SetTheme(colorPicker, theme);
           colorPicker.ColorChanged += (DependencyObject d, DependencyPropertyChangedEventArgs e) =>

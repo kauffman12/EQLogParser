@@ -288,8 +288,14 @@ namespace EQLogParser
       {
         var name = value.First().Name;
         name = ((CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION) && !HasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
-        var series = new FastLineSeries { Label = name, XBindingPath = "DateTime", YBindingPath = yPath, 
-          ItemsSource = value, ShowTooltip = true };
+        var series = new FastLineSeries
+        {
+          Label = name,
+          XBindingPath = "DateTime",
+          YBindingPath = yPath,
+          ItemsSource = value,
+          ShowTooltip = true
+        };
         collection.Add(series);
       }
 

@@ -203,7 +203,7 @@ namespace EQLogParser
         {
           // Obviously illusions are bad to look for
           // Call of Fire is Ranger only and self target but VT clickie lets warriors use it
-          if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 && 
+          if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 &&
           !spell.Name.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
           spell.Name.IndexOf(" Synergy", StringComparison.OrdinalIgnoreCase) == -1 &&
           spell.Name.IndexOf("Call of Fire", StringComparison.OrdinalIgnoreCase) == -1)
@@ -744,8 +744,8 @@ namespace EQLogParser
         {
           for (int j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
           {
-            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && !cast.Interrupted && 
-              output.Find(spellData => (spellData.Target != (int)SpellTarget.SELF || cast.Caster == player) && 
+            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && !cast.Interrupted &&
+              output.Find(spellData => (spellData.Target != (int)SpellTarget.SELF || cast.Caster == player) &&
               spellData.Name == cast.Spell && (!isAdps || spellData.Adps > 0)) is SpellData found)
             {
               return found;
