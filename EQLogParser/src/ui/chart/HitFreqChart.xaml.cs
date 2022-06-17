@@ -33,10 +33,10 @@ namespace EQLogParser
       minFreqList.SelectedIndex = 0;
     }
 
-    internal void Update(Dictionary<string, List<HitFreqChartData>> chartData)
+    internal void Update(PlayerStats playerStats, CombinedStats combined)
     {
-      PlayerData = chartData;
-      List<string> players = chartData.Keys.ToList();
+      PlayerData = GetHitFreqValues(playerStats, combined);
+      List<string> players = PlayerData.Keys.ToList();
       playerList.ItemsSource = players;
       playerList.SelectedIndex = 0; // triggers event
     }
@@ -307,12 +307,57 @@ namespace EQLogParser
       }
     }
 
-    public class ColumnData
+    private static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
+    {
+      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
+
+      // get chart data for player and pets if available
+      if (damageStats?.Children.ContainsKey(selected.Name) == true)
+      {
+        damageStats?.Children[selected.Name].ForEach(stats => AddStats(stats));
+      }
+      else
+      {
+        AddStats(selected);
+      }
+
+      return results;
+
+      void AddStats(PlayerStats stats)
+      {
+        results[stats.Name] = new List<HitFreqChartData>();
+        foreach (string type in stats.SubStats.Keys)
+        {
+          HitFreqChartData chartData = new HitFreqChartData { HitType = stats.SubStats[type].Name };
+
+          // add crits
+          chartData.CritXValues.AddRange(stats.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
+          chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stats.SubStats[type].CritFreqValues[damage]));
+
+          // add non crits
+          chartData.NonCritXValues.AddRange(stats.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
+          chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stats.SubStats[type].NonCritFreqValues[damage]));
+          results[stats.Name].Add(chartData);
+        }
+      }
+    }
+
+
+    private class ColumnData
     {
       public string X { get; set; }
       public int Y { get; set; }
       public long Diff { get; set; }
       public long XLongValue { get; set; }
+    }
+
+    private class HitFreqChartData
+    {
+      public string HitType { get; set; }
+      public List<int> CritYValues { get; } = new List<int>();
+      public List<long> CritXValues { get; } = new List<long>();
+      public List<int> NonCritYValues { get; } = new List<int>();
+      public List<long> NonCritXValues { get; } = new List<long>();
     }
 
     /*

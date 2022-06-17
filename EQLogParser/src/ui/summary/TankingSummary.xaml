@@ -115,6 +115,11 @@
               <fa:ImageAwesome x:Name="showTankingLogIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_File" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem x:Name="menuItemShowHitFreq" IsEnabled="False" Header="Hit Frequency" Click="DataGridHitFreqClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showHitFreqIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_ChartBar" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <Separator />          
           <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAllClick">
             <MenuItem.Icon>

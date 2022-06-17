@@ -94,6 +94,20 @@ namespace EQLogParser
       }
     }
 
+    private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems.Count == 1)
+      {
+        var chart = new HitFreqChart();
+        var main = Application.Current.MainWindow as MainWindow;
+        var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "tankHitFreqChart", "Tanking Hit Frequency", chart, 400, 300);
+
+        chart.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
+        hitFreqWindow.CanFloat = true;
+        hitFreqWindow.CanClose = true;
+      }
+    }
+
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
@@ -174,7 +188,7 @@ namespace EQLogParser
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
         menuItemShowSpellCasts.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
-        menuItemShowTankingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
+        menuItemShowTankingLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyTankingParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
         copyReceivedHealingParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats2?.ContainsKey("receivedHealing") == true;
         menuItemShowDefensiveTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
@@ -194,7 +208,8 @@ namespace EQLogParser
       {
         menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
            menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
-           copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowDefensiveTimeline.IsEnabled = false;
+           copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled = 
+           menuItemShowDefensiveTimeline.IsEnabled = false;
       }
 
       menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);

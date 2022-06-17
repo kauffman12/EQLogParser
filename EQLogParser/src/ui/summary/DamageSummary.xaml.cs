@@ -192,12 +192,10 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var chart = new HitFreqChart();
-        var results = DamageStatsManager.GetHitFreqValues(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
-
         var main = Application.Current.MainWindow as MainWindow;
-        var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "freqChart", "Hit Frequency", chart, 400, 300);
+        var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "damageFreqChart", "Damage Hit Frequency", chart, 400, 300);
 
-        chart.Update(results);
+        chart.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
         hitFreqWindow.CanFloat = true;
         hitFreqWindow.CanClose = true;
       }
