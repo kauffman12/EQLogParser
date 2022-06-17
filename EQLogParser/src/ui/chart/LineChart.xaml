@@ -15,11 +15,11 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
-    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
       <ComboBox Margin="0,0,0,0" x:Name="petOrPlayerList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="choicesList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
-    <syncfusion:SfChart x:Name="sfLineChart" Grid.Row="2">
+    <syncfusion:SfChart x:Name="sfLineChart" Grid.Row="2" Margin="0">
       <syncfusion:SfChart.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
@@ -45,17 +45,25 @@
         </Style>
       </syncfusion:SfChart.Resources>
       <syncfusion:SfChart.Legend>
-        <syncfusion:ChartLegend FontSize="14"/>
+        <syncfusion:ChartLegend Margin="0" FontSize="14" Padding="0"/>
       </syncfusion:SfChart.Legend>
       <syncfusion:SfChart.Behaviors>
         <syncfusion:ChartZoomPanBehavior EnableMouseWheelZooming="True" EnablePanning="True" ResetOnDoubleTap="True" />
         <syncfusion:ChartTooltipBehavior LabelStyle = "{StaticResource labelStyle}" EnableAnimation="False" />
       </syncfusion:SfChart.Behaviors>
       <syncfusion:SfChart.PrimaryAxis>
-        <syncfusion:DateTimeAxis LabelFormat="hh:mm:ss"/>
+        <syncfusion:DateTimeAxis LabelFormat="hh:mm:ss">
+          <syncfusion:DateTimeAxis.LabelStyle>
+            <syncfusion:LabelStyle FontSize="12"/>
+          </syncfusion:DateTimeAxis.LabelStyle>
+        </syncfusion:DateTimeAxis>
       </syncfusion:SfChart.PrimaryAxis>
       <syncfusion:SfChart.SecondaryAxis>
-        <syncfusion:NumericalAxis/>
+        <syncfusion:NumericalAxis>
+          <syncfusion:NumericalAxis.LabelStyle>
+            <syncfusion:LabelStyle FontSize="12"/>
+          </syncfusion:NumericalAxis.LabelStyle>
+        </syncfusion:NumericalAxis>
       </syncfusion:SfChart.SecondaryAxis>
     </syncfusion:SfChart>
   </Grid>

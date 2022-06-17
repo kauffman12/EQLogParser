@@ -39,7 +39,7 @@
     <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.GroupBoxForegroundNormalBrushKey}" Color="#c2c2c0" />
     
     <!-- General Element Styles -->
-     <Style TargetType="TextBox">
+    <Style TargetType="TextBox">
       <Setter Property="Background">
         <Setter.Value>
           <SolidColorBrush Color="#101010"/>

@@ -284,7 +284,7 @@ namespace EQLogParser
           break;
       }
 
-      foreach (ref var value in sortedValues.ToArray().AsSpan())
+      foreach (var value in sortedValues.ToList())
       {
         var name = value.First().Name;
         name = ((CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION) && !HasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
@@ -420,7 +420,7 @@ namespace EQLogParser
       if (diff > DataManager.FIGHTTIMEOUT)
       {
         UpdateRemaining(theValues, needAccounting, firstTime, lastTime);
-        foreach (ref var value in playerData.Values.ToArray().AsSpan())
+        foreach (var value in playerData.Values.ToList())
         {
           value.RollingTotal = 0;
           value.RollingCritHits = 0;
