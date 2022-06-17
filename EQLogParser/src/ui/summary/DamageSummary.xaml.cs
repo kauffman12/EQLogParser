@@ -62,7 +62,7 @@ namespace EQLogParser
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1200) };
       SelectionTimer.Tick += (sender, e) =>
       {
-        var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true, MaxSeconds = (long) timeChooser.Value };
+        var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true, MaxSeconds = (long)timeChooser.Value };
         Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
         SelectionTimer.Stop();
       };

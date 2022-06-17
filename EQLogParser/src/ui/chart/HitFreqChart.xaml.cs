@@ -75,7 +75,7 @@ namespace EQLogParser
           {
             try
             {
-              if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type && 
+              if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type &&
               critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
               {
                 var data = PlayerData[player];
@@ -91,8 +91,13 @@ namespace EQLogParser
                     {
                       var diff = (i > 0) ? (first.CritXValues[i] - first.CritXValues[i - 1]) : 0;
                       var diffString = (diff == 0) ? "" : "+" + diff;
-                      Columns.Add(new ColumnData { Diff = diff, Y = first.CritYValues[i], XLongValue = first.CritXValues[i], 
-                        X = first.CritXValues[i] + "\n" + diffString });
+                      Columns.Add(new ColumnData
+                      {
+                        Diff = diff,
+                        Y = first.CritYValues[i],
+                        XLongValue = first.CritXValues[i],
+                        X = first.CritXValues[i] + "\n" + diffString
+                      });
                     }
                   }
                 }
@@ -104,8 +109,13 @@ namespace EQLogParser
                     {
                       var diff = (i > 0) ? (first.NonCritXValues[i] - first.NonCritXValues[i - 1]) : 0;
                       var diffString = (diff == 0) ? "" : "+" + diff;
-                      Columns.Add(new ColumnData { Diff = diff, Y = first.NonCritYValues[i], XLongValue = first.NonCritXValues[i], 
-                        X = first.NonCritXValues[i] + "\n" + diffString });
+                      Columns.Add(new ColumnData
+                      {
+                        Diff = diff,
+                        Y = first.NonCritYValues[i],
+                        XLongValue = first.NonCritXValues[i],
+                        X = first.NonCritXValues[i] + "\n" + diffString
+                      });
                     }
                   }
                 }
@@ -144,8 +154,15 @@ namespace EQLogParser
 
         var collection = new ChartSeriesCollection();
         var series = new FastColumnBitmapSeries { XBindingPath = "X", YBindingPath = "Y", ItemsSource = onePage };
-        var adornment = new ChartAdornmentInfo { ShowLabel = true, ShowMarker = false, LabelPosition = AdornmentsLabelPosition.Outer, 
-          FontSize = 20, Foreground = MainWindow.BRIGHT_TEXT_BRUSH, Background = new SolidColorBrush(Colors.Transparent) };
+        var adornment = new ChartAdornmentInfo
+        {
+          ShowLabel = true,
+          ShowMarker = false,
+          LabelPosition = AdornmentsLabelPosition.Outer,
+          FontSize = 20,
+          Foreground = MainWindow.BRIGHT_TEXT_BRUSH,
+          Background = new SolidColorBrush(Colors.Transparent)
+        };
         series.AdornmentsInfo = adornment;
         ChartSeriesBase.SetSpacing(series, 0.5);
         collection.Add(series);
