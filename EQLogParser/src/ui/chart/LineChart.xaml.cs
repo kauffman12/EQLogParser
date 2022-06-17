@@ -288,13 +288,14 @@ namespace EQLogParser
       {
         var name = value.First().Name;
         name = ((CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION) && !HasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
-        var series = new FastLineSeries
+        var series = new FastLineBitmapSeries
         {
           Label = name,
           XBindingPath = "DateTime",
           YBindingPath = yPath,
           ItemsSource = value,
-          ShowTooltip = true
+          ShowTooltip = true,
+          EnableAntiAliasing = true
         };
         collection.Add(series);
       }

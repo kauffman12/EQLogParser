@@ -55,7 +55,7 @@ namespace EQLogParser
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
 
-    private const string VERSION = "v1.9.11";
+    private const string VERSION = "v1.9.12";
     private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
 
@@ -1038,7 +1038,7 @@ namespace EQLogParser
       }
     }
 
-    private void TrayIcon_MouseUp(object sender, RoutedEventArgs e)
+    private void NotifyIcon_Click(object sender, EventArgs e)
     {
       if (Visibility == Visibility.Hidden)
       {
@@ -1082,7 +1082,7 @@ namespace EQLogParser
 
       StopProcessing();
       OverlayUtil.CloseOverlay();
-      taskBarIcon?.Dispose();
+      //taskBarIcon?.Dispose();
       PlayerChatManager?.Dispose();
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
@@ -1152,7 +1152,7 @@ namespace EQLogParser
         if (disposing)
         {
           // TODO: dispose managed state (managed objects).
-          taskBarIcon?.Dispose();
+          //taskBarIcon?.Dispose();
           PlayerChatManager?.Dispose();
         }
 
