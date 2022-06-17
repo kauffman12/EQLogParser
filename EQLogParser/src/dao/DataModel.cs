@@ -405,15 +405,6 @@ namespace EQLogParser
     public Dictionary<string, List<PlayerStats>> Children { get; } = new Dictionary<string, List<PlayerStats>>();
   }
 
-  internal class HitFreqChartData
-  {
-    public string HitType { get; set; }
-    public List<int> CritYValues { get; } = new List<int>();
-    public List<long> CritXValues { get; } = new List<long>();
-    public List<int> NonCritYValues { get; } = new List<int>();
-    public List<long> NonCritXValues { get; } = new List<long>();
-  }
-
   internal class StatsSummary
   {
     public string Title { get; set; }

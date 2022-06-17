@@ -166,41 +166,6 @@ namespace EQLogParser
       return combined;
     }
 
-    internal static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
-    {
-      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
-
-      // get chart data for player and pets if available
-      if (damageStats?.Children.ContainsKey(selected.Name) == true)
-      {
-        damageStats?.Children[selected.Name].ForEach(stats => AddStats(stats));
-      }
-      else
-      {
-        AddStats(selected);
-      }
-
-      return results;
-
-      void AddStats(PlayerStats stats)
-      {
-        results[stats.Name] = new List<HitFreqChartData>();
-        foreach (string type in stats.SubStats.Keys)
-        {
-          HitFreqChartData chartData = new HitFreqChartData() { HitType = stats.SubStats[type].Name };
-
-          // add crits
-          chartData.CritXValues.AddRange(stats.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
-          chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stats.SubStats[type].CritFreqValues[damage]));
-
-          // add non crits
-          chartData.NonCritXValues.AddRange(stats.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
-          chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stats.SubStats[type].NonCritFreqValues[damage]));
-          results[stats.Name].Add(chartData);
-        }
-      }
-    }
-
     internal DamageStatsManager()
     {
       DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
