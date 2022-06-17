@@ -1,5 +1,4 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
-using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -71,14 +70,6 @@ namespace EQLogParser
           content.Visibility = Visibility.Hidden;
         }
       }), TaskScheduler.Default);
-    }
-
-    internal static void ChartResetView(CartesianChart theChart)
-    {
-      theChart.AxisY[0].MaxValue = double.NaN;
-      theChart.AxisY[0].MinValue = 0;
-      theChart.AxisX[0].MinValue = double.NaN;
-      theChart.AxisX[0].MaxValue = double.NaN;
     }
 
     internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)

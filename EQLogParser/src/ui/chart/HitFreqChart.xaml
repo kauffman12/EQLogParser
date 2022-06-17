@@ -1,10 +1,9 @@
-﻿<UserControl x:Class="EQLogParser.HitFreqChart"
+﻿<UserControl xmlns:syncfusion="http://schemas.syncfusion.com/wpf"  x:Class="EQLogParser.HitFreqChart"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid Background="#232325">
@@ -19,8 +18,8 @@
       <ComboBox Margin="0,0,0,0" x:Name="hitTypeList" Height="24" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="minFreqList" Height="24" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
-    <lvc:CartesianChart Grid.Row="1" x:Name="lvcChart" Hoverable="False" LegendLocation="None"  DisableAnimations="True" SizeChanged="ChartSizeChanged">
-      <lvc:CartesianChart.ContextMenu>
+    <syncfusion:SfChart Grid.Row="1" x:Name="sfChart" Margin="0" PreviewMouseWheel="sfChart_PreviewMouseWheel" SizeChanged="sfChart_SizeChanged">
+      <syncfusion:SfChart.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
@@ -38,17 +37,22 @@
             </MenuItem>
           </MenuItem>
         </ContextMenu>
-      </lvc:CartesianChart.ContextMenu>    
-      <lvc:CartesianChart.AxisY>
-        <lvc:Axis Title="Frequency" MinValue="0" />
-      </lvc:CartesianChart.AxisY>
-      <lvc:CartesianChart.AxisX>
-        <lvc:Axis Title="Hit Value" Position="LeftBottom" MinValue="0" ShowLabels="True">
-          <lvc:Axis.Separator>
-            <lvc:Separator IsEnabled="True" Step="1"></lvc:Separator>
-          </lvc:Axis.Separator>
-        </lvc:Axis>
-      </lvc:CartesianChart.AxisX>
-    </lvc:CartesianChart>
+      </syncfusion:SfChart.ContextMenu>
+      <syncfusion:SfChart.PrimaryAxis>
+        <syncfusion:CategoryAxis ShowGridLines="False" EnableAutoIntervalOnZooming="False" ShowLabelBorder="False" 
+          LabelPlacement="BetweenTicks" EnableScrollBar="False" IsManipulationEnabled="False">
+          <syncfusion:CategoryAxis.LabelStyle>
+            <syncfusion:LabelStyle FontSize="12"/>
+          </syncfusion:CategoryAxis.LabelStyle>
+        </syncfusion:CategoryAxis>
+      </syncfusion:SfChart.PrimaryAxis>
+      <syncfusion:SfChart.SecondaryAxis>
+        <syncfusion:NumericalAxis Header="Frequency" FontSize="16" RangePadding="Normal" Interval="2" StartRangeFromZero="True">
+          <syncfusion:NumericalAxis.LabelStyle>
+            <syncfusion:LabelStyle FontSize="12"/>
+          </syncfusion:NumericalAxis.LabelStyle>
+        </syncfusion:NumericalAxis>
+      </syncfusion:SfChart.SecondaryAxis>
+    </syncfusion:SfChart>
   </Grid>
 </UserControl>
