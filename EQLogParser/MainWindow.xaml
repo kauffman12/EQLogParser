@@ -4,7 +4,7 @@
         xmlns:docking="http://schemas.actiprosoftware.com/winfx/xaml/docking"
         xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
         xmlns:fa="http://schemas.fontawesome.com/icons/"
-        xmlns:tb="http://www.hardcodet.net/taskbar"
+        xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
         xmlns:local="clr-namespace:EQLogParser"
         x:Class="EQLogParser.MainWindow"
         WindowStyle="SingleBorderWindow"
@@ -28,13 +28,7 @@
       <RowDefinition Height="30" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
-    <tb:TaskbarIcon x:Name="taskBarIcon" ToolTipText="EQ Log Parser" TrayLeftMouseUp="TrayIcon_MouseUp" TrayRightMouseUp="TrayIcon_MouseUp" IconSource="EQLogParser.ico">
-      <tb:TaskbarIcon.TrayToolTip>
-        <Border Background="White" BorderBrush="Gray" BorderThickness="2" CornerRadius="4" Opacity="0.8">
-          <TextBlock Text="EQ Log Parser" HorizontalAlignment="Center" Height="18" Margin="4,0,4,0" VerticalAlignment="Center" />
-        </Border>
-      </tb:TaskbarIcon.TrayToolTip>
-    </tb:TaskbarIcon>
+    <syncfusion:NotifyIcon ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIcon_Click"/>
     <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Background="#202020">
       <Image Source="EQLogParser.ico" Height="18" Width="18" Margin="10,2,0,0"/>
       <Menu Margin="0" Height="30" Width="210" VerticalAlignment="Top" Background="#202020">

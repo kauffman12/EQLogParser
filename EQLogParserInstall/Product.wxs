@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.11" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.12" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -145,9 +145,6 @@
       <Component Win64="yes" Id="Newtonsoft.Json.dll" Guid="6D0CCBFE-C08A-492C-8583-800E5E35D846">
         <File Id="Newtonsoft.Json.dll" Name="Newtonsoft.Json.dll" Source="$(var.EQLogParser.TargetDir)Newtonsoft.Json.dll" />
       </Component>
-      <Component Win64="yes" Id="Hardcodet.Wpf.TaskbarNotification.dll" Guid="D79C74F8-96A9-4C61-8125-7AA5AA5670DC">
-        <File Id="Hardcodet.Wpf.TaskbarNotification.dll" Name="Hardcodet.Wpf.TaskbarNotification.dll" Source="$(var.EQLogParser.TargetDir)Hardcodet.Wpf.TaskbarNotification.dll" />
-      </Component>
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
       </Component>
@@ -171,6 +168,9 @@
       </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
         <File Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Tools.WPF.Classic.dll" Guid="BDFC58AB-E906-42A5-B081-402299D84EE1">
+        <File Id="Syncfusion.Tools.WPF.Classic.dll" Name="Syncfusion.Tools.WPF.Classic.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.Classic.dll" />
       </Component>      
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
