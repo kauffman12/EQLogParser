@@ -3,6 +3,9 @@ using ActiproSoftware.Windows.Themes;
 using FontAwesome5;
 using log4net;
 using log4net.Core;
+using Syncfusion.SfSkinManager;
+using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -25,9 +28,6 @@ namespace EQLogParser
 {
   public partial class MainWindow : Window, IDisposable
   {
-    // binding property
-    public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
-
     internal event EventHandler<bool> EventsLogLoadingComplete;
 
     // global settings
@@ -70,24 +70,25 @@ namespace EQLogParser
     private static DateTime StartLoadTime;
     private static LogOption CurrentLogOption;
 
+    private readonly ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
     private readonly ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
     private readonly DispatcherTimer ComputeStatsTimer;
 
     private ChatManager PlayerChatManager = null;
     private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
-    private readonly Dictionary<string, DockingWindow> IconToWindow;
-    private DocumentWindow ChatWindow = null;
-    private DocumentWindow DamageWindow = null;
-    private DocumentWindow HealingWindow = null;
-    private DocumentWindow TankingWindow = null;
-    private DocumentWindow DamageChartWindow = null;
-    private DocumentWindow HealingChartWindow = null;
-    private DocumentWindow TankingChartWindow = null;
-    private DocumentWindow EventWindow = null;
-    private DocumentWindow LootWindow = null;
-    private DocumentWindow SpellResistsWindow = null;
-    private DocumentWindow SpellDamageWindow = null;
+    private readonly Dictionary<string, ContentControl> IconToWindow;
+    private ContentControl ChatWindow = null;
+    private ContentControl DamageWindow = null;
+    private ContentControl HealingWindow = null;
+    private ContentControl TankingWindow = null;
+    private ContentControl DamageChartWindow = null;
+    private ContentControl HealingChartWindow = null;
+    private ContentControl TankingChartWindow = null;
+    private ContentControl EventWindow = null;
+    private ContentControl LootWindow = null;
+    private ContentControl SpellResistsWindow = null;
+    private ContentControl SpellDamageWindow = null;
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
 
@@ -100,14 +101,16 @@ namespace EQLogParser
         Width = resolution.Width * 0.85 / dpi.DpiScaleX;
         Height = resolution.Height * 0.75 / dpi.DpiScaleY;
         InitializeComponent();
+        SfSkinManager.SetTheme(dockSite, new Theme("MaterialDark"));
 
         // update titles
         versionText.Text = VERSION;
 
         // used for setting menu icons based on open windows
-        IconToWindow = new Dictionary<string, DockingWindow>()
+        IconToWindow = new Dictionary<string, ContentControl>()
         {
-          { npcIcon.Name, npcWindow }, { verifiedPlayersIcon.Name, verifiedPlayersWindow },
+          { npcIcon.Name, npcWindow },
+          { verifiedPlayersIcon.Name, verifiedPlayersWindow },
           { verifiedPetsIcon.Name, verifiedPetsWindow }, { petMappingIcon.Name, petMappingWindow },
           { playerParseIcon.Name, playerParseTextWindow }
         };
@@ -120,23 +123,31 @@ namespace EQLogParser
         PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
           Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
-          verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
+          DockingManager.SetHeader(verifiedPetsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
         });
 
         // pet -> players
         petMappingGrid.ItemsSource = PetPlayersView;
+        ownerList.ItemsSource = VerifiedPlayersView;
         PlayerManager.Instance.EventsNewPetMapping += (sender, mapping) =>
         {
           Dispatcher.InvokeAsync(() =>
           {
             var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
-            if (existing != null && existing.Owner != mapping.Owner)
+            if (existing != null)
             {
-              PetPlayersView.Remove(existing);
+              if (existing.Owner != mapping.Owner)
+              {
+                PetPlayersView.Remove(existing);
+                Helpers.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
+              }
+            }
+            else
+            {
+              Helpers.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
             }
 
-            Helpers.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
-            petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
+            DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
           });
 
           CheckComputeStats();
@@ -148,39 +159,39 @@ namespace EQLogParser
           if (found != null)
           {
             VerifiedPetsView.Remove(found);
-            verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
+            DockingManager.SetHeader(verifiedPetsWindow, string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count));
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
               PetPlayersView.Remove(existing);
-              petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
+              DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
             }
             CheckComputeStats();
           }
         });
 
         // verified player table
-        verifiedPlayersGrid.ItemsSource = VerifiedPlayersProperty;
+        verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
         PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          Helpers.InsertNameIntoSortedList(name, VerifiedPlayersProperty);
-          verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
+          Helpers.InsertNameIntoSortedList(name, VerifiedPlayersView);
+          DockingManager.SetHeader(verifiedPlayersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
         });
 
         PlayerManager.Instance.EventsRemoveVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
         {
-          var found = VerifiedPlayersProperty.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+          var found = VerifiedPlayersView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
           {
-            VerifiedPlayersProperty.Remove(found);
-            verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
+            VerifiedPlayersView.Remove(found);
+            DockingManager.SetHeader(verifiedPlayersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
               PetPlayersView.Remove(existing);
-              petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
+              DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
             }
             CheckComputeStats();
           }
@@ -352,23 +363,23 @@ namespace EQLogParser
       var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id);
       string name = filtered?.FirstOrDefault()?.Name;
 
-      var damageOptions = new GenerateStatsOptions { Name = name, RequestChartData = DamageChartWindow?.IsOpen == true };
+      var damageOptions = new GenerateStatsOptions { Name = name, RequestChartData = DamageChartWindow != null };
       damageOptions.Npcs.AddRange(filtered);
-      if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
+      if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow != null)
       {
         damageOptions.RequestSummaryData = true;
       }
 
-      var healingOptions = new GenerateStatsOptions { Name = name, RequestChartData = HealingChartWindow?.IsOpen == true };
+      var healingOptions = new GenerateStatsOptions { Name = name, RequestChartData = HealingChartWindow != null };
       healingOptions.Npcs.AddRange(filtered);
-      if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
+      if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow != null)
       {
         healingOptions.RequestSummaryData = true;
       }
 
-      var tankingOptions = new GenerateStatsOptions { Name = name, RequestChartData = TankingChartWindow?.IsOpen == true };
+      var tankingOptions = new GenerateStatsOptions { Name = name, RequestChartData = TankingChartWindow != null };
       tankingOptions.Npcs.AddRange(filtered);
-      if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
+      if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow != null)
       {
         tankingOptions.RequestSummaryData = true;
         tankingOptions.DamageType = tankingSummary.DamageType;
@@ -382,19 +393,19 @@ namespace EQLogParser
     private void MenuItemExportHTMLClick(object sender, RoutedEventArgs e)
     {
       var tables = new Dictionary<string, SummaryTable>();
-      if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
+      if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow != null)
       {
-        tables.Add(DamageWindow.Title, damageSummary);
+        tables.Add(DockingManager.GetHeader(DamageWindow) as string, damageSummary);
       }
 
-      if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
+      if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow != null)
       {
-        tables.Add(HealingWindow.Title, healingSummary);
+        tables.Add(DockingManager.GetHeader(HealingWindow) as string, healingSummary);
       }
 
-      if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
+      if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow != null)
       {
-        tables.Add(TankingWindow.Title, tankingSummary);
+        tables.Add(DockingManager.GetHeader(TankingWindow) as string, tankingSummary);
       }
 
       if (tables.Count > 0)
@@ -573,28 +584,29 @@ namespace EQLogParser
       }
     }
 
-    private bool OpenLineChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title,
-      List<string> choices, bool includePets, out DocumentWindow newWindow)
+    private bool OpenLineChart(ContentControl window, ContentControl other1, ContentControl other2, FrameworkElement icon, string title,
+      List<string> choices, bool includePets, out ContentControl newWindow)
     {
       bool updated = false;
       newWindow = window;
 
-      if (newWindow?.IsOpen == true)
+      if (newWindow != null)
       {
-        newWindow.Close();
+        dockSite.ExecuteClose(newWindow);
         newWindow = null;
       }
       else
       {
         updated = true;
         var chart = new LineChart(choices, includePets);
-        newWindow = new DocumentWindow(dockSite, title, title, null, chart);
+        //newWindow = new DocumentWindow(dockSite, title, title, null, chart);
         IconToWindow[icon.Name] = newWindow;
 
-        Helpers.OpenWindow(newWindow);
-        newWindow.CanFloat = true;
-        newWindow.CanClose = true;
+        //Helpers.OpenWindow(newWindow);
+        //newWindow.CanFloat = true;
+        //newWindow.CanClose = true;
 
+        /*
         if (other1?.IsOpen == true || other2?.IsOpen == true)
         {
           newWindow.MoveToNextContainer();
@@ -603,6 +615,7 @@ namespace EQLogParser
         {
           newWindow.MoveToNewHorizontalContainer();
         }
+        */
       }
 
       return updated;
@@ -640,24 +653,25 @@ namespace EQLogParser
 
     private void OpenDamageSummary()
     {
-      if (DamageWindow?.IsOpen == true)
+      if (DamageWindow != null)
       {
-        DamageWindow.Close();
+        dockSite.ExecuteClose(DamageWindow);
+        DamageWindow = null;
       }
       else
       {
         var damageSummary = new DamageSummary();
         damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
-        DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
+        //DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
 
         Helpers.OpenWindow(DamageWindow);
-        if (HealingWindow?.IsOpen == true || TankingWindow?.IsOpen == true)
+        if (HealingWindow != null || TankingWindow != null)
         {
-          DamageWindow.MoveToPreviousContainer();
+          //DamageWindow.MoveToPreviousContainer();
         }
 
-        Helpers.RepositionCharts(DamageWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
+        //Helpers.RepositionCharts(DamageWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
 
         if (DamageStatsManager.Instance.GetGroupCount() > 0)
         {
@@ -670,24 +684,25 @@ namespace EQLogParser
 
     private void OpenHealingSummary()
     {
-      if (HealingWindow?.IsOpen == true)
+      if (HealingWindow != null)
       {
-        HealingWindow.Close();
+        dockSite.ExecuteClose(HealingWindow);
+        HealingWindow = null;
       }
       else
       {
         var healingSummary = new HealingSummary();
         healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
-        HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
+        //HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         IconToWindow[healingSummaryIcon.Name] = HealingWindow;
 
         Helpers.OpenWindow(HealingWindow);
-        if (DamageWindow?.IsOpen == true || TankingWindow?.IsOpen == true)
+        if (DamageWindow != null || TankingWindow != null)
         {
-          HealingWindow.MoveToPreviousContainer();
+          //HealingWindow.MoveToPreviousContainer();
         }
 
-        Helpers.RepositionCharts(HealingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
+        //Helpers.RepositionCharts(HealingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
 
         if (HealingStatsManager.Instance.GetGroupCount() > 0)
         {
@@ -700,24 +715,25 @@ namespace EQLogParser
 
     private void OpenTankingSummary()
     {
-      if (TankingWindow?.IsOpen == true)
+      if (TankingWindow != null)
       {
-        TankingWindow.Close();
+        dockSite.ExecuteClose(TankingWindow);
+        TankingWindow = null;
       }
       else
       {
         var tankingSummary = new TankingSummary();
         tankingSummary.EventsSelectionChange += TankingSummary_SelectionChanged;
-        TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
+        //TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
         IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
 
         Helpers.OpenWindow(TankingWindow);
-        if (DamageWindow?.IsOpen == true || HealingWindow?.IsOpen == true)
+        if (DamageWindow!= null || HealingWindow != null)
         {
-          TankingWindow.MoveToPreviousContainer();
+          //TankingWindow.MoveToPreviousContainer();
         }
 
-        Helpers.RepositionCharts(TankingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow); ;
+        //Helpers.RepositionCharts(TankingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow); ;
 
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
@@ -842,19 +858,12 @@ namespace EQLogParser
       });
     }
 
-    private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void PetMappingDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
     {
-      if (sender is ComboBox comboBox && comboBox.DataContext is PetMapping mapping && comboBox.SelectedItem is SortableName selected)
+      if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is PetMapping mapping)
       {
-        if (selected.Name != mapping.Owner)
-        {
-          PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selected.Name);
-          petMappingGrid.CommitEdit();
-        }
-        else
-        {
-          LOG.Error("Error adding pet=" + selected.Name + " to owner=" + mapping.Owner + ". The player name and pet name can not be the same.");
-        }
+        dataGrid.SelectionController.CurrentCellManager.EndEdit();
+        PlayerManager.Instance.AddPetToPlayer(mapping.Pet, mapping.Owner);
       }
     }
 
@@ -888,10 +897,10 @@ namespace EQLogParser
 
         if (success)
         {
-          if (!npcWindow.IsOpen)
-          {
-            Helpers.OpenWindow(IconToWindow[npcIcon.Name]);
-          }
+          //if (!npcWindow.IsOpen)
+         // {
+          //  Helpers.OpenWindow(IconToWindow[npcIcon.Name]);
+         // }
 
           StopProcessing();
           CastProcessor = new ActionProcessor(CastLineParser.Process);
@@ -930,10 +939,10 @@ namespace EQLogParser
           {
             PetPlayersView.Clear();
             VerifiedPetsView.Clear();
-            VerifiedPlayersProperty.Clear();
-            VerifiedPlayersProperty.Add(new SortableName { Name = Labels.UNASSIGNED });
-            verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
-            verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
+            VerifiedPlayersView.Clear();
+            VerifiedPlayersView.Add(new SortableName { Name = Labels.UNASSIGNED });
+            DockingManager.SetHeader(verifiedPetsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
+            DockingManager.SetHeader(verifiedPlayersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
 
             // save before switching
             if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
@@ -1016,7 +1025,7 @@ namespace EQLogParser
     {
       if (sender is FrameworkElement icon && IconToWindow.ContainsKey(icon.Name))
       {
-        icon.Visibility = IconToWindow[icon.Name]?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+        icon.Visibility = IconToWindow[icon.Name]?.IsVisible == true ? Visibility.Visible : Visibility.Hidden;
       }
     }
 
@@ -1073,16 +1082,15 @@ namespace EQLogParser
 
     private void WindowClosed(object sender, EventArgs e)
     {
-      ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowHealingSummaryAtStartup", (HealingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowTankingSummaryAtStartup", (TankingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowDamageChartAtStartup", (DamageChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowHealingChartAtStartup", (HealingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowTankingChartAtStartup", (TankingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", (DamageWindow != null).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowHealingSummaryAtStartup", (HealingWindow != null).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowTankingSummaryAtStartup", (TankingWindow != null).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowDamageChartAtStartup", (DamageChartWindow != null).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowHealingChartAtStartup", (HealingChartWindow != null).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowTankingChartAtStartup", (TankingChartWindow != null).ToString(CultureInfo.CurrentCulture));
 
       StopProcessing();
       OverlayUtil.CloseOverlay();
-      //taskBarIcon?.Dispose();
       PlayerChatManager?.Dispose();
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
@@ -1107,15 +1115,16 @@ namespace EQLogParser
     private void Close_MouseClick(object sender, RoutedEventArgs e) => Close();
 
     // This is where closing summary tables and line charts will get disposed
-    private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e)
+    private void CloseTab(ContentControl control)
     {
-      var content = e.Window.Content;
+      var content = control.Content;
       if (content is EQLogViewer)
       {
-        int last = e.Window.Title.LastIndexOf(" ");
+        string title = DockingManager.GetHeader(control) as string;
+        int last = title.LastIndexOf(" ");
         if (last > -1)
         {
-          string value = e.Window.Title.Substring(last, e.Window.Title.Length - last);
+          string value = title.Substring(last, title.Length - last);
           if (int.TryParse(value, out int result) && result > 0 && LogWindows.Count >= result)
           {
             LogWindows[result - 1] = false;
@@ -1124,6 +1133,10 @@ namespace EQLogParser
       }
       (content as IDisposable)?.Dispose();
     }
+
+    private void dockSite_CloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
+
+    private void dockSite_WindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
 
     private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
     private void WindowClose(object sender, EventArgs e) => Close();

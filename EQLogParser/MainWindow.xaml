@@ -1,7 +1,6 @@
 ﻿<Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:docking="http://schemas.actiprosoftware.com/winfx/xaml/docking"
         xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
         xmlns:fa="http://schemas.fontawesome.com/icons/"
         xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
@@ -28,7 +27,7 @@
       <RowDefinition Height="30" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
-    <syncfusion:NotifyIcon ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIcon_Click"/>
+    <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIcon_Click"/>
     <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Background="#202020">
       <Image Source="EQLogParser.ico" Height="18" Width="18" Margin="10,2,0,0"/>
       <Menu Margin="0" Height="30" Width="210" VerticalAlignment="Top" Background="#202020">
@@ -164,7 +163,7 @@
                 <fa:ImageAwesome x:Name="eventIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
             </MenuItem>
-          </MenuItem>          
+          </MenuItem>
           <MenuItem x:Name="statsView" Header="S_tatistics" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="statsViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Calculator"  Foreground="#FF4F9FE2" />
@@ -173,7 +172,7 @@
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="npcSpellDamageIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
-            </MenuItem>            
+            </MenuItem>
             <MenuItem x:Name="spellResistsMenuItem" Header="Spell _Resists" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="spellResistsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
@@ -206,7 +205,7 @@
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="verifiedPetsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
-            </MenuItem>            
+            </MenuItem>
             <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_layers" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="verifiedPlayersIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
@@ -229,7 +228,7 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="ignoreCharmPetsIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-          </MenuItem>          
+          </MenuItem>
           <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableAoEHealingIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
@@ -264,7 +263,7 @@
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableSlayUndeadDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
-            </MenuItem>            
+            </MenuItem>
           </MenuItem>
         </MenuItem>
         <MenuItem Header="_Tools" Height="30" Width="55">
@@ -277,7 +276,7 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="restoreTableColumnsIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_Undo"  Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
-          </MenuItem>          
+          </MenuItem>
           <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLogClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="viewErrorLogIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_FileCode"  Foreground="#FF4F9FE2" />
@@ -294,90 +293,65 @@
     <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,40,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
     <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,10,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
     <TextBlock Grid.Column="2" x:Name="versionText" Height="24" Width="40" Margin="0,8,100,0" Foreground="Orange" FontStyle="Italic" PreviewMouseDown="WindowDrag" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
-    <docking:DockSite Grid.Row="1" x:Name="dockSite" Grid.ColumnSpan="2" PreviewKeyDown="NPCWindow_KeyDown" WindowUnregistered="DockSite_WindowUnreg">
-      <docking:SplitContainer Orientation="Horizontal">
-        <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="npcWindow" Title="Fight List" ContainerAutoHideSize="330, 400" ContainerDockedSize="330,400">
-            <local:FightTable />
-          </docking:ToolWindow>
-        </docking:ToolWindowContainer>
-        <docking:SplitContainer Orientation="Vertical">
-          <docking:Workspace>
-            <docking:TabbedMdiHost>
-            </docking:TabbedMdiHost>
-          </docking:Workspace>
-        </docking:SplitContainer>
-      </docking:SplitContainer>
-      <docking:DockSite.AutoHideRightContainers>
-        <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="verifiedPlayersWindow" IsOpen="False" Title="Verified Players" ContainerDockedSize="240,150">
-            <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
-              <DataGrid.Columns>
-                <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
-                  <DataGridTemplateColumn.CellStyle>
-                    <Style TargetType="DataGridCell">
-                      <EventSetter Event="PreviewMouseDown" Handler="RemovePlayerMouseDown"/>
-                    </Style>
-                  </DataGridTemplateColumn.CellStyle>
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
-              </DataGrid.Columns>
-            </datagrid:ThemedDataGrid>
-          </docking:ToolWindow>
-          <docking:ToolWindow x:Name="verifiedPetsWindow" IsOpen="False" Title="Verified Pets" ContainerDockedSize="240,150">
-            <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
-              <DataGrid.Columns>
-                <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
-                  <DataGridTemplateColumn.CellStyle>
-                    <Style TargetType="DataGridCell">
-                      <EventSetter Event="PreviewMouseDown" Handler="RemovePetMouseDown"/>
-                    </Style>
-                  </DataGridTemplateColumn.CellStyle>
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
-              </DataGrid.Columns>
-            </datagrid:ThemedDataGrid>
-          </docking:ToolWindow>
-        </docking:ToolWindowContainer>
-        <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="petMappingWindow" IsOpen="True" Title="Pet Owners" ContainerAutoHideSize="300,150" ContainerDockedSize="300,150">
-            <datagrid:ThemedDataGrid x:Name="petMappingGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="False" CanUserResizeRows="False">
-              <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Owner" CanUserSort="True" SortMemberPath="Owner" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="False" MinWidth="30" Width="30*">
-                  <DataGridTemplateColumn.CellEditingTemplate>
-                    <DataTemplate>
-                      <ComboBox ItemsSource="{Binding VerifiedPlayersProperty, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" SelectedValue="{Binding Owner}" SelectionChanged="PetMapping_SelectionChanged" SelectedValuePath="Name" DisplayMemberPath="Name"/>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellEditingTemplate>
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding Owner}"/>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Binding="{Binding Pet}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Pet" IsReadOnly="True" MinWidth="30" Width="30*" />
-              </DataGrid.Columns>
-            </datagrid:ThemedDataGrid>
-          </docking:ToolWindow>
-        </docking:ToolWindowContainer>
-      </docking:DockSite.AutoHideRightContainers>
-      <docking:DockSite.AutoHideBottomContainers>
-        <docking:ToolWindowContainer>
-          <docking:ToolWindow x:Name="playerParseTextWindow" IsOpen="True" Title="Preview Parse" ContainerAutoHideSize="400, 140" ContainerDockedSize="400, 140">
-            <local:ParsePreview />
-          </docking:ToolWindow>
-        </docking:ToolWindowContainer>
-      </docking:DockSite.AutoHideBottomContainers>
-    </docking:DockSite>
+
+    <syncfusion:DockingManager x:Name="dockSite" Grid.Row="1" Grid.ColumnSpan="2" DocumentCloseButtonType="Individual" CloseButtonClick="dockSite_CloseButtonClick"  WindowClosing="dockSite_WindowClosing">
+      <ContentControl x:Name="npcWindow" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
+                      syncfusion:DockingManager.DesiredMinWidthInDockedMode="340" syncfusion:DockingManager.DesiredMinWidthInFloatingMode="340">
+        <local:FightTable />
+      </ContentControl>
+      <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
+                      syncfusion:DockingManager.DesiredMinWidthInDockedMode="230" syncfusion:DockingManager.DesiredMinWidthInFloatingMode="230">
+        <syncfusion:SfDataGrid x:Name="petMappingGrid" AllowEditing="True" CurrentCellDropDownSelectionChanged="PetMappingDropDownSelectionChanged" RowHeaderWidth="0" Margin="0" ColumnSizer="AutoLastColumnFill" EditTrigger="OnTap" AutoGenerateColumns="False" IsReadOnly="False" AllowResizingColumns="False">
+          <syncfusion:SfDataGrid.Columns>
+            <syncfusion:GridComboBoxColumn x:Name="ownerList" HeaderText="Owner" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
+            <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True"/>
+          </syncfusion:SfDataGrid.Columns>
+        </syncfusion:SfDataGrid>
+      </ContentControl>
+      <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
+                      syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredMinWidthInDockedMode="200" syncfusion:DockingManager.DesiredMinWidthInFloatingMode="200">
+        <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
+              <DataGridTemplateColumn.CellStyle>
+                <Style TargetType="DataGridCell">
+                  <EventSetter Event="PreviewMouseDown" Handler="RemovePlayerMouseDown"/>
+                </Style>
+              </DataGridTemplateColumn.CellStyle>
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
+          </DataGrid.Columns>
+        </datagrid:ThemedDataGrid>
+      </ContentControl>
+      <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
+                      syncfusion:DockingManager.DesiredMinWidthInDockedMode="200" syncfusion:DockingManager.DesiredMinWidthInFloatingMode="200">
+        <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
+              <DataGridTemplateColumn.CellStyle>
+                <Style TargetType="DataGridCell">
+                  <EventSetter Event="PreviewMouseDown" Handler="RemovePetMouseDown"/>
+                </Style>
+              </DataGridTemplateColumn.CellStyle>
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
+          </DataGrid.Columns>
+        </datagrid:ThemedDataGrid>
+      </ContentControl>
+      <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
+                      syncfusion:DockingManager.DesiredMinHeightInDockedMode="150" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
+        <local:ParsePreview />
+      </ContentControl>
+    </syncfusion:DockingManager>
   </Grid>
 </Window>

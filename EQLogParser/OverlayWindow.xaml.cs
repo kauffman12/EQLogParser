@@ -593,7 +593,7 @@ namespace EQLogParser
       }
       else
       {
-        theme = new Theme("FluentDark", new string[] { "ColorPicker" });
+        theme = new Theme("MaterialDark", new string[] { "ColorPicker" });
       }
 
       for (int i = 0; i < CurrentMaxRows; i++)

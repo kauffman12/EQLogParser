@@ -236,7 +236,7 @@ namespace EQLogParser
           NeedRefresh = false;
         }
 
-        if ((Parent as ToolWindow).IsOpen && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
+        if ((Parent as ContentControl).IsVisible && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
         {
           fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
         }
@@ -289,7 +289,7 @@ namespace EQLogParser
           NeedRefresh = false;
         }
 
-        if ((Parent as ToolWindow).IsOpen && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
+        if ((Parent as ContentControl).IsVisible && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
         {
           fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
         }

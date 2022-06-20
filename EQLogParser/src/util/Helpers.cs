@@ -1,10 +1,12 @@
 ﻿using ActiproSoftware.Windows.Controls.Docking;
+using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -99,58 +101,51 @@ namespace EQLogParser
       }
     }
 
-    internal static DocumentWindow OpenWindow(DockSite dockSite, DocumentWindow window, Type type, string key, string title)
+    internal static ContentControl OpenWindow(DockingManager dockSite, ContentControl window, Type type, string key, string title)
     {
-      if (window?.IsOpen == true)
+      if (window != null)
       {
-        window.Close();
+        dockSite.Children.Remove(window);
+        (window.Content as IDisposable)?.Dispose();
         window = null;
       }
       else
       {
         var instance = Activator.CreateInstance(type);
-        window = new DocumentWindow(dockSite, key, title, null, instance);
-        OpenWindow(window);
+        window = new ContentControl { Name = key };
+        DockingManager.SetHeader(window, title);
+        DockingManager.SetState(window, DockState.Document);
+        window.Content = instance;
+        dockSite.Children.Add(window);
       }
 
       return window;
     }
 
-    internal static void OpenWindow(DockingWindow window)
+    internal static void OpenWindow(ContentControl window)
     {
-      if (!window.IsOpen)
-      {
-        window.IsOpen = true;
-        if (!window.IsActive)
-        {
-          window.Activate();
-        }
-      }
-      else
-      {
-        window.Close();
-      }
+
     }
 
-    internal static DocumentWindow OpenNewTab(DockSite dockSite, string id, string title, object content, double width = 0, double height = 0)
+    internal static DocumentWindow OpenNewTab(DockingManager dockSite, string id, string title, object content, double width = 0, double height = 0)
     {
-      var window = new DocumentWindow(dockSite, id, title, null, content);
+      //var window = new DocumentWindow(dockSite, id, title, null, content);
 
       if (width != 0 && height != 0)
       {
-        window.ContainerDockedSize = new Size(width, height);
+      //  window.ContainerDockedSize = new Size(width, height);
       }
 
-      OpenWindow(window);
-      window.MoveToLast();
-      return window;
+      //OpenWindow(window);
+      //window.MoveToLast();
+      return null; // window;
     }
 
-    internal static void HandleChartUpdate(Dispatcher dispatcher, DocumentWindow window, DataPointEvent e)
+    internal static void HandleChartUpdate(Dispatcher dispatcher, ContentControl window, DataPointEvent e)
     {
       dispatcher.InvokeAsync(() =>
       {
-        if (window?.IsOpen == true)
+        if (window != null)
         {
           (window.Content as LineChart)?.HandleUpdateEvent(e);
         }
@@ -159,6 +154,10 @@ namespace EQLogParser
 
     internal static void RepositionCharts(DocumentWindow window, params DocumentWindow[] charts)
     {
+      if (window == null)
+      {
+        return;
+      }
       if (window.ParentContainer is TabbedMdiContainer tabControl)
       {
         bool moved = false;

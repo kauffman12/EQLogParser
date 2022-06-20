@@ -3,11 +3,26 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+  <UserControl.Resources>
+    <Style TargetType="syncfusion:GridRowHeaderCell">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+            <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+              <Grid>
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+              </Grid>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
   <Grid>
     <Grid.Resources>
       <local:ZeroConverter x:Key="ZeroConverter" />
@@ -21,29 +36,35 @@
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="RefreshMouseClick">
-        <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Redo" ToolTip="Refresh Results" Foreground="#FF4F9FE2"/>
-      </Button>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <CheckBox x:Name="showPlayers" IsChecked="True" Margin="4,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
-      <ComboBox Margin="0,0,0,0" x:Name="fightOption" SelectedIndex="0" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged">
+      <CheckBox x:Name="showPlayers" IsChecked="True" Margin="0,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
+      <ComboBox Margin="0,0,0,0" x:Name="fightOption" SelectedIndex="0" IsEnabled="True" SelectionChanged="OptionsChanged">
         <ComboBoxItem>All Fights</ComboBoxItem>
         <ComboBoxItem>Selected Fights</ComboBoxItem>        
       </ComboBox>
-      <ComboBox Margin="0,0,0,0" x:Name="playerList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="spellList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="typeList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,0" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="30" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Extended">
-      <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Spell}" ClipboardContentBinding="{x:Null}" Header="Spell" IsReadOnly="True" CanUserReorder="True" Width="220"/>
-        <DataGridTextColumn Binding="{Binding Caster}" ClipboardContentBinding="{x:Null}" Header="Caster" IsReadOnly="True" CanUserReorder="True" MinWidth="70" />
-        <DataGridTextColumn Binding="{Binding Type}" ClipboardContentBinding="{x:Null}" Header="Type" IsReadOnly="True" CanUserReorder="True" MinWidth="80" />
-        <DataGridTextColumn Binding="{Binding Avg, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource SpellGridDataCellStyle}"  SortDirection="Descending" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="80" Width="80"/>
-        <DataGridTextColumn Binding="{Binding Max, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource SpellGridDataCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="85" Width="85"/>
-        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource SpellGridDataCellStyle}" ClipboardContentBinding="{x:Null}" Header="Total" IsReadOnly="True" CanUserReorder="True" MinWidth="100" Width="100"/>
-        <DataGridTextColumn Binding="{Binding Hits, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource SpellGridDataCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60"/>
-      </DataGrid.Columns>
-    </datagrid:ThemedDataGrid>
+    <syncfusion:SfDataGrid x:Name="dataGrid" Grid.Row="1" AllowSorting="True" ColumnSizer="AutoWithLastColumnFill" FrozenColumnCount="1" AllowResizingColumns="True" ShowRowHeader="True" RowHeaderWidth="30" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell" IsReadOnly="True"/>
+        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster" IsReadOnly="True"/>
+        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" IsReadOnly="True"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Avg, Converter={StaticResource NumberFormatConverter}}" HeaderText="Av Hit" TextAlignment="Right" IsReadOnly="True"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Max, Converter={StaticResource NumberFormatConverter}}" HeaderText="Max Hit" TextAlignment="Right" IsReadOnly="True"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" HeaderText="Total" TextAlignment="Right" IsReadOnly="True"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Hits, Converter={StaticResource NumberFormatConverter}}" HeaderText="# Hits" TextAlignment="Right" IsReadOnly="True"/>
+        <syncfusion:GridTextColumn MappingName="Empty" HeaderText="" IsReadOnly="True"/>
+      </syncfusion:SfDataGrid.Columns>
+      <syncfusion:SfDataGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="#FF4F9FE2" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </ContextMenu>
+      </syncfusion:SfDataGrid.ContextMenu>
+    </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

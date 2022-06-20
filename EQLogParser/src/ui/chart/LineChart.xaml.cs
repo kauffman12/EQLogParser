@@ -35,7 +35,7 @@ namespace EQLogParser
     public LineChart(List<string> choices, bool includePets = false)
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(sfLineChart, new Theme("FluentDark"));
+      SfSkinManager.SetTheme(sfLineChart, new Theme("MaterialDark"));
 
       CurrentConfig = 0;
       choicesList.ItemsSource = choices;
