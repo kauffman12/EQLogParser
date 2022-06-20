@@ -17,7 +17,6 @@ namespace EQLogParser
   {
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
-    private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new SortablePetMappingComparer();
 
     public static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
     {
@@ -85,19 +84,6 @@ namespace EQLogParser
       else
       {
         collection.Insert(index, entry);
-      }
-    }
-
-    internal static void InsertPetMappingIntoSortedList(PetMapping mapping, ObservableCollection<PetMapping> collection)
-    {
-      int index = collection.ToList().BinarySearch(mapping, TheSortablePetMappingComparer);
-      if (index < 0)
-      {
-        collection.Insert(~index, mapping);
-      }
-      else
-      {
-        collection.Insert(index, mapping);
       }
     }
 
@@ -196,11 +182,6 @@ namespace EQLogParser
     private class SortableNameComparer : IComparer<SortableName>
     {
       public int Compare(SortableName x, SortableName y) => string.CompareOrdinal(x?.Name, y?.Name);
-    }
-
-    private class SortablePetMappingComparer : IComparer<PetMapping>
-    {
-      public int Compare(PetMapping x, PetMapping y) => string.CompareOrdinal(x?.Owner, y?.Owner);
     }
   }
 
