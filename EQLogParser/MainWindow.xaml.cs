@@ -1,5 +1,4 @@
-﻿using ActiproSoftware.Windows.Controls.Docking;
-using ActiproSoftware.Windows.Themes;
+﻿using ActiproSoftware.Windows.Themes;
 using FontAwesome5;
 using log4net;
 using log4net.Core;
@@ -8,7 +7,6 @@ using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -54,10 +52,7 @@ namespace EQLogParser
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
-
     private const string VERSION = "v1.9.12";
-    private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
-    private const string PETS_LIST_TITLE = "Verified Pets ({0})";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -70,11 +65,7 @@ namespace EQLogParser
     private static DateTime StartLoadTime;
     private static LogOption CurrentLogOption;
 
-    private readonly ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
-    private readonly ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
-    private readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
     private readonly DispatcherTimer ComputeStatsTimer;
-
     private ChatManager PlayerChatManager = null;
     private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private readonly Dictionary<string, ContentControl> IconToWindow;
@@ -118,84 +109,9 @@ namespace EQLogParser
         // Clear/Reset
         DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
 
-        // verified pets table
-        verifiedPetsGrid.ItemsSource = VerifiedPetsView;
-        PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
-        {
-          Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
-          DockingManager.SetHeader(verifiedPetsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
-        });
-
-        // pet -> players
-        petMappingGrid.ItemsSource = PetPlayersView;
-        ownerList.ItemsSource = VerifiedPlayersView;
-        PlayerManager.Instance.EventsNewPetMapping += (sender, mapping) =>
-        {
-          Dispatcher.InvokeAsync(() =>
-          {
-            var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-              if (existing.Owner != mapping.Owner)
-              {
-                PetPlayersView.Remove(existing);
-                Helpers.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
-              }
-            }
-            else
-            {
-              Helpers.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
-            }
-
-            DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
-          });
-
-          CheckComputeStats();
-        };
-
-        PlayerManager.Instance.EventsRemoveVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
-        {
-          var found = VerifiedPetsView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-          if (found != null)
-          {
-            VerifiedPetsView.Remove(found);
-            DockingManager.SetHeader(verifiedPetsWindow, string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count));
-
-            var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-              PetPlayersView.Remove(existing);
-              DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
-            }
-            CheckComputeStats();
-          }
-        });
-
-        // verified player table
-        verifiedPlayersGrid.ItemsSource = VerifiedPlayersView;
-        PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
-        {
-          Helpers.InsertNameIntoSortedList(name, VerifiedPlayersView);
-          DockingManager.SetHeader(verifiedPlayersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
-        });
-
-        PlayerManager.Instance.EventsRemoveVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
-        {
-          var found = VerifiedPlayersView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-          if (found != null)
-          {
-            VerifiedPlayersView.Remove(found);
-            DockingManager.SetHeader(verifiedPlayersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
-
-            var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-              PetPlayersView.Remove(existing);
-              DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
-            }
-            CheckComputeStats();
-          }
-        });
+        MainActions.InitPetPlayers(this, petMappingGrid, ownerList, petMappingWindow);
+        MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, verifiedPlayersWindow, petMappingWindow);
+        MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
 
         (npcWindow.Content as FightTable).EventsSelectionChange += (sender, data) => ComputeStats();
         DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, DamageChartWindow, data);
@@ -339,7 +255,7 @@ namespace EQLogParser
       deleteChat.IsEnabled = deleteChat.Items.Count > 0;
     }
 
-    private void CheckComputeStats()
+    internal void CheckComputeStats()
     {
       if (ComputeStatsTimer != null)
       {
@@ -937,12 +853,7 @@ namespace EQLogParser
           var changed = ConfigUtil.ServerName != server;
           if (changed)
           {
-            PetPlayersView.Clear();
-            VerifiedPetsView.Clear();
-            VerifiedPlayersView.Clear();
-            VerifiedPlayersView.Add(new SortableName { Name = Labels.UNASSIGNED });
-            DockingManager.SetHeader(verifiedPetsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
-            DockingManager.SetHeader(verifiedPlayersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
+            MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow);
 
             // save before switching
             if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
