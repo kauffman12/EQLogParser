@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -13,6 +15,44 @@ namespace EQLogParser
   class DataGridUtil
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+    internal static void SortColumnsChanged(object sender, GridSortColumnsChangedEventArgs e, string[] descending)
+    {
+      var dataGrid = sender as SfDataGrid;
+      // Here, we have updated the column's items in view based on SortDescriptions. 
+      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+      {
+        var sortcolumn = dataGrid.View.SortDescriptions.FirstOrDefault(x => x.PropertyName == e.AddedItems[0].ColumnName);
+        SortDescription sortDescription;
+        if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
+        {
+          sortDescription = new SortDescription(sortcolumn.PropertyName, ListSortDirection.Descending);
+        }
+        else
+        {
+          sortDescription = new SortDescription(sortcolumn.PropertyName, ListSortDirection.Ascending);
+        }
+
+        dataGrid.View.SortDescriptions.Remove(sortcolumn);
+        dataGrid.View.SortDescriptions.Add(sortDescription);
+      } 
+    }
+
+    internal static void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e, string[] descending)
+    {
+      // Initially, we can change the SortDirection of particular column based on columnchanged action. 
+      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+      {
+        if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
+        {
+          e.AddedItems[0].SortDirection = ListSortDirection.Descending;
+        }
+        else
+        {
+          e.AddedItems[0].SortDirection = ListSortDirection.Ascending;
+        }
+      }
+    }
 
     internal static void CopyCsvFromTable(DataGrid dataGrid, string title)
     {

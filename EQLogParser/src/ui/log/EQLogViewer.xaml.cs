@@ -37,8 +37,8 @@ namespace EQLogParser
     public EQLogViewer()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(colorPicker, new Theme("FluentDark"));
-      SfSkinManager.SetTheme(tabControl, new Theme("FluentDark"));
+      SfSkinManager.SetTheme(colorPicker, new Theme("MaterialDark"));
+      SfSkinManager.SetTheme(tabControl, new Theme("MaterialDark"));
       fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
 

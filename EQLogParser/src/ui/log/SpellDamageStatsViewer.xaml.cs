@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -8,7 +9,6 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -40,23 +40,27 @@ namespace EQLogParser
       Types.Add(Labels.DOT);
       typeList.SelectedIndex = 0;
 
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += SpellDamageStatsViewer_EventsLogLoadingComplete;
-      (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SpellDamageStatsViewer_EventsSelectionChange;
-      dataGrid.Sorting += CustomSorting;
+      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LogLoadingComplete;
+      (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
+
+      // default these columns to descending
+      string[] desc = new string[] { "Avg", "Max", "Total", "Hits" };
+      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       Load();
     }
 
-    private void SpellDamageStatsViewer_EventsSelectionChange(object sender, System.Collections.IList e)
+    private void LogLoadingComplete(object sender, bool e) => Load();
+
+    private void MenuItemRefresh(object sender, RoutedEventArgs e) => Load();
+
+    private void SelectionChange(object sender, System.Collections.IList e)
     {
       if (fightOption.SelectedIndex != 0)
       {
         Load();
       }
     }
-
-    private void SpellDamageStatsViewer_EventsLogLoadingComplete(object sender, bool e) => Load();
-
-    private void RefreshMouseClick(object sender, MouseButtonEventArgs e) => Load();
 
     private void Load()
     {
@@ -117,12 +121,12 @@ namespace EQLogParser
         }
       }
 
-      foreach (var stats in playerDoTTotals.Values)
+      foreach (ref var stats in playerDoTTotals.Values.ToArray().AsSpan())
       {
         AddRow(stats, Labels.DOT);
       }
 
-      foreach (var stats in playerDDTotals.Values)
+      foreach (ref var stats in playerDDTotals.Values.ToArray().AsSpan())
       {
         AddRow(stats, Labels.DD);
       }
@@ -140,12 +144,8 @@ namespace EQLogParser
       spellList.SelectedIndex = (Spells.IndexOf(selectedSpell) is int s && s > -1) ? s : 0;
       playerList.SelectedIndex = (Players.IndexOf(selectedPlayer) is int p && p > -1) ? p : 0;
 
-      if (dataGrid.ItemsSource is ListCollectionView view)
-      {
-        view.SortDescriptions.Clear();
-        view.SortDescriptions.Add(new SortDescription("Avg", ListSortDirection.Descending));
-      }
-
+      dataGrid.SortColumnDescriptions.Clear();
+      dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Avg", SortDirection = ListSortDirection.Descending });
       titleLabel.Content = Records.Count == 0 ? NODATA : "Spell Damage Stats for " + uniqueSpells.Count + " Unique Spells";
     }
 
@@ -159,58 +159,25 @@ namespace EQLogParser
       row["Avg"] = stats.Total / stats.Count;
       row["Total"] = stats.Total;
       row["Type"] = type;
-
-      lock (LockObject)
-      {
-        Records.Add(row);
-      }
-    }
-
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      // set header count
-      if (e.Row != null)
-      {
-        e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
-      }
-    }
-
-    private void CustomSorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e.Column.Header != null && e.Column.Header.ToString() != "Name" && dataGrid.ItemsSource != null)
-      {
-        e.Handled = true;
-        var direction = ListSortDirection.Descending;
-        if (e.Column.SortDirection != null)
-        {
-          direction = (e.Column.SortDirection == ListSortDirection.Descending) ? ListSortDirection.Ascending : ListSortDirection.Descending;
-        }
-
-        if (dataGrid.ItemsSource is ListCollectionView view)
-        {
-          view.SortDescriptions.Clear();
-          view.SortDescriptions.Add(new SortDescription(((e.Column as DataGridTextColumn).Binding as Binding).Path.Path, direction));
-        }
-
-        e.Column.SortDirection = direction;
-      }
+      row["Empty"] = "";
+      Records.Add(row);
     }
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (dataGrid != null && Records.Count > 0 && dataGrid.ItemsSource is ListCollectionView view)
+      if (dataGrid != null && dataGrid.View != null)
       {
         string type = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
         string spell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
         string player = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
         bool isPlayerOnly = showPlayers.IsChecked.Value;
 
-        if (sender == showPlayers || sender == fightOption)
+        if (sender == fightOption)
         {
           Load();
         }
 
-        view.Filter = new Predicate<object>(item =>
+        dataGrid.View.Filter = new Predicate<object>(item =>
         {
           bool pass = false;
           if (item is IDictionary<string, object> dict)
@@ -220,6 +187,8 @@ namespace EQLogParser
           }
           return pass;
         });
+
+        dataGrid.View.RefreshFilter();
       }
     }
 
@@ -230,14 +199,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-          Records.Clear();
-        }
-
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= SpellDamageStatsViewer_EventsLogLoadingComplete;
-        (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SpellDamageStatsViewer_EventsSelectionChange;
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
+        (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
         disposedValue = true;
       }
     }

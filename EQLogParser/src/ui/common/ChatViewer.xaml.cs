@@ -45,7 +45,7 @@ namespace EQLogParser
     public ChatViewer()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(colorPicker, new Theme("FluentDark", new string[] { "ColorPicker" }));
+      SfSkinManager.SetTheme(colorPicker, new Theme("MaterialDark", new string[] { "ColorPicker" }));
       fontSize.ItemsSource = FontSizeList;
       startDate.Text = Properties.Resources.CHAT_START_DATE;
       endDate.Text = Properties.Resources.CHAT_END_DATE;

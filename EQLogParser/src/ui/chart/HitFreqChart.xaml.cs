@@ -28,7 +28,7 @@ namespace EQLogParser
     internal HitFreqChart()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(sfChart, new Theme("FluentDark"));
+      SfSkinManager.SetTheme(sfChart, new Theme("MaterialDark"));
       minFreqList.ItemsSource = MinFreqs;
       minFreqList.SelectedIndex = 0;
     }
