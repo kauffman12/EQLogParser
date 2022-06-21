@@ -1,35 +1,21 @@
-﻿<Window
+﻿<syncfusion:ChromelessWindow
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
         xmlns:fa="http://schemas.fontawesome.com/icons/"
         xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
         xmlns:local="clr-namespace:EQLogParser"
+        xmlns:listCollection="clr-namespace:System.Collections;assembly=mscorlib"
         x:Class="EQLogParser.MainWindow"
-        WindowStyle="SingleBorderWindow"
-        SizeChanged="WindowSizeChanged"
         Icon="EQLogParser.ico"
         Title="EQLogParser"
         Closed="WindowClosed"
         ResizeMode="CanResize"
+        ShowTitle="False"
         TextOptions.TextFormattingMode="Display"
         WindowStartupLocation="CenterScreen"
         StateChanged="WindowStateChanged">
-  <WindowChrome.WindowChrome>
-    <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" UseAeroCaptionButtons="False" ResizeBorderThickness="7" />
-  </WindowChrome.WindowChrome>
-  <Grid>
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="200"/>
-      <ColumnDefinition Width="1200*"/>
-    </Grid.ColumnDefinitions>
-    <Grid.RowDefinitions>
-      <RowDefinition Height="30" />
-      <RowDefinition Height="500*" />
-    </Grid.RowDefinitions>
-    <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIcon_Click"/>
-    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Background="#202020">
-      <Image Source="EQLogParser.ico" Height="18" Width="18" Margin="10,2,0,0"/>
+  <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
+    <listCollection:ArrayList>
       <Menu Margin="0" Height="30" Width="210" VerticalAlignment="Top" Background="#202020">
         <MenuItem Header="_File" Height="30" Width="40">
           <MenuItem Header="Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
@@ -284,18 +270,20 @@
           </MenuItem>
         </MenuItem>
       </Menu>
-      <StackPanel Height="24" Width="5000" PreviewMouseDown="WindowDrag" MouseLeftButtonDown="Maximize_DoubleClick" Background="#202020" Orientation="Horizontal">
-        <TextBlock x:Name="statusText" Height="24" Margin="4,6,0,0"/>
-        <TextBlock x:Name="fileText" Height="24" Margin="4,6,0,0" Foreground="LightGray"/>
-      </StackPanel>
-    </StackPanel>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,70,0" VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" BorderBrush="{x:Null}" Click="Minimize_Click" Height="Auto" Width="Auto" Padding="3" Focusable="False">&#59192;</Button>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="19" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,40,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="11" Click="Maximize_Click" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE739;</Button>
-    <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,10,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
-    <TextBlock Grid.Column="2" x:Name="versionText" Height="24" Width="40" Margin="0,8,100,0" Foreground="Orange" FontStyle="Italic" PreviewMouseDown="WindowDrag" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
+      <TextBlock x:Name="statusText" Height="24" Margin="4,6,0,0"/>
+      <TextBlock x:Name="fileText" Height="24" Margin="4,6,0,0" Foreground="LightGray"/>
+    </listCollection:ArrayList>
+  </syncfusion:ChromelessWindow.LeftHeaderItemsSource>
+  <syncfusion:ChromelessWindow.RightHeaderItemsSource>
+    <listCollection:ArrayList>
+      <TextBlock x:Name="versionText" Height="24" Width="40" Margin="0,8,10,0" Foreground="Orange" FontStyle="Italic" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
+    </listCollection:ArrayList>
+  </syncfusion:ChromelessWindow.RightHeaderItemsSource>
+  <Grid Margin="0">
+    <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIcon_Click"/>
 
-    <syncfusion:DockingManager x:Name="dockSite" Grid.Row="1" Grid.ColumnSpan="2" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="dockSite_CloseButtonClick"  WindowClosing="dockSite_WindowClosing">
-      <ContentControl x:Name="npcWindow" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
+    <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="dockSite_CloseButtonClick"  WindowClosing="dockSite_WindowClosing">
+      <ContentControl x:Name="npcWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="340" syncfusion:DockingManager.DesiredWidthInFloatingMode="340">
         <local:FightTable />
       </ContentControl>
@@ -344,4 +332,4 @@
       </ContentControl>
     </syncfusion:DockingManager>
   </Grid>
-</Window>
+</syncfusion:ChromelessWindow>
