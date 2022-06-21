@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace EQLogParser
@@ -317,7 +318,6 @@ namespace EQLogParser
     public string Pet { get; set; }
   }
 
-  // keep public since reference from a property
   public class SortableName
   {
     public string Name { get; set; }

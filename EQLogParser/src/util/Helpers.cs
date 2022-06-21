@@ -108,9 +108,16 @@ namespace EQLogParser
       return window;
     }
 
-    internal static void OpenWindow(ContentControl window)
+    internal static void ShowWindow(ContentControl window)
     {
-
+      if (DockingManager.GetState(window) == DockState.Hidden)
+      {
+        DockingManager.SetState(window, DockState.AutoHidden);
+      }
+      else
+      {
+        DockingManager.SetState(window, DockState.Hidden);
+      }
     }
 
     internal static DocumentWindow OpenNewTab(DockingManager dockSite, string id, string title, object content, double width = 0, double height = 0)

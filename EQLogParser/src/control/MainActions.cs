@@ -27,7 +27,7 @@ namespace EQLogParser
       DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
     }
 
-    internal static void InitPetPlayers(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
+    internal static void InitPetOwners(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
     {
       // pet -> players
       petMappingGrid.ItemsSource = PetPlayersView;
@@ -57,7 +57,7 @@ namespace EQLogParser
       };
     }
 
-    internal static void InitVerifiedPlayers(MainWindow main, DataGrid playersGrid, ContentControl playersWindow, ContentControl petMappingWindow)
+    internal static void InitVerifiedPlayers(MainWindow main, SfDataGrid playersGrid, ContentControl playersWindow, ContentControl petMappingWindow)
     {
       // verified player table
       playersGrid.ItemsSource = VerifiedPlayersView;
