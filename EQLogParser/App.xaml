@@ -4,10 +4,8 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
-             xmlns:local="clr-namespace:EQLogParser"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-
     <!--Style for the days of a month.-->
     <Color x:Key="GlyphMouseOver">sc#1, 0.004391443, 0.002428215, 0.242281124</Color>
     <Style TargetType="CalendarDayButton" x:Key="CalendarDayButtonStyle">
@@ -351,7 +349,6 @@
     </DataTemplate>
 
     <!-- DataGrid Row/Column Colors and Alignment -->
-
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
       <Setter Property="Background" Value="#3a543f" />
       <Style.Triggers>

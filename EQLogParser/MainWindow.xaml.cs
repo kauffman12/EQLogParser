@@ -3,6 +3,7 @@ using log4net;
 using log4net.Core;
 using Syncfusion.SfSkinManager;
 using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  public partial class MainWindow : Window, IDisposable
+  public partial class MainWindow : ChromelessWindow, IDisposable
   {
     internal event EventHandler<bool> EventsLogLoadingComplete;
 
@@ -983,11 +984,6 @@ namespace EQLogParser
       }
     }
 
-    public void WindowSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-      BorderThickness = (WindowState == WindowState.Maximized) ? new Thickness(6) : new Thickness(0);
-    }
-
     private void WindowClosed(object sender, EventArgs e)
     {
       ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", (DamageWindow != null).ToString(CultureInfo.CurrentCulture));
@@ -1003,19 +999,6 @@ namespace EQLogParser
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
       Application.Current.Shutdown();
-    }
-
-    private void Maximize_Click(object sender, RoutedEventArgs e)
-    {
-      WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-    }
-
-    private void Maximize_DoubleClick(object sender, MouseButtonEventArgs e)
-    {
-      if (e.ClickCount == 2)
-      {
-        Maximize_Click(sender, e);
-      }
     }
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
@@ -1047,21 +1030,8 @@ namespace EQLogParser
     private void dockSite_WindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
 
     private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
+
     private void WindowClose(object sender, EventArgs e) => Close();
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-    [DllImportAttribute("user32.dll")]
-    internal static extern bool ReleaseCapture();
-
-    //Attach this to the MouseDown event of your drag control to move the window in place of the title bar
-    private void WindowDrag(object sender, MouseButtonEventArgs e) // MouseDown
-    {
-      ReleaseCapture();
-      SendMessage(new WindowInteropHelper(this).Handle,
-          0xA1, (IntPtr)0x2, (IntPtr)0);
-    }
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
