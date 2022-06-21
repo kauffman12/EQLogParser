@@ -185,7 +185,7 @@
               <fa:ImageAwesome x:Name="windowListIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_WindowRestore"  Foreground="#FF4F9FE2" />
             </MenuItem.Icon>
             <Separator />
-            <MenuItem x:Name="npcWindowMenuitem" Header="_Fight List" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="npcWindowMenuItem" Header="_Fight List" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="npcIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
               </MenuItem.Icon>
@@ -325,23 +325,18 @@
       </ContentControl>
       <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="200" syncfusion:DockingManager.DesiredWidthInFloatingMode="200">
-        <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
-          <DataGrid.Columns>
-            <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
-              <DataGridTemplateColumn.CellStyle>
-                <Style TargetType="DataGridCell">
-                  <EventSetter Event="PreviewMouseDown" Handler="RemovePetMouseDown"/>
-                </Style>
-              </DataGridTemplateColumn.CellStyle>
-              <DataGridTemplateColumn.CellTemplate>
+        <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" ColumnSizer="AutoLastColumnFill" IsReadOnly="True" AllowResizingColumns="False">
+          <syncfusion:SfDataGrid.Columns>
+            <syncfusion:GridTemplateColumn HeaderText="">
+              <syncfusion:GridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                  <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
+                  <fa:ImageAwesome Width="12" Height="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" PreviewMouseDown="RemovePetMouseDown"/>
                 </DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
-            <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
-          </DataGrid.Columns>
-        </datagrid:ThemedDataGrid>
+              </syncfusion:GridTemplateColumn.CellTemplate>
+            </syncfusion:GridTemplateColumn>
+            <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
+          </syncfusion:SfDataGrid.Columns>
+        </syncfusion:SfDataGrid>
       </ContentControl>
       <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredMinHeightInDockedMode="150" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">

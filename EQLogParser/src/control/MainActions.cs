@@ -93,7 +93,7 @@ namespace EQLogParser
       };
     }
 
-    internal static void InitVerifiedPets(MainWindow main, DataGrid petsGrid, ContentControl petsWindow, ContentControl petMappingWindow)
+    internal static void InitVerifiedPets(MainWindow main, SfDataGrid petsGrid, ContentControl petsWindow, ContentControl petMappingWindow)
     {
       // verified pets table
       petsGrid.ItemsSource = VerifiedPetsView;

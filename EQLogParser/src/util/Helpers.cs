@@ -81,13 +81,9 @@ namespace EQLogParser
       {
         collection.Insert(~index, entry);
       }
-      else
-      {
-        collection.Insert(index, entry);
-      }
     }
 
-    internal static ContentControl OpenWindow(DockingManager dockSite, ContentControl window, Type type, string key, string title)
+    internal static ContentControl ToggleCloseWindow(DockingManager dockSite, ContentControl window, Type type, string key, string title)
     {
       if (window != null)
       {
@@ -108,16 +104,10 @@ namespace EQLogParser
       return window;
     }
 
-    internal static void ShowWindow(ContentControl window)
+    internal static void ToggleHideWindow(ContentControl window)
     {
-      if (DockingManager.GetState(window) == DockState.Hidden)
-      {
-        DockingManager.SetState(window, DockState.AutoHidden);
-      }
-      else
-      {
-        DockingManager.SetState(window, DockState.Hidden);
-      }
+      var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
+      DockingManager.SetState(window, state);
     }
 
     internal static DocumentWindow OpenNewTab(DockingManager dockSite, string id, string title, object content, double width = 0, double height = 0)
