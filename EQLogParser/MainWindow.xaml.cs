@@ -443,17 +443,17 @@ namespace EQLogParser
       }
       else if (e.Source == chatMenuItem)
       {
-        ChatWindow = Helpers.OpenWindow(dockSite, ChatWindow, typeof(ChatViewer), "chatWindow", "Chat Archive");
+        ChatWindow = Helpers.ToggleCloseWindow(dockSite, ChatWindow, typeof(ChatViewer), "chatWindow", "Chat Archive");
         IconToWindow[chatIcon.Name] = ChatWindow;
       }
       else if (e.Source == eventMenuItem)
       {
-        EventWindow = Helpers.OpenWindow(dockSite, EventWindow, typeof(EventViewer), "eventWindow", "Special Events");
+        EventWindow = Helpers.ToggleCloseWindow(dockSite, EventWindow, typeof(EventViewer), "eventWindow", "Special Events");
         IconToWindow[eventIcon.Name] = EventWindow;
       }
       else if (e.Source == playerLootMenuItem)
       {
-        LootWindow = Helpers.OpenWindow(dockSite, LootWindow, typeof(LootViewer), "lootWindow", "Looted Items");
+        LootWindow = Helpers.ToggleCloseWindow(dockSite, LootWindow, typeof(LootViewer), "lootWindow", "Looted Items");
         IconToWindow[playerLootIcon.Name] = LootWindow;
       }
       else if (e.Source == eqLogMenuItem)
@@ -470,23 +470,23 @@ namespace EQLogParser
           found += 1;
         }
 
-        Helpers.OpenWindow(dockSite, null, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
+        Helpers.ToggleCloseWindow(dockSite, null, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
       }
       else if (e.Source == spellResistsMenuItem)
       {
-        SpellResistsWindow = Helpers.OpenWindow(dockSite, SpellResistsWindow, typeof(NpcStatsViewer), "spellResistsWindow", "Spell Resists");
+        SpellResistsWindow = Helpers.ToggleCloseWindow(dockSite, SpellResistsWindow, typeof(NpcStatsViewer), "spellResistsWindow", "Spell Resists");
         IconToWindow[spellResistsIcon.Name] = SpellResistsWindow;
       }
       else if (e.Source == spellDamageStatsMenuItem)
       {
-        SpellDamageWindow = Helpers.OpenWindow(dockSite, SpellDamageWindow, typeof(SpellDamageStatsViewer), "spellDamageWindow", "Spell Damage");
+        SpellDamageWindow = Helpers.ToggleCloseWindow(dockSite, SpellDamageWindow, typeof(SpellDamageStatsViewer), "spellDamageWindow", "Spell Damage");
         IconToWindow[npcSpellDamageIcon.Name] = SpellDamageWindow;
       }
       else
       {
         if ((sender as MenuItem)?.Icon is ImageAwesome icon && IconToWindow.ContainsKey(icon.Name))
         {
-          Helpers.ShowWindow(IconToWindow[icon.Name]);
+          Helpers.ToggleHideWindow(IconToWindow[icon.Name]);
         }
       }
     }
@@ -572,7 +572,7 @@ namespace EQLogParser
         //DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
 
-        Helpers.ShowWindow(DamageWindow);
+        Helpers.ToggleHideWindow(DamageWindow);
         if (HealingWindow != null || TankingWindow != null)
         {
           //DamageWindow.MoveToPreviousContainer();
@@ -603,7 +603,7 @@ namespace EQLogParser
         //HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         IconToWindow[healingSummaryIcon.Name] = HealingWindow;
 
-        Helpers.ShowWindow(HealingWindow);
+        Helpers.ToggleHideWindow(HealingWindow);
         if (DamageWindow != null || TankingWindow != null)
         {
           //HealingWindow.MoveToPreviousContainer();
@@ -634,7 +634,7 @@ namespace EQLogParser
         //TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
         IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
 
-        Helpers.ShowWindow(TankingWindow);
+        Helpers.ToggleHideWindow(TankingWindow);
         if (DamageWindow!= null || HealingWindow != null)
         {
           //TankingWindow.MoveToPreviousContainer();
@@ -801,13 +801,12 @@ namespace EQLogParser
           theFile = dialog.FileName;
         }
 
-
         if (success)
         {
-          //if (!npcWindow.IsOpen)
-         // {
-          //  Helpers.OpenWindow(IconToWindow[npcIcon.Name]);
-         // }
+          if (DockingManager.GetState(npcWindow) == DockState.Hidden)
+          {
+            DockingManager.SetState(npcWindow, DockState.Dock);
+          }
 
           StopProcessing();
           CastProcessor = new ActionProcessor(CastLineParser.Process);
@@ -942,7 +941,7 @@ namespace EQLogParser
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is DataGridCell cell && cell.DataContext is SortableName sortable)
+      if (sender is ImageAwesome image && image.DataContext is SortableName sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPet(sortable.Name);
       }
