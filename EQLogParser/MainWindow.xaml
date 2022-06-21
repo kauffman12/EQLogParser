@@ -294,13 +294,13 @@
     <Button Grid.Column="2" WindowChrome.IsHitTestVisibleInChrome="True" MaxHeight="21" Background="#FF202020" Foreground="LightGray" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Top" Margin="0,6,10,0"  VerticalContentAlignment="Center" HorizontalAlignment="Right" FontSize="13" Click="Close_MouseClick" Height="Auto" Width="Auto" BorderBrush="{x:Null}" Padding="3" Focusable="False">&#xE711;</Button>
     <TextBlock Grid.Column="2" x:Name="versionText" Height="24" Width="40" Margin="0,8,100,0" Foreground="Orange" FontStyle="Italic" PreviewMouseDown="WindowDrag" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
 
-    <syncfusion:DockingManager x:Name="dockSite" Grid.Row="1" Grid.ColumnSpan="2" DocumentCloseButtonType="Individual" CloseButtonClick="dockSite_CloseButtonClick"  WindowClosing="dockSite_WindowClosing">
+    <syncfusion:DockingManager x:Name="dockSite" Grid.Row="1" Grid.ColumnSpan="2" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="dockSite_CloseButtonClick"  WindowClosing="dockSite_WindowClosing">
       <ContentControl x:Name="npcWindow" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
-                      syncfusion:DockingManager.DesiredMinWidthInDockedMode="340" syncfusion:DockingManager.DesiredMinWidthInFloatingMode="340">
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="340" syncfusion:DockingManager.DesiredWidthInFloatingMode="340">
         <local:FightTable />
       </ContentControl>
-      <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
-                      syncfusion:DockingManager.DesiredMinWidthInDockedMode="230" syncfusion:DockingManager.DesiredMinWidthInFloatingMode="230">
+      <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="230" syncfusion:DockingManager.DesiredWidthInFloatingMode="230">
         <syncfusion:SfDataGrid x:Name="petMappingGrid" AllowEditing="True" CurrentCellDropDownSelectionChanged="PetMappingDropDownSelectionChanged" RowHeaderWidth="0" Margin="0" ColumnSizer="AutoLastColumnFill" EditTrigger="OnTap" AutoGenerateColumns="False" IsReadOnly="False" AllowResizingColumns="False">
           <syncfusion:SfDataGrid.Columns>
             <syncfusion:GridComboBoxColumn x:Name="ownerList" HeaderText="Owner" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
@@ -308,28 +308,23 @@
           </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>
       </ContentControl>
-      <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
-                      syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredMinWidthInDockedMode="200" syncfusion:DockingManager.DesiredMinWidthInFloatingMode="200">
-        <datagrid:ThemedDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
-          <DataGrid.Columns>
-            <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
-              <DataGridTemplateColumn.CellStyle>
-                <Style TargetType="DataGridCell">
-                  <EventSetter Event="PreviewMouseDown" Handler="RemovePlayerMouseDown"/>
-                </Style>
-              </DataGridTemplateColumn.CellStyle>
-              <DataGridTemplateColumn.CellTemplate>
+      <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
+                      syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="200" syncfusion:DockingManager.DesiredWidthInFloatingMode="200">
+        <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" ColumnSizer="AutoLastColumnFill" IsReadOnly="True" AllowResizingColumns="False">
+          <syncfusion:SfDataGrid.Columns>
+            <syncfusion:GridTemplateColumn HeaderText="">
+              <syncfusion:GridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                  <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
+                  <fa:ImageAwesome Width="12" Height="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" PreviewMouseDown="RemovePlayerMouseDown"/>
                 </DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
-            <DataGridTextColumn Binding="{Binding Name}" CanUserSort="True" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Name" MinWidth="30" Width="30*" />
-          </DataGrid.Columns>
-        </datagrid:ThemedDataGrid>
+              </syncfusion:GridTemplateColumn.CellTemplate>
+            </syncfusion:GridTemplateColumn>
+            <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
+          </syncfusion:SfDataGrid.Columns>
+        </syncfusion:SfDataGrid>
       </ContentControl>
-      <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
-                      syncfusion:DockingManager.DesiredMinWidthInDockedMode="200" syncfusion:DockingManager.DesiredMinWidthInFloatingMode="200">
+      <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="200" syncfusion:DockingManager.DesiredWidthInFloatingMode="200">
         <datagrid:ThemedDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeRows="False">
           <DataGrid.Columns>
             <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">

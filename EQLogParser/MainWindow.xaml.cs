@@ -1,5 +1,4 @@
-﻿using ActiproSoftware.Windows.Themes;
-using FontAwesome5;
+﻿using FontAwesome5;
 using log4net;
 using log4net.Core;
 using Syncfusion.SfSkinManager;
@@ -92,7 +91,7 @@ namespace EQLogParser
         Width = resolution.Width * 0.85 / dpi.DpiScaleX;
         Height = resolution.Height * 0.75 / dpi.DpiScaleY;
         InitializeComponent();
-        SfSkinManager.SetTheme(dockSite, new Theme("MaterialDark"));
+        SfSkinManager.SetTheme(this, new Theme("MaterialDark"));
 
         // update titles
         versionText.Text = VERSION;
@@ -109,7 +108,7 @@ namespace EQLogParser
         // Clear/Reset
         DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
 
-        MainActions.InitPetPlayers(this, petMappingGrid, ownerList, petMappingWindow);
+        MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, verifiedPlayersWindow, petMappingWindow);
         MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
 
@@ -117,12 +116,6 @@ namespace EQLogParser
         DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, DamageChartWindow, data);
         HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, HealingChartWindow, data);
         TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, TankingChartWindow, data);
-
-        // Setup themes
-        ThemeManager.BeginUpdate();
-        ThemeManager.AreNativeThemesEnabled = true;
-        SystemThemeCatalogRegistrar.Register();
-        ThemeManager.CurrentTheme = ThemeNames.Dark;
 
         UpdateDeleteChatMenu();
 
@@ -196,6 +189,8 @@ namespace EQLogParser
           ComputeStatsTimer.Stop();
         };
 
+        DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
+
         if (ConfigUtil.IfSet("Debug"))
         {
           LOG.Info("Debug Enabled. Saving Unprocessed Lines to " + ConfigUtil.LogsDir);
@@ -208,10 +203,6 @@ namespace EQLogParser
       {
         LOG.Error(e);
         throw;
-      }
-      finally
-      {
-        ThemeManager.EndUpdate();
       }
     }
 
@@ -495,7 +486,7 @@ namespace EQLogParser
       {
         if ((sender as MenuItem)?.Icon is ImageAwesome icon && IconToWindow.ContainsKey(icon.Name))
         {
-          Helpers.OpenWindow(IconToWindow[icon.Name]);
+          Helpers.ShowWindow(IconToWindow[icon.Name]);
         }
       }
     }
@@ -581,7 +572,7 @@ namespace EQLogParser
         //DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
 
-        Helpers.OpenWindow(DamageWindow);
+        Helpers.ShowWindow(DamageWindow);
         if (HealingWindow != null || TankingWindow != null)
         {
           //DamageWindow.MoveToPreviousContainer();
@@ -612,7 +603,7 @@ namespace EQLogParser
         //HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         IconToWindow[healingSummaryIcon.Name] = HealingWindow;
 
-        Helpers.OpenWindow(HealingWindow);
+        Helpers.ShowWindow(HealingWindow);
         if (DamageWindow != null || TankingWindow != null)
         {
           //HealingWindow.MoveToPreviousContainer();
@@ -643,7 +634,7 @@ namespace EQLogParser
         //TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
         IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
 
-        Helpers.OpenWindow(TankingWindow);
+        Helpers.ShowWindow(TankingWindow);
         if (DamageWindow!= null || HealingWindow != null)
         {
           //TankingWindow.MoveToPreviousContainer();
@@ -936,7 +927,14 @@ namespace EQLogParser
     {
       if (sender is FrameworkElement icon && IconToWindow.ContainsKey(icon.Name))
       {
-        icon.Visibility = IconToWindow[icon.Name]?.IsVisible == true ? Visibility.Visible : Visibility.Hidden;
+        if (IconToWindow.ContainsKey(icon.Name) && IconToWindow[icon.Name] != null)
+        {
+          icon.Visibility = DockingManager.GetState(IconToWindow[icon.Name]) != DockState.Hidden ? Visibility.Visible : Visibility.Hidden;
+        }
+        else
+        {
+          icon.Visibility = Visibility.Hidden;
+        }
       }
     }
 
@@ -952,7 +950,7 @@ namespace EQLogParser
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is DataGridCell cell && cell.DataContext is SortableName sortable)
+      if (sender is ImageAwesome image && image.DataContext is SortableName sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPlayer(sortable.Name);
       }
