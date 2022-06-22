@@ -36,25 +36,25 @@
       <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showPlayers" IsChecked="True" Margin="0,0,8,0" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
-      <ComboBox Margin="0,0,0,0" x:Name="fightOption" SelectedIndex="0" IsEnabled="True" SelectionChanged="OptionsChanged">
+      <CheckBox x:Name="showPlayers" IsChecked="True" Margin="0,0,10,1" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
+      <ComboBox Margin="0,0,0,1" x:Name="fightOption" SelectedIndex="0" IsEnabled="True" SelectionChanged="OptionsChanged">
         <ComboBoxItem>All Fights</ComboBoxItem>
         <ComboBoxItem>Selected Fights</ComboBoxItem>        
       </ComboBox>
-      <ComboBox Margin="0" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,8,0" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,1" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,1" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,1" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid" Grid.Row="1" AllowSorting="True" ColumnSizer="AutoWithLastColumnFill" FrozenColumnCount="1" AllowResizingColumns="True" ShowRowHeader="True" RowHeaderWidth="30" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell" IsReadOnly="True"/>
-        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster" IsReadOnly="True"/>
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" IsReadOnly="True"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Avg, Converter={StaticResource NumberFormatConverter}}" HeaderText="Av Hit" TextAlignment="Right" IsReadOnly="True"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Max, Converter={StaticResource NumberFormatConverter}}" HeaderText="Max Hit" TextAlignment="Right" IsReadOnly="True"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" HeaderText="Total" TextAlignment="Right" IsReadOnly="True"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Hits, Converter={StaticResource NumberFormatConverter}}" HeaderText="# Hits" TextAlignment="Right" IsReadOnly="True"/>
-        <syncfusion:GridTextColumn MappingName="Empty" HeaderText="" IsReadOnly="True"/>
+        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell"/>
+        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster"/>
+        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Avg, Converter={StaticResource NumberFormatConverter}}" HeaderText="Av Hit" TextAlignment="Right"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Max, Converter={StaticResource NumberFormatConverter}}" HeaderText="Max Hit" TextAlignment="Right"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" HeaderText="Total" TextAlignment="Right"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Hits, Converter={StaticResource NumberFormatConverter}}" HeaderText="# Hits" TextAlignment="Right"/>
+        <syncfusion:GridTextColumn MappingName="Empty" HeaderText="" AllowSorting="False"/>
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>

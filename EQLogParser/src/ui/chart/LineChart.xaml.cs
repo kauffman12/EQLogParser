@@ -1,5 +1,4 @@
-﻿using Syncfusion.SfSkinManager;
-using Syncfusion.UI.Xaml.Charts;
+﻿using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -35,7 +34,6 @@ namespace EQLogParser
     public LineChart(List<string> choices, bool includePets = false)
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(sfLineChart, new Theme("MaterialDark"));
 
       CurrentConfig = 0;
       choicesList.ItemsSource = choices;

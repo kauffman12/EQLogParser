@@ -107,8 +107,6 @@ namespace EQLogParser
         var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         var main = Application.Current.MainWindow as MainWindow;
         var window = Helpers.OpenNewTab(main.dockSite, "healingLog", "Healing Log", log, 400, 300);
-        window.CanFloat = true;
-        window.CanClose = true;
       }
     }
 

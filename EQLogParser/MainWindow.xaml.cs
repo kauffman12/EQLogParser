@@ -2,6 +2,7 @@
 using log4net;
 using log4net.Core;
 using Syncfusion.SfSkinManager;
+using Syncfusion.Themes.MaterialDark.WPF;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -11,14 +12,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -87,12 +86,21 @@ namespace EQLogParser
     {
       try
       {
+        // DPI and sizing
         var dpi = VisualTreeHelper.GetDpi(this);
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
         Width = resolution.Width * 0.85 / dpi.DpiScaleX;
         Height = resolution.Height * 0.75 / dpi.DpiScaleY;
-        InitializeComponent();
+
+        // set theme
         SfSkinManager.SetTheme(this, new Theme("MaterialDark"));
+        var themeSettings = new MaterialDarkThemeSettings();
+        themeSettings.PrimaryBackground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3d7baf"));
+        themeSettings.PrimaryForeground = new SolidColorBrush(Colors.White);
+        SfSkinManager.RegisterThemeSettings("MaterialDark", themeSettings);
+        BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1f1f1f"));
+
+        InitializeComponent();
 
         // update titles
         versionText.Text = VERSION;
@@ -444,17 +452,17 @@ namespace EQLogParser
       }
       else if (e.Source == chatMenuItem)
       {
-        ChatWindow = Helpers.ToggleCloseWindow(dockSite, ChatWindow, typeof(ChatViewer), "chatWindow", "Chat Archive");
+        ChatWindow = Helpers.OpenWindow(dockSite, ChatWindow, typeof(ChatViewer), "chatWindow", "Chat Archive");
         IconToWindow[chatIcon.Name] = ChatWindow;
       }
       else if (e.Source == eventMenuItem)
       {
-        EventWindow = Helpers.ToggleCloseWindow(dockSite, EventWindow, typeof(EventViewer), "eventWindow", "Special Events");
+        EventWindow = Helpers.OpenWindow(dockSite, EventWindow, typeof(EventViewer), "eventWindow", "Special Events");
         IconToWindow[eventIcon.Name] = EventWindow;
       }
       else if (e.Source == playerLootMenuItem)
       {
-        LootWindow = Helpers.ToggleCloseWindow(dockSite, LootWindow, typeof(LootViewer), "lootWindow", "Looted Items");
+        LootWindow = Helpers.OpenWindow(dockSite, LootWindow, typeof(LootViewer), "lootWindow", "Looted Items");
         IconToWindow[playerLootIcon.Name] = LootWindow;
       }
       else if (e.Source == eqLogMenuItem)
@@ -471,24 +479,21 @@ namespace EQLogParser
           found += 1;
         }
 
-        Helpers.ToggleCloseWindow(dockSite, null, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
+        Helpers.OpenWindow(dockSite, null, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
       }
       else if (e.Source == spellResistsMenuItem)
       {
-        SpellResistsWindow = Helpers.ToggleCloseWindow(dockSite, SpellResistsWindow, typeof(NpcStatsViewer), "spellResistsWindow", "Spell Resists");
+        SpellResistsWindow = Helpers.OpenWindow(dockSite, SpellResistsWindow, typeof(NpcStatsViewer), "spellResistsWindow", "Spell Resists");
         IconToWindow[spellResistsIcon.Name] = SpellResistsWindow;
       }
       else if (e.Source == spellDamageStatsMenuItem)
       {
-        SpellDamageWindow = Helpers.ToggleCloseWindow(dockSite, SpellDamageWindow, typeof(SpellDamageStatsViewer), "spellDamageWindow", "Spell Damage");
+        SpellDamageWindow = Helpers.OpenWindow(dockSite, SpellDamageWindow, typeof(SpellDamageStatsViewer), "spellDamageWindow", "Spell Damage");
         IconToWindow[npcSpellDamageIcon.Name] = SpellDamageWindow;
       }
-      else
+      else if ((sender as MenuItem)?.Icon is ImageAwesome icon && IconToWindow.ContainsKey(icon.Name))
       {
-        if ((sender as MenuItem)?.Icon is ImageAwesome icon && IconToWindow.ContainsKey(icon.Name))
-        {
-          Helpers.ToggleHideWindow(IconToWindow[icon.Name]);
-        }
+        Helpers.OpenWindow(dockSite, IconToWindow[icon.Name]);
       }
     }
 
@@ -573,7 +578,7 @@ namespace EQLogParser
         //DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
 
-        Helpers.ToggleHideWindow(DamageWindow);
+        Helpers.OpenWindow(dockSite,DamageWindow);
         if (HealingWindow != null || TankingWindow != null)
         {
           //DamageWindow.MoveToPreviousContainer();
@@ -604,7 +609,7 @@ namespace EQLogParser
         //HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
         IconToWindow[healingSummaryIcon.Name] = HealingWindow;
 
-        Helpers.ToggleHideWindow(HealingWindow);
+        Helpers.OpenWindow(dockSite, HealingWindow);
         if (DamageWindow != null || TankingWindow != null)
         {
           //HealingWindow.MoveToPreviousContainer();
@@ -635,7 +640,7 @@ namespace EQLogParser
         //TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
         IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
 
-        Helpers.ToggleHideWindow(TankingWindow);
+        Helpers.OpenWindow(dockSite, TankingWindow);
         if (DamageWindow!= null || HealingWindow != null)
         {
           //TankingWindow.MoveToPreviousContainer();
@@ -927,7 +932,7 @@ namespace EQLogParser
     {
       if (sender is FrameworkElement icon && IconToWindow.ContainsKey(icon.Name))
       {
-        if (IconToWindow.ContainsKey(icon.Name) && IconToWindow[icon.Name] != null)
+        if (IconToWindow.ContainsKey(icon.Name) && IconToWindow[icon.Name] != null && IconToWindow[icon.Name].Content != null)
         {
           icon.Visibility = DockingManager.GetState(IconToWindow[icon.Name]) != DockState.Hidden ? Visibility.Visible : Visibility.Hidden;
         }
@@ -1001,17 +1006,13 @@ namespace EQLogParser
       Application.Current.Shutdown();
     }
 
-    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-
-    private void Close_MouseClick(object sender, RoutedEventArgs e) => Close();
-
     // This is where closing summary tables and line charts will get disposed
-    private void CloseTab(ContentControl control)
+    private void CloseTab(ContentControl window)
     {
-      var content = control.Content;
+      var content = window.Content;
       if (content is EQLogViewer)
       {
-        string title = DockingManager.GetHeader(control) as string;
+        string title = DockingManager.GetHeader(window) as string;
         int last = title.LastIndexOf(" ");
         if (last > -1)
         {
@@ -1021,8 +1022,13 @@ namespace EQLogParser
             LogWindows[result - 1] = false;
           }
         }
+
+        (window.Content as IDisposable)?.Dispose();
       }
-      (content as IDisposable)?.Dispose();
+      else
+      {
+        Helpers.CloseWindow(dockSite, window);
+      }
     }
 
     private void dockSite_CloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);

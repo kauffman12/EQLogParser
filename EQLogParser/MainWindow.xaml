@@ -10,13 +10,14 @@
         Title="EQLogParser"
         Closed="WindowClosed"
         ResizeMode="CanResize"
+        BorderThickness="2"
         ShowTitle="False"
         TextOptions.TextFormattingMode="Display"
         WindowStartupLocation="CenterScreen"
         StateChanged="WindowStateChanged">
   <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
     <listCollection:ArrayList>
-      <Menu Margin="0" Height="30" Width="210" VerticalAlignment="Top" Background="#202020">
+      <Menu Height="26" FontSize="12" Width="210" Margin="0,0,0,0" VerticalAlignment="Top">
         <MenuItem Header="_File" Height="30" Width="40">
           <MenuItem Header="Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
             <MenuItem.Icon>
@@ -270,24 +271,24 @@
           </MenuItem>
         </MenuItem>
       </Menu>
-      <TextBlock x:Name="statusText" Height="24" Margin="4,6,0,0"/>
-      <TextBlock x:Name="fileText" Height="24" Margin="4,6,0,0" Foreground="LightGray"/>
+      <TextBlock x:Name="statusText" Height="22" Margin="4,8,0,0"/>
+      <TextBlock x:Name="fileText" Height="22" Margin="4,8,0,0" Foreground="LightGray"/>
     </listCollection:ArrayList>
   </syncfusion:ChromelessWindow.LeftHeaderItemsSource>
   <syncfusion:ChromelessWindow.RightHeaderItemsSource>
     <listCollection:ArrayList>
-      <TextBlock x:Name="versionText" Height="24" Width="40" Margin="0,8,10,0" Foreground="Orange" FontStyle="Italic" FontSize="12" Text="v1.0.0.0" HorizontalAlignment="Right"/>
+      <TextBlock x:Name="versionText" Height="22" VerticalAlignment="Center" Width="40" Margin="0,8,10,0" Foreground="Orange" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
     </listCollection:ArrayList>
   </syncfusion:ChromelessWindow.RightHeaderItemsSource>
   <Grid Margin="0">
     <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIcon_Click"/>
 
     <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="dockSite_CloseButtonClick"  WindowClosing="dockSite_WindowClosing">
-      <ContentControl x:Name="npcWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
+      <ContentControl x:Name="npcWindow" Tag="Hide" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="340" syncfusion:DockingManager.DesiredWidthInFloatingMode="340">
         <local:FightTable />
       </ContentControl>
-      <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
+      <ContentControl x:Name="petMappingWindow" Tag="Hide" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="230" syncfusion:DockingManager.DesiredWidthInFloatingMode="230">
         <syncfusion:SfDataGrid x:Name="petMappingGrid" AllowEditing="True" CurrentCellDropDownSelectionChanged="PetMappingDropDownSelectionChanged" RowHeaderWidth="0" Margin="0" ColumnSizer="AutoLastColumnFill" EditTrigger="OnTap" AutoGenerateColumns="False" IsReadOnly="False" AllowResizingColumns="False">
           <syncfusion:SfDataGrid.Columns>
@@ -296,7 +297,7 @@
           </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>
       </ContentControl>
-      <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
+      <ContentControl x:Name="verifiedPlayersWindow" Tag="Hide" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
                       syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="200" syncfusion:DockingManager.DesiredWidthInFloatingMode="200">
         <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" ColumnSizer="AutoLastColumnFill" IsReadOnly="True" AllowResizingColumns="False">
           <syncfusion:SfDataGrid.Columns>
@@ -311,7 +312,7 @@
           </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>
       </ContentControl>
-      <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
+      <ContentControl x:Name="verifiedPetsWindow" Tag="Hide" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="200" syncfusion:DockingManager.DesiredWidthInFloatingMode="200">
         <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" ColumnSizer="AutoLastColumnFill" IsReadOnly="True" AllowResizingColumns="False">
           <syncfusion:SfDataGrid.Columns>
@@ -326,8 +327,8 @@
           </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>
       </ContentControl>
-      <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
-                      syncfusion:DockingManager.DesiredMinHeightInDockedMode="150" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
+      <ContentControl x:Name="playerParseTextWindow" Tag="Hide" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
+                      syncfusion:DockingManager.DesiredHeightInDockedMode="150" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
         <local:ParsePreview />
       </ContentControl>
     </syncfusion:DockingManager>

@@ -1,5 +1,4 @@
 ﻿using FontAwesome5;
-using Syncfusion.SfSkinManager;
 using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Generic;
@@ -585,15 +584,10 @@ namespace EQLogParser
       TitleDamagePanel.Children.Add(TitleDamageBlock);
       overlayCanvas.Children.Add(TitleDamagePanel);
 
-      Theme theme = null;
       if (!configure)
       {
         TitlePanel.SizeChanged += TitleResizing;
         TitleDamagePanel.SizeChanged += TitleResizing;
-      }
-      else
-      {
-        theme = new Theme("MaterialDark", new string[] { "ColorPicker" });
       }
 
       for (int i = 0; i < CurrentMaxRows; i++)
@@ -630,7 +624,6 @@ namespace EQLogParser
             BorderThickness = new Thickness(0)
           };
           colorPicker.HeaderTemplate = Application.Current.Resources["ColorPickerMinHeaderTemplate"] as DataTemplate;
-          SfSkinManager.SetTheme(colorPicker, theme);
           colorPicker.ColorChanged += (DependencyObject d, DependencyPropertyChangedEventArgs e) =>
           {
             rectangle.Fill = OverlayUtil.CreateBrush(colorPicker.Color);

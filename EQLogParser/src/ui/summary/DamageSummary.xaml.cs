@@ -1,5 +1,4 @@
-﻿using Syncfusion.SfSkinManager;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -32,7 +31,6 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(timeChooser, new Theme("MaterialDark"));
       InitSummaryTable(title, dataGrid, selectedColumns);
 
       PropertyDescriptor widthPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
@@ -171,8 +169,6 @@ namespace EQLogParser
       var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups);
       var main = Application.Current.MainWindow as MainWindow;
       var window = Helpers.OpenNewTab(main.dockSite, "adpsTimeline", "ADPS Timeline", timeline, 400, 300);
-      window.CanFloat = true;
-      window.CanClose = true;
     }
 
     private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
@@ -182,8 +178,6 @@ namespace EQLogParser
         var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         var main = Application.Current.MainWindow as MainWindow;
         var window = Helpers.OpenNewTab(main.dockSite, "damageLog", "Damage Log", log, 400, 300);
-        window.CanFloat = true;
-        window.CanClose = true;
       }
     }
 
@@ -196,8 +190,6 @@ namespace EQLogParser
         var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "damageFreqChart", "Damage Hit Frequency", chart, 400, 300);
 
         chart.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
-        hitFreqWindow.CanFloat = true;
-        hitFreqWindow.CanClose = true;
       }
     }
 
