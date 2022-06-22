@@ -33,7 +33,7 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="{StaticResource menuIconColor}" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showPlayers" IsChecked="True" Margin="0,0,10,1" VerticalAlignment="Center" IsEnabled="True" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
@@ -60,7 +60,7 @@
         <ContextMenu>
           <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
