@@ -21,53 +21,53 @@
         <MenuItem Header="_File" Height="30" Width="40">
           <MenuItem Header="Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Eye" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Eye" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem Header="Open and Monitor _Log File" Height="24" ToolTip="Open Log File, Archive Chat and Start Monitoring">
             <MenuItem.Icon>
-              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_FolderOpen" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_FolderOpen" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
             <MenuItem Header="Last Hour" Tag="1" Height="24" Click="MenuItemSelectLogFileClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarDay" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarDay" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem Header="Last  8 Hours" Tag="8" Height="24" Click="MenuItemSelectLogFileClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarDay" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarDay" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem Header="Last 24 Hours" Tag="24 " Height="24" Click="MenuItemSelectLogFileClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarDay" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarDay" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem Header="Last  7 Days" Tag="168" Height="24" Click="MenuItemSelectLogFileClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarAlt" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarAlt" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem Header="Last 14 Days" Tag="336" Height="24" Click="MenuItemSelectLogFileClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarAlt" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarAlt" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem Header="Last 30 Days" Tag="720" Height="24" Click="MenuItemSelectLogFileClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarAlt" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_CalendarAlt" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem Header="Everything" Height="24" Click="MenuItemSelectLogFileClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Infinity" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Loaded="WindowIcon_Loaded" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Infinity" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator/>
           <MenuItem Header="_Save Summary (html)" Height="24" Click="MenuItemExportHTMLClick" ToolTip="Save Open Summary Tables As HTML">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Save"  Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Save" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator/>
@@ -76,126 +76,126 @@
         <MenuItem Header="_View" Height="30" Width="45">
           <MenuItem x:Name="damageView" Header="_Damage" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="damageViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Meteor" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="damageViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Meteor" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
             <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="Damage _Chart" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="damageChartIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="damageChartIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="Damage _Summary" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="damageSummaryIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="damageSummaryIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="enableDamageOverlay" Header="Damage _Overlay" Click="ToggleDamageOverlayClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <MenuItem x:Name="healingView" Header="_Healing" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="healingViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Heart" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="healingViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Heart" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
             <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindowClick" Header="Healing _Chart" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="healingChartIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="healingChartIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindowClick" Header="Healing _Summary" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="healingSummaryIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="healingSummaryIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <MenuItem x:Name="tankingView" Header="_Tanking" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="tankingViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_ShieldAlt" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="tankingViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_ShieldAlt" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
             <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindowClick" Header="Tanking _Chart" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="tankingChartIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="tankingChartIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindowClick" Header="Tanking _Summary" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="tankingSummaryIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="tankingSummaryIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="searchView" Header="_Search" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="searchViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Search" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="searchViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Search" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
             <MenuItem x:Name="eqLogMenuItem" Header="_New Log Search" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_FileAlt" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_FileAlt" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <Separator />
             <MenuItem x:Name="chatMenuItem" Click="MenuItemWindowClick" Header="_Chat Archive" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="chatIcon" Height="12" Width="12"  Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="chatIcon" Height="12" Width="12"  Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="playerLootMenuItem" Header="_Looted Items" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="playerLootIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="playerLootIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="eventMenuItem" Header="Special _Events" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="eventIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="eventIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <MenuItem x:Name="statsView" Header="S_tatistics" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="statsViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Calculator"  Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="statsViewIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Calculator"  Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
             <MenuItem x:Name="spellDamageStatsMenuItem" Header="Spell _Damage" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="npcSpellDamageIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="npcSpellDamageIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="spellResistsMenuItem" Header="Spell _Resists" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="spellResistsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="spellResistsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="windowList" Header="_Windows" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="windowListIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_WindowRestore"  Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="windowListIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_WindowRestore"  Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
             <Separator />
             <MenuItem x:Name="npcWindowMenuItem" Header="_Fight List" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="npcIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="npcIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="playerParseIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="playerParseIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <Separator />
             <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="petMappingIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="petMappingIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_ets" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="verifiedPetsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="verifiedPetsIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_layers" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="verifiedPlayersIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="verifiedPlayersIcon" Height="12" Width="12" Loaded="WindowIcon_Loaded" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -203,52 +203,52 @@
         <MenuItem Header="_Options" Height="30" Width="65">
           <MenuItem x:Name="enableAutoMonitor" Header="Auto _Monitor Last Log" Click="ToggleAutoMonitorClick" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableAutoMonitorIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="enableAutoMonitorIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="hideOnMinimize" Header="_Hide Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="ignoreCharmPets" Header="Ignore _Charm Pets" Click="ToggleIgnoreCharmPetsClick" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="ignoreCharmPetsIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="ignoreCharmPetsIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableAoEHealingIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="enableAoEHealingIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="damageOptions" Header="_Damage" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="damageOptionsIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Meteor" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="damageOptionsIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Meteor" Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
             <MenuItem x:Name="enableAssassinateDamage" Header="Include _Assassinate" Click="ToggleAssassinateDamageClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="enableAssassinateDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="enableAssassinateDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="enableBaneDamage" Header="Include _Banes" Click="ToggleBaneDamageClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="enableBaneDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="enableBaneDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="enableHeahshotDamage" Header="Include _Headshots" Click="ToggleHeadshotDamageClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="enableHeadshotDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="enableHeadshotDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="enableFinishingBlowDamage" Header="Include _Finishing Blow" Click="ToggleFinishingBlowDamageClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="enableFinishingBlowDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="enableFinishingBlowDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem x:Name="enableSlayUndeadDamage" Header="Include _Slay Undead" Click="ToggleSlayUndeadDamageClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="enableSlayUndeadDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome x:Name="enableSlayUndeadDamageIcon" Height="12" Width="12" Visibility="Hidden" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="{StaticResource menuIconColor}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -256,17 +256,17 @@
         <MenuItem Header="_Tools" Height="30" Width="55">
           <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="deleteChatIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_Times"  Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="deleteChatIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_Times"  Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="restoreTableColumns" Header="_Restore Default Table Columns" Click="RestoreTableColumnsClick" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="restoreTableColumnsIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_Undo"  Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="restoreTableColumnsIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_Undo"  Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLogClick" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="viewErrorLogIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_FileCode"  Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="viewErrorLogIcon" Height="12" Width="12" Visibility="Visible" HorizontalAlignment="Center" Icon="Solid_FileCode"  Foreground="{StaticResource menuIconColor}" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
@@ -304,7 +304,7 @@
             <syncfusion:GridTemplateColumn HeaderText="">
               <syncfusion:GridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                  <fa:ImageAwesome Width="12" Height="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" PreviewMouseDown="RemovePlayerMouseDown"/>
+                  <fa:ImageAwesome Width="12" Height="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="{StaticResource menuIconColor}" PreviewMouseDown="RemovePlayerMouseDown"/>
                 </DataTemplate>
               </syncfusion:GridTemplateColumn.CellTemplate>
             </syncfusion:GridTemplateColumn>
@@ -319,7 +319,7 @@
             <syncfusion:GridTemplateColumn HeaderText="">
               <syncfusion:GridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                  <fa:ImageAwesome Width="12" Height="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" PreviewMouseDown="RemovePetMouseDown"/>
+                  <fa:ImageAwesome Width="12" Height="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="{StaticResource menuIconColor}" PreviewMouseDown="RemovePetMouseDown"/>
                 </DataTemplate>
               </syncfusion:GridTemplateColumn.CellTemplate>
             </syncfusion:GridTemplateColumn>

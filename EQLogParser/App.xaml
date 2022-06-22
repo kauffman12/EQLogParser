@@ -6,6 +6,17 @@
              xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
+    <SolidColorBrush x:Key="menuIconColor" Color="#FF4F9FE2"/>
+    <SolidColorBrush x:Key="defaultBackgroundColor" Color="#FF121212"/>
+    <SolidColorBrush x:Key="secondBackgroundColor" Color="#FF1f1f1f"/>
+
+    <!-- Syncfusion ColorPicker -->
+    <DataTemplate x:Key="ColorPickerMinHeaderTemplate">
+      <StackPanel Orientation="Horizontal" Margin="0">
+        <Border Width="11" Height="11" Margin="0,0,0,3" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
+      </StackPanel>
+    </DataTemplate>
+
     <!--Style for the days of a month.-->
     <Color x:Key="GlyphMouseOver">sc#1, 0.004391443, 0.002428215, 0.242281124</Color>
     <Style TargetType="CalendarDayButton" x:Key="CalendarDayButtonStyle">
@@ -301,12 +312,6 @@
       </Setter>
     </Style>
 
-    <!-- General -->
-    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Static themes:SharedResourceKeys.MenuItemStyleKey}}">
-      <Setter Property="ToolTipService.InitialShowDelay" Value="1500"/>
-      <Setter Property="ToolTipService.ShowDuration" Value="2500"/>
-    </Style>
-
     <!-- LogRow Templates for check columns -->
     <DataTemplate x:Key="NoDataTemplate">
     </DataTemplate>
@@ -339,13 +344,6 @@
     </DataTemplate>
     <DataTemplate x:Key="StrikethroughCountTemplate">
       <TextBlock Text="{Binding StrikethroughCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
-    </DataTemplate>
-
-    <!-- Syncfusion ColorPicker -->
-    <DataTemplate x:Key="ColorPickerMinHeaderTemplate">
-      <StackPanel Orientation="Horizontal">
-        <Border Width="14" Height="14" Margin="0, -2, 0 ,0" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
-      </StackPanel>
     </DataTemplate>
 
     <!-- DataGrid Row/Column Colors and Alignment -->
