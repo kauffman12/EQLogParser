@@ -72,7 +72,7 @@
         </FlowDocument>
       </RichTextBox>
     </ScrollViewer>
-    <StatusBar Grid.Row="2" FontSize="11" Background="#151515">
+    <StatusBar Grid.Row="2" FontSize="11">
       <TextBlock x:Name="statusCount"/>
     </StatusBar>
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"  Margin="0,0,0,0">

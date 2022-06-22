@@ -1,5 +1,4 @@
-﻿using Syncfusion.SfSkinManager;
-using Syncfusion.UI.Xaml.Charts;
+﻿using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +27,6 @@ namespace EQLogParser
     internal HitFreqChart()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(sfChart, new Theme("MaterialDark"));
       minFreqList.ItemsSource = MinFreqs;
       minFreqList.SelectedIndex = 0;
     }

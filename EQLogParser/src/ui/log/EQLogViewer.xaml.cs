@@ -1,5 +1,4 @@
 ﻿using FontAwesome5;
-using Syncfusion.SfSkinManager;
 using Syncfusion.Windows.Edit;
 using System;
 using System.Collections.Generic;
@@ -37,8 +36,6 @@ namespace EQLogParser
     public EQLogViewer()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(colorPicker, new Theme("MaterialDark"));
-      SfSkinManager.SetTheme(tabControl, new Theme("MaterialDark"));
       fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
 

@@ -89,8 +89,6 @@ namespace EQLogParser
         var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
         var main = Application.Current.MainWindow as MainWindow;
         var window = Helpers.OpenNewTab(main.dockSite, "tankingLog", "Tanking Log", log, 400, 300);
-        window.CanFloat = true;
-        window.CanClose = true;
       }
     }
 
@@ -103,8 +101,6 @@ namespace EQLogParser
         var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "tankHitFreqChart", "Tanking Hit Frequency", chart, 400, 300);
 
         chart.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
-        hitFreqWindow.CanFloat = true;
-        hitFreqWindow.CanClose = true;
       }
     }
 
@@ -290,8 +286,6 @@ namespace EQLogParser
       var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, true);
       var main = Application.Current.MainWindow as MainWindow;
       var window = Helpers.OpenNewTab(main.dockSite, "defensiveTimeline", "Defensive Timeline", timeline, 400, 300);
-      window.CanFloat = true;
-      window.CanClose = true;
     }
 
     #region IDisposable Support

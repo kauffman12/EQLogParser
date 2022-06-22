@@ -1,5 +1,4 @@
-﻿using ActiproSoftware.Windows.Controls.Docking;
-using Syncfusion.Windows.Tools.Controls;
+﻿using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -83,15 +82,34 @@ namespace EQLogParser
       }
     }
 
-    internal static ContentControl ToggleCloseWindow(DockingManager dockSite, ContentControl window, Type type, string key, string title)
+    internal static ContentControl CloseWindow(DockingManager dockSite, ContentControl window)
     {
       if (window != null)
       {
-        dockSite.Children.Remove(window);
-        (window.Content as IDisposable)?.Dispose();
-        window = null;
+        var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
+        if (state == DockState.Hidden && window?.Tag as string != "Hide")
+        {
+          dockSite.Children.Remove(window);
+          (window.Content as IDisposable)?.Dispose();
+          window.Content = null;
+          window = null;
+        }
+        else
+        {
+          DockingManager.SetState(window, state);
+        }
       }
-      else
+
+      return window;
+    }
+
+    internal static ContentControl OpenWindow(DockingManager dockSite, ContentControl window, Type type = null, string key = "", string title = "")
+    {
+      if (window != null && window.Content != null)
+      {
+        window = CloseWindow(dockSite, window);
+      }
+      else if (type != null)
       {
         var instance = Activator.CreateInstance(type);
         window = new ContentControl { Name = key };
@@ -104,13 +122,7 @@ namespace EQLogParser
       return window;
     }
 
-    internal static void ToggleHideWindow(ContentControl window)
-    {
-      var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
-      DockingManager.SetState(window, state);
-    }
-
-    internal static DocumentWindow OpenNewTab(DockingManager dockSite, string id, string title, object content, double width = 0, double height = 0)
+    internal static ContentControl OpenNewTab(DockingManager dockSite, string id, string title, object content, double width = 0, double height = 0)
     {
       //var window = new DocumentWindow(dockSite, id, title, null, content);
 
@@ -133,35 +145,6 @@ namespace EQLogParser
           (window.Content as LineChart)?.HandleUpdateEvent(e);
         }
       });
-    }
-
-    internal static void RepositionCharts(DocumentWindow window, params DocumentWindow[] charts)
-    {
-      if (window == null)
-      {
-        return;
-      }
-      if (window.ParentContainer is TabbedMdiContainer tabControl)
-      {
-        bool moved = false;
-        foreach (var child in tabControl.Windows.Reverse().ToList())
-        {
-          if (charts.Contains(child))
-          {
-            if (child.IsOpen && !moved)
-            {
-              moved = true;
-              child.MoveToNewHorizontalContainer();
-            }
-            else if (child.IsOpen && moved)
-            {
-              child.MoveToNextContainer();
-            }
-
-            (child.Content as LineChart)?.FixSize();
-          }
-        }
-      }
     }
 
     internal static string CreateRecordKey(string type, string subType)
