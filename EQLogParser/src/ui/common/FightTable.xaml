@@ -5,13 +5,36 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:sfgrid="clr-namespace:Syncfusion.UI.Xaml.Grid;assembly=Syncfusion.SfGrid.WPF"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
+      <!-- note sfgrid namespace due to class naming conflict -->
+      <local:FightRowStyleConverter x:Key="fightrowstyleconverter" />
+      <Style x:Key="fightrowstyle" TargetType="sfgrid:VirtualizingCellsControl">
+        <Setter Property="Background" Value="{Binding Converter={StaticResource fightrowstyleconverter}}"/>
+        <Setter Property="RowHoverForeground" Value="{StaticResource hoverForegroundBrush}"/>
+      </Style>
       <local:TotalFormatConverter x:Key="TotalFormatConverter" />
-    </Grid.Resources>      
+      <DataTemplate x:Key="TemplateToolTip">
+        <TextBlock FontSize="12" Text="{Binding TooltipText}" />
+      </DataTemplate>
+      <Style TargetType="syncfusion:GridRowHeaderCell">
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+              <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                <Grid>
+                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                </Grid>
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+    </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30" />
       <RowDefinition Height="500*" />
@@ -22,8 +45,8 @@
       <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="2,0,6,0" ToolTip="Add Breaks for Inactivity" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
       <CheckBox x:Name="fightShowTanking" IsChecked="True" Margin="2,0,6,0" ToolTip="Include Fights with only Tanking data" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowTankingChange" Unchecked="ShowTankingChange">Tanking</CheckBox>
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="fightDataGrid" Grid.Row="1" PreviewMouseDown="UpdateCurrentItem" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="True" CanUserResizeRows="False">
-      <DataGrid.ContextMenu>
+    <syncfusion:SfDataGrid x:Name="fightDataGrid" Grid.Row="1" RowStyle="{StaticResource fightrowstyle}" SelectionMode="Extended" ColumnSizer="AutoWithLastColumnFill" AllowDraggingColumns="False" PreviewMouseDown="UpdateCurrentItem" HorizontalContentAlignment="Right" ShowRowHeader="True" RowHeaderWidth="40" Margin="0" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="SelectionChanged" AllowSorting="True">
+      <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
           <MenuItem x:Name="fightMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
             <MenuItem.Icon>
@@ -63,12 +86,12 @@
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
-      </DataGrid.ContextMenu>
-      <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="100" Width="100" />
-        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource TotalFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="HP" IsReadOnly="True" CanUserReorder="False" MinWidth="45" Width="45" />
-        <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90*" />
-      </DataGrid.Columns>
-    </datagrid:ThemedDataGrid>
+      </syncfusion:SfDataGrid.ContextMenu>
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="SortId" DisplayBinding="{Binding BeginTimeString}" Width="100" HorizontalHeaderContentAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Initial Hit Time" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Total, Converter={StaticResource TotalFormatConverter}}" TextAlignment="Right" HorizontalHeaderContentAlignment="Center" HeaderText="HP" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Name}" HorizontalHeaderContentAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Name" />
+      </syncfusion:SfDataGrid.Columns>
+    </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

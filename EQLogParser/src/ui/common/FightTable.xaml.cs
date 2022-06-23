@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -23,10 +24,7 @@ namespace EQLogParser
     // events
     public event EventHandler<IList> EventsSelectionChange;
 
-    // brushes
-    private static readonly SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
-    private static readonly SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(35, 35, 37));
-    private static readonly SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
+    internal static readonly SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
 
     // time before creating new group
     public const int GroupTimeout = 120;
@@ -67,7 +65,6 @@ namespace EQLogParser
 
       View = (ListCollectionView)CollectionViewSource.GetDefaultView(Fights);
       NonTankingView = (ListCollectionView)CollectionViewSource.GetDefaultView(NonTankingFights);
-      fightDataGrid.Sorting += CustomSorting;
 
       var filter = new Predicate<object>(item => !(CurrentShowBreaks == false && ((Fight)item).IsInactivity));
       View.Filter = filter;
@@ -101,12 +98,17 @@ namespace EQLogParser
 
       // read show hp setting
       fightShowHitPoints.IsChecked = ConfigUtil.IfSet("NpcShowHitPoints");
-      fightDataGrid.Columns[1].Visibility = fightShowHitPoints.IsChecked.Value ? Visibility.Visible : Visibility.Hidden;
+      fightDataGrid.Columns[1].IsHidden = !fightShowHitPoints.IsChecked.Value;
 
       // read show breaks and spells setting
       fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
       fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", null, true);
       fightDataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
+
+      // default these columns to descending
+      string[] desc = new string[] { "SortId" };
+      fightDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      fightDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
@@ -235,10 +237,10 @@ namespace EQLogParser
           NeedRefresh = false;
         }
 
-        if ((Parent as ContentControl).IsVisible && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
-        {
-          fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
-        }
+        //if ((Parent as ContentControl).IsVisible && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
+        //{
+        //  fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
+        //}
       }
 
       if (processNonTankingList != null)
@@ -288,10 +290,10 @@ namespace EQLogParser
           NeedRefresh = false;
         }
 
-        if ((Parent as ContentControl).IsVisible && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
-        {
-          fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
-        }
+        //if ((Parent as ContentControl).IsVisible && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
+        //{
+        //  fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
+        //}
       }
 
       if (NeedRefresh && (processList == null && fightDataGrid.ItemsSource == View || processNonTankingList == null && fightDataGrid.ItemsSource == NonTankingView) &&
@@ -299,29 +301,6 @@ namespace EQLogParser
       {
         (fightDataGrid.ItemsSource as ICollectionView).Refresh();
         NeedRefresh = false;
-      }
-    }
-
-    private void CustomSorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e.Column.Header != null && fightDataGrid.ItemsSource != null)
-      {
-        var direction = e.Column.SortDirection ?? ListSortDirection.Ascending;
-
-        if (fightDataGrid.ItemsSource is ListCollectionView view)
-        {
-          if (e.Column.Header.ToString() == "Initial Hit Time")
-          {
-            e.Handled = true;
-            view.CustomSort = new FightTimeSorter(direction);
-            e.Column.SortDirection = direction == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
-            fightDataGrid.Items.Refresh();
-          }
-          else
-          {
-            view.CustomSort = null;
-          }
-        }
       }
     }
 
@@ -362,39 +341,17 @@ namespace EQLogParser
       }
     }
 
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      // set header count
-      e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
-
-      if (e.Row.Item is Fight npc && npc.BeginTimeString == Fight.BREAKTIME)
-      {
-        if (e.Row.Background != BREAK_TIME_BRUSH)
-        {
-          e.Row.Background = BREAK_TIME_BRUSH;
-        }
-      }
-      else if (e.Row.Background != NORMAL_BRUSH)
-      {
-        e.Row.Background = NORMAL_BRUSH;
-      }
-
-      if (fightMenuItemSelectFight.IsEnabled == false)
-      {
-        fightMenuItemSelectFight.IsEnabled = fightMenuItemUnselectFight.IsEnabled = true;
-      }
-    }
-
-    private void SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
       // adds a delay where a drag-select doesn't keep sending events
       SelectionTimer.Stop();
       SelectionTimer.Start();
 
-      DataGrid callingDataGrid = sender as DataGrid;
-      fightMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
-      fightMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
-      fightMenuItemClear.IsEnabled = callingDataGrid.Items.Count > 0;
+      var callingDataGrid = sender as SfDataGrid;
+      var items = callingDataGrid.ItemsSource as ListCollectionView;
+      fightMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < items.Count) && items.Count > 0;
+      fightMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && items.Count > 0;
+      fightMenuItemClear.IsEnabled = items.Count > 0;
 
       var selected = callingDataGrid.SelectedItem as Fight;
       fightMenuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && !selected.IsInactivity;
@@ -448,9 +405,8 @@ namespace EQLogParser
     {
       if (fightDataGrid != null)
       {
-        var show = fightDataGrid.Columns[1].Visibility == Visibility.Hidden;
-        fightDataGrid.Columns[1].Visibility = show ? Visibility.Visible : Visibility.Hidden;
-        ConfigUtil.SetSetting("NpcShowHitPoints", show.ToString(CultureInfo.CurrentCulture));
+        fightDataGrid.Columns[1].IsHidden = !fightDataGrid.Columns[1].IsHidden;
+        ConfigUtil.SetSetting("NpcShowHitPoints", (!fightDataGrid.Columns[1].IsHidden).ToString(CultureInfo.CurrentCulture));
       }
     }
 
@@ -526,7 +482,7 @@ namespace EQLogParser
         CurrentSearchRow.Background = null;
       }
 
-      if (fightSearchBox.Text.Length > 0 && fightDataGrid.Items.Count > 0)
+      if (fightDataGrid.ItemsSource is ListCollectionView items && fightSearchBox.Text.Length > 0 && items.Count > 0)
       {
         int checksNeeded;
         int direction;
@@ -540,11 +496,11 @@ namespace EQLogParser
 
           if (CurrentFightSearchIndex < 0)
           {
-            CurrentFightSearchIndex = fightDataGrid.Items.Count - 1;
+            CurrentFightSearchIndex = items.Count - 1;
           }
 
           // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
-          checksNeeded = CurrentFightSearchIndex == (fightDataGrid.Items.Count - 1) ? 1 : 2;
+          checksNeeded = CurrentFightSearchIndex == (items.Count - 1) ? 1 : 2;
         }
         else
         {
@@ -554,7 +510,7 @@ namespace EQLogParser
             CurrentFightSearchIndex += 2;
           }
 
-          if (CurrentFightSearchIndex >= fightDataGrid.Items.Count)
+          if (CurrentFightSearchIndex >= items.Count)
           {
             CurrentFightSearchIndex = 0;
           }
@@ -567,14 +523,14 @@ namespace EQLogParser
 
         while (checksNeeded-- > 0)
         {
-          for (int i = CurrentFightSearchIndex; i < fightDataGrid.Items.Count && i >= 0; i += (1 * direction))
+          for (int i = CurrentFightSearchIndex; i < items.Count && i >= 0; i += (1 * direction))
           {
-            if (fightDataGrid.Items[i] is Fight npc && npc.Name != null && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
+            if (items.GetItemAt(i) is Fight npc && npc.Name != null && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
             {
-              fightDataGrid.ScrollIntoView(npc);
-              var row = fightDataGrid.ItemContainerGenerator.ContainerFromItem(npc) as DataGridRow;
-              row.Background = SEARCH_BRUSH;
-              CurrentSearchRow = row;
+              //fightDataGrid.ScrollIntoView(npc);
+              //var row = fightDataGrid.ItemContainerGenerator.ContainerFromItem(npc) as DataGridRow;
+              //row.Background = SEARCH_BRUSH;
+              //CurrentSearchRow = row;
               CurrentFightSearchIndex = i + (1 * direction);
               return;
             }
@@ -582,7 +538,7 @@ namespace EQLogParser
 
           if (checksNeeded == 1)
           {
-            CurrentFightSearchIndex = (direction == 1) ? CurrentFightSearchIndex = 0 : CurrentFightSearchIndex = fightDataGrid.Items.Count - 1;
+            CurrentFightSearchIndex = (direction == 1) ? CurrentFightSearchIndex = 0 : CurrentFightSearchIndex = items.Count - 1;
           }
         }
       }
@@ -613,29 +569,5 @@ namespace EQLogParser
     private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
     private void Instance_EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
-  }
-
-  public class FightTimeSorter : IComparer
-  {
-    private int direction = 1;
-    public FightTimeSorter(ListSortDirection dir)
-    {
-      if (dir == ListSortDirection.Descending)
-      {
-        direction = -1;
-      }
-    }
-    public int Compare(object x, object y)
-    {
-      int result = 0;
-
-      if (x is Fight a && y is Fight b)
-      {
-        result = (a.SortId > b.SortId) ? -1 : 1;
-        result *= direction;
-      }
-
-      return result;
-    }
   }
 }

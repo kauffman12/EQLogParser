@@ -31,7 +31,6 @@ namespace EQLogParser
     private List<string> UnFiltered = new List<string>();
     private Dictionary<long, long> FilteredLinePositionMap = new Dictionary<long, long>();
     private Dictionary<long, long> LinePositions = new Dictionary<long, long>();
-    private static SolidColorBrush ORANGE_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
 
     public EQLogViewer()
     {
@@ -151,9 +150,10 @@ namespace EQLogParser
             var allText = string.Join(Environment.NewLine, list) + Environment.NewLine;
             Dispatcher.Invoke(() =>
             {
+              SolidColorBrush highlight = Application.Current.Resources["warnBackgroundBrush"] as SolidColorBrush;
               contextBox.Text = allText;
               contextTab.Visibility = Visibility.Visible;
-              FoundLines.ForEach(line => contextBox.SetLineBackground(line, false, ORANGE_BRUSH));
+              FoundLines.ForEach(line => contextBox.SetLineBackground(line, false, highlight));
               tabControl.SelectedItem = contextTab;
               UpdateStatusCount(contextBox.Lines.Count);
 
