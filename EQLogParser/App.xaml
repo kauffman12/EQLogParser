@@ -6,9 +6,10 @@
              xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-    <SolidColorBrush x:Key="menuIconColor" Color="#FF4F9FE2"/>
-    <SolidColorBrush x:Key="defaultBackgroundColor" Color="#FF121212"/>
-    <SolidColorBrush x:Key="secondBackgroundColor" Color="#FF1f1f1f"/>
+    <SolidColorBrush x:Key="hoverForegroundBrush" Color="White"/>    
+    <SolidColorBrush x:Key="menuIconBrush" Color="#FF4F9FE2"/>
+    <SolidColorBrush x:Key="secondBackgroundBrush" Color="#FF1f1f1f"/>
+    <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
 
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">

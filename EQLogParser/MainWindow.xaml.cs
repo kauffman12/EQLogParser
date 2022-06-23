@@ -99,10 +99,10 @@ namespace EQLogParser
         {
           SfSkinManager.SetTheme(this, new Theme("MaterialDark"));
           var themeSettings = new MaterialDarkThemeSettings();
-          themeSettings.PrimaryBackground = (SolidColorBrush)Application.Current.Resources["menuIconColor"];
+          themeSettings.PrimaryBackground = Application.Current.Resources["menuIconBrush"] as SolidColorBrush;
           themeSettings.PrimaryForeground = new SolidColorBrush(Colors.Black);
           SfSkinManager.RegisterThemeSettings("MaterialDark", themeSettings);
-          BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#ff1f1f1f"));
+          BorderBrush = Application.Current.Resources["secondBackgroundBrush"] as SolidColorBrush;
         }
         else
         {
