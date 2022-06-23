@@ -495,6 +495,7 @@ namespace EQLogParser
     private void FontFgColor_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
       logBox.Foreground = new SolidColorBrush(colorPicker.Color);
+      contextBox.Foreground = new SolidColorBrush(colorPicker.Color);
       ConfigUtil.SetSetting("EQLogViewerFontFgColor", TextFormatUtils.GetHexString(colorPicker.Color));
     }
 

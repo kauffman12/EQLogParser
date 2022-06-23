@@ -3,6 +3,7 @@ using log4net;
 using log4net.Core;
 using Syncfusion.SfSkinManager;
 using Syncfusion.Themes.MaterialDark.WPF;
+using Syncfusion.Themes.MaterialLight.WPF;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -81,6 +82,7 @@ namespace EQLogParser
     private ContentControl SpellDamageWindow = null;
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
+    private string CurrentTheme = "MaterialDark";
 
     public MainWindow()
     {
@@ -93,12 +95,24 @@ namespace EQLogParser
         Height = resolution.Height * 0.75 / dpi.DpiScaleY;
 
         // set theme
-        SfSkinManager.SetTheme(this, new Theme("MaterialDark"));
-        var themeSettings = new MaterialDarkThemeSettings();
-        themeSettings.PrimaryBackground = (SolidColorBrush)Application.Current.Resources["menuIconColor"];
-        themeSettings.PrimaryForeground = new SolidColorBrush(Colors.Black);
-        SfSkinManager.RegisterThemeSettings("MaterialDark", themeSettings);
-        BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1f1f1f"));
+        if (CurrentTheme == "MaterialDark")
+        {
+          SfSkinManager.SetTheme(this, new Theme("MaterialDark"));
+          var themeSettings = new MaterialDarkThemeSettings();
+          themeSettings.PrimaryBackground = (SolidColorBrush)Application.Current.Resources["menuIconColor"];
+          themeSettings.PrimaryForeground = new SolidColorBrush(Colors.Black);
+          SfSkinManager.RegisterThemeSettings("MaterialDark", themeSettings);
+          BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#ff1f1f1f"));
+        }
+        else
+        {
+          SfSkinManager.SetTheme(this, new Theme("Office2019DarkGray"));
+          Application.Current.Resources["secondBackgroundColor"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#ffbfbfbf"));
+          TitleBarBackground = (SolidColorBrush)Application.Current.Resources["secondBackgroundColor"];
+          //var themeSettings = new Office2019DarkGraySettings();
+          //themeSettings.PrimaryBackground = (SolidColorBrush)Application.Current.Resources["menuIconColor"];
+          //SfSkinManager.RegisterThemeSettings("VisualStudio2015", themeSettings);
+        }
 
         InitializeComponent();
 
