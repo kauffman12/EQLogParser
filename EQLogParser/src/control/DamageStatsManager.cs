@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 
 namespace EQLogParser
@@ -47,56 +46,59 @@ namespace EQLogParser
       if (fights.Count > 0)
       {
         oldestFight = fights[0];
-        foreach (var fight in fights.Where(fight => !fight.Dead || mode > 0))
+        foreach (Fight fight in fights)
         {
-          foreach (var keypair in fight.PlayerTotals)
+          if (!fight.Dead || mode > 0)
           {
-            var player = keypair.Key;
-            if (!string.IsNullOrEmpty(keypair.Value.PetOwner))
+            foreach (var keypair in fight.PlayerTotals)
             {
-              player = keypair.Value.PetOwner;
-              playerHasPet[player] = true;
-            }
-            else if (PlayerManager.Instance.GetPlayerFromPet(player) is string owner && owner != Labels.UNASSIGNED)
-            {
-              player = owner;
-              playerHasPet[player] = true;
-            }
-
-            allDamage += baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage;
-            allTime.Add(new TimeSegment(keypair.Value.BeginTime, fight.LastDamageTime));
-
-            if (updateTime == 0)
-            {
-              updateTime = keypair.Value.UpdateTime;
-              oldestTime = keypair.Value.UpdateTime;
-              oldestFight = fight;
-            }
-            else
-            {
-              updateTime = Math.Max(updateTime, keypair.Value.UpdateTime);
-              if (oldestTime > keypair.Value.UpdateTime)
+              var player = keypair.Key;
+              if (!string.IsNullOrEmpty(keypair.Value.PetOwner))
               {
+                player = keypair.Value.PetOwner;
+                playerHasPet[player] = true;
+              }
+              else if (PlayerManager.Instance.GetPlayerFromPet(player) is string owner && owner != Labels.UNASSIGNED)
+              {
+                player = owner;
+                playerHasPet[player] = true;
+              }
+
+              allDamage += keypair.Value.Damage;
+              allTime.Add(new TimeSegment(keypair.Value.BeginTime, fight.LastDamageTime));
+
+              if (updateTime == 0)
+              {
+                updateTime = keypair.Value.UpdateTime;
                 oldestTime = keypair.Value.UpdateTime;
                 oldestFight = fight;
               }
-            }
-
-            if (playerTotals.TryGetValue(player, out OverlayPlayerTotal total))
-            {
-              total.Damage += baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage;
-              total.Range.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
-              total.UpdateTime = Math.Max(total.UpdateTime, keypair.Value.UpdateTime);
-            }
-            else
-            {
-              playerTotals[player] = new OverlayPlayerTotal
+              else
               {
-                Name = player,
-                Damage = baneEnabled ? keypair.Value.DamageWithBane : keypair.Value.Damage,
-                Range = new TimeRange(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime)),
-                UpdateTime = keypair.Value.UpdateTime
-              };
+                updateTime = Math.Max(updateTime, keypair.Value.UpdateTime);
+                if (oldestTime > keypair.Value.UpdateTime)
+                {
+                  oldestTime = keypair.Value.UpdateTime;
+                  oldestFight = fight;
+                }
+              }
+
+              if (playerTotals.TryGetValue(player, out OverlayPlayerTotal total))
+              {
+                total.Damage += keypair.Value.Damage;
+                total.Range.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
+                total.UpdateTime = Math.Max(total.UpdateTime, keypair.Value.UpdateTime);
+              }
+              else
+              {
+                playerTotals[player] = new OverlayPlayerTotal
+                {
+                  Name = player,
+                  Damage = keypair.Value.Damage,
+                  Range = new TimeRange(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime)),
+                  UpdateTime = keypair.Value.UpdateTime
+                };
+              }
             }
           }
         }
@@ -162,41 +164,6 @@ namespace EQLogParser
       }
 
       return combined;
-    }
-
-    internal static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
-    {
-      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
-
-      // get chart data for player and pets if available
-      if (damageStats?.Children.ContainsKey(selected.Name) == true)
-      {
-        damageStats?.Children[selected.Name].ForEach(stats => AddStats(stats));
-      }
-      else
-      {
-        AddStats(selected);
-      }
-
-      return results;
-
-      void AddStats(PlayerStats stats)
-      {
-        results[stats.Name] = new List<HitFreqChartData>();
-        foreach (string type in stats.SubStats.Keys)
-        {
-          HitFreqChartData chartData = new HitFreqChartData() { HitType = stats.SubStats[type].Name };
-
-          // add crits
-          chartData.CritXValues.AddRange(stats.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
-          chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stats.SubStats[type].CritFreqValues[damage]));
-
-          // add non crits
-          chartData.NonCritXValues.AddRange(stats.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
-          chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stats.SubStats[type].NonCritFreqValues[damage]));
-          results[stats.Name].Add(chartData);
-        }
-      }
     }
 
     internal DamageStatsManager()
@@ -298,7 +265,7 @@ namespace EQLogParser
             });
 
             DamageGroups.Add(newBlock);
-            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block => 
+            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block =>
               Resists.AddRange(block.Actions)));
             ComputeDamageStats(options);
           }
@@ -453,7 +420,7 @@ namespace EQLogParser
 
                     if (stats.Total > 0)
                     {
-                      child.Percent = (float) Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
+                      child.Percent = (float)Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                     }
 
                     if (specials.TryGetValue(child.Name, out string special1))
@@ -608,7 +575,7 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, 
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS,
       bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();
@@ -637,7 +604,7 @@ namespace EQLogParser
 
             if (showSpecial && !string.IsNullOrEmpty(stats.Special))
             {
-              dps = string.Format(CultureInfo.CurrentCulture, StatsUtil.SPECIAL_FORMAT, dps, stats.Special);
+              dps = string.Format(StatsUtil.SPECIAL_FORMAT, dps, stats.Special);
             }
 
             list.Add(dps);

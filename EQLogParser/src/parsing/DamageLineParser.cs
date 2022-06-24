@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -59,14 +58,7 @@ namespace EQLogParser
         // handle Slain queue
         if (!double.IsNaN(SlainTime) && (currentTime > SlainTime))
         {
-          SlainQueue.ForEach(slain =>
-          {
-            if (!DataManager.Instance.RemoveActiveFight(slain) && char.IsUpper(slain[0]))
-            {
-              DataManager.Instance.RemoveActiveFight(char.ToLower(slain[0], CultureInfo.CurrentCulture) + slain.Substring(1));
-            }
-          });
-
+          SlainQueue.ForEach(slain => DataManager.Instance.RemoveActiveFight(slain));
           SlainQueue.Clear();
           SlainTime = double.NaN;
         }
@@ -235,7 +227,7 @@ namespace EQLogParser
                     break;
                   // Old (EQEMU) crit and crippling blow handling
                   case "hit!":
-                    if (stop == i && split.Length > 4 && split[i-1] == "critical" && split[i-3] == "scores")
+                    if (stop == i && split.Length > 4 && split[i - 1] == "critical" && split[i - 3] == "scores")
                     {
                       LastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
                     }
@@ -537,6 +529,8 @@ namespace EQLogParser
 
           lock (SlainQueue)
           {
+            // we also use upper case now
+            slain = TextFormatUtils.ToUpper(slain);
             if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);

@@ -213,7 +213,16 @@ namespace EQLogParser
                         PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
                         StatsUtil.UpdateStats(stats, record);
                         PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+
+                        uint critHits = subStats.CritHits;
                         StatsUtil.UpdateStats(subStats, record);
+
+                        // dont count misses/dodges or where no damage was done
+                        if (record.Total > 0)
+                        {
+                          Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
+                          Helpers.LongIntAddHelper.Add(values, record.Total, 1);
+                        }
                       }
                     }
                   });
@@ -280,7 +289,7 @@ namespace EQLogParser
       Title = "";
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals, 
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals,
       bool rankPlayers, bool __, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();
@@ -298,7 +307,7 @@ namespace EQLogParser
             {
               string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
               string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + damageFormat + " ");
+              list.Add(playerFormat + damageFormat);
             }
           }
 
@@ -317,7 +326,7 @@ namespace EQLogParser
             {
               string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
               string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + damageFormat + " ");
+              list.Add(playerFormat + damageFormat);
               totals += stats.Total;
             }
 

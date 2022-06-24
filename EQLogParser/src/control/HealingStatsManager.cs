@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -118,7 +117,7 @@ namespace EQLogParser
 
                 currentTime = heal.BeginTime;
                 currentSpellCounts = new Dictionary<string, HashSet<string>>();
-                
+
                 foreach (var timeKey in previousSpellCounts.Keys.ToList())
                 {
                   if (previousSpellCounts.ContainsKey(timeKey))
@@ -459,7 +458,7 @@ namespace EQLogParser
       Title = "";
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals, 
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals,
       bool rankPlayers, bool __, bool showTime, string customTitle)
     {
       List<string> list = new List<string>();
@@ -477,7 +476,7 @@ namespace EQLogParser
             {
               string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
               string healsFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + healsFormat + " ");
+              list.Add(playerFormat + healsFormat);
             }
           }
 
@@ -496,7 +495,7 @@ namespace EQLogParser
               string abbrv = DataManager.Instance.AbbreviateSpellName(stats.Name);
               string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, abbrv) : string.Format(StatsUtil.PLAYER_FORMAT, abbrv);
               string healsFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + healsFormat + " ");
+              list.Add(playerFormat + healsFormat);
             }
 
             string totalTitle = selected[0].Name + "'s Top Heals";
