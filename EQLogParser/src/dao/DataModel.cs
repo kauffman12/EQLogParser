@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Windows.Controls;
 using System.Windows.Media;
 
@@ -262,15 +264,32 @@ namespace EQLogParser
     public Dictionary<long, int> NonCritFreqValues { get; } = new Dictionary<long, int>();
   }
 
-  internal class Fight : FullTimedAction
+  internal class Fight : FullTimedAction, INotifyPropertyChanged
   {
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string name = null)
+    {
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    private bool searchResult;
+    public bool IsSearchResult
+    {
+      get { return searchResult; }
+      set
+      {
+        searchResult = value;
+        OnPropertyChanged();
+      }
+    }
+
+    public const string BREAKTIME = "Break Time";
+
     public bool Dead { get; set; } = false;
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
     public double LastDamageTime { get; set; }
     public double LastTankingTime { get; set; }
-
-    public const string BREAKTIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public int Id { get; set; }

@@ -8,8 +8,11 @@
   <Application.Resources>
     <SolidColorBrush x:Key="hoverForegroundBrush" Color="White"/>    
     <SolidColorBrush x:Key="menuIconBrush" Color="#FF4F9FE2"/>
+    <SolidColorBrush x:Key="mainBackgroundBrush" Color="#FF121212"/>
+    <SolidColorBrush x:Key="searchBackgroundBrush" Color="#FF3a543f"/>
     <SolidColorBrush x:Key="secondBackgroundBrush" Color="#FF1f1f1f"/>
-    <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
+    <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF33212b" />
+    <SolidColorBrush x:Key="warnBackgroundBrush2" Color="#FF96410d" />
 
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">

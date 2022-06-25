@@ -12,9 +12,12 @@ namespace EQLogParser
 
     object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      if (value is Fight npc && npc.BeginTimeString == Fight.BREAKTIME)
+      if (value is Fight npc)
       {
-        return BREAK_TIME_BRUSH;
+        if (npc.BeginTimeString == Fight.BREAKTIME)
+        {
+          return BREAK_TIME_BRUSH;
+        }
       }
       return null;
     }

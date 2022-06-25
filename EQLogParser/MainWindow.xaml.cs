@@ -2,6 +2,7 @@
 using log4net;
 using log4net.Core;
 using Syncfusion.SfSkinManager;
+using Syncfusion.Themes.FluentDark.WPF;
 using Syncfusion.Themes.MaterialDark.WPF;
 using Syncfusion.Themes.MaterialLight.WPF;
 using Syncfusion.UI.Xaml.Grid;
@@ -99,19 +100,21 @@ namespace EQLogParser
         {
           SfSkinManager.SetTheme(this, new Theme("MaterialDark"));
           var themeSettings = new MaterialDarkThemeSettings();
-          themeSettings.PrimaryBackground = Application.Current.Resources["menuIconBrush"] as SolidColorBrush;
+          themeSettings.PrimaryBackground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#ffe1e1e1"));
           themeSettings.PrimaryForeground = new SolidColorBrush(Colors.Black);
+          themeSettings.PrimaryColorForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#ffe1e1e1"));
           SfSkinManager.RegisterThemeSettings("MaterialDark", themeSettings);
           BorderBrush = Application.Current.Resources["secondBackgroundBrush"] as SolidColorBrush;
         }
         else
         {
-          SfSkinManager.SetTheme(this, new Theme("Office2019DarkGray"));
-          Application.Current.Resources["secondBackgroundColor"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#ffbfbfbf"));
-          TitleBarBackground = (SolidColorBrush)Application.Current.Resources["secondBackgroundColor"];
-          //var themeSettings = new Office2019DarkGraySettings();
-          //themeSettings.PrimaryBackground = (SolidColorBrush)Application.Current.Resources["menuIconColor"];
-          //SfSkinManager.RegisterThemeSettings("VisualStudio2015", themeSettings);
+          //SfSkinManager.SetTheme(this, new Theme("Office2019Colorful"));
+          SfSkinManager.SetTheme(this, new Theme("FluentDark"));
+          var themeSettings = new FluentDarkThemeSettings();
+          themeSettings.PrimaryBackground = Application.Current.Resources["menuIconBrush"] as SolidColorBrush;
+          themeSettings.PrimaryForeground = new SolidColorBrush(Colors.Black);
+          SfSkinManager.RegisterThemeSettings("FluentDark", themeSettings);
+          BorderBrush = Application.Current.Resources["secondBackgroundBrush"] as SolidColorBrush;
         }
 
         InitializeComponent();
@@ -956,8 +959,6 @@ namespace EQLogParser
         }
       }
     }
-
-    private void NPCWindow_KeyDown(object sender, KeyEventArgs e) => (npcWindow?.Content as FightTable).FightSearchBoxKeyDown(sender, e);
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
