@@ -17,7 +17,7 @@
         StateChanged="WindowStateChanged">
   <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
     <listCollection:ArrayList>
-      <Menu Height="26" FontSize="12" Width="210" Margin="0,0,0,0" VerticalAlignment="Top">
+      <Menu Height="26" FontSize="12" Width="210" Margin="0" VerticalAlignment="Top">
         <MenuItem Header="_File" Height="30" Width="40">
           <MenuItem Header="Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
             <MenuItem.Icon>
@@ -277,7 +277,7 @@
   </syncfusion:ChromelessWindow.LeftHeaderItemsSource>
   <syncfusion:ChromelessWindow.RightHeaderItemsSource>
     <listCollection:ArrayList>
-      <TextBlock x:Name="versionText" Height="22" VerticalAlignment="Center" Width="40" Margin="0,8,10,0" Foreground="Orange" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
+      <TextBlock x:Name="versionText" Height="22" VerticalAlignment="Center" Width="40" Margin="0,8,10,0" Foreground="White" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
     </listCollection:ArrayList>
   </syncfusion:ChromelessWindow.RightHeaderItemsSource>
   <Grid Margin="0">

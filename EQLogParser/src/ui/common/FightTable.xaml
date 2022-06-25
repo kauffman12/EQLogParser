@@ -14,6 +14,11 @@
       <!-- note sfgrid namespace due to class naming conflict -->
       <local:FightRowStyleConverter x:Key="fightrowstyleconverter" />
       <Style x:Key="fightrowstyle" TargetType="sfgrid:VirtualizingCellsControl">
+        <Style.Triggers>
+          <DataTrigger Binding="{Binding IsSearchResult, UpdateSourceTrigger=PropertyChanged}" Value="True" >
+            <Setter Property="Background" Value="{StaticResource searchBackgroundBrush}"/>
+          </DataTrigger>
+        </Style.Triggers>
         <Setter Property="Background" Value="{Binding Converter={StaticResource fightrowstyleconverter}}"/>
         <Setter Property="RowHoverForeground" Value="{StaticResource hoverForegroundBrush}"/>
       </Style>
@@ -40,49 +45,49 @@
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="fightSearchBox" Margin="4,0,8,0" VerticalContentAlignment="Center" Height="24" Width="130" GotFocus="FightSearchBoxGotFocus" LostFocus="FightSearchBoxLostFocus" TextChanged="FightSearchBoxTextChanged" BorderBrush="#FF707070" />
+      <TextBox x:Name="fightSearchBox" Margin="4,0,8,0" VerticalContentAlignment="Center" Height="24" Width="130" GotFocus="FightSearchBoxGotFocus" LostFocus="FightSearchBoxLostFocus" TextChanged="FightSearchBoxTextChanged" PreviewKeyDown="FightSearchBoxKeyDown" BorderBrush="#FF707070" />
       <CheckBox x:Name="fightShowHitPoints" IsChecked="True" Margin="0,0,6,0" ToolTip="Show Hit Points" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowHitPointsChange" Unchecked="ShowHitPointsChange">HP</CheckBox>
       <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="2,0,6,0" ToolTip="Add Breaks for Inactivity" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
       <CheckBox x:Name="fightShowTanking" IsChecked="True" Margin="2,0,6,0" ToolTip="Include Fights with only Tanking data" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowTankingChange" Unchecked="ShowTankingChange">Tanking</CheckBox>
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid" Grid.Row="1" RowStyle="{StaticResource fightrowstyle}" SelectionMode="Extended" ColumnSizer="AutoWithLastColumnFill" AllowDraggingColumns="False" PreviewMouseDown="UpdateCurrentItem" HorizontalContentAlignment="Right" ShowRowHeader="True" RowHeaderWidth="40" Margin="0" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="SelectionChanged" AllowSorting="True">
+    <syncfusion:SfDataGrid x:Name="dataGrid" Grid.Row="1" SourceType="{x:Type local:Fight}" RowStyle="{StaticResource fightrowstyle}" ItemsSourceChanged="ItemsSourceChanged" SelectionMode="Extended" ColumnSizer="AutoWithLastColumnFill" AllowDraggingColumns="False" PreviewMouseDown="UpdateCurrentItem" HorizontalContentAlignment="Right" ShowRowHeader="True" RowHeaderWidth="40" Margin="0" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="SelectionChanged" AllowSorting="True">
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
-          <MenuItem x:Name="fightMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
+          <MenuItem x:Name="menuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick" Background="{StaticResource mainBackgroundBrush}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPetIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Paw"  Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="setPetIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Paw"  Foreground="{StaticResource menuIconBrush}" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="fightMenuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayerClick">
+          <MenuItem x:Name="menuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayerClick" Background="{StaticResource mainBackgroundBrush}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPlayerIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_User" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="setPlayerIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_User" Foreground="{StaticResource menuIconBrush}" />
             </MenuItem.Icon>
           </MenuItem>
-          <Separator />
-          <MenuItem x:Name="fightMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick">
+          <syncfusion:MenuItemSeparator />
+          <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick" Background="{StaticResource mainBackgroundBrush}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="{StaticResource menuIconBrush}" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="fightMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick">
+          <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick" Background="{StaticResource mainBackgroundBrush}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>          
-          <MenuItem x:Name="fightMenuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Clone" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="{StaticResource menuIconBrush}" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="fightMenuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick">
+          <MenuItem x:Name="menuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick" Background="{StaticResource mainBackgroundBrush}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Regular_Clone" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="selectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Clone" Foreground="{StaticResource menuIconBrush}" />
             </MenuItem.Icon>
-          </MenuItem>          
-          <Separator />
-          <MenuItem x:Name="fightMenuItemClear" IsEnabled="False" Header="Clear All" Click="ClearClick">
+          </MenuItem>
+          <MenuItem x:Name="menuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick" Background="{StaticResource mainBackgroundBrush}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="clearAllIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="unselectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Regular_Clone" Foreground="{StaticResource menuIconBrush}" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <syncfusion:MenuItemSeparator />
+          <MenuItem x:Name="menuItemClear" IsEnabled="False" Header="Clear All" Click="ClearClick" Background="{StaticResource mainBackgroundBrush}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="clearAllIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="{StaticResource menuIconBrush}" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>

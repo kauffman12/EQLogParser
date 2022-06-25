@@ -162,7 +162,7 @@ namespace EQLogParser
     {
       if (sender?.Parent is ContextMenu menu)
       {
-        (menu.PlacementTarget as DataGrid)?.SelectAll();
+        (menu.PlacementTarget as SfDataGrid)?.SelectAll();
       }
     }
 
@@ -170,7 +170,7 @@ namespace EQLogParser
     {
       if (sender?.Parent is ContextMenu menu)
       {
-        (menu.PlacementTarget as DataGrid)?.UnselectAll();
+        (menu.PlacementTarget as SfDataGrid)?.SelectedItems.Clear();
       }
     }
 
