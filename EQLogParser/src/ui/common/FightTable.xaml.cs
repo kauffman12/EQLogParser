@@ -1,4 +1,6 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.ScrollAxis;
+using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -75,7 +77,7 @@ namespace EQLogParser
       {
         if (!rightClickMenu.IsOpen)
         {
-          EventsSelectionChange(this, fightDataGrid.SelectedItems);
+          EventsSelectionChange(this, dataGrid.SelectedItems);
         }
         else
         {
@@ -98,17 +100,25 @@ namespace EQLogParser
 
       // read show hp setting
       fightShowHitPoints.IsChecked = ConfigUtil.IfSet("NpcShowHitPoints");
-      fightDataGrid.Columns[1].IsHidden = !fightShowHitPoints.IsChecked.Value;
+      dataGrid.Columns[1].IsHidden = !fightShowHitPoints.IsChecked.Value;
 
       // read show breaks and spells setting
       fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
       fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", null, true);
-      fightDataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
+      dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
+
+      if (dataGrid.View != null)
+      {
+        if (true)
+        {
+
+        }
+      }
 
       // default these columns to descending
       string[] desc = new string[] { "SortId" };
-      fightDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      fightDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
@@ -117,8 +127,8 @@ namespace EQLogParser
       DataManager.Instance.EventsNewNonTankingFight += Instance_EventsNewNonTankingFight;
     }
 
-    internal IEnumerable<Fight> GetSelectedFights() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
-    internal bool HasSelected() => fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => !item.IsInactivity) != null;
+    internal IEnumerable<Fight> GetSelectedFights() => dataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
+    internal bool HasSelected() => dataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => !item.IsInactivity) != null;
     internal IEnumerable<Fight> GetFights() => Fights.Where(item => !item.IsInactivity);
 
     private static void RemoveFight(ObservableCollection<Fight> fights, string name)
@@ -136,19 +146,19 @@ namespace EQLogParser
     {
       if (NeedSelectionChange)
       {
-        EventsSelectionChange(this, fightDataGrid.SelectedItems);
+        EventsSelectionChange(this, dataGrid.SelectedItems);
         NeedSelectionChange = false;
       }
     }
 
     private void UpdateCurrentItem(object sender, MouseButtonEventArgs e)
     {
-      var gridPoint = e.GetPosition(fightDataGrid);
-      var vis = VisualTreeHelper.HitTest(fightDataGrid, gridPoint);
+      var gridPoint = e.GetPosition(dataGrid);
+      var vis = VisualTreeHelper.HitTest(dataGrid, gridPoint);
 
       if (vis != null && vis.VisualHit is FrameworkElement elem && elem.DataContext != null)
       {
-        fightDataGrid.CurrentItem = elem.DataContext;
+        dataGrid.CurrentItem = elem.DataContext;
       }
     }
 
@@ -211,19 +221,7 @@ namespace EQLogParser
           if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GroupTimeout)
           {
             CurrentGroup++;
-
-            var seconds = fight.BeginTime - lastWithTankingTime;
-            Fight divider = new Fight
-            {
-              LastTime = fight.BeginTime,
-              BeginTime = lastWithTankingTime,
-              IsInactivity = true,
-              BeginTimeString = Fight.BREAKTIME,
-              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
-            };
-
-            divider.SortId = CurrentSortId++;
-            Fights.Add(divider);
+            AddDivider(fight, Fights, lastWithTankingTime);
           }
 
           fight.GroupId = CurrentGroup;
@@ -232,15 +230,7 @@ namespace EQLogParser
           lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
         });
 
-        if (fightDataGrid.ItemsSource == View)
-        {
-          NeedRefresh = false;
-        }
-
-        //if ((Parent as ContentControl).IsVisible && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
-        //{
-        //  fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
-        //}
+        NewRowsAdded(View);
       }
 
       if (processNonTankingList != null)
@@ -263,20 +253,7 @@ namespace EQLogParser
           if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GroupTimeout)
           {
             CurrentNonTankingGroup++;
-
-            // only set processed for non tanking since its a special case
-            var seconds = fight.BeginTime - lastNonTankingTime;
-            Fight divider = new Fight
-            {
-              LastTime = fight.BeginTime,
-              BeginTime = lastNonTankingTime,
-              IsInactivity = true,
-              BeginTimeString = Fight.BREAKTIME,
-              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
-            };
-
-            divider.SortId = CurrentSortId++;
-            NonTankingFights.Add(divider);
+            AddDivider(fight, NonTankingFights, lastNonTankingTime);
           }
 
           fight.NonTankingGroupId = CurrentNonTankingGroup;
@@ -285,22 +262,43 @@ namespace EQLogParser
           lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
         });
 
-        if (fightDataGrid.ItemsSource == NonTankingView)
-        {
-          NeedRefresh = false;
-        }
-
-        //if ((Parent as ContentControl).IsVisible && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
-        //{
-        //  fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
-        //}
+        NewRowsAdded(NonTankingView);
       }
 
-      if (NeedRefresh && (processList == null && fightDataGrid.ItemsSource == View || processNonTankingList == null && fightDataGrid.ItemsSource == NonTankingView) &&
+      if (NeedRefresh && (processList == null && dataGrid.ItemsSource == View || processNonTankingList == null && dataGrid.ItemsSource == NonTankingView) &&
         (Keyboard.GetKeyStates(Key.LeftShift) & KeyStates.Down) == 0 && (Keyboard.GetKeyStates(Key.LeftCtrl) & KeyStates.Down) == 0)
       {
-        (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+        (dataGrid.ItemsSource as ICollectionView).Refresh();
         NeedRefresh = false;
+      }
+    }
+
+    private void AddDivider(Fight fight, ObservableCollection<Fight> list, double lastTime)
+    {
+      var seconds = fight.BeginTime - lastTime;
+      Fight divider = new Fight
+      {
+        LastTime = fight.BeginTime,
+        BeginTime = lastTime,
+        IsInactivity = true,
+        BeginTimeString = Fight.BREAKTIME,
+        Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
+      };
+
+      divider.SortId = CurrentSortId++;
+      list.Add(divider);
+    }
+
+    private void NewRowsAdded(ListCollectionView view)
+    {
+      if (dataGrid.ItemsSource == view)
+      {
+        NeedRefresh = false;
+      }
+
+      if (DockingManager.GetState(Parent as ContentControl) != DockState.Hidden && !dataGrid.IsMouseOver && dataGrid.View.Records.Count > 1)
+      {
+        dataGrid.ScrollInView(new RowColumnIndex { ColumnIndex = 0, RowIndex = dataGrid.View.Records.Count });
       }
     }
 
@@ -383,7 +381,7 @@ namespace EQLogParser
 
     private void ShowBreakChange(object sender, RoutedEventArgs e)
     {
-      if (fightDataGrid?.ItemsSource is ICollectionView view)
+      if (dataGrid?.ItemsSource is ICollectionView view)
       {
         CurrentShowBreaks = fightShowBreaks.IsChecked.Value;
         ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
@@ -393,20 +391,20 @@ namespace EQLogParser
 
     private void ShowTankingChange(object sender, RoutedEventArgs e)
     {
-      if (fightDataGrid?.ItemsSource is ICollectionView)
+      if (dataGrid?.ItemsSource is ICollectionView)
       {
-        fightDataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
+        dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
         ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
-        (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+        (dataGrid.ItemsSource as ICollectionView).Refresh();
       }
     }
 
     private void ShowHitPointsChange(object sender, RoutedEventArgs e)
     {
-      if (fightDataGrid != null)
+      if (dataGrid != null)
       {
-        fightDataGrid.Columns[1].IsHidden = !fightDataGrid.Columns[1].IsHidden;
-        ConfigUtil.SetSetting("NpcShowHitPoints", (!fightDataGrid.Columns[1].IsHidden).ToString(CultureInfo.CurrentCulture));
+        dataGrid.Columns[1].IsHidden = !dataGrid.Columns[1].IsHidden;
+        ConfigUtil.SetSetting("NpcShowHitPoints", (!dataGrid.Columns[1].IsHidden).ToString(CultureInfo.CurrentCulture));
       }
     }
 
@@ -449,7 +447,7 @@ namespace EQLogParser
           {
             CurrentSearchRow.Background = null;
           }
-          fightDataGrid.Focus();
+          dataGrid.Focus();
         }
         else if (e.Key == Key.Enter)
         {
@@ -461,13 +459,13 @@ namespace EQLogParser
     private List<Fight> GetFightGroup()
     {
       List<Fight> fightGroup = new List<Fight>();
-      if (fightDataGrid.CurrentItem is Fight npc && !npc.IsInactivity)
+      if (dataGrid.CurrentItem is Fight npc && !npc.IsInactivity)
       {
-        if (fightDataGrid.ItemsSource == View)
+        if (dataGrid.ItemsSource == View)
         {
           Fights.Where(fight => fight.GroupId == npc.GroupId).ToList().ForEach(fight => fightGroup.Add(fight));
         }
-        else if (fightDataGrid.ItemsSource == NonTankingView)
+        else if (dataGrid.ItemsSource == NonTankingView)
         {
           NonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId).ToList().ForEach(fight => fightGroup.Add(fight));
         }
@@ -482,7 +480,7 @@ namespace EQLogParser
         CurrentSearchRow.Background = null;
       }
 
-      if (fightDataGrid.ItemsSource is ListCollectionView items && fightSearchBox.Text.Length > 0 && items.Count > 0)
+      if (dataGrid.ItemsSource is ListCollectionView items && fightSearchBox.Text.Length > 0 && items.Count > 0)
       {
         int checksNeeded;
         int direction;
@@ -527,8 +525,8 @@ namespace EQLogParser
           {
             if (items.GetItemAt(i) is Fight npc && npc.Name != null && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
             {
-              //fightDataGrid.ScrollIntoView(npc);
-              //var row = fightDataGrid.ItemContainerGenerator.ContainerFromItem(npc) as DataGridRow;
+              //dataGrid.ScrollIntoView(npc);
+              //var row = dataGrid.ItemContainerGenerator.ContainerFromItem(npc) as DataGridRow;
               //row.Background = SEARCH_BRUSH;
               //CurrentSearchRow = row;
               CurrentFightSearchIndex = i + (1 * direction);
