@@ -28,9 +28,9 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="{StaticResource menuIconBrush}" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="titleLabel" Margin="0" Foreground="{StaticResource menuIconBrush}" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid" AllowSorting="True" ColumnSizer="AutoWithLastColumnFill" AllowResizingColumns="True" ShowRowHeader="True" HorizontalContentAlignment="Right" RowHeaderWidth="30" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+    <syncfusion:SfDataGrid x:Name="dataGrid" AllowSorting="True" ColumnSizer="Auto" AllowResizingColumns="True" ShowRowHeader="True" RowHeaderWidth="30" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
         <syncfusion:GridTextColumn MappingName="Lowest" DisplayBinding="{Binding Path=LowestText}" TextAlignment="Right" HeaderText="Chromatic Resist %" />
@@ -43,11 +43,10 @@
         <syncfusion:GridTextColumn MappingName="Poison" DisplayBinding="{Binding Path=PoisonText}" TextAlignment="Right" HeaderText="Poison Resist %" />
         <syncfusion:GridTextColumn MappingName="Average" DisplayBinding="{Binding Path=AverageText}" TextAlignment="Right" HeaderText="Prismatic Resist %" />
         <syncfusion:GridTextColumn MappingName="Reflected" DisplayBinding="{Binding Path=ReflectedText}" TextAlignment="Right" HeaderText="Reflected %" />
-        <syncfusion:GridTextColumn MappingName="Empty" HeaderText="" AllowSorting="False"/>
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh">
+          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh" Background="{StaticResource mainBackgroundBrush}">
             <MenuItem.Icon>
               <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="{StaticResource menuIconBrush}" />
             </MenuItem.Icon>

@@ -44,7 +44,7 @@
       ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
             <ContextMenu>
-              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Click="SelectedContext" />
+              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Background="{StaticResource mainBackgroundBrush}" Click="SelectedContext" />
             </ContextMenu>
           </syncfusion:EditControl.ContextMenu>
         </syncfusion:EditControl>

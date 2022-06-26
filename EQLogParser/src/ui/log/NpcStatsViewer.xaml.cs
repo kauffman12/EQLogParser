@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -172,7 +171,6 @@ namespace EQLogParser
 
   public class NpcStatsRow
   {
-    public string Empty { get; set; } = "";
     public string Name { get; set; }
     public double Average { get; set; } = -1.0;
     public string AverageText { get; set; } = "-";

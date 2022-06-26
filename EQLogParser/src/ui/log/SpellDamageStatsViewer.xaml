@@ -56,7 +56,7 @@
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh">
+          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh" Background="{StaticResource mainBackgroundBrush}">
             <MenuItem.Icon>
               <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="{StaticResource menuIconBrush}" />
             </MenuItem.Icon>

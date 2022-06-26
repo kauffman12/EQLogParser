@@ -1,15 +1,13 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -30,12 +28,9 @@ namespace EQLogParser
     private readonly List<string> Options = new List<string>() { "Individual View", "Summary View" };
     private readonly ObservableCollection<LootRow> IndividualRecords = new ObservableCollection<LootRow>();
     private readonly ObservableCollection<LootRow> TotalRecords = new ObservableCollection<LootRow>();
-    private readonly ICollectionView IndividualView = null;
-    private readonly ICollectionView SummaryView = null;
     private bool ShowSummaryView = false;
     private string CurrentSelectedItem = ALLITEMS;
     private string CurrentSelectedPlayer = ALLPLAYERS;
-    private static bool Running = false;
 
     public LootViewer()
     {
@@ -44,39 +39,14 @@ namespace EQLogParser
       optionsList.ItemsSource = Options;
       optionsList.SelectedIndex = 0;
 
-      IndividualView = CollectionViewSource.GetDefaultView(IndividualRecords);
-      SummaryView = CollectionViewSource.GetDefaultView(TotalRecords);
-
-      IndividualView.Filter = SummaryView.Filter = new Predicate<object>(obj =>
-      {
-        bool found = false;
-
-        if (obj is LootRow row)
-        {
-          found = (CurrentSelectedItem == ALLITEMS || row.IsCurrency && CurrentSelectedItem == ONLYCURR ||
-          !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) &&
-          (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
-        }
-
-        return found;
-      });
-
-      dataGrid.ItemsSource = IndividualView;
-
+      dataGrid.ItemsSource = IndividualRecords;
       BindingOperations.EnableCollectionSynchronization(IndividualRecords, CollectionLock);
       BindingOperations.EnableCollectionSynchronization(TotalRecords, CollectionLock);
 
-      dataGrid.Sorting += (s, e2) =>
-      {
-        if (!string.IsNullOrEmpty(e2.Column.Header as string) && e2.Column.Header as string == "Quantity")
-        {
-          e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Ascending;
-        }
-        else
-        {
-          e2.Column.SortDirection = e2.Column.SortDirection ?? ListSortDirection.Descending;
-        }
-      };
+      // default these columns to descending
+      string[] desc = new string[] { "Quantity" };
+      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LootViewer_EventsLogLoadingComplete;
       Load();
@@ -84,122 +54,116 @@ namespace EQLogParser
 
     private void Load()
     {
-      if (!Running)
+      itemsList.IsEnabled = playersList.IsEnabled = optionsList.IsEnabled = false;
+
+      TotalRecords.Clear();
+      IndividualRecords.Clear();
+
+      List<LootRow> totalRecords = new List<LootRow>();
+      Dictionary<string, byte> uniquePlayers = new Dictionary<string, byte>();
+      Dictionary<string, byte> uniqueItems = new Dictionary<string, byte>();
+
+      List<string> players = new List<string>
       {
-        Running = true;
-        itemsList.IsEnabled = playersList.IsEnabled = optionsList.IsEnabled = false;
+        ALLPLAYERS
+      };
 
-        Task.Delay(75).ContinueWith(task =>
+      List<string> itemNames = new List<string>
+      {
+        ALLITEMS,
+        ONLYASS,
+        ONLYCURR,
+        ONLYITEMS
+      };
+
+      DataManager.Instance.GetAllLoot().ForEach(block =>
+      {
+        // lock since actions can be removed by the parsing thread
+        lock (block.Actions)
         {
-          lock (CollectionLock)
+          block.Actions.ForEach(record =>
           {
-            TotalRecords.Clear();
-            IndividualRecords.Clear();
-          }
-
-          List<LootRow> totalRecords = new List<LootRow>();
-          Dictionary<string, byte> uniquePlayers = new Dictionary<string, byte>();
-          Dictionary<string, byte> uniqueItems = new Dictionary<string, byte>();
-
-          List<string> players = new List<string>
-          {
-            ALLPLAYERS
-          };
-
-          List<string> itemNames = new List<string>
-          {
-            ALLITEMS,
-            ONLYASS,
-            ONLYCURR,
-            ONLYITEMS
-          };
-
-          DataManager.Instance.GetAllLoot().ForEach(block =>
-          {
-            // lock since actions can be removed by the parsing thread
-            lock (block.Actions)
+            if (record is LootRecord looted)
             {
-              block.Actions.ForEach(record =>
+              IndividualRecords.Add(CreateRow(looted, block.BeginTime));
+              UpdateTotals(totalRecords, looted);
+              uniquePlayers[looted.Player] = 1;
+              if (!looted.IsCurrency)
               {
-                if (record is LootRecord looted)
-                {
-                  lock (CollectionLock)
-                  {
-                    IndividualRecords.Add(CreateRow(looted, block.BeginTime));
-                  }
-
-                  UpdateTotals(totalRecords, looted);
-
-                  uniquePlayers[looted.Player] = 1;
-                  if (!looted.IsCurrency)
-                  {
-                    uniqueItems[looted.Item] = 1;
-                  }
-                }
-              });
+                uniqueItems[looted.Item] = 1;
+              }
             }
           });
+        }
+      });
 
-          uniquePlayers.Keys.OrderBy(player => player).ToList().ForEach(newPlayer => players.Add(newPlayer));
-          uniqueItems.Keys.OrderBy(item => item).ToList().ForEach(newItem => itemNames.Add(newItem));
-
-          lock (CollectionLock)
-          {
-            totalRecords.OrderByDescending(row => row.Quantity).ToList().ForEach(s => TotalRecords.Add(s));
-          }
-
-          Dispatcher.InvokeAsync(() =>
-          {
-            itemsList.ItemsSource = itemNames;
-            playersList.ItemsSource = players;
-
-            UpdateUI();
-
-            itemsList.SelectedItem = CurrentSelectedItem;
-            playersList.SelectedItem = CurrentSelectedPlayer;
-
-            Running = false;
-          });
-
-        }, TaskScheduler.Default);
+      foreach (ref var player in uniquePlayers.Keys.OrderBy(player => player).ToArray().AsSpan())
+      {
+        players.Add(player);
       }
+
+      foreach (ref var item in uniqueItems.Keys.OrderBy(item => item).ToArray().AsSpan())
+      {
+        itemNames.Add(item);
+      }
+
+      foreach (ref var row in totalRecords.OrderByDescending(row => row.Quantity).ToArray().AsSpan())
+      {
+        TotalRecords.Add(row);
+      }
+
+      itemsList.ItemsSource = itemNames;
+      playersList.ItemsSource = players;
+      itemsList.SelectedItem = CurrentSelectedItem;
+      playersList.SelectedItem = CurrentSelectedPlayer;
+
+      // delay before view is available
+      Dispatcher.InvokeAsync(() => UpdateUI());
     }
 
     private void UpdateUI()
     {
-      (dataGrid.ItemsSource as ICollectionView)?.Refresh();
-      titleLabel.Content = dataGrid.Items.Count == 0 ? "No Loot Found" : dataGrid.Items.Count + " Loot Entries Found";
+      dataGrid.View.RefreshFilter();
+      titleLabel.Content = dataGrid.View.Records.Count == 0 ? "No Loot Found" : dataGrid.View.Records.Count + " Loot Entries Found";
       itemsList.IsEnabled = itemsList.Items.Count > 3;
       playersList.IsEnabled = playersList.Items.Count > 1;
       optionsList.IsEnabled = true;
     }
 
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
+    private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-      // set header count
-      if (e.Row != null)
-      {
-        e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
-      }
-    }
-
-    private void OptionsChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (!Running && dataGrid != null && IndividualRecords?.Count > 0)
+      if (dataGrid != null && dataGrid.View != null)
       {
         ShowSummaryView = optionsList.SelectedIndex != 0;
         CurrentSelectedPlayer = playersList.SelectedItem as string;
         CurrentSelectedItem = itemsList.SelectedItem as string;
 
-        if (ShowSummaryView && dataGrid.ItemsSource != SummaryView)
+        if (ShowSummaryView && dataGrid.ItemsSource != TotalRecords)
         {
-          dataGrid.ItemsSource = SummaryView;
-          dataGrid.Columns[0].Visibility = dataGrid.Columns[4].Visibility = Visibility.Collapsed;
+          dataGrid.ItemsSource = TotalRecords;
+          dataGrid.Columns[0].IsHidden = dataGrid.Columns[4].IsHidden = true;
         }
-        else if (!ShowSummaryView && dataGrid.ItemsSource != IndividualView)
+        else if (!ShowSummaryView && dataGrid.ItemsSource != IndividualRecords)
         {
-          dataGrid.ItemsSource = IndividualView;
-          dataGrid.Columns[0].Visibility = dataGrid.Columns[4].Visibility = Visibility.Visible;
+          dataGrid.ItemsSource = IndividualRecords;
+          dataGrid.Columns[0].IsHidden = dataGrid.Columns[4].IsHidden = false;
+        }
+
+        if (dataGrid.View.Filter == null)
+        {
+          dataGrid.View.Filter = new Predicate<object>(obj =>
+          {
+            bool found = false;
+
+            if (obj is LootRow row)
+            {
+              found = (CurrentSelectedItem == ALLITEMS || row.IsCurrency && CurrentSelectedItem == ONLYCURR ||
+              !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) &&
+              (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
+            }
+
+            return found;
+          });
         }
 
         UpdateUI();
@@ -232,22 +196,22 @@ namespace EQLogParser
 
       for (int col = 0; col < dataGrid.Columns.Count; col++)
       {
-        if (dataGrid.Columns[col].Visibility == Visibility.Visible)
+        if (!dataGrid.Columns[col].IsHidden)
         {
-          header.Add(dataGrid.Columns[col].Header as string);
+          header.Add(dataGrid.Columns[col].HeaderText);
         }
       }
 
-      foreach (var item in dataGrid.Items)
+      foreach (var item in dataGrid.View.Records)
       {
-        if (item is LootRow looted)
+        if (item.Data is LootRow looted)
         {
           var row = new List<object>();
           for (int col = 0; col < dataGrid.Columns.Count; col++)
           {
-            if (dataGrid.Columns[col].Visibility == Visibility.Visible)
+            if (!dataGrid.Columns[col].IsHidden)
             {
-              switch (dataGrid.Columns[col].Header.ToString())
+              switch (dataGrid.Columns[col].HeaderText)
               {
                 case "Time":
                   row.Add(DateUtil.FormatSimpleDate(looted.Time));
@@ -284,7 +248,7 @@ namespace EQLogParser
 
     private static LootRow CreateRow(LootRecord looted, double time = 0)
     {
-      return new LootRow()
+      return new LootRow
       {
         Time = time,
         Item = looted.Item,
@@ -344,15 +308,13 @@ namespace EQLogParser
     }
 
     private void LootViewer_EventsLogLoadingComplete(object sender, bool e) => Load();
-    private void RefreshMouseClick(object sender, MouseButtonEventArgs e) => Load();
+    private void MenuItemRefresh(object sender, RoutedEventArgs e) => Load();
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "UPDATE");
-
       if (!disposedValue)
       {
         if (disposing)
