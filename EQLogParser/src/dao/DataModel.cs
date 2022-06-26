@@ -212,6 +212,7 @@ namespace EQLogParser
   {
     public double Time { get; set; }
     public string TooltipText { get; set; }
+    public string Empty { get; } = "";
   }
 
   internal class ActionBlock : TimedAction

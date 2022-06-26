@@ -27,7 +27,7 @@ namespace EQLogParser
     public SpellDamageStatsViewer()
     {
       InitializeComponent();
-      dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(Records);
+      dataGrid.ItemsSource = Records;
       BindingOperations.EnableCollectionSynchronization(Records, LockObject);
       BindingOperations.EnableCollectionSynchronization(Players, LockObject);
       BindingOperations.EnableCollectionSynchronization(Spells, LockObject);
