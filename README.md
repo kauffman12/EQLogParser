@@ -1,15 +1,15 @@
 # EQLogParser
-Everquest Log Parser for Live/TLP servers. There's currently two versions as I'm reworking things.
+Everquest Log Parser for Live/TLP servers.
 
 Latest Release:
 https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-1.8.79.msi
 
-The software depends on a Docking UI control from Actipro so needs a license to build
-and run without having an Actipro splash screen. One day I may find a good replacement
-so that it's all open source. I've only tested on Live but it may work fine on TLP.
-I imagine it won't work at all for P99.
+This software depends on a Docking UI control from Actipro so it needs a license to build
+and run without having an Actipro splash screen. However, I am currently replacing
+Actipro with an equivlent from Syncfusion. Licenses for Syncfusion can be obtained
+for free if you meet requirements. 
 
-The Releases folder has recent builds. The msi installer and exe have now been signed with a real cert. It still will display Unknown Publisher messages in windows but if you do the following you can avoid those in the future.
+The Releases folder has recent builds including a version 1.9. build that's a work in-progress. The msi installer has been signed with a real cert. It still will display Unknown Publisher messages in windows but if you do the following you can avoid those in the future.
 
 1. right-click the msi file and choose properties
 2. under the digital signatures tab select the one signature and click details
