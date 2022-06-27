@@ -206,6 +206,7 @@ namespace EQLogParser
     public string Target { get; set; }
     public string Event { get; set; }
     public string TooltipText { get; set; }
+    public string Empty { get; } = "";
   }
 
   internal class LootRow : LootRecord

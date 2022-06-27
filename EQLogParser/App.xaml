@@ -26,7 +26,7 @@
       <Setter Property="FontSize" Value="15" />
       <Setter Property="FontWeight" Value="Bold" />
       <Setter Property="Margin" Value="0" />
-    </Style>    
+    </Style>
 
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">

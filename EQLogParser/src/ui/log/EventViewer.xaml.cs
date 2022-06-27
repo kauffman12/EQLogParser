@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,8 +16,6 @@ namespace EQLogParser
   /// </summary>
   public partial class EventViewer : UserControl, IDisposable
   {
-    private static bool Running = false;
-    private static readonly object CollectionLock = new object();
     private const string ZONE_EVENT = "Entered Area";
     private const string KILLSHOT_EVENT = "Kill Shot";
     private const string PLAYERSLAIN_EVENT = "Player Slain";
@@ -26,7 +23,6 @@ namespace EQLogParser
     private const string MEZBREAK_EVENT = "Mez Break";
 
     private readonly ObservableCollection<EventRow> EventRows = new ObservableCollection<EventRow>();
-    private readonly ICollectionView EventView;
     private readonly DispatcherTimer FilterTimer;
     private bool CurrentShowMezBreaks = true;
     private bool CurrentShowEnterZone = true;
@@ -38,36 +34,7 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      dataGrid.ItemsSource = EventView = CollectionViewSource.GetDefaultView(EventRows);
-
-      EventView.Filter = new Predicate<object>(obj =>
-      {
-        bool result = false;
-        if (obj is EventRow row)
-        {
-          result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots &&
-            row.Event == KILLSHOT_EVENT || CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT || CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT;
-
-          if (result && !string.IsNullOrEmpty(eventFilter.Text) && eventFilter.Text != Properties.Resources.EVENT_FILTER_TEXT)
-          {
-            if (eventFilterModifier.SelectedIndex == 0)
-            {
-              result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 || row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1;
-            }
-            else if (eventFilterModifier.SelectedIndex == 1)
-            {
-              result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1 && row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1;
-            }
-            else if (eventFilterModifier.SelectedIndex == 2)
-            {
-              result = row.Actor?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true || row.Target?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true;
-            }
-          }
-        }
-        return result;
-      });
-
-      BindingOperations.EnableCollectionSynchronization(EventRows, CollectionLock);
+      dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(EventRows);
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventViewer_EventsLogLoadingComplete;
 
       eventFilter.Text = Properties.Resources.EVENT_FILTER_TEXT;
@@ -81,81 +48,67 @@ namespace EQLogParser
       Load();
     }
 
+    private void MenuItemRefresh(object sender, RoutedEventArgs e) => Load();
+
     private void Load()
     {
-      if (!Running)
+      EventRows.Clear();
+
+      var rows = new List<EventRow>();
+      DataManager.Instance.GetDeathsDuring(0, double.MaxValue).ForEach(block =>
       {
-        Running = true;
-
-        Task.Delay(75).ContinueWith(task =>
+        block.Actions.ForEach(action =>
         {
-          lock (CollectionLock)
+          if (action is DeathRecord death)
           {
-            EventRows.Clear();
+            if (!(PlayerManager.Instance.IsVerifiedPet(death.Killed) && !PlayerManager.Instance.IsPossiblePlayerName(death.Killed)))
+            {
+              var isActorNpc = DataManager.Instance.IsLifetimeNpc(death.Killer) || DataManager.Instance.IsKnownNpc(death.Killer);
+              var isTargetNpc = DataManager.Instance.IsLifetimeNpc(death.Killed) || DataManager.Instance.IsKnownNpc(death.Killed);
+              var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(death.Killer);
+              var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(death.Killed);
+
+              string text = KILLSHOT_EVENT;
+              if (isTargetPlayer && isActorPlayer)
+              {
+                text = PLAYERKILL_EVENT;
+              }
+              else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.Instance.IsPossiblePlayerName(death.Killed)))
+              {
+                text = PLAYERSLAIN_EVENT;
+              }
+
+              rows.Add(new EventRow { Time = block.BeginTime, Actor = death.Killer, Target = death.Killed, Event = text });
+            }
           }
+        });
+      });
 
-          var rows = new List<EventRow>();
-          DataManager.Instance.GetDeathsDuring(0, double.MaxValue).ForEach(block =>
+      DataManager.Instance.GetMiscDuring(0, double.MaxValue).ForEach(block =>
+      {
+        block.Actions.ForEach(action =>
+        {
+          if (action is MezBreakRecord mezBreak)
           {
-            block.Actions.ForEach(action =>
-            {
-              if (action is DeathRecord death)
-              {
-                if (!(PlayerManager.Instance.IsVerifiedPet(death.Killed) && !PlayerManager.Instance.IsPossiblePlayerName(death.Killed)))
-                {
-                  var isActorNpc = DataManager.Instance.IsLifetimeNpc(death.Killer) || DataManager.Instance.IsKnownNpc(death.Killer);
-                  var isTargetNpc = DataManager.Instance.IsLifetimeNpc(death.Killed) || DataManager.Instance.IsKnownNpc(death.Killed);
-                  var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(death.Killer);
-                  var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(death.Killed);
-
-                  string text = KILLSHOT_EVENT;
-                  if (isTargetPlayer && isActorPlayer)
-                  {
-                    text = PLAYERKILL_EVENT;
-                  }
-                  else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.Instance.IsPossiblePlayerName(death.Killed)))
-                  {
-                    text = PLAYERSLAIN_EVENT;
-                  }
-
-                  rows.Add(new EventRow() { Time = block.BeginTime, Actor = death.Killer, Target = death.Killed, Event = text });
-                }
-              }
-            });
-          });
-
-          DataManager.Instance.GetMiscDuring(0, double.MaxValue).ForEach(block =>
+            rows.Add(new EventRow() { Time = block.BeginTime, Actor = mezBreak.Breaker, Target = mezBreak.Awakened, Event = MEZBREAK_EVENT });
+          }
+          else if (action is ZoneRecord zone)
           {
-            block.Actions.ForEach(action =>
-            {
-              if (action is MezBreakRecord mezBreak)
-              {
-                rows.Add(new EventRow() { Time = block.BeginTime, Actor = mezBreak.Breaker, Target = mezBreak.Awakened, Event = MEZBREAK_EVENT });
-              }
-              else if (action is ZoneRecord zone)
-              {
-                rows.Add(new EventRow() { Time = block.BeginTime, Actor = ConfigUtil.PlayerName, Event = ZONE_EVENT, Target = zone.Zone });
-              }
-            });
-          });
+            rows.Add(new EventRow() { Time = block.BeginTime, Actor = ConfigUtil.PlayerName, Event = ZONE_EVENT, Target = zone.Zone });
+          }
+        });
+      });
 
-          rows.Sort((a, b) => a.Time.CompareTo(b.Time));
-          rows.ForEach(row => EventRows.Add(row));
+      rows.Sort((a, b) => a.Time.CompareTo(b.Time));
+      rows.ForEach(row => EventRows.Add(row));
 
-          Dispatcher.InvokeAsync(() =>
-          {
-            UpdateUI(rows.Count > 0);
-            Running = false;
-          });
-
-        }, TaskScheduler.Default);
-      }
+      Dispatcher.InvokeAsync(() => UpdateUI(rows.Count > 0));
     }
 
     private void UpdateUI(bool enable)
     {
-      (dataGrid.ItemsSource as ICollectionView)?.Refresh();
-      titleLabel.Content = dataGrid.Items.Count == 0 ? "No Events Found" : dataGrid.Items.Count + " Events Found";
+      dataGrid.View?.RefreshFilter();
+      titleLabel.Content = dataGrid.View.Records.Count == 0 ? "No Events Found" : dataGrid.View.Records.Count + " Events Found";
 
       if (showMezBreaks.IsEnabled != enable)
       {
@@ -163,24 +116,46 @@ namespace EQLogParser
       }
     }
 
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      // set header count
-      if (e.Row != null)
-      {
-        e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
-      }
-    }
-
     private void OptionsChange(object sender, EventArgs e)
     {
-      if (dataGrid?.ItemsSource != null)
+      if (dataGrid?.View != null)
       {
         CurrentShowMezBreaks = showMezBreaks.IsChecked.Value;
         CurrentShowEnterZone = showEnterZone.IsChecked.Value;
         CurrentShowKillShots = showKillShots.IsChecked.Value;
         CurrentShowPlayerKilling = showPlayerKillsPlayer.IsChecked.Value;
         CurrentShowPlayerSlain = showPlayerSlain.IsChecked.Value;
+
+        if (dataGrid.View.Filter == null)
+        {
+          dataGrid.View.Filter = new Predicate<object>(obj =>
+          {
+            bool result = false;
+            if (obj is EventRow row)
+            {
+              result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots &&
+                row.Event == KILLSHOT_EVENT || CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT || CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT;
+
+              if (result && !string.IsNullOrEmpty(eventFilter.Text) && eventFilter.Text != Properties.Resources.EVENT_FILTER_TEXT)
+              {
+                if (eventFilterModifier.SelectedIndex == 0)
+                {
+                  result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 || row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1;
+                }
+                else if (eventFilterModifier.SelectedIndex == 1)
+                {
+                  result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1 && row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1;
+                }
+                else if (eventFilterModifier.SelectedIndex == 2)
+                {
+                  result = row.Actor?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true || row.Target?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true;
+                }
+              }
+            }
+            return result;
+          });
+        }
+
         UpdateUI(true);
       }
     }
@@ -229,11 +204,6 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventViewer_EventsLogLoadingComplete;
         disposedValue = true;
       }

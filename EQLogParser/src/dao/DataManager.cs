@@ -946,11 +946,11 @@ namespace EQLogParser
         }
         else
         {
-          return new SpellTreeResult { SpellData = child.SpellData, DataIndex = lastIndex };
+          return new SpellTreeResult { SpellData = child.SpellData.Where(sd => sd.Level == lastIndex).ToList(), DataIndex = lastIndex };
         }
       }
 
-      return new SpellTreeResult { SpellData = node.SpellData, DataIndex = lastIndex };
+      return new SpellTreeResult { SpellData = node.SpellData.Where(sd => sd.Level == lastIndex).ToList(), DataIndex = lastIndex };
     }
 
     private static void BuildSpellPath(List<string> data, SpellTreeNode node, SpellData spellData, int lastIndex = -1)
