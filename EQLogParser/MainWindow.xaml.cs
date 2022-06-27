@@ -94,26 +94,12 @@ namespace EQLogParser
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
         Width = resolution.Width * 0.85 / dpi.DpiScaleX;
         Height = resolution.Height * 0.75 / dpi.DpiScaleY;
+        //SfSkinManager.ApplyStylesOnApplication = true;
 
         // set theme
         if (CurrentTheme == "MaterialDark")
         {
-          SfSkinManager.SetTheme(this, new Theme("MaterialDark"));
-          var themeSettings = new MaterialDarkThemeSettings();
-          themeSettings.PrimaryBackground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#ffe1e1e1"));
-          themeSettings.PrimaryForeground = new SolidColorBrush(Colors.Black);
-          themeSettings.PrimaryColorForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#ffe1e1e1"));
-          SfSkinManager.RegisterThemeSettings("MaterialDark", themeSettings);
-          BorderBrush = Application.Current.Resources["secondBackgroundBrush"] as SolidColorBrush;
-        }
-        else
-        {
-          //SfSkinManager.SetTheme(this, new Theme("Office2019Colorful"));
-          SfSkinManager.SetTheme(this, new Theme("FluentDark"));
-          var themeSettings = new FluentDarkThemeSettings();
-          themeSettings.PrimaryBackground = Application.Current.Resources["menuIconBrush"] as SolidColorBrush;
-          themeSettings.PrimaryForeground = new SolidColorBrush(Colors.Black);
-          SfSkinManager.RegisterThemeSettings("FluentDark", themeSettings);
+          SfSkinManager.SetTheme(this, new Theme("MaterialDarkCustom;MaterialDark"));
           BorderBrush = Application.Current.Resources["secondBackgroundBrush"] as SolidColorBrush;
         }
 

@@ -44,7 +44,7 @@
       ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
             <ContextMenu>
-              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Background="{StaticResource mainBackgroundBrush}" Click="SelectedContext" />
+              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Click="SelectedContext" />
             </ContextMenu>
           </syncfusion:EditControl.ContextMenu>
         </syncfusion:EditControl>
@@ -58,7 +58,7 @@
       <TextBlock x:Name="statusCount">0 Lines</TextBlock>
     </StatusBar>
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="12" Width="120" ItemsSource="{x:Static Fonts.SystemFontFamilies}" SelectionChanged="FontFamily_Changed" />
+      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="12" Width="120" SelectionChanged="FontFamily_Changed" />
       <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="12" SelectionChanged="FontSize_Changed" />
       <syncfusion:ColorPicker x:Name="colorPicker" Width="34" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
         HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColor_Changed" />

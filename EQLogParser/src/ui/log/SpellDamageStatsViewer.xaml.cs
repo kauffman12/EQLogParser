@@ -8,7 +8,6 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -17,7 +16,6 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellDamageStatsViewer : UserControl, IDisposable
   {
-    private readonly object LockObject = new object();
     private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
     private readonly ObservableCollection<string> Players = new ObservableCollection<string>();
     private readonly ObservableCollection<string> Spells = new ObservableCollection<string>();
@@ -28,10 +26,6 @@ namespace EQLogParser
     {
       InitializeComponent();
       dataGrid.ItemsSource = Records;
-      BindingOperations.EnableCollectionSynchronization(Records, LockObject);
-      BindingOperations.EnableCollectionSynchronization(Players, LockObject);
-      BindingOperations.EnableCollectionSynchronization(Spells, LockObject);
-      BindingOperations.EnableCollectionSynchronization(Types, LockObject);
       typeList.ItemsSource = Types;
       spellList.ItemsSource = Spells;
       playerList.ItemsSource = Players;

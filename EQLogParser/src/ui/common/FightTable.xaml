@@ -53,41 +53,41 @@
     <syncfusion:SfDataGrid x:Name="dataGrid" Grid.Row="1" SourceType="{x:Type local:Fight}" RowStyle="{StaticResource fightrowstyle}" ItemsSourceChanged="ItemsSourceChanged" SelectionMode="Extended" ColumnSizer="AutoWithLastColumnFill" AllowDraggingColumns="False" PreviewMouseDown="UpdateCurrentItem" HorizontalContentAlignment="Right" ShowRowHeader="True" RowHeaderWidth="40" Margin="0" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="SelectionChanged" AllowSorting="True">
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
-          <MenuItem x:Name="menuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick" Background="{StaticResource mainBackgroundBrush}">
+          <MenuItem x:Name="menuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPetIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Paw"  Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome x:Name="setPetIcon" Style="{StaticResource iconStyle}" Icon="Solid_Paw" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="menuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayerClick" Background="{StaticResource mainBackgroundBrush}">
+          <MenuItem x:Name="menuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayerClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPlayerIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_User" Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome x:Name="setPlayerIcon" Style="{StaticResource iconStyle}" Icon="Solid_User" />
             </MenuItem.Icon>
           </MenuItem>
-          <syncfusion:MenuItemSeparator />
-          <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick" Background="{StaticResource mainBackgroundBrush}">
+          <Separator />
+          <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome x:Name="selectAllIcon" Style="{StaticResource iconStyle}" Icon="Solid_Square" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick" Background="{StaticResource mainBackgroundBrush}">
+          <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome x:Name="unselectAllIcon" Style="{StaticResource iconStyle}" Icon="Regular_Square" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="menuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick" Background="{StaticResource mainBackgroundBrush}">
+          <MenuItem x:Name="menuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Clone" Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome x:Name="selectFightIcon" Style="{StaticResource iconStyle}" Icon="Solid_Clone" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="menuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick" Background="{StaticResource mainBackgroundBrush}">
+          <MenuItem x:Name="menuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Regular_Clone" Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome x:Name="unselectFightIcon" Style="{StaticResource iconStyle}" Icon="Regular_Clone" />
             </MenuItem.Icon>
           </MenuItem>
-          <syncfusion:MenuItemSeparator />
-          <MenuItem x:Name="menuItemClear" IsEnabled="False" Header="Clear All" Click="ClearClick" Background="{StaticResource mainBackgroundBrush}">
+          <Separator />
+          <MenuItem x:Name="menuItemClear" IsEnabled="False" Header="Clear All" Click="ClearClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="clearAllIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome x:Name="clearAllIcon" Style="{StaticResource iconStyle}" Icon="Solid_Times" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>

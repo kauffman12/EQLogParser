@@ -30,7 +30,7 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Margin="0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="titleLabel" Style="{StaticResource titleStyle}" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="4,0,0,0" x:Name="playersList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
@@ -40,20 +40,20 @@
     <syncfusion:SfDataGrid x:Name="dataGrid" ShowRowHeader="True" AllowSorting="True" AllowResizingColumns="True" ColumnSizer="AutoWithLastColumnFill" RowHeaderWidth="30" Grid.Row="1" AutoGenerateColumns="False" SelectionMode="Extended" IsReadOnly="True">
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As" Background="{StaticResource mainBackgroundBrush}">
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
-            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV Table" Click="CopyCsvClick" Background="{StaticResource mainBackgroundBrush}">
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV Table" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="{StaticResource menuIconBrush}" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh" Background="{StaticResource mainBackgroundBrush}">
+          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="{StaticResource menuIconBrush}" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Redo" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
