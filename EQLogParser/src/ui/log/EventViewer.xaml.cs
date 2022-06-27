@@ -61,7 +61,7 @@ namespace EQLogParser
         {
           if (action is DeathRecord death)
           {
-            if (!(PlayerManager.Instance.IsVerifiedPet(death.Killed) && !PlayerManager.Instance.IsPossiblePlayerName(death.Killed)))
+            if (!(PlayerManager.Instance.IsVerifiedPet(death.Killed) && !PlayerManager.IsPossiblePlayerName(death.Killed)))
             {
               var isActorNpc = DataManager.Instance.IsLifetimeNpc(death.Killer) || DataManager.Instance.IsKnownNpc(death.Killer);
               var isTargetNpc = DataManager.Instance.IsLifetimeNpc(death.Killed) || DataManager.Instance.IsKnownNpc(death.Killed);
@@ -73,7 +73,7 @@ namespace EQLogParser
               {
                 text = PLAYERKILL_EVENT;
               }
-              else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.Instance.IsPossiblePlayerName(death.Killed)))
+              else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.IsPossiblePlayerName(death.Killed)))
               {
                 text = PLAYERSLAIN_EVENT;
               }

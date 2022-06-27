@@ -555,7 +555,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(value))
       {
         string player = value.ToLower(CultureInfo.CurrentCulture);
-        if (!PlayerCache.ContainsKey(player) && !PlayerManager.Instance.IsVerifiedPet(player) && PlayerManager.Instance.IsPossiblePlayerName(player))
+        if (!PlayerCache.ContainsKey(player) && !PlayerManager.Instance.IsVerifiedPet(player) && PlayerManager.IsPossiblePlayerName(player))
         {
           PlayerCache[player] = 1;
           PlayerCacheUpdated = true;
