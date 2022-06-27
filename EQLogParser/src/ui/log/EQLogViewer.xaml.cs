@@ -17,7 +17,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for EQLogViewer.xaml
   /// </summary>
-  public partial class EQLogViewer : UserControl, IDisposable
+  public partial class EQLogViewer : UserControl
   {
     private const int CONTEXT = 30000;
     private const int MAX_ROWS = 250000;
@@ -597,31 +597,5 @@ namespace EQLogParser
     }
 
     private void OptionsChange(object sender, EventArgs e) => UpdateUI();
-
-    #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
-        disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }

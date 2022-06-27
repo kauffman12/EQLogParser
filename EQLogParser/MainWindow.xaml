@@ -293,16 +293,16 @@
         <local:FightTable />
       </ContentControl>
       <ContentControl x:Name="petMappingWindow" Tag="Hide" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="240" syncfusion:DockingManager.DesiredWidthInFloatingMode="240">
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="320" syncfusion:DockingManager.DesiredWidthInFloatingMode="320">
         <syncfusion:SfDataGrid x:Name="petMappingGrid" CurrentCellDropDownSelectionChanged="PetMappingDropDownSelectionChanged" RowHeaderWidth="0" Margin="0" ColumnSizer="AutoLastColumnFill" EditTrigger="OnTap" AutoGenerateColumns="False" AllowResizingColumns="False">
           <syncfusion:SfDataGrid.Columns>
-            <syncfusion:GridComboBoxColumn x:Name="ownerList" HeaderText="Owner" AllowEditing="True" IsReadOnly="False" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
+            <syncfusion:GridComboBoxColumn x:Name="ownerList" Width="160" HeaderText="Owner" AllowEditing="True" IsReadOnly="False" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
             <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
           </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>
       </ContentControl>
       <ContentControl x:Name="verifiedPlayersWindow" Tag="Hide" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
-                      syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="210" syncfusion:DockingManager.DesiredWidthInFloatingMode="210">
+                      syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="220" syncfusion:DockingManager.DesiredWidthInFloatingMode="220">
         <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" ColumnSizer="AutoLastColumnFill" IsReadOnly="True" AllowResizingColumns="False">
           <syncfusion:SfDataGrid.Columns>
             <syncfusion:GridTemplateColumn HeaderText="">
@@ -317,7 +317,7 @@
         </syncfusion:SfDataGrid>
       </ContentControl>
       <ContentControl x:Name="verifiedPetsWindow" Tag="Hide" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="210" syncfusion:DockingManager.DesiredWidthInFloatingMode="210">
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="220" syncfusion:DockingManager.DesiredWidthInFloatingMode="220">
         <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" ColumnSizer="AutoLastColumnFill" IsReadOnly="True" AllowResizingColumns="False">
           <syncfusion:SfDataGrid.Columns>
             <syncfusion:GridTemplateColumn HeaderText="">
