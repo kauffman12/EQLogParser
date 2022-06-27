@@ -41,6 +41,7 @@ namespace EQLogParser
       SfSkinManager.SetTheme(tabControl, new Theme("FluentDark"));
       fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
+      fontFamily.ItemsSource = System.Windows.Media.Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
 
       try
       {
@@ -498,6 +499,7 @@ namespace EQLogParser
     private void FontFgColor_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
       logBox.Foreground = new SolidColorBrush(colorPicker.Color);
+      contextBox.Foreground = new SolidColorBrush(colorPicker.Color);
       ConfigUtil.SetSetting("EQLogViewerFontFgColor", TextFormatUtils.GetHexString(colorPicker.Color));
     }
 
@@ -517,6 +519,7 @@ namespace EQLogParser
       {
         var family = fontFamily.SelectedItem as FontFamily;
         logBox.FontFamily = family;
+        contextBox.FontFamily = family;
         ConfigUtil.SetSetting("EQLogViewerFontFamily", family.ToString());
       }
     }

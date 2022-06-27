@@ -180,7 +180,8 @@ namespace EQLogParser
         }
 
         searchResult = DataManager.Instance.GetLandsOnOther(sList, out player);
-        if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player) && searchResult.SpellData[0].Target == (int)SpellTarget.PET)
+        if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player) && searchResult.SpellData[0].Target == (int)SpellTarget.PET
+          && PlayerManager.Instance.IsPossiblePlayerName(player))
         {
           // let the add verified API be used to force change to a pet so make this check here
           if (!PlayerManager.Instance.IsVerifiedPlayer(player))
