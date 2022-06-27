@@ -47,6 +47,7 @@ namespace EQLogParser
       InitializeComponent();
       SfSkinManager.SetTheme(colorPicker, new Theme("FluentDark", new string[] { "ColorPicker" }));
       fontSize.ItemsSource = FontSizeList;
+      fontFamily.ItemsSource = Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
       startDate.Text = Properties.Resources.CHAT_START_DATE;
       endDate.Text = Properties.Resources.CHAT_END_DATE;
       textFilter.Text = Properties.Resources.CHAT_TEXT_FILTER;
