@@ -75,7 +75,7 @@
       <TextBlock x:Name="statusCount"/>
     </StatusBar>
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"  Margin="0,0,0,0">
-      <ComboBox x:Name="fontFamily" Height="20" FontSize="11" Width="120" ItemsSource="{x:Static Fonts.SystemFontFamilies}" SelectionChanged="FontFamily_Changed" />
+      <ComboBox x:Name="fontFamily" Height="20" FontSize="11" Width="120" SelectionChanged="FontFamily_Changed" />
       <ComboBox x:Name="fontSize" Height="20" FontSize="11" SelectionChanged="FontSize_Changed" />
       <local:ColorComboBox x:Name="fontFgColor" Height="20" FontSize="11" SelectionChanged="FontFgColor_Changed" />
     </StackPanel>

@@ -203,12 +203,15 @@ namespace EQLogParser
       {
         // exact match meaning class-only spell that are of certain target types
         var tgt = (SpellTarget)spell.Target;
-        if (spell.Level <= 250 && (tgt == SpellTarget.SELF || tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS || spell.Rank > 1) &&
+        if (spell.Level <= 254 && spell.Proc == 0 && (tgt == SpellTarget.SELF || tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS || spell.Rank > 1) &&
           classEnums.Contains((SpellClass)spell.ClassMask))
         {
           // Obviously illusions are bad to look for
           // Call of Fire is Ranger only and self target but VT clickie lets warriors use it
-          if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 && spell.Name.IndexOf("Call of Fire", StringComparison.OrdinalIgnoreCase) == -1)
+          if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 && 
+          !spell.Name.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
+          spell.Name.IndexOf(" Synergy", StringComparison.OrdinalIgnoreCase) == -1 &&
+          spell.Name.IndexOf("Call of Fire", StringComparison.OrdinalIgnoreCase) == -1)
           {
             // these need to be unique and keep track if a conflict is found
             if (SpellsToClass.ContainsKey(spell.Name))

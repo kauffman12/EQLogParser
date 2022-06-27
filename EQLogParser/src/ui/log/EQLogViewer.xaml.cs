@@ -35,6 +35,7 @@ namespace EQLogParser
       InitializeComponent();
       fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
+      fontFamily.ItemsSource = System.Windows.Media.Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
 
       string fgColor = ConfigUtil.GetSetting("EQLogViewerFontFgColor");
       if (fontFgColor.ItemsSource is List<ColorItem> colors)

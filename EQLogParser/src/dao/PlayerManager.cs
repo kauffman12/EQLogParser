@@ -544,7 +544,10 @@ namespace EQLogParser
           counter.CurrentClass = theClass;
           counter.ClassCounts[theClass] = long.MaxValue;
           counter.CurrentMax = long.MaxValue;
-          LOG.Debug("Assigning " + player + " as " + theClass.ToString() + " from class specific action");
+          if (LOG.IsDebugEnabled)
+          {
+            LOG.Warn("Assigning " + player + " as " + theClass.ToString() + " from class specific action");
+          }
         }
       }
     }
