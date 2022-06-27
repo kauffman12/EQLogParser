@@ -8,10 +8,25 @@
   <Application.Resources>
     <SolidColorBrush x:Key="hoverForegroundBrush" Color="White"/>    
     <SolidColorBrush x:Key="menuIconBrush" Color="#FF4F9FE2"/>
-    <SolidColorBrush x:Key="mainBackgroundBrush" Color="#FF121212"/>
     <SolidColorBrush x:Key="searchBackgroundBrush" Color="#FF3a543f"/>
     <SolidColorBrush x:Key="secondBackgroundBrush" Color="#FF1f1f1f"/>
     <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
+
+    <Style x:Key="iconStyle" TargetType="fa:ImageAwesome">
+      <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
+      <Setter Property="Height" Value="12"/>
+      <Setter Property="Width" Value="12" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="titleStyle" TargetType="Label">
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Margin" Value="0" />
+    </Style>    
 
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">

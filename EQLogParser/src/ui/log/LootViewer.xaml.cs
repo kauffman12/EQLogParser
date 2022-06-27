@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -24,7 +23,6 @@ namespace EQLogParser
     private const string ONLYCURR = "Only Currency";
     private const string ONLYITEMS = "Only Items";
 
-    private static readonly object CollectionLock = new object();
     private readonly List<string> Options = new List<string>() { "Individual View", "Summary View" };
     private readonly ObservableCollection<LootRow> IndividualRecords = new ObservableCollection<LootRow>();
     private readonly ObservableCollection<LootRow> TotalRecords = new ObservableCollection<LootRow>();
@@ -38,16 +36,12 @@ namespace EQLogParser
 
       optionsList.ItemsSource = Options;
       optionsList.SelectedIndex = 0;
-
       dataGrid.ItemsSource = IndividualRecords;
-      BindingOperations.EnableCollectionSynchronization(IndividualRecords, CollectionLock);
-      BindingOperations.EnableCollectionSynchronization(TotalRecords, CollectionLock);
 
       // default these columns to descending
       string[] desc = new string[] { "Quantity" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LootViewer_EventsLogLoadingComplete;
       Load();
     }
@@ -223,14 +217,7 @@ namespace EQLogParser
                   row.Add(looted.Item);
                   break;
                 case "Quantity":
-                  if (looted.IsCurrency)
-                  {
-                    row.Add("");
-                  }
-                  else
-                  {
-                    row.Add(looted.Quantity);
-                  }
+                  row.Add(looted.IsCurrency ? "" : looted.Quantity);
                   break;
                 case "NPC":
                   row.Add(looted.Npc);
@@ -317,11 +304,6 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LootViewer_EventsLogLoadingComplete;
         disposedValue = true;
       }
