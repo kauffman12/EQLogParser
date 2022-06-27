@@ -131,7 +131,7 @@ namespace EQLogParser
 
                 foreach (var record in heal.Actions.Cast<HealRecord>())
                 {
-                  if (PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Healed) || PlayerManager.Instance.IsPossiblePlayerName(record.Healed))
+                  if (PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Healed) || PlayerManager.IsPossiblePlayerName(record.Healed))
                   {
                     // if AOEHealing is disabled then filter out AEs
                     if (!MainWindow.IsAoEHealingEnabled)

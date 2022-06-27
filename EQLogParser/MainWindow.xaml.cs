@@ -50,7 +50,7 @@ namespace EQLogParser
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
-    private const string VERSION = "v1.9.12";
+    private const string VERSION = "v1.9.13";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;

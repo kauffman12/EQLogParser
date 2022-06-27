@@ -193,12 +193,12 @@ namespace EQLogParser
 
         if (isDefenderNpc && !isAttackerNpc)
         {
-          valid = isAttackerPlayer || PlayerManager.Instance.IsPossiblePlayerName(record.Attacker);
+          valid = isAttackerPlayer || PlayerManager.IsPossiblePlayerName(record.Attacker);
           npcDefender = true;
         }
         else if (!isDefenderNpc && isAttackerNpc)
         {
-          valid = isDefenderPlayer || PlayerManager.Instance.IsPossiblePlayerName(record.Defender);
+          valid = isDefenderPlayer || PlayerManager.IsPossiblePlayerName(record.Defender);
           npcDefender = false;
         }
         else if (!isDefenderNpc && !isAttackerNpc)
@@ -226,7 +226,7 @@ namespace EQLogParser
           }
           else
           {
-            npcDefender = PlayerManager.Instance.IsPossiblePlayerName(record.Attacker) || !PlayerManager.Instance.IsPossiblePlayerName(record.Defender);
+            npcDefender = PlayerManager.IsPossiblePlayerName(record.Attacker) || !PlayerManager.IsPossiblePlayerName(record.Defender);
             valid = true;
           }
         }

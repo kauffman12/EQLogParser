@@ -590,7 +590,7 @@ namespace EQLogParser
       }
     }
 
-    internal int FindPossiblePlayerName(string part, out bool isCrossServer, int start = 0, int stop = -1, char end = char.MaxValue)
+    internal static int FindPossiblePlayerName(string part, out bool isCrossServer, int start = 0, int stop = -1, char end = char.MaxValue)
     {
       isCrossServer = false;
       int dotCount = 0;
@@ -635,7 +635,7 @@ namespace EQLogParser
       return -1;
     }
 
-    internal bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out bool _, 0, stop) > -1;
+    internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out bool _, 0, stop) > -1;
 
     private static void AddMultiCase(string[] values, ConcurrentDictionary<string, byte> dict)
     {
