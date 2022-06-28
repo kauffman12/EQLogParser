@@ -93,7 +93,7 @@ namespace EQLogParser
           {
             dockSite.Children.Remove(window);
           }
-          else if(dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
+          else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
           {
             dockSite.DocContainer.Items.Remove(window);
           }
@@ -170,7 +170,7 @@ namespace EQLogParser
 
       if (width != 0 && height != 0)
       {
-      //  window.ContainerDockedSize = new Size(width, height);
+        //  window.ContainerDockedSize = new Size(width, height);
       }
 
       //OpenWindow(window);

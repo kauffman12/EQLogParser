@@ -506,7 +506,7 @@ namespace EQLogParser
         }
       }
 
-      return new StatsSummary() { Title = title, RankedPlayers = details, };
+      return new StatsSummary { Title = title, RankedPlayers = details, };
     }
   }
 }

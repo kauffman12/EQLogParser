@@ -12,6 +12,10 @@
     <SolidColorBrush x:Key="secondBackgroundBrush" Color="#FF1f1f1f"/>
     <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
 
+    <DataTemplate x:Key="TemplateToolTip">
+      <TextBlock FontSize="12" Text="{Binding TooltipText}" />
+    </DataTemplate>
+
     <Style x:Key="iconStyle" TargetType="fa:ImageAwesome">
       <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
       <Setter Property="Height" Value="12"/>

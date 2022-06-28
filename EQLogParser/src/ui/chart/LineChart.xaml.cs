@@ -1,7 +1,6 @@
 ﻿using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -338,14 +337,6 @@ namespace EQLogParser
       {
         Reset();
       }
-    }
-
-    private string GetLabelFormat(double value)
-    {
-      string dateTimeString;
-      DateTime dt = value > 0 ? new DateTime((long)(value * TimeSpan.FromSeconds(1).Ticks)) : new DateTime();
-      dateTimeString = dt.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
-      return dateTimeString;
     }
 
     private void Reset() => titleLabel.Content = Labels.NODATA;
