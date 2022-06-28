@@ -89,7 +89,15 @@ namespace EQLogParser
         var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
         if (state == DockState.Hidden && window?.Tag as string != "Hide")
         {
-          dockSite.Children.Remove(window);
+          if (dockSite.Children.Contains(window))
+          {
+            dockSite.Children.Remove(window);
+          }
+          else if(dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
+          {
+            dockSite.DocContainer.Items.Remove(window);
+          }
+
           (window.Content as IDisposable)?.Dispose();
           window.Content = null;
           window = null;
@@ -122,6 +130,40 @@ namespace EQLogParser
       return window;
     }
 
+    internal static bool OpenChart(Dictionary<string, ContentControl> lookup, DockingManager dockSite, string key, List<string> choices,
+      string title, DocumentTabControl tabControl)
+    {
+      bool opened = false;
+      if (lookup[key] != null && lookup[key].Content != null)
+      {
+        lookup[key] = CloseWindow(dockSite, lookup[key]);
+      }
+      else
+      {
+        var chart = new LineChart(choices, true);
+        lookup[key] = new ContentControl { Name = key };
+        DockingManager.SetHeader(lookup[key], title);
+        DockingManager.SetState(lookup[key], DockState.Document);
+        lookup[key].Content = chart;
+
+        if (dockSite.DocContainer.Items.Count == 0)
+        {
+          dockSite.Children.Add(lookup[key]);
+        }
+        else if (tabControl == null || tabControl.Items.Count == 0)
+        {
+          dockSite.CreateHorizontalTabGroup(lookup[key]);
+        }
+        else
+        {
+          tabControl.Container.AddElementToTabGroup(tabControl, lookup[key]);
+        }
+
+        opened = true;
+      }
+      return opened;
+    }
+
     internal static ContentControl OpenNewTab(DockingManager dockSite, string id, string title, object content, double width = 0, double height = 0)
     {
       //var window = new DocumentWindow(dockSite, id, title, null, content);
@@ -134,17 +176,6 @@ namespace EQLogParser
       //OpenWindow(window);
       //window.MoveToLast();
       return null; // window;
-    }
-
-    internal static void HandleChartUpdate(Dispatcher dispatcher, ContentControl window, DataPointEvent e)
-    {
-      dispatcher.InvokeAsync(() =>
-      {
-        if (window != null)
-        {
-          (window.Content as LineChart)?.HandleUpdateEvent(e);
-        }
-      });
     }
 
     internal static string CreateRecordKey(string type, string subType)

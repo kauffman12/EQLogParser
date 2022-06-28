@@ -71,13 +71,11 @@ namespace EQLogParser
     private ContentControl DamageWindow = null;
     private ContentControl HealingWindow = null;
     private ContentControl TankingWindow = null;
-    private ContentControl DamageChartWindow = null;
-    private ContentControl HealingChartWindow = null;
-    private ContentControl TankingChartWindow = null;
     private ContentControl EventWindow = null;
     private ContentControl LootWindow = null;
     private ContentControl SpellResistsWindow = null;
     private ContentControl SpellDamageWindow = null;
+    private DocumentTabControl ChartTab = null;
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
     private string CurrentTheme = "MaterialDark";
@@ -111,7 +109,8 @@ namespace EQLogParser
           { npcIcon.Name, npcWindow },
           { verifiedPlayersIcon.Name, verifiedPlayersWindow },
           { verifiedPetsIcon.Name, verifiedPetsWindow }, { petMappingIcon.Name, petMappingWindow },
-          { playerParseIcon.Name, playerParseTextWindow }
+          { playerParseIcon.Name, playerParseTextWindow }, { damageChartIcon.Name, null },
+          { healingChartIcon.Name, null }, { tankingChartIcon.Name, null }
         };
 
         // Clear/Reset
@@ -121,10 +120,10 @@ namespace EQLogParser
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, verifiedPlayersWindow, petMappingWindow);
         MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
 
-        (npcWindow.Content as FightTable).EventsSelectionChange += (sender, data) => ComputeStats();
-        DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, DamageChartWindow, data);
-        HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, HealingChartWindow, data);
-        TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, TankingChartWindow, data);
+        (npcWindow.Content as FightTable).EventsSelectionChange += (_, __) => ComputeStats();
+        DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Name, data));
+        HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Name, data));
+        TankingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Name, data));
 
         UpdateDeleteChatMenu();
 
@@ -163,18 +162,6 @@ namespace EQLogParser
         // Damage Overlay
         enableDamageOverlayIcon.Visibility = OverlayUtil.LoadSettings() ? Visibility.Visible : Visibility.Hidden;
 
-        // Show Tanking Summary at startup
-        ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
-        // Show Tanking Summary at startup
-        ConfigUtil.IfSet("ShowTankingChartAtStartup", OpenTankingChart);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowHealingChartAtStartup", OpenHealingChart);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowDamageChartAtStartup", OpenDamageChart);
         LOG.Info("Initialized Components");
 
         if (ConfigUtil.IfSet("AutoMonitor"))
@@ -219,11 +206,34 @@ namespace EQLogParser
 
     internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
 
-    private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
-
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
+    }
+    private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
+
+    private void DockSiteLoaded(object sender, RoutedEventArgs e)
+    {
+      // Show Tanking Summary at startup
+      ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
+      // Show Healing Summary at startup
+      ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
+      // Show Healing Summary at startup
+      ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
+      // Show Tanking Summary at startup
+      ConfigUtil.IfSet("ShowTankingChartAtStartup", OpenTankingChart);
+      // Show Healing Summary at startup
+      ConfigUtil.IfSet("ShowHealingChartAtStartup", OpenHealingChart);
+      // Show Healing Summary at startup
+      ConfigUtil.IfSet("ShowDamageChartAtStartup", OpenDamageChart);
+    }
+
+    private void HandleChartUpdate(string key, DataPointEvent e)
+    {
+      if (IconToWindow[key] != null && IconToWindow[key].Content != null)
+      {
+        (IconToWindow[key].Content as LineChart)?.HandleUpdateEvent(e);
+      }
     }
 
     private void UpdateDeleteChatMenu()
@@ -269,9 +279,9 @@ namespace EQLogParser
       (DamageWindow?.Content as DamageSummary)?.Clear();
       (HealingWindow?.Content as HealingSummary)?.Clear();
       (TankingWindow?.Content as TankingSummary)?.Clear();
-      (DamageChartWindow?.Content as LineChart)?.Clear();
-      (HealingChartWindow?.Content as LineChart)?.Clear();
-      (TankingChartWindow?.Content as LineChart)?.Clear();
+      (IconToWindow[damageChartIcon.Name]?.Content as LineChart)?.Clear();
+      (IconToWindow[healingChartIcon.Name]?.Content as LineChart)?.Clear();
+      (IconToWindow[tankingChartIcon.Name]?.Content as LineChart)?.Clear();
     }
 
     private void ComputeStats()
@@ -279,21 +289,24 @@ namespace EQLogParser
       var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id);
       string name = filtered?.FirstOrDefault()?.Name;
 
-      var damageOptions = new GenerateStatsOptions { Name = name, RequestChartData = DamageChartWindow != null };
+      var reqDamageChart = (IconToWindow[damageChartIcon.Name] != null && IconToWindow[damageChartIcon.Name].Content != null);
+      var damageOptions = new GenerateStatsOptions { Name = name, RequestChartData = reqDamageChart };
       damageOptions.Npcs.AddRange(filtered);
       if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow != null)
       {
         damageOptions.RequestSummaryData = true;
       }
 
-      var healingOptions = new GenerateStatsOptions { Name = name, RequestChartData = HealingChartWindow != null };
+      var reqHealingChart = (IconToWindow[healingChartIcon.Name] != null && IconToWindow[healingChartIcon.Name].Content != null);
+      var healingOptions = new GenerateStatsOptions { Name = name, RequestChartData = reqHealingChart };
       healingOptions.Npcs.AddRange(filtered);
       if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow != null)
       {
         healingOptions.RequestSummaryData = true;
       }
 
-      var tankingOptions = new GenerateStatsOptions { Name = name, RequestChartData = TankingChartWindow != null };
+      var reqTankingChart = (IconToWindow[tankingChartIcon.Name] != null && IconToWindow[tankingChartIcon.Name].Content != null);
+      var tankingOptions = new GenerateStatsOptions { Name = name, RequestChartData = reqTankingChart };
       tankingOptions.Npcs.AddRange(filtered);
       if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow != null)
       {
@@ -423,6 +436,11 @@ namespace EQLogParser
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
     }
 
+    private void TabGroupCreated(object sender, TabGroupEventArgs e)
+    {
+      ChartTab = e.CurrentTabGroup;
+    }
+
     // Main Menu
     private void MenuItemWindowClick(object sender, RoutedEventArgs e)
     {
@@ -497,46 +515,9 @@ namespace EQLogParser
       }
     }
 
-    private bool OpenLineChart(ContentControl window, ContentControl other1, ContentControl other2, FrameworkElement icon, string title,
-      List<string> choices, bool includePets, out ContentControl newWindow)
-    {
-      bool updated = false;
-      newWindow = window;
-
-      if (newWindow != null)
-      {
-        dockSite.ExecuteClose(newWindow);
-        newWindow = null;
-      }
-      else
-      {
-        updated = true;
-        var chart = new LineChart(choices, includePets);
-        //newWindow = new DocumentWindow(dockSite, title, title, null, chart);
-        IconToWindow[icon.Name] = newWindow;
-
-        //Helpers.OpenWindow(newWindow);
-        //newWindow.CanFloat = true;
-        //newWindow.CanClose = true;
-
-        /*
-        if (other1?.IsOpen == true || other2?.IsOpen == true)
-        {
-          newWindow.MoveToNextContainer();
-        }
-        else
-        {
-          newWindow.MoveToNewHorizontalContainer();
-        }
-        */
-      }
-
-      return updated;
-    }
-
     private void OpenDamageChart()
     {
-      if (OpenLineChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, true, out DamageChartWindow))
+      if (Helpers.OpenChart(IconToWindow, dockSite, damageChartIcon.Name, DAMAGE_CHOICES, "Damage Chart", ChartTab))
       {
         var summary = DamageWindow?.Content as DamageSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
@@ -546,7 +527,7 @@ namespace EQLogParser
 
     private void OpenHealingChart()
     {
-      if (OpenLineChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, false, out HealingChartWindow))
+      if (Helpers.OpenChart(IconToWindow, dockSite, healingChartIcon.Name, HEALING_CHOICES, "Healing Chart", ChartTab))
       {
         var summary = HealingWindow?.Content as HealingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
@@ -556,7 +537,7 @@ namespace EQLogParser
 
     private void OpenTankingChart()
     {
-      if (OpenLineChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, false, out TankingChartWindow))
+      if (Helpers.OpenChart(IconToWindow, dockSite, tankingChartIcon.Name, TANKING_CHOICES, "Tanking Chart", ChartTab))
       {
         var summary = TankingWindow?.Content as TankingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
@@ -930,7 +911,7 @@ namespace EQLogParser
 
     private void WindowIcon_Loaded(object sender, RoutedEventArgs e)
     {
-      if (sender is FrameworkElement icon && IconToWindow.ContainsKey(icon.Name))
+      if (sender is FrameworkElement icon)
       {
         if (IconToWindow.ContainsKey(icon.Name) && IconToWindow[icon.Name] != null && IconToWindow[icon.Name].Content != null)
         {
@@ -992,9 +973,12 @@ namespace EQLogParser
       ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", (DamageWindow != null).ToString(CultureInfo.CurrentCulture));
       ConfigUtil.SetSetting("ShowHealingSummaryAtStartup", (HealingWindow != null).ToString(CultureInfo.CurrentCulture));
       ConfigUtil.SetSetting("ShowTankingSummaryAtStartup", (TankingWindow != null).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowDamageChartAtStartup", (DamageChartWindow != null).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowHealingChartAtStartup", (HealingChartWindow != null).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowTankingChartAtStartup", (TankingChartWindow != null).ToString(CultureInfo.CurrentCulture));
+      var damageChart = (IconToWindow[damageChartIcon.Name] != null && IconToWindow[damageChartIcon.Name].Content != null);
+      var healingChart = (IconToWindow[healingChartIcon.Name] != null && IconToWindow[healingChartIcon.Name].Content != null);
+      var tankingChart = (IconToWindow[tankingChartIcon.Name] != null && IconToWindow[tankingChartIcon.Name].Content != null);
+      ConfigUtil.SetSetting("ShowDamageChartAtStartup", damageChart.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowHealingChartAtStartup", healingChart.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("ShowTankingChartAtStartup", tankingChart.ToString(CultureInfo.CurrentCulture));
 
       StopProcessing();
       OverlayUtil.CloseOverlay();

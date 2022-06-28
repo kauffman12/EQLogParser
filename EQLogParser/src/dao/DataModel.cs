@@ -21,10 +21,21 @@ namespace EQLogParser
 
   internal interface IAction { }
 
-  internal class ColorItem
+  internal class DataPoint
   {
-    public SolidColorBrush Brush { get; set; }
+    public long Avg { get; set; }
     public string Name { get; set; }
+    public string PlayerName { get; set; }
+    public int ModifiersMask { get; set; }
+    public long Total { get; set; }
+    public long RollingTotal { get; set; }
+    public uint RollingHits { get; set; }
+    public uint RollingCritHits { get; set; }
+    public long Vps { get; set; }
+    public double CritRate { get; set; }
+    public double BeginTime { get; set; }
+    public double CurrentTime { get; set; }
+    public DateTime DateTime { get; set; }
   }
 
   internal class ComboBoxItemDetails

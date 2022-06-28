@@ -6,17 +6,17 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              mc:Ignorable="d" 
              d:DesignHeight="250" d:DesignWidth="800">
-  <Grid Background="#232325">
+  <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="200*"></RowDefinition>
     </Grid.RowDefinitions>
     <!-- Setting Background colors -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="titleLabel" Style="{StaticResource titleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-      <ComboBox Margin="0,0,0,0" x:Name="petOrPlayerList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0" x:Name="petOrPlayerList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="choicesList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
     <syncfusion:SfChart x:Name="sfLineChart" Grid.Row="2" Margin="0">
@@ -24,16 +24,16 @@
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
