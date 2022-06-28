@@ -85,18 +85,6 @@ namespace EQLogParser
       }
     }
 
-    internal void FixSize()
-    {
-      Task.Delay(750).ContinueWith(task =>
-      {
-        Dispatcher.InvokeAsync(() =>
-        {
-          //lvcChart.UpdateLayout();
-          //lvcChart.Update();
-        });
-      }, TaskScheduler.Default);
-    }
-
     private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null, Predicate<object> filter = null)
     {
       Task.Run(() =>
@@ -360,10 +348,7 @@ namespace EQLogParser
       return dateTimeString;
     }
 
-    private void Reset()
-    {
-      titleLabel.Content = Labels.NODATA;
-    }
+    private void Reset() => titleLabel.Content = Labels.NODATA;
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -517,22 +502,5 @@ namespace EQLogParser
         playerValues.Add(newEntry);
       }
     }
-  }
-
-  public class DataPoint
-  {
-    public long Avg { get; set; }
-    public string Name { get; set; }
-    public string PlayerName { get; set; }
-    public int ModifiersMask { get; set; }
-    public long Total { get; set; }
-    public long RollingTotal { get; set; }
-    public uint RollingHits { get; set; }
-    public uint RollingCritHits { get; set; }
-    public long Vps { get; set; }
-    public double CritRate { get; set; }
-    public double BeginTime { get; set; }
-    public double CurrentTime { get; set; }
-    public DateTime DateTime { get; set; }
   }
 }
