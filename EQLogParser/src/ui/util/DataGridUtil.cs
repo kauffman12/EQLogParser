@@ -35,7 +35,7 @@ namespace EQLogParser
 
         dataGrid.View.SortDescriptions.Remove(sortcolumn);
         dataGrid.View.SortDescriptions.Add(sortDescription);
-      } 
+      }
     }
 
     internal static void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e, string[] descending)

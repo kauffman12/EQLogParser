@@ -23,9 +23,6 @@
         <Setter Property="RowHoverForeground" Value="{StaticResource hoverForegroundBrush}"/>
       </Style>
       <local:TotalFormatConverter x:Key="TotalFormatConverter" />
-      <DataTemplate x:Key="TemplateToolTip">
-        <TextBlock FontSize="12" Text="{Binding TooltipText}" />
-      </DataTemplate>
       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">
           <Setter.Value>

@@ -3,8 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -216,14 +214,12 @@ namespace EQLogParser
     public string Actor { get; set; }
     public string Target { get; set; }
     public string Event { get; set; }
-    public string TooltipText { get; set; }
     public string Empty { get; } = "";
   }
 
   internal class LootRow : LootRecord
   {
     public double Time { get; set; }
-    public string TooltipText { get; set; }
     public string Empty { get; } = "";
   }
 
@@ -475,7 +471,6 @@ namespace EQLogParser
     public float PercentOfRaid { get; set; }
     public string Special { get; set; }
     public string ClassName { get; set; }
-    public string TooltipText { get; set; } // referenced by cell style and could start using
     public TimeRange Ranges { get; } = new TimeRange();
   }
 

@@ -148,11 +148,6 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= NpcStatsViewer_EventsLogLoadingComplete;
         disposedValue = true;
       }

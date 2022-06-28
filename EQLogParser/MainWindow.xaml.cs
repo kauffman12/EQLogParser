@@ -559,7 +559,7 @@ namespace EQLogParser
         //DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
         IconToWindow[damageSummaryIcon.Name] = DamageWindow;
 
-        Helpers.OpenWindow(dockSite,DamageWindow);
+        Helpers.OpenWindow(dockSite, DamageWindow);
         if (HealingWindow != null || TankingWindow != null)
         {
           //DamageWindow.MoveToPreviousContainer();
@@ -622,7 +622,7 @@ namespace EQLogParser
         IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
 
         Helpers.OpenWindow(dockSite, TankingWindow);
-        if (DamageWindow!= null || HealingWindow != null)
+        if (DamageWindow != null || HealingWindow != null)
         {
           //TankingWindow.MoveToPreviousContainer();
         }
