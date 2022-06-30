@@ -31,7 +31,7 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid, selectedColumns);
+      //InitSummaryTable(title, dataGrid, selectedColumns);
 
       PropertyDescriptor widthPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
       PropertyDescriptor orderPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn));
@@ -66,7 +66,7 @@ namespace EQLogParser
       };
     }
 
-    internal new void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtil.ShowColumns(selectedColumns, dataGrid, ChildGrids);
+    internal new void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(selectedColumns, null, null);// grid, ChildGrids);
 
     private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.DAMAGEPARSE);
 
@@ -274,6 +274,7 @@ namespace EQLogParser
               childColumn.DisplayIndex = column.DisplayIndex;
             }
 
+            /*
             if (TheShownColumns != null && TheShownColumns.Count > 0)
             {
               // never let users hide the first two columns
@@ -293,6 +294,7 @@ namespace EQLogParser
                 childColumn.Visibility = dataGrid.Columns[i].Visibility;
               }
             }
+            */
           }
         }
       }

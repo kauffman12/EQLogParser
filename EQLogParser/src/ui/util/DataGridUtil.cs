@@ -195,72 +195,80 @@ namespace EQLogParser
         Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    internal static Dictionary<string, bool> LoadColumns(ComboBox columns, DataGrid dataGrid, int start = 0)
+    internal static void LoadColumns(ComboBox columnCombo, SfDataGrid dataGrid, int start = 0)
     {
-      var columnNames = dataGrid.Columns.Select(col => col.Header as string).ToHashSet();
-      var indexesCache = new Dictionary<string, int>();
-      var indexString = ConfigUtil.GetSetting((columns.Tag as string) + "DisplayIndex");
+      string visibleSetting = ConfigUtil.GetSetting(columnCombo.Tag as string);
+      Dictionary<string, bool> visible = new Dictionary<string, bool>();
+      visible["Name"] = true;
+
+      if (!string.IsNullOrEmpty(visibleSetting))
+      {
+        visibleSetting.Split(',').ToList().ForEach(key => visible[key] = true);
+      }
+
+      Columns updatedColumns = new Columns();
+      dataGrid.Columns.Take(start).ToList().ForEach(column => updatedColumns.Add(column));
+
+      var indexString = ConfigUtil.GetSetting((columnCombo.Tag as string) + "DisplayIndex");
       if (!string.IsNullOrEmpty(indexString))
       {
-        int index = start;
-        foreach (var col in indexString.Split(','))
+        var foundColumns = new Dictionary<string, bool>();
+        foreach (var name in indexString.Split(','))
         {
-          if (!string.IsNullOrEmpty(col))
+          for (int i = start; i < dataGrid.Columns.Count; i++)
           {
-            var split = col.Split('|');
-            if (split != null && split.Length >= 1 && !string.IsNullOrEmpty(split[0]))
+            if (dataGrid.Columns[i].HeaderText == name)
             {
-              // ignore the saved index
-              if (columnNames.Contains(split[0]))
-              {
-                indexesCache[split[0]] = index++;
-              }
+              foundColumns[name] = true;
+              updatedColumns.Add(dataGrid.Columns[i]);
+              dataGrid.Columns[i].IsHidden = !visible.ContainsKey(name);
+              break;
             }
           }
         }
-      }
 
-      var cache = new Dictionary<string, bool>();
-      string columnSetting = ConfigUtil.GetSetting(columns.Tag as string);
-      if (!string.IsNullOrEmpty(columnSetting))
-      {
-        foreach (var selected in columnSetting.Split(','))
+        for (int i = start; i < dataGrid.Columns.Count; i++)
         {
-          cache[selected] = true;
+          if (!foundColumns.ContainsKey(dataGrid.Columns[i].HeaderText))
+          {
+            updatedColumns.Add(dataGrid.Columns[i]);
+            dataGrid.Columns[i].IsHidden = !visible.ContainsKey(dataGrid.Columns[i].HeaderText);
+          }
         }
+
+        dataGrid.Columns = updatedColumns;
+
+        // save column order if it changes
+        dataGrid.QueryColumnDragging  += (object sender, QueryColumnDraggingEventArgs e) =>
+        {
+          if (e.Reason == QueryColumnDraggingReason.Dropped)
+          {
+            var dataGrid = sender as SfDataGrid;
+            var columns = dataGrid.Columns.ToList().Skip(start).Select(column => column.HeaderText).ToList();
+            ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+          }
+        };
       }
 
       int selectedCount = 0;
       List<ComboBoxItemDetails> list = new List<ComboBoxItemDetails>();
-      for (int i = 0; i < dataGrid.Columns.Count; i++)
+      for (int i = start; i < dataGrid.Columns.Count; i++)
       {
-        var column = dataGrid.Columns[i];
-        var header = column.Header as string;
-        if (!string.IsNullOrEmpty(header))
+        // dont let them hide Name
+        if (dataGrid.Columns[i].HeaderText != "Name")
         {
-          if (header != "Name")
-          {
-            var visible = (cache.Count == 0 && column.Visibility == Visibility.Visible) || cache.ContainsKey(header);
-            column.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
-            selectedCount += visible ? 1 : 0;
-            list.Add(new ComboBoxItemDetails { Text = column.Header as string, IsChecked = visible });
-
-            if (indexesCache.ContainsKey(header) && column.DisplayIndex != indexesCache[header])
-            {
-              column.DisplayIndex = indexesCache[header];
-            }
-          }
+          list.Add(new ComboBoxItemDetails { Text = dataGrid.Columns[i].HeaderText, IsChecked = !dataGrid.Columns[i].IsHidden });
+          selectedCount += dataGrid.Columns[i].IsHidden ? 0 : 1;
         }
       }
 
-      columns.ItemsSource = list;
-      SetSelectedColumnsTitle(columns, selectedCount);
-      return cache;
+      columnCombo.ItemsSource = list;
+      SetSelectedColumnsTitle(columnCombo, selectedCount);
     }
 
-    internal static Dictionary<string, bool> ShowColumns(ComboBox columns, DataGrid dataGrid, List<DataGrid> children = null)
+    internal static Dictionary<string, bool> ShowColumns(ComboBox columns, SfDataGrid dataGrid, List<SfDataGrid> children = null)
     {
-      Dictionary<string, bool> cache = new Dictionary<string, bool>();
+      Dictionary<string, bool> visible = new Dictionary<string, bool>();
       if (columns.Items.Count > 0)
       {
         for (int i = 0; i < columns.Items.Count; i++)
@@ -268,78 +276,42 @@ namespace EQLogParser
           var checkedItem = columns.Items[i] as ComboBoxItemDetails;
           if (checkedItem.IsChecked)
           {
-            cache[checkedItem.Text] = true;
+            visible[checkedItem.Text] = true;
           }
         }
 
-        SetSelectedColumnsTitle(columns, cache.Count);
+        SetSelectedColumnsTitle(columns, visible.Count);
 
         for (int i = 0; i < dataGrid.Columns.Count; i++)
         {
-          string header = dataGrid.Columns[i].Header as string;
-          if (!string.IsNullOrEmpty(header) && header != "Name")
+          var header = dataGrid.Columns[i].HeaderText;
+          if (!string.IsNullOrEmpty(header))
           {
-            if (cache.ContainsKey(header))
+            if (dataGrid.Columns[i].IsHidden == visible.ContainsKey(header))
             {
-              if (dataGrid.Columns[i].Visibility != Visibility.Visible)
-              {
-                dataGrid.Columns[i].Visibility = Visibility.Visible;
-              }
-
-              if (children != null)
-              {
-                children.ForEach(child =>
-                {
-                  if (child.Columns[i].Visibility != Visibility.Visible)
-                  {
-                    child.Columns[i].Visibility = Visibility.Visible;
-                  }
-                });
-              }
+              dataGrid.Columns[i].IsHidden = !visible.ContainsKey(header);
             }
-            else
-            {
-              if (dataGrid.Columns[i].Visibility != Visibility.Hidden)
-              {
-                dataGrid.Columns[i].Visibility = Visibility.Hidden;
-              }
 
-              if (children != null)
+            if (children != null)
+            {
+              children.ForEach(child =>
               {
-                children.ForEach(child =>
+                if (child.Columns[i].IsHidden == visible.ContainsKey(header))
                 {
-                  if (child.Columns[i].Visibility != Visibility.Hidden)
-                  {
-                    child.Columns[i].Visibility = Visibility.Hidden;
-                  }
-                });
-              }
+                  child.Columns[i].IsHidden = !visible.ContainsKey(header);
+                }
+              });
             }
           }
         }
 
         if (!string.IsNullOrEmpty(columns.Tag as string))
         {
-          ConfigUtil.SetSetting(columns.Tag as string, string.Join(",", cache.Keys));
+          ConfigUtil.SetSetting(columns.Tag as string, string.Join(",", visible.Keys));
         }
       }
 
-      return cache;
-    }
-
-    internal static void SaveColumnIndexes(ComboBox columns, DataGrid dataGrid)
-    {
-      var columnIndexes = new List<string>();
-      foreach (var column in dataGrid.Columns.OrderBy(column => column.DisplayIndex))
-      {
-        string header = column.Header as string;
-        if (!string.IsNullOrEmpty(header))
-        {
-          columnIndexes.Add(header);
-        }
-      }
-
-      ConfigUtil.SetSetting(columns.Tag + "DisplayIndex", string.Join(",", columnIndexes));
+      return visible;
     }
 
     private static void SetSelectedColumnsTitle(ComboBox columns, int count)

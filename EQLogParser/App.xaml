@@ -11,11 +11,28 @@
     <SolidColorBrush x:Key="searchBackgroundBrush" Color="#FF3a543f"/>
     <SolidColorBrush x:Key="secondBackgroundBrush" Color="#FF1f1f1f"/>
     <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
+    <!-- colors set at startup -->
+    <SolidColorBrush x:Key="backgroundBrush" Color="#FF121212"/>
 
     <DataTemplate x:Key="TemplateToolTip">
       <TextBlock FontSize="12" Text="{Binding TooltipText}" />
     </DataTemplate>
-
+    <DataTemplate x:Key="HeaderTotalTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Percent of Total (raid total)" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderOverHealTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Amount of Healing in Excess of what could be Healed" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderHPSTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Healing Per Second based on Player Time" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderSHPSTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Scaled Healing Per Second based on Total Time (raid time)" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderOverHealPercentTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Percent of Healing in Excess of what could be Healed" />
+    </DataTemplate>
+    
     <Style x:Key="iconStyle" TargetType="fa:ImageAwesome">
       <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
       <Setter Property="Height" Value="12"/>

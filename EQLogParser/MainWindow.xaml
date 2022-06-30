@@ -288,6 +288,10 @@
     <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIcon_Click"/>
 
     <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" TabGroupCreated="TabGroupCreated" Loaded="DockSiteLoaded" DocumentCloseButtonType="Individual" CloseButtonClick="dockSite_CloseButtonClick"  WindowClosing="dockSite_WindowClosing">
+      <ContentControl x:Name="playerParseTextWindow" Tag="Hide" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
+                      syncfusion:DockingManager.DesiredHeightInDockedMode="150" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
+        <local:ParsePreview />
+      </ContentControl>   
       <ContentControl x:Name="npcWindow" Tag="Hide" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="340" syncfusion:DockingManager.DesiredWidthInFloatingMode="340">
         <local:FightTable />
@@ -330,10 +334,6 @@
             <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
           </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>
-      </ContentControl>
-      <ContentControl x:Name="playerParseTextWindow" Tag="Hide" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
-                      syncfusion:DockingManager.DesiredHeightInDockedMode="150" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
-        <local:ParsePreview />
       </ContentControl>
     </syncfusion:DockingManager>
   </Grid>

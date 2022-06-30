@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -13,8 +14,10 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for ParsePreview.xaml
   /// </summary>
-  public partial class ParsePreview : UserControl, IDisposable
+  public partial class ParsePreview : UserControl
   {
+    private static readonly SolidColorBrush BRIGHT_BRUSH = Application.Current.Resources["hoverForegroundBrush"] as SolidColorBrush;
+    private static readonly SolidColorBrush WARNING_BRUSH = Application.Current.Resources["warnBackgroundBrush"] as SolidColorBrush;
     private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
     private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
     private readonly bool initialized = false;
@@ -34,6 +37,7 @@ namespace EQLogParser
       playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
       playerParseTextDoTime.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowTime", true);
 
+      // this window is either hidden or visible and doesn't need to implement dispose
       DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
@@ -80,6 +84,28 @@ namespace EQLogParser
       }
 
       TriggerParseUpdate(type, copy);
+    }
+
+    internal void UpdateParse(PlayerStatsSelectionChangedEventArgs data, ISummaryBuilder builder, bool hasTopParse, string label, string topLabel)
+    {
+      // change the update order based on whats displayed
+      if (parseList.SelectedItem?.ToString() == topLabel)
+      {
+        UpdateParse(label, data.Selected);
+        if (hasTopParse)
+        {
+          AddParse(topLabel, builder, data.CurrentStats, data.Selected);
+        }
+      }
+      else
+      {
+        if (hasTopParse)
+        {
+          AddParse(topLabel, builder, data.CurrentStats, data.Selected);
+        }
+
+        UpdateParse(label, data.Selected);
+      }
     }
 
     internal void UpdateParse(string type, List<PlayerStats> selected)
@@ -152,37 +178,33 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == Properties.Resources.SHARE_DPS_SELECTED)
       {
         copyToEQButton.IsEnabled = false;
-        copyToEQButton.Foreground = MainWindow.LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_SELECTED;
-        sharePlayerParseLabel.Foreground = MainWindow.BRIGHT_TEXT_BRUSH;
+        sharePlayerParseLabel.Foreground = BRIGHT_BRUSH;
         sharePlayerParseWarningLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
       }
       else if (playerParseTextBox.Text.Length > 509)
       {
         copyToEQButton.IsEnabled = false;
-        copyToEQButton.Foreground = MainWindow.LIGHTER_BRUSH;
         sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_TOO_BIG;
-        sharePlayerParseLabel.Foreground = MainWindow.WARNING_BRUSH;
-        sharePlayerParseWarningLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0}/{1}", playerParseTextBox.Text.Length, 509);
-        sharePlayerParseWarningLabel.Foreground = MainWindow.WARNING_BRUSH;
+        sharePlayerParseLabel.Foreground = WARNING_BRUSH;
+        sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
+        sharePlayerParseWarningLabel.Foreground = WARNING_BRUSH;
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
       else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Properties.Resources.SHARE_DPS_SELECTED)
       {
         copyToEQButton.IsEnabled = true;
-        copyToEQButton.Foreground = MainWindow.BRIGHT_TEXT_BRUSH;
-
         if (parseList.SelectedItem != null && Parses.TryGetValue(parseList.SelectedItem as string, out ParseData data))
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
           string players = count == 1 ? "Player" : "Players";
-          sharePlayerParseLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0} {1} Selected", count, players);
+          sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
         }
 
-        sharePlayerParseLabel.Foreground = MainWindow.BRIGHT_TEXT_BRUSH;
+        sharePlayerParseLabel.Foreground = BRIGHT_BRUSH;
         sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + " / " + 509;
-        sharePlayerParseWarningLabel.Foreground = MainWindow.GOOD_BRUSH;
+        sharePlayerParseWarningLabel.Foreground = BRIGHT_BRUSH;
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
     }
@@ -255,34 +277,5 @@ namespace EQLogParser
       TitleTimer.Stop();
       TitleTimer.Start();
     }
-
-    #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
-        TankingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-        HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-        DamageStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-        disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }
