@@ -26,24 +26,16 @@ namespace EQLogParser
       {
         TheDataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
 
-        PropertyDescriptor orderPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn));
-        foreach (var column in dataGrid.Columns)
-        {
-          orderPd.AddValueChanged(column, new EventHandler(ColumnDisplayIndexPropertyChanged));
-        }
-
         if (TheSelectedColumns != null)
         {
-          DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
+          //DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
         }
       }
     }
 
     internal abstract void Display(List<PlayerStats> selectedStats = null);
 
-    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
-
-    internal void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtil.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, null);
 
     internal void CustomSorting(object sender, DataGridSortingEventArgs e)
     {

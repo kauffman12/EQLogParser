@@ -166,15 +166,6 @@ namespace EQLogParser
 
     internal static ContentControl OpenNewTab(DockingManager dockSite, string id, string title, object content, double width = 0, double height = 0)
     {
-      //var window = new DocumentWindow(dockSite, id, title, null, content);
-
-      if (width != 0 && height != 0)
-      {
-        //  window.ContainerDockedSize = new Size(width, height);
-      }
-
-      //OpenWindow(window);
-      //window.MoveToLast();
       return null; // window;
     }
 

@@ -25,7 +25,7 @@ namespace EQLogParser
     public TankingSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid, selectedColumns);
+      //InitSummaryTable(title, dataGrid, selectedColumns);
 
       // if pets are shown
       showPets.IsChecked = CurrentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", null, true);

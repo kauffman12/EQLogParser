@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -15,14 +16,13 @@ namespace EQLogParser
 
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
-    internal DataGrid TheDataGrid;
+    internal SfDataGrid TheDataGrid;
     internal ComboBox TheSelectedColumns;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
     internal List<List<ActionBlock>> CurrentGroups;
-    internal Dictionary<string, bool> TheShownColumns;
 
-    internal void InitSummaryTable(Label title, DataGrid dataGrid, ComboBox columns)
+    internal void InitSummaryTable(Label title, SfDataGrid dataGrid, ComboBox columns)
     {
       TheDataGrid = dataGrid;
       TheSelectedColumns = columns;
@@ -35,18 +35,7 @@ namespace EQLogParser
 
       if (TheDataGrid != null)
       {
-        TheDataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
-
-        PropertyDescriptor orderPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn));
-        foreach (var column in dataGrid.Columns)
-        {
-          orderPd.AddValueChanged(column, new EventHandler(ColumnDisplayIndexPropertyChanged));
-        }
-
-        if (TheSelectedColumns != null)
-        {
-          TheShownColumns = DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid, 1);
-        }
+        DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid, 1);
       }
     }
 
@@ -65,26 +54,25 @@ namespace EQLogParser
     internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetSelectedStats());
     internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
-    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
-    internal void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
-    private void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtil.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
+    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(null, TheTitle.Content.ToString());
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
 
     internal void CreateImageClick(object sender, RoutedEventArgs e)
     {
       // lame workaround to toggle scrollbar to fix UI
       TheDataGrid.IsEnabled = false;
       TheDataGrid.SelectedItem = null;
-      TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
-      TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
+      //TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
+      //TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
 
       Task.Delay(50).ContinueWith((bleh) =>
       {
         Dispatcher.InvokeAsync(() =>
         {
-          TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-          TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          TheDataGrid.Items.Refresh();
-          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(TheDataGrid, TheTitle)), TaskScheduler.Default);
+          //TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+          //TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
+          //TheDataGrid.Items.Refresh();
+          //Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(TheDataGrid, TheTitle)), TaskScheduler.Default);
         });
       }, TaskScheduler.Default);
     }
@@ -125,10 +113,10 @@ namespace EQLogParser
       {
         string binding = "";
         string title = "";
-        if (column is DataGridTextColumn textColumn && textColumn.Binding is System.Windows.Data.Binding theBinding)
+        if (column is GridTextColumn textColumn && !string.IsNullOrEmpty(textColumn.HeaderText))
         {
-          title = textColumn.Header as string;
-          binding = theBinding.Path.Path;
+          title = textColumn.HeaderText;
+          //binding = theBinding.Path.Path;
         }
 
         return new string[] { binding, title };
@@ -159,9 +147,9 @@ namespace EQLogParser
     internal List<PlayerStats> GetPlayerStatsByClass(string className)
     {
       List<PlayerStats> selectedStats = new List<PlayerStats>();
-      foreach (var item in TheDataGrid.Items)
+      foreach (var record in TheDataGrid.View.Records)
       {
-        PlayerStats stats = item as PlayerStats;
+        PlayerStats stats = record.Data as PlayerStats;
         if (stats.ClassName == className)
         {
           selectedStats.Add(stats);
@@ -221,14 +209,6 @@ namespace EQLogParser
         spellTable.ShowSpells(selected, CurrentStats);
         var main = Application.Current.MainWindow as MainWindow;
         Helpers.OpenNewTab(main.dockSite, "spellCountsWindow", "Spell Counts", spellTable);
-      }
-    }
-
-    private void DataGrid_Sorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e.Column.Header != null && e.Column.Header.ToString() != "Name")
-      {
-        e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
       }
     }
   }

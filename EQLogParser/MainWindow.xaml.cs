@@ -2,6 +2,7 @@
 using log4net;
 using log4net.Core;
 using Syncfusion.SfSkinManager;
+using Syncfusion.Themes.MaterialDark.WPF;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -89,13 +90,13 @@ namespace EQLogParser
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
         Width = resolution.Width * 0.85 / dpi.DpiScaleX;
         Height = resolution.Height * 0.75 / dpi.DpiScaleY;
-        //SfSkinManager.ApplyStylesOnApplication = true;
 
         // set theme
         if (CurrentTheme == "MaterialDark")
         {
           SfSkinManager.SetTheme(this, new Theme("MaterialDarkCustom;MaterialDark"));
           BorderBrush = Application.Current.Resources["secondBackgroundBrush"] as SolidColorBrush;
+          Application.Current.Resources["backgroundBrush"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF121212"));
         }
 
         InitializeComponent();
@@ -547,26 +548,12 @@ namespace EQLogParser
 
     private void OpenDamageSummary()
     {
+      DamageWindow = Helpers.OpenWindow(dockSite, DamageWindow, typeof(DamageSummary), "damageSummary", "Damage Summary");
+      IconToWindow[damageSummaryIcon.Name] = DamageWindow;
+
       if (DamageWindow != null)
       {
-        dockSite.ExecuteClose(DamageWindow);
-        DamageWindow = null;
-      }
-      else
-      {
-        var damageSummary = new DamageSummary();
-        damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
-        //DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
-        IconToWindow[damageSummaryIcon.Name] = DamageWindow;
-
-        Helpers.OpenWindow(dockSite, DamageWindow);
-        if (HealingWindow != null || TankingWindow != null)
-        {
-          //DamageWindow.MoveToPreviousContainer();
-        }
-
-        //Helpers.RepositionCharts(DamageWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
-
+        (DamageWindow.Content as DamageSummary).EventsSelectionChange += DamageSummary_SelectionChanged;
         if (DamageStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
@@ -578,26 +565,12 @@ namespace EQLogParser
 
     private void OpenHealingSummary()
     {
+      HealingWindow = Helpers.OpenWindow(dockSite, HealingWindow, typeof(HealingSummary), "healingSummary", "Healing Summary");
+      IconToWindow[healingSummaryIcon.Name] = HealingWindow;
+
       if (HealingWindow != null)
       {
-        dockSite.ExecuteClose(HealingWindow);
-        HealingWindow = null;
-      }
-      else
-      {
-        var healingSummary = new HealingSummary();
-        healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
-        //HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
-        IconToWindow[healingSummaryIcon.Name] = HealingWindow;
-
-        Helpers.OpenWindow(dockSite, HealingWindow);
-        if (DamageWindow != null || TankingWindow != null)
-        {
-          //HealingWindow.MoveToPreviousContainer();
-        }
-
-        //Helpers.RepositionCharts(HealingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
-
+        (HealingWindow.Content as HealingSummary).EventsSelectionChange += HealingSummary_SelectionChanged;
         if (HealingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
@@ -609,30 +582,14 @@ namespace EQLogParser
 
     private void OpenTankingSummary()
     {
+      TankingWindow = Helpers.OpenWindow(dockSite, TankingWindow, typeof(TankingSummary), "tankingSummary", "Tanking Summary");
       if (TankingWindow != null)
       {
-        dockSite.ExecuteClose(TankingWindow);
-        TankingWindow = null;
-      }
-      else
-      {
-        var tankingSummary = new TankingSummary();
-        tankingSummary.EventsSelectionChange += TankingSummary_SelectionChanged;
-        //TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
-        IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
-
-        Helpers.OpenWindow(dockSite, TankingWindow);
-        if (DamageWindow != null || HealingWindow != null)
-        {
-          //TankingWindow.MoveToPreviousContainer();
-        }
-
-        //Helpers.RepositionCharts(TankingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow); ;
-
+        (TankingWindow.Content as TankingSummary).EventsSelectionChange += TankingSummary_SelectionChanged;
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true, DamageType = tankingSummary.DamageType };
+          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true, DamageType = (TankingWindow.Content as TankingSummary).DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
@@ -647,52 +604,18 @@ namespace EQLogParser
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var options = new GenerateStatsOptions() { RequestChartData = true };
-      HealingStatsManager.Instance.FireChartEvent(options, "SELECT", data.Selected);
-
+      HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "SELECT", data.Selected);
+      bool addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
-
-      // change the update order based on whats displayed
-      if (preview.parseList.SelectedItem?.ToString() == Labels.TOPHEALSPARSE)
-      {
-        preview?.UpdateParse(Labels.HEALPARSE, data.Selected);
-        if (data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0)
-        {
-          preview?.AddParse(Labels.TOPHEALSPARSE, HealingStatsManager.Instance, data.CurrentStats, data.Selected);
-        }
-      }
-      else
-      {
-        if (data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0)
-        {
-          preview?.AddParse(Labels.TOPHEALSPARSE, HealingStatsManager.Instance, data.CurrentStats, data.Selected);
-        }
-        preview?.UpdateParse(Labels.HEALPARSE, data.Selected);
-      }
+      preview.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEALPARSE, Labels.TOPHEALSPARSE);
     }
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "SELECT", data.Selected);
+      bool addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].SubStats2?.ContainsKey("receivedHealing") == true;
       var preview = playerParseTextWindow.Content as ParsePreview;
-
-      // change the update order based on whats displayed
-      if (preview.parseList.SelectedItem?.ToString() == Labels.RECEIVEDHEALPARSE)
-      {
-        preview?.UpdateParse(Labels.TANKPARSE, data.Selected);
-        if (data.Selected?.Count == 1 && data.Selected[0].SubStats2?.ContainsKey("receivedHealing") == true)
-        {
-          preview?.AddParse(Labels.RECEIVEDHEALPARSE, TankingStatsManager.Instance, data.CurrentStats, data.Selected);
-        }
-      }
-      else
-      {
-        if (data.Selected?.Count == 1 && data.Selected[0].SubStats2?.ContainsKey("receivedHealing") == true)
-        {
-          preview?.AddParse(Labels.RECEIVEDHEALPARSE, TankingStatsManager.Instance, data.CurrentStats, data.Selected);
-        }
-        preview?.UpdateParse(Labels.TANKPARSE, data.Selected);
-      }
+      preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANKPARSE, Labels.RECEIVEDHEALPARSE);
     }
 
     private void MenuItemSelectLogFileClick(object sender, RoutedEventArgs e)
@@ -849,7 +772,6 @@ namespace EQLogParser
 
           DataManager.Instance.Clear();
           PlayerChatManager = new ChatManager();
-
           CurrentLogFile = theFile;
           NpcDamageManager.ResetTime();
           EQLogReader = new LogReader(theFile, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
