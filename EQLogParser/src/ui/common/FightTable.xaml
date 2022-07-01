@@ -47,7 +47,22 @@
       <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="2,0,6,0" ToolTip="Add Breaks for Inactivity" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
       <CheckBox x:Name="fightShowTanking" IsChecked="True" Margin="2,0,6,0" ToolTip="Include Fights with only Tanking data" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowTankingChange" Unchecked="ShowTankingChange">Tanking</CheckBox>
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid" Grid.Row="1" SourceType="{x:Type local:Fight}" RowStyle="{StaticResource fightrowstyle}" ItemsSourceChanged="ItemsSourceChanged" SelectionMode="Extended" ColumnSizer="AutoWithLastColumnFill" AllowDraggingColumns="False" PreviewMouseDown="UpdateCurrentItem" HorizontalContentAlignment="Right" ShowRowHeader="True" RowHeaderWidth="40" Margin="0" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="SelectionChanged" AllowSorting="True">
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="AutoWithLastColumnFill"
+                           Grid.Row="1"
+                           HorizontalContentAlignment="Right"                      
+                           IsReadOnly="True"
+                           ItemsSourceChanged="ItemsSourceChanged"
+                           PreviewMouseDown="UpdateCurrentItem"
+                           RowHeaderWidth="40"
+                           RowStyle="{StaticResource fightrowstyle}"
+                           SelectionChanged="SelectionChanged"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True"                           
+                           SourceType="{x:Type local:Fight}">
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
           <MenuItem x:Name="menuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">

@@ -34,10 +34,20 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="4,0,0,0" x:Name="playersList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="itemsList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="00" x:Name="itemsList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="optionsList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid" ShowRowHeader="True" AllowSorting="True" AllowResizingColumns="True" ColumnSizer="AutoWithLastColumnFill" RowHeaderWidth="30" Grid.Row="1" AutoGenerateColumns="False" SelectionMode="Extended" IsReadOnly="True">
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="AutoWithLastColumnFill"
+                           FrozenColumnCount="1"                           
+                           Grid.Row="1"
+                           IsReadOnly="True"
+                           RowHeaderWidth="30"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True">
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">

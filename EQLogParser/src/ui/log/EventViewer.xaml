@@ -46,7 +46,17 @@
       </ComboBox>
       <TextBox x:Name="eventFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" LostFocus="Filter_LostFocus" GotFocus="Filter_GotFocus" PreviewKeyDown="Filter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid" AllowSorting="True" ShowRowHeader="True" ColumnSizer="AutoWithLastColumnFill" RowHeaderWidth="30" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="AutoWithLastColumnFill"
+                           FrozenColumnCount="1"
+                           Grid.Row="1"
+                           IsReadOnly="True"
+                           RowHeaderWidth="30"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True">
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Time, Converter={StaticResource DateTimeConverter}}" HeaderText="Time" />
         <syncfusion:GridTextColumn MappingName="Actor" HeaderText="Actor" />

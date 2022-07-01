@@ -59,7 +59,7 @@ namespace EQLogParser
       menuItemClear.IsEnabled = menuItemSelectAll.IsEnabled = menuItemUnselectAll.IsEnabled =
       menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = false;
 
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 800) };
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 700) };
       SelectionTimer.Tick += (sender, e) =>
       {
         if (!rightClickMenu.IsOpen)
@@ -299,8 +299,16 @@ namespace EQLogParser
     }
 
     private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
-    private void SelectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.SelectAll(sender as FrameworkElement);
     private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
+    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => UpdateSelection();
+
+    // workaround since select all API doesn't seem to fire selection changed
+    private void SelectAllClick(object sender, RoutedEventArgs e)
+    {
+      NeedSelectionChange = false;
+      DataGridUtil.SelectAll(sender as FrameworkElement);
+      Dispatcher.InvokeAsync(() => UpdateSelection());
+    }
 
     private void SetPetClick(object sender, RoutedEventArgs e)
     {
@@ -326,22 +334,21 @@ namespace EQLogParser
       }
     }
 
-    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e)
+    private void UpdateSelection()
     {
       // adds a delay where a drag-select doesn't keep sending events
       SelectionTimer.Stop();
       SelectionTimer.Start();
 
-      var callingDataGrid = sender as SfDataGrid;
-      var items = callingDataGrid.View.Records;
-      menuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < items.Count) && items.Count > 0;
-      menuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && items.Count > 0;
+      var items = dataGrid.View.Records;
+      menuItemSelectAll.IsEnabled = (dataGrid.SelectedItems.Count < items.Count) && items.Count > 0;
+      menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0 && items.Count > 0;
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = items.Count > 0;
 
-      var selected = callingDataGrid.SelectedItem as Fight;
-      menuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && !selected.IsInactivity;
-      menuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && !selected.IsInactivity &&
-        PlayerManager.IsPossiblePlayerName((callingDataGrid.SelectedItem as Fight)?.Name);
+      var selected = dataGrid.SelectedItem as Fight;
+      menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && !selected.IsInactivity;
+      menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && !selected.IsInactivity &&
+        PlayerManager.IsPossiblePlayerName((dataGrid.SelectedItem as Fight)?.Name);
     }
 
     private void SelectGroupClick(object sender, RoutedEventArgs e)

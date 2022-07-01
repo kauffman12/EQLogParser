@@ -396,8 +396,8 @@ namespace EQLogParser
           dataGrid.Items.Refresh();
           Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() =>
           {
-            DataGridUtil.CreateImage(dataGrid, titleLabel);
-            SpellRows.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
+            //DataGridUtil.CreateImage(dataGrid, titleLabel);
+            //SpellRows.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
           }), TaskScheduler.Default);
         });
       }, TaskScheduler.Default);
@@ -529,16 +529,16 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
-      DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+      //DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     }
 
     private void CopyBBCodeClick(object sender, RoutedEventArgs e)
     {
       try
       {
-        var export = DataGridUtil.BuildExportData(dataGrid);
-        string result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
-        Clipboard.SetDataObject(result);
+        //var export = DataGridUtil.BuildExportData(dataGrid);
+        //string result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
+        //Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
       {
@@ -555,9 +555,9 @@ namespace EQLogParser
     {
       try
       {
-        var export = DataGridUtil.BuildExportData(dataGrid);
-        string result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
-        Clipboard.SetDataObject(result);
+        //var export = DataGridUtil.BuildExportData(dataGrid);
+        //string result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
+        //Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
       {
