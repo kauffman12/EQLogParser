@@ -30,7 +30,17 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Style="{StaticResource titleStyle}"/>
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid" AllowSorting="True" ColumnSizer="Auto" AllowResizingColumns="True" ShowRowHeader="True" RowHeaderWidth="30" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="Auto"
+                           FrozenColumnCount="1"                           
+                           Grid.Row="1"
+                           IsReadOnly="True"
+                           RowHeaderWidth="30"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True">
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
         <syncfusion:GridTextColumn MappingName="Lowest" DisplayBinding="{Binding Path=LowestText}" TextAlignment="Right" HeaderText="Chromatic Resist %" />

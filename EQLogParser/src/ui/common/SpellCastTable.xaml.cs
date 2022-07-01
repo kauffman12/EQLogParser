@@ -187,7 +187,7 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
-      DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+      //DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     }
 
     private void CreateImageClick(object sender, RoutedEventArgs e)
@@ -205,7 +205,7 @@ namespace EQLogParser
           dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
           dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
           dataGrid.Items.Refresh();
-          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(dataGrid, titleLabel)), TaskScheduler.Default);
+          //Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(dataGrid, titleLabel)), TaskScheduler.Default);
         });
       }, TaskScheduler.Default);
     }

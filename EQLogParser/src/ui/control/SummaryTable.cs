@@ -54,29 +54,14 @@ namespace EQLogParser
     internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetSelectedStats());
     internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
-    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(null, TheTitle.Content.ToString());
+    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
 
     internal void CreateImageClick(object sender, RoutedEventArgs e)
     {
-      // lame workaround to toggle scrollbar to fix UI
-      TheDataGrid.IsEnabled = false;
-      TheDataGrid.SelectedItem = null;
-      //TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
-      //TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
-
-      Task.Delay(50).ContinueWith((bleh) =>
-      {
-        Dispatcher.InvokeAsync(() =>
-        {
-          //TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-          //TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          //TheDataGrid.Items.Refresh();
-          //Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(TheDataGrid, TheTitle)), TaskScheduler.Default);
-        });
-      }, TaskScheduler.Default);
+      TheDataGrid.SelectedItems.Clear();
+      Task.Delay(50).ContinueWith((t) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(TheDataGrid, TheTitle)), TaskScheduler.Default);
     }
-
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
     {
@@ -98,7 +83,7 @@ namespace EQLogParser
       TheDataGrid.ItemsSource = null;
     }
 
-    internal static void EnableClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
+    internal static void EnableClassMenuItems(MenuItem menu, SfDataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
     {
       foreach (var item in menu.Items)
       {
@@ -175,10 +160,13 @@ namespace EQLogParser
 
     internal void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
-      var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
-      selectionChanged.Selected.AddRange(selected);
-      selectionChanged.CurrentStats = CurrentStats;
-      EventsSelectionChange(this, selectionChanged);
+      Dispatcher.InvokeAsync(() =>
+      {
+        var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
+        selectionChanged.Selected.AddRange(selected);
+        selectionChanged.CurrentStats = CurrentStats;
+        EventsSelectionChange(this, selectionChanged);
+      });
     }
 
     internal virtual void ShowBreakdown(List<PlayerStats> selected)

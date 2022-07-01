@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -54,7 +55,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void CopyCsvFromTable(DataGrid dataGrid, string title)
+    internal static void CopyCsvFromTable(SfDataGrid dataGrid, string title)
     {
       try
       {
@@ -73,44 +74,38 @@ namespace EQLogParser
       }
     }
 
-    internal static Tuple<List<string>, List<List<object>>> BuildExportData(DataGrid dataGrid)
+    internal static Tuple<List<string>, List<List<object>>> BuildExportData(SfDataGrid dataGrid)
     {
       var headers = new List<string>();
       var headerKeys = new List<string>();
       var data = new List<List<object>>();
+      var props = dataGrid.View.GetPropertyAccessProvider();
 
       for (int i = 0; i < dataGrid.Columns.Count; i++)
       {
-        if (dataGrid.Columns[i] is DataGridBoundColumn bound && bound.Visibility == Visibility.Visible)
+        if (!dataGrid.Columns[i].IsHidden && dataGrid.Columns[i].ValueBinding is Binding binding)
         {
-          headers.Add(bound.Header as string);
-          headerKeys.Add(((System.Windows.Data.Binding)bound.Binding).Path.Path);
+          headers.Add(dataGrid.Columns[i].HeaderText);
+          headerKeys.Add(binding.Path.Path);
         }
       }
 
-      foreach (var item in dataGrid.Items)
+      foreach (var record in dataGrid.View.Records)
       {
         var row = new List<object>();
         foreach (var key in headerKeys)
         {
-          // spell casts and counts use dictionaries
-          if (item is IDictionary<string, object> dict)
-          {
-            if (dict.ContainsKey(key))
-            {
-              row.Add(dict[key]);
-            }
-          }
           // regular object with properties
-          else
-          {
-            var property = item.GetType().GetProperty(key);
-            if (property != null)
-            {
-              var value = property.GetValue(item, null);
-              row.Add(value ?? "");
-            }
-          }
+          row.Add(props.GetFormattedValue(record.Data, key) ?? "");
+
+          // spell casts and counts use dictionaries
+          //if (item is IDictionary<string, object> dict)
+          //{
+          //  if (dict.ContainsKey(key))
+          //  {
+          //    row.Add(dict[key]);
+          //  }
+          //}
         }
 
         data.Add(row);
@@ -119,42 +114,37 @@ namespace EQLogParser
       return new Tuple<List<string>, List<List<object>>>(headers, data);
     }
 
-    internal static void CreateImage(DataGrid dataGrid, Label titleLabel)
+    internal static void CreateImage(SfDataGrid dataGrid, Label titleLabel)
     {
       try
       {
-        const int margin = 2;
-
-        var details = GetRowDetails(dataGrid);
-        var totalRowHeight = details.Item1 * details.Item2 + details.Item1 + 2; // add extra for header row and a little for the bottom border
-        var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth) + dataGrid.RowHeaderActualWidth;
-        var realTableHeight = dataGrid.ActualHeight < totalRowHeight ? dataGrid.ActualHeight : totalRowHeight;
+        var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth);
+        var realTableHeight = dataGrid.ActualHeight + dataGrid.HeaderRowHeight + 1;
         var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
+        var titleHeight = titleLabel.DesiredSize.Height - (titleLabel.Padding.Top + titleLabel.Padding.Bottom);
+        var titleWidth = titleLabel.DesiredSize.Width;
 
         var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleLabel.ActualHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleHeight), 
+          dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
           var brush = new VisualBrush(titleLabel);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(4, margin / 2), new Size(titleLabel.ActualWidth, titleLabel.ActualHeight)));
+          ctx.DrawRectangle(brush, null, new Rect(new Point(4, 0), new Size(titleWidth, titleHeight)));
 
           brush = new VisualBrush(dataGrid);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleLabel.ActualHeight + margin), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight + SystemParameters.HorizontalScrollBarHeight)));
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight + 
+            SystemParameters.HorizontalScrollBarHeight)));
         }
 
         rtb.Render(dv);
         Clipboard.SetImage(rtb);
-        dataGrid.Items.Refresh();
       }
       catch (Exception ex)
       {
         LOG.Error("Could not Copy Image", ex);
-      }
-      finally
-      {
-        dataGrid.IsEnabled = true;
       }
     }
 
@@ -266,9 +256,11 @@ namespace EQLogParser
       SetSelectedColumnsTitle(columnCombo, selectedCount);
     }
 
-    internal static Dictionary<string, bool> ShowColumns(ComboBox columns, SfDataGrid dataGrid, List<SfDataGrid> children = null)
+    internal static void ShowColumns(ComboBox columns, SfDataGrid dataGrid, List<SfDataGrid> children = null)
     {
       Dictionary<string, bool> visible = new Dictionary<string, bool>();
+      visible["Name"] = true;
+
       if (columns.Items.Count > 0)
       {
         for (int i = 0; i < columns.Items.Count; i++)
@@ -305,13 +297,14 @@ namespace EQLogParser
           }
         }
 
+        dataGrid.GridColumnSizer.ResetAutoCalculationforAllColumns();
+        dataGrid.GridColumnSizer.Refresh();
+
         if (!string.IsNullOrEmpty(columns.Tag as string))
         {
           ConfigUtil.SetSetting(columns.Tag as string, string.Join(",", visible.Keys));
         }
       }
-
-      return visible;
     }
 
     private static void SetSelectedColumnsTitle(ComboBox columns, int count)
@@ -325,27 +318,6 @@ namespace EQLogParser
       selected.SelectedText = countString + " " + Properties.Resources.COLUMNS_SELECTED;
       columns.SelectedIndex = -1;
       columns.SelectedItem = selected;
-    }
-
-    internal static Tuple<double, int> GetRowDetails(DataGrid dataGrid)
-    {
-      double height = 0;
-      int count = 0;
-      for (int i = 0; i < dataGrid.Items.Count; i++)
-      {
-        var row = dataGrid.ItemContainerGenerator.ContainerFromIndex(i);
-        if (row != null && row is DataGridRow gRow)
-        {
-          height = gRow.ActualHeight;
-          count++;
-        }
-        else if (count > 0)
-        {
-          break;
-        }
-      }
-
-      return new Tuple<double, int>(height, count);
     }
   }
 }

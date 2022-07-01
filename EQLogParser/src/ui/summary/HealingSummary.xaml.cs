@@ -1,10 +1,9 @@
 ﻿
+using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
 
 namespace EQLogParser
@@ -32,6 +31,17 @@ namespace EQLogParser
 
       HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
+    }
+
+    internal override void ShowBreakdown(List<PlayerStats> selected)
+    {
+      if (selected?.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        var healTable = new HealBreakdown(CurrentStats);
+        healTable.Show(selected);
+        Helpers.OpenNewTab(main.dockSite, "healWindow", "Healing Breakdown", healTable);
+      }
     }
 
     private void Instance_EventsClearedActiveData(object sender, bool cleared)
@@ -62,8 +72,7 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              var view = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
-              dataGrid.ItemsSource = SetFilter(view);
+              dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
             }
 
             if (!MainWindow.IsAoEHealingEnabled)
@@ -80,62 +89,18 @@ namespace EQLogParser
             UpdateDataGridMenuItems();
             break;
         }
-      });
+      }, System.Windows.Threading.DispatcherPriority.Render);
     }
 
-    private void DataGridSelectionChanged(object sender, Syncfusion.UI.Xaml.Grid.GridSelectionChangedEventArgs e)
-    {
-      FireSelectionChangedEvent(GetSelectedStats());
-      UpdateDataGridMenuItems();
-    }
+    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.HEALPARSE);
 
-    internal override void ShowBreakdown(List<PlayerStats> selected)
-    {
-      if (selected?.Count > 0)
-      {
-        var main = Application.Current.MainWindow as MainWindow;
-        var healTable = new HealBreakdown(CurrentStats);
-        healTable.Show(selected);
-        Helpers.OpenNewTab(main.dockSite, "healWindow", "Healing Breakdown", healTable);
-      }
-    }
+    private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TOPHEALSPARSE);
 
-    private void DataGridHealingLogClick(object sender, RoutedEventArgs e)
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count == 1)
+      if (dataGrid.View != null)
       {
-        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
-        var main = Application.Current.MainWindow as MainWindow;
-        var window = Helpers.OpenNewTab(main.dockSite, "healingLog", "Healing Log", log, 400, 300);
-      }
-    }
-
-    private void UpdateDataGridMenuItems()
-    {
-      if (CurrentStats != null && CurrentStats.StatsList.Count > 0)
-      {
-        menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
-        menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
-        menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
-        copyHealParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
-        copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
-        //EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
-        //EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
-        //EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats.UniqueClasses);
-      }
-      else
-      {
-        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
-          menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
-      }
-    }
-
-    private ICollectionView SetFilter(ICollectionView view)
-    {
-      if (view != null)
-      {
-        view.Filter = (stats) =>
+        dataGrid.View.Filter = (stats) =>
         {
           string className = null;
           if (stats is PlayerStats playerStats)
@@ -150,26 +115,55 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
         };
 
-        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, view.Filter);
+        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View.Filter);
       }
-
-      return view;
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e)
+    private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
-      (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.HEALPARSE);
+      FireSelectionChangedEvent(GetSelectedStats());
+      UpdateDataGridMenuItems();
     }
 
-    private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e)
+    private void DataGridHealingLogClick(object sender, RoutedEventArgs e)
     {
-      (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TOPHEALSPARSE);
+      if (dataGrid.SelectedItems.Count == 1)
+      {
+        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        var main = Application.Current.MainWindow as MainWindow;
+        var window = Helpers.OpenNewTab(main.dockSite, "healingLog", "Healing Log", log, 400, 300);
+      }
     }
 
-    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void UpdateDataGridMenuItems()
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
+        {
+          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
+          menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
+          menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
+          menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
+          copyHealParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
+          copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
+          EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
+          EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
+          EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats.UniqueClasses);
+        }
+        else
+        {
+          menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
+            menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
+        }
+      });
+    }
+
+    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
       CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      SetFilter(dataGrid?.ItemsSource as ICollectionView);
+      dataGrid.View?.RefreshFilter();
+      HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
     }
 
     #region IDisposable Support
@@ -183,7 +177,6 @@ namespace EQLogParser
       {
         if (disposing)
         {
-          // TODO: dispose managed state (managed objects).
           CurrentStats = null;
         }
 

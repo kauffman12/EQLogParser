@@ -43,7 +43,17 @@
       <ComboBox Margin="0,0,0,1" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,1" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid" Grid.Row="1" AllowSorting="True" ColumnSizer="AutoWithLastColumnFill" FrozenColumnCount="1" AllowResizingColumns="True" ShowRowHeader="True" RowHeaderWidth="30" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended">
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="AutoWithLastColumnFill"
+                           FrozenColumnCount="1"
+                           Grid.Row="1"
+                           IsReadOnly="True"
+                           RowHeaderWidth="30"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True">
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell"/>
         <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster"/>

@@ -42,7 +42,19 @@
         </ComboBox.ItemTemplateSelector>
       </ComboBox>      
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid" Grid.Row="1" ColumnSizer="AutoWithLastColumnFill" AllowDraggingColumns="True" AllowResizingColumns="True" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionChanged="DataGridSelectionChanged">
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowDraggingColumns="True"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="AutoWithLastColumnFill"
+                           FrozenColumnCount="2"
+                           Grid.Row="1"
+                           IsReadOnly="True"
+                           ItemsSourceChanged="ItemsSourceChanged"
+                           SelectionMode="Extended"
+                           SelectionChanged="DataGridSelectionChanged"
+                           ShowRowHeader="False">
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
@@ -109,11 +121,11 @@
         <syncfusion:GridTextColumn MappingName="Rank" HeaderText="" TextAlignment="Right" />
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" />
         <syncfusion:GridTextColumn Width="60" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Healing" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Extra, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
+        <syncfusion:GridTextColumn Width="100" DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Healing" />
+        <syncfusion:GridTextColumn Width="100" DisplayBinding="{Binding Path=Extra, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
         <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=DPS, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
         <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=SDPS, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=TotalSeconds, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:GridTextColumn Width="70 " DisplayBinding="{Binding Path=TotalSeconds, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=Hits, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="# Heals" />
         <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=Max, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Max Heal" />
         <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=Avg, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Av Heal" />
