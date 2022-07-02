@@ -2,7 +2,6 @@
 using log4net;
 using log4net.Core;
 using Syncfusion.SfSkinManager;
-using Syncfusion.Themes.MaterialDark.WPF;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -95,8 +94,9 @@ namespace EQLogParser
         if (CurrentTheme == "MaterialDark")
         {
           SfSkinManager.SetTheme(this, new Theme("MaterialDarkCustom;MaterialDark"));
-          BorderBrush = Application.Current.Resources["secondBackgroundBrush"] as SolidColorBrush;
-          Application.Current.Resources["backgroundBrush"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF121212"));
+          BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
+          Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
+          Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
         }
 
         InitializeComponent();

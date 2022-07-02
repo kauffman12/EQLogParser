@@ -71,11 +71,7 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator/>
-          <MenuItem Header="E_xit" Height="24" Click="WindowClose" InputGestureText="Alt+F4">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_DoorOpen" />
-            </MenuItem.Icon>
-          </MenuItem>
+          <MenuItem Header="E_xit" Height="24" Click="WindowClose" InputGestureText="Alt+F4" />
         </MenuItem>
         <MenuItem Header="_View" Height="30" Width="45">
           <MenuItem x:Name="damageView" Header="_Damage" Height="24">

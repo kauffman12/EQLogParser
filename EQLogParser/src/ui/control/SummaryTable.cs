@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -40,19 +41,21 @@ namespace EQLogParser
     }
 
     internal virtual bool IsPetsCombined() => false;
+    internal virtual void ShowBreakdown(List<PlayerStats> selected) => new object(); // need to override this method
+    internal virtual void ShowBreakdown2(List<PlayerStats> selected) => new object(); // need to override this method
+    internal virtual void UpdateDataGridMenuItems() => new object(); // need to override this method
     internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
     internal string GetTitle() => TheTitle.Content as string;
     internal List<PlayerStats> GetSelectedStats() => TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.SelectAll(sender as FrameworkElement);
     internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
     internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetSelectedStats());
     internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e) => ShowBreakdown2(GetSelectedStats());
-    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
-    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown2(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown2(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal void DataGridShowSpellCountsClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetSelectedStats());
-    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetSelectedStats());
-    internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
@@ -65,13 +68,13 @@ namespace EQLogParser
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
     {
-      MenuItem selected = new MenuItem() { IsEnabled = false, Header = "Selected" };
+      MenuItem selected = new MenuItem { IsEnabled = false, Header = "Selected" };
       selected.Click += new RoutedEventHandler(selectedHandler);
       parent.Items.Add(selected);
 
       PlayerManager.Instance.GetClassList().ForEach(name =>
       {
-        MenuItem item = new MenuItem() { IsEnabled = false, Header = name };
+        MenuItem item = new MenuItem { IsEnabled = false, Header = name };
         item.Click += new RoutedEventHandler(classHandler);
         parent.Items.Add(item);
       });
@@ -96,14 +99,8 @@ namespace EQLogParser
     {
       return TheDataGrid.Columns.Select(column =>
       {
-        string binding = "";
-        string title = "";
-        if (column is GridTextColumn textColumn && !string.IsNullOrEmpty(textColumn.HeaderText))
-        {
-          title = textColumn.HeaderText;
-          //binding = theBinding.Path.Path;
-        }
-
+        string binding = (column.ValueBinding as Binding).Path.Path;
+        string title = column.HeaderText;
         return new string[] { binding, title };
       }).ToList();
     }
@@ -129,7 +126,7 @@ namespace EQLogParser
       return results;
     }
 
-    internal List<PlayerStats> GetPlayerStatsByClass(string className)
+    internal List<PlayerStats> GetStatsByClass(string className)
     {
       List<PlayerStats> selectedStats = new List<PlayerStats>();
       foreach (var record in TheDataGrid.View.Records)
@@ -142,6 +139,18 @@ namespace EQLogParser
       }
 
       return selectedStats;
+    }
+
+    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e)
+    {
+      DataGridUtil.SelectAll(sender as FrameworkElement);
+      Dispatcher.InvokeAsync(() => DataGridSelectionChanged());
+    }
+
+    internal void DataGridSelectionChanged()
+    {
+      FireSelectionChangedEvent(GetSelectedStats());
+      UpdateDataGridMenuItems();
     }
 
     internal void SetPetClick(object sender, RoutedEventArgs e)
@@ -169,23 +178,13 @@ namespace EQLogParser
       });
     }
 
-    internal virtual void ShowBreakdown(List<PlayerStats> selected)
-    {
-      // need to override this method
-    }
-
-    internal virtual void ShowBreakdown2(List<PlayerStats> selected)
-    {
-      // need to override this method
-    }
-
     internal void ShowSpellCasts(List<PlayerStats> selected)
     {
       if (selected?.Count > 0)
       {
-        var spellTable = new SpellCastTable(CurrentStats?.ShortTitle ?? "", selected, CurrentStats);
         var main = Application.Current.MainWindow as MainWindow;
-        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Cast Timeline", spellTable);
+        var spellTable = Helpers.OpenWindow(main.dockSite, null, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Timeline");
+        (spellTable.Content as SpellCastTable).Init(CurrentStats?.ShortTitle ?? "", selected, CurrentStats);
       }
     }
 

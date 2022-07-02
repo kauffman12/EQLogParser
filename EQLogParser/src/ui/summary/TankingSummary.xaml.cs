@@ -175,7 +175,7 @@ namespace EQLogParser
       });
     }
 
-    private void UpdateDataGridMenuItems()
+    override internal void UpdateDataGridMenuItems()
     {
       string selectedName = "Unknown";
 
@@ -183,21 +183,24 @@ namespace EQLogParser
       {
         menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
         menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        menuItemShowSpellCasts.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
+        menuItemShowSpellCasts.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled = 
+          menuItemShowSpellCounts.IsEnabled = true;
         menuItemShowTankingLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
         copyTankingParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
-        copyReceivedHealingParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats2?.ContainsKey("receivedHealing") == true;
+        copyReceivedHealingParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && 
+          (dataGrid.SelectedItem as PlayerStats)?.SubStats2?.ContainsKey("receivedHealing") == true;
         menuItemShowDefensiveTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
 
         if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
         {
-          menuItemSetAsPet.IsEnabled = !PlayerManager.Instance.IsVerifiedPet(playerStats.OrigName) && !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
+          menuItemSetAsPet.IsEnabled = !PlayerManager.Instance.IsVerifiedPet(playerStats.OrigName) && 
+            !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
           selectedName = playerStats.OrigName;
         }
 
-       // EnableClassMenuItems(menuItemShowHealingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
+        // EnableClassMenuItems(menuItemShowHealingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
         //EnableClassMenuItems(menuItemShowTankingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
-       // EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
+        // EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
         //EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats?.UniqueClasses);
       }
       else
