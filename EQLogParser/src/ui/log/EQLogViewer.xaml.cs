@@ -149,12 +149,12 @@ namespace EQLogParser
             }
 
             var allText = string.Join(Environment.NewLine, list) + Environment.NewLine;
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
-              SolidColorBrush highlight = Application.Current.Resources["warnBackgroundBrush"] as SolidColorBrush;
+              SolidColorBrush highlight = Application.Current.Resources["searchBackgroundBrush"] as SolidColorBrush;
               contextBox.Text = allText;
               contextTab.Visibility = Visibility.Visible;
-              FoundLines.ForEach(line => contextBox.SetLineBackground(line, false, highlight));
+              FoundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
               tabControl.SelectedItem = contextTab;
               UpdateStatusCount(contextBox.Lines.Count);
 
@@ -258,7 +258,7 @@ namespace EQLogParser
                 if (percent % 5 == 0 && percent != lastPercent)
                 {
                   lastPercent = percent;
-                  Dispatcher.Invoke(() =>
+                  Dispatcher.InvokeAsync(() =>
                   {
                     progress.Content = "Searching (" + percent + "% Complete)";
                   }, DispatcherPriority.Background);
@@ -269,7 +269,7 @@ namespace EQLogParser
               var allData = string.Join(Environment.NewLine, UnFiltered) + Environment.NewLine;
               // adding extra new line to be away from scrollbar
 
-              Dispatcher.Invoke(() =>
+              Dispatcher.InvokeAsync(() =>
               {
                 if (!string.IsNullOrEmpty(allData))
                 {
@@ -291,7 +291,7 @@ namespace EQLogParser
             }
           }
 
-          Dispatcher.Invoke(() =>
+          Dispatcher.InvokeAsync(() =>
           {
             searchButton.IsEnabled = true;
             searchIcon.Icon = EFontAwesomeIcon.Solid_Search;

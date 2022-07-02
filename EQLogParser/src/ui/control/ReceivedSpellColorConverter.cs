@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -9,7 +10,7 @@ namespace EQLogParser
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      object result;
+      object result = DependencyProperty.UnsetValue;
 
       if (value is string spellName && spellName.StartsWith("Received ", StringComparison.Ordinal))
       {
@@ -19,6 +20,7 @@ namespace EQLogParser
       {
         result = Brushes.White;
       }
+
       return result;
     }
 

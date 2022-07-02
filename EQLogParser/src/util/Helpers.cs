@@ -82,6 +82,19 @@ namespace EQLogParser
       }
     }
 
+    internal static void LoadDictionary(string path)
+    {
+      var dict = new ResourceDictionary
+      {
+        Source = new Uri(path, UriKind.RelativeOrAbsolute)
+      };
+
+      foreach (var key in dict.Keys)
+      {
+        Application.Current.Resources[key] = dict[key];
+      }
+    }
+
     internal static ContentControl CloseWindow(DockingManager dockSite, ContentControl window)
     {
       if (window != null)

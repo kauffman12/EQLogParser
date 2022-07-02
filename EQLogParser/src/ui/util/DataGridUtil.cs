@@ -125,7 +125,7 @@ namespace EQLogParser
         var titleWidth = titleLabel.DesiredSize.Width;
 
         var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleHeight), 
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleHeight),
           dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
@@ -135,7 +135,7 @@ namespace EQLogParser
           ctx.DrawRectangle(brush, null, new Rect(new Point(4, 0), new Size(titleWidth, titleHeight)));
 
           brush = new VisualBrush(dataGrid);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight + 
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight +
             SystemParameters.HorizontalScrollBarHeight)));
         }
 
@@ -229,7 +229,7 @@ namespace EQLogParser
         dataGrid.Columns = updatedColumns;
 
         // save column order if it changes
-        dataGrid.QueryColumnDragging  += (object sender, QueryColumnDraggingEventArgs e) =>
+        dataGrid.QueryColumnDragging += (object sender, QueryColumnDraggingEventArgs e) =>
         {
           if (e.Reason == QueryColumnDraggingReason.Dropped)
           {
@@ -296,9 +296,6 @@ namespace EQLogParser
             }
           }
         }
-
-        dataGrid.GridColumnSizer.ResetAutoCalculationforAllColumns();
-        dataGrid.GridColumnSizer.Refresh();
 
         if (!string.IsNullOrEmpty(columns.Tag as string))
         {

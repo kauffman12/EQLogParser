@@ -300,7 +300,7 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateDataGridMenuItems()
+    override internal void UpdateDataGridMenuItems()
     {
       string selectedName = "Unknown";
 

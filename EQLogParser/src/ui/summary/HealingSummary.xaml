@@ -21,7 +21,7 @@
       <Label x:Name="title" Style="{StaticResource titleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0" x:Name="classesList" Height="26" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0" x:Name="classesList" Height="26" SelectionChanged="ClassSelectionChanged" />
       <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Height="26" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns" BorderBrush="#FF707070">
         <ComboBox.ItemTemplateSelector>
           <local:ComboBoxItemTemplateSelector>

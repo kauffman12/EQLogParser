@@ -1,5 +1,4 @@
-﻿
-using Syncfusion.UI.Xaml.Grid;
+﻿using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,9 +27,8 @@ namespace EQLogParser
       CreateClassMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
       CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
       CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
-
-      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
+      HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
@@ -44,14 +42,61 @@ namespace EQLogParser
       }
     }
 
-    private void Instance_EventsClearedActiveData(object sender, bool cleared)
+    internal override void UpdateDataGridMenuItems()
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
+        {
+          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
+          menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
+          menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
+          menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
+          copyHealParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
+          copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
+          EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
+          EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
+          EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats.UniqueClasses);
+        }
+        else
+        {
+          menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
+            menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
+        }
+      });
+    }
+
+    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.HEALPARSE);
+
+    private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TOPHEALSPARSE);
+
+    private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
+
+    private void ClassSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+      CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
+      dataGrid.View?.RefreshFilter();
+      HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
+    }
+
+    private void DataGridHealingLogClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems.Count == 1)
+      {
+        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        var main = Application.Current.MainWindow as MainWindow;
+        var window = Helpers.OpenNewTab(main.dockSite, "healingLog", "Healing Log", log, 400, 300);
+      }
+    }
+
+    private void EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
       dataGrid.ItemsSource = null;
       title.Content = DEFAULT_TABLE_LABEL;
     }
 
-    private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    private void EventsGenerationStatus(object sender, StatsGenerationEvent e)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -92,10 +137,6 @@ namespace EQLogParser
       }, System.Windows.Threading.DispatcherPriority.Render);
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.HEALPARSE);
-
-    private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TOPHEALSPARSE);
-
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
       if (dataGrid.View != null)
@@ -119,69 +160,22 @@ namespace EQLogParser
       }
     }
 
-    private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e)
-    {
-      FireSelectionChangedEvent(GetSelectedStats());
-      UpdateDataGridMenuItems();
-    }
-
-    private void DataGridHealingLogClick(object sender, RoutedEventArgs e)
-    {
-      if (dataGrid.SelectedItems.Count == 1)
-      {
-        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
-        var main = Application.Current.MainWindow as MainWindow;
-        var window = Helpers.OpenNewTab(main.dockSite, "healingLog", "Healing Log", log, 400, 300);
-      }
-    }
-
-    private void UpdateDataGridMenuItems()
-    {
-      Dispatcher.InvokeAsync(() =>
-      {
-        if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
-        {
-          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
-          menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-          menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
-          menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
-          copyHealParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
-          copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
-          EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
-          EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
-          EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats.UniqueClasses);
-        }
-        else
-        {
-          menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
-            menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
-        }
-      });
-    }
-
-    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-    {
-      CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      dataGrid.View?.RefreshFilter();
-      HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
-    }
-
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "UPDATE");
-
       if (!disposedValue)
       {
+        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "UPDATE");
+        HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+
         if (disposing)
         {
           CurrentStats = null;
         }
 
-        HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
         disposedValue = true;
       }
     }

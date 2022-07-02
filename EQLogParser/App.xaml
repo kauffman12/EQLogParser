@@ -8,11 +8,9 @@
   <Application.Resources>
     <SolidColorBrush x:Key="hoverForegroundBrush" Color="White"/>    
     <SolidColorBrush x:Key="menuIconBrush" Color="#FF4F9FE2"/>
-    <SolidColorBrush x:Key="searchBackgroundBrush" Color="#FF3a543f"/>
+    <SolidColorBrush x:Key="searchBackgroundBrush" Color="#FF3a543f" Opacity="0.5"/>
     <SolidColorBrush x:Key="secondBackgroundBrush" Color="#FF1f1f1f"/>
     <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
-    <!-- colors set at startup -->
-    <SolidColorBrush x:Key="backgroundBrush" Color="#FF121212"/>
 
     <DataTemplate x:Key="TemplateToolTip">
       <TextBlock FontSize="12" Text="{Binding TooltipText}" />
@@ -47,6 +45,12 @@
       <Setter Property="FontSize" Value="15" />
       <Setter Property="FontWeight" Value="Bold" />
       <Setter Property="Margin" Value="0" />
+    </Style>
+
+    <Style x:Key="receivedSpellCellStyle" TargetType="syncfusion:GridCell" BasedOn="{StaticResource sfgrid:SyncfusionGridCellStyle}">
+      <Setter Property="FontSize" Value="34" />
+      <Setter Property="Foreground" Value="Yellow" />
+      <Setter Property="Background" Value="Red" />
     </Style>
 
     <!-- Syncfusion ColorPicker -->
