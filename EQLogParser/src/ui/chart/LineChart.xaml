@@ -39,17 +39,11 @@
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfChart.ContextMenu>
-      <syncfusion:SfChart.Resources>
-        <Style TargetType="TextBlock" x:Key="labelStyle">
-          <Setter Property="FontSize" Value="16"/>
-        </Style>
-      </syncfusion:SfChart.Resources>
       <syncfusion:SfChart.Legend>
         <syncfusion:ChartLegend Margin="0" FontSize="14" Padding="0"/>
       </syncfusion:SfChart.Legend>
       <syncfusion:SfChart.Behaviors>
         <syncfusion:ChartZoomPanBehavior EnableMouseWheelZooming="True" EnablePanning="True" ResetOnDoubleTap="True" />
-        <syncfusion:ChartTooltipBehavior LabelStyle = "{StaticResource labelStyle}" EnableAnimation="False" />
       </syncfusion:SfChart.Behaviors>
       <syncfusion:SfChart.PrimaryAxis>
         <syncfusion:DateTimeAxis LabelFormat="hh:mm:ss">

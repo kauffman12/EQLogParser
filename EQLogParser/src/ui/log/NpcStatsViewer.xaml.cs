@@ -18,7 +18,7 @@ namespace EQLogParser
     public NpcStatsViewer()
     {
       InitializeComponent();
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += NpcStatsViewer_EventsLogLoadingComplete;
+      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
       // default these columns to descending
       string[] desc = new string[] { "Lowest", "Cold", "Corruption", "Disease", "Magic", "Fire", "Physical", "Poison", "Average", "Reflected" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
@@ -138,8 +138,10 @@ namespace EQLogParser
       }
     }
 
-    private void NpcStatsViewer_EventsLogLoadingComplete(object sender, bool e) => Load();
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void MenuItemRefresh(object sender, RoutedEventArgs e) => Load();
+    private void EventsLogLoadingComplete(object sender, bool e) => Load();
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
@@ -148,7 +150,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= NpcStatsViewer_EventsLogLoadingComplete;
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         disposedValue = true;
       }
     }

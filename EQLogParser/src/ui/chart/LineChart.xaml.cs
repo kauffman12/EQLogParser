@@ -273,15 +273,15 @@ namespace EQLogParser
       {
         var name = value.First().Name;
         name = ((CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION) && !HasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
-        var series = new FastLineBitmapSeries
+        var series = new FastLineSeries
         {
           Label = name,
           XBindingPath = "DateTime",
           YBindingPath = yPath,
           ItemsSource = value,
-          ShowTooltip = true,
-          EnableAntiAliasing = true
+          ShowTooltip = false,
         };
+
         collection.Add(series);
       }
 

@@ -105,9 +105,10 @@
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="SortId" DisplayBinding="{Binding BeginTimeString}" Width="90" TextAlignment="Center" HorizontalHeaderContentAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Initial Hit Time" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Total, Converter={StaticResource totalFormatConverter}}" TextAlignment="Right" HorizontalHeaderContentAlignment="Center" HeaderText="HP" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Name}" HorizontalHeaderContentAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Name" />
+        <syncfusion:GridTextColumn MappingName="SortId" DisplayBinding="{Binding BeginTimeString}" 
+                                   Width="100" TextAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Initial Hit Time" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Total, Converter={StaticResource totalFormatConverter}}" TextAlignment="Right" HeaderText="HP" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Name}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Name" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>

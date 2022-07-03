@@ -110,6 +110,9 @@ namespace EQLogParser
       dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(Records);
     }
 
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+
     private bool IsValid(ReceivedSpell spell, Dictionary<string, byte> uniqueNames, string player, out SpellData replaced)
     {
       bool valid = false;
@@ -156,33 +159,6 @@ namespace EQLogParser
 
         Records.Add(row);
       }
-    }
-
-    private void CopyCsvClick(object sender, RoutedEventArgs e)
-    {
-      //DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    }
-
-    private void CreateImageClick(object sender, RoutedEventArgs e)
-    {
-      /*
-      // lame workaround to toggle scrollbar to fix UI
-      dataGrid.IsEnabled = false;
-      dataGrid.SelectedItem = null;
-      dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
-      dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
-
-      Task.Delay(50).ContinueWith((bleh) =>
-      {
-        Dispatcher.InvokeAsync(() =>
-        {
-          dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-          dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          dataGrid.Items.Refresh();
-          //Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(dataGrid, titleLabel)), TaskScheduler.Default);
-        });
-      }, TaskScheduler.Default);
-      */
     }
 
     private void OptionsChanged()

@@ -66,6 +66,22 @@
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Table" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Image" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+          <Separator />
           <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Redo" />

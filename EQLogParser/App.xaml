@@ -47,12 +47,6 @@
       <Setter Property="Margin" Value="0" />
     </Style>
 
-    <Style x:Key="receivedSpellCellStyle" TargetType="syncfusion:GridCell" BasedOn="{StaticResource sfgrid:SyncfusionGridCellStyle}">
-      <Setter Property="FontSize" Value="34" />
-      <Setter Property="Foreground" Value="Yellow" />
-      <Setter Property="Background" Value="Red" />
-    </Style>
-
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">
       <StackPanel Orientation="Horizontal" Margin="0">

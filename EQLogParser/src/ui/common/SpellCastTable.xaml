@@ -69,7 +69,8 @@
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" Width="90" TextAlignment="Center" HeaderText="Time" />
+        <syncfusion:GridTextColumn MappingName="Time" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
+                                   Width="100" TextAlignment="Center" HeaderText="Time" />
         <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Seconds}" TextAlignment="Right" HeaderText="Sec" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

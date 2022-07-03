@@ -44,8 +44,9 @@ namespace EQLogParser
       Load();
     }
 
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void LogLoadingComplete(object sender, bool e) => Load();
-
     private void MenuItemRefresh(object sender, RoutedEventArgs e) => Load();
 
     private void SelectionChange(object sender, System.Collections.IList e)
