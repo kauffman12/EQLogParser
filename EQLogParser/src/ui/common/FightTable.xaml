@@ -28,7 +28,7 @@
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-              <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+              <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                 <Grid>
                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
                 </Grid>
@@ -54,6 +54,7 @@
                            AutoGenerateColumns="False"
                            ColumnSizer="AutoWithLastColumnFill"
                            Grid.Row="1"                  
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            PreviewMouseDown="UpdateCurrentItem"
@@ -105,9 +106,9 @@
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="SortId" DisplayBinding="{Binding BeginTimeString}" 
+        <syncfusion:GridTextColumn MappingName="SortId" SortMode="Value" DisplayBinding="{Binding BeginTimeString}" 
                                    Width="100" TextAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Initial Hit Time" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Total, Converter={StaticResource totalFormatConverter}}" TextAlignment="Right" HeaderText="HP" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Total, Converter={StaticResource totalFormatConverter}}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" TextAlignment="Right" HeaderText="HP" />
         <syncfusion:GridTextColumn DisplayBinding="{Binding Name}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Name" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

@@ -50,6 +50,7 @@
                            ColumnSizer="AutoWithLastColumnFill"
                            FrozenColumnCount="2"
                            Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            SelectionMode="Extended"
@@ -120,20 +121,20 @@
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Rank" HeaderText="" TextAlignment="Right" />
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" />
-        <syncfusion:GridTextColumn Width="60" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
-        <syncfusion:GridTextColumn Width="100" DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Healing" />
-        <syncfusion:GridTextColumn Width="100" DisplayBinding="{Binding Path=Extra, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
-        <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=DPS, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
-        <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=SDPS, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
-        <syncfusion:GridTextColumn Width="70 " DisplayBinding="{Binding Path=TotalSeconds, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=Hits, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="# Heals" />
-        <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=Max, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Max Heal" />
-        <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=Avg, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Av Heal" />
-        <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=AvgCrit, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Av Crit" />
-        <syncfusion:GridTextColumn Width="70" DisplayBinding="{Binding Path=AvgLucky, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Av Lucky" />
-        <syncfusion:GridTextColumn Width="60" DisplayBinding="{Binding Path=ExtraRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealPercentTemplateToolTip}" TextAlignment="Right" HeaderText="% Over" />
-        <syncfusion:GridTextColumn Width="60" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="% Crit" />
-        <syncfusion:GridTextColumn Width="60" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="% Luck" />
+        <syncfusion:GridTextColumn Width="70" MappingName="PercentOfRaid" SortMode="Value" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        <syncfusion:GridTextColumn Width="100" MappingName="Total" SortMode="Value" DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Healing" />
+        <syncfusion:GridTextColumn Width="100" MappingName="Extra" SortMode="Value" DisplayBinding="{Binding Path=Extra, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
+        <syncfusion:GridTextColumn Width="70" MappingName="DPS" SortMode="Value" DisplayBinding="{Binding Path=DPS, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
+        <syncfusion:GridTextColumn Width="70" MappingName="SDPS" SortMode="Value" DisplayBinding="{Binding Path=SDPS, Converter={StaticResource NumberFormatConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
+        <syncfusion:GridTextColumn Width="70" MappingName="TotalSeconds" SortMode="Value" DisplayBinding="{Binding Path=TotalSeconds, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:GridTextColumn Width="70" MappingName="Hits" SortMode="Value" DisplayBinding="{Binding Path=Hits, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="# Heals" />
+        <syncfusion:GridTextColumn Width="70" MappingName="Max" SortMode="Value" DisplayBinding="{Binding Path=Max, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Max Heal" />
+        <syncfusion:GridTextColumn Width="70" MappingName="Avg" SortMode="Value" DisplayBinding="{Binding Path=Avg, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Av Heal" />
+        <syncfusion:GridTextColumn Width="70" MappingName="AvgCrit" SortMode="Value" DisplayBinding="{Binding Path=AvgCrit, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Av Crit" />
+        <syncfusion:GridTextColumn Width="70" MappingName="AvgLucky" SortMode="Value" DisplayBinding="{Binding Path=AvgLucky, Converter={StaticResource NumberFormatConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="Av Lucky" />
+        <syncfusion:GridTextColumn Width="60" MappingName="ExtraRate" SortMode="Value" DisplayBinding="{Binding Path=ExtraRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealPercentTemplateToolTip}" TextAlignment="Right" HeaderText="% Over" />
+        <syncfusion:GridTextColumn Width="60" MappingName="CritRate" SortMode="Value" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="% Crit" />
+        <syncfusion:GridTextColumn Width="60" MappingName="LuckRate" SortMode="Value" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" HorizontalHeaderContentAlignment="Center" TextAlignment="Right" HeaderText="% Luck" />
         <syncfusion:GridTextColumn MappingName="ClassName" HorizontalHeaderContentAlignment="Center" HeaderText="Class" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

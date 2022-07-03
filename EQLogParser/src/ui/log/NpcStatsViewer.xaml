@@ -37,6 +37,7 @@
                            ColumnSizer="Auto"
                            FrozenColumnCount="1"                           
                            Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            IsReadOnly="True"
                            RowHeaderWidth="30"
                            SelectionMode="Extended"

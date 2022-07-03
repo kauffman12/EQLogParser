@@ -45,6 +45,7 @@
                            AutoGenerateColumns="True"
                            ColumnSizer="Auto"
                            Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            IsReadOnly="True"
                            RowHeaderWidth="40"
                            ShowRowHeader="True"
@@ -69,9 +70,9 @@
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
+        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
                                    Width="100" TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Seconds}" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:GridTextColumn MappingName="Seconds" SortMode="Value" DisplayBinding="{Binding Path=Seconds}" TextAlignment="Right" HeaderText="Sec" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>

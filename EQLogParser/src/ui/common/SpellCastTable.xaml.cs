@@ -29,9 +29,9 @@ namespace EQLogParser
       InitializeComponent();
     }
 
-    internal void Init(string title, List<PlayerStats> selectedStats, CombinedStats currentStats)
+    internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
-      titleLabel.Content = title;
+      titleLabel.Content = currentStats?.ShortTitle ?? "";
       selectedStats?.ForEach(stats => UniqueNames[stats.OrigName] = 1);
       RaidStats = currentStats?.RaidStats;
       castTypes.ItemsSource = CastTypes;
