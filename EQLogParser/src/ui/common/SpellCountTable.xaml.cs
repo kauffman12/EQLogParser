@@ -1,10 +1,11 @@
-﻿using Microsoft.Win32;
+﻿using FontAwesome5;
+using Microsoft.Win32;
 using Newtonsoft.Json;
+using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Dynamic;
 using System.Globalization;
 using System.IO;
@@ -12,11 +13,10 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -26,10 +26,6 @@ namespace EQLogParser
   public partial class SpellCountTable : UserControl
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private readonly object LockObject = new object();
-    private bool Running = false;
-
-    private const string EMPTYICON = "#00ffffff";
     private const string ACTIVEICON = "#5191c1";
 
     private List<string> PlayerList;
@@ -49,16 +45,10 @@ namespace EQLogParser
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowProcs = false;
     private bool CurrentShowInterrupts = false;
-    private bool Ready = false;
 
-    public SpellCountTable(string title, double seconds)
+    public SpellCountTable()
     {
       InitializeComponent();
-      titleLabel.Content = title;
-      Time = seconds;
-
-      var view = new ListCollectionView(SpellRows);
-      dataGrid.ItemsSource = view;
       castTypes.ItemsSource = CastTypes;
       castTypes.SelectedIndex = 0;
       countTypes.ItemsSource = CountTypes;
@@ -67,22 +57,13 @@ namespace EQLogParser
       minFreqList.SelectedIndex = 0;
       spellTypes.ItemsSource = SpellTypes;
       spellTypes.SelectedIndex = 0;
-
-      dataGrid.Sorting += (s, e2) =>
-      {
-        if (!string.IsNullOrEmpty(e2.Column.Header as string))
-        {
-          e2.Handled = true;
-          var direction = e2.Column.SortDirection ?? ListSortDirection.Ascending;
-          view.CustomSort = new SpellCountComparer(e2.Column.SortMemberPath, direction == ListSortDirection.Ascending);
-          e2.Column.SortDirection = direction == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
-        }
-      };
-
     }
 
-    internal void ShowSpells(List<PlayerStats> selectedStats, CombinedStats currentStats)
+    internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
+      titleLabel.Content = currentStats?.ShortTitle ?? "";
+      Time = currentStats.RaidStats.TotalSeconds;
+
       var raidStats = currentStats?.RaidStats;
 
       if (selectedStats != null && raidStats != null)
@@ -99,208 +80,186 @@ namespace EQLogParser
       }
     }
 
-    private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e) => OptionsChanged(true);
-    private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged(true);
-    private void SelectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.SelectAll(sender as FrameworkElement);
-    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
-
     private void Display()
     {
-      lock (LockObject)
+      try
       {
-        if (Running == false)
+        var headerCol = new GridTextColumn
         {
-          Running = true;
-          showInterrupts.IsEnabled = showSelfOnly.IsEnabled = showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = false;
+          HeaderText = "",
+          MappingName = "Spell",
+          ColumnSizer = GridLengthUnitType.SizeToCells
+        };
 
-          Task.Delay(50).ContinueWith(task =>
+        dataGrid.Columns.Add(headerCol);
+
+        Dictionary<string, Dictionary<string, uint>> filteredPlayerMap = new Dictionary<string, Dictionary<string, uint>>();
+        Dictionary<string, uint> totalCountMap = new Dictionary<string, uint>();
+        Dictionary<string, uint> uniqueSpellsMap = new Dictionary<string, uint>();
+
+        uint totalCasts = 0;
+        PlayerList.ForEach(player =>
+        {
+          filteredPlayerMap[player] = new Dictionary<string, uint>();
+
+          if ((CurrentCastType == 0 || CurrentCastType == 1) && TheSpellCounts.PlayerCastCounts.ContainsKey(player))
           {
-            try
+            foreach (string id in TheSpellCounts.PlayerCastCounts[player].Keys)
             {
-              Dispatcher.InvokeAsync(() =>
-              {
-                var column = new DataGridTextColumn
-                {
-                  Header = "",
-                  Binding = new Binding("Spell")
-                };
-
-                var columnStyle = new Style(typeof(TextBlock));
-                columnStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding("Spell") { Converter = new ReceivedSpellColorConverter() }));
-                column.ElementStyle = columnStyle;
-                dataGrid.Columns.Add(column);
-              });
-
-              Dictionary<string, Dictionary<string, uint>> filteredPlayerMap = new Dictionary<string, Dictionary<string, uint>>();
-              Dictionary<string, uint> totalCountMap = new Dictionary<string, uint>();
-              Dictionary<string, uint> uniqueSpellsMap = new Dictionary<string, uint>();
-
-              uint totalCasts = 0;
-              PlayerList.ForEach(player =>
-              {
-                filteredPlayerMap[player] = new Dictionary<string, uint>();
-
-                if ((CurrentCastType == 0 || CurrentCastType == 1) && TheSpellCounts.PlayerCastCounts.ContainsKey(player))
-                {
-                  foreach (string id in TheSpellCounts.PlayerCastCounts[player].Keys)
-                  {
-                    totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
-                  }
-                }
-
-                if ((CurrentCastType == 0 || CurrentCastType == 2) && TheSpellCounts.PlayerReceivedCounts.ContainsKey(player))
-                {
-                  foreach (string id in TheSpellCounts.PlayerReceivedCounts[player].Keys)
-                  {
-                    totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
-                  }
-                }
-              });
-
-              List<string> sortedPlayers = totalCountMap.Keys.OrderByDescending(key => totalCountMap[key]).ToList();
-              List<string> sortedSpellList = uniqueSpellsMap.Keys.OrderByDescending(key => uniqueSpellsMap[key]).ToList();
-
-              int colCount = 0;
-              foreach (string name in sortedPlayers)
-              {
-                string colBinding = name; // dont use colCount directly since it will change during Dispatch
-                double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
-
-                double amount = 0.0;
-                switch (CurrentCountType)
-                {
-                  case 0:
-                    amount = total;
-                    break;
-                  case 1:
-                    amount = totalCasts > 0 ? Math.Round(total / totalCasts * 100, 2) : 0;
-                    break;
-                  case 2:
-                    amount = Time > 0 ? Math.Round(total / Time * 60, 2) : 0;
-                    break;
-                }
-
-                string header = string.Format("{0} = {1}", name, amount.ToString(CultureInfo.CurrentCulture));
-
-                Dispatcher.InvokeAsync(() =>
-                {
-                  DataGridTextColumn col = new DataGridTextColumn() { Header = header, Binding = new Binding(colBinding) };
-                  col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
-                  col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
-                  dataGrid.Columns.Add(col);
-                });
-
-                Thread.Sleep(5);
-                colCount++;
-              }
-
-              string headerAmount = "";
-              switch (CurrentCountType)
-              {
-                case 0:
-                  headerAmount = totalCasts.ToString(CultureInfo.CurrentCulture);
-                  break;
-                case 1:
-                  headerAmount = "100";
-                  break;
-                case 2:
-                  headerAmount = Time > 0 ? Math.Round(totalCasts / Time * 60, 2).ToString(CultureInfo.CurrentCulture) : "0";
-                  break;
-              }
-
-              string totalHeader = string.Format("Total = {0}", headerAmount);
-
-              Dispatcher.InvokeAsync(() =>
-              {
-                DataGridTextColumn col = new DataGridTextColumn() { Header = totalHeader, Binding = new Binding("totalColumn") };
-                col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
-                col.HeaderStyle = Application.Current.Resources["BrightCenterGridHeaderStyle"] as Style;
-                dataGrid.Columns.Add(col);
-              });
-
-              int existingIndex = 0;
-              foreach (var spell in sortedSpellList)
-              {
-                var row = (SpellRows.Count > existingIndex) ? SpellRows[existingIndex] : new ExpandoObject();
-                row["Spell"] = spell;
-
-                //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
-                row["IconColor"] = ACTIVEICON;
-
-                for (int i = 0; i < sortedPlayers.Count; i++)
-                {
-                  if (filteredPlayerMap.ContainsKey(sortedPlayers[i]))
-                  {
-                    if (filteredPlayerMap[sortedPlayers[i]].ContainsKey(spell))
-                    {
-                      switch (CurrentCountType)
-                      {
-                        case 0:
-                          AddPlayerRow(sortedPlayers[i], spell, filteredPlayerMap[sortedPlayers[i]][spell].ToString(CultureInfo.CurrentCulture), row);
-                          break;
-                        case 1:
-                          var percent = totalCountMap[sortedPlayers[i]] > 0 ? Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2) : 0.0;
-                          AddPlayerRow(sortedPlayers[i], spell, percent.ToString(CultureInfo.CurrentCulture), row);
-                          break;
-                        case 2:
-                          var rate = Time > 0 ? Math.Round(filteredPlayerMap[sortedPlayers[i]][spell] / Time * 60, 2) : 0.0;
-                          AddPlayerRow(sortedPlayers[i], spell, rate.ToString(CultureInfo.CurrentCulture), row);
-                          break;
-                      }
-                    }
-                    else
-                    {
-                      row[sortedPlayers[i]] = CurrentCountType == 0 ? "0" : "0.0";
-                    }
-                  }
-                }
-
-                switch (CurrentCountType)
-                {
-                  case 0:
-                    row["totalColumn"] = uniqueSpellsMap[spell].ToString(CultureInfo.CurrentCulture);
-                    break;
-                  case 1:
-                    row["totalColumn"] = Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2).ToString(CultureInfo.CurrentCulture);
-                    break;
-                  case 2:
-                    row["totalColumn"] = Time > 0 ? Math.Round(uniqueSpellsMap[spell] / Time * 60, 2).ToString(CultureInfo.CurrentCulture) : "0.0";
-                    break;
-                }
-
-                if (SpellRows.Count <= existingIndex)
-                {
-                  Dispatcher.InvokeAsync(() => SpellRows.Add(row));
-                }
-
-                existingIndex++;
-                Thread.Sleep(5);
-              }
+              totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
             }
-            catch (Exception ex)
+          }
+
+          if ((CurrentCastType == 0 || CurrentCastType == 2) && TheSpellCounts.PlayerReceivedCounts.ContainsKey(player))
+          {
+            foreach (string id in TheSpellCounts.PlayerReceivedCounts[player].Keys)
             {
-              LOG.Error(ex);
-              throw;
+              totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
             }
-            finally
-            {
-              Dispatcher.InvokeAsync(() =>
-              {
-                showInterrupts.IsEnabled = showProcs.IsEnabled = spellTypes.IsEnabled = castTypes.IsEnabled = countTypes.IsEnabled = minFreqList.IsEnabled = true;
-                showSelfOnly.IsEnabled = PlayerList.Contains(ConfigUtil.PlayerName);
-                exportClick.IsEnabled = copyOptions.IsEnabled = removeRowClick.IsEnabled = SpellRows.Count > 0;
+          }
+        });
 
-                lock (LockObject)
-                {
-                  Running = false;
-                }
-              });
-            }
-          }, TaskScheduler.Default);
+        List<string> sortedPlayers = totalCountMap.Keys.OrderByDescending(key => totalCountMap[key]).ToList();
+        List<string> sortedSpellList = uniqueSpellsMap.Keys.OrderByDescending(key => uniqueSpellsMap[key]).ToList();
 
-          Ready = true;
+        int colCount = 0;
+        foreach (string name in sortedPlayers)
+        {
+          string colBinding = name; // dont use colCount directly since it will change during Dispatch
+          double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
+
+          double amount = 0.0;
+          switch (CurrentCountType)
+          {
+            case 0:
+              amount = total;
+              break;
+            case 1:
+              amount = totalCasts > 0 ? Math.Round(total / totalCasts * 100, 2) : 0;
+              break;
+            case 2:
+              amount = Time > 0 ? Math.Round(total / Time * 60, 2) : 0;
+              break;
+          }
+
+          string header = string.Format("{0} = {1}", name, amount.ToString(CultureInfo.CurrentCulture));
+
+          var playerCol = new GridTextColumn
+          {
+            HeaderText = header,
+            MappingName = colBinding,
+            HorizontalHeaderContentAlignment = HorizontalAlignment.Center
+          };
+            // col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
+          dataGrid.Columns.Add(playerCol);
+          colCount++;
         }
+
+        string headerAmount = "";
+        switch (CurrentCountType)
+        {
+          case 0:
+            headerAmount = totalCasts.ToString(CultureInfo.CurrentCulture);
+            break;
+          case 1:
+            headerAmount = "100";
+            break;
+          case 2:
+            headerAmount = Time > 0 ? Math.Round(totalCasts / Time * 60, 2).ToString(CultureInfo.CurrentCulture) : "0";
+            break;
+        }
+
+        string totalHeader = string.Format("Total = {0}", headerAmount);
+
+        var totalCol = new GridTextColumn
+        {
+          HeaderText = totalHeader,
+          MappingName = "totalColumn",
+          HorizontalHeaderContentAlignment = HorizontalAlignment.Center
+        };
+
+          //col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
+        dataGrid.Columns.Add(totalCol);
+
+        int existingIndex = 0;
+        foreach (var spell in sortedSpellList)
+        {
+          var row = (SpellRows.Count > existingIndex) ? SpellRows[existingIndex] : new ExpandoObject();
+          row["Spell"] = spell;
+
+          //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
+          row["IconColor"] = ACTIVEICON;
+
+          for (int i = 0; i < sortedPlayers.Count; i++)
+          {
+            if (filteredPlayerMap.ContainsKey(sortedPlayers[i]))
+            {
+              if (filteredPlayerMap[sortedPlayers[i]].ContainsKey(spell))
+              {
+                switch (CurrentCountType)
+                {
+                  case 0:
+                    AddPlayerRow(sortedPlayers[i], spell, filteredPlayerMap[sortedPlayers[i]][spell].ToString(CultureInfo.CurrentCulture), row);
+                    break;
+                  case 1:
+                    var percent = totalCountMap[sortedPlayers[i]] > 0 ? Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2) : 0.0;
+                    AddPlayerRow(sortedPlayers[i], spell, percent.ToString(CultureInfo.CurrentCulture), row);
+                    break;
+                  case 2:
+                    var rate = Time > 0 ? Math.Round(filteredPlayerMap[sortedPlayers[i]][spell] / Time * 60, 2) : 0.0;
+                    AddPlayerRow(sortedPlayers[i], spell, rate.ToString(CultureInfo.CurrentCulture), row);
+                    break;
+                }
+              }
+              else
+              {
+                row[sortedPlayers[i]] = CurrentCountType == 0 ? "0" : "0.0";
+              }
+            }
+          }
+
+          switch (CurrentCountType)
+          {
+            case 0:
+              row["totalColumn"] = uniqueSpellsMap[spell].ToString(CultureInfo.CurrentCulture);
+              break;
+            case 1:
+              row["totalColumn"] = Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2).ToString(CultureInfo.CurrentCulture);
+              break;
+            case 2:
+              row["totalColumn"] = Time > 0 ? Math.Round(uniqueSpellsMap[spell] / Time * 60, 2).ToString(CultureInfo.CurrentCulture) : "0.0";
+              break;
+          }
+
+          if (SpellRows.Count <= existingIndex)
+          {
+            SpellRows.Add(row);
+          }
+
+          existingIndex++;
+        }
+
+        dataGrid.ItemsSource = new ListCollectionView(SpellRows);
       }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+        throw;
+      }
+    }
+
+    private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged(true);
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void OptionsSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => OptionsChanged(true);
+    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
+    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => UpdateSelection();
+
+    // workaround since select all API doesn't seem to fire selection changed
+    private void SelectAllClick(object sender, RoutedEventArgs e)
+    {
+      DataGridUtil.SelectAll(sender as FrameworkElement);
+      Dispatcher.InvokeAsync(() => UpdateSelection());
     }
 
     private void AddPlayerRow(string player, string spell, string value, IDictionary<string, object> row)
@@ -311,6 +270,7 @@ namespace EQLogParser
       {
         count = count + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
       }
+
       row[player] = count;
     }
 
@@ -346,7 +306,7 @@ namespace EQLogParser
 
     private void OptionsChanged(bool clear = false)
     {
-      if (Ready)
+      if (dataGrid.View != null)
       {
         if (clear)
         {
@@ -369,38 +329,12 @@ namespace EQLogParser
       }
     }
 
-    private void SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void UpdateSelection()
     {
       // adds a delay where a drag-select doesn't keep sending events
-
-      DataGrid callingDataGrid = sender as DataGrid;
-      selectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
-      unselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
-    }
-
-    private void CreateImageClick(object sender, RoutedEventArgs e)
-    {
-      // lame workaround to toggle scrollbar to fix UI
-      dataGrid.IsEnabled = false;
-      dataGrid.SelectedItems.Clear();
-      dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
-      dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
-
-      Task.Delay(50).ContinueWith((bleh) =>
-      {
-        Dispatcher.InvokeAsync(() =>
-        {
-          dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-          dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          SpellRows.ToList().ForEach(spr => spr["IconColor"] = EMPTYICON);
-          dataGrid.Items.Refresh();
-          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() =>
-          {
-            //DataGridUtil.CreateImage(dataGrid, titleLabel);
-            //SpellRows.ToList().ForEach(spr => spr["IconColor"] = ACTIVEICON);
-          }), TaskScheduler.Default);
-        });
-      }, TaskScheduler.Default);
+      var records = dataGrid.View.Records;
+      selectAll.IsEnabled = (dataGrid.SelectedItems.Count < records.Count) && records.Count > 0;
+      unselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0 && records.Count > 0;
     }
 
     private void ReloadClick(object sender, RoutedEventArgs e)
@@ -527,11 +461,6 @@ namespace EQLogParser
       }
     }
 
-    private void CopyCsvClick(object sender, RoutedEventArgs e)
-    {
-      //DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    }
-
     private void CopyBBCodeClick(object sender, RoutedEventArgs e)
     {
       try
@@ -572,35 +501,28 @@ namespace EQLogParser
 
     private void RemoveSelectedRowsClick(object sender, RoutedEventArgs e)
     {
-      // Don't allow if the previous operation hasn't finished
-      // this probably needs to be better...
-      if (!Running)
+      var modified = false;
+      while (dataGrid.SelectedItems.Count > 0)
       {
-        var modified = false;
-        while (dataGrid.SelectedItems.Count > 0)
+        if (dataGrid.SelectedItem is IDictionary<string, object> spr)
         {
-          if (dataGrid.SelectedItem is IDictionary<string, object> spr)
-          {
-            HiddenSpells[spr["Spell"] as string] = 1;
-            SpellRows.Remove(spr);
-            modified = true;
-          }
+          HiddenSpells[spr["Spell"] as string] = 1;
+          SpellRows.Remove(spr);
+          modified = true;
         }
+      }
 
-        if (modified)
-        {
-          OptionsChanged();
-        }
+      if (modified)
+      {
+        OptionsChanged();
       }
     }
 
-    private void RemoveSpellMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void RemoveSpellMouseDown(object sender, MouseButtonEventArgs e)
     {
-      var cell = sender as DataGridCell;
-
       // Don't allow if the previous operation hasn't finished
       // this probably needs to be better...
-      if (!Running && cell.DataContext is IDictionary<string, object> spr)
+      if (sender is ImageAwesome image && image.DataContext is IDictionary<string, object> spr)
       {
         HiddenSpells[spr["Spell"] as string] = 1;
         SpellRows.Remove(spr);

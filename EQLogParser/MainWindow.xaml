@@ -294,7 +294,15 @@
       </ContentControl>
       <ContentControl x:Name="petMappingWindow" Tag="Hide" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="320" syncfusion:DockingManager.DesiredWidthInFloatingMode="320">
-        <syncfusion:SfDataGrid x:Name="petMappingGrid" CurrentCellDropDownSelectionChanged="PetMappingDropDownSelectionChanged" RowHeaderWidth="0" Margin="0" ColumnSizer="AutoLastColumnFill" EditTrigger="OnTap" AutoGenerateColumns="False" AllowResizingColumns="False">
+        <syncfusion:SfDataGrid x:Name="petMappingGrid"
+                               AllowResizingColumns="False"
+                               AutoGenerateColumns="False"
+                               ColumnSizer="AutoLastColumnFill"
+                               CurrentCellDropDownSelectionChanged="PetMappingDropDownSelectionChanged"
+                               EditTrigger="OnTap"
+                               ShowRowHeader="False"
+                               GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                               SelectionMode="Extended">
           <syncfusion:SfDataGrid.Columns>
             <syncfusion:GridComboBoxColumn x:Name="ownerList" Width="160" HeaderText="Owner" AllowEditing="True" IsReadOnly="False" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
             <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
@@ -303,30 +311,62 @@
       </ContentControl>
       <ContentControl x:Name="verifiedPlayersWindow" Tag="Hide" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
                       syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="220" syncfusion:DockingManager.DesiredWidthInFloatingMode="220">
-        <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" ColumnSizer="AutoLastColumnFill" IsReadOnly="True" AllowResizingColumns="False">
+        <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid"
+                               AllowResizingColumns="False"
+                               AutoGenerateColumns="False"
+                               ColumnSizer="AutoLastColumnFill"
+                               IsReadOnly="True"
+                               RowHeaderWidth="25"
+                               ShowRowHeader="True"
+                               GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                               SelectionMode="Extended">
+          <syncfusion:SfDataGrid.Resources>
+            <Style TargetType="syncfusion:GridRowHeaderCell">
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                      <Grid>
+                        <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Times" PreviewMouseDown="RemovePlayerMouseDown"/>
+                      </Grid>
+                    </Border>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </syncfusion:SfDataGrid.Resources>
           <syncfusion:SfDataGrid.Columns>
-            <syncfusion:GridTemplateColumn HeaderText="">
-              <syncfusion:GridTemplateColumn.CellTemplate>
-                <DataTemplate>
-                  <fa:ImageAwesome Width="12" Height="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="{StaticResource menuIconBrush}" PreviewMouseDown="RemovePlayerMouseDown"/>
-                </DataTemplate>
-              </syncfusion:GridTemplateColumn.CellTemplate>
-            </syncfusion:GridTemplateColumn>
             <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
           </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>
       </ContentControl>
       <ContentControl x:Name="verifiedPetsWindow" Tag="Hide" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="220" syncfusion:DockingManager.DesiredWidthInFloatingMode="220">
-        <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" RowHeaderWidth="0" Margin="0" AutoGenerateColumns="False" ColumnSizer="AutoLastColumnFill" IsReadOnly="True" AllowResizingColumns="False">
+        <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" 
+                               AllowResizingColumns="False"
+                               AutoGenerateColumns="False"
+                               ColumnSizer="AutoLastColumnFill"
+                               IsReadOnly="True"
+                               RowHeaderWidth="25"
+                               ShowRowHeader="True"
+                               GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                               SelectionMode="Extended">
+          <syncfusion:SfDataGrid.Resources>
+            <Style TargetType="syncfusion:GridRowHeaderCell">
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                      <Grid>
+                        <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Times" PreviewMouseDown="RemovePetMouseDown"/>
+                      </Grid>
+                    </Border>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </syncfusion:SfDataGrid.Resources>
           <syncfusion:SfDataGrid.Columns>
-            <syncfusion:GridTemplateColumn HeaderText="">
-              <syncfusion:GridTemplateColumn.CellTemplate>
-                <DataTemplate>
-                  <fa:ImageAwesome Width="12" Height="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="{StaticResource menuIconBrush}" PreviewMouseDown="RemovePetMouseDown"/>
-                </DataTemplate>
-              </syncfusion:GridTemplateColumn.CellTemplate>
-            </syncfusion:GridTemplateColumn>
             <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
           </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>

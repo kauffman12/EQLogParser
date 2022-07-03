@@ -34,6 +34,12 @@ namespace EQLogParser
         TheTitle.Content = DEFAULT_TABLE_LABEL;
       }
 
+      // default these columns to descending
+      string[] desc = new string[] { "PercentOfRaid", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
+      "ExtraRate", "CritRate", "LuckRate"};
+      TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+
       if (TheDataGrid != null)
       {
         DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid, 1);
@@ -179,7 +185,7 @@ namespace EQLogParser
       {
         var main = Application.Current.MainWindow as MainWindow;
         var spellTable = Helpers.OpenWindow(main.dockSite, null, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Timeline");
-        (spellTable.Content as SpellCastTable).Init(CurrentStats?.ShortTitle ?? "", selected, CurrentStats);
+        (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
       }
     }
 
@@ -187,10 +193,9 @@ namespace EQLogParser
     {
       if (selected?.Count > 0)
       {
-        var spellTable = new SpellCountTable(CurrentStats?.ShortTitle ?? "", CurrentStats.RaidStats.TotalSeconds);
-        spellTable.ShowSpells(selected, CurrentStats);
         var main = Application.Current.MainWindow as MainWindow;
-        Helpers.OpenNewTab(main.dockSite, "spellCountsWindow", "Spell Counts", spellTable);
+        var spellTable = Helpers.OpenWindow(main.dockSite, null, typeof(SpellCountTable), "spellCountsWindow", "Spell Counts");
+        (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
       }
     }
   }

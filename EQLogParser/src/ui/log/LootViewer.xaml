@@ -44,6 +44,7 @@
                            ColumnSizer="AutoWithLastColumnFill"
                            FrozenColumnCount="1"                           
                            Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            IsReadOnly="True"
                            RowHeaderWidth="30"
                            SelectionMode="Extended"
@@ -74,7 +75,7 @@
         </ContextMenu>
         </syncfusion:SfDataGrid.ContextMenu>
         <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
+        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
                                    Width="100" TextAlignment="Center" HeaderText="Time"/>
         <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Player}" HeaderText="Player"/>
         <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Item}" HeaderText="Item"/>

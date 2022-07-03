@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid SizeChanged="GridSizeChanged">
@@ -13,95 +13,99 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel x:Name="titlePanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" FontSize="15" FontWeight="Bold">This is a title</Label>
+      <Label x:Name="titleLabel" Style="{StaticResource titleStyle}" />
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,6,0" VerticalAlignment="Center" IsEnabled="False" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Self Only</CheckBox>
       <CheckBox x:Name="showInterrupts" IsChecked="False" Margin="0,0,6,0" VerticalAlignment="Center" IsEnabled="True" ToolTip="Include spell interrupt information next to the spell count if available." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Spell Interrupts</CheckBox>
       <CheckBox x:Name="showProcs" IsChecked="False" Margin="0,0,4,0" VerticalAlignment="Center" IsEnabled="True" ToolTip="Include spell procs from augs and weapons." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Spell Procs</CheckBox>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <ComboBox Margin="4,0,0,0" x:Name="countTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="minFreqList" Height="24" SelectionChanged="Options_SelectionChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="spellTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="24" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox Margin="4,0,0,0" x:Name="countTypes" Height="24" SelectionChanged="OptionsSelectionChanged" />
+      <ComboBox Margin="0" x:Name="minFreqList" Height="24" SelectionChanged="OptionsSelectionChanged" />
+      <ComboBox Margin="0" x:Name="spellTypes" Height="24" SelectionChanged="OptionsSelectionChanged" />
+      <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="24" SelectionChanged="OptionsSelectionChanged" />
     </StackPanel>
-    <datagrid:ThemedDataGrid Grid.Row="1" x:Name="dataGrid" Margin="0,0,0,0" AlternatingRowBackground="{x:Null}" AutoGenerateColumns="False" RowHeaderWidth="0" IsReadOnly="True" ScrollViewer.CanContentScroll="True" HorizontalScrollBarVisibility="Hidden" SelectionChanged="SelectionChanged">
-      <DataGrid.ContextMenu>
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="Auto"                           
+                           Grid.Row="1"  
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           IsReadOnly="True" 
+                           ShowRowHeader="False"
+                           SelectionChanged="SelectionChanged"
+                           SelectionMode="Extended">
+      <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyBBCodeClick" Header="BBCode Table" Click="CopyBBCodeClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>            
             <MenuItem IsEnabled="True" x:Name="copyGamparseClick" Header="Gamparse BBCode" Click="CopyGamparseClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Code" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Code" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem IsEnabled="True" x:Name="importClick" Header="Import Data (scf)" Click="ImportClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Upload" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Upload" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="True" x:Name="exportClick" Header="Export Data (scf)" Click="ExportClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Download" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Download" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="selectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Square" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="unselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Regular_Square" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />          
           <MenuItem IsEnabled="True" x:Name="removeRowClick" Header="Clear Selected Rows" Click="RemoveSelectedRowsClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Times" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Counts" Click="ReloadClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Redo" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
-      </DataGrid.ContextMenu>
-      <DataGrid.Columns>
-        <DataGridTemplateColumn Header="" Width="18" MaxWidth="18" IsReadOnly="True">
-          <DataGridTemplateColumn.CellStyle>
-            <Style TargetType="DataGridCell">
-              <EventSetter Event="PreviewMouseDown" Handler="RemoveSpellMouseDown"/>
-            </Style>
-          </DataGridTemplateColumn.CellStyle>
-          <DataGridTemplateColumn.CellTemplate>
+      </syncfusion:SfDataGrid.ContextMenu>
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTemplateColumn HeaderText="">
+          <syncfusion:GridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="{Binding IconColor}"  />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Times" PreviewMouseDown="RemoveSpellMouseDown"/>
             </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
-        </DataGridTemplateColumn>
-      </DataGrid.Columns>
-    </datagrid:ThemedDataGrid>
+          </syncfusion:GridTemplateColumn.CellTemplate>
+        </syncfusion:GridTemplateColumn>
+      </syncfusion:SfDataGrid.Columns>
+    </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

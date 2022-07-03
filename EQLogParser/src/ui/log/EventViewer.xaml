@@ -53,12 +53,13 @@
                            ColumnSizer="AutoWithLastColumnFill"
                            FrozenColumnCount="1"
                            Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            IsReadOnly="True"
                            RowHeaderWidth="30"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Time, Converter={StaticResource DateTimeConverter}}" 
+        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource DateTimeConverter}}" 
                                    Width="100" TextAlignment="Center" HeaderText="Time" />
         <syncfusion:GridTextColumn MappingName="Actor" HeaderText="Actor" />
         <syncfusion:GridTextColumn MappingName="Event" HeaderText="Event" />
