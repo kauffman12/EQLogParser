@@ -23,7 +23,7 @@
           </Setter.Value>
         </Setter>
       </Style>      
-      <local:DateTimeConverter x:Key="DateTimeConverter" />
+      <local:DateTimeConverter x:Key="dateTimeConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
@@ -34,7 +34,7 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="4,0,0,0" x:Name="playersList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="00" x:Name="itemsList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0" x:Name="itemsList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,4,0" x:Name="optionsList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
@@ -54,9 +54,14 @@
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
-            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV Table" Click="CopyCsvClick">
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Table" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -69,7 +74,8 @@
         </ContextMenu>
         </syncfusion:SfDataGrid.ContextMenu>
         <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" DisplayBinding="{Binding Path=Time, Converter={StaticResource DateTimeConverter}}" HeaderText="Time"/>
+        <syncfusion:GridTextColumn MappingName="Time" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
+                                   Width="100" TextAlignment="Center" HeaderText="Time"/>
         <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Player}" HeaderText="Player"/>
         <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Item}" HeaderText="Item"/>
         <syncfusion:GridTemplateColumn HeaderText="Quantity" MappingName="Quantity">

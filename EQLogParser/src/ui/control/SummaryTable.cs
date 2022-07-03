@@ -59,12 +59,7 @@ namespace EQLogParser
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
-
-    internal void CreateImageClick(object sender, RoutedEventArgs e)
-    {
-      TheDataGrid.SelectedItems.Clear();
-      Task.Delay(50).ContinueWith((t) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(TheDataGrid, TheTitle)), TaskScheduler.Default);
-    }
+    internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
     {

@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -95,17 +96,12 @@ namespace EQLogParser
         var row = new List<object>();
         foreach (var key in headerKeys)
         {
-          // regular object with properties
-          row.Add(props.GetFormattedValue(record.Data, key) ?? "");
-
-          // spell casts and counts use dictionaries
-          //if (item is IDictionary<string, object> dict)
-          //{
-          //  if (dict.ContainsKey(key))
-          //  {
-          //    row.Add(dict[key]);
-          //  }
-          //}
+          // ignore sometimes last column
+          if (key != "Empty")
+          {
+            // regular object with properties
+            row.Add(props.GetFormattedValue(record.Data, key) ?? "");
+          }
         }
 
         data.Add(row);
@@ -116,36 +112,40 @@ namespace EQLogParser
 
     internal static void CreateImage(SfDataGrid dataGrid, Label titleLabel)
     {
-      try
+      Task.Delay(50).ContinueWith((t) => dataGrid.Dispatcher.InvokeAsync(() =>
       {
-        var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth);
-        var realTableHeight = dataGrid.ActualHeight + dataGrid.HeaderRowHeight + 1;
-        var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
-        var titleHeight = titleLabel.DesiredSize.Height - (titleLabel.Padding.Top + titleLabel.Padding.Bottom);
-        var titleWidth = titleLabel.DesiredSize.Width;
-
-        var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleHeight),
-          dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
-
-        DrawingVisual dv = new DrawingVisual();
-        using (DrawingContext ctx = dv.RenderOpen())
+        try
         {
-          var brush = new VisualBrush(titleLabel);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(4, 0), new Size(titleWidth, titleHeight)));
+          dataGrid.SelectedItems.Clear();
+          var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth);
+          var realTableHeight = dataGrid.ActualHeight + dataGrid.HeaderRowHeight + 1;
+          var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
+          var titleHeight = titleLabel.DesiredSize.Height - (titleLabel.Padding.Top + titleLabel.Padding.Bottom);
+          var titleWidth = titleLabel.DesiredSize.Width;
 
-          brush = new VisualBrush(dataGrid);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight +
-            SystemParameters.HorizontalScrollBarHeight)));
+          var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
+          RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleHeight),
+            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+
+          DrawingVisual dv = new DrawingVisual();
+          using (DrawingContext ctx = dv.RenderOpen())
+          {
+            var brush = new VisualBrush(titleLabel);
+            ctx.DrawRectangle(brush, null, new Rect(new Point(4, 0), new Size(titleWidth, titleHeight)));
+
+            brush = new VisualBrush(dataGrid);
+            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight +
+              SystemParameters.HorizontalScrollBarHeight)));
+          }
+
+          rtb.Render(dv);
+          Clipboard.SetImage(rtb);
         }
-
-        rtb.Render(dv);
-        Clipboard.SetImage(rtb);
-      }
-      catch (Exception ex)
-      {
-        LOG.Error("Could not Copy Image", ex);
-      }
+        catch (Exception ex)
+        {
+          LOG.Error("Could not Copy Image", ex);
+        }
+      }));
     }
 
     internal static void SelectAll(FrameworkElement sender)

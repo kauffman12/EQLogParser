@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -115,6 +114,9 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() => UpdateUI());
     }
 
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+
     private void UpdateUI()
     {
       dataGrid.View.RefreshFilter();
@@ -161,25 +163,6 @@ namespace EQLogParser
         }
 
         UpdateUI();
-      }
-    }
-
-    private void CopyCsvClick(object sender, RoutedEventArgs e)
-    {
-      try
-      {
-        var export = BuildExportData();
-        string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2);
-        Clipboard.SetDataObject(result);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
-        LOG.Error(ane);
-      }
-      catch (ExternalException ex)
-      {
-        LOG.Error(ex);
       }
     }
 
