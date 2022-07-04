@@ -23,7 +23,7 @@
             </ControlTemplate>
           </Setter.Value>
         </Setter>
-      </Style>      
+      </Style>
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
@@ -44,6 +44,7 @@
                            AllowSorting="True"
                            AutoGenerateColumns="True"
                            ColumnSizer="Auto"
+                           FrozenColumnCount="2"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            IsReadOnly="True"

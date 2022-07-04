@@ -17,6 +17,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -26,7 +27,6 @@ namespace EQLogParser
   public partial class SpellCountTable : UserControl
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private const string ACTIVEICON = "#5191c1";
 
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
@@ -38,6 +38,7 @@ namespace EQLogParser
     private readonly List<string> CountTypes = new List<string>() { "Show Counts", "Show Percent", "Show Counts/Minute" };
     private readonly List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
     private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
+    private readonly HashSet<string> SortDescs = new HashSet<string>();
     private int CurrentCastType = 0;
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
@@ -57,6 +58,10 @@ namespace EQLogParser
       minFreqList.SelectedIndex = 0;
       spellTypes.ItemsSource = SpellTypes;
       spellTypes.SelectedIndex = 0;
+
+      // default these columns to descending
+      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, SortDescs);
+      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, SortDescs);
     }
 
     internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
@@ -88,7 +93,7 @@ namespace EQLogParser
         {
           HeaderText = "",
           MappingName = "Spell",
-          ColumnSizer = GridLengthUnitType.SizeToCells
+          CellStyle = DataGridUtil.CreateReceivedSpellStyle("Spell")
         };
 
         dataGrid.Columns.Add(headerCol);
@@ -125,7 +130,6 @@ namespace EQLogParser
         int colCount = 0;
         foreach (string name in sortedPlayers)
         {
-          string colBinding = name; // dont use colCount directly since it will change during Dispatch
           double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
 
           double amount = 0.0;
@@ -147,12 +151,12 @@ namespace EQLogParser
           var playerCol = new GridTextColumn
           {
             HeaderText = header,
-            MappingName = colBinding,
-            HorizontalHeaderContentAlignment = HorizontalAlignment.Center
+            MappingName = name
           };
-            // col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
+
           dataGrid.Columns.Add(playerCol);
           colCount++;
+          SortDescs.Add(name);
         }
 
         string headerAmount = "";
@@ -178,17 +182,14 @@ namespace EQLogParser
           HorizontalHeaderContentAlignment = HorizontalAlignment.Center
         };
 
-          //col.CellStyle = Application.Current.Resources["SpellGridDataCellStyle"] as Style;
         dataGrid.Columns.Add(totalCol);
+        SortDescs.Add(totalHeader);
 
         int existingIndex = 0;
         foreach (var spell in sortedSpellList)
         {
           var row = (SpellRows.Count > existingIndex) ? SpellRows[existingIndex] : new ExpandoObject();
           row["Spell"] = spell;
-
-          //row.IsReceived = spell.StartsWith("Received", StringComparison.Ordinal);
-          row["IconColor"] = ACTIVEICON;
 
           for (int i = 0; i < sortedPlayers.Count; i++)
           {
@@ -251,6 +252,7 @@ namespace EQLogParser
     private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged(true);
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void GridSizeChanged(object sender, SizeChangedEventArgs e) => DataGridUtil.CheckHideTitlePanel(titlePanel, settingsPanel);
     private void OptionsSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => OptionsChanged(true);
     private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
     private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => UpdateSelection();
@@ -313,11 +315,7 @@ namespace EQLogParser
           SpellRows.Clear();
         }
 
-        for (int i = dataGrid.Columns.Count - 1; i > 0; i--)
-        {
-          dataGrid.Columns.RemoveAt(i);
-        }
-
+        dataGrid.Columns.Clear();
         CurrentCastType = castTypes.SelectedIndex;
         CurrentCountType = countTypes.SelectedIndex;
         CurrentMinFreqCount = minFreqList.SelectedIndex;
@@ -465,13 +463,13 @@ namespace EQLogParser
     {
       try
       {
-        //var export = DataGridUtil.BuildExportData(dataGrid);
-        //string result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
-        //Clipboard.SetDataObject(result);
+        var export = DataGridUtil.BuildExportData(dataGrid);
+        string result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
+        Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
       {
-        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
+        Clipboard.SetDataObject("EQLogParser Error: Failed to create BBCode\r\n");
         LOG.Error(ane);
       }
       catch (ExternalException ex)
@@ -484,9 +482,9 @@ namespace EQLogParser
     {
       try
       {
-        //var export = DataGridUtil.BuildExportData(dataGrid);
-        //string result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
-        //Clipboard.SetDataObject(result);
+        var export = DataGridUtil.BuildExportData(dataGrid);
+        string result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
+        Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
       {
@@ -520,28 +518,11 @@ namespace EQLogParser
 
     private void RemoveSpellMouseDown(object sender, MouseButtonEventArgs e)
     {
-      // Don't allow if the previous operation hasn't finished
-      // this probably needs to be better...
       if (sender is ImageAwesome image && image.DataContext is IDictionary<string, object> spr)
       {
         HiddenSpells[spr["Spell"] as string] = 1;
         SpellRows.Remove(spr);
         OptionsChanged();
-      }
-    }
-
-    private void GridSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-      var settingsLoc = settingsPanel.PointToScreen(new Point(0, 0));
-      var titleLoc = titlePanel.PointToScreen(new Point(0, 0));
-
-      if ((titleLoc.X + titlePanel.ActualWidth) > (settingsLoc.X + 10))
-      {
-        titlePanel.Visibility = Visibility.Hidden;
-      }
-      else
-      {
-        titlePanel.Visibility = Visibility.Visible;
       }
     }
   }

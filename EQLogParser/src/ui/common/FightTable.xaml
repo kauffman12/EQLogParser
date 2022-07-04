@@ -22,7 +22,7 @@
           </DataTrigger>
         </Style.Triggers>
         <Setter Property="Background" Value="{Binding Converter={StaticResource fightrowstyleconverter}}"/>
-        <Setter Property="RowHoverForeground" Value="{StaticResource hoverForegroundBrush}"/>
+        <Setter Property="RowHoverForeground" Value="{StaticResource ContentForeground}"/>
       </Style>
       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">

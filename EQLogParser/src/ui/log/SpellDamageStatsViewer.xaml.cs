@@ -154,7 +154,6 @@ namespace EQLogParser
       row["Avg"] = stats.Total / stats.Count;
       row["Total"] = stats.Total;
       row["Type"] = type;
-      row["Empty"] = "";
       Records.Add(row);
     }
 

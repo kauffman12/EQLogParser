@@ -47,17 +47,12 @@ namespace EQLogParser
 
       foreach (var name in UniqueNames.Keys)
       {
-        var style = new Style(typeof(GridCell));
-        style.Setters.Add(new Setter(ForegroundProperty, new Binding(name) { Converter = new ReceivedSpellColorConverter() }));
-        style.BasedOn = Application.Current.Resources["SyncfusionGridCellStyle"] as Style;
-
         var column = new GridTextColumn
         {
           HeaderText = name,
           MappingName = name,
-          ColumnSizer = GridLengthUnitType.SizeToCells,
-          CellStyle = style
-        };
+          CellStyle = DataGridUtil.CreateReceivedSpellStyle(name)
+      };
 
         dataGrid.Columns.Add(column);
       }

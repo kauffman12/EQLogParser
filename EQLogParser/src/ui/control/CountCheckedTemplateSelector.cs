@@ -19,31 +19,31 @@ namespace EQLogParser
         switch (Header)
         {
           case "Hits":
-            value = row.Count;
+            value = row.Hits;
             countTemplate = Application.Current.Resources["CountTemplate"] as DataTemplate;
             break;
           case "Critical":
-            value = row.CritCount;
+            value = row.Critical;
             countTemplate = Application.Current.Resources["CritCountTemplate"] as DataTemplate;
             break;
           case "Lucky":
-            value = row.LuckyCount;
+            value = row.Lucky;
             countTemplate = Application.Current.Resources["LuckyCountTemplate"] as DataTemplate;
             break;
           case "Twincast":
-            value = row.TwincastCount;
+            value = row.Twincast;
             countTemplate = Application.Current.Resources["TwincastCountTemplate"] as DataTemplate;
             break;
           case "Rampage":
-            value = row.RampageCount;
+            value = row.Rampage;
             countTemplate = Application.Current.Resources["RampageCountTemplate"] as DataTemplate;
             break;
           case "Riposte":
-            value = row.RiposteCount;
+            value = row.Riposte;
             countTemplate = Application.Current.Resources["RiposteCountTemplate"] as DataTemplate;
             break;
           case "Strikethrough":
-            value = row.StrikethroughCount;
+            value = row.Strikethrough;
             countTemplate = Application.Current.Resources["StrikethroughCountTemplate"] as DataTemplate;
             break;
         }

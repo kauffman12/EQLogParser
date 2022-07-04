@@ -73,7 +73,7 @@
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh">
+          <MenuItem IsEnabled="True" Header="Reload Data" Click="MenuItemRefresh">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Redo" />
             </MenuItem.Icon>

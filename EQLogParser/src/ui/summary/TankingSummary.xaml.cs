@@ -84,11 +84,11 @@ namespace EQLogParser
 
     private void DataGridTankingLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count == 1)
+      if (dataGrid.SelectedItems?.Count > 0)
       {
-        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
         var main = Application.Current.MainWindow as MainWindow;
-        var window = Helpers.OpenNewTab(main.dockSite, "tankingLog", "Tanking Log", log, 400, 300);
+        var log = Helpers.OpenWindow(main.dockSite, null, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log");
+        (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
       }
     }
 

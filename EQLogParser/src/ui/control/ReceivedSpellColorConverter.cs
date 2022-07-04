@@ -10,18 +10,14 @@ namespace EQLogParser
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      object result = DependencyProperty.UnsetValue;
-
       if (value is string spellName && spellName.StartsWith("Received ", StringComparison.Ordinal))
       {
-        result = Brushes.LightGreen;
+        return Application.Current.Resources["goodForegroundBrush"] as SolidColorBrush;
       }
       else
       {
-        result = Brushes.White;
+        return Application.Current.Resources["ContentForeground"] as SolidColorBrush;
       }
-
-      return result;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
