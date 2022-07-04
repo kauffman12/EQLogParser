@@ -527,6 +527,12 @@ namespace EQLogParser
     }
   }
 
+  internal class SpellCountsSerialized
+  {
+    public List<string> PlayerNames { get; } = new List<string>();
+    public SpellCountData TheSpellData { get; set; }
+  }
+
   public class SpellCountComparer : IComparer
   {
     private readonly bool Ascending;

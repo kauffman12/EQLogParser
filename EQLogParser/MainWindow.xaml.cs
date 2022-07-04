@@ -36,7 +36,7 @@ namespace EQLogParser
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static bool IsIgnoreCharmPetsEnabled = false;
-
+    internal static readonly int ACTION_INDEX = 27;
     internal static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
     internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     internal static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
@@ -803,7 +803,7 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(line) && line.Length > 30)
       {
-        var lineData = new LineData { Action = line.Substring(LineParsing.ActionIndex), LineNumber = LineCount, BeginTime = dateTime };
+        var lineData = new LineData { Action = line.Substring(ACTION_INDEX), LineNumber = LineCount, BeginTime = dateTime };
 
         // avoid having other things parse chat by accident
         if (ChatLineParser.Process(lineData, line) is ChatType chatType)
