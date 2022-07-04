@@ -28,11 +28,13 @@
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
-                           ColumnSizer="Auto"                           
-                           Grid.Row="1"  
+                           ColumnSizer="Auto"
+                           FrozenColumnCount="1"
+                           Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                           IsReadOnly="True" 
-                           ShowRowHeader="False"
+                           IsReadOnly="True"
+                           RowHeaderWidth="25"
+                           ShowRowHeader="True"
                            SelectionChanged="SelectionChanged"
                            SelectionMode="Extended">
       <syncfusion:SfDataGrid.ContextMenu>
@@ -90,22 +92,28 @@
               <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Times" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Counts" Click="ReloadClick">
+          <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Data" Click="ReloadClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Redo" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTemplateColumn HeaderText="">
-          <syncfusion:GridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Times" PreviewMouseDown="RemoveSpellMouseDown"/>
-            </DataTemplate>
-          </syncfusion:GridTemplateColumn.CellTemplate>
-        </syncfusion:GridTemplateColumn>
-      </syncfusion:SfDataGrid.Columns>
+      <syncfusion:SfDataGrid.Resources>
+        <Style TargetType="syncfusion:GridRowHeaderCell">
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                  <Grid>
+                    <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Times" PreviewMouseDown="RemoveSpellMouseDown"/>
+                  </Grid>
+                </Border>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Style>
+      </syncfusion:SfDataGrid.Resources>
     </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

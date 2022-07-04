@@ -195,13 +195,13 @@ namespace EQLogParser
     public string Actor { get; set; }
     public string ActorClass { get; set; }
     public string Acted { get; set; }
-    public uint Count { get; set; }
-    public uint CritCount { get; set; }
-    public uint LuckyCount { get; set; }
-    public uint TwincastCount { get; set; }
-    public uint RampageCount { get; set; }
-    public uint RiposteCount { get; set; }
-    public uint StrikethroughCount { get; set; }
+    public uint Hits { get; set; }
+    public uint Critical { get; set; }
+    public uint Lucky { get; set; }
+    public uint Twincast { get; set; }
+    public uint Rampage { get; set; }
+    public uint Riposte { get; set; }
+    public uint Strikethrough { get; set; }
     public double Time { get; set; }
     public bool IsPet { get; set; }
     public bool IsGroupingEnabled { get; set; }
@@ -214,13 +214,11 @@ namespace EQLogParser
     public string Actor { get; set; }
     public string Target { get; set; }
     public string Event { get; set; }
-    public string Empty { get; } = "";
   }
 
   internal class LootRow : LootRecord
   {
     public double Time { get; set; }
-    public string Empty { get; } = "";
   }
 
   internal class ActionBlock : TimedAction

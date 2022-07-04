@@ -41,7 +41,6 @@ namespace EQLogParser
     internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
     internal static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
     internal static readonly SolidColorBrush LOADING_BRUSH = new SolidColorBrush(Colors.Orange);
-    internal static readonly SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
 
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -658,7 +657,7 @@ namespace EQLogParser
           {
             if (filePercent >= 100 || CurrentLogOption == LogOption.MONITOR)
             {
-              statusText.Foreground = GOOD_BRUSH;
+              statusText.Foreground = Application.Current.Resources["goodForegroundBrush"] as SolidColorBrush;
               statusText.Text = "Monitoring Active";
             }
 

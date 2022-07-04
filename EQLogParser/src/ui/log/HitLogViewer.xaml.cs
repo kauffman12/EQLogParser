@@ -1,10 +1,9 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -16,97 +15,120 @@ namespace EQLogParser
   /// </summary>
   public partial class HitLogViewer : UserControl
   {
-    private readonly object CollectionLock = new object();
     private readonly ObservableCollection<HitLogRow> Records = new ObservableCollection<HitLogRow>();
     private readonly ObservableCollection<string> Actions = new ObservableCollection<string>();
     private readonly ObservableCollection<string> Types = new ObservableCollection<string>();
-
-    private readonly string ActedOption = Labels.UNK;
-    private readonly List<List<ActionBlock>> CurrentGroups;
     private readonly Dictionary<string, double> LastSeenCache = new Dictionary<string, double>();
-    private readonly bool Defending;
-    private readonly PlayerStats PlayerStats;
+    private readonly Columns CheckBoxColumns = new Columns();
+    private readonly Columns TextColumns = new Columns();
+    private readonly string[] ColumnIds = new string[] { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
 
+    private string ActedOption = Labels.UNK;
+    private List<List<ActionBlock>> CurrentGroups;
+    private bool Defending;
+    private PlayerStats PlayerStats;
     private string CurrentActedFilter = null;
     private string CurrentActionFilter = null;
     private string CurrentTypeFilter = null;
     private bool CurrentShowPetsFilter = true;
     private bool CurrentGroupActionsFilter = true;
 
-    internal HitLogViewer(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups, bool defending = false)
+    public HitLogViewer()
     {
       InitializeComponent();
 
+      for (int i = 0; i <= 5; i++)
+      {
+        CheckBoxColumns.Add(dataGrid.Columns[i]);
+        TextColumns.Add(dataGrid.Columns[i]);
+      }
+
+      ColumnIds.ToList().ForEach(name =>
+      {
+        CheckBoxColumns.Add(new GridCheckBoxColumn
+        {
+          MappingName = name,
+          SortMode = Syncfusion.Data.DataReflectionMode.Value,
+          HeaderText = name
+        });
+      });
+
+      ColumnIds.ToList().ForEach(name =>
+      {
+        TextColumns.Add(new GridTextColumn
+        {
+          MappingName = name,
+          SortMode = Syncfusion.Data.DataReflectionMode.Value,
+          HeaderText = name,
+          TextAlignment = TextAlignment.Right
+        });
+      });
+
+      for (int i = 6; i < dataGrid.Columns.Count; i++)
+      {
+        CheckBoxColumns.Add(dataGrid.Columns[i]);
+        TextColumns.Add(dataGrid.Columns[i]);
+      }
+
+      dataGrid.Columns = TextColumns;
+    }
+
+    internal void Init(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups, bool defending = false)
+    {
       CurrentGroups = groups;
       Defending = defending;
       PlayerStats = playerStats;
-
       titleLabel.Content = currentStats?.ShortTitle;
-      var view = CollectionViewSource.GetDefaultView(Records);
 
-      view.Filter = new Predicate<object>(item =>
-      {
-        var record = (HitLogRow)item;
-        return (string.IsNullOrEmpty(CurrentTypeFilter) || CurrentTypeFilter == record.Type) &&
-        (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) &&
-        (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) &&
-        (CurrentShowPetsFilter || !record.IsPet);
-      });
-
-      BindingOperations.EnableCollectionSynchronization(Records, CollectionLock);
-      BindingOperations.EnableCollectionSynchronization(Actions, CollectionLock);
-      BindingOperations.EnableCollectionSynchronization(Types, CollectionLock);
-
+      // hide columns dependnig on type of data
+      // TextColumns contains the same instance of columns 0 to 5 and 13 to end
       var firstAction = groups?.First()?.First()?.Actions?.First();
       if (firstAction is DamageRecord && !defending)
       {
         ActedOption = "All Defenders";
-        dataGrid.Columns[4].Header = "Damage";
-        dataGrid.Columns[10].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[11].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[12].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[13].Header = "Attacker";
-        dataGrid.Columns[14].Header = "Attacker Class";
-        dataGrid.Columns[15].Header = "Defender";
+        TextColumns[4].HeaderText = "Damage";
+        TextColumns[5].IsHidden = true;
+        TextColumns[10].IsHidden = CheckBoxColumns[10].IsHidden = true;
+        TextColumns[11].IsHidden = CheckBoxColumns[11].IsHidden = true;
+        TextColumns[12].IsHidden = CheckBoxColumns[12].IsHidden = true;
+        TextColumns[13].HeaderText = "Attacker";
+        TextColumns[14].HeaderText = "Attacker Class";
+        TextColumns[15].HeaderText = "Defender";
         showPets.Visibility = Visibility.Visible;
       }
       else if (firstAction is DamageRecord && defending)
       {
         ActedOption = "All Attackers";
-        dataGrid.Columns[4].Header = "Damage";
-        dataGrid.Columns[7].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[8].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[9].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[13].Header = "Defender";
-        dataGrid.Columns[14].Header = "Defender Class";
-        dataGrid.Columns[15].Header = "Attacker";
+        TextColumns[4].HeaderText = "Damage";
+        TextColumns[5].IsHidden = true;
+        TextColumns[7].IsHidden = CheckBoxColumns[7].IsHidden = true;
+        TextColumns[8].IsHidden = CheckBoxColumns[8].IsHidden = true;
+        TextColumns[9].IsHidden = CheckBoxColumns[9].IsHidden = true;
+        TextColumns[13].HeaderText = "Defender";
+        TextColumns[14].HeaderText = "Defender Class";
+        TextColumns[15].HeaderText = "Attacker";
         showPets.Visibility = Visibility.Collapsed;
-        petDivider.Visibility = Visibility.Collapsed;
       }
       else if (firstAction is HealRecord)
       {
         ActedOption = "All Healed Players";
-        dataGrid.Columns[4].Header = "Heal";
-        dataGrid.Columns[5].Visibility = Visibility.Visible;
-        dataGrid.Columns[10].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[11].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[12].Visibility = Visibility.Collapsed;
-        dataGrid.Columns[13].Header = "Healer";
-        dataGrid.Columns[14].Header = "Healer Class";
-        dataGrid.Columns[15].Header = "Healed";
+        TextColumns[4].HeaderText = "Heal";
+        TextColumns[10].IsHidden = CheckBoxColumns[10].IsHidden = true;
+        TextColumns[11].IsHidden = CheckBoxColumns[11].IsHidden = true;
+        TextColumns[12].IsHidden = CheckBoxColumns[12].IsHidden = true;
+        TextColumns[13].HeaderText = "Healer";
+        TextColumns[14].HeaderText = "Healer Class";
+        TextColumns[15].HeaderText = "Healed";
         showPets.Visibility = Visibility.Collapsed;
-        petDivider.Visibility = Visibility.Collapsed;
       }
 
       actionList.ItemsSource = Actions;
       typeList.ItemsSource = Types;
-      dataGrid.ItemsSource = view;
-
+      dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(Records);
       Actions.Add("All Actions");
       Types.Add("All Types");
       actionList.SelectedIndex = 0;
       typeList.SelectedIndex = 0;
-
       Display(true);
     }
 
@@ -114,78 +136,60 @@ namespace EQLogParser
     {
       if (init || actionList.IsEnabled)
       {
-        actionList.IsEnabled = typeList.IsEnabled = actedList.IsEnabled = showPets.IsEnabled = groupHits.IsEnabled = false;
-        dataGrid.Columns[6].Visibility = CurrentGroupActionsFilter ? Visibility.Visible : Visibility.Collapsed;
+        TextColumns[6].IsHidden = CheckBoxColumns[6].IsHidden = !CurrentGroupActionsFilter;
 
-        Task.Delay(125).ContinueWith(task =>
+        var rowCache = new Dictionary<string, HitLogRow>();
+        Dictionary<string, byte> uniqueDefenders = new Dictionary<string, byte>();
+        Dictionary<string, byte> uniqueActions = new Dictionary<string, byte>();
+        Dictionary<string, byte> uniqueTypes = new Dictionary<string, byte>();
+        ObservableCollection<string> acted = new ObservableCollection<string> { ActedOption };
+
+        Records.Clear();
+        LastSeenCache.Clear();
+        CurrentGroups?.ForEach(group =>
         {
-          var rowCache = new Dictionary<string, HitLogRow>();
-          Dictionary<string, byte> uniqueDefenders = new Dictionary<string, byte>();
-          Dictionary<string, byte> uniqueActions = new Dictionary<string, byte>();
-          Dictionary<string, byte> uniqueTypes = new Dictionary<string, byte>();
-
-          ObservableCollection<string> acted = new ObservableCollection<string> { ActedOption };
-
-          lock (CollectionLock)
+          group.ForEach(block =>
           {
-            Records.Clear();
-          }
-
-          LastSeenCache.Clear();
-          CurrentGroups?.ForEach(group =>
-          {
-            group.ForEach(block =>
+            rowCache.Clear();
+            block.Actions.ForEach(action =>
             {
-              rowCache.Clear();
-              block.Actions.ForEach(action =>
+              if (CreateRow(rowCache, PlayerStats, action, block.BeginTime, Defending) is HitLogRow row && !CurrentGroupActionsFilter)
               {
-                if (CreateRow(rowCache, PlayerStats, action, block.BeginTime, Defending) is HitLogRow row && !CurrentGroupActionsFilter)
-                {
-                  AddRow(row, uniqueActions, uniqueDefenders, uniqueTypes, acted);
-                }
-              });
-
-              if (CurrentGroupActionsFilter)
-              {
-                foreach (var row in rowCache.Values.OrderByDescending(row => row.Total))
-                {
-                  AddRow(row, uniqueActions, uniqueDefenders, uniqueTypes, acted);
-                }
+                AddRow(row, uniqueActions, uniqueDefenders, uniqueTypes, acted);
               }
             });
+
+            if (CurrentGroupActionsFilter)
+            {
+              foreach (var row in rowCache.Values.OrderByDescending(row => row.Total))
+              {
+                AddRow(row, uniqueActions, uniqueDefenders, uniqueTypes, acted);
+              }
+            }
           });
+        });
 
-          Dispatcher.InvokeAsync(() =>
-          {
-            actedList.ItemsSource = acted;
+        actedList.ItemsSource = acted;
 
-            if (CurrentActedFilter == null)
-            {
-              actedList.SelectedIndex = 0;
-            }
-            else if (acted.IndexOf(CurrentActedFilter) is int actedIndex && actedIndex > -1)
-            {
-              actedList.SelectedIndex = actedIndex;
-            }
-            else
-            {
-              CurrentActedFilter = null;
-              actedList.SelectedIndex = 0;
-            }
-
-            actionList.IsEnabled = typeList.IsEnabled = actedList.IsEnabled = showPets.IsEnabled = groupHits.IsEnabled = true;
-          });
-        }, TaskScheduler.Default);
+        if (CurrentActedFilter == null)
+        {
+          actedList.SelectedIndex = 0;
+        }
+        else if (acted.IndexOf(CurrentActedFilter) is int actedIndex && actedIndex > -1)
+        {
+          actedList.SelectedIndex = actedIndex;
+        }
+        else
+        {
+          CurrentActedFilter = null;
+          actedList.SelectedIndex = 0;
+        }
       }
     }
 
     private void AddRow(HitLogRow row, Dictionary<string, byte> uniqueActions, Dictionary<string, byte> uniqueDefenders, Dictionary<string, byte> uniqueTypes, ObservableCollection<string> acted)
     {
-      lock (CollectionLock)
-      {
-        Records.Add(row);
-      }
-
+      Records.Add(row);
       PopulateOption(uniqueActions, row.SubType, Actions);
       PopulateOption(uniqueDefenders, row.Acted, acted);
       PopulateOption(uniqueTypes, row.Type, Types);
@@ -197,35 +201,32 @@ namespace EQLogParser
       {
         cache[value] = 1;
 
-        lock (CollectionLock)
+        if (list.Count == 1)
         {
-          if (list.Count == 1)
+          list.Insert(1, value);
+        }
+        else
+        {
+          int i = 1;
+          int found = -1;
+          foreach (var item in list.Skip(1))
           {
-            list.Insert(1, value);
+            if (string.Compare(item, value, StringComparison.OrdinalIgnoreCase) is int index && index >= 0)
+            {
+              found = index == 0 ? -2 : i;
+              break;
+            }
+
+            i++;
           }
-          else
+
+          if (found == -1)
           {
-            int i = 1;
-            int found = -1;
-            foreach (var item in list.Skip(1))
-            {
-              if (string.Compare(item, value, StringComparison.OrdinalIgnoreCase) is int index && index >= 0)
-              {
-                found = index == 0 ? -2 : i;
-                break;
-              }
-
-              i++;
-            }
-
-            if (found == -1)
-            {
-              list.Add(value);
-            }
-            else if (found > 0)
-            {
-              list.Insert(found, value);
-            }
+            list.Add(value);
+          }
+          else if (found > 0)
+          {
+            list.Insert(found, value);
           }
         }
       }
@@ -311,13 +312,13 @@ namespace EQLogParser
         row.IsGroupingEnabled = CurrentGroupActionsFilter;
         row.Total += hit.Total;
         row.OverTotal += hit.OverTotal;
-        row.CritCount += (uint)(LineModifiersParser.IsCrit(hit.ModifiersMask) ? 1 : 0);
-        row.LuckyCount += (uint)(LineModifiersParser.IsLucky(hit.ModifiersMask) ? 1 : 0);
-        row.TwincastCount += (uint)(LineModifiersParser.IsTwincast(hit.ModifiersMask) ? 1 : 0);
-        row.RampageCount += (uint)(LineModifiersParser.IsRampage(hit.ModifiersMask) ? 1 : 0);
-        row.RiposteCount += (uint)(LineModifiersParser.IsRiposte(hit.ModifiersMask) ? 1 : 0);
-        row.StrikethroughCount += (uint)(LineModifiersParser.IsStrikethrough(hit.ModifiersMask) ? 1 : 0);
-        row.Count++;
+        row.Critical += (uint)(LineModifiersParser.IsCrit(hit.ModifiersMask) ? 1 : 0);
+        row.Lucky += (uint)(LineModifiersParser.IsLucky(hit.ModifiersMask) ? 1 : 0);
+        row.Twincast += (uint)(LineModifiersParser.IsTwincast(hit.ModifiersMask) ? 1 : 0);
+        row.Rampage += (uint)(LineModifiersParser.IsRampage(hit.ModifiersMask) ? 1 : 0);
+        row.Riposte += (uint)(LineModifiersParser.IsRiposte(hit.ModifiersMask) ? 1 : 0);
+        row.Strikethrough += (uint)(LineModifiersParser.IsStrikethrough(hit.ModifiersMask) ? 1 : 0);
+        row.Hits++;
 
         if (LastSeenCache.TryGetValue(row.SubType, out double lastTime)) // 1 day
         {
@@ -340,15 +341,9 @@ namespace EQLogParser
       return string.Format(CultureInfo.CurrentCulture, "{0}-{1}-{2}-{3}", row.Actor, useActedKey ? row.Acted : "", row.SubType, row.Time);
     }
 
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      // set header count
-      e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
-    }
-
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (dataGrid != null && Records.Count > 0)
+      if (dataGrid != null && dataGrid.View != null)
       {
         CurrentActedFilter = actedList.SelectedIndex == 0 ? null : actedList.SelectedItem as string;
         CurrentActionFilter = actionList.SelectedIndex == 0 ? null : actionList.SelectedItem as string;
@@ -358,9 +353,30 @@ namespace EQLogParser
         var refresh = CurrentGroupActionsFilter == groupHits.IsChecked.Value;
         CurrentGroupActionsFilter = groupHits.IsChecked.Value;
 
+        if (CurrentGroupActionsFilter && dataGrid.Columns != TextColumns)
+        {
+          dataGrid.Columns = TextColumns;
+        }
+        else if (!CurrentGroupActionsFilter && dataGrid.Columns != CheckBoxColumns)
+        {
+          dataGrid.Columns = CheckBoxColumns;
+        }
+
+        if (dataGrid.View.Filter == null)
+        {
+          dataGrid.View.Filter = new Predicate<object>(item =>
+          {
+            var record = (HitLogRow)item;
+            return (string.IsNullOrEmpty(CurrentTypeFilter) || CurrentTypeFilter == record.Type) &&
+            (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) &&
+            (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) &&
+            (CurrentShowPetsFilter || !record.IsPet);
+          });
+        }
+
         if (refresh)
         {
-          (dataGrid.ItemsSource as ICollectionView)?.Refresh();
+          dataGrid.View.RefreshFilter();
         }
         else
         {

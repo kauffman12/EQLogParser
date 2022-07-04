@@ -6,10 +6,9 @@
              xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-    <SolidColorBrush x:Key="hoverForegroundBrush" Color="White"/>    
+    <SolidColorBrush x:Key="goodForegroundBrush" Color="LightGreen"/>
     <SolidColorBrush x:Key="menuIconBrush" Color="#FF4F9FE2"/>
     <SolidColorBrush x:Key="searchBackgroundBrush" Color="#FF3a543f" Opacity="0.5"/>
-    <SolidColorBrush x:Key="secondBackgroundBrush" Color="#FF1f1f1f"/>
     <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
 
     <DataTemplate x:Key="TemplateToolTip">

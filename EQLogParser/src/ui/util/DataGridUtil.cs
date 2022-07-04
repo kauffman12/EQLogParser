@@ -18,7 +18,30 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static void SortColumnsChanged(object sender, GridSortColumnsChangedEventArgs e, string[] descending)
+    internal static void CheckHideTitlePanel(Panel titlePanel, Panel optionsPanel)
+    {
+      var settingsLoc = optionsPanel.PointToScreen(new Point(0, 0));
+      var titleLoc = titlePanel.PointToScreen(new Point(0, 0));
+
+      if ((titleLoc.X + titlePanel.ActualWidth) > (settingsLoc.X + 10))
+      {
+        titlePanel.Visibility = Visibility.Hidden;
+      }
+      else
+      {
+        titlePanel.Visibility = Visibility.Visible;
+      }
+    }
+
+    internal static Style CreateReceivedSpellStyle(string name)
+    {
+      var style = new Style(typeof(GridCell));
+      style.Setters.Add(new Setter(GridCell.ForegroundProperty, new Binding(name) { Converter = new ReceivedSpellColorConverter() }));
+      style.BasedOn = Application.Current.Resources["SyncfusionGridCellStyle"] as Style;
+      return style;
+    }
+
+    internal static void SortColumnsChanged(object sender, GridSortColumnsChangedEventArgs e, IReadOnlyCollection<string> descending)
     {
       var dataGrid = sender as SfDataGrid;
       // Here, we have updated the column's items in view based on SortDescriptions. 
@@ -40,7 +63,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e, string[] descending)
+    internal static void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e, IReadOnlyCollection<string> descending)
     {
       // Initially, we can change the SortDirection of particular column based on columnchanged action. 
       if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
@@ -96,12 +119,8 @@ namespace EQLogParser
         var row = new List<object>();
         foreach (var key in headerKeys)
         {
-          // ignore sometimes last column
-          if (key != "Empty")
-          {
-            // regular object with properties
-            row.Add(props.GetFormattedValue(record.Data, key) ?? "");
-          }
+          // regular object with properties
+          row.Add(props.GetFormattedValue(record.Data, key) ?? "");
         }
 
         data.Add(row);

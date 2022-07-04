@@ -160,7 +160,7 @@ namespace EQLogParser
       DataGrid callingDataGrid = menu?.PlacementTarget as DataGrid;
       if (callingDataGrid.SelectedItem is PlayerStats stats)
       {
-        Task.Delay(150).ContinueWith(_ =>
+        Task.Delay(100).ContinueWith(_ =>
         {
           PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
           PlayerManager.Instance.AddPetToPlayer(stats.OrigName, Labels.UNASSIGNED);

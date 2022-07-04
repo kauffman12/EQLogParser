@@ -16,8 +16,6 @@ namespace EQLogParser
   /// </summary>
   public partial class ParsePreview : UserControl
   {
-    private static readonly SolidColorBrush BRIGHT_BRUSH = Application.Current.Resources["hoverForegroundBrush"] as SolidColorBrush;
-    private static readonly SolidColorBrush WARNING_BRUSH = Application.Current.Resources["warnBackgroundBrush"] as SolidColorBrush;
     private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
     private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
     private readonly bool initialized = false;
@@ -179,7 +177,7 @@ namespace EQLogParser
       {
         copyToEQButton.IsEnabled = false;
         sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_SELECTED;
-        sharePlayerParseLabel.Foreground = BRIGHT_BRUSH;
+        sharePlayerParseLabel.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
       }
@@ -187,9 +185,9 @@ namespace EQLogParser
       {
         copyToEQButton.IsEnabled = false;
         sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_TOO_BIG;
-        sharePlayerParseLabel.Foreground = WARNING_BRUSH;
+        sharePlayerParseLabel.Foreground = Application.Current.Resources["warnBackgroundBrush"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
-        sharePlayerParseWarningLabel.Foreground = WARNING_BRUSH;
+        sharePlayerParseWarningLabel.Foreground = Application.Current.Resources["warnBackgroundBrush"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
       else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Properties.Resources.SHARE_DPS_SELECTED)
@@ -202,9 +200,9 @@ namespace EQLogParser
           sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
         }
 
-        sharePlayerParseLabel.Foreground = BRIGHT_BRUSH;
+        sharePlayerParseLabel.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + " / " + 509;
-        sharePlayerParseWarningLabel.Foreground = BRIGHT_BRUSH;
+        sharePlayerParseWarningLabel.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
     }

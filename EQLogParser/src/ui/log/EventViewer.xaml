@@ -50,7 +50,7 @@
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
-                           ColumnSizer="AutoWithLastColumnFill"
+                           ColumnSizer="Auto"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
@@ -64,7 +64,6 @@
         <syncfusion:GridTextColumn MappingName="Actor" HeaderText="Actor" />
         <syncfusion:GridTextColumn MappingName="Event" HeaderText="Event" />
         <syncfusion:GridTextColumn MappingName="Target" HeaderText="Target" />
-        <syncfusion:GridTextColumn MappingName="Empty" HeaderText="" />
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
@@ -84,7 +83,7 @@
             </MenuItem>
           </MenuItem>
           <Separator />       
-          <MenuItem IsEnabled="True" Header="Refresh" Click="MenuItemRefresh">
+          <MenuItem IsEnabled="True" Header="Reload Data" Click="MenuItemRefresh">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Redo" />
             </MenuItem.Icon>
