@@ -219,4 +219,12 @@ namespace EQLogParser
     }
     #endregion
   }
+
+  internal class EventRow
+  {
+    public double Time { get; set; }
+    public string Actor { get; set; }
+    public string Target { get; set; }
+    public string Event { get; set; }
+  }
 }

@@ -6,11 +6,6 @@ using System.Runtime.CompilerServices;
 
 namespace EQLogParser
 {
-  public static class LineParsing
-  {
-    public const int ActionIndex = 27;
-  }
-
   internal interface ISummaryBuilder
   {
     StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, bool showTotals,
@@ -188,32 +183,6 @@ namespace EQLogParser
     public string Action { get; set; }
     public double BeginTime { get; set; }
     public long LineNumber { get; set; }
-  }
-
-  internal class HitLogRow : HitRecord
-  {
-    public string Actor { get; set; }
-    public string ActorClass { get; set; }
-    public string Acted { get; set; }
-    public uint Hits { get; set; }
-    public uint Critical { get; set; }
-    public uint Lucky { get; set; }
-    public uint Twincast { get; set; }
-    public uint Rampage { get; set; }
-    public uint Riposte { get; set; }
-    public uint Strikethrough { get; set; }
-    public double Time { get; set; }
-    public bool IsPet { get; set; }
-    public bool IsGroupingEnabled { get; set; }
-    public string TimeSince { get; set; }
-  }
-
-  internal class EventRow
-  {
-    public double Time { get; set; }
-    public string Actor { get; set; }
-    public string Target { get; set; }
-    public string Event { get; set; }
   }
 
   internal class LootRow : LootRecord
@@ -401,12 +370,6 @@ namespace EQLogParser
     public Dictionary<string, uint> MaxCastCounts { get; } = new Dictionary<string, uint>();
     public Dictionary<string, uint> MaxReceivedCounts { get; } = new Dictionary<string, uint>();
     public Dictionary<string, SpellData> UniqueSpells { get; } = new Dictionary<string, SpellData>();
-  }
-
-  internal class SpellCountsSerialized
-  {
-    public List<string> PlayerNames { get; } = new List<string>();
-    public SpellCountData TheSpellData { get; set; }
   }
 
   internal class OverlayPlayerTotal

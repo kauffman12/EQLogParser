@@ -187,6 +187,9 @@ namespace EQLogParser
       }
     }
 
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+
     private void AddRow(HitLogRow row, Dictionary<string, byte> uniqueActions, Dictionary<string, byte> uniqueDefenders, Dictionary<string, byte> uniqueTypes, ObservableCollection<string> acted)
     {
       Records.Add(row);
@@ -384,5 +387,23 @@ namespace EQLogParser
         }
       }
     }
+  }
+
+  internal class HitLogRow : HitRecord
+  {
+    public string Actor { get; set; }
+    public string ActorClass { get; set; }
+    public string Acted { get; set; }
+    public uint Hits { get; set; }
+    public uint Critical { get; set; }
+    public uint Lucky { get; set; }
+    public uint Twincast { get; set; }
+    public uint Rampage { get; set; }
+    public uint Riposte { get; set; }
+    public uint Strikethrough { get; set; }
+    public double Time { get; set; }
+    public bool IsPet { get; set; }
+    public bool IsGroupingEnabled { get; set; }
+    public string TimeSince { get; set; }
   }
 }
