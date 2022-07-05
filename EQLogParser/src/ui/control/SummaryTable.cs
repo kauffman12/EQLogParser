@@ -28,22 +28,14 @@ namespace EQLogParser
       TheDataGrid = dataGrid;
       TheSelectedColumns = columns;
       TheTitle = title;
-
-      if (title != null)
-      {
-        TheTitle.Content = DEFAULT_TABLE_LABEL;
-      }
+      TheTitle.Content = DEFAULT_TABLE_LABEL;
 
       // default these columns to descending
       string[] desc = new string[] { "PercentOfRaid", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
       "ExtraRate", "CritRate", "LuckRate"};
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-
-      if (TheDataGrid != null)
-      {
-        DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid, 1);
-      }
+      DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid, 1);
     }
 
     internal virtual bool IsPetsCombined() => false;
@@ -92,7 +84,8 @@ namespace EQLogParser
       foreach (var item in menu.Items)
       {
         MenuItem menuItem = item as MenuItem;
-        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses != null && uniqueClasses.ContainsKey(menuItem.Header as string);
+        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses != null && 
+          uniqueClasses.ContainsKey(menuItem.Header as string);
       }
     }
 

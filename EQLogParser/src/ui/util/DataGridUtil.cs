@@ -33,10 +33,10 @@ namespace EQLogParser
       }
     }
 
-    internal static Style CreateReceivedSpellStyle(string name)
+    internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
     {
       var style = new Style(typeof(GridCell));
-      style.Setters.Add(new Setter(GridCell.ForegroundProperty, new Binding(name) { Converter = new ReceivedSpellColorConverter() }));
+      style.Setters.Add(new Setter(GridCell.ForegroundProperty, new Binding(name) { Converter = converter }));
       style.BasedOn = Application.Current.Resources["SyncfusionGridCellStyle"] as Style;
       return style;
     }

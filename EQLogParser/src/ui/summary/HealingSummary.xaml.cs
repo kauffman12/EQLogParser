@@ -33,12 +33,11 @@ namespace EQLogParser
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0)
+      if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var healTable = new HealBreakdown(CurrentStats);
-        healTable.Show(selected);
-        Helpers.OpenNewTab(main.dockSite, "healWindow", "Healing Breakdown", healTable);
+        var breakdown = Helpers.OpenWindow(main.dockSite, null, typeof(HealBreakdown), "healingBreakdownWindow", "Healing Breakdown");
+        (breakdown.Content as HealBreakdown).Init(CurrentStats, selected);
       }
     }
 

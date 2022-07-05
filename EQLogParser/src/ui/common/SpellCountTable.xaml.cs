@@ -93,7 +93,7 @@ namespace EQLogParser
         {
           HeaderText = "",
           MappingName = "Spell",
-          CellStyle = DataGridUtil.CreateReceivedSpellStyle("Spell")
+          CellStyle = DataGridUtil.CreateHighlightForegroundStyle("Spell", new ReceivedSpellColorConverter())
         };
 
         dataGrid.Columns.Add(headerCol);
@@ -151,7 +151,8 @@ namespace EQLogParser
           var playerCol = new GridTextColumn
           {
             HeaderText = header,
-            MappingName = name
+            MappingName = name,
+            TextAlignment = TextAlignment.Right
           };
 
           dataGrid.Columns.Add(playerCol);
@@ -179,7 +180,7 @@ namespace EQLogParser
         {
           HeaderText = totalHeader,
           MappingName = "totalColumn",
-          HorizontalHeaderContentAlignment = HorizontalAlignment.Center
+          TextAlignment = TextAlignment.Right
         };
 
         dataGrid.Columns.Add(totalCol);

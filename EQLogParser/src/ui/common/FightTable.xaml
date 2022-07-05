@@ -11,17 +11,17 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
-      <local:TotalFormatConverter x:Key="totalFormatConverter" />
-      <local:FightRowStyleConverter x:Key="fightrowstyleconverter" />
+      <local:TotalFormatConverter x:Key="TotalFormatConverter" />
+      <local:FightRowStyleConverter x:Key="FightRowStyleConverter" />
 
       <!-- sfgrid namespace due to class naming conflict -->
-      <Style x:Key="fightrowstyle" TargetType="sfgrid:VirtualizingCellsControl">
+      <Style x:Key="FightRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
         <Style.Triggers>
           <DataTrigger Binding="{Binding IsSearchResult, UpdateSourceTrigger=PropertyChanged}" Value="True" >
             <Setter Property="Background" Value="{StaticResource searchBackgroundBrush}"/>
           </DataTrigger>
         </Style.Triggers>
-        <Setter Property="Background" Value="{Binding Converter={StaticResource fightrowstyleconverter}}"/>
+        <Setter Property="Background" Value="{Binding Converter={StaticResource FightRowStyleConverter}}"/>
         <Setter Property="RowHoverForeground" Value="{StaticResource ContentForeground}"/>
       </Style>
       <Style TargetType="syncfusion:GridRowHeaderCell">
@@ -59,7 +59,7 @@
                            ItemsSourceChanged="ItemsSourceChanged"
                            PreviewMouseDown="UpdateCurrentItem"
                            RowHeaderWidth="40"
-                           RowStyle="{StaticResource fightrowstyle}"
+                           RowStyle="{StaticResource FightRowStyle}"
                            SelectionChanged="SelectionChanged"
                            SelectionMode="Extended"
                            ShowRowHeader="True"                           
@@ -108,7 +108,7 @@
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="SortId" SortMode="Value" DisplayBinding="{Binding BeginTimeString}" 
                                    Width="100" TextAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Initial Hit Time" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Total, Converter={StaticResource totalFormatConverter}}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" TextAlignment="Right" HeaderText="HP" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Total, Converter={StaticResource TotalFormatConverter}}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" TextAlignment="Right" HeaderText="HP" />
         <syncfusion:GridTextColumn DisplayBinding="{Binding Name}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Name" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

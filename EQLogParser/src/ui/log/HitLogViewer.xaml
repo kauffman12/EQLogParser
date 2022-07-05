@@ -9,23 +9,6 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
-    <Grid.Resources>
-      <local:DateTimeConverter x:Key="dateTimeConverter" />
-      <local:NumberFormatConverter x:Key="numberFormatConverter" />
-      <Style TargetType="syncfusion:GridRowHeaderCell">
-        <Setter Property="Template">
-          <Setter.Value>
-            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-              <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                <Grid>
-                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
-                </Grid>
-              </Border>
-            </ControlTemplate>
-          </Setter.Value>
-        </Setter>
-      </Style>
-    </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
@@ -52,6 +35,22 @@
                            RowHeaderWidth="40"
                            ShowRowHeader="True"               
                            SelectionMode="Extended">
+      <syncfusion:SfDataGrid.Resources>
+        <local:DateTimeConverter x:Key="DateTimeConverter" />
+        <Style TargetType="syncfusion:GridRowHeaderCell">
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+                <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                  <Grid>
+                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                  </Grid>
+                </Border>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Style>
+      </syncfusion:SfDataGrid.Resources>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
@@ -72,13 +71,13 @@
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>      
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource dateTimeConverter}}"
+        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
                                    Width="100" TextAlignment="Center" HeaderText="Time" />
         <syncfusion:GridTextColumn MappingName="TimeSince" TextAlignment="Center" HeaderText="Since" />
         <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" />
         <syncfusion:GridTextColumn MappingName="SubType" HeaderText="Action" />
-        <syncfusion:GridTextColumn MappingName="Total" SortMode="Value" DisplayBinding="{Binding Total, Converter={StaticResource numberFormatConverter}}" TextAlignment="Right" HeaderText="" />
-        <syncfusion:GridTextColumn MappingName="OverTotal" SortMode="Value" DisplayBinding="{Binding OverTotal, Converter={StaticResource numberFormatConverter}}" TextAlignment="Right" HeaderText="Over Healed" />
+        <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="" />
+        <syncfusion:GridNumericColumn MappingName="OverTotal" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Over Healed" />
         <!-- columns 5 to 12 added dynamically -->
         <syncfusion:GridTextColumn MappingName="Actor" HeaderText="" />
         <syncfusion:GridTextColumn MappingName="ActorClass" HeaderText="" />

@@ -13,11 +13,11 @@ namespace EQLogParser
       {
         if (row.IsCurrency)
         {
-          template = Application.Current.Resources["CurrencyTemplate"] as DataTemplate;
+          template = Application.Current.Resources["currencyTemplate"] as DataTemplate;
         }
         else
         {
-          template = Application.Current.Resources["QuantityTemplate"] as DataTemplate;
+          template = Application.Current.Resources["quantityTemplate"] as DataTemplate;
         }
       }
 

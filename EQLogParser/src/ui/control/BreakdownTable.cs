@@ -1,4 +1,5 @@
 ﻿using ActiproSoftware.Windows.Themes;
+using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,54 +15,25 @@ namespace EQLogParser
     private protected string CurrentSortKey = "Total";
     private protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     private protected DataGridTextColumn CurrentColumn = null;
-    private DataGrid TheDataGrid;
+    private SfDataGrid TheDataGrid;
     private ComboBox TheSelectedColumns;
 
-    internal void InitBreakdownTable(DataGrid dataGrid, ComboBox columns)
+    internal void InitBreakdownTable(SfDataGrid dataGrid, ComboBox columns)
     {
       TheDataGrid = dataGrid;
       TheSelectedColumns = columns;
 
-      if (TheDataGrid != null)
-      {
-        TheDataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
-
-        if (TheSelectedColumns != null)
-        {
-          //DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
-        }
-      }
+      // default these columns to descending
+      string[] desc = new string[] { "Percent", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
+      "ExtraRate", "CritRate", "LuckRate", "TwincastRate"};
+      TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
     }
 
     internal abstract void Display(List<PlayerStats> selectedStats = null);
 
-    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, null);
-
-    internal void CustomSorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e?.Column is DataGridTextColumn column)
-      {
-        // prevent the built-in sort from sorting
-        e.Handled = true;
-
-        if (column.Binding is Binding binding && binding.Path != null) // dont sort on percent total, its not useful
-        {
-          CurrentSortKey = binding.Path.Path;
-          CurrentColumn = column;
-
-          if (column.Header.ToString() != "Name" && column.SortDirection == null)
-          {
-            CurrentSortDirection = ListSortDirection.Descending;
-          }
-          else
-          {
-            CurrentSortDirection = (column.SortDirection != ListSortDirection.Ascending) ? ListSortDirection.Ascending : ListSortDirection.Descending;
-          }
-
-          Display();
-        }
-      }
-    }
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
 
     internal object GetSortValue(PlayerSubStats sub) => sub?.GetType().GetProperty(CurrentSortKey).GetValue(sub, null);
 
@@ -90,14 +62,6 @@ namespace EQLogParser
       }
 
       return query.ToList();
-    }
-
-    private void DataGrid_Sorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e.Column.Header != null && e.Column.Header.ToString() != "Name")
-      {
-        e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
-      }
     }
   }
 }

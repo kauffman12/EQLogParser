@@ -10,9 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
-      <local:ZeroConverter x:Key="ZeroConverter" />
-      <local:NumberFormatConverter x:Key="NumberFormatConverter" />
-      <Style TargetType="syncfusion:GridRowHeaderCell">
+       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
@@ -59,10 +57,10 @@
         <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell"/>
         <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster"/>
         <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Avg, Converter={StaticResource NumberFormatConverter}}" HeaderText="Av Hit" TextAlignment="Right"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Max, Converter={StaticResource NumberFormatConverter}}" HeaderText="Max Hit" TextAlignment="Right"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" HeaderText="Total" TextAlignment="Right"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Hits, Converter={StaticResource NumberFormatConverter}}" HeaderText="# Hits" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Av Hit" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Max Hit" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Total" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="# Hits" TextAlignment="Right"/>
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
