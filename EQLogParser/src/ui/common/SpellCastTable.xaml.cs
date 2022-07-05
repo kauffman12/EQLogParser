@@ -51,7 +51,7 @@ namespace EQLogParser
         {
           HeaderText = name,
           MappingName = name,
-          CellStyle = DataGridUtil.CreateReceivedSpellStyle(name)
+          CellStyle = DataGridUtil.CreateHighlightForegroundStyle(name, new ReceivedSpellColorConverter())
       };
 
         dataGrid.Columns.Add(column);

@@ -21,7 +21,7 @@ namespace EQLogParser
     internal TankingBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
-      InitBreakdownTable(dataGrid, selectedColumns);
+      //InitBreakdownTable(dataGrid, selectedColumns);
       titleLabel.Content = currentStats?.ShortTitle;
       RaidStats = currentStats?.RaidStats;
     }

@@ -11,6 +11,29 @@
     <SolidColorBrush x:Key="searchBackgroundBrush" Color="#FF3a543f" Opacity="0.5"/>
     <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
 
+    <Style x:Key="iconStyle" TargetType="fa:ImageAwesome">
+      <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
+      <Setter Property="Height" Value="12"/>
+      <Setter Property="Width" Value="12" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="titleStyle" TargetType="Label">
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Margin" Value="0" />
+    </Style>
+
+    <DataTemplate x:Key="currencyTemplate">
+      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
+    </DataTemplate>
+    <DataTemplate x:Key="quantityTemplate">
+      <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center"></TextBlock>
+    </DataTemplate>    
+    
     <DataTemplate x:Key="TemplateToolTip">
       <TextBlock FontSize="12" Text="{Binding TooltipText}" />
     </DataTemplate>
@@ -29,22 +52,6 @@
     <DataTemplate x:Key="HeaderOverHealPercentTemplateToolTip">
       <TextBlock FontSize="12" Foreground="Black" Text="Percent of Healing in Excess of what could be Healed" />
     </DataTemplate>
-    
-    <Style x:Key="iconStyle" TargetType="fa:ImageAwesome">
-      <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
-      <Setter Property="Height" Value="12"/>
-      <Setter Property="Width" Value="12" />
-      <Setter Property="HorizontalAlignment" Value="Center" />
-    </Style>
-
-    <Style x:Key="titleStyle" TargetType="Label">
-      <Setter Property="Background" Value="{x:Null}" />
-      <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
-      <Setter Property="Height" Value="30"/>
-      <Setter Property="FontSize" Value="15" />
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="Margin" Value="0" />
-    </Style>
 
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">
@@ -351,17 +358,8 @@
     <!-- LogRow Templates for check columns -->
     <DataTemplate x:Key="NoDataTemplate">
     </DataTemplate>
-    <DataTemplate x:Key="QuantityTemplate">
-      <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center"></TextBlock>
-    </DataTemplate>
     <DataTemplate x:Key="CheckTemplate">
       <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#73b15d" />
-    </DataTemplate>
-    <DataTemplate x:Key="CurrencyTemplate">
-      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
-    </DataTemplate>
-    <DataTemplate x:Key="CountTemplate">
-      <TextBlock Text="{Binding Count}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
     </DataTemplate>
     <DataTemplate x:Key="CritCountTemplate">
       <TextBlock Text="{Binding CritCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>

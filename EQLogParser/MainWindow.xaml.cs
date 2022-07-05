@@ -94,6 +94,7 @@ namespace EQLogParser
         {
           SfSkinManager.SetTheme(this, new Theme("MaterialDarkCustom;MaterialDark"));
           BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
+          Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
           Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
           Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
         }

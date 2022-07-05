@@ -33,7 +33,7 @@ namespace EQLogParser
     internal DamageBreakdown(CombinedStats currentStats)
     {
       InitializeComponent();
-      InitBreakdownTable(dataGrid, selectedColumns);
+      //InitBreakdownTable(dataGrid, selectedColumns);
       titleLabel.Content = currentStats?.ShortTitle;
       RaidStats = currentStats.RaidStats;
       ChildStats = currentStats.Children;

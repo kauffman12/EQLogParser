@@ -21,7 +21,7 @@ namespace EQLogParser
     private readonly Dictionary<string, double> LastSeenCache = new Dictionary<string, double>();
     private readonly Columns CheckBoxColumns = new Columns();
     private readonly Columns TextColumns = new Columns();
-    private readonly string[] ColumnIds = new string[] { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
+    private readonly List<string> ColumnIds = new List<string> { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
 
     private string ActedOption = Labels.UNK;
     private List<List<ActionBlock>> CurrentGroups;
@@ -43,7 +43,7 @@ namespace EQLogParser
         TextColumns.Add(dataGrid.Columns[i]);
       }
 
-      ColumnIds.ToList().ForEach(name =>
+      ColumnIds.ForEach(name =>
       {
         CheckBoxColumns.Add(new GridCheckBoxColumn
         {
@@ -53,7 +53,7 @@ namespace EQLogParser
         });
       });
 
-      ColumnIds.ToList().ForEach(name =>
+      ColumnIds.ForEach(name =>
       {
         TextColumns.Add(new GridTextColumn
         {
