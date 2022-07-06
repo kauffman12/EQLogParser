@@ -298,8 +298,15 @@ namespace EQLogParser
             stat.SubStats2["receivedHealing"] = indStats;
             UpdateStats(indStats, HealedBySpellTimeRanges, HealedByHealerTimeRanges);
 
-            indStats.SubStats.Values.ToList().ForEach(subStat => StatsUtil.UpdateCalculations(subStat, indStats));
-            indStats.SubStats2.Values.ToList().ForEach(subStat => StatsUtil.UpdateCalculations(subStat, indStats));
+            foreach (ref var subStat in indStats.SubStats.Values.ToArray().AsSpan())
+            {
+              StatsUtil.UpdateCalculations(subStat, indStats);
+            }
+
+            foreach (ref var subStat2 in indStats.SubStats2.Values.ToArray().AsSpan())
+            {
+              StatsUtil.UpdateCalculations(subStat2, indStats);
+            }
           }
         });
       }
