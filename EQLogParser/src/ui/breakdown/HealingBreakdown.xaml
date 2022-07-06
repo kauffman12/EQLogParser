@@ -10,7 +10,6 @@
   <Grid>
     <Grid.Resources>
       <local:ZeroConverter x:Key="ZeroConverter" />
-      <local:NumberFormatConverter x:Key="NumberFormatConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
@@ -20,9 +19,8 @@
       <Label x:Name="titleLabel" Style="{StaticResource titleStyle}" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,4,0" x:Name="choicesList" Height="24" SelectionChanged="ListSelectionChanged" />
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <ComboBox x:Name="selectedColumns" Tag="HealingBreakdownColumns" Height="26" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns" BorderBrush="#FF707070">
+      <ComboBox Margin="0,0,0,1" x:Name="choicesList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox x:Name="selectedColumns" Tag="HealingBreakdownColumns" Margin="0,0,0,1" DropDownClosed="SelectDataGridColumns">
         <ComboBox.ItemTemplateSelector>
           <local:ComboBoxItemTemplateSelector>
             <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
@@ -42,36 +40,40 @@
         </ComboBox.ItemTemplateSelector>
       </ComboBox>
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid"
+    <syncfusion:SfTreeGrid x:Name="dataGrid"
+                           AllowAutoSizingExpanderColumn="True"
                            AllowDraggingColumns="True"
                            AllowResizingColumns="True"
+                           AllowSelectionOnPointerPressed="True"
                            AllowSorting="True"
+                           AutoExpandMode="AllNodesExpanded"
                            AutoGenerateColumns="False"
                            ColumnSizer="Auto"
+                           ChildPropertyName="SubStats"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            IsReadOnly="True"
                            SelectionMode="Extended"
                            ShowRowHeader="False">
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" />
-        <syncfusion:GridTextColumn MappingName="Precent" SortMode="Value" DisplayBinding="{Binding Path=Percent, Converter={StaticResource ZeroConverter}}" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Player" />
-        <syncfusion:GridTextColumn MappingName="Total" SortMode="Value" DisplayBinding="{Binding Path=Total, Converter={StaticResource NumberFormatConverter}}" TextAlignment="Right" HeaderText="Heal" />
-        <syncfusion:GridTextColumn MappingName="Extra" SortMode="Value" DisplayBinding="{Binding Path=Extra, Converter={StaticResource NumberFormatConverter}}" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
-        <syncfusion:GridTextColumn MappingName="DPS" SortMode="Value" DisplayBinding="{Binding Path=DPS, Converter={StaticResource NumberFormatConverter}}" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
-        <syncfusion:GridTextColumn MappingName="SDPS" SortMode="Value" DisplayBinding="{Binding Path=SDPS, Converter={StaticResource NumberFormatConverter}}" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
-        <syncfusion:GridTextColumn MappingName="TotalSeconds" SortMode="Value" DisplayBinding="{Binding Path=TotalSeconds, Converter={StaticResource NumberFormatConverter}}" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:GridTextColumn MappingName="Hits" SortMode="Value" DisplayBinding="{Binding Path=Hits, Converter={StaticResource NumberFormatConverter}}" TextAlignment="Right" HeaderText="# Heals" />
-        <syncfusion:GridTextColumn MappingName="Max" SortMode="Value" DisplayBinding="{Binding Path=Max, Converter={StaticResource NumberFormatConverter}}" TextAlignment="Right" HeaderText="Max Heal" />
-        <syncfusion:GridTextColumn MappingName="Avg" SortMode="Value" DisplayBinding="{Binding Path=Avg, Converter={StaticResource NumberFormatConverter}}" TextAlignment="Right" HeaderText="Av Heal" />
-        <syncfusion:GridTextColumn MappingName="AvgCrit" SortMode="Value" DisplayBinding="{Binding Path=AvgCrit, Converter={StaticResource NumberFormatConverter}}" TextAlignment="Right" HeaderText="Av Crit" />
-        <syncfusion:GridTextColumn MappingName="AvgLucky" SortMode="Value" DisplayBinding="{Binding Path=AvgLucky, Converter={StaticResource NumberFormatConverter}}" TextAlignment="Right" HeaderText="Av Lucky" />
-        <syncfusion:GridTextColumn MappingName="ExtraRate" SortMode="Value" DisplayBinding="{Binding Path=ExtraRate, Converter={StaticResource ZeroConverter}}" HeaderToolTipTemplate="{StaticResource HeaderOverHealPercentTemplateToolTip}" TextAlignment="Right" HeaderText="% Over" />
-        <syncfusion:GridTextColumn MappingName="CritRate" SortMode="Value" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
-        <syncfusion:GridTextColumn MappingName="LuckRate" SortMode="Value" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Luck" />
-        <syncfusion:GridTextColumn MappingName="TwincastRate" SortMode="Value" DisplayBinding="{Binding Path=TwincastRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% TC" />
-      </syncfusion:SfDataGrid.Columns>
-    </syncfusion:SfDataGrid>
+      <syncfusion:SfTreeGrid.Columns>
+        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
+        <syncfusion:TreeGridTextColumn Width="75" MappingName="Percent" DisplayBinding="{Binding Path=Percent, Converter={StaticResource ZeroConverter}}" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Player" />
+        <syncfusion:TreeGridNumericColumn Width="90" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Total" TextAlignment="Right" HeaderText="Heal" />
+        <syncfusion:TreeGridNumericColumn Width="100" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Extra" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
+        <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="DPS" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
+        <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="SDPS" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
+        <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="TotalSeconds" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Hits" TextAlignment="Right" HeaderText="# Heals" />
+        <syncfusion:TreeGridNumericColumn Width="80" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Max" TextAlignment="Right" HeaderText="Max Heal" />
+        <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Avg" TextAlignment="Right" HeaderText="Av Heal" />
+        <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="AvgCrit" TextAlignment="Right" HeaderText="Av Crit" />
+        <syncfusion:TreeGridNumericColumn Width="80" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="AvgLucky" TextAlignment="Right" HeaderText="Av Lucky" />
+        <syncfusion:TreeGridTextColumn Width="70" MappingName="ExtraRate" DisplayBinding="{Binding Path=ExtraRate, Converter={StaticResource ZeroConverter}}" HeaderToolTipTemplate="{StaticResource HeaderOverHealPercentTemplateToolTip}" TextAlignment="Right" HeaderText="% Over" />
+        <syncfusion:TreeGridTextColumn Width="65" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
+        <syncfusion:TreeGridTextColumn Width="70" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Luck" />
+        <syncfusion:TreeGridTextColumn Width="65" MappingName="TwincastRate" DisplayBinding="{Binding Path=TwincastRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% TC" />
+      </syncfusion:SfTreeGrid.Columns>
+    </syncfusion:SfTreeGrid>
   </Grid>
 </local:BreakdownTable>

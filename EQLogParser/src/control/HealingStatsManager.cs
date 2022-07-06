@@ -295,15 +295,15 @@ namespace EQLogParser
             }
 
             var indStats = individualStats[stat.Name];
-            stat.SubStats2["receivedHealing"] = indStats;
+            stat.SubStats2.Add(indStats);
             UpdateStats(indStats, HealedBySpellTimeRanges, HealedByHealerTimeRanges);
 
-            foreach (ref var subStat in indStats.SubStats.Values.ToArray().AsSpan())
+            foreach (ref var subStat in indStats.SubStats.ToArray().AsSpan())
             {
               StatsUtil.UpdateCalculations(subStat, indStats);
             }
 
-            foreach (ref var subStat2 in indStats.SubStats2.Values.ToArray().AsSpan())
+            foreach (ref var subStat2 in indStats.SubStats2.ToArray().AsSpan())
             {
               StatsUtil.UpdateCalculations(subStat2, indStats);
             }
@@ -497,7 +497,7 @@ namespace EQLogParser
           if (selected?.Count == 1 && selected[0].SubStats.Count > 0)
           {
             int rank = 1;
-            foreach (var stats in selected[0].SubStats.Values.OrderByDescending(stats => stats.Total).Take(10))
+            foreach (var stats in selected[0].SubStats.OrderByDescending(stats => stats.Total).Take(10))
             {
               string abbrv = DataManager.Instance.AbbreviateSpellName(stats.Name);
               string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, abbrv) : string.Format(StatsUtil.PLAYER_FORMAT, abbrv);

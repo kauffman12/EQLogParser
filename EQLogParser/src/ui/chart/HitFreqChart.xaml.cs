@@ -324,17 +324,24 @@ namespace EQLogParser
       void AddStats(PlayerStats stats)
       {
         results[stats.Name] = new List<HitFreqChartData>();
-        foreach (string type in stats.SubStats.Keys)
+        foreach (ref var subStat in stats.SubStats.ToArray().AsSpan())
         {
-          HitFreqChartData chartData = new HitFreqChartData { HitType = stats.SubStats[type].Name };
+          HitFreqChartData chartData = new HitFreqChartData { HitType = subStat.Name };
 
           // add crits
-          chartData.CritXValues.AddRange(stats.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
-          chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stats.SubStats[type].CritFreqValues[damage]));
+          chartData.CritXValues.AddRange(subStat.CritFreqValues.Keys.OrderBy(key => key));
+          foreach (ref var damage in chartData.CritXValues.ToArray().AsSpan())
+          {
+            chartData.CritYValues.Add(subStat.CritFreqValues[damage]);
+          }
 
           // add non crits
-          chartData.NonCritXValues.AddRange(stats.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
-          chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stats.SubStats[type].NonCritFreqValues[damage]));
+          chartData.NonCritXValues.AddRange(subStat.NonCritFreqValues.Keys.OrderBy(key => key));
+          foreach (ref var damage in chartData.NonCritXValues.ToArray().AsSpan())
+          {
+            chartData.NonCritYValues.Add(subStat.NonCritFreqValues[damage]);
+          }
+
           results[stats.Name].Add(chartData);
         }
       }

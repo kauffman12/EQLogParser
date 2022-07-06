@@ -35,7 +35,7 @@ namespace EQLogParser
       "ExtraRate", "CritRate", "LuckRate"};
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid, 1);
+      DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
     }
 
     internal virtual bool IsPetsCombined() => false;
