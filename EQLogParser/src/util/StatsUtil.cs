@@ -55,35 +55,22 @@ namespace EQLogParser
       };
     }
 
-    internal static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string subType, string type)
+    internal static PlayerSubStats CreatePlayerSubStats(ICollection<PlayerSubStats> individualStats, string subType, string type)
     {
       var key = Helpers.CreateRecordKey(type, subType);
       PlayerSubStats stats = null;
 
       lock (individualStats)
       {
-        if (!individualStats.ContainsKey(key))
+        stats = individualStats.FirstOrDefault(stats => stats.Key == key);
+        if (stats == null)
         {
-          stats = CreatePlayerSubStats(subType, type);
-          individualStats[key] = stats;
-        }
-        else
-        {
-          stats = individualStats[key];
+          stats = new PlayerSubStats { ClassName = "", Name = string.Intern(subType), Type = string.Intern(type), Key = key };
+          individualStats.Add(stats);
         }
       }
 
       return stats;
-    }
-
-    internal static PlayerSubStats CreatePlayerSubStats(string name, string type)
-    {
-      return new PlayerSubStats()
-      {
-        ClassName = "",
-        Name = string.Intern(name),
-        Type = string.Intern(type)
-      };
     }
 
     internal static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
@@ -211,21 +198,21 @@ namespace EQLogParser
     {
       if (playerSubTimeRanges.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> subRanges))
       {
-        foreach (ref var kv in stats.SubStats.ToArray().AsSpan())
+        foreach (ref var subStat in stats.SubStats.ToArray().AsSpan())
         {
-          if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
+          if (subRanges.TryGetValue(subStat.Key, out TimeRange subRange))
           {
             var filteredRange = FilterMaxTime(subRange, maxTime);
-            kv.Value.TotalSeconds = filteredRange.GetTotal();
+            subStat.TotalSeconds = filteredRange.GetTotal();
           }
         }
 
-        foreach (ref var kv in stats.SubStats2.ToArray().AsSpan())
+        foreach (ref var subStat2 in stats.SubStats2.ToArray().AsSpan())
         {
-          if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
+          if (subRanges.TryGetValue(subStat2.Key, out TimeRange subRange))
           {
             var filteredRange = FilterMaxTime(subRange, maxTime);
-            kv.Value.TotalSeconds = filteredRange.GetTotal();
+            subStat2.TotalSeconds = filteredRange.GetTotal();
           }
         }
       }
@@ -511,13 +498,13 @@ namespace EQLogParser
       if (stats is PlayerStats playerStats)
       {
 
-        foreach (ref var subStat in playerStats.SubStats.Values.ToArray().AsSpan())
+        foreach (ref var subStat in playerStats.SubStats.ToArray().AsSpan())
         {
           UpdateCalculations(subStat, raidTotals, resistCounts, playerStats);
         }
 
         // optional stats
-        foreach (ref var subStat2 in playerStats.SubStats2.Values.ToArray().AsSpan())
+        foreach (ref var subStat2 in playerStats.SubStats2.ToArray().AsSpan())
         {
           UpdateCalculations(subStat2, raidTotals, resistCounts, playerStats);
         }

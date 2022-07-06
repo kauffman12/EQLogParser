@@ -35,7 +35,7 @@ namespace EQLogParser
       }
     }
 
-    internal override void Display(List<PlayerStats> _ = null)
+    internal void Display()
     {
       if (Running == false && RaidStats != null)
       {
@@ -48,11 +48,11 @@ namespace EQLogParser
             {
               ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
 
-              foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
-              {
-                list.Add(playerStat);
-                SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
-              }
+              //foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
+              //{
+              //  list.Add(playerStat);
+                //SortSubStats(playerStat.SubStats.ToList()).ForEach(subStat => list.Add(subStat));
+              //}
 
               Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
 

@@ -1,11 +1,4 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Controls;
-using System.Windows.Threading;
+﻿using System.Collections.Generic;
 
 namespace EQLogParser
 {
@@ -14,7 +7,6 @@ namespace EQLogParser
   /// </summary>
   public partial class HealBreakdown : BreakdownTable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private bool CurrentShowSpellsChoice = true;
     private List<PlayerStats> PlayerStats = null;
 
@@ -35,43 +27,22 @@ namespace EQLogParser
       Display();
     }
 
-    internal override void Display(List<PlayerStats> _ = null)
+    internal void Display()
     {
-      try
+      if (CurrentShowSpellsChoice)
       {
-        ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
+        dataGrid.ChildPropertyName = "SubStats";
+      }
+      else
+      {
+        dataGrid.ChildPropertyName = "SubStats2";
+      }
 
-        foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
-        {
-          list.Add(playerStat);
-
-          if (CurrentShowSpellsChoice)
-          {
-            SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
-          }
-          else
-          {
-            SortSubStats(playerStat.SubStats2.Values.ToList()).ForEach(subStat => list.Add(subStat));
-          }
-        }
-
-        dataGrid.ItemsSource = list;
-      }
-      catch (ArgumentNullException ane)
-      {
-        LOG.Error(ane);
-      }
-      catch (NullReferenceException nre)
-      {
-        LOG.Error(nre);
-      }
-      catch (ArgumentOutOfRangeException aro)
-      {
-        LOG.Error(aro);
-      }
+      dataGrid.ItemsSource = null;
+      dataGrid.ItemsSource = PlayerStats;
     }
 
-    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
       if (PlayerStats != null)
       {

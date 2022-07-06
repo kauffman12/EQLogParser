@@ -318,11 +318,11 @@ namespace EQLogParser
         }
         else if (type == Labels.RECEIVEDHEALPARSE)
         {
-          if (selected?.Count == 1 && selected[0].SubStats2.TryGetValue("receivedHealing", out PlayerSubStats subStats) && subStats is PlayerStats receivedHealing)
+          if (selected?.Count == 1 && selected[0].SubStats2.Count > 0)
           {
             int rank = 1;
             long totals = 0;
-            foreach (var stats in receivedHealing.SubStats.Values.OrderByDescending(stats => stats.Total).Take(10))
+            foreach (var stats in selected[0].SubStats2.OrderByDescending(stats => stats.Total).Take(10))
             {
               string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
               string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));

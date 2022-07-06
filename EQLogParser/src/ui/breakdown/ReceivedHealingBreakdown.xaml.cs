@@ -37,7 +37,7 @@ namespace EQLogParser
       }
     }
 
-    internal override void Display(List<PlayerStats> _ = null)
+    internal void Display()
     {
       if (Running == false)
       {
@@ -57,11 +57,11 @@ namespace EQLogParser
               {
                 if (selected.SubStats2.Count > 0)
                 {
-                  receivedHealing.AddRange(selected.SubStats2.Values.Cast<PlayerStats>().ToList());
+                  receivedHealing.AddRange(selected.SubStats2.Cast<PlayerStats>().ToList());
                 }
               });
 
-              foreach (var playerStat in receivedHealing.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
+              foreach (var playerStat in receivedHealing.AsParallel().OrderByDescending(stats => stats))
               {
                 Dispatcher.InvokeAsync(() =>
                 {
@@ -70,11 +70,11 @@ namespace EQLogParser
                   // Spells are kept under SubStats2 and Healers under SubStats1. Both are children in the parent's SubStats2 as the 'receivedHealing' attribute
                   if (CurrentShowSpellsChoice)
                   {
-                    SortSubStats(playerStat.SubStats2.Values.ToList()).ForEach(subStat => list.Add(subStat));
+                    //SortSubStats(playerStat.SubStats2.ToList()).ForEach(subStat => list.Add(subStat));
                   }
                   else
                   {
-                    SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
+                    //SortSubStats(playerStat.SubStats.ToList()).ForEach(subStat => list.Add(subStat));
                   }
                 });
               }

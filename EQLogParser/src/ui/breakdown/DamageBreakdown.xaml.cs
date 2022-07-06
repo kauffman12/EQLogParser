@@ -47,7 +47,7 @@ namespace EQLogParser
       }
     }
 
-    internal override void Display(List<PlayerStats> selectedStats = null)
+    internal void Display(List<PlayerStats> selectedStats = null)
     {
       if (Running == false && ChildStats != null && RaidStats != null)
       {
@@ -64,14 +64,14 @@ namespace EQLogParser
             if (selectedStats != null)
             {
               PlayerStats = new List<PlayerSubStats>();
-              foreach (var playerStats in selectedStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
+              foreach (var playerStats in selectedStats.AsParallel().OrderByDescending(stats => stats))
               {
                 if (ChildStats.ContainsKey(playerStats.Name))
                 {
                   foreach (var childStat in ChildStats[playerStats.Name])
                   {
                     PlayerStats.Add(childStat);
-                    BuildGroups(childStat, childStat.SubStats.Values.ToList());
+                    BuildGroups(childStat, childStat.SubStats.ToList());
                   }
 
                   Dispatcher.InvokeAsync(() =>
@@ -85,7 +85,7 @@ namespace EQLogParser
                 else
                 {
                   PlayerStats.Add(playerStats);
-                  BuildGroups(playerStats, playerStats.SubStats.Values.ToList());
+                  BuildGroups(playerStats, playerStats.SubStats.ToList());
                 }
               }
             }
@@ -93,15 +93,15 @@ namespace EQLogParser
             if (PlayerStats != null)
             {
               var filtered = CurrentShowPets ? PlayerStats : PlayerStats.Where(playerStats => !PlayerManager.Instance.IsVerifiedPet(playerStats.Name));
-              foreach (var playerStats in SortSubStats(filtered.ToList()))
-              {
-                Dispatcher.InvokeAsync(() =>
-                {
-                  list.Add(playerStats);
-                  var optionalList = GetSubStats(playerStats as PlayerStats);
-                  SortSubStats(optionalList).ForEach(subStat => list.Add(subStat));
-                });
-              }
+              //foreach (var playerStats in SortSubStats(filtered.ToList()))
+              //{
+              //  Dispatcher.InvokeAsync(() =>
+              //  {
+              //    list.Add(playerStats);
+              //    var optionalList = GetSubStats(playerStats as PlayerStats);
+              //    SortSubStats(optionalList).ForEach(subStat => list.Add(subStat));
+              //  });
+              //}
 
               Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
 

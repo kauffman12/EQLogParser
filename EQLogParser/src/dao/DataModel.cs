@@ -439,10 +439,11 @@ namespace EQLogParser
 
   internal class PlayerStats : PlayerSubStats
   {
-    public Dictionary<string, PlayerSubStats> SubStats { get; } = new Dictionary<string, PlayerSubStats>();
-    public Dictionary<string, PlayerSubStats> SubStats2 { get; } = new Dictionary<string, PlayerSubStats>();
+    public List<PlayerSubStats> SubStats { get; } = new List<PlayerSubStats>();
+    public List<PlayerSubStats> SubStats2 { get; } = new List<PlayerSubStats>();
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }
     public double MaxTime { get; set; }
   }
+
 }
