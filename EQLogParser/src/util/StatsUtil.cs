@@ -510,12 +510,16 @@ namespace EQLogParser
       // handle sub stats
       if (stats is PlayerStats playerStats)
       {
-        Parallel.ForEach(playerStats.SubStats.Values, subStats => UpdateCalculations(subStats, raidTotals, resistCounts, playerStats));
+
+        foreach (ref var subStat in playerStats.SubStats.Values.ToArray().AsSpan())
+        {
+          UpdateCalculations(subStat, raidTotals, resistCounts, playerStats);
+        }
 
         // optional stats
-        if (playerStats.SubStats2.Count > 0)
+        foreach (ref var subStat2 in playerStats.SubStats2.Values.ToArray().AsSpan())
         {
-          Parallel.ForEach(playerStats.SubStats2.Values, subStats => UpdateCalculations(subStats, raidTotals, resistCounts, playerStats));
+          UpdateCalculations(subStat2, raidTotals, resistCounts, playerStats);
         }
       }
     }

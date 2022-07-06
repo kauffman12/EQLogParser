@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -432,6 +433,7 @@ namespace EQLogParser
     public float PercentOfRaid { get; set; }
     public string Special { get; set; }
     public string ClassName { get; set; }
+    public string Key { get; set; }
     public TimeRange Ranges { get; } = new TimeRange();
   }
 

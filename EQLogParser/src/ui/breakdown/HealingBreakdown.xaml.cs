@@ -15,7 +15,6 @@ namespace EQLogParser
   public partial class HealBreakdown : BreakdownTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static bool Running = false;
     private bool CurrentShowSpellsChoice = true;
     private List<PlayerStats> PlayerStats = null;
 
@@ -38,59 +37,37 @@ namespace EQLogParser
 
     internal override void Display(List<PlayerStats> _ = null)
     {
-      if (Running == false && PlayerStats != null)
+      try
       {
-        Running = true;
-        choicesList.IsEnabled = false;
+        ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
 
-        Task.Delay(10).ContinueWith(task =>
+        foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
         {
-          try
-          {
-            if (PlayerStats != null)
-            {
-              ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
+          list.Add(playerStat);
 
-              foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
-              {
-                list.Add(playerStat);
+          if (CurrentShowSpellsChoice)
+          {
+            SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
+          }
+          else
+          {
+            SortSubStats(playerStat.SubStats2.Values.ToList()).ForEach(subStat => list.Add(subStat));
+          }
+        }
 
-                if (CurrentShowSpellsChoice)
-                {
-                  SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
-                }
-                else
-                {
-                  SortSubStats(playerStat.SubStats2.Values.ToList()).ForEach(subStat => list.Add(subStat));
-                }
-              }
-
-              Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
-
-              if (CurrentColumn != null)
-              {
-                Dispatcher.InvokeAsync(() => CurrentColumn.SortDirection = CurrentSortDirection);
-              }
-            }
-          }
-          catch (ArgumentNullException ane)
-          {
-            LOG.Error(ane);
-          }
-          catch (NullReferenceException nre)
-          {
-            LOG.Error(nre);
-          }
-          catch (ArgumentOutOfRangeException aro)
-          {
-            LOG.Error(aro);
-          }
-          finally
-          {
-            Dispatcher.InvokeAsync(() => choicesList.IsEnabled = true);
-            Running = false;
-          }
-        }, TaskScheduler.Default);
+        dataGrid.ItemsSource = list;
+      }
+      catch (ArgumentNullException ane)
+      {
+        LOG.Error(ane);
+      }
+      catch (NullReferenceException nre)
+      {
+        LOG.Error(nre);
+      }
+      catch (ArgumentOutOfRangeException aro)
+      {
+        LOG.Error(aro);
       }
     }
 
