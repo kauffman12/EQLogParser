@@ -24,7 +24,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for SpellCountTable.xaml
   /// </summary>
-  public partial class SpellCountTable : UserControl
+  public partial class SpellCountTable : UserControl, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -526,6 +526,28 @@ namespace EQLogParser
         OptionsChanged();
       }
     }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        dataGrid.Dispose();
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 
   internal class SpellCountsSerialized

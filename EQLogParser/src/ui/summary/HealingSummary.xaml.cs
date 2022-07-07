@@ -153,6 +153,7 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
         };
 
+        dataGrid.View.RefreshFilter();
         HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View.Filter);
       }
     }
@@ -167,12 +168,8 @@ namespace EQLogParser
         HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "UPDATE");
         HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
-
-        if (disposing)
-        {
-          CurrentStats = null;
-        }
-
+        CurrentStats = null;
+        dataGrid.Dispose();
         disposedValue = true;
       }
     }

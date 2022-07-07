@@ -15,24 +15,21 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private List<PlayerStats> PlayerStats;
-    private readonly PlayerStats RaidStats;
+    private PlayerStats RaidStats;
     private static bool Running = false;
 
-    internal TankingBreakdown(CombinedStats currentStats)
+    internal TankingBreakdown()
     {
       InitializeComponent();
       //InitBreakdownTable(dataGrid, selectedColumns);
-      titleLabel.Content = currentStats?.ShortTitle;
-      RaidStats = currentStats?.RaidStats;
     }
 
-    internal void Show(List<PlayerStats> selectedStats)
+    internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
-      if (selectedStats != null)
-      {
-        PlayerStats = selectedStats;
-        Display();
-      }
+      titleLabel.Content = currentStats?.ShortTitle;
+      RaidStats = currentStats?.RaidStats;
+      PlayerStats = selectedStats;
+      Display();
     }
 
     internal void Display()

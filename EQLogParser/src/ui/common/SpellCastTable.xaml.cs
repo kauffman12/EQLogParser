@@ -13,7 +13,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for SpellCastTable.xaml
   /// </summary>
-  public partial class SpellCastTable : UserControl
+  public partial class SpellCastTable : UserControl, IDisposable
   {
     private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
     private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
@@ -176,5 +176,27 @@ namespace EQLogParser
 
     private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged();
     private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => OptionsChanged();
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        dataGrid.Dispose();
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }
