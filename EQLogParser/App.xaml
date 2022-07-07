@@ -32,7 +32,8 @@
     </DataTemplate>
     <DataTemplate x:Key="quantityTemplate">
       <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center"></TextBlock>
-    </DataTemplate>    
+    </DataTemplate>
+
     
     <DataTemplate x:Key="TemplateToolTip">
       <TextBlock FontSize="12" Text="{Binding TooltipText}" />
@@ -43,15 +44,30 @@
     <DataTemplate x:Key="HeaderOverHealTemplateToolTip">
       <TextBlock FontSize="12" Foreground="Black" Text="Amount of Healing in Excess of what could be Healed" />
     </DataTemplate>
+    <DataTemplate x:Key="HeaderDPSTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Damage Per Second based on Player Time" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderSDPSTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Scaled Damage Per Second based on Total Time (raid time)" />
+    </DataTemplate>    
     <DataTemplate x:Key="HeaderHPSTemplateToolTip">
       <TextBlock FontSize="12" Foreground="Black" Text="Healing Per Second based on Player Time" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderSHPSTemplateToolTip">
       <TextBlock FontSize="12" Foreground="Black" Text="Scaled Healing Per Second based on Total Time (raid time)" />
     </DataTemplate>
+    <DataTemplate x:Key="HeaderMeleeAccRateTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Percent of Hits that were not Misses" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderMeleeHitRateTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
+    </DataTemplate>
     <DataTemplate x:Key="HeaderOverHealPercentTemplateToolTip">
       <TextBlock FontSize="12" Foreground="Black" Text="Percent of Healing in Excess of what could be Healed" />
     </DataTemplate>
+    <DataTemplate x:Key="HeaderRampageTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Percent of Melee hits received which were from Rampage" />
+    </DataTemplate>    
 
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">
@@ -361,24 +377,6 @@
     <DataTemplate x:Key="CheckTemplate">
       <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#73b15d" />
     </DataTemplate>
-    <DataTemplate x:Key="CritCountTemplate">
-      <TextBlock Text="{Binding CritCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
-    </DataTemplate>
-    <DataTemplate x:Key="LuckyCountTemplate">
-      <TextBlock Text="{Binding LuckyCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
-    </DataTemplate>
-    <DataTemplate x:Key="TwincastCountTemplate">
-      <TextBlock Text="{Binding TwincastCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
-    </DataTemplate>
-    <DataTemplate x:Key="RampageCountTemplate">
-      <TextBlock Text="{Binding RampageCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
-    </DataTemplate>
-    <DataTemplate x:Key="RiposteCountTemplate">
-      <TextBlock Text="{Binding RiposteCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
-    </DataTemplate>
-    <DataTemplate x:Key="StrikethroughCountTemplate">
-      <TextBlock Text="{Binding StrikethroughCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
-    </DataTemplate>
 
     <!-- DataGrid Row/Column Colors and Alignment -->
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
@@ -405,10 +403,6 @@
     </Style>
     <Style x:Key="CenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
       <Setter Property="HorizontalContentAlignment"  Value="Center"/>
-    </Style>
-    <!-- Also SpellGridDataCellStyle is used by the spell damage stats viewer -->
-    <Style x:Key="SpellGridDataCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Right" />
     </Style>
     <Style x:Key="RightAlignGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
       <Setter Property="TextBlock.TextAlignment" Value="Right" />

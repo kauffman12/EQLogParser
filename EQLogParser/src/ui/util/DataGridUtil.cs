@@ -1,4 +1,5 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using Syncfusion.Data;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
@@ -100,11 +101,11 @@ namespace EQLogParser
       }
     }
 
-    internal static void CopyCsvFromTable(SfDataGrid dataGrid, string title)
+    internal static void CopyCsvFromTable(SfGridBase gridBase, string title)
     {
       try
       {
-        var export = BuildExportData(dataGrid);
+        var export = BuildExportData(gridBase);
         string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, title);
         Clipboard.SetDataObject(result);
       }
@@ -119,29 +120,52 @@ namespace EQLogParser
       }
     }
 
-    internal static Tuple<List<string>, List<List<object>>> BuildExportData(SfDataGrid dataGrid)
+    internal static Tuple<List<string>, List<List<object>>> BuildExportData(SfGridBase gridBase)
     {
       var headers = new List<string>();
       var headerKeys = new List<string>();
       var data = new List<List<object>>();
-      var props = dataGrid.View.GetPropertyAccessProvider();
+      IPropertyAccessProvider props = null;
+      List<object> records = null;
 
-      for (int i = 0; i < dataGrid.Columns.Count; i++)
+      if (gridBase is SfDataGrid)
       {
-        if (!dataGrid.Columns[i].IsHidden && dataGrid.Columns[i].ValueBinding is Binding binding)
+        var dataGrid = gridBase as SfDataGrid;
+        props = dataGrid.View.GetPropertyAccessProvider();
+        for (int i = 0; i < dataGrid.Columns.Count; i++)
         {
-          headers.Add(dataGrid.Columns[i].HeaderText);
-          headerKeys.Add(binding.Path.Path);
+          if (!dataGrid.Columns[i].IsHidden && dataGrid.Columns[i].ValueBinding is Binding binding)
+          {
+            headers.Add(dataGrid.Columns[i].HeaderText);
+            headerKeys.Add(binding.Path.Path);
+          }
         }
-      }
 
-      foreach (var record in dataGrid.View.Records)
+        records = dataGrid.View.Records.Select(record => record.Data).ToList();
+      }
+      else if (gridBase is SfTreeGrid)
+      {
+        var treeGrid = gridBase as SfTreeGrid;
+        props = treeGrid.View.GetPropertyAccessProvider();
+        for (int i = 0; i < treeGrid.Columns.Count; i++)
+        {
+          if (!treeGrid.Columns[i].IsHidden && treeGrid.Columns[i].ValueBinding is Binding binding)
+          {
+            headers.Add(treeGrid.Columns[i].HeaderText);
+            headerKeys.Add(binding.Path.Path);
+          }
+        }
+
+        records = treeGrid.View.Nodes.Select(node => node.Item).ToList();
+      }
+      
+      foreach (ref var record in records.ToArray().AsSpan())
       {
         var row = new List<object>();
         foreach (var key in headerKeys)
         {
           // regular object with properties
-          row.Add(props.GetFormattedValue(record.Data, key) ?? "");
+          row.Add(props.GetFormattedValue(record, key) ?? "");
         }
 
         data.Add(row);
@@ -150,20 +174,30 @@ namespace EQLogParser
       return new Tuple<List<string>, List<List<object>>>(headers, data);
     }
 
-    internal static void CreateImage(SfDataGrid dataGrid, Label titleLabel)
+    internal static void CreateImage(SfGridBase gridBase, Label titleLabel)
     {
-      Task.Delay(50).ContinueWith((t) => dataGrid.Dispatcher.InvokeAsync(() =>
+      Task.Delay(50).ContinueWith((t) => gridBase.Dispatcher.InvokeAsync(() =>
       {
         try
         {
-          dataGrid.SelectedItems.Clear();
-          var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth);
-          var realTableHeight = dataGrid.ActualHeight + dataGrid.HeaderRowHeight + 1;
-          var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
+          gridBase.SelectedItems.Clear();
+
+          double totalColumnWidth = 0;
+          if (gridBase is SfTreeGrid)
+          {
+            totalColumnWidth = ((SfTreeGrid)gridBase).Columns.ToList().Sum(column => column.ActualWidth);
+          }
+          else if (gridBase is SfDataGrid)
+          {
+            totalColumnWidth = ((SfDataGrid)gridBase).Columns.ToList().Sum(column => column.ActualWidth);
+          }
+  
+          var realTableHeight = gridBase.ActualHeight + gridBase.HeaderRowHeight + 1;
+          var realColumnWidth = gridBase.ActualWidth < totalColumnWidth ? gridBase.ActualWidth : totalColumnWidth;
           var titleHeight = titleLabel.DesiredSize.Height - (titleLabel.Padding.Top + titleLabel.Padding.Bottom);
           var titleWidth = titleLabel.DesiredSize.Width;
 
-          var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
+          var dpiScale = VisualTreeHelper.GetDpi(gridBase);
           RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleHeight),
             dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
@@ -173,8 +207,8 @@ namespace EQLogParser
             var brush = new VisualBrush(titleLabel);
             ctx.DrawRectangle(brush, null, new Rect(new Point(4, 0), new Size(titleWidth, titleHeight)));
 
-            brush = new VisualBrush(dataGrid);
-            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight +
+            brush = new VisualBrush(gridBase);
+            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight), new Size(gridBase.ActualWidth, gridBase.ActualHeight +
               SystemParameters.HorizontalScrollBarHeight)));
           }
 

@@ -13,7 +13,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageLog.xaml
   /// </summary>
-  public partial class HitLogViewer : UserControl
+  public partial class HitLogViewer : UserControl, IDisposable
   {
     private readonly ObservableCollection<HitLogRow> Records = new ObservableCollection<HitLogRow>();
     private readonly ObservableCollection<string> Actions = new ObservableCollection<string>();
@@ -387,9 +387,31 @@ namespace EQLogParser
         }
       }
     }
+
+  #region IDisposable Support
+  private bool disposedValue = false; // To detect redundant calls
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if (!disposedValue)
+    {
+      dataGrid.Dispose();
+      disposedValue = true;
+    }
   }
 
-  internal class HitLogRow : HitRecord
+  // This code added to correctly implement the disposable pattern.
+  public void Dispose()
+  {
+    // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+    Dispose(true);
+    // TODO: uncomment the following line if the finalizer is overridden above.
+    GC.SuppressFinalize(this);
+  }
+  #endregion
+}
+
+internal class HitLogRow : HitRecord
   {
     public string Actor { get; set; }
     public string ActorClass { get; set; }

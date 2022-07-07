@@ -20,8 +20,8 @@
       <Label x:Name="title" Style="{StaticResource titleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0" x:Name="classesList" Height="26" SelectionChanged="ClassSelectionChanged" />
-      <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Height="26" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns">
+      <ComboBox Margin="0" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
+      <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns">
         <ComboBox.ItemTemplateSelector>
           <local:ComboBoxItemTemplateSelector>
             <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
@@ -118,7 +118,7 @@
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Rank" HeaderText="" TextAlignment="Right" />
+        <syncfusion:GridTextColumn MappingName="Rank" HeaderText="" TextAlignment="Center" />
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" />
         <syncfusion:GridTextColumn Width="70" MappingName="PercentOfRaid" SortMode="Value" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:GridNumericColumn Width="100" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healing" />

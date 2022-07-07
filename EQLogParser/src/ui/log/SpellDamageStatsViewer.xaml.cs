@@ -195,6 +195,7 @@ namespace EQLogParser
       {
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
         (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
+        dataGrid.Dispose();
         disposedValue = true;
       }
     }

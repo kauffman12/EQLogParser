@@ -205,6 +205,7 @@ namespace EQLogParser
       if (!disposedValue)
       {
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventViewer_EventsLogLoadingComplete;
+        dataGrid.Dispose();
         disposedValue = true;
       }
     }

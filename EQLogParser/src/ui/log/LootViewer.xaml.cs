@@ -288,6 +288,7 @@ namespace EQLogParser
       if (!disposedValue)
       {
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LootViewer_EventsLogLoadingComplete;
+        dataGrid.Dispose();
         disposedValue = true;
       }
     }
