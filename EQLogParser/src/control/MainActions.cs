@@ -16,6 +16,7 @@ namespace EQLogParser
     private static readonly ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new SortablePetMappingComparer();
+    private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
 
     internal static void Clear(ContentControl petsWindow, ContentControl playersWindow)
     {
@@ -50,6 +51,16 @@ namespace EQLogParser
       }
 
       return opened;
+    }
+
+    internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
+    {
+      var entry = new SortableName() { Name = string.Intern(name) };
+      int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
+      if (index < 0)
+      {
+        collection.Insert(~index, entry);
+      }
     }
 
     internal static void InitPetOwners(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
@@ -90,7 +101,7 @@ namespace EQLogParser
       {
         main.Dispatcher.InvokeAsync(() =>
         {
-          Helpers.InsertNameIntoSortedList(name, VerifiedPlayersView);
+          InsertNameIntoSortedList(name, VerifiedPlayersView);
           DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
         });
       };
@@ -124,7 +135,7 @@ namespace EQLogParser
       petsGrid.ItemsSource = VerifiedPetsView;
       PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => main.Dispatcher.InvokeAsync(() =>
       {
-        Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
+        InsertNameIntoSortedList(name, VerifiedPetsView);
         DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
       });
 
@@ -167,6 +178,11 @@ namespace EQLogParser
     private class SortablePetMappingComparer : IComparer<PetMapping>
     {
       public int Compare(PetMapping x, PetMapping y) => string.CompareOrdinal(x?.Owner, y?.Owner);
+    }
+
+    private class SortableNameComparer : IComparer<SortableName>
+    {
+      public int Compare(SortableName x, SortableName y) => string.CompareOrdinal(x?.Name, y?.Name);
     }
   }
 }

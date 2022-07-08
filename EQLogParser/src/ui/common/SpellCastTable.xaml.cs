@@ -60,7 +60,6 @@ namespace EQLogParser
       var allSpells = new HashSet<TimedAction>();
       var startTime = SpellCountBuilder.QuerySpellBlocks(RaidStats, allSpells);
       var playerSpells = new Dictionary<string, List<string>>();
-      var helper = new DictionaryListHelper<string, string>();
       int max = 0;
 
       double lastTime = double.NaN;
@@ -78,7 +77,7 @@ namespace EQLogParser
         {
           if (action is SpellCast cast && !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, out _))
           {
-            size = helper.AddToList(playerSpells, cast.Caster, cast.Spell);
+            size = AddToList(playerSpells, cast.Caster, cast.Spell);
           }
         }
         else if ((CurrentCastType == 0 || CurrentCastType == 2) && action is ReceivedSpell)
@@ -88,7 +87,7 @@ namespace EQLogParser
           {
             if (replaced != null)
             {
-              size = helper.AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
+              size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
             }
           }
         }
@@ -107,6 +106,20 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+
+    private int AddToList(Dictionary<string, List<string>> dict, string key, string value)
+    {
+      if (dict.TryGetValue(key, out List<string> list))
+      {
+        list.Add(value);
+      }
+      else
+      {
+        dict[key] = new List<string> { value };
+      }
+
+      return dict[key].Count;
+    }
 
     private bool IsValid(ReceivedSpell spell, Dictionary<string, byte> uniqueNames, string player, out SpellData replaced)
     {

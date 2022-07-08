@@ -15,7 +15,6 @@ namespace EQLogParser
   class Helpers
   {
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
-    private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
 
     public static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
     {
@@ -70,16 +69,6 @@ namespace EQLogParser
           content.Visibility = Visibility.Hidden;
         }
       }), TaskScheduler.Default);
-    }
-
-    internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
-    {
-      var entry = new SortableName() { Name = string.Intern(name) };
-      int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
-      if (index < 0)
-      {
-        collection.Insert(~index, entry);
-      }
     }
 
     internal static void LoadDictionary(string path)
@@ -191,30 +180,6 @@ namespace EQLogParser
       }
 
       return key;
-    }
-
-    private class SortableNameComparer : IComparer<SortableName>
-    {
-      public int Compare(SortableName x, SortableName y) => string.CompareOrdinal(x?.Name, y?.Name);
-    }
-  }
-
-  internal class DictionaryListHelper<T1, T2>
-  {
-    internal int AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
-    {
-      int size = 0;
-      lock (dict)
-      {
-        if (!dict.ContainsKey(key))
-        {
-          dict[key] = new List<T2>();
-        }
-
-        dict[key].Add(value);
-        size = dict[key].Count;
-      }
-      return size;
     }
   }
 

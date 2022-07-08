@@ -6,17 +6,17 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-  <Grid Background="#232325">
+  <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Slider x:Name="pageSlider" Margin="0,4,20,0" Width="266" ValueChanged="PageSliderValueChanged" SmallChange="1" LargeChange="10" />
-      <ComboBox Margin="0,0,0,0" x:Name="playerList" Height="24" SelectionChanged="PlayerListSelectionChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="critTypeList" Height="24" SelectionChanged="CritTypeListSelectionChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="hitTypeList" Height="24" SelectionChanged="ListSelectionChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="minFreqList" Height="24" SelectionChanged="ListSelectionChanged" />
+      <Slider x:Name="pageSlider" Margin="0,5,20,0" Width="266" ValueChanged="PageSliderValueChanged" SmallChange="1" LargeChange="10" />
+      <ComboBox Margin="0,0,0,2" x:Name="playerList" SelectionChanged="PlayerListSelectionChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="critTypeList" SelectionChanged="CritTypeListSelectionChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="hitTypeList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="minFreqList" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
     <syncfusion:SfChart Grid.Row="1" x:Name="sfChart" Margin="0" PreviewMouseWheel="sfChart_PreviewMouseWheel" SizeChanged="sfChart_SizeChanged">
       <syncfusion:SfChart.ContextMenu>

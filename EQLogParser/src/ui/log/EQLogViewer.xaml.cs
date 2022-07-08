@@ -64,7 +64,7 @@ namespace EQLogParser
 
       logSearch.Text = Properties.Resources.LOG_SEARCH_TEXT;
       logSearch2.Text = Properties.Resources.LOG_SEARCH_TEXT;
-      progress.Foreground = MainWindow.WARNING_BRUSH;
+      progress.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
       searchButton.Focus();
 
       logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;

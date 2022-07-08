@@ -14,25 +14,25 @@
       <RowDefinition Height="20" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="logSearch" Margin="4,0,0,0" Height="24" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
-      <ComboBox x:Name="logSearchModifier" Margin="0" Height="24" SelectedIndex="0" Width="76" VerticalContentAlignment="Center">
+      <TextBox x:Name="logSearch" Margin="8,0,0,2" ToolTip="Minimum of 2 Characters" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <ComboBox x:Name="logSearchModifier" Margin="0,0,0,2" SelectedIndex="0" Width="76" VerticalContentAlignment="Center">
         <ComboBoxItem>And</ComboBoxItem>
         <ComboBoxItem>Or</ComboBoxItem>
         <ComboBoxItem>Excluding</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logSearch2" Margin="0" Height="24" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
-      <ComboBox x:Name="logSearchTime" Margin="0" Height="24" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" />
-      <Button x:Name="searchButton" Margin="8,0,0,3" Background="{StaticResource ContentBackground}" Height="24" Width="30" PreviewMouseLeftButtonUp="SearchClick">
-        <fa:ImageAwesome x:Name="searchIcon" Height="14" Width="30" Margin="0" HorizontalAlignment="Center" Icon="Solid_Search" ToolTip="Search Log" Foreground="{StaticResource EQEQMenuIconBrush}"/>
+      <TextBox x:Name="logSearch2" Margin="0,0,0,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <ComboBox x:Name="logSearchTime" Margin="0,0,0,2" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" />
+      <Button x:Name="searchButton" Margin="4,0,0,2" Background="{StaticResource ContentBackground}" Height="24" Width="30" PreviewMouseLeftButtonUp="SearchClick">
+        <fa:ImageAwesome x:Name="searchIcon" Height="14" Width="30" Icon="Solid_Search" ToolTip="Search Log" Foreground="{StaticResource EQEQMenuIconBrush}"/>
       </Button>
-      <Label x:Name="progress" Visibility="Hidden" Height="24" FontStyle="Italic" />
+      <Label x:Name="progress" Visibility="Hidden" FontStyle="Italic" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox x:Name="logFilterModifier" Margin="4,0,0,0" Height="24" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange">
+      <ComboBox x:Name="logFilterModifier" Margin="0,0,0,2" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange">
         <ComboBoxItem>Includes</ComboBoxItem>
         <ComboBoxItem>Excludes</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
+      <TextBox x:Name="logFilter" Margin="0,0,8,2" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
     </StackPanel>
     <syncfusion:TabControlExt x:Name="tabControl" TabClosed="tabControl_TabClosed" PreviewSelectedItemChangedEvent="tabControl_PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
       <syncfusion:TabItemExt x:Name="resultsTab" Background="{StaticResource ContentBackgroundAlt2}" Header="Search Results" FontSize="14" CloseButtonState="Hidden" CanClose="False">

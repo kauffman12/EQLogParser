@@ -1,8 +1,6 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -18,7 +16,7 @@ namespace EQLogParser
     private PlayerStats RaidStats;
     private static bool Running = false;
 
-    internal TankingBreakdown()
+    public TankingBreakdown()
     {
       InitializeComponent();
       //InitBreakdownTable(dataGrid, selectedColumns);

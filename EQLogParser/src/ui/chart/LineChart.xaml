@@ -16,8 +16,8 @@
       <Label x:Name="titleLabel" Style="{StaticResource titleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-      <ComboBox Margin="0" x:Name="petOrPlayerList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="choicesList" Height="24" MinWidth="60" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="petOrPlayerList" MinWidth="60" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="choicesList" MinWidth="60" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
     <syncfusion:SfChart x:Name="sfLineChart" Grid.Row="2" Margin="0">
       <syncfusion:SfChart.ContextMenu>

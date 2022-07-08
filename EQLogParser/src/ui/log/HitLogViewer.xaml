@@ -17,11 +17,11 @@
       <Label x:Name="titleLabel" Style="{StaticResource titleStyle}" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="groupHits" Visibility="Visible" IsChecked="True" Margin="2,0,4,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Group Actions</CheckBox>
-      <CheckBox x:Name="showPets" Visibility="Collapsed" IsChecked="True" Margin="4,0,4,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
-      <ComboBox Margin="4,0,4,0" x:Name="typeList" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="actionList" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="actedList" Height="24" SelectionChanged="OptionsChanged" />
+      <CheckBox x:Name="groupHits" Visibility="Visible" IsChecked="True" Margin="0,0,10,2" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Group Actions</CheckBox>
+      <CheckBox x:Name="showPets" Visibility="Collapsed" IsChecked="True" Margin="0,0,0,2" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
+      <ComboBox Margin="0,0,0,2" x:Name="typeList" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="actionList" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="actedList" SelectionChanged="OptionsChanged" />
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
