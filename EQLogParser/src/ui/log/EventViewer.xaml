@@ -33,18 +33,17 @@
       <Label x:Name="titleLabel" Style="{StaticResource titleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showEnterZone" IsChecked="True" Margin="4,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Entered Area</CheckBox>
-      <CheckBox x:Name="showMezBreaks" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Mez Breaks</CheckBox>
-      <CheckBox x:Name="showKillShots" IsChecked="True" Margin="2,0,4,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Kill Shots</CheckBox>
-      <CheckBox x:Name="showPlayerKillsPlayer" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Player Killing</CheckBox>
-      <CheckBox x:Name="showPlayerSlain" IsChecked="True" Margin="2,0,4,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Player Slain</CheckBox>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <ComboBox x:Name="eventFilterModifier" Margin="4,0,0,0" Height="24" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange" Background="#101010" Foreground="#EEEEEE">
+      <CheckBox x:Name="showEnterZone" IsChecked="True" Margin="0,0,8,2" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Entered Area</CheckBox>
+      <CheckBox x:Name="showMezBreaks" IsChecked="True" Margin="0,0,8,2" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Mez Breaks</CheckBox>
+      <CheckBox x:Name="showKillShots" IsChecked="True" Margin="0,0,8,2" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Kill Shots</CheckBox>
+      <CheckBox x:Name="showPlayerKillsPlayer" IsChecked="True" Margin="0,0,8,2" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Player Killing</CheckBox>
+      <CheckBox x:Name="showPlayerSlain" IsChecked="True" Margin="0,0,10,2" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Player Slain</CheckBox>
+      <ComboBox x:Name="eventFilterModifier" Margin="0,0,0,2" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange">
         <ComboBoxItem>Includes</ComboBoxItem>
         <ComboBoxItem>Excludes</ComboBoxItem>
         <ComboBoxItem>Equals</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="eventFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" LostFocus="Filter_LostFocus" GotFocus="Filter_GotFocus" PreviewKeyDown="Filter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
+      <TextBox x:Name="eventFilter" Margin="0,0,8,2"  FontStyle="Italic" Width="190" LostFocus="Filter_LostFocus" GotFocus="Filter_GotFocus" PreviewKeyDown="Filter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"

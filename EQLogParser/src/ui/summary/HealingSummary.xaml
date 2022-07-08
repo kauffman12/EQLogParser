@@ -20,8 +20,8 @@
       <Label x:Name="title" Style="{StaticResource titleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
-      <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns">
+      <ComboBox Margin="0,0,0,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
+      <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Width="140" Margin="0,0,8,2" DropDownClosed="SelectDataGridColumns">
         <ComboBox.ItemTemplateSelector>
           <local:ComboBoxItemTemplateSelector>
             <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>

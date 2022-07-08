@@ -24,7 +24,7 @@ namespace EQLogParser
     private static bool Updating = false;
     private List<ColumnData> Columns = new List<ColumnData>();
 
-    internal HitFreqChart()
+    public HitFreqChart()
     {
       InitializeComponent();
       minFreqList.ItemsSource = MinFreqs;
@@ -158,7 +158,7 @@ namespace EQLogParser
           ShowMarker = false,
           LabelPosition = AdornmentsLabelPosition.Outer,
           FontSize = 20,
-          Foreground = MainWindow.BRIGHT_TEXT_BRUSH,
+          Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
           Background = new SolidColorBrush(Colors.Transparent)
         };
         series.AdornmentsInfo = adornment;

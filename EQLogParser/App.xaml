@@ -10,6 +10,7 @@
     <SolidColorBrush x:Key="EQEQMenuIconBrush" Color="#FF4F9FE2"/>
     <SolidColorBrush x:Key="EQSearchBackgroundBrush" Color="#FF3a543f" Opacity="0.5"/>
     <SolidColorBrush x:Key="EQWarnBackgroundBrush" Color="#FF96410d" />
+    <SolidColorBrush x:Key="EQWarnForegroundBrush" Color="Orange" />
 
     <Style x:Key="EQIconStyle" TargetType="fa:ImageAwesome">
       <Setter Property="Foreground" Value="{StaticResource EQEQMenuIconBrush}" />

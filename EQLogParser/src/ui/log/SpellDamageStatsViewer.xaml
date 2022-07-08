@@ -31,14 +31,14 @@
       <Label x:Name="titleLabel" Style="{StaticResource titleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showPlayers" IsChecked="True" Margin="0,0,10,1" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
-      <ComboBox Margin="0,0,0,1" x:Name="fightOption" SelectedIndex="0" SelectionChanged="OptionsChanged">
+      <CheckBox x:Name="showPlayers" IsChecked="True" Margin="0,0,10,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
+      <ComboBox Margin="0,0,0,2" x:Name="fightOption" SelectedIndex="0" SelectionChanged="OptionsChanged">
         <ComboBoxItem>All Fights</ComboBoxItem>
         <ComboBoxItem>Selected Fights</ComboBoxItem>        
       </ComboBox>
-      <ComboBox Margin="0,0,0,1" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,0,1" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,8,1" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"

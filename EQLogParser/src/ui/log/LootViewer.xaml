@@ -33,9 +33,9 @@
       <Label x:Name="titleLabel" Style="{StaticResource titleStyle}" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="4,0,0,0" x:Name="playersList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0" x:Name="itemsList" IsEnabled="False" Height="24" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="optionsList" IsEnabled="True" Height="24" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="playersList" IsEnabled="False" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="itemsList" IsEnabled="False" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="optionsList" IsEnabled="True" SelectionChanged="OptionsChanged" />
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
