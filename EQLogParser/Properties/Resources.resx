@@ -132,14 +132,8 @@
   <data name="CHANNELS_SELECTED" xml:space="preserve">
     <value>Channels Selected</value>
   </data>
-  <data name="CHAT_END_DATE" xml:space="preserve">
-    <value>End Date</value>
-  </data>
   <data name="CHAT_FROM_FILTER" xml:space="preserve">
     <value>From</value>
-  </data>
-  <data name="CHAT_START_DATE" xml:space="preserve">
-    <value>Start Date</value>
   </data>
   <data name="CHAT_TEXT_FILTER" xml:space="preserve">
     <value>Message Search</value>

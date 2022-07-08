@@ -46,9 +46,9 @@ namespace EQLogParser
       InitializeComponent();
       fontSize.ItemsSource = FontSizeList;
       fontFamily.ItemsSource = fontFamily.ItemsSource = Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
-      startDate.Text = Properties.Resources.CHAT_START_DATE;
-      endDate.Text = Properties.Resources.CHAT_END_DATE;
       textFilter.Text = Properties.Resources.CHAT_TEXT_FILTER;
+      startDate.DateTime = DateTime.Now.AddDays(-90);
+      endDate.DateTime = DateTime.Now;
 
       var context = new AutoCompleteText() { Text = Properties.Resources.CHAT_TO_FILTER };
       context.Items.AddRange(PlayerAutoCompleteList);
@@ -333,7 +333,7 @@ namespace EQLogParser
       return selected;
     }
 
-    private void ChangeSearch(bool refresh = false)
+    private void ChangeSearch()
     {
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
@@ -343,7 +343,7 @@ namespace EQLogParser
         string from = (fromFilter.Text.Length != 0 && fromFilter.Text != Properties.Resources.CHAT_FROM_FILTER) ? fromFilter.Text : null;
         double startDateValue = GetStartDate();
         double endDateValue = GetEndDate();
-        if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
+        if (changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
           LastStartDate != startDateValue || LastEndDate != endDateValue)
         {
           CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
@@ -626,23 +626,15 @@ namespace EQLogParser
       }
     }
 
-    private void Calendar_SelectedDatesChanged(object s, SelectionChangedEventArgs e)
-    {
-      if (calendarPopup.PlacementTarget is TextBox target)
-      {
-        target.Text = calendar.SelectedDate?.ToShortDateString();
-        target.FontStyle = FontStyles.Normal;
-        calendarPopup.IsOpen = false;
-      }
-    }
+    private void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ChangeSearch();
 
     private double GetEndDate()
     {
       double result = 0;
 
-      if (DateTime.TryParse(endDate.Text, out DateTime value))
+      if (endDate.DateTime != null)
       {
-        result = value.Ticks / TimeSpan.FromSeconds(1).Ticks;
+        result = endDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks;
       }
 
       return result;
@@ -652,87 +644,17 @@ namespace EQLogParser
     {
       double result = 0;
 
-      if (DateTime.TryParse(startDate.Text, out DateTime value))
+      if (startDate.DateTime != null)
       {
-        result = value.Ticks / TimeSpan.FromSeconds(1).Ticks;
+        result = startDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks;
       }
 
       return result;
     }
 
-    private void DateTimeMouseClick(TextBox box, MouseButtonEventArgs e)
-    {
-      if (calendarPopup.IsOpen && calendarPopup.PlacementTarget == box)
-      {
-        calendarPopup.IsOpen = false;
-      }
-      else if (e.ClickCount == 1 && e.ChangedButton == MouseButton.Left)
-      {
-        calendarPopup.PlacementTarget = null;
-
-        if (DateTime.TryParse(box.Text, out DateTime result))
-        {
-          calendar.SelectedDates.Clear();
-          calendar.SelectedDates.Add(result);
-          calendar.DisplayDate = result;
-        }
-
-        calendarPopup.PlacementTarget = box;
-        calendarPopup.IsOpen = true;
-      }
-    }
-
-    private void DateChooser_KeyDown(object sender, KeyEventArgs e)
-    {
-      if (e.Key == Key.Escape)
-      {
-        ResetDateText(sender);
-        chatBox.Focus();
-      }
-      else if (e.Key == Key.Enter)
-      {
-        chatBox.Focus();
-      }
-    }
-
-    private void DateChooser_GotFocus(object sender, RoutedEventArgs e)
-    {
-      if (sender is TextBox box && box.Text.Contains("Date"))
-      {
-        box.Text = "";
-      }
-    }
-
-    private void DateChooser_LostFocus(object sender, RoutedEventArgs e)
-    {
-      var text = (sender as TextBox)?.Text;
-      if (!DateTime.TryParse(text, out _))
-      {
-        ResetDateText(sender);
-      }
-    }
-
-    private void ResetDateText(object sender)
-    {
-      if (startDate == sender)
-      {
-        startDate.Text = Properties.Resources.CHAT_START_DATE;
-        startDate.FontStyle = FontStyles.Italic;
-      }
-      else if (endDate == sender)
-      {
-        endDate.Text = Properties.Resources.CHAT_END_DATE;
-        endDate.FontStyle = FontStyles.Italic;
-      }
-    }
-
     private void ToFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(toFilter, Properties.Resources.CHAT_TO_FILTER);
     private void FromFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(fromFilter, Properties.Resources.CHAT_FROM_FILTER);
     private void TextFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(textFilter, Properties.Resources.CHAT_TEXT_FILTER);
-    private void StartDate_MouseClick(object sender, MouseButtonEventArgs e) => DateTimeMouseClick(startDate, e);
-    private void EndDate_MouseClick(object sender, MouseButtonEventArgs e) => DateTimeMouseClick(endDate, e);
-    private void Refresh_MouseClick(object sender, MouseButtonEventArgs e) => ChangeSearch(true);
-
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
@@ -741,11 +663,6 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
         ChatManager.EventsUpdatePlayer -= ChatManager_EventsUpdatePlayer;
         ChatManager.EventsNewChannels -= ChatManager_EventsNewChannels;
 
