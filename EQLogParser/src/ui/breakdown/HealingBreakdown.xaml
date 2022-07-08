@@ -78,14 +78,14 @@
       </syncfusion:SfTreeGrid.ContextMenu>
       <syncfusion:SfTreeGrid.Columns>
         <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
-        <syncfusion:TreeGridTextColumn Width="75" MappingName="Percent" DisplayBinding="{Binding Path=Percent, Converter={StaticResource ZeroConverter}}" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Player" />
-        <syncfusion:TreeGridNumericColumn Width="90" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Total" TextAlignment="Right" HeaderText="Heal" />
+        <syncfusion:TreeGridTextColumn Width="80" MappingName="Percent" DisplayBinding="{Binding Path=Percent, Converter={StaticResource ZeroConverter}}" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Player" />
+        <syncfusion:TreeGridNumericColumn Width="100" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Total" TextAlignment="Right" HeaderText="Heal" />
         <syncfusion:TreeGridNumericColumn Width="100" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Extra" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
-        <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="DPS" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
-        <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="SDPS" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
-        <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="TotalSeconds" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="DPS" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
+        <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="SDPS" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
+        <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="TotalSeconds" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Hits" TextAlignment="Right" HeaderText="# Heals" />
-        <syncfusion:TreeGridNumericColumn Width="80" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Max" TextAlignment="Right" HeaderText="Max Heal" />
+        <syncfusion:TreeGridNumericColumn Width="75" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Max" TextAlignment="Right" HeaderText="Max Heal" />
         <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Avg" TextAlignment="Right" HeaderText="Av Heal" />
         <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="AvgCrit" TextAlignment="Right" HeaderText="Av Crit" />
         <syncfusion:TreeGridNumericColumn Width="80" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="AvgLucky" TextAlignment="Right" HeaderText="Av Lucky" />

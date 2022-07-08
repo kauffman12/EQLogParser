@@ -145,20 +145,20 @@
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Rank" HeaderText="" TextAlignment="Center" />
+        <syncfusion:GridTextColumn Width="30" MappingName="Rank" HeaderText="" TextAlignment="Center" />
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" />
-        <syncfusion:GridTextColumn Width="70" MappingName="PercentOfRaid" SortMode="Value" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        <syncfusion:GridTextColumn Width="80" MappingName="PercentOfRaid" SortMode="Value" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:GridNumericColumn Width="100" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damaged" />
         <syncfusion:GridNumericColumn Width="100" MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healed" />
         <syncfusion:GridNumericColumn Width="70" MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
         <syncfusion:GridNumericColumn Width="70" MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
         <syncfusion:GridNumericColumn Width="70" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:GridNumericColumn Width="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
-        <syncfusion:GridNumericColumn Width="70" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:GridNumericColumn Width="75" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
         <syncfusion:GridNumericColumn Width="70" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
-        <syncfusion:GridTextColumn Width="60" MappingName="MeleeAccRate" SortMode="Value" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
+        <syncfusion:GridTextColumn Width="65" MappingName="MeleeAccRate" SortMode="Value" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
         <syncfusion:GridTextColumn Width="60" MappingName="MeleeHitRate" SortMode="Value" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
-        <syncfusion:GridTextColumn Width="90" MappingName="RampageRate" SortMode="Value" DisplayBinding="{Binding Path=RampageRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderRampageTemplateToolTip}" TextAlignment="Right" HeaderText="% Rampage" />
+        <syncfusion:GridTextColumn Width="95" MappingName="RampageRate" SortMode="Value" DisplayBinding="{Binding Path=RampageRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderRampageTemplateToolTip}" TextAlignment="Right" HeaderText="% Rampage" />
         <syncfusion:GridTextColumn MappingName="ClassName" HorizontalHeaderContentAlignment="Center" HeaderText="Class" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

@@ -1,80 +1,58 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
+using System.Windows;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for TankingBreakdown.xaml
   /// </summary>
-  public partial class TankingBreakdown : BreakdownTable
+  public partial class TankingBreakdown : BreakdownTable, IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    private List<PlayerStats> PlayerStats;
-    private PlayerStats RaidStats;
-    private static bool Running = false;
+    private List<PlayerStats> PlayerStats = null;
 
     public TankingBreakdown()
     {
       InitializeComponent();
-      //InitBreakdownTable(dataGrid, selectedColumns);
+      InitBreakdownTable(dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
       titleLabel.Content = currentStats?.ShortTitle;
-      RaidStats = currentStats?.RaidStats;
       PlayerStats = selectedStats;
       Display();
     }
 
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+
     internal void Display()
     {
-      if (Running == false && RaidStats != null)
+      dataGrid.ItemsSource = null;
+      dataGrid.ItemsSource = PlayerStats;
+    }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
       {
-        Running = true;
-        Task.Delay(10).ContinueWith(task =>
-        {
-          try
-          {
-            if (PlayerStats != null)
-            {
-              ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
-
-              //foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
-              //{
-              //  list.Add(playerStat);
-                //SortSubStats(playerStat.SubStats.ToList()).ForEach(subStat => list.Add(subStat));
-              //}
-
-              Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
-
-              if (CurrentColumn != null)
-              {
-                Dispatcher.InvokeAsync(() => CurrentColumn.SortDirection = CurrentSortDirection);
-              }
-            }
-          }
-          catch (ArgumentNullException ane)
-          {
-            LOG.Error(ane);
-          }
-          catch (NullReferenceException nre)
-          {
-            LOG.Error(nre);
-          }
-          catch (ArgumentOutOfRangeException aro)
-          {
-            LOG.Error(aro);
-          }
-          finally
-          {
-            Running = false;
-          }
-        }, TaskScheduler.Default);
+        dataGrid.Dispose();
+        disposedValue = true;
       }
     }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }
