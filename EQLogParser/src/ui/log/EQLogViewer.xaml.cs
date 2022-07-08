@@ -151,7 +151,7 @@ namespace EQLogParser
             var allText = string.Join(Environment.NewLine, list) + Environment.NewLine;
             Dispatcher.InvokeAsync(() =>
             {
-              SolidColorBrush highlight = Application.Current.Resources["searchBackgroundBrush"] as SolidColorBrush;
+              SolidColorBrush highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
               contextBox.Text = allText;
               contextTab.Visibility = Visibility.Visible;
               FoundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));

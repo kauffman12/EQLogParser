@@ -12,7 +12,7 @@ namespace EQLogParser
     {
       if (value is string spellName && spellName.StartsWith("Received ", StringComparison.Ordinal))
       {
-        return Application.Current.Resources["goodForegroundBrush"] as SolidColorBrush;
+        return Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
       }
       else
       {

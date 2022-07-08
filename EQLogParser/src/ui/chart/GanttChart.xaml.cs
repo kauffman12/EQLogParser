@@ -18,11 +18,11 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static readonly SolidColorBrush GridBrush = new SolidColorBrush(Colors.White);
+    private static readonly SolidColorBrush GRID_BRUSH = Application.Current.Resources["ContentForeground"] as SolidColorBrush;
     private static readonly List<Brush> BlockBrushes = new List<Brush>()
     {
-      new SolidColorBrush(Color.FromRgb(73, 151, 217)),
-      new SolidColorBrush(Color.FromRgb(205, 205, 205))
+      Application.Current.Resources["EQEQMenuIconBrush"] as SolidColorBrush,
+      Application.Current.Resources["PrimaryLight"] as SolidColorBrush
     };
 
     private const int ROW_HEIGHT = 24;
@@ -36,21 +36,24 @@ namespace EQLogParser
     private readonly List<TextBlock> Headers = new List<TextBlock>();
     private readonly Dictionary<string, byte> SelfOnly = new Dictionary<string, byte>();
     private readonly Dictionary<string, byte> SelfOnlyOverride = new Dictionary<string, byte>();
-    private readonly double StartTime;
-    private readonly double EndTime;
-    private readonly double Length;
-    private readonly List<PlayerStats> Selected;
     private readonly Dictionary<string, byte> Ignore = new Dictionary<string, byte>();
-    private readonly bool TankingMode;
+    private double StartTime;
+    private double EndTime;
+    private double Length;
+    private List<PlayerStats> Selected;
+    private bool TankingMode;
 
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowCasterAdps = true;
     private bool CurrentShowMeleeAdps = true;
 
-    internal GanttChart(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups, bool tanking = false)
+    public GanttChart()
     {
       InitializeComponent();
+    }
 
+    internal void Init(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups, bool tanking = false)
+    {
       if (selected != null && selected.Count > 0)
       {
         TankingMode = tanking;
@@ -345,7 +348,7 @@ namespace EQLogParser
       {
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
-        Foreground = GridBrush,
+        Foreground = GRID_BRUSH,
         Text = name,
         Width = LABELS_WIDTH - 20,
         FontSize = 12,
@@ -362,7 +365,7 @@ namespace EQLogParser
     {
       var textBlock = new TextBlock()
       {
-        Foreground = GridBrush,
+        Foreground = GRID_BRUSH,
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Center,
         Text = text,
@@ -380,7 +383,7 @@ namespace EQLogParser
     {
       var rectangle = new Rectangle()
       {
-        Stroke = GridBrush,
+        Stroke = GRID_BRUSH,
         StrokeThickness = 0.3,
         Height = hPos,
         Width = 0.3,
@@ -466,7 +469,7 @@ namespace EQLogParser
 
       var block = new Rectangle()
       {
-        Stroke = GridBrush,
+        Stroke = GRID_BRUSH,
         StrokeThickness = 0.2,
         Height = ROW_HEIGHT / 3,
         HorizontalAlignment = HorizontalAlignment.Left,
@@ -490,7 +493,7 @@ namespace EQLogParser
       return new Rectangle()
       {
         Height = ROW_HEIGHT,
-        Stroke = GridBrush,
+        Stroke = GRID_BRUSH,
         StrokeThickness = 0.2,
         VerticalAlignment = VerticalAlignment.Top,
         Margin = new Thickness(0, hPos, 0, 0)

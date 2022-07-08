@@ -6,13 +6,13 @@
              xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-    <SolidColorBrush x:Key="goodForegroundBrush" Color="LightGreen"/>
-    <SolidColorBrush x:Key="menuIconBrush" Color="#FF4F9FE2"/>
-    <SolidColorBrush x:Key="searchBackgroundBrush" Color="#FF3a543f" Opacity="0.5"/>
-    <SolidColorBrush x:Key="warnBackgroundBrush" Color="#FF96410d" />
+    <SolidColorBrush x:Key="EQGoodForegroundBrush" Color="LightGreen"/>
+    <SolidColorBrush x:Key="EQEQMenuIconBrush" Color="#FF4F9FE2"/>
+    <SolidColorBrush x:Key="EQSearchBackgroundBrush" Color="#FF3a543f" Opacity="0.5"/>
+    <SolidColorBrush x:Key="EQWarnBackgroundBrush" Color="#FF96410d" />
 
     <Style x:Key="iconStyle" TargetType="fa:ImageAwesome">
-      <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource EQEQMenuIconBrush}" />
       <Setter Property="Height" Value="12"/>
       <Setter Property="Width" Value="12" />
       <Setter Property="HorizontalAlignment" Value="Center" />
@@ -20,7 +20,7 @@
 
     <Style x:Key="titleStyle" TargetType="Label">
       <Setter Property="Background" Value="{x:Null}" />
-      <Setter Property="Foreground" Value="{StaticResource menuIconBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource EQEQMenuIconBrush}" />
       <Setter Property="Height" Value="30"/>
       <Setter Property="FontSize" Value="15" />
       <Setter Property="FontWeight" Value="Bold" />
