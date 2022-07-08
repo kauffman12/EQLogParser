@@ -158,7 +158,7 @@ namespace EQLogParser
 
         records = treeGrid.View.Nodes.Select(node => node.Item).ToList();
       }
-      
+
       foreach (ref var record in records.ToArray().AsSpan())
       {
         var row = new List<object>();
@@ -191,7 +191,7 @@ namespace EQLogParser
           {
             totalColumnWidth = ((SfDataGrid)gridBase).Columns.ToList().Sum(column => column.ActualWidth);
           }
-  
+
           var realTableHeight = gridBase.ActualHeight + gridBase.HeaderRowHeight + 1;
           var realColumnWidth = gridBase.ActualWidth < totalColumnWidth ? gridBase.ActualWidth : totalColumnWidth;
           var titleHeight = titleLabel.DesiredSize.Height - (titleLabel.Padding.Top + titleLabel.Padding.Bottom);
@@ -261,11 +261,12 @@ namespace EQLogParser
 
     internal static void LoadColumns(ComboBox columnCombo, SfGridBase gridBase)
     {
-      Dictionary<string, bool> visible = new Dictionary<string, bool>() { { "Name", true } };
+      Dictionary<string, bool> visible = null;
       string visibleSetting = ConfigUtil.GetSetting(columnCombo.Tag as string);
 
       if (!string.IsNullOrEmpty(visibleSetting))
       {
+        visible = new Dictionary<string, bool>() { { "Name", true } };
         visibleSetting.Split(',').ToList().ForEach(key => visible[key] = true);
       }
 
@@ -283,12 +284,12 @@ namespace EQLogParser
     {
       Columns updatedColumns = new Columns();
       dataGrid.Columns.Take(1).ToList().ForEach(column => updatedColumns.Add(column));
-
       var indexString = ConfigUtil.GetSetting((columnCombo.Tag as string) + "DisplayIndex");
-      if (!string.IsNullOrEmpty(indexString))
+
+      var foundColumns = new Dictionary<string, bool>();
+      if (indexString != null)
       {
-        var foundColumns = new Dictionary<string, bool>();
-        foreach (var name in indexString.Split(','))
+        foreach (var name in indexString.Split(',').ToList())
         {
           for (int i = 1; i < dataGrid.Columns.Count; i++)
           {
@@ -296,34 +297,34 @@ namespace EQLogParser
             {
               foundColumns[name] = true;
               updatedColumns.Add(dataGrid.Columns[i]);
-              dataGrid.Columns[i].IsHidden = !visible.ContainsKey(name);
+              dataGrid.Columns[i].IsHidden = (visible == null) ? false : !visible.ContainsKey(name);
               break;
             }
           }
         }
-
-        for (int i = 1; i < dataGrid.Columns.Count; i++)
-        {
-          if (!foundColumns.ContainsKey(dataGrid.Columns[i].HeaderText))
-          {
-            updatedColumns.Add(dataGrid.Columns[i]);
-            dataGrid.Columns[i].IsHidden = !visible.ContainsKey(dataGrid.Columns[i].HeaderText);
-          }
-        }
-
-        dataGrid.Columns = updatedColumns;
-
-        // save column order if it changes
-        dataGrid.QueryColumnDragging += (object sender, QueryColumnDraggingEventArgs e) =>
-        {
-          if (e.Reason == QueryColumnDraggingReason.Dropped)
-          {
-            var dataGrid = sender as SfDataGrid;
-            var columns = dataGrid.Columns.ToList().Skip(1).Select(column => column.HeaderText).ToList();
-            ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
-          }
-        };
       }
+
+      for (int i = 1; i < dataGrid.Columns.Count; i++)
+      {
+        if (!foundColumns.ContainsKey(dataGrid.Columns[i].HeaderText))
+        {
+          updatedColumns.Add(dataGrid.Columns[i]);
+          dataGrid.Columns[i].IsHidden = (visible == null) ? false : !visible.ContainsKey(dataGrid.Columns[i].HeaderText);
+        }
+      }
+
+      dataGrid.Columns = updatedColumns;
+
+      // save column order if it changes
+      dataGrid.QueryColumnDragging += (object sender, QueryColumnDraggingEventArgs e) =>
+      {
+        if (e.Reason == QueryColumnDraggingReason.Dropped)
+        {
+          var dataGrid = sender as SfDataGrid;
+          var columns = dataGrid.Columns.ToList().Skip(1).Select(column => column.HeaderText).ToList();
+          ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+        }
+      };
 
       int selectedCount = 0;
       List<ComboBoxItemDetails> list = new List<ComboBoxItemDetails>();
@@ -345,10 +346,11 @@ namespace EQLogParser
     {
       TreeGridColumns updatedColumns = new TreeGridColumns();
       var indexString = ConfigUtil.GetSetting((columnCombo.Tag as string) + "DisplayIndex");
-      if (!string.IsNullOrEmpty(indexString))
+
+      var foundColumns = new Dictionary<string, bool>();
+      if (indexString != null)
       {
-        var foundColumns = new Dictionary<string, bool>();
-        foreach (var name in indexString.Split(','))
+        foreach (var name in indexString.Split(',').ToList())
         {
           for (int i = 0; i < treeGrid.Columns.Count; i++)
           {
@@ -356,34 +358,34 @@ namespace EQLogParser
             {
               foundColumns[name] = true;
               updatedColumns.Add(treeGrid.Columns[i]);
-              treeGrid.Columns[i].IsHidden = !visible.ContainsKey(name);
+              treeGrid.Columns[i].IsHidden = (visible == null) ? false : !visible.ContainsKey(name);
               break;
             }
           }
         }
-
-        for (int i = 0; i < treeGrid.Columns.Count; i++)
-        {
-          if (!foundColumns.ContainsKey(treeGrid.Columns[i].HeaderText))
-          {
-            updatedColumns.Add(treeGrid.Columns[i]);
-            treeGrid.Columns[i].IsHidden = !visible.ContainsKey(treeGrid.Columns[i].HeaderText);
-          }
-        }
-
-        treeGrid.Columns = updatedColumns;
-
-        // save column order if it changes
-        treeGrid.ColumnDragging += (object sender,TreeGridColumnDraggingEventArgs e) =>
-        {
-          if (e.Reason == QueryColumnDraggingReason.Dropped)
-          {
-            var treeGrid = sender as SfTreeGrid;
-            var columns = treeGrid.Columns.ToList().Select(column => column.HeaderText).ToList();
-            ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
-          }
-        };
       }
+
+      for (int i = 0; i < treeGrid.Columns.Count; i++)
+      {
+        if (!foundColumns.ContainsKey(treeGrid.Columns[i].HeaderText))
+        {
+          updatedColumns.Add(treeGrid.Columns[i]);
+          treeGrid.Columns[i].IsHidden = (visible == null) ? false : !visible.ContainsKey(treeGrid.Columns[i].HeaderText);
+        }
+      }
+
+      treeGrid.Columns = updatedColumns;
+
+      // save column order if it changes
+      treeGrid.ColumnDragging += (object sender, TreeGridColumnDraggingEventArgs e) =>
+      {
+        if (e.Reason == QueryColumnDraggingReason.Dropped)
+        {
+          var treeGrid = sender as SfTreeGrid;
+          var columns = treeGrid.Columns.ToList().Select(column => column.HeaderText).ToList();
+          ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+        }
+      };
 
       int selectedCount = 0;
       List<ComboBoxItemDetails> list = new List<ComboBoxItemDetails>();
@@ -416,7 +418,7 @@ namespace EQLogParser
           }
         }
 
-        SetSelectedColumnsTitle(columns, visible.Count);
+        SetSelectedColumnsTitle(columns, visible.Count - 1); // account for name
 
         for (int i = 0; i < dataGrid.Columns.Count; i++)
         {
@@ -463,7 +465,7 @@ namespace EQLogParser
           }
         }
 
-        SetSelectedColumnsTitle(columns, visible.Count);
+        SetSelectedColumnsTitle(columns, visible.Count - 1); // account for name
 
         for (int i = 0; i < treeGrid.Columns.Count; i++)
         {
