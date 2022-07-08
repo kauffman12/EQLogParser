@@ -2,7 +2,7 @@
 Everquest Log Parser for Live/TLP servers.
 
 Latest Release:
-https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-1.8.79.msi
+https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-1.8.80.msi
 
 This software depends on a Docking UI control from Actipro so it needs a license to build
 and run without having an Actipro splash screen. However, I am currently replacing
