@@ -59,8 +59,11 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var breakdown = Helpers.OpenWindow(main.dockSite, null, typeof(TankingBreakdown), "tankinggBreakdownWindow", "Tanking Breakdown");
-        (breakdown.Content as TankingBreakdown).Init(CurrentStats, selected);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(TankingBreakdown),
+          "tankinggBreakdownWindow", "Tanking Breakdown"))
+        {
+          (breakdown.Content as TankingBreakdown).Init(CurrentStats, selected);
+        }
       }
     }
 
@@ -69,8 +72,11 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var breakdown = Helpers.OpenWindow(main.dockSite, null, typeof(ReceivedHealingBreakdown), "receivedHealingWindow", "Received Healing Breakdown");
-        (breakdown.Content as ReceivedHealingBreakdown).Init(CurrentStats, selected);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(ReceivedHealingBreakdown), 
+          "receivedHealingWindow", "Received Healing Breakdown"))
+        {
+          (breakdown.Content as ReceivedHealingBreakdown).Init(CurrentStats, selected);
+        }
       }
     }
 
@@ -134,8 +140,10 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var log = Helpers.OpenWindow(main.dockSite, null, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log");
-        (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
+        {
+          (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
+        }       
       }
     }
 
@@ -144,8 +152,10 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var hitFreq = Helpers.OpenWindow(main.dockSite, null, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency");
-        (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl hitFreq, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency"))
+        {
+          (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
+        }       
       }
     }
 
@@ -154,8 +164,10 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var timeline = Helpers.OpenWindow(main.dockSite, null, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline");
-        ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, true);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
+        {
+          ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, true);
+        }       
       }
     }
 

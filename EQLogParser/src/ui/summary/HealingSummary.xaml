@@ -59,60 +59,60 @@
         <ContextMenu>
           <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="copyHealParseIcon" Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
+              <fa:ImageAwesome x:Name="copyHealParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="False" x:Name="copyTopHealsParseToEQClick" Header="Copy Top Heals Parse" Click="CopyTopHealsToEQClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="copyTopHealsParseIcon" Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
+              <fa:ImageAwesome x:Name="copyTopHealsParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Table" />
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Image" />
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Spell Cast Order">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showSpellCastsIcon" Style="{StaticResource iconStyle}" Icon="Solid_ListOl" />
+              <fa:ImageAwesome x:Name="showSpellCastsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_ListOl" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemShowSpellCounts" IsEnabled="False" Header="Spell Counts">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showSpellCountsIcon" Style="{StaticResource iconStyle}" Icon="Solid_Calculator" />
+              <fa:ImageAwesome x:Name="showSpellCountsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Calculator" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemShowBreakdown" IsEnabled="False" Header="Healing Breakdown">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showBreakdownIcon" Style="{StaticResource iconStyle}" Icon="Solid_Heart" />
+              <fa:ImageAwesome x:Name="showBreakdownIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Heart" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemShowHealingLog" IsEnabled="False" Header="Healing Log" Click="DataGridHealingLogClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showHealingLogIcon" Style="{StaticResource iconStyle}" Icon="Solid_File" />
+              <fa:ImageAwesome x:Name="showHealingLogIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Style="{StaticResource iconStyle}" Icon="Solid_Square" />
+              <fa:ImageAwesome x:Name="selectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Style="{StaticResource iconStyle}" Icon="Regular_Square" />
+              <fa:ImageAwesome x:Name="unselectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>

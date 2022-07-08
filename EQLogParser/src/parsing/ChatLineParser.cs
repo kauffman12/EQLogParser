@@ -36,7 +36,7 @@
     internal static ChatType CheckYouCriteria(string action)
     {
       ChatType chatType = null;
-      string you = ConfigUtil.PlayerName;
+      string you = "You";
 
       if (action.Length > 7 && action.IndexOf("say", 4, 3) == 4)
       {
@@ -118,7 +118,7 @@
     internal static ChatType CheckOtherCriteria(string action, double beginTime = double.NaN)
     {
       ChatType chatType = null;
-      string you = ConfigUtil.PlayerName;
+      string you = "You";
 
       // check if line starts with what looks like a player name followed by a space
       // ignore NPC like names entirely

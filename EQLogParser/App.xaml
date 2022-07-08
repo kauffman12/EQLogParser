@@ -11,7 +11,7 @@
     <SolidColorBrush x:Key="EQSearchBackgroundBrush" Color="#FF3a543f" Opacity="0.5"/>
     <SolidColorBrush x:Key="EQWarnBackgroundBrush" Color="#FF96410d" />
 
-    <Style x:Key="iconStyle" TargetType="fa:ImageAwesome">
+    <Style x:Key="EQIconStyle" TargetType="fa:ImageAwesome">
       <Setter Property="Foreground" Value="{StaticResource EQEQMenuIconBrush}" />
       <Setter Property="Height" Value="12"/>
       <Setter Property="Width" Value="12" />
@@ -371,13 +371,6 @@
       </Setter>
     </Style>
 
-    <!-- LogRow Templates for check columns -->
-    <DataTemplate x:Key="NoDataTemplate">
-    </DataTemplate>
-    <DataTemplate x:Key="CheckTemplate">
-      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#73b15d" />
-    </DataTemplate>
-
     <!-- DataGrid Row/Column Colors and Alignment -->
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
       <Setter Property="Background" Value="#3a543f" />
@@ -392,15 +385,6 @@
       <Setter Property="TextBlock.TextAlignment" Value="Right" />
       <Setter Property="HorizontalAlignment" Value="Right" />
     </Style>
-    <Style x:Key="BrightCenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
-      <Setter Property="HorizontalContentAlignment"  Value="Center"/>
-      <Setter Property="Foreground" Value="White" />
-      <Style.Triggers>
-        <Trigger Property="IsMouseOver" Value="True">
-          <Setter Property="Foreground" Value="White" />
-        </Trigger>
-      </Style.Triggers>
-    </Style>
     <Style x:Key="CenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
       <Setter Property="HorizontalContentAlignment"  Value="Center"/>
     </Style>
@@ -411,9 +395,6 @@
     <Style x:Key="RightAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
       <Setter Property="TextBlock.TextAlignment" Value="Right" />
       <Setter Property="Foreground" Value="Black" />
-    </Style>
-    <Style x:Key="CenterAlignGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Center" />
     </Style>
     <Style x:Key="LeftAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
       <Setter Property="TextBlock.TextAlignment" Value="Left" />
