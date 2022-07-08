@@ -150,7 +150,7 @@ namespace EQLogParser
     internal void SetPetClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement)?.Parent as ContextMenu;
-      DataGrid callingDataGrid = menu?.PlacementTarget as DataGrid;
+      SfDataGrid callingDataGrid = menu?.PlacementTarget as SfDataGrid;
       if (callingDataGrid.SelectedItem is PlayerStats stats)
       {
         Task.Delay(100).ContinueWith(_ =>

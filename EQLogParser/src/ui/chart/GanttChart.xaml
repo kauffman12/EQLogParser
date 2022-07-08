@@ -12,14 +12,14 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel x:Name="titlePane" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel1" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold" Padding="5,5,0,5"/>
-      <Label x:Name="titleLabel2" Margin="0,0,0,0" Foreground="#FFCDCDCD" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold" Padding="0,5"/>
-      <Label x:Name="titleLabel3" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold" Padding="0,5,5,5"/>
+      <Label x:Name="titleLabel1" Style="{StaticResource titleStyle}" Padding="5,5,0,5"/>
+      <Label x:Name="titleLabel2" Style="{StaticResource titleStyle}" Foreground="{StaticResource EQEQMenuIconBrush}" Padding="0,5"/>
+      <Label x:Name="titleLabel3" Style="{StaticResource titleStyle}" Padding="0,5,5,5"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common." VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Self Only</CheckBox>
-      <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
-      <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
+      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,0,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common.">Self Only</CheckBox>
+      <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="0,0,0,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
+      <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="0,0,0,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
     </StackPanel>
     <Grid Grid.Row="1">
       <Grid.RowDefinitions>
@@ -30,48 +30,48 @@
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload ADPS Data" Click="ReloadClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Redo" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource iconStyle}" Icon="Solid_Redo" />
             </MenuItem.Icon>
           </MenuItem>          
         </ContextMenu>
       </Grid.ContextMenu>
       <ScrollViewer x:Name="headerScroller" Grid.Row="0" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Hidden">
-        <Grid x:Name="contentHeader" Grid.Row="0" Background="#FF232325">
+        <Grid x:Name="contentHeader" Grid.Row="0">
           <Grid.RowDefinitions>
             <RowDefinition Height="*" />
           </Grid.RowDefinitions>
         </Grid>
       </ScrollViewer>
-      <Grid Grid.Row="1" Background="#FF232325">
+      <Grid Grid.Row="1">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="190" MaxWidth="190" MinWidth="190" />
           <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <ScrollViewer x:Name="labelsScroller" Grid.Column="0" CanContentScroll="True" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" ScrollChanged="LabelsScrollViewChanged">
-          <Grid x:Name="contentLabels" Background="#FF232325">
+          <Grid x:Name="contentLabels">
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
           </Grid>
         </ScrollViewer>
         <ScrollViewer x:Name="contentScroller" Grid.Column="1" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" ScrollChanged="ContentScrollViewChanged">
-          <Grid x:Name="content" Background="#FF232325">
+          <Grid x:Name="content">
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>

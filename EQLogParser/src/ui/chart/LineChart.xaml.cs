@@ -13,7 +13,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DPSChart.xaml
   /// </summary>
-  public partial class LineChart : UserControl
+  public partial class LineChart : UserControl, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -38,6 +38,7 @@ namespace EQLogParser
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
       CurrentChoice = choicesList.SelectedValue as string;
+      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
 
       if (includePets)
       {
@@ -53,6 +54,8 @@ namespace EQLogParser
 
       Reset();
     }
+
+    private void EventsClearedActiveData(object sender, bool cleared) => Clear();
 
     internal void Clear()
     {
@@ -339,7 +342,11 @@ namespace EQLogParser
       }
     }
 
-    private void Reset() => titleLabel.Content = Labels.NODATA;
+    private void Reset()
+    {
+      sfLineChart.Series.Clear();
+      titleLabel.Content = Labels.NODATA;
+    }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -493,5 +500,28 @@ namespace EQLogParser
         playerValues.Add(newEntry);
       }
     }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+        sfLineChart.Dispose();
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }

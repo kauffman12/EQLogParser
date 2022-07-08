@@ -125,6 +125,7 @@ namespace EQLogParser
     {
       CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
       dataGrid.View?.RefreshFilter();
+      dataGrid.SelectedItems.Clear();
       TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
     }
 
@@ -150,9 +151,12 @@ namespace EQLogParser
 
     private void DataGridDefensiveTimelineClick(object sender, RoutedEventArgs e)
     {
-      //var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, true);
-      //var main = Application.Current.MainWindow as MainWindow;
-      //var window = Helpers.OpenNewTab(main.dockSite, "defensiveTimeline", "Defensive Timeline", timeline, 400, 300);
+      if (dataGrid.SelectedItems.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        var timeline = Helpers.OpenWindow(main.dockSite, null, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline");
+        ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, true);
+      }
     }
 
     private void EventsClearedActiveData(object sender, bool cleared)
@@ -172,6 +176,7 @@ namespace EQLogParser
           {
             HealingStatsManager.Instance.PopulateHealing(CurrentStats);
             dataGrid.View.RefreshFilter();
+            dataGrid.SelectedItems.Clear();
 
             if (!MainWindow.IsAoEHealingEnabled)
             {
@@ -255,6 +260,7 @@ namespace EQLogParser
         };
 
         dataGrid.View.RefreshFilter();
+        dataGrid.SelectedItems.Clear();
         TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View.Filter);
       }
     }
@@ -269,6 +275,7 @@ namespace EQLogParser
         ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue.ToString(CultureInfo.CurrentCulture));
         ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType.ToString(CultureInfo.CurrentCulture));
         dataGrid.View.RefreshFilter();
+        dataGrid.SelectedItems.Clear();
 
         if (needRequery)
         {

@@ -18,7 +18,7 @@
       <Style x:Key="FightRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
         <Style.Triggers>
           <DataTrigger Binding="{Binding IsSearchResult, UpdateSourceTrigger=PropertyChanged}" Value="True" >
-            <Setter Property="Background" Value="{StaticResource searchBackgroundBrush}"/>
+            <Setter Property="Background" Value="{StaticResource EQSearchBackgroundBrush}"/>
           </DataTrigger>
         </Style.Triggers>
         <Setter Property="Background" Value="{Binding Converter={StaticResource FightRowStyleConverter}}"/>

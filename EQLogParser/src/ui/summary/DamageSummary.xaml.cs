@@ -166,9 +166,12 @@ namespace EQLogParser
 
     private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
     {
-      var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups);
-      var main = Application.Current.MainWindow as MainWindow;
-      var window = Helpers.OpenNewTab(main.dockSite, "adpsTimeline", "ADPS Timeline", timeline, 400, 300);
+      if (dataGrid.SelectedItems.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        var timeline = Helpers.OpenWindow(main.dockSite, null, typeof(GanttChart), "adpsTimeline", "ADPS Timeline");
+        ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups);
+      }
     }
 
     private void DataGridDamageLogClick(object sender, RoutedEventArgs e)

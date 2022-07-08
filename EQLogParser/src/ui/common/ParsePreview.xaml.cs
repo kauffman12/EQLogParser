@@ -185,9 +185,9 @@ namespace EQLogParser
       {
         copyToEQButton.IsEnabled = false;
         sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_TOO_BIG;
-        sharePlayerParseLabel.Foreground = Application.Current.Resources["warnBackgroundBrush"] as SolidColorBrush; ;
+        sharePlayerParseLabel.Foreground = Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
-        sharePlayerParseWarningLabel.Foreground = Application.Current.Resources["warnBackgroundBrush"] as SolidColorBrush; ;
+        sharePlayerParseWarningLabel.Foreground = Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
       else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Properties.Resources.SHARE_DPS_SELECTED)
