@@ -68,39 +68,39 @@
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
           <MenuItem x:Name="menuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPetIcon" Style="{StaticResource iconStyle}" Icon="Solid_Paw" />
+              <fa:ImageAwesome x:Name="setPetIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayerClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPlayerIcon" Style="{StaticResource iconStyle}" Icon="Solid_User" />
+              <fa:ImageAwesome x:Name="setPlayerIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Style="{StaticResource iconStyle}" Icon="Solid_Square" />
+              <fa:ImageAwesome x:Name="selectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Style="{StaticResource iconStyle}" Icon="Regular_Square" />
+              <fa:ImageAwesome x:Name="unselectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectFightIcon" Style="{StaticResource iconStyle}" Icon="Solid_Clone" />
+              <fa:ImageAwesome x:Name="selectFightIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Clone" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectFightIcon" Style="{StaticResource iconStyle}" Icon="Regular_Clone" />
+              <fa:ImageAwesome x:Name="unselectFightIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_Clone" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemClear" IsEnabled="False" Header="Clear All" Click="ClearClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="clearAllIcon" Style="{StaticResource iconStyle}" Icon="Solid_Times" />
+              <fa:ImageAwesome x:Name="clearAllIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>

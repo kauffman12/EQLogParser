@@ -27,6 +27,31 @@ namespace EQLogParser
       DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
     }
 
+    internal static Dictionary<string, ContentControl> GetOpenWindows(DockingManager dockSite, DocumentTabControl ChartTab)
+    {
+      var opened = new Dictionary<string, ContentControl>();
+      foreach (var child in dockSite.Children)
+      {
+        if (child is ContentControl control)
+        {
+          opened[control.Name] = control;
+        }
+      }
+
+      if (ChartTab != null && ChartTab.Container != null)
+      {
+        foreach (var child in ChartTab.Container.Items)
+        {
+          if (child is ContentControl control)
+          {
+            opened[control.Name] = control;
+          }
+        }
+      }
+
+      return opened;
+    }
+
     internal static void InitPetOwners(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
     {
       // pet -> players

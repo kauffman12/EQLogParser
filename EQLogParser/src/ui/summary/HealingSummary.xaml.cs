@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 
 namespace EQLogParser
@@ -36,8 +37,11 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var breakdown = Helpers.OpenWindow(main.dockSite, null, typeof(HealBreakdown), "healingBreakdownWindow", "Healing Breakdown");
-        (breakdown.Content as HealBreakdown).Init(CurrentStats, selected);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(HealBreakdown),
+          "healingBreakdownWindow", "Healing Breakdown"))
+        {
+          (breakdown.Content as HealBreakdown).Init(CurrentStats, selected);
+        }
       }
     }
 
@@ -82,8 +86,10 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var log = Helpers.OpenWindow(main.dockSite, null, typeof(HitLogViewer), "healingLogWindow", "Healing Log");
-        (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
+        {
+          (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        }      
       }
     }
 

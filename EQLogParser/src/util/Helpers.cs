@@ -95,7 +95,7 @@ namespace EQLogParser
       }
     }
 
-    internal static ContentControl CloseWindow(DockingManager dockSite, ContentControl window)
+    internal static void CloseWindow(DockingManager dockSite, ContentControl window)
     {
       if (window != null)
       {
@@ -112,23 +112,23 @@ namespace EQLogParser
           }
 
           (window.Content as IDisposable)?.Dispose();
-          window.Content = null;
-          window = null;
         }
         else
         {
           DockingManager.SetState(window, state);
         }
       }
-
-      return window;
     }
 
-    internal static ContentControl OpenWindow(DockingManager dockSite, ContentControl window, Type type = null, string key = "", string title = "")
+    internal static bool OpenWindow(DockingManager dockSite, Dictionary<string, ContentControl> opened, out ContentControl window,
+      Type type = null, string key = "", string title = "")
     {
-      if (window != null && window.Content != null)
+      bool nowOpen = false;
+      window = null;
+
+      if (opened != null && opened.TryGetValue(key, out ContentControl control))
       {
-        window = CloseWindow(dockSite, window);
+        CloseWindow(dockSite, control);
       }
       else if (type != null)
       {
@@ -138,48 +138,47 @@ namespace EQLogParser
         DockingManager.SetState(window, DockState.Document);
         window.Content = instance;
         dockSite.Children.Add(window);
+        nowOpen = true;
       }
 
-      return window;
+      return nowOpen;
     }
 
-    internal static bool OpenChart(Dictionary<string, ContentControl> lookup, DockingManager dockSite, string key, List<string> choices,
-      string title, DocumentTabControl tabControl, bool includePets)
+    internal static bool OpenChart(Dictionary<string, ContentControl> opened, DockingManager dockSite, string key, List<string> choices,
+      string title, DocumentTabControl tabControl, bool includePets, out ContentControl window)
     {
-      bool opened = false;
-      if (lookup[key] != null && lookup[key].Content != null)
+      bool nowOpen = false;
+      window = null;
+
+      if (opened != null && opened.TryGetValue(key, out ContentControl control))
       {
-        lookup[key] = CloseWindow(dockSite, lookup[key]);
+        CloseWindow(dockSite, control);
       }
       else
       {
         var chart = new LineChart(choices, includePets);
-        lookup[key] = new ContentControl { Name = key };
-        DockingManager.SetHeader(lookup[key], title);
-        DockingManager.SetState(lookup[key], DockState.Document);
-        lookup[key].Content = chart;
+        window = new ContentControl { Name = key };
+        DockingManager.SetHeader(window, title);
+        DockingManager.SetState(window, DockState.Document);
+        window.Content = chart;
 
         if (dockSite.DocContainer.Items.Count == 0)
         {
-          dockSite.Children.Add(lookup[key]);
+          dockSite.Children.Add(window);
         }
         else if (tabControl == null || tabControl.Items.Count == 0)
         {
-          dockSite.CreateHorizontalTabGroup(lookup[key]);
+          dockSite.CreateHorizontalTabGroup(window);
         }
         else
         {
-          tabControl.Container.AddElementToTabGroup(tabControl, lookup[key]);
+          tabControl.Container.AddElementToTabGroup(tabControl, window);
         }
 
-        opened = true;
+        nowOpen = true;
       }
-      return opened;
-    }
 
-    internal static ContentControl OpenNewTab(DockingManager dockSite, string id, string title, object content, double width = 0, double height = 0)
-    {
-      return null; // window;
+      return nowOpen;
     }
 
     internal static string CreateRecordKey(string type, string subType)

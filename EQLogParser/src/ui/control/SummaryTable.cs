@@ -177,8 +177,10 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var spellTable = Helpers.OpenWindow(main.dockSite, null, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Timeline");
-        (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Timeline"))
+        {
+          (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
+        }     
       }
     }
 
@@ -187,8 +189,10 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var spellTable = Helpers.OpenWindow(main.dockSite, null, typeof(SpellCountTable), "spellCountsWindow", "Spell Counts");
-        (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCountTable), "spellCountsWindow", "Spell Counts"))
+        {
+          (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
+        }      
       }
     }
   }

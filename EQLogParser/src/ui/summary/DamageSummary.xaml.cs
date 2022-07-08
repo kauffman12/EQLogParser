@@ -140,7 +140,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         var damageTable = new DamageBreakdown(CurrentStats);
         damageTable.Show(selected);
-        Helpers.OpenNewTab(main.dockSite, "damageWindow", "Damage Breakdown", damageTable);
+        //Helpers.OpenNewTab(main.dockSite, "damageWindow", "Damage Breakdown", damageTable);
       }
     }
 
@@ -169,8 +169,10 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var timeline = Helpers.OpenWindow(main.dockSite, null, typeof(GanttChart), "adpsTimeline", "ADPS Timeline");
-        ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
+        {
+          ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups);
+        }     
       }
     }
 
@@ -179,8 +181,10 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        var log = Helpers.OpenWindow(main.dockSite, null, typeof(HitLogViewer), "damageLogWindow", "Damage Log");
-        (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "damageLogWindow", "Damage Log"))
+        {
+          (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        }   
       }
     }
 
@@ -190,9 +194,9 @@ namespace EQLogParser
       {
         var chart = new HitFreqChart();
         var main = Application.Current.MainWindow as MainWindow;
-        var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "damageFreqChart", "Damage Hit Frequency", chart, 400, 300);
+        //var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "damageFreqChart", "Damage Hit Frequency", chart, 400, 300);
 
-        chart.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
+        //chart.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
       }
     }
 
