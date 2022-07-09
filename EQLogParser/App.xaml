@@ -19,7 +19,7 @@
       <Setter Property="HorizontalAlignment" Value="Center" />
     </Style>
 
-    <Style x:Key="titleStyle" TargetType="Label">
+    <Style x:Key="EQTitleStyle" TargetType="Label">
       <Setter Property="Background" Value="{x:Null}" />
       <Setter Property="Foreground" Value="{StaticResource EQEQMenuIconBrush}" />
       <Setter Property="Height" Value="30"/>
@@ -28,10 +28,10 @@
       <Setter Property="Margin" Value="0" />
     </Style>
 
-    <DataTemplate x:Key="currencyTemplate">
+    <DataTemplate x:Key="CurrencyTemplate">
       <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
     </DataTemplate>
-    <DataTemplate x:Key="quantityTemplate">
+    <DataTemplate x:Key="QuantityTemplate">
       <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center"></TextBlock>
     </DataTemplate>
 
@@ -75,6 +75,7 @@
         <Border Width="11" Height="11" Margin="0,0,0,3" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
       </StackPanel>
     </DataTemplate>
+     
     
     <!-- DataGrid Row/Column Colors and Alignment -->
     <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
@@ -84,11 +85,6 @@
           <Setter Property="Background" Value="#3a543f"/>
         </Trigger>
       </Style.Triggers>
-    </Style>
-    <Style x:Key="RightAlignGridRowHeaderStyle" TargetType="{x:Type DataGridRowHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowHeaderStyleKey}}">
-      <Setter Property="HorizontalContentAlignment" Value="Right" />
-      <Setter Property="TextBlock.TextAlignment" Value="Right" />
-      <Setter Property="HorizontalAlignment" Value="Right" />
     </Style>
     <Style x:Key="CenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
       <Setter Property="HorizontalContentAlignment"  Value="Center"/>
@@ -122,12 +118,6 @@
     <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Based on Crippling Blow, Critical, Deadly Strike, and Finishing Blow" />
     </Style>
-    <Style x:Key="OverHealColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Amount of Healing in Excess of what could be Healed" />
-    </Style>
-    <Style x:Key="OverHealPercentColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Healing in Excess of what could be Healed" />
-    </Style>    
     <Style x:Key="TotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Percent of Total (raid total)" />
     </Style>
@@ -137,23 +127,14 @@
     <Style x:Key="DPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Damage Per Second based on Player Time" />
     </Style>
-    <Style x:Key="HPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Healing Per Second based on Player Time" />
-    </Style>
     <Style x:Key="SDPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Scaled Damage Per Second based on Total Time (raid time)" />
     </Style>
     <Style x:Key="MeleeAccRateColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Percent of Hits that were not Misses" />
-    </Style>    
+    </Style>
     <Style x:Key="MeleeHitRateColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
       <Setter Property="ToolTip" Value="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
-    </Style>
-    <Style x:Key="SHPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Scaled Healing Per Second based on Total Time (raid time)" />
-    </Style>
-    <Style x:Key="RampageColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Melee hits received which were from Rampage" />
     </Style>
 
     <!-- Window/Chrome Styles -->
