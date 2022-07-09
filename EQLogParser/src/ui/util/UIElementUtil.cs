@@ -1,12 +1,23 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 
 namespace EQLogParser
 {
   class UIElementUtil
   {
-    private UIElementUtil()
+    internal static void CheckHideTitlePanel(Panel titlePanel, Panel optionsPanel)
     {
+      var settingsLoc = optionsPanel.PointToScreen(new Point(0, 0));
+      var titleLoc = titlePanel.PointToScreen(new Point(0, 0));
 
+      if ((titleLoc.X + titlePanel.ActualWidth) > (settingsLoc.X + 10))
+      {
+        titlePanel.Visibility = Visibility.Hidden;
+      }
+      else
+      {
+        titlePanel.Visibility = Visibility.Visible;
+      }
     }
 
     internal static void SetSize(FrameworkElement element, double height, double width)

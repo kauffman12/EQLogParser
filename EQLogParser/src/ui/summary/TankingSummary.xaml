@@ -129,7 +129,7 @@
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn Width="30" MappingName="Rank" HeaderText="" TextAlignment="Center" />
+        <syncfusion:GridTextColumn Width="30" MappingName="Rank" HeaderText="#" TextAlignment="Center" AllowSorting="False" />
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" />
         <syncfusion:GridTextColumn Width="80" MappingName="PercentOfRaid" SortMode="Value" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:GridNumericColumn Width="100" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damaged" />

@@ -253,7 +253,7 @@ namespace EQLogParser
     private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged(true);
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
-    private void GridSizeChanged(object sender, SizeChangedEventArgs e) => DataGridUtil.CheckHideTitlePanel(titlePanel, settingsPanel);
+    private void GridSizeChanged(object sender, SizeChangedEventArgs e) =>UIElementUtil.CheckHideTitlePanel(titlePanel, settingsPanel);
     private void OptionsSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => OptionsChanged(true);
     private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
     private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => UpdateSelection();

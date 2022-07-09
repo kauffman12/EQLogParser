@@ -12,12 +12,12 @@ namespace EQLogParser
     private protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     private protected DataGridTextColumn CurrentColumn = null;
     private SfTreeGrid TheDataGrid;
-    private ComboBox TheSelectedColumns;
+    private ComboBox TheColumnsCombo;
 
-    internal void InitBreakdownTable(SfTreeGrid dataGrid, ComboBox columns)
+    internal void InitBreakdownTable(SfTreeGrid dataGrid, ComboBox columnsCombo)
     {
       TheDataGrid = dataGrid;
-      TheSelectedColumns = columns;
+      TheColumnsCombo = columnsCombo;
       TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
 
       // default these columns to descending
@@ -26,9 +26,9 @@ namespace EQLogParser
       "Misses", "Parries", "StrikethroughHits", "RiposteHits", "RampageRate"};
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
+      DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
     }
 
-    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
   }
 }
