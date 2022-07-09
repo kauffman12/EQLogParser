@@ -11,6 +11,7 @@
   <Grid>
     <Grid.Resources>
       <local:ZeroConverter x:Key="ZeroConverter" />
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30" />
@@ -21,25 +22,8 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="0,0,0,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
-      <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Width="140" Margin="0,0,8,2" DropDownClosed="SelectDataGridColumns">
-        <ComboBox.ItemTemplateSelector>
-          <local:ComboBoxItemTemplateSelector>
-            <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
-                <TextBlock Text="{Binding SelectedText}" />
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-            <local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
-                <StackPanel Orientation="Horizontal">
-                  <CheckBox IsChecked="{Binding IsChecked}" Width="20" />
-                  <TextBlock Text="{Binding Text}" IsHitTestVisible="false" />
-                </StackPanel>
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-          </local:ComboBoxItemTemplateSelector>
-        </ComboBox.ItemTemplateSelector>
-      </ComboBox>      
+      <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Width="140" Margin="0,0,8,2" 
+                DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowDraggingColumns="True"
