@@ -18,24 +18,25 @@ namespace EQLogParser
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
     internal SfDataGrid TheDataGrid;
-    internal ComboBox TheSelectedColumns;
+    internal ComboBox TheColumnsCombo;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
     internal List<List<ActionBlock>> CurrentGroups;
 
-    internal void InitSummaryTable(Label title, SfDataGrid dataGrid, ComboBox columns)
+    internal void InitSummaryTable(Label title, SfDataGrid dataGrid, ComboBox columnsCombo)
     {
       TheDataGrid = dataGrid;
-      TheSelectedColumns = columns;
+      TheColumnsCombo = columnsCombo;
+      TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
       TheTitle = title;
       TheTitle.Content = DEFAULT_TABLE_LABEL;
 
       // default these columns to descending
       string[] desc = new string[] { "PercentOfRaid", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
-      "ExtraRate", "CritRate", "LuckRate"};
+      "ExtraRate", "CritRate", "LuckRate", "MeleeHitRate", "MeleeAccRate", "RampageRate"};
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
+      DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
     }
 
     internal virtual bool IsPetsCombined() => false;
@@ -56,7 +57,7 @@ namespace EQLogParser
     internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
-    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
     internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
