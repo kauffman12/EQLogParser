@@ -11,6 +11,9 @@
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
+    <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
+    </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30" />
       <RowDefinition Height="300*" />
@@ -20,7 +23,7 @@
       <ComboBox x:Name="players" SelectedIndex="0" Width="120" Margin="8,0,0,2" SelectionChanged="Player_Changed">
         <ComboBoxItem Content="No Chat Data"/>
       </ComboBox>
-      <ComboBox x:Name="channels" Width="135" Margin="0,0,0,2" DropDownClosed="Channels_DropDownClosed">
+      <ComboBox x:Name="channels" Width="135" Margin="0,0,0,2" DropDownClosed="Channels_DropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
         <ComboBox.ItemContainerStyle>
           <Style>
             <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="Channel_PreviewMouseDown"/>

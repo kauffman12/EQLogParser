@@ -49,7 +49,6 @@ namespace EQLogParser
       textFilter.Text = Properties.Resources.CHAT_TEXT_FILTER;
       startDate.DateTime = DateTime.Now.AddDays(-90);
       endDate.DateTime = DateTime.Now;
-      channels.ItemTemplateSelector = new ComboBoxItemTemplateSelector();
 
       var context = new AutoCompleteText() { Text = Properties.Resources.CHAT_TO_FILTER };
       context.Items.AddRange(PlayerAutoCompleteList);

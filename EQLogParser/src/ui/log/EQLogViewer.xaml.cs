@@ -82,7 +82,7 @@ namespace EQLogParser
 
       if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT)
       {
-        logBox.Text = string.Join(Environment.NewLine, UnFiltered) + Environment.NewLine;
+        logBox.Text = string.Join(Environment.NewLine, UnFiltered);
         UpdateStatusCount(UnFiltered.Count);
         if (logBox.Lines.Count > 0)
         {
@@ -104,7 +104,7 @@ namespace EQLogParser
           }
         }
 
-        logBox.Text = string.Join(Environment.NewLine, filtered) + Environment.NewLine;
+        logBox.Text = string.Join(Environment.NewLine, filtered);
         UpdateStatusCount(filtered.Count);
         if (logBox.Lines.Count > 0)
         {
@@ -148,7 +148,7 @@ namespace EQLogParser
               }
             }
 
-            var allText = string.Join(Environment.NewLine, list) + Environment.NewLine;
+            var allText = string.Join(Environment.NewLine, list);
             Dispatcher.InvokeAsync(() =>
             {
               SolidColorBrush highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
@@ -266,7 +266,7 @@ namespace EQLogParser
               }
 
               UnFiltered = list.Take(MAX_ROWS).ToList();
-              var allData = string.Join(Environment.NewLine, UnFiltered) + Environment.NewLine;
+              var allData = string.Join(Environment.NewLine, UnFiltered);
               // adding extra new line to be away from scrollbar
 
               Dispatcher.InvokeAsync(() =>
