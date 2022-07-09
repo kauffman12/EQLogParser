@@ -441,6 +441,7 @@ namespace EQLogParser
   {
     public List<PlayerSubStats> SubStats { get; } = new List<PlayerSubStats>();
     public List<PlayerSubStats> SubStats2 { get; } = new List<PlayerSubStats>();
+    public PlayerStats MoreStats { get; set; }
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }
     public double MaxTime { get; set; }

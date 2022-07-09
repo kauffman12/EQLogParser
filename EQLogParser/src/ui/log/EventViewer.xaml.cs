@@ -40,7 +40,7 @@ namespace EQLogParser
       FilterTimer.Tick += (sender, e) =>
       {
         FilterTimer.Stop();
-        UpdateUI(true);
+        UpdateUI();
       };
 
       Load();
@@ -102,18 +102,43 @@ namespace EQLogParser
       rows.Sort((a, b) => a.Time.CompareTo(b.Time));
       rows.ForEach(row => EventRows.Add(row));
 
-      Dispatcher.InvokeAsync(() => UpdateUI(rows.Count > 0));
+      Dispatcher.InvokeAsync(() => UpdateUI());
     }
 
-    private void UpdateUI(bool enable)
+    private void UpdateUI()
     {
+      if (dataGrid.View != null && dataGrid.View.Filter == null)
+      {
+        dataGrid.View.Filter = new Predicate<object>(obj =>
+        {
+          bool result = false;
+          if (obj is EventRow row)
+          {
+            result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots &&
+              row.Event == KILLSHOT_EVENT || CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT || CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT;
+
+            if (result && !string.IsNullOrEmpty(eventFilter.Text) && eventFilter.Text != Properties.Resources.EVENT_FILTER_TEXT)
+            {
+              if (eventFilterModifier.SelectedIndex == 0)
+              {
+                result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 || row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1;
+              }
+              else if (eventFilterModifier.SelectedIndex == 1)
+              {
+                result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1 && row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1;
+              }
+              else if (eventFilterModifier.SelectedIndex == 2)
+              {
+                result = row.Actor?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true || row.Target?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true;
+              }
+            }
+          }
+          return result;
+        });
+      }
+
       dataGrid.View?.RefreshFilter();
       titleLabel.Content = dataGrid.View.Records.Count == 0 ? "No Events Found" : dataGrid.View.Records.Count + " Events Found";
-
-      if (showMezBreaks.IsEnabled != enable)
-      {
-        showMezBreaks.IsEnabled = showEnterZone.IsEnabled = showKillShots.IsEnabled = showPlayerKillsPlayer.IsEnabled = showPlayerSlain.IsEnabled = enable;
-      }
     }
 
     private void OptionsChange(object sender, EventArgs e)
@@ -125,38 +150,7 @@ namespace EQLogParser
         CurrentShowKillShots = showKillShots.IsChecked.Value;
         CurrentShowPlayerKilling = showPlayerKillsPlayer.IsChecked.Value;
         CurrentShowPlayerSlain = showPlayerSlain.IsChecked.Value;
-
-        if (dataGrid.View.Filter == null)
-        {
-          dataGrid.View.Filter = new Predicate<object>(obj =>
-          {
-            bool result = false;
-            if (obj is EventRow row)
-            {
-              result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots &&
-                row.Event == KILLSHOT_EVENT || CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT || CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT;
-
-              if (result && !string.IsNullOrEmpty(eventFilter.Text) && eventFilter.Text != Properties.Resources.EVENT_FILTER_TEXT)
-              {
-                if (eventFilterModifier.SelectedIndex == 0)
-                {
-                  result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 || row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) > -1;
-                }
-                else if (eventFilterModifier.SelectedIndex == 1)
-                {
-                  result = row.Actor?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1 && row.Target?.IndexOf(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == -1;
-                }
-                else if (eventFilterModifier.SelectedIndex == 2)
-                {
-                  result = row.Actor?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true || row.Target?.Equals(eventFilter.Text, StringComparison.OrdinalIgnoreCase) == true;
-                }
-              }
-            }
-            return result;
-          });
-        }
-
-        UpdateUI(true);
+        UpdateUI();
       }
     }
 

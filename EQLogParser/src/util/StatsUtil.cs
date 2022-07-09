@@ -198,22 +198,19 @@ namespace EQLogParser
     {
       if (playerSubTimeRanges.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> subRanges))
       {
-        foreach (ref var subStat in stats.SubStats.ToArray().AsSpan())
-        {
-          if (subRanges.TryGetValue(subStat.Key, out TimeRange subRange))
-          {
-            var filteredRange = FilterMaxTime(subRange, maxTime);
-            subStat.TotalSeconds = filteredRange.GetTotal();
-          }
-        }
+        UpdateSubStat(stats.SubStats, subRanges, maxTime);
+        UpdateSubStat(stats.SubStats2, subRanges, maxTime);
+      }
+    }
 
-        foreach (ref var subStat2 in stats.SubStats2.ToArray().AsSpan())
+    private static void UpdateSubStat(List<PlayerSubStats> subStats, ConcurrentDictionary<string, TimeRange> subRanges, double maxTime)
+    {
+      foreach (ref var subStat in subStats.ToArray().AsSpan())
+      {
+        if (subRanges.TryGetValue(subStat.Key, out TimeRange subRange))
         {
-          if (subRanges.TryGetValue(subStat2.Key, out TimeRange subRange))
-          {
-            var filteredRange = FilterMaxTime(subRange, maxTime);
-            subStat2.TotalSeconds = filteredRange.GetTotal();
-          }
+          var filteredRange = FilterMaxTime(subRange, maxTime);
+          subStat.TotalSeconds = filteredRange.GetTotal();
         }
       }
     }

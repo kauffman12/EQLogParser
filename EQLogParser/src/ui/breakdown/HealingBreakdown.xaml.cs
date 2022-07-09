@@ -13,19 +13,20 @@ namespace EQLogParser
     private List<PlayerStats> PlayerStats = null;
 
     private readonly List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
+    private readonly List<string> ReceivedChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healer" };
 
     public HealBreakdown()
     {
       InitializeComponent();
       InitBreakdownTable(dataGrid, selectedColumns);
-      choicesList.ItemsSource = ChoicesList;
-      choicesList.SelectedIndex = 0;
     }
 
-    internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
+    internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats, bool received = false)
     {
       titleLabel.Content = currentStats?.ShortTitle;
       PlayerStats = selectedStats;
+      choicesList.ItemsSource = received ? ReceivedChoicesList: ChoicesList;
+      choicesList.SelectedIndex = 0;
       Display();
     }
 

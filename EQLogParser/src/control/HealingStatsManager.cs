@@ -266,11 +266,11 @@ namespace EQLogParser
                 PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
                 StatsUtil.UpdateStats(stats, record);
 
-                PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.Healer, record.Type);
-                StatsUtil.UpdateStats(subStats, record);
+                PlayerSubStats subStats2 = StatsUtil.CreatePlayerSubStats(stats.SubStats2, record.Healer, record.Type);
+                StatsUtil.UpdateStats(subStats2, record);
 
                 var spellStatName = record.SubType ?? Labels.SELFHEAL;
-                PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, spellStatName, record.Type);
+                PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
                 StatsUtil.UpdateStats(spellStats, record);
 
                 long value = 0;
@@ -295,7 +295,8 @@ namespace EQLogParser
             }
 
             var indStats = individualStats[stat.Name];
-            stat.SubStats2.Add(indStats);
+            stat.MoreStats = indStats;
+
             UpdateStats(indStats, HealedBySpellTimeRanges, HealedByHealerTimeRanges);
 
             foreach (ref var subStat in indStats.SubStats.ToArray().AsSpan())

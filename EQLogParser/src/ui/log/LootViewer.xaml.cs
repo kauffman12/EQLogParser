@@ -47,8 +47,6 @@ namespace EQLogParser
 
     private void Load()
     {
-      itemsList.IsEnabled = playersList.IsEnabled = optionsList.IsEnabled = false;
-
       TotalRecords.Clear();
       IndividualRecords.Clear();
 
@@ -121,9 +119,6 @@ namespace EQLogParser
     {
       dataGrid.View.RefreshFilter();
       titleLabel.Content = dataGrid.View.Records.Count == 0 ? "No Loot Found" : dataGrid.View.Records.Count + " Loot Entries Found";
-      itemsList.IsEnabled = itemsList.Items.Count > 3;
-      playersList.IsEnabled = playersList.Items.Count > 1;
-      optionsList.IsEnabled = true;
     }
 
     private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -164,56 +159,6 @@ namespace EQLogParser
 
         UpdateUI();
       }
-    }
-
-    private Tuple<List<string>, List<List<object>>> BuildExportData()
-    {
-      List<string> header = new List<string>();
-      List<List<object>> data = new List<List<object>>();
-
-      for (int col = 0; col < dataGrid.Columns.Count; col++)
-      {
-        if (!dataGrid.Columns[col].IsHidden)
-        {
-          header.Add(dataGrid.Columns[col].HeaderText);
-        }
-      }
-
-      foreach (var item in dataGrid.View.Records)
-      {
-        if (item.Data is LootRow looted)
-        {
-          var row = new List<object>();
-          for (int col = 0; col < dataGrid.Columns.Count; col++)
-          {
-            if (!dataGrid.Columns[col].IsHidden)
-            {
-              switch (dataGrid.Columns[col].HeaderText)
-              {
-                case "Time":
-                  row.Add(DateUtil.FormatSimpleDate(looted.Time));
-                  break;
-                case "Player":
-                  row.Add(looted.Player);
-                  break;
-                case "Item":
-                  row.Add(looted.Item);
-                  break;
-                case "Quantity":
-                  row.Add(looted.IsCurrency ? "" : looted.Quantity);
-                  break;
-                case "NPC":
-                  row.Add(looted.Npc);
-                  break;
-              }
-            }
-          }
-
-          data.Add(row);
-        }
-      }
-
-      return new Tuple<List<string>, List<List<object>>>(header, data);
     }
 
     private static LootRow CreateRow(LootRecord looted, double time = 0)

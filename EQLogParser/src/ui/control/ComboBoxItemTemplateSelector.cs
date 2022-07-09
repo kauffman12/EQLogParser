@@ -7,8 +7,8 @@ namespace EQLogParser
 {
   public class ComboBoxItemTemplateSelector : DataTemplateSelector
   {
-    private DataTemplate SelectedItemTemplate;
-    private DataTemplate DropDownItemTemplate;
+    private readonly DataTemplate SelectedItemTemplate;
+    private readonly DataTemplate DropDownItemTemplate;
 
     public ComboBoxItemTemplateSelector()
     {
