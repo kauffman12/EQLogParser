@@ -34,7 +34,7 @@ namespace EQLogParser
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(HealBreakdown),

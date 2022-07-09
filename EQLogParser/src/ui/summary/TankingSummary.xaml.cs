@@ -56,7 +56,7 @@ namespace EQLogParser
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(TankingBreakdown),
@@ -69,13 +69,16 @@ namespace EQLogParser
 
     internal override void ShowBreakdown2(List<PlayerStats> selected)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(ReceivedHealingBreakdown), 
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(HealBreakdown),
           "receivedHealingWindow", "Received Healing Breakdown"))
         {
-          (breakdown.Content as ReceivedHealingBreakdown).Init(CurrentStats, selected);
+          // healing stats on the tank is stored in MoreStats property
+          // it's like another player stat based around healing
+          var selectedHealing = selected.Where(stats => stats.MoreStats != null).Select(stats => stats.MoreStats).ToList();
+          (breakdown.Content as HealBreakdown).Init(CurrentStats, selectedHealing, true);
         }
       }
     }
@@ -279,20 +282,24 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid != null && dataGrid.View != null)
+      if (dataGrid != null)
       {
-        var needRequery = DamageType != damageTypes.SelectedIndex;
         CurrentPetValue = showPets.IsChecked.Value;
         DamageType = damageTypes.SelectedIndex;
         ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue.ToString(CultureInfo.CurrentCulture));
         ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType.ToString(CultureInfo.CurrentCulture));
-        dataGrid.View.RefreshFilter();
-        dataGrid.SelectedItems.Clear();
 
-        if (needRequery)
+        if (dataGrid.View != null)
         {
-          var tankingOptions = new GenerateStatsOptions { RequestSummaryData = true, RequestChartData = true, DamageType = DamageType };
-          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
+          var needRequery = DamageType != damageTypes.SelectedIndex;
+          dataGrid.View.RefreshFilter();
+          dataGrid.SelectedItems.Clear();
+
+          if (needRequery)
+          {
+            var tankingOptions = new GenerateStatsOptions { RequestSummaryData = true, RequestChartData = true, DamageType = DamageType };
+            Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
+          }
         }
       }
     }
