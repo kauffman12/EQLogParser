@@ -12,6 +12,7 @@
              d:DesignHeight="450" d:DesignWidth="1200">
   <Grid>
     <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <local:ZeroConverter x:Key="ZeroConverter" />
       <local:NumberFormatConverter x:Key="NumberFormatConverter" />
       <DataTemplate x:Key="ModifiedHeaderTemplate" DataType="local:ColorPicker">
@@ -33,27 +34,10 @@
           <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
         </syncfusion:UpDown.NumberFormatInfo>
       </syncfusion:UpDown>
-      <ComboBox Margin="0,0,0,0" x:Name="petOrPlayerList" Height="26" MinWidth="60" SelectionChanged="ListSelectionChanged" />
-      <ComboBox Margin="0,0,0,0" x:Name="classesList" Height="26" SelectionChanged="ListSelectionChanged" />
-      <ComboBox x:Name="selectedColumns" Tag="DamageSummaryColumns" Height="26" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns" BorderBrush="#FF707070">
-        <ComboBox.ItemTemplateSelector>
-          <local:ComboBoxItemTemplateSelector>
-            <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
-                <TextBlock Text="{Binding SelectedText}" />
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-            <local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
-                <StackPanel Orientation="Horizontal">
-                  <CheckBox IsChecked="{Binding IsChecked}" Width="20" />
-                  <TextBlock Text="{Binding Text}" IsHitTestVisible="false" />
-                </StackPanel>
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-          </local:ComboBoxItemTemplateSelector>
-        </ComboBox.ItemTemplateSelector>
-      </ComboBox>
+      <ComboBox Margin="0" x:Name="petOrPlayerList" MinWidth="60" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0" x:Name="classesList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox x:Name="selectedColumns" Tag="DamageSummaryColumns" Width="140" Margin="0,0,8,2" 
+                DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
     <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"
       AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGridSelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
