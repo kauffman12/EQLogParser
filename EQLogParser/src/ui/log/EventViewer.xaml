@@ -30,7 +30,7 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Style="{StaticResource titleStyle}"/>
+      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showEnterZone" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Entered Area</CheckBox>

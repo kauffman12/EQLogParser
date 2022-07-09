@@ -28,7 +28,7 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Style="{StaticResource titleStyle}"/>
+      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
