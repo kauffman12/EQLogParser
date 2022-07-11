@@ -388,30 +388,30 @@ namespace EQLogParser
       }
     }
 
-  #region IDisposable Support
-  private bool disposedValue = false; // To detect redundant calls
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
 
-  protected virtual void Dispose(bool disposing)
-  {
-    if (!disposedValue)
+    protected virtual void Dispose(bool disposing)
     {
-      dataGrid.Dispose();
-      disposedValue = true;
+      if (!disposedValue)
+      {
+        dataGrid.Dispose();
+        disposedValue = true;
+      }
     }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 
-  // This code added to correctly implement the disposable pattern.
-  public void Dispose()
-  {
-    // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-    Dispose(true);
-    // TODO: uncomment the following line if the finalizer is overridden above.
-    GC.SuppressFinalize(this);
-  }
-  #endregion
-}
-
-internal class HitLogRow : HitRecord
+  internal class HitLogRow : HitRecord
   {
     public string Actor { get; set; }
     public string ActorClass { get; set; }

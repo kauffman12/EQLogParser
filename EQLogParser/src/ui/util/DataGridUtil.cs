@@ -144,6 +144,13 @@ namespace EQLogParser
         records = treeGrid.View.Nodes.Select(node => node.Item).ToList();
       }
 
+      // Rank data is in the row header column not a regular column
+      if (records.Count > 0 && records[0] is PlayerStats)
+      {
+        headers.Insert(0, "Rank");
+        headerKeys.Insert(0, "Rank");
+      }
+
       foreach (ref var record in records.ToArray().AsSpan())
       {
         var row = new List<object>();
@@ -339,17 +346,8 @@ namespace EQLogParser
       {
         if (!found.ContainsKey(columns[i].MappingName))
         {
-          // special caase for changing how Rank column is handled
-          if (columns[i].MappingName == "Rank")
-          {
-            updated.Insert(0, columns[i]);
-            columns[i].IsHidden = false;
-          }
-          else
-          {
-            updated.Add(columns[i]);
-            columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
-          }
+          updated.Add(columns[i]);
+          columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
         }
 
         // if old format make sure Name is visible
@@ -366,8 +364,12 @@ namespace EQLogParser
       List<ComboBoxItemDetails> list = new List<ComboBoxItemDetails>();
       for (int i = 0; i < columns.Count; i++)
       {
-        list.Add(new ComboBoxItemDetails { Text = columns[i].HeaderText, IsChecked = !columns[i].IsHidden, 
-          Value = columns[i].MappingName });
+        list.Add(new ComboBoxItemDetails
+        {
+          Text = columns[i].HeaderText,
+          IsChecked = !columns[i].IsHidden,
+          Value = columns[i].MappingName
+        });
         selectedCount += columns[i].IsHidden ? 0 : 1;
       }
 
@@ -382,9 +384,8 @@ namespace EQLogParser
       // save column order if it changes
       dataGrid.QueryColumnDragging += (object sender, QueryColumnDraggingEventArgs e) =>
       {
-        if (e.Reason == QueryColumnDraggingReason.Dropped)
+        if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfDataGrid dataGrid)
         {
-          var dataGrid = sender as SfDataGrid;
           var columns = dataGrid.Columns.ToList().Select(column => column.MappingName).ToList();
           ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
         }
@@ -400,9 +401,8 @@ namespace EQLogParser
       // save column order if it changes
       treeGrid.ColumnDragging += (object sender, TreeGridColumnDraggingEventArgs e) =>
       {
-        if (e.Reason == QueryColumnDraggingReason.Dropped)
+        if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfTreeGrid treeGrid)
         {
-          var treeGrid = sender as SfTreeGrid;
           var columns = treeGrid.Columns.ToList().Select(column => column.MappingName).ToList();
           ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
         }

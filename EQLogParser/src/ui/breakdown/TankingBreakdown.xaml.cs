@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -15,7 +13,7 @@ namespace EQLogParser
     public TankingBreakdown()
     {
       InitializeComponent();
-      InitBreakdownTable(dataGrid, selectedColumns);
+      InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
@@ -24,10 +22,6 @@ namespace EQLogParser
       PlayerStats = selectedStats;
       Display();
     }
-
-    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
-    private void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
 
     internal void Display()
     {

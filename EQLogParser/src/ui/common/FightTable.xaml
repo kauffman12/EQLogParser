@@ -55,6 +55,7 @@
                            ColumnSizer="AutoWithLastColumnFill"
                            Grid.Row="1"                  
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            PreviewMouseDown="UpdateCurrentItem"

@@ -32,6 +32,7 @@
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
                            IsReadOnly="True"
                            RowHeaderWidth="25"
                            ShowRowHeader="True"

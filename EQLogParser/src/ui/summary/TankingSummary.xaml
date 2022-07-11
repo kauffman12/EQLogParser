@@ -7,7 +7,7 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="1200">
   <Grid>
     <Grid.Resources>
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
@@ -22,7 +22,7 @@
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showPets" IsChecked="True" Margin="0,0,10,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
-      <ComboBox SelectedIndex="0" Margin="0,0,0,2" x:Name="damageTypes" Width="85" SelectionChanged="OptionsChanged">
+      <ComboBox Margin="0,0,0,2" x:Name="damageTypes" Width="85" SelectionChanged="OptionsChanged">
         <ComboBoxItem>All Damage</ComboBoxItem>
         <ComboBoxItem>Melee</ComboBoxItem>
         <ComboBoxItem>Non-Melee</ComboBoxItem>
@@ -31,21 +31,42 @@
       <ComboBox x:Name="selectedColumns" Tag="TankingSummaryColumns" Width="140" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid"
+    <syncfusion:SfTreeGrid x:Name="dataGrid"
+                           AllowAutoSizingExpanderColumn="False"
                            AllowDraggingColumns="True"
                            AllowResizingColumns="True"
+                           AllowSelectionOnPointerPressed="True"
                            AllowSorting="True"
-                           AutoGenerateColumns="False"
-                           ColumnSizer="AutoWithLastColumnFill"
-                           FrozenColumnCount="2"
+                           AutoExpandMode="None"
+                           AutoGenerateColumns="False"                           
+                           ColumnSizer="Auto"                      
+                           FrozenColumnCount="1"
                            Grid.Row="1"
-                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"
+                           GridLinesVisibility="Horizontal"
+                           RowHeaderWidth="40"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
+                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            SelectionMode="Extended"
                            SelectionChanged="DataGridSelectionChanged"
-                           ShowRowHeader="False">
-      <syncfusion:SfDataGrid.ContextMenu>
+                           ShowRowHeader="True">
+      <syncfusion:SfTreeGrid.Resources>
+        <Style TargetType="syncfusion:TreeGridRowHeaderCell">
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="syncfusion:TreeGridRowHeaderCell">
+                <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                  <Grid>
+                    <TextBlock HorizontalAlignment="Center" Foreground="{StaticResource ContentForeground}" VerticalAlignment="Center" Text="{Binding Rank}" TextAlignment="Center" />
+                  </Grid>
+                </Border>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Style>
+      </syncfusion:SfTreeGrid.Resources>      
+      <syncfusion:SfTreeGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="False" x:Name="copyTankingParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
@@ -127,24 +148,23 @@
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
-      </syncfusion:SfDataGrid.ContextMenu>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn Width="30" MappingName="Rank" HeaderText="#" TextAlignment="Center" AllowSorting="False" />
-        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" />
-        <syncfusion:GridTextColumn Width="80" MappingName="PercentOfRaid" SortMode="Value" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
-        <syncfusion:GridNumericColumn Width="100" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damaged" />
-        <syncfusion:GridNumericColumn Width="100" MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healed" />
-        <syncfusion:GridNumericColumn Width="70" MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
-        <syncfusion:GridNumericColumn Width="70" MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
-        <syncfusion:GridNumericColumn Width="70" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:GridNumericColumn Width="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
-        <syncfusion:GridNumericColumn Width="75" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
-        <syncfusion:GridNumericColumn Width="70" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
-        <syncfusion:GridTextColumn Width="65" MappingName="MeleeAccRate" SortMode="Value" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
-        <syncfusion:GridTextColumn Width="60" MappingName="MeleeHitRate" SortMode="Value" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
-        <syncfusion:GridTextColumn Width="95" MappingName="RampageRate" SortMode="Value" DisplayBinding="{Binding Path=RampageRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderRampageTemplateToolTip}" TextAlignment="Right" HeaderText="% Rampage" />
-        <syncfusion:GridTextColumn MappingName="ClassName" HorizontalHeaderContentAlignment="Center" HeaderText="Class" />
-      </syncfusion:SfDataGrid.Columns>
-    </syncfusion:SfDataGrid>
+      </syncfusion:SfTreeGrid.ContextMenu>
+      <syncfusion:SfTreeGrid.Columns>
+        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
+        <syncfusion:TreeGridTextColumn Width="80" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        <syncfusion:TreeGridNumericColumn Width="100" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damaged" />
+        <syncfusion:TreeGridNumericColumn Width="100" MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healed" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
+        <syncfusion:TreeGridNumericColumn Width="75" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
+        <syncfusion:TreeGridTextColumn Width="65" MappingName="MeleeAccRate" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
+        <syncfusion:TreeGridTextColumn Width="60" MappingName="MeleeHitRate" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
+        <syncfusion:TreeGridTextColumn Width="95" MappingName="RampageRate" DisplayBinding="{Binding Path=RampageRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderRampageTemplateToolTip}" TextAlignment="Right" HeaderText="% Rampage" />
+        <syncfusion:TreeGridTextColumn MappingName="ClassName" HorizontalHeaderContentAlignment="Center" HeaderText="Class" />
+      </syncfusion:SfTreeGrid.Columns>
+    </syncfusion:SfTreeGrid>
   </Grid>
 </local:SummaryTable>

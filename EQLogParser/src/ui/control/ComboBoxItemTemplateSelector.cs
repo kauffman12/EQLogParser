@@ -32,7 +32,7 @@ namespace EQLogParser
 
     public override DataTemplate SelectTemplate(object item, DependencyObject container)
     {
-      return GetVisualParent<ComboBoxItem>(container) == null ?SelectedItemTemplate : DropDownItemTemplate;
+      return GetVisualParent<ComboBoxItem>(container) == null ? SelectedItemTemplate : DropDownItemTemplate;
     }
 
     private static T GetVisualParent<T>(DependencyObject child) where T : Visual

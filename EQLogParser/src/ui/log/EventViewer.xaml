@@ -53,16 +53,20 @@
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
                            IsReadOnly="True"
                            RowHeaderWidth="30"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
+      <syncfusion:SfDataGrid.SortColumnDescriptions>
+        <syncfusion:SortColumnDescription ColumnName="Time" SortDirection="Descending" />
+      </syncfusion:SfDataGrid.SortColumnDescriptions>
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource DateTimeConverter}}" 
                                    Width="100" TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn MappingName="Actor" HeaderText="Actor" />
-        <syncfusion:GridTextColumn MappingName="Event" HeaderText="Event" />
-        <syncfusion:GridTextColumn MappingName="Target" HeaderText="Target" />
+        <syncfusion:GridTextColumn MappingName="Actor" HeaderText="Actor" Width="150"/>
+        <syncfusion:GridTextColumn MappingName="Event" HeaderText="Event" Width="120" />
+        <syncfusion:GridTextColumn MappingName="Target" HeaderText="Target" Width="450" />
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>

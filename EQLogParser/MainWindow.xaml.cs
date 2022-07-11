@@ -274,7 +274,7 @@ namespace EQLogParser
       if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl control))
       {
         tankingOptions.RequestSummaryData = true;
-        tankingOptions.DamageType = ((TankingSummary) control.Content).DamageType;
+        tankingOptions.DamageType = ((TankingSummary)control.Content).DamageType;
       }
 
       Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
@@ -289,17 +289,17 @@ namespace EQLogParser
 
       if (opened.TryGetValue(damageSummaryIcon.Tag as string, out ContentControl control))
       {
-        tables.Add(DockingManager.GetHeader(control) as string, (DamageSummary) control.Content);
+        tables.Add(DockingManager.GetHeader(control) as string, (DamageSummary)control.Content);
       }
 
       if (opened.TryGetValue(healingSummaryIcon.Tag as string, out ContentControl control2))
       {
-        tables.Add(DockingManager.GetHeader(control2) as string, (HealingSummary) control2.Content);
+        tables.Add(DockingManager.GetHeader(control2) as string, (HealingSummary)control2.Content);
       }
 
       if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl control3))
       {
-        tables.Add(DockingManager.GetHeader(control3) as string, (TankingSummary) control3.Content);
+        tables.Add(DockingManager.GetHeader(control3) as string, (TankingSummary)control3.Content);
       }
 
       if (tables.Count > 0)
@@ -462,12 +462,12 @@ namespace EQLogParser
       else if (e.Source == spellResistsMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _,typeof(NpcStatsViewer), spellResistsIcon.Tag as string, "Spell Resists");
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(NpcStatsViewer), spellResistsIcon.Tag as string, "Spell Resists");
       }
       else if (e.Source == spellDamageStatsMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _,typeof(SpellDamageStatsViewer), npcSpellDamageIcon.Tag as string, "Spell Damage");
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(SpellDamageStatsViewer), npcSpellDamageIcon.Tag as string, "Spell Damage");
       }
       else if ((sender as MenuItem)?.Icon is ImageAwesome icon && icon.Tag is string name)
       {

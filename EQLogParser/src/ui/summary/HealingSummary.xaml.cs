@@ -1,10 +1,11 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -18,7 +19,6 @@ namespace EQLogParser
     public HealingSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid, selectedColumns);
 
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, Properties.Resources.ANY_CLASS);
@@ -28,6 +28,9 @@ namespace EQLogParser
       CreateClassMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
       CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
       CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
+
+      // call after everything else is initialized
+      InitSummaryTable(title, dataGrid, selectedColumns);
       HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
     }
@@ -51,7 +54,7 @@ namespace EQLogParser
       {
         if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
         {
-          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
+          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Nodes.Count;
           menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
           menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
           menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
@@ -75,10 +78,16 @@ namespace EQLogParser
 
     private void ClassSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-      CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      dataGrid.View?.RefreshFilter();
-      dataGrid.SelectedItems.Clear();
-      HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
+      var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
+      var needUpdate = CurrentClass != update;
+      CurrentClass = update;
+
+      if (needUpdate)
+      {
+        dataGrid.View?.RefreshFilter();
+        dataGrid.SelectedItems.Clear();
+        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
+      }
     }
 
     private void DataGridHealingLogClick(object sender, RoutedEventArgs e)
@@ -89,7 +98,7 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
-        }      
+        }
       }
     }
 
@@ -121,7 +130,7 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
+              dataGrid.ItemsSource = CurrentStats.StatsList;
             }
 
             if (!MainWindow.IsAoEHealingEnabled)
@@ -141,7 +150,7 @@ namespace EQLogParser
       }, System.Windows.Threading.DispatcherPriority.Render);
     }
 
-    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
+    private void ItemsSourceChanged(object sender, TreeGridItemsSourceChangedEventArgs e)
     {
       if (dataGrid.View != null)
       {

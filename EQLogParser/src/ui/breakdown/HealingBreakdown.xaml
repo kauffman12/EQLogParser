@@ -24,7 +24,6 @@
       <ComboBox Margin="0,0,0,2" x:Name="choicesList" SelectionChanged="ListSelectionChanged" />
       <ComboBox x:Name="selectedColumns" Tag="HealingBreakdownColumns" Width="140" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
-
     </StackPanel>
     <syncfusion:SfTreeGrid x:Name="dataGrid"
                            AllowAutoSizingExpanderColumn="True"
@@ -39,6 +38,7 @@
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
                            IsReadOnly="True"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            SelectionMode="Extended"

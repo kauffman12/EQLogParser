@@ -8,21 +8,6 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
-    <Grid.Resources>
-       <Style TargetType="syncfusion:GridRowHeaderCell">
-        <Setter Property="Template">
-          <Setter.Value>
-            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-              <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                <Grid>
-                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
-                </Grid>
-              </Border>
-            </ControlTemplate>
-          </Setter.Value>
-        </Setter>
-      </Style>
-    </Grid.Resources>    
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
@@ -48,18 +33,34 @@
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
                            IsReadOnly="True"
                            RowHeaderWidth="30"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
+      <syncfusion:SfDataGrid.Resources>
+        <Style TargetType="syncfusion:GridRowHeaderCell">
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+                <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                  <Grid>
+                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                  </Grid>
+                </Border>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Style>
+      </syncfusion:SfDataGrid.Resources>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell"/>
-        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster"/>
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type"/>
-        <syncfusion:GridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Av Hit" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Max Hit" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Total" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="# Hits" TextAlignment="Right"/>
+        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell" Width="250"/>
+        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster" Width="150"/>
+        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" Width="120"/>
+        <syncfusion:GridNumericColumn MappingName="Avg" Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Av Hit" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Max" Width="75" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Max Hit" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Total" Width="100" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Total" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Hits" Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="# Hits" TextAlignment="Right"/>
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
