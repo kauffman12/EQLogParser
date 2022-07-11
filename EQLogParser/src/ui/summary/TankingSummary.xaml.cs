@@ -1,13 +1,12 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -26,7 +25,6 @@ namespace EQLogParser
     public TankingSummary()
     {
       InitializeComponent();
-      InitSummaryTable(title, dataGrid, selectedColumns);
 
       // if pets are shown
       showPets.IsChecked = CurrentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", null, true);
@@ -49,6 +47,9 @@ namespace EQLogParser
       CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
       CreateClassMenuItems(menuItemShowTankingBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
       CreateClassMenuItems(menuItemShowHealingBreakdown, DataGridShowBreakdown2Click, DataGridShowBreakdown2ByClassClick);
+
+      // call after everything else is initialized
+      InitSummaryTable(title, dataGrid, selectedColumns);
       TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
@@ -91,7 +92,7 @@ namespace EQLogParser
       {
         if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
         {
-          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
+          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Nodes.Count;
           menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
           menuItemShowSpellCasts.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
             menuItemShowSpellCounts.IsEnabled = true;
@@ -132,10 +133,16 @@ namespace EQLogParser
 
     private void ClassSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-      CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      dataGrid.View?.RefreshFilter();
-      dataGrid.SelectedItems.Clear();
-      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
+      var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
+      var needUpdate = CurrentClass != update;
+      CurrentClass = update;
+
+      if (needUpdate)
+      {
+        dataGrid.View?.RefreshFilter();
+        dataGrid.SelectedItems.Clear();
+        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
+      }
     }
 
     private void DataGridTankingLogClick(object sender, RoutedEventArgs e)
@@ -146,7 +153,7 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
-        }       
+        }
       }
     }
 
@@ -158,7 +165,7 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl hitFreq, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency"))
         {
           (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
-        }       
+        }
       }
     }
 
@@ -170,7 +177,7 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, true);
-        }       
+        }
       }
     }
 
@@ -224,7 +231,7 @@ namespace EQLogParser
               {
                 title.Content = CurrentStats.FullTitle;
                 HealingStatsManager.Instance.PopulateHealing(CurrentStats);
-                dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(CurrentStats.StatsList);
+                dataGrid.ItemsSource = CurrentStats.StatsList;
               }
 
               if (!MainWindow.IsAoEHealingEnabled)
@@ -245,7 +252,7 @@ namespace EQLogParser
       });
     }
 
-    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
+    private void ItemsSourceChanged(object sender, TreeGridItemsSourceChangedEventArgs e)
     {
       if (dataGrid.View != null)
       {
@@ -282,24 +289,21 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid != null)
+      if (dataGrid != null && dataGrid.ItemsSource != null)
       {
+        var needRequery = DamageType != damageTypes.SelectedIndex;
         CurrentPetValue = showPets.IsChecked.Value;
         DamageType = damageTypes.SelectedIndex;
         ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue.ToString(CultureInfo.CurrentCulture));
         ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType.ToString(CultureInfo.CurrentCulture));
 
-        if (dataGrid.View != null)
-        {
-          var needRequery = DamageType != damageTypes.SelectedIndex;
-          dataGrid.View.RefreshFilter();
-          dataGrid.SelectedItems.Clear();
+        dataGrid.View.RefreshFilter();
+        dataGrid.SelectedItems.Clear();
 
-          if (needRequery)
-          {
-            var tankingOptions = new GenerateStatsOptions { RequestSummaryData = true, RequestChartData = true, DamageType = DamageType };
-            Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
-          }
+        if (needRequery)
+        {
+          var tankingOptions = new GenerateStatsOptions { RequestSummaryData = true, RequestChartData = true, DamageType = DamageType };
+          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
     }

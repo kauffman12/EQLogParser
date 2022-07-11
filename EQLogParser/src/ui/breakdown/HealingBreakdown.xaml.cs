@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -19,21 +17,17 @@ namespace EQLogParser
     public HealBreakdown()
     {
       InitializeComponent();
-      InitBreakdownTable(dataGrid, selectedColumns);
+      InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats, bool received = false)
     {
       titleLabel.Content = currentStats?.ShortTitle;
       PlayerStats = selectedStats;
-      choicesList.ItemsSource = received ? ReceivedChoicesList: ChoicesList;
+      choicesList.ItemsSource = received ? ReceivedChoicesList : ChoicesList;
       choicesList.SelectedIndex = 0;
       Display();
     }
-
-    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
-    private void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
 
     private void Display()
     {

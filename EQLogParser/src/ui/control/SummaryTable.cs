@@ -1,4 +1,5 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -17,13 +19,13 @@ namespace EQLogParser
 
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
-    internal SfDataGrid TheDataGrid;
+    internal SfTreeGrid TheDataGrid;
     internal ComboBox TheColumnsCombo;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
     internal List<List<ActionBlock>> CurrentGroups;
 
-    internal void InitSummaryTable(Label title, SfDataGrid dataGrid, ComboBox columnsCombo)
+    internal void InitSummaryTable(Label title, SfTreeGrid dataGrid, ComboBox columnsCombo)
     {
       TheDataGrid = dataGrid;
       TheColumnsCombo = columnsCombo;
@@ -37,6 +39,9 @@ namespace EQLogParser
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
+
+      // workaround to avoid drag/drop failing when grid has no data
+      TheDataGrid.ItemsSource = new List<PlayerStats>();
     }
 
     internal virtual bool IsPetsCombined() => false;
@@ -46,6 +51,8 @@ namespace EQLogParser
     internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
     internal string GetTitle() => TheTitle.Content as string;
     internal List<PlayerStats> GetSelectedStats() => TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
+    internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
     internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
     internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetSelectedStats());
     internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e) => ShowBreakdown2(GetSelectedStats());
@@ -56,9 +63,8 @@ namespace EQLogParser
     internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetSelectedStats());
     internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
-    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
-    internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
+    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
     {
@@ -80,12 +86,12 @@ namespace EQLogParser
       TheDataGrid.ItemsSource = null;
     }
 
-    internal static void EnableClassMenuItems(MenuItem menu, SfDataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
+    internal static void EnableClassMenuItems(MenuItem menu, SfGridBase gridBase, Dictionary<string, byte> uniqueClasses)
     {
       foreach (var item in menu.Items)
       {
         MenuItem menuItem = item as MenuItem;
-        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses != null && 
+        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? gridBase.SelectedItems.Count > 0 : uniqueClasses != null &&
           uniqueClasses.ContainsKey(menuItem.Header as string);
       }
     }
@@ -124,9 +130,9 @@ namespace EQLogParser
     internal List<PlayerStats> GetStatsByClass(string className)
     {
       List<PlayerStats> selectedStats = new List<PlayerStats>();
-      foreach (var record in TheDataGrid.View.Records)
+      foreach (var record in TheDataGrid.View.Nodes)
       {
-        PlayerStats stats = record.Data as PlayerStats;
+        PlayerStats stats = record.Item as PlayerStats;
         if (stats.ClassName == className)
         {
           selectedStats.Add(stats);
@@ -181,7 +187,7 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Timeline"))
         {
           (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
-        }     
+        }
       }
     }
 
@@ -193,7 +199,7 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCountTable), "spellCountsWindow", "Spell Counts"))
         {
           (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
-        }      
+        }
       }
     }
   }

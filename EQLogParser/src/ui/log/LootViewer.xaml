@@ -45,10 +45,26 @@
                            FrozenColumnCount="1"                           
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
                            IsReadOnly="True"
                            RowHeaderWidth="30"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
+      <syncfusion:SfDataGrid.SortColumnDescriptions>
+        <syncfusion:SortColumnDescription ColumnName="Time" SortDirection="Descending" />
+      </syncfusion:SfDataGrid.SortColumnDescriptions>
+        <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
+                                   Width="100" TextAlignment="Center" HeaderText="Time"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Player}" HeaderText="Player" Width="150"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Item}" HeaderText="Item" Width="300"/>
+        <syncfusion:GridTemplateColumn HeaderText="Quantity" MappingName="Quantity" Width="120">
+          <syncfusion:GridTemplateColumn.CellTemplateSelector>
+            <local:LootQuantityTemplateSelector />
+          </syncfusion:GridTemplateColumn.CellTemplateSelector>
+        </syncfusion:GridTemplateColumn>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Npc}" HeaderText="NPC" Width="250"/>
+      </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
@@ -73,19 +89,7 @@
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
-        </syncfusion:SfDataGrid.ContextMenu>
-        <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
-                                   Width="100" TextAlignment="Center" HeaderText="Time"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Player}" HeaderText="Player"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Item}" HeaderText="Item"/>
-        <syncfusion:GridTemplateColumn HeaderText="Quantity" MappingName="Quantity">
-          <syncfusion:GridTemplateColumn.CellTemplateSelector>
-            <local:LootQuantityTemplateSelector />
-          </syncfusion:GridTemplateColumn.CellTemplateSelector>
-        </syncfusion:GridTemplateColumn>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Npc}" HeaderText="NPC" />
-      </syncfusion:SfDataGrid.Columns>
+      </syncfusion:SfDataGrid.ContextMenu>
     </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

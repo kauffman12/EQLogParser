@@ -52,7 +52,7 @@ namespace EQLogParser
           HeaderText = name,
           MappingName = name,
           CellStyle = DataGridUtil.CreateHighlightForegroundStyle(name, new ReceivedSpellColorConverter())
-      };
+        };
 
         dataGrid.Columns.Add(column);
       }
