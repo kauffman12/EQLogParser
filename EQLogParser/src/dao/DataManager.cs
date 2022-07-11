@@ -735,7 +735,7 @@ namespace EQLogParser
       }
     }
 
-    private SpellData FindPreviousCast(string player, List<SpellData> output, bool isAdps = false)
+    internal SpellData FindPreviousCast(string player, List<SpellData> output, bool isAdps = false)
     {
       if (LastSpellIndex > -1)
       {
