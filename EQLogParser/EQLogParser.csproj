@@ -91,6 +91,27 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v21.1.1\Assemblies\ActiproSoftware.Shared.Wpf.dll</HintPath>
     </Reference>
+    <Reference Include="Syncfusion.Edit.Wpf">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.Edit.WPF.dll</HintPath>
+    </Reference>
+    <Reference Include="Syncfusion.SfChart.WPF">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.SfChart.WPF.dll</HintPath>
+    </Reference>
+    <Reference Include="Syncfusion.SfSkinManager.WPF">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.SfSkinManager.WPF.dll</HintPath>
+    </Reference>
+    <Reference Include="Syncfusion.Shared.Wpf">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.Shared.WPF.dll</HintPath>
+    </Reference>
+    <Reference Include="Syncfusion.Themes.FluentDark.WPF">
+      <HintPath>..\Dependencies\Syncfusion.Themes.FluentDark.WPF.dll</HintPath>
+    </Reference>
+    <Reference Include="Syncfusion.Tools.Wpf">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.Tools.WPF.dll</HintPath>
+    </Reference>
+    <Reference Include="Syncfusion.Tools.Wpf.Classic">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.Tools.WPF.Classic.dll</HintPath>
+    </Reference>
     <Reference Update="System">
       <Private>False</Private>
     </Reference>
@@ -184,8 +205,6 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
     </PackageReference>
-    <PackageReference Include="syncfusion.ui.wpf.net" Version="20.1.0.55" />
-    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="WPFTextBoxAutoComplete">
       <Version>1.0.5</Version>
     </PackageReference>
