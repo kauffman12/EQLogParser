@@ -152,6 +152,13 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name) && !VerifiedPets.ContainsKey(name))
       {
+        if (name.IndexOf("Fade", StringComparison.OrdinalIgnoreCase) > -1)
+        {
+          if (true)
+          {
+
+          }
+        }
         name = string.Intern(name);
         lock (LockObject)
         {
