@@ -19,6 +19,11 @@ namespace EQLogParser
       { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
     };
 
+    private static readonly Dictionary<string, bool> PetSpells = new Dictionary<string, bool>()
+    {
+      { "Fortify Companion", true }, { "Zeal of the Elements", true }, { "Frenzied Burnout", true }, { "Frenzy of the Dead", true }
+    };
+
     public static void Process(LineData lineData)
     {
       try
@@ -183,10 +188,12 @@ namespace EQLogParser
         if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player) && searchResult.SpellData[0].Target == (int)SpellTarget.PET
           && PlayerManager.IsPossiblePlayerName(player))
         {
-          // let the add verified API be used to force change to a pet so make this check here
-          if (!PlayerManager.Instance.IsVerifiedPlayer(player))
+          foreach (var spell in PetSpells.Keys)
           {
-            PlayerManager.Instance.AddVerifiedPet(player);
+            if (searchResult.SpellData[0].Name.StartsWith(spell) && !PlayerManager.Instance.IsVerifiedPlayer(player))
+            {
+              PlayerManager.Instance.AddVerifiedPet(player);
+            }
           }
         }
       }

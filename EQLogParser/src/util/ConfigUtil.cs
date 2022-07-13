@@ -72,11 +72,11 @@ namespace EQLogParser
       return result;
     }
 
-    internal static string GetSetting(string key)
+    internal static string GetSetting(string key, string def = null)
     {
       Init();
       ApplicationSettings.TryGetValue(key, out string setting);
-      return setting;
+      return setting ?? def;
     }
 
     internal static void RemoveSetting(string key)

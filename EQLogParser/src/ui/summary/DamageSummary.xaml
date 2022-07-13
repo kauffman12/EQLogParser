@@ -1,11 +1,10 @@
 ﻿<local:SummaryTable x:Class="EQLogParser.DamageSummary"
-             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:numberformat="clr-namespace:System.Globalization;assembly=mscorlib"
              mc:Ignorable="d"
@@ -14,162 +13,153 @@
     <Grid.Resources>
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <local:ZeroConverter x:Key="ZeroConverter" />
-      <local:NumberFormatConverter x:Key="NumberFormatConverter" />
-      <DataTemplate x:Key="ModifiedHeaderTemplate" DataType="local:ColorPicker">
-        <StackPanel Orientation="Horizontal">
-          <Border x:Name="selectedColorRect" Width="20" Height="20" Margin="2" HorizontalAlignment="Left" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
-        </StackPanel>
-      </DataTemplate>
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30" />
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0" >
-      <Label x:Name="title" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <syncfusion:UpDown x:Name="timeChooser" Margin="0,0,4,0" Height="26" Width="70" TextAlignment="Right" IsEnabled="True" Value="0" MaxValue="0" MinValue="0" ValueChanged="MaxTimeChanged">
+      <syncfusion:UpDown x:Name="timeChooser" Margin="0,0,0,2" Width="70" TextAlignment="Right" Value="0" MaxValue="0" MinValue="0" ValueChanged="MaxTimeChanged">
         <syncfusion:UpDown.NumberFormatInfo>
           <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
         </syncfusion:UpDown.NumberFormatInfo>
       </syncfusion:UpDown>
-      <ComboBox Margin="0" x:Name="petOrPlayerList" MinWidth="60" SelectionChanged="ListSelectionChanged" />
-      <ComboBox Margin="0" x:Name="classesList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="petOrPlayerList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
       <ComboBox x:Name="selectedColumns" Tag="DamageSummaryColumns" Width="140" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" CanUserResizeColumns="True" CanUserResizeRows="False" RowHeaderWidth="0"
-      AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="DataGridSelectionChanged" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
-      RowDetailsVisibilityChanged="ChildrenGridRowDetailsVis" EnableRowVirtualization="False">
-      <DataGrid.ContextMenu>
+    <syncfusion:SfTreeGrid x:Name="dataGrid"
+                           AllowAutoSizingExpanderColumn="False"
+                           AllowDraggingColumns="True"
+                           AllowResizingColumns="True"
+                           AllowSelectionOnPointerPressed="True"
+                           AllowSorting="True"
+                           AutoExpandMode="None"
+                           AutoGenerateColumns="False"
+                           ChildPropertyName="Children"
+                           ColumnSizer="AutoFillColumn"                     
+                           FrozenColumnCount="1"
+                           Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"
+                           GridLinesVisibility="Horizontal"
+                           RequestTreeItems="RequestTreeItems"
+                           RowHeaderWidth="40"
+                           IsReadOnly="True"
+                           ItemsSourceChanged="ItemsSourceChanged"
+                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
+                           SelectionMode="Extended"
+                           SelectionChanged="DataGridSelectionChanged"
+                           ShowRowHeader="True">
+      <syncfusion:SfTreeGrid.Resources>
+        <Style TargetType="syncfusion:TreeGridRowHeaderCell">
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="syncfusion:TreeGridRowHeaderCell">
+                <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                  <Grid>
+                    <TextBlock HorizontalAlignment="Center" Foreground="{StaticResource ContentForeground}" VerticalAlignment="Center" Text="{Binding Rank}" TextAlignment="Center" />
+                  </Grid>
+                </Border>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Style>
+      </syncfusion:SfTreeGrid.Resources>      
+      <syncfusion:SfTreeGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="copyDamageParseIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="copyDamageParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Set Unknown As Pet" Click="SetPetClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPetIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Paw" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="setPetIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemShowAdpsTimeline" IsEnabled="False" Header="ADPS Timeline" Click="DataGridAdpsTimelineClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showAdpsTimelineIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Film" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showAdpsTimelineIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Film" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Spell Cast Order">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showSpellCastsIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_ListOl" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showSpellCastsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_ListOl" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemShowSpellCounts" IsEnabled="False" Header="Spell Counts">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showSpellCountsIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Calculator" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showSpellCountsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Calculator" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemShowBreakdown" IsEnabled="False" Header="Damage Breakdown">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showBreakdownIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Meteor" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showBreakdownIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Meteor" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemShowDamageLog" IsEnabled="False" Header="Damage Log" Click="DataGridDamageLogClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showDamageLogIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_File" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showDamageLogIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
             </MenuItem.Icon>
           </MenuItem>          
           <MenuItem x:Name="menuItemShowHitFreq" IsEnabled="False" Header="Hit Frequency" Click="DataGridHitFreqClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="showHitFreqIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_ChartBar" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="showHitFreqIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_ChartBar" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="selectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAllClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="unselectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
-      </DataGrid.ContextMenu>
-      <DataGrid.Columns>
-        <DataGridTemplateColumn MinWidth="48" Width="48" CanUserReorder="False">
-          <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <StackPanel Orientation="Horizontal">
-                <Image PreviewMouseLeftButtonDown="DataGridExpanderMouseDown" Loaded="DataGridExpanderLoaded" Margin="0,0,2,0" Width="15"></Image>
-                <TextBlock Width="20" TextAlignment="Right" Text="{Binding Rank}"></TextBlock>
-              </StackPanel>
-            </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
-        </DataGridTemplateColumn>
-        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="110" Width="110*"/>
-        <DataGridTextColumn Binding="{Binding PercentOfRaid, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource TotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="True" MinWidth="64" Width="64*"/>
-        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damage" IsReadOnly="True" CanUserReorder="True" MinWidth="78" Width="78*"/>
-        <DataGridTextColumn Binding="{Binding DPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource DPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding SDPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource SDPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SDPS" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding TotalSeconds, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="True" MinWidth="54" Width="54*"/>
-        <DataGridTextColumn Binding="{Binding Hits, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding Max, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="70" Width="70*"/>
-        <DataGridTextColumn Binding="{Binding Avg, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding AvgCrit, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Crit" IsReadOnly="True" CanUserReorder="True" MinWidth="64" Width="64*"/>
-        <DataGridTextColumn Binding="{Binding AvgLucky, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Lucky" IsReadOnly="True" CanUserReorder="True" MinWidth="74" Width="74*"/>
-        <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CritColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Crit" IsReadOnly="True" CanUserReorder="True" MinWidth="58" Width="58*"/>
-        <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Luck" IsReadOnly="True" CanUserReorder="True" MinWidth="64" Width="64*"/>
-        <DataGridTextColumn Binding="{Binding Special}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" ClipboardContentBinding="{x:Null}" Header="Special" IsReadOnly="True" CanUserReorder="True" MinWidth="64" Width="64*"/>
-        <DataGridTextColumn Visibility="Hidden" Binding="{Binding BaneHits}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="True" MinWidth="54" Width="54*"/>
-        <DataGridTextColumn Binding="{Binding ClassName}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CanUserSort="True" ClipboardContentBinding="{x:Null}" Header="Class" IsReadOnly="True" CanUserReorder="True" MinWidth="90" Width="90*" />
-      </DataGrid.Columns>
-      <DataGrid.RowDetailsTemplate>
-        <DataTemplate>
-          <datagrid:ThemedDataGrid x:Name="childrenDataGrid" IsHitTestVisible="false" RowStyle="{StaticResource DetailsDataGridRowSyle}" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ChildrenDataGridPrevMouseWheel" 
-              HeadersVisibility="None" CanUserResizeColumns="False" CanUserResizeRows="False" RowHeaderWidth="0" Margin="-2,0,0,0" AutoGenerateColumns="False" IsReadOnly="True" Panel.ZIndex="-4" RowDetailsVisibilityMode="Collapsed"
-              EnableRowVirtualization="False" GridLinesVisibility="Vertical" AreRowDetailsFrozen="False" FrozenColumnCount="0">
-            <DataGrid.Columns>
-              <DataGridTextColumn ClipboardContentBinding="{x:Null}" IsReadOnly="True" CellStyle="{StaticResource RightAlignGridCellStyle}" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding PercentOfRaid, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Total" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource NumberFormatConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding DPS, Converter={StaticResource NumberFormatConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding SDPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SDPS" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding TotalSeconds, Converter={StaticResource NumberFormatConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding Hits, Converter={StaticResource NumberFormatConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding Max, Converter={StaticResource NumberFormatConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding Avg, Converter={StaticResource NumberFormatConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding AvgCrit, Converter={StaticResource NumberFormatConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding AvgLucky, Converter={StaticResource NumberFormatConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding CritRate, Converter={StaticResource ZeroConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding LuckRate, Converter={StaticResource ZeroConverter}}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding Special}" ClipboardContentBinding="{x:Null}" Header="# Slain" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Visibility="Hidden" Binding="{Binding BaneHits}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Bane" IsReadOnly="True" CanUserReorder="False"/>
-              <DataGridTextColumn Binding="{Binding ClassName}" ClipboardContentBinding="{x:Null}" IsReadOnly="True" CanUserReorder="False"/>
-            </DataGrid.Columns>
-          </datagrid:ThemedDataGrid>
-        </DataTemplate>
-      </DataGrid.RowDetailsTemplate>
-    </datagrid:ThemedDataGrid>
+      </syncfusion:SfTreeGrid.ContextMenu>
+      <syncfusion:SfTreeGrid.Columns>
+        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" Width="135"/>
+        <syncfusion:TreeGridTextColumn Width="70" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        <syncfusion:TreeGridNumericColumn Width="90" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damage" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
+        <syncfusion:TreeGridNumericColumn Width="55" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:TreeGridNumericColumn Width="60" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
+        <syncfusion:TreeGridNumericColumn Width="75" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="BaneHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Bane" />
+        <syncfusion:TreeGridNumericColumn Width="65" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />
+        <syncfusion:TreeGridNumericColumn Width="80" MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />
+        <syncfusion:TreeGridTextColumn Width="60" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
+        <syncfusion:TreeGridTextColumn Width="70" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Luck" />
+        <syncfusion:TreeGridTextColumn MappingName="Special" TextAlignment="Left" HeaderText="Special" />
+        <syncfusion:TreeGridTextColumn Width="90" MappingName="ClassName" HeaderText="Class" />
+      </syncfusion:SfTreeGrid.Columns>
+    </syncfusion:SfTreeGrid>
   </Grid>
 </local:SummaryTable>

@@ -17,7 +17,7 @@
       <RowDefinition Height="30" />
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
-    <StackPanel Orientation="Vertical" Grid.Row="0" Margin="0" >
+    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0" >
       <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
@@ -33,7 +33,7 @@
                            AllowSorting="True"
                            AutoExpandMode="None"
                            AutoGenerateColumns="False"                           
-                           ColumnSizer="Auto"                      
+                           ColumnSizer="AutoFillColumn"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"
@@ -123,22 +123,22 @@
         </ContextMenu>
       </syncfusion:SfTreeGrid.ContextMenu>
       <syncfusion:SfTreeGrid.Columns>
-        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
-        <syncfusion:TreeGridTextColumn Width="80" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
-        <syncfusion:TreeGridNumericColumn Width="100" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healing" />
-        <syncfusion:TreeGridNumericColumn Width="100" MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
-        <syncfusion:TreeGridNumericColumn Width="70" MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
-        <syncfusion:TreeGridNumericColumn Width="70" MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
-        <syncfusion:TreeGridNumericColumn Width="70" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:TreeGridNumericColumn Width="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Heals" />
+        <syncfusion:TreeGridTextColumn Width="110" MappingName="Name" HeaderText="Name"/>
+        <syncfusion:TreeGridTextColumn Width="70" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        <syncfusion:TreeGridNumericColumn Width="90" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healing" />
+        <syncfusion:TreeGridNumericColumn Width="90" MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
+        <syncfusion:TreeGridNumericColumn Width="65" MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
+        <syncfusion:TreeGridNumericColumn Width="65" MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
+        <syncfusion:TreeGridNumericColumn Width="55" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:TreeGridNumericColumn Width="60" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Heals" />
         <syncfusion:TreeGridNumericColumn Width="75" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Heal" />
-        <syncfusion:TreeGridNumericColumn Width="70" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Heal" />
+        <syncfusion:TreeGridNumericColumn Width="65" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Heal" />
         <syncfusion:TreeGridNumericColumn Width="70" MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />
         <syncfusion:TreeGridNumericColumn Width="80" MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />
         <syncfusion:TreeGridTextColumn Width="70" MappingName="ExtraRate" DisplayBinding="{Binding Path=ExtraRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealPercentTemplateToolTip}" TextAlignment="Right" HeaderText="% Over" />
-        <syncfusion:TreeGridTextColumn Width="65" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
+        <syncfusion:TreeGridTextColumn Width="60" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
         <syncfusion:TreeGridTextColumn Width="70" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Luck" />
-        <syncfusion:TreeGridTextColumn MappingName="ClassName" HorizontalHeaderContentAlignment="Center" HeaderText="Class" />
+        <syncfusion:TreeGridTextColumn MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfTreeGrid.Columns>
     </syncfusion:SfTreeGrid>
   </Grid>

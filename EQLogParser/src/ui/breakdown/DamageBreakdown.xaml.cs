@@ -14,7 +14,7 @@ namespace EQLogParser
   public partial class DamageBreakdown : BreakdownTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private List<PlayerSubStats> PlayerStats;
+    private List<PlayerStats> PlayerStats;
     private readonly PlayerStats RaidStats;
     private readonly Dictionary<string, List<PlayerStats>> ChildStats;
     private bool CurrentGroupDDSetting = true;
@@ -30,21 +30,17 @@ namespace EQLogParser
     private readonly Dictionary<string, List<PlayerSubStats>> UnGroupedProcs = new Dictionary<string, List<PlayerSubStats>>();
     private readonly Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
 
-    internal DamageBreakdown(CombinedStats currentStats)
+    internal DamageBreakdown()
     {
       InitializeComponent();
       //InitBreakdownTable(dataGrid, selectedColumns);
-      titleLabel.Content = currentStats?.ShortTitle;
-      RaidStats = currentStats.RaidStats;
-      ChildStats = currentStats.Children;
     }
 
-    internal void Show(List<PlayerStats> selectedStats)
+    internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
-      if (selectedStats != null)
-      {
-        Display(selectedStats);
-      }
+      titleLabel.Content = currentStats?.ShortTitle;
+      PlayerStats = selectedStats;
+      Display();
     }
 
     internal void Display(List<PlayerStats> selectedStats = null)
@@ -63,7 +59,7 @@ namespace EQLogParser
             // initial load
             if (selectedStats != null)
             {
-              PlayerStats = new List<PlayerSubStats>();
+              PlayerStats = new List<PlayerStats>();
               foreach (var playerStats in selectedStats.AsParallel().OrderByDescending(stats => stats))
               {
                 if (ChildStats.ContainsKey(playerStats.Name))

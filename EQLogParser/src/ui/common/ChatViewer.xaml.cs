@@ -57,15 +57,16 @@ namespace EQLogParser
       context = new AutoCompleteText() { Text = Properties.Resources.CHAT_FROM_FILTER };
       context.Items.AddRange(PlayerAutoCompleteList);
       fromFilter.DataContext = context;
+      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
 
       try
       {
-        string fgColor = ConfigUtil.GetSetting("ChatFontFgColor");
+        var fgColor = ConfigUtil.GetSetting("EQLogViewerFontFgColor", TextFormatUtils.GetHexString(defaultColor));
         colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
       }
       catch (FormatException)
       {
-        colorPicker.Color = Colors.White;
+        colorPicker.Color = defaultColor;
       }
 
       string family = ConfigUtil.GetSetting("ChatFontFamily");
