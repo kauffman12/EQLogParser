@@ -35,7 +35,7 @@ namespace EQLogParser
 
       // default these columns to descending
       string[] desc = new string[] { "PercentOfRaid", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
-      "ExtraRate", "CritRate", "LuckRate", "MeleeHitRate", "MeleeAccRate", "RampageRate"};
+      "ExtraRate", "CritRate", "LuckRate", "MeleeHitRate", "MeleeAccRate", "RampageRate", "Special"};
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
@@ -109,11 +109,11 @@ namespace EQLogParser
     internal List<PlayerStats> GetPlayerStats()
     {
       var results = new List<PlayerStats>();
-      if (TheDataGrid.ItemsSource != null)
+      if (TheDataGrid.View != null)
       {
-        foreach (var item in TheDataGrid.ItemsSource as ICollectionView)
+        foreach (var node in TheDataGrid.View.Nodes)
         {
-          if (item is PlayerStats stats)
+          if (node.Item is PlayerStats stats)
           {
             results.Add(stats);
             if (CurrentStats.Children.ContainsKey(stats.Name))

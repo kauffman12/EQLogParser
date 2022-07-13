@@ -35,6 +35,10 @@ namespace EQLogParser
       {
         damageTypes.SelectedIndex = type;
       }
+      else
+      {
+        damageTypes.SelectedIndex = 0;
+      }
 
       DamageType = damageTypes.SelectedIndex;
 
@@ -61,7 +65,7 @@ namespace EQLogParser
       {
         var main = Application.Current.MainWindow as MainWindow;
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(TankingBreakdown),
-          "tankinggBreakdownWindow", "Tanking Breakdown"))
+          "tankingBreakdownWindow", "Tanking Breakdown"))
         {
           (breakdown.Content as TankingBreakdown).Init(CurrentStats, selected);
         }

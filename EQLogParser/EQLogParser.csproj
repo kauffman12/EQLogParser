@@ -177,7 +177,7 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
     </PackageReference>
-    <PackageReference Include="syncfusion.ui.wpf.net" Version="20.2.0.36" />
+    <PackageReference Include="syncfusion.ui.wpf.net" Version="20.2.0.38" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="WPFTextBoxAutoComplete">
       <Version>1.0.5</Version>
