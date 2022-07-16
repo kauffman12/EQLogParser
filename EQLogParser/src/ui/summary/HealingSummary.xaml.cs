@@ -86,7 +86,6 @@ namespace EQLogParser
       {
         dataGrid.View?.RefreshFilter();
         dataGrid.SelectedItems.Clear();
-        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
       }
     }
 
@@ -171,7 +170,7 @@ namespace EQLogParser
 
         dataGrid.View.RefreshFilter();
         dataGrid.SelectedItems.Clear();
-        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View.Filter);
+        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null);
       }
     }
 

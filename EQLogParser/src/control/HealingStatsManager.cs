@@ -329,14 +329,14 @@ namespace EQLogParser
       StatsUtil.UpdateCalculations(stats, RaidTotals);
     }
 
-    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null)
     {
       lock (HealingGroups)
       {
         if (options.RequestChartData)
         {
           // send update
-          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new HealGroupCollection(HealingGroups), Filter = filter };
+          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new HealGroupCollection(HealingGroups) };
 
           if (selected != null)
           {
