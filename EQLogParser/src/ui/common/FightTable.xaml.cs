@@ -356,10 +356,13 @@ namespace EQLogParser
       NeedSelectionChange = false;
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       SfDataGrid callingDataGrid = menu.PlacementTarget as SfDataGrid;
-      GetFightGroup().ForEach(fight =>
+      foreach (var fight in GetFightGroup())
       {
-        Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(fight), DispatcherPriority.Normal);
-      });
+        if (!callingDataGrid.SelectedItems.Contains(fight))
+        {
+          callingDataGrid.SelectedItems.Add(fight);
+        }
+      }
     }
 
     private void UnselectGroupClick(object sender, RoutedEventArgs e)
@@ -367,10 +370,10 @@ namespace EQLogParser
       NeedSelectionChange = false;
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
       SfDataGrid callingDataGrid = menu.PlacementTarget as SfDataGrid;
-      GetFightGroup().ForEach(fight =>
+      foreach (var fight in GetFightGroup())
       {
-        Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Remove(fight), DispatcherPriority.Normal);
-      });
+        callingDataGrid.SelectedItems.Remove(fight);
+      }
     }
 
     private void ShowBreakChange(object sender, RoutedEventArgs e)
@@ -441,21 +444,21 @@ namespace EQLogParser
       }
     }
 
-    private List<Fight> GetFightGroup()
+    private IEnumerable<Fight> GetFightGroup()
     {
-      List<Fight> fightGroup = new List<Fight>();
       if (dataGrid.CurrentItem is Fight npc && !npc.IsInactivity)
       {
         if (dataGrid.ItemsSource == Fights)
         {
-          Fights.Where(fight => fight.GroupId == npc.GroupId).ToList().ForEach(fight => fightGroup.Add(fight));
+          return Fights.Where(fight => fight.GroupId == npc.GroupId);
         }
         else if (dataGrid.ItemsSource == NonTankingFights)
         {
-          NonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId).ToList().ForEach(fight => fightGroup.Add(fight));
+          return NonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId);
         }
       }
-      return fightGroup;
+
+      return new List<Fight>();
     }
 
     private void SearchForNPC(bool backwards = false)

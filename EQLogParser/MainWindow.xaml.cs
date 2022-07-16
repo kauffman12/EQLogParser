@@ -488,7 +488,6 @@ namespace EQLogParser
       {
         var summary = control.Content as DamageSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
-        DamageStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
       }
     }
 
@@ -499,7 +498,7 @@ namespace EQLogParser
       {
         var summary = control.Content as HealingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
-        HealingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
+        HealingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats());
       }
     }
 
@@ -510,7 +509,7 @@ namespace EQLogParser
       {
         var summary = control.Content as TankingSummary;
         var options = new GenerateStatsOptions() { RequestChartData = true };
-        TankingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
+        TankingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats());
       }
     }
 

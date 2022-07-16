@@ -145,7 +145,6 @@ namespace EQLogParser
       {
         dataGrid.View?.RefreshFilter();
         dataGrid.SelectedItems.Clear();
-        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
       }
     }
 
@@ -287,7 +286,7 @@ namespace EQLogParser
 
         dataGrid.View.RefreshFilter();
         dataGrid.SelectedItems.Clear();
-        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View.Filter);
+        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null);
       }
     }
 
