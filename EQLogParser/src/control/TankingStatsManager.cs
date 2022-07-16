@@ -142,14 +142,14 @@ namespace EQLogParser
       }
     }
 
-    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null)
     {
       lock (TankingGroupIds)
       {
         if (options.RequestChartData)
         {
           // send update
-          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups, options.DamageType), Filter = filter };
+          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups, options.DamageType) };
 
           if (selected != null)
           {

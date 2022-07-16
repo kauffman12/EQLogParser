@@ -114,7 +114,6 @@ namespace EQLogParser
       {
         dataGrid.View?.RefreshFilter();
         dataGrid.SelectedItems.Clear();
-        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
       }
     }
 
@@ -125,10 +124,42 @@ namespace EQLogParser
 
       if (needUpdate)
       {
-        dataGrid.View?.RefreshFilter();
-        dataGrid.SelectedItems.Clear();
-        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View?.Filter);
+        UpdateList();
       }
+    }
+
+    private void UpdateList()
+    {
+      var beforeList = dataGrid.ItemsSource;
+      switch (CurrentPetOrPlayerOption)
+      {
+        case 0:
+          dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
+          break;
+        case 1:
+        case 2:
+        case 3:
+          dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
+          break;
+      }
+
+      // if list stayed the same then update the filter
+      if (beforeList == dataGrid.ItemsSource)
+      {
+        dataGrid.View.RefreshFilter();
+        dataGrid.SelectedItems.Clear();
+      }
+    }
+
+    private List<PlayerStats> UpdateRank(List<PlayerStats> list)
+    {
+      int rank = 1;
+      foreach (ref var stats in list.OrderByDescending(stats => stats.Total).ToArray().AsSpan())
+      {
+        stats.Rank = (ushort)rank++;
+      }
+
+      return list;
     }
 
     private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
@@ -200,7 +231,7 @@ namespace EQLogParser
               title.Content = CurrentStats.FullTitle;
               timeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
               timeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds);
-              dataGrid.ItemsSource = CurrentStats.StatsList;
+              UpdateList();
             }
 
             if (e.Limited)
@@ -258,7 +289,6 @@ namespace EQLogParser
 
         dataGrid.View.RefreshFilter();
         dataGrid.SelectedItems.Clear();
-        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, dataGrid.View.Filter);
       }
     }
 
@@ -274,11 +304,11 @@ namespace EQLogParser
 
     private void RequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
     {
-      if (CurrentStats != null)
+      if (dataGrid.ItemsSource is List<PlayerStats> playerList)
       {
         if (e.ParentItem == null)
         {
-          e.ChildItems = CurrentStats.StatsList;
+          e.ChildItems = dataGrid.ItemsSource as List<PlayerStats>;
         }
         else if (e.ParentItem is PlayerStats stats && CurrentStats.Children.TryGetValue(stats.Name, out List<PlayerStats> childs))
         {

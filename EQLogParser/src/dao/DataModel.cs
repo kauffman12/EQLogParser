@@ -91,7 +91,6 @@ namespace EQLogParser
     public string Action { get; set; }
     public RecordGroupCollection Iterator { get; set; }
     public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
-    public Predicate<object> Filter { get; set; }
   }
 
   internal class GenerateStatsOptions

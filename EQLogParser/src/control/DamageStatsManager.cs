@@ -519,7 +519,7 @@ namespace EQLogParser
       FireChartEvent(options, "CLEAR");
     }
 
-    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null, Predicate<object> filter = null)
+    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null)
     {
       lock (DamageGroupIds)
       {
@@ -532,7 +532,7 @@ namespace EQLogParser
           }
 
           // send update
-          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new DamageGroupCollection(DamageGroups), Filter = filter };
+          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new DamageGroupCollection(DamageGroups) };
 
           if (selected != null)
           {

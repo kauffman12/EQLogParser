@@ -17,9 +17,9 @@
       <Label x:Name="titleLabel3" Style="{StaticResource EQTitleStyle}" Padding="0,5,5,5"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,0,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common.">Self Only</CheckBox>
-      <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="0,0,0,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
-      <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="0,0,0,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
+      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,8,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common.">Self Only</CheckBox>
+      <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="0,0,8,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
+      <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="0,0,10,1" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
     </StackPanel>
     <Grid Grid.Row="1">
       <Grid.RowDefinitions>
