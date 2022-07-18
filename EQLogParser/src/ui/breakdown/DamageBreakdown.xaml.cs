@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.TreeGrid;
+using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -11,17 +10,15 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageBreakdownTable.xaml
   /// </summary>
-  public partial class DamageBreakdown : BreakdownTable
+  public partial class DamageBreakdown : BreakdownTable, IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private List<PlayerStats> PlayerStats;
-    private readonly PlayerStats RaidStats;
-    private readonly Dictionary<string, List<PlayerStats>> ChildStats;
+    private List<PlayerStats> PlayerStats = new List<PlayerStats>();
+    private PlayerStats RaidStats;
+    private Dictionary<string, List<PlayerStats>> ChildStats;
     private bool CurrentGroupDDSetting = true;
     private bool CurrentGroupDoTSetting = true;
     private bool CurrentGroupProcsSetting = true;
     private bool CurrentShowPets = true;
-    private static bool Running = false;
     private readonly Dictionary<string, PlayerSubStats> GroupedDD = new Dictionary<string, PlayerSubStats>();
     private readonly Dictionary<string, PlayerSubStats> GroupedDoT = new Dictionary<string, PlayerSubStats>();
     private readonly Dictionary<string, PlayerSubStats> GroupedProcs = new Dictionary<string, PlayerSubStats>();
@@ -30,113 +27,53 @@ namespace EQLogParser
     private readonly Dictionary<string, List<PlayerSubStats>> UnGroupedProcs = new Dictionary<string, List<PlayerSubStats>>();
     private readonly Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
 
-    internal DamageBreakdown()
+    public DamageBreakdown()
     {
       InitializeComponent();
-      //InitBreakdownTable(dataGrid, selectedColumns);
+      InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
       titleLabel.Content = currentStats?.ShortTitle;
-      PlayerStats = selectedStats;
+      RaidStats = currentStats.RaidStats;
+      ChildStats = currentStats.Children;
+
+      foreach (ref var stats in selectedStats.ToArray().AsSpan())
+      {
+        if (ChildStats.ContainsKey(stats.Name))
+        {
+          foreach (ref var childStat in ChildStats[stats.Name].ToArray().AsSpan())
+          {
+            PlayerStats.Add(childStat);
+            BuildGroups(childStat, childStat.SubStats);
+          }
+        }
+        else
+        {
+          PlayerStats.Add(stats);
+          BuildGroups(stats, stats.SubStats);
+        }
+      }
+
       Display();
     }
 
-    internal void Display(List<PlayerStats> selectedStats = null)
+    internal void Display()
     {
-      if (Running == false && ChildStats != null && RaidStats != null)
-      {
-        Running = true;
-        groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = showPets.IsEnabled = false;
-
-        Task.Delay(10).ContinueWith(task =>
-        {
-          try
-          {
-            ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
-
-            // initial load
-            if (selectedStats != null)
-            {
-              PlayerStats = new List<PlayerStats>();
-              foreach (var playerStats in selectedStats.AsParallel().OrderByDescending(stats => stats))
-              {
-                if (ChildStats.ContainsKey(playerStats.Name))
-                {
-                  foreach (var childStat in ChildStats[playerStats.Name])
-                  {
-                    PlayerStats.Add(childStat);
-                    BuildGroups(childStat, childStat.SubStats.ToList());
-                  }
-
-                  Dispatcher.InvokeAsync(() =>
-                  {
-                    if (!showPets.IsEnabled)
-                    {
-                      showPets.IsEnabled = true;
-                    }
-                  });
-                }
-                else
-                {
-                  PlayerStats.Add(playerStats);
-                  BuildGroups(playerStats, playerStats.SubStats.ToList());
-                }
-              }
-            }
-
-            if (PlayerStats != null)
-            {
-              var filtered = CurrentShowPets ? PlayerStats : PlayerStats.Where(playerStats => !PlayerManager.Instance.IsVerifiedPet(playerStats.Name));
-              //foreach (var playerStats in SortSubStats(filtered.ToList()))
-              //{
-              //  Dispatcher.InvokeAsync(() =>
-              //  {
-              //    list.Add(playerStats);
-              //    var optionalList = GetSubStats(playerStats as PlayerStats);
-              //    SortSubStats(optionalList).ForEach(subStat => list.Add(subStat));
-              //  });
-              //}
-
-              Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
-
-              if (CurrentColumn != null)
-              {
-                Dispatcher.InvokeAsync(() => CurrentColumn.SortDirection = CurrentSortDirection);
-              }
-            }
-          }
-          catch (ArgumentNullException ane)
-          {
-            LOG.Error(ane);
-          }
-          catch (NullReferenceException nre)
-          {
-            LOG.Error(nre);
-          }
-          catch (ArgumentOutOfRangeException aro)
-          {
-            LOG.Error(aro);
-          }
-          finally
-          {
-            Dispatcher.InvokeAsync(() => groupDirectDamage.IsEnabled = groupDoT.IsEnabled = groupProcs.IsEnabled = showPets.IsEnabled = true);
-            Running = false;
-          }
-        }, TaskScheduler.Default);
-      }
+      dataGrid.ItemsSource = null;
+      dataGrid.ItemsSource = PlayerStats;
     }
 
     private void BuildGroups(PlayerStats playerStats, List<PlayerSubStats> all)
     {
-      List<PlayerSubStats> list = new List<PlayerSubStats>();
-      PlayerSubStats dots = new PlayerSubStats() { Name = Labels.DOT, Type = Labels.DOT };
-      PlayerSubStats dds = new PlayerSubStats() { Name = Labels.DD, Type = Labels.DD };
-      PlayerSubStats procs = new PlayerSubStats() { Name = Labels.PROC, Type = Labels.PROC };
-      List<PlayerSubStats> allDots = new List<PlayerSubStats>();
-      List<PlayerSubStats> allDds = new List<PlayerSubStats>();
-      List<PlayerSubStats> allProcs = new List<PlayerSubStats>();
+      var list = new List<PlayerSubStats>();
+      var dots = new PlayerSubStats() { Name = Labels.DOT, Type = Labels.DOT };
+      var dds = new PlayerSubStats() { Name = Labels.DD, Type = Labels.DD };
+      var procs = new PlayerSubStats() { Name = Labels.PROC, Type = Labels.PROC };
+      var allDots = new List<PlayerSubStats>();
+      var allDds = new List<PlayerSubStats>();
+      var allProcs = new List<PlayerSubStats>();
 
       all.ForEach(sub =>
       {
@@ -178,23 +115,20 @@ namespace EQLogParser
       GroupedProcs[playerStats.Name] = procs;
       OtherDamage[playerStats.Name] = list;
 
-      Dispatcher.InvokeAsync(() =>
+      if (allDds.Count > 0 && !groupDirectDamage.IsEnabled)
       {
-        if (allDds.Count > 0 && !groupDirectDamage.IsEnabled)
-        {
-          groupDirectDamage.IsEnabled = true;
-        }
+        groupDirectDamage.IsEnabled = true;
+      }
 
-        if (allProcs.Count > 0 && !groupProcs.IsEnabled)
-        {
-          groupProcs.IsEnabled = true;
-        }
+      if (allProcs.Count > 0 && !groupProcs.IsEnabled)
+      {
+        groupProcs.IsEnabled = true;
+      }
 
-        if (allDots.Count > 0 && !groupDoT.IsEnabled)
-        {
-          groupDoT.IsEnabled = true;
-        }
-      });
+      if (allDots.Count > 0 && !groupDoT.IsEnabled)
+      {
+        groupDoT.IsEnabled = true;
+      }
     }
 
     private List<PlayerSubStats> GetSubStats(PlayerStats playerStats)
@@ -278,17 +212,82 @@ namespace EQLogParser
       });
     }
 
+    private void ItemsSourceChanged(object sender, TreeGridItemsSourceChangedEventArgs e)
+    {
+      if (dataGrid.View != null)
+      {
+        dataGrid.View.Filter = (value) =>
+        {
+          var result = true;
+          if (value is PlayerStats stats)
+          {
+            result = CurrentShowPets || (PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name));
+          }
+          return result;
+        };
+
+        dataGrid.View.RefreshFilter();
+        dataGrid.SelectedItems.Clear();
+      }
+    }
+
     private void OptionsChange(object sender, RoutedEventArgs e)
     {
       // check if call is during initialization
-      if (PlayerStats != null)
+      if (dataGrid?.View != null)
       {
         CurrentGroupDDSetting = groupDirectDamage.IsChecked.Value;
         CurrentGroupDoTSetting = groupDoT.IsChecked.Value;
         CurrentGroupProcsSetting = groupProcs.IsChecked.Value;
         CurrentShowPets = showPets.IsChecked.Value;
-        Display();
+
+        if (sender == showPets)
+        {
+          dataGrid.View.RefreshFilter();
+          dataGrid.SelectedItems.Clear();
+        }
+        else
+        {
+          Dispatcher.InvokeAsync(() => Display(), DispatcherPriority.Background);
+        }
       }
     }
+
+    private void RequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
+    {
+      if (dataGrid.ItemsSource is List<PlayerStats>)
+      {
+        if (e.ParentItem == null)
+        {
+          e.ChildItems = dataGrid.ItemsSource as List<PlayerStats>;
+        }
+        else if (e.ParentItem is PlayerStats stats)
+        {
+          e.ChildItems = GetSubStats(stats);
+        }
+      }
+    }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        dataGrid.Dispose();
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }

@@ -321,13 +321,21 @@ namespace EQLogParser
 
       if (displayOrder != null)
       {
-        foreach (var name in displayOrder.Split(',').ToList())
+        foreach (var item in displayOrder.Split(',').ToList())
         {
+          var name = item;
+
+          // Eventually (remove this)
+          oldFormat = oldFormat || name.Contains(" ");
+          
+          // changed column names
+          if (name == "% Luck")
+          {
+            name = "% Lucky";
+          }
+
           for (int i = 0; i < columns.Count; i++)
           {
-            // Eventually (remove this)
-            oldFormat = oldFormat || name.Contains(" ");
-
             // handle old version that saved column display names
             // Eventually (remove the HeaderText check)
             if (columns[i].MappingName == name || columns[i].HeaderText == name)
