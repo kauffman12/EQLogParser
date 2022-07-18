@@ -198,6 +198,24 @@ namespace EQLogParser
       PopulateOption(uniqueTypes, row.Type, Types);
     }
 
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
+    {
+      if (dataGrid.View != null)
+      {
+        dataGrid.View.Filter = new Predicate<object>(item =>
+        {
+          var record = (HitLogRow)item;
+          return (string.IsNullOrEmpty(CurrentTypeFilter) || CurrentTypeFilter == record.Type) &&
+          (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) &&
+          (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) &&
+          (CurrentShowPetsFilter || !record.IsPet);
+        });
+
+        dataGrid.SelectedItems.Clear();
+        dataGrid.View.RefreshFilter();
+      }
+    }
+
     private void PopulateOption(Dictionary<string, byte> cache, string value, ObservableCollection<string> list)
     {
       if (!string.IsNullOrEmpty(value) && !cache.ContainsKey(value))
@@ -356,34 +374,26 @@ namespace EQLogParser
         var refresh = CurrentGroupActionsFilter == groupHits.IsChecked.Value;
         CurrentGroupActionsFilter = groupHits.IsChecked.Value;
 
-        if (CurrentGroupActionsFilter && dataGrid.Columns != TextColumns)
-        {
-          dataGrid.Columns = TextColumns;
-        }
-        else if (!CurrentGroupActionsFilter && dataGrid.Columns != CheckBoxColumns)
-        {
-          dataGrid.Columns = CheckBoxColumns;
-        }
-
-        if (dataGrid.View.Filter == null)
-        {
-          dataGrid.View.Filter = new Predicate<object>(item =>
-          {
-            var record = (HitLogRow)item;
-            return (string.IsNullOrEmpty(CurrentTypeFilter) || CurrentTypeFilter == record.Type) &&
-            (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) &&
-            (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) &&
-            (CurrentShowPetsFilter || !record.IsPet);
-          });
-        }
-
         if (refresh)
         {
+          dataGrid.SelectedItems.Clear();
           dataGrid.View.RefreshFilter();
         }
         else
         {
-          Display();
+          Dispatcher.InvokeAsync(() =>
+          {
+            if (CurrentGroupActionsFilter && dataGrid.Columns != TextColumns)
+            {
+              dataGrid.Columns = TextColumns;
+            }
+            else if (!CurrentGroupActionsFilter && dataGrid.Columns != CheckBoxColumns)
+            {
+              dataGrid.Columns = CheckBoxColumns;
+            }
+
+            Display();
+          }, System.Windows.Threading.DispatcherPriority.Background);
         }
       }
     }

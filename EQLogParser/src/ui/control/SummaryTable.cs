@@ -19,15 +19,15 @@ namespace EQLogParser
 
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
-    internal SfTreeGrid TheDataGrid;
+    internal dynamic TheDataGrid;
     internal ComboBox TheColumnsCombo;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
     internal List<List<ActionBlock>> CurrentGroups;
 
-    internal void InitSummaryTable(Label title, SfTreeGrid dataGrid, ComboBox columnsCombo)
+    internal void InitSummaryTable(Label title, SfGridBase gridBase, ComboBox columnsCombo)
     {
-      TheDataGrid = dataGrid;
+      TheDataGrid = gridBase;
       TheColumnsCombo = columnsCombo;
       TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
       TheTitle = title;
@@ -36,8 +36,18 @@ namespace EQLogParser
       // default these columns to descending
       string[] desc = new string[] { "PercentOfRaid", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
       "ExtraRate", "CritRate", "LuckRate", "MeleeHitRate", "MeleeAccRate", "RampageRate", "Special"};
-      TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+
+      if (TheDataGrid is SfTreeGrid treeGrid)
+      {
+        treeGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+        treeGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      }
+      else if (TheDataGrid is SfDataGrid dataGrid)
+      {
+        dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+        dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      }
+
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
 
       // workaround to avoid drag/drop failing when grid has no data
@@ -50,7 +60,6 @@ namespace EQLogParser
     internal virtual void UpdateDataGridMenuItems() => new object(); // need to override this method
     internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
     internal string GetTitle() => TheTitle.Content as string;
-    internal List<PlayerStats> GetSelectedStats() => TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
     internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
     internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
@@ -97,12 +106,44 @@ namespace EQLogParser
 
     internal List<string[]> GetHeaders()
     {
-      return TheDataGrid.Columns.Select(column =>
+      if (TheDataGrid is SfTreeGrid treeGrid)
       {
-        string binding = (column.ValueBinding as Binding).Path.Path;
-        string title = column.HeaderText;
-        return new string[] { binding, title };
-      }).ToList();
+        return treeGrid.Columns.Select(column =>
+        {
+          string binding = (column.ValueBinding as Binding).Path.Path;
+          string title = column.HeaderText;
+          return new string[] { binding, title };
+        }).ToList();
+      }
+      else if (TheDataGrid is SfDataGrid dataGrid)
+      {
+        return dataGrid.Columns.Select(column =>
+        {
+          string binding = (column.ValueBinding as Binding).Path.Path;
+          string title = column.HeaderText;
+          return new string[] { binding, title };
+        }).ToList();
+      }
+      else
+      {
+        return new List<string[]> { };
+      }
+    }
+
+    internal List<PlayerStats> GetSelectedStats()
+    {
+      if (TheDataGrid is SfTreeGrid treeGrid)
+      {
+        return treeGrid.SelectedItems.ToList().Cast<PlayerStats>().ToList();
+      }
+      else if (TheDataGrid is SfDataGrid dataGrid)
+      {
+        return dataGrid.SelectedItems.ToList().Cast<PlayerStats>().ToList();
+      }
+      else
+      {
+        return new List<PlayerStats>();
+      }
     }
 
     internal List<PlayerStats> GetPlayerStats()
