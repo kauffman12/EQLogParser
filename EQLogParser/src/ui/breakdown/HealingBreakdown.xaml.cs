@@ -6,7 +6,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for HealTable.xaml
   /// </summary>
-  public partial class HealBreakdown : BreakdownTable, IDisposable
+  public partial class HealBreakdown : BreakdownTable
   {
     private bool CurrentShowSpellsChoice = true;
     private List<PlayerStats> PlayerStats = null;
@@ -52,27 +52,5 @@ namespace EQLogParser
         Display();
       }
     }
-
-    #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        dataGrid.Dispose();
-        disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }

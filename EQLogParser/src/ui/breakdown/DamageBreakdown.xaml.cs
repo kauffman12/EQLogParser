@@ -10,7 +10,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageBreakdownTable.xaml
   /// </summary>
-  public partial class DamageBreakdown : BreakdownTable, IDisposable
+  public partial class DamageBreakdown : BreakdownTable
   {
     private List<PlayerStats> PlayerStats = new List<PlayerStats>();
     private PlayerStats RaidStats;
@@ -41,6 +41,11 @@ namespace EQLogParser
 
       foreach (ref var stats in selectedStats.ToArray().AsSpan())
       {
+        if (!showPets.IsEnabled && !(PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name)))
+        {
+          showPets.IsEnabled = true;
+        }
+
         if (ChildStats.ContainsKey(stats.Name))
         {
           foreach (ref var childStat in ChildStats[stats.Name].ToArray().AsSpan())
@@ -267,27 +272,5 @@ namespace EQLogParser
         }
       }
     }
-
-    #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        dataGrid.Dispose();
-        disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }
