@@ -230,8 +230,8 @@ namespace EQLogParser
           return result;
         };
 
-        dataGrid.View.RefreshFilter();
         dataGrid.SelectedItems.Clear();
+        dataGrid.View.RefreshFilter();
       }
     }
 
