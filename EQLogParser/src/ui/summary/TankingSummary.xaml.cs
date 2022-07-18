@@ -1,5 +1,4 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
-using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -96,7 +95,7 @@ namespace EQLogParser
       {
         if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
         {
-          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Nodes.Count;
+          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
           menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
           menuItemShowSpellCasts.IsEnabled = menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
             menuItemShowSpellCounts.IsEnabled = true;
@@ -255,7 +254,7 @@ namespace EQLogParser
       });
     }
 
-    private void ItemsSourceChanged(object sender, TreeGridItemsSourceChangedEventArgs e)
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
       if (dataGrid.View != null)
       {
@@ -284,8 +283,8 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || (!string.IsNullOrEmpty(name) && CurrentClass == className);
         };
 
-        dataGrid.View.RefreshFilter();
         dataGrid.SelectedItems.Clear();
+        dataGrid.View.RefreshFilter();
         TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null);
       }
     }

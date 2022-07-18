@@ -30,7 +30,7 @@
       <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
         <TextBox x:Name="customParseTitle" Margin="0,0,0,2" Width="200" TextChanged="CustomTitleTextChanged" KeyDown="CustomTitleKeyDown" GotFocus="CustomTitleGotFocus" LostFocus="CustomTitleLostFocus" />
         <ComboBox Margin="0,0,0,2" x:Name="parseList" IsEnabled="True" SelectionChanged="ParseListSelectionChanged" />
-        <CheckBox x:Name="playerParseTextDoPetLabel" IsChecked="True" Margin="10,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Denote Pets</CheckBox>
+        <CheckBox x:Name="playerParseTextDoPetLabel" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Denote Pets</CheckBox>
         <CheckBox x:Name="playerParseTextDoDPS" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include DPS/HPS</CheckBox>
         <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Raid Total</CheckBox>
         <CheckBox x:Name="playerParseTextDoSpecials" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Specials</CheckBox>

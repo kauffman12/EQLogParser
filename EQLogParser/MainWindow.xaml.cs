@@ -45,7 +45,7 @@ namespace EQLogParser
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
-    private const string VERSION = "v1.9.13";
+    private const string VERSION = "v1.9.20";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -487,7 +487,8 @@ namespace EQLogParser
       if (Helpers.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "Damage Chart", ChartTab, true, out ContentControl control))
       {
         var summary = control.Content as DamageSummary;
-        var options = new GenerateStatsOptions() { RequestChartData = true };
+        var options = new GenerateStatsOptions { RequestChartData = true };
+        DamageStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats());
       }
     }
 
@@ -497,7 +498,7 @@ namespace EQLogParser
       if (Helpers.OpenChart(opened, dockSite, healingChartIcon.Tag as string, HEALING_CHOICES, "Healing Chart", ChartTab, false, out ContentControl control))
       {
         var summary = control.Content as HealingSummary;
-        var options = new GenerateStatsOptions() { RequestChartData = true };
+        var options = new GenerateStatsOptions { RequestChartData = true };
         HealingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats());
       }
     }
@@ -508,7 +509,7 @@ namespace EQLogParser
       if (Helpers.OpenChart(opened, dockSite, tankingChartIcon.Tag as string, TANKING_CHOICES, "Tanking Chart", ChartTab, false, out ContentControl control))
       {
         var summary = control.Content as TankingSummary;
-        var options = new GenerateStatsOptions() { RequestChartData = true };
+        var options = new GenerateStatsOptions { RequestChartData = true };
         TankingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats());
       }
     }
@@ -560,9 +561,9 @@ namespace EQLogParser
 
     private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var options = new GenerateStatsOptions() { RequestChartData = true };
-      DamageStatsManager.Instance.FireChartEvent(options, "SELECT", data.Selected);
-      (playerParseTextWindow.Content as ParsePreview)?.UpdateParse(Labels.DAMAGEPARSE, data.Selected);
+      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "SELECT", data.Selected);
+      var preview = playerParseTextWindow.Content as ParsePreview;
+      preview?.UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)

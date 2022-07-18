@@ -1,5 +1,4 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
-using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +52,7 @@ namespace EQLogParser
       {
         if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
         {
-          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Nodes.Count;
+          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
           menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
           menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
           menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
@@ -148,7 +147,7 @@ namespace EQLogParser
       }, System.Windows.Threading.DispatcherPriority.Render);
     }
 
-    private void ItemsSourceChanged(object sender, TreeGridItemsSourceChangedEventArgs e)
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
       if (dataGrid.View != null)
       {

@@ -22,7 +22,7 @@
       <Setter Property="Background" Value="{x:Null}" />
       <Setter Property="Foreground" Value="{StaticResource EQEQMenuIconBrush}" />
       <Setter Property="Height" Value="30"/>
-      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontSize" Value="14" />
       <Setter Property="FontWeight" Value="Bold" />
       <Setter Property="Margin" Value="0" />
     </Style>

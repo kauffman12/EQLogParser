@@ -33,11 +33,11 @@
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="4,0,4,0" VerticalAlignment="Center" IsEnabled="False" 
+      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,8,2" VerticalAlignment="Center" IsEnabled="False" 
                 ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common." 
                 VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Self Only</CheckBox>
-      <ComboBox Margin="4,0,0,0" x:Name="spellTypes" Height="26" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="26" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="spellTypes" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="castTypes" SelectionChanged="OptionsChanged" />
     </StackPanel>    
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
