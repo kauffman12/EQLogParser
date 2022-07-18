@@ -21,7 +21,7 @@
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showPets" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Show Pets</CheckBox>
+      <CheckBox x:Name="showPets" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Show Pets</CheckBox>
       <Label Margin="0,0,4,2" VerticalAlignment="Center" FontStyle="Italic" FontSize="14">Combine:</Label>
       <CheckBox x:Name="groupDoT" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">DoTs</CheckBox>
       <CheckBox x:Name="groupDirectDamage" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Direct Damage</CheckBox>
