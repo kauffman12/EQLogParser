@@ -327,7 +327,7 @@ namespace EQLogParser
 
           // Eventually (remove this)
           oldFormat = oldFormat || name.Contains(" ");
-          
+
           // changed column names
           if (name == "% Luck")
           {
