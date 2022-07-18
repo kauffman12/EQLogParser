@@ -47,8 +47,8 @@ namespace EQLogParser
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
-          var grayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2d2d30"));
-          ctx.DrawRectangle(grayBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
+          var brush = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, 0), new Size(width, height)));
 
           if (title != null)
           {
