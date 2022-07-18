@@ -27,7 +27,6 @@ namespace EQLogParser
     private int CurrentConfig;
     private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected = null;
-    private List<List<DataPoint>> LastSortedValues = null;
 
     public LineChart(List<string> choices, bool includePets = false)
     {
@@ -50,7 +49,6 @@ namespace EQLogParser
 
       petOrPlayerList.SelectedIndex = 0;
       CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
-
       Reset();
     }
 
@@ -217,7 +215,8 @@ namespace EQLogParser
           var first = values.First();
           if (CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION)
           {
-            pass = names.Contains(first.PlayerName) || (HasPets.ContainsKey(first.Name) && names.FirstOrDefault(name => HasPets[first.Name].ContainsKey(name)) != null);
+            pass = names.Contains(first.PlayerName) || (HasPets.ContainsKey(first.Name) && 
+            names.FirstOrDefault(name => HasPets[first.Name].ContainsKey(name)) != null);
           }
           else if (CurrentPetOrPlayerOption == Labels.PLAYEROPTION)
           {
@@ -324,39 +323,43 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
-      if (LastSortedValues != null)
+      if (sfLineChart.Series.Count > 0)
       {
         try
         {
           List<string> header = new List<string> { "Seconds", choicesList.SelectedValue as string, "Name" };
 
           var data = new List<List<object>>();
-          LastSortedValues.ForEach(sortedValue =>
+          foreach (var series in sfLineChart.Series)
           {
-            foreach (var chartData in sortedValue)
+            if (series.ItemsSource is List<DataPoint> dataPoints)
             {
-              double chartValue = 0;
-              if (CurrentConfig == 2)
+              foreach (ref var chartData in dataPoints.ToArray().AsSpan())
               {
-                chartValue = chartData.Avg;
-              }
-              else if (CurrentConfig == 3)
-              {
-                chartValue = chartData.CritRate;
-              }
-              else if (CurrentConfig == 1)
-              {
-                chartValue = chartData.Total;
-              }
-              else if (CurrentConfig == 0)
-              {
-                chartValue = chartData.Vps;
-              }
+                double chartValue = 0;
+                if (CurrentConfig == 2)
+                {
+                  chartValue = chartData.Avg;
+                }
+                else if (CurrentConfig == 3)
+                {
+                  chartValue = chartData.CritRate;
+                }
+                else if (CurrentConfig == 1)
+                {
+                  chartValue = chartData.Total;
+                }
+                else if (CurrentConfig == 0)
+                {
+                  chartValue = chartData.Vps;
+                }
 
-              data.Add(new List<object> { chartData.CurrentTime, chartValue, chartData.Name });
-              Clipboard.SetDataObject(TextFormatUtils.BuildCsv(header, data, titleLabel.Content as string));
+                data.Add(new List<object> { chartData.CurrentTime, Math.Round(chartValue, 2), chartData.Name });
+              }
             }
-          });
+          }
+
+          Clipboard.SetDataObject(TextFormatUtils.BuildCsv(header, data, titleLabel.Content as string));
         }
         catch (ExternalException ex)
         {
