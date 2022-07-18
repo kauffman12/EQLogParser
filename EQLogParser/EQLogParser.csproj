@@ -79,14 +79,6 @@
     <AssemblyOriginatorKeyFile>newsigner.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.DataGrid.Contrib.Wpf, Version=19.1.681.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v21.1.1\Assemblies\ActiproSoftware.DataGrid.Contrib.Wpf.dll</HintPath>
-    </Reference>
-    <Reference Include="ActiproSoftware.Shared.Wpf, Version=19.1.681.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v21.1.1\Assemblies\ActiproSoftware.Shared.Wpf.dll</HintPath>
-    </Reference>
     <Reference Update="System">
       <Private>False</Private>
     </Reference>
@@ -116,7 +108,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="licenses.licx" />
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>

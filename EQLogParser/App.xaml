@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-             xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
     <SolidColorBrush x:Key="EQGoodForegroundBrush" Color="LightGreen"/>
@@ -67,7 +66,16 @@
     </DataTemplate>
     <DataTemplate x:Key="HeaderRampageTemplateToolTip">
       <TextBlock FontSize="12" Foreground="Black" Text="Percent of Melee hits received which were from Rampage" />
-    </DataTemplate>    
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderAvgNonTwincastTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Average Damage for all Hits that were not a Twincast" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderAvgNonTwincastCritTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Average Crit Damage for all Hits that were not a Twincast" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderAvgNonTwincastLuckyTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="Black" Text="Average Lucky Damage for all Hits that were not a Twincast" />
+    </DataTemplate>
 
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">
@@ -75,68 +83,7 @@
         <Border Width="11" Height="11" Margin="0,0,0,3" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
       </StackPanel>
     </DataTemplate>
-     
-    
-    <!-- DataGrid Row/Column Colors and Alignment -->
-    <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
-      <Setter Property="Background" Value="#3a543f" />
-      <Style.Triggers>
-        <Trigger Property="IsMouseOver" Value="True">
-          <Setter Property="Background" Value="#3a543f"/>
-        </Trigger>
-      </Style.Triggers>
-    </Style>
-    <Style x:Key="CenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
-      <Setter Property="HorizontalContentAlignment"  Value="Center"/>
-    </Style>
-    <Style x:Key="RightAlignGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Right" />
-      <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=DataContext.TooltipText}" />
-    </Style>
-    <Style x:Key="RightAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Right" />
-      <Setter Property="Foreground" Value="Black" />
-    </Style>
-    <Style x:Key="LeftAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Left" />
-      <Setter Property="Foreground" Value="Black" />
-    </Style>
-    <Style x:Key="TooltipCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=DataContext.TooltipText}" />
-    </Style>
-    
-    <!-- Tooltips -->
-    <Style x:Key="AvgNonTwincastColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Average Damage for all Hits that were not a Twincast" />
-    </Style>
-    <Style x:Key="AvgNonTwincastCritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Average Crit Damage for all Hits that were not a Twincast" />
-    </Style>
-    <Style x:Key="AvgNonTwincastLuckyColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Average Lucky Damage for all Hits that were not a Twincast" />
-    </Style>    
-    <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Based on Crippling Blow, Critical, Deadly Strike, and Finishing Blow" />
-    </Style>
-    <Style x:Key="TotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Total (raid total)" />
-    </Style>
-    <Style x:Key="PlayerTotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Player's Total" />
-    </Style>
-    <Style x:Key="DPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Damage Per Second based on Player Time" />
-    </Style>
-    <Style x:Key="SDPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Scaled Damage Per Second based on Total Time (raid time)" />
-    </Style>
-    <Style x:Key="MeleeAccRateColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Hits that were not Misses" />
-    </Style>
-    <Style x:Key="MeleeHitRateColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
-    </Style>
-
+   
     <!-- Window/Chrome Styles -->
     <Style x:Key="OverlayStyle" TargetType="{x:Type Window}">
       <Setter Property="WindowChrome.WindowChrome">

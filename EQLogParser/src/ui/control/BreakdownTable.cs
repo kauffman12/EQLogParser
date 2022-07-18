@@ -28,7 +28,9 @@ namespace EQLogParser
       // default these columns to descending
       string[] desc = new string[] { "Percent", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
       "ExtraRate", "CritRate", "LuckRate", "TwincastRate", "MeleeAccRate", "MeleeHitRate", "Absorbs", "Blocks", "Dodges", "Invulnerable",
-      "Misses", "Parries", "StrikethroughHits", "RiposteHits", "RampageRate"};
+      "Misses", "Parries", "StrikethroughHits", "RiposteHits", "RampageRate", "TotalAss", "TotalFinishing", "TotalHead", "TotalRiposte",
+      "TotalSlay", "AvgNonTwincast", "AvgNonTwincastCrit", "AvgNonTwincastLucky", "TwincastHits", "Resists", "DoubleBowRate",
+      "FlurryRate", "ResistRate"};
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
