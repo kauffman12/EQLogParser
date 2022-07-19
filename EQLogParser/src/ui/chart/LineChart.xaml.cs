@@ -80,7 +80,7 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateTimes(string name, DataPoint dataPoint, Dictionary<string, double> diffs, Dictionary<string, double> firstTimes, 
+    private void UpdateTimes(string name, DataPoint dataPoint, Dictionary<string, double> diffs, Dictionary<string, double> firstTimes,
       Dictionary<string, double> lastTimes)
     {
       double diff = lastTimes.TryGetValue(name, out double lastTime) ? dataPoint.CurrentTime - lastTime : 1;
@@ -374,7 +374,7 @@ namespace EQLogParser
     }
 
     private static void Aggregate(Dictionary<string, List<DataPoint>> theValues,
-      Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate, 
+      Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate,
       Dictionary<string, double> firstTimes, Dictionary<string, double> lastTimes, Dictionary<string, double> diffs)
     {
       var diff = diffs[aggregate.Name];
