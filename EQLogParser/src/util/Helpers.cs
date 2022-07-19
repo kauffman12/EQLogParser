@@ -29,15 +29,15 @@ namespace EQLogParser
       }
     }
 
-    internal static void CopyImage(Dispatcher dispatcher, FrameworkElement content, FrameworkElement title = null)
+    internal static void CopyImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
     {
       Task.Delay(100).ContinueWith((task) => dispatcher.InvokeAsync(() =>
       {
         var wasHidden = content.Visibility != Visibility.Visible;
         content.Visibility = Visibility.Visible;
 
-        var titleHeight = title?.ActualHeight ?? 0;
-        var titleWidth = title?.ActualWidth ?? 0;
+        var titleHeight = titleLabel.DesiredSize.Height - (titleLabel.Padding.Top + titleLabel.Padding.Bottom);
+        var titleWidth = titleLabel.DesiredSize.Width;
         var height = (int)content.ActualHeight + (int)titleHeight;
         var width = (int)content.ActualWidth;
 
@@ -50,10 +50,10 @@ namespace EQLogParser
           var brush = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
           ctx.DrawRectangle(brush, null, new Rect(new Point(0, 0), new Size(width, height)));
 
-          if (title != null)
+          if (titleLabel != null)
           {
-            var titleBrush = new VisualBrush(title);
-            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(0, 0), new Size(titleWidth, titleHeight)));
+            var titleBrush = new VisualBrush(titleLabel);
+            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(4, 0), new Size(titleWidth, titleHeight)));
           }
 
           var chartBrush = new VisualBrush(content);
