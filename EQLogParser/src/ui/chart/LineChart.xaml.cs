@@ -3,15 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
 
 namespace EQLogParser
 {
   /// <summary>
-  /// Interaction logic for DPSChart.xaml
+  /// Interaction logic for LineChart.xaml
   /// </summary>
   public partial class LineChart : UserControl, IDisposable
   {
@@ -83,84 +82,81 @@ namespace EQLogParser
 
     private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null)
     {
-      Task.Run(() =>
+      var lastTime = double.NaN;
+      var firstTime = double.NaN;
+      var petData = new Dictionary<string, DataPoint>();
+      var playerData = new Dictionary<string, DataPoint>();
+      var totalPlayerData = new Dictionary<string, DataPoint>();
+      var raidData = new Dictionary<string, DataPoint>();
+      var needTotalAccounting = new Dictionary<string, DataPoint>();
+      var needPlayerAccounting = new Dictionary<string, DataPoint>();
+      var needPetAccounting = new Dictionary<string, DataPoint>();
+      var needRaidAccounting = new Dictionary<string, DataPoint>();
+
+      foreach (var dataPoint in recordIterator)
       {
-        var lastTime = double.NaN;
-        var firstTime = double.NaN;
-        var petData = new Dictionary<string, DataPoint>();
-        var playerData = new Dictionary<string, DataPoint>();
-        var totalPlayerData = new Dictionary<string, DataPoint>();
-        var raidData = new Dictionary<string, DataPoint>();
-        var needTotalAccounting = new Dictionary<string, DataPoint>();
-        var needPlayerAccounting = new Dictionary<string, DataPoint>();
-        var needPetAccounting = new Dictionary<string, DataPoint>();
-        var needRaidAccounting = new Dictionary<string, DataPoint>();
+        double diff = double.IsNaN(lastTime) ? 1 : dataPoint.CurrentTime - lastTime;
 
-        foreach (var dataPoint in recordIterator)
+        if (double.IsNaN(firstTime) || diff > DataManager.FIGHTTIMEOUT)
         {
-          double diff = double.IsNaN(lastTime) ? 1 : dataPoint.CurrentTime - lastTime;
-
-          if (double.IsNaN(firstTime) || diff > DataManager.FIGHTTIMEOUT)
-          {
-            firstTime = dataPoint.CurrentTime;
-          }
-
-          var raidName = "Raid";
-          if (!raidData.TryGetValue(raidName, out DataPoint raidAggregate))
-          {
-            raidAggregate = new DataPoint() { Name = raidName };
-            raidData[raidName] = raidAggregate;
-          }
-
-          Aggregate(raidData, RaidValues, needRaidAccounting, dataPoint, raidAggregate, firstTime, lastTime, diff);
-
-          var playerName = dataPoint.PlayerName ?? dataPoint.Name;
-          var petName = dataPoint.PlayerName == null ? null : dataPoint.Name;
-          var totalName = playerName + " +Pets";
-          if (!totalPlayerData.TryGetValue(totalName, out DataPoint totalAggregate))
-          {
-            totalAggregate = new DataPoint() { Name = totalName, PlayerName = playerName };
-            totalPlayerData[totalName] = totalAggregate;
-          }
-
-          Aggregate(totalPlayerData, PlayerPetValues, needTotalAccounting, dataPoint, totalAggregate, firstTime, lastTime, diff);
-
-          if (dataPoint.PlayerName == null)
-          {
-            if (!playerData.TryGetValue(dataPoint.Name, out DataPoint aggregate))
-            {
-              aggregate = new DataPoint() { Name = dataPoint.Name };
-              playerData[dataPoint.Name] = aggregate;
-            }
-
-            Aggregate(playerData, PlayerValues, needPlayerAccounting, dataPoint, aggregate, firstTime, lastTime, diff);
-          }
-          else if (dataPoint.PlayerName != null)
-          {
-            if (!HasPets.ContainsKey(totalName))
-            {
-              HasPets[totalName] = new Dictionary<string, byte>();
-            }
-
-            HasPets[totalName][petName] = 1;
-            if (!petData.TryGetValue(petName, out DataPoint petAggregate))
-            {
-              petAggregate = new DataPoint() { Name = petName, PlayerName = playerName };
-              petData[petName] = petAggregate;
-            }
-
-            Aggregate(petData, PetValues, needPetAccounting, dataPoint, petAggregate, firstTime, lastTime, diff);
-          }
-
-          lastTime = dataPoint.CurrentTime;
+          firstTime = dataPoint.CurrentTime;
         }
 
-        UpdateRemaining(RaidValues, needRaidAccounting, firstTime, lastTime);
-        UpdateRemaining(PlayerPetValues, needTotalAccounting, firstTime, lastTime);
-        UpdateRemaining(PlayerValues, needPlayerAccounting, firstTime, lastTime);
-        UpdateRemaining(PetValues, needPetAccounting, firstTime, lastTime);
-        Plot(selected);
-      });
+        var raidName = "Raid";
+        if (!raidData.TryGetValue(raidName, out DataPoint raidAggregate))
+        {
+          raidAggregate = new DataPoint() { Name = raidName };
+          raidData[raidName] = raidAggregate;
+        }
+
+        Aggregate(raidData, RaidValues, needRaidAccounting, dataPoint, raidAggregate, firstTime, lastTime, diff);
+
+        var playerName = dataPoint.PlayerName ?? dataPoint.Name;
+        var petName = dataPoint.PlayerName == null ? null : dataPoint.Name;
+        var totalName = playerName + " +Pets";
+        if (!totalPlayerData.TryGetValue(totalName, out DataPoint totalAggregate))
+        {
+          totalAggregate = new DataPoint() { Name = totalName, PlayerName = playerName };
+          totalPlayerData[totalName] = totalAggregate;
+        }
+
+        Aggregate(totalPlayerData, PlayerPetValues, needTotalAccounting, dataPoint, totalAggregate, firstTime, lastTime, diff);
+
+        if (dataPoint.PlayerName == null)
+        {
+          if (!playerData.TryGetValue(dataPoint.Name, out DataPoint aggregate))
+          {
+            aggregate = new DataPoint() { Name = dataPoint.Name };
+            playerData[dataPoint.Name] = aggregate;
+          }
+
+          Aggregate(playerData, PlayerValues, needPlayerAccounting, dataPoint, aggregate, firstTime, lastTime, diff);
+        }
+        else if (dataPoint.PlayerName != null)
+        {
+          if (!HasPets.ContainsKey(totalName))
+          {
+            HasPets[totalName] = new Dictionary<string, byte>();
+          }
+
+          HasPets[totalName][petName] = 1;
+          if (!petData.TryGetValue(petName, out DataPoint petAggregate))
+          {
+            petAggregate = new DataPoint() { Name = petName, PlayerName = playerName };
+            petData[petName] = petAggregate;
+          }
+
+          Aggregate(petData, PetValues, needPetAccounting, dataPoint, petAggregate, firstTime, lastTime, diff);
+        }
+
+        lastTime = dataPoint.CurrentTime;
+      }
+
+      UpdateRemaining(RaidValues, needRaidAccounting, firstTime, lastTime);
+      UpdateRemaining(PlayerPetValues, needTotalAccounting, firstTime, lastTime);
+      UpdateRemaining(PlayerValues, needPlayerAccounting, firstTime, lastTime);
+      UpdateRemaining(PetValues, needPetAccounting, firstTime, lastTime);
+      Plot(selected);
     }
 
     private void Plot(List<PlayerStats> selected = null)
@@ -215,7 +211,7 @@ namespace EQLogParser
           var first = values.First();
           if (CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION)
           {
-            pass = names.Contains(first.PlayerName) || (HasPets.ContainsKey(first.Name) && 
+            pass = names.Contains(first.PlayerName) || (HasPets.ContainsKey(first.Name) &&
             names.FirstOrDefault(name => HasPets[first.Name].ContainsKey(name)) != null);
           }
           else if (CurrentPetOrPlayerOption == Labels.PLAYEROPTION)
@@ -237,17 +233,14 @@ namespace EQLogParser
         label += " " + CurrentChoice;
       }
 
-      Dispatcher.InvokeAsync(() =>
-      {
-        Reset();
-        titleLabel.Content = label;
-        sfLineChart.Series = BuildCollection(sortedValues);
-      });
+      Reset();
+      titleLabel.Content = label;
+      sfLineChart.Series = BuildCollection(sortedValues);
     }
 
     private ChartSeriesCollection BuildCollection(List<List<DataPoint>> sortedValues)
     {
-      ChartSeriesCollection collection = new ChartSeriesCollection();
+      var collection = new ChartSeriesCollection();
 
       string yPath = "Avg";
       switch (CurrentConfig)

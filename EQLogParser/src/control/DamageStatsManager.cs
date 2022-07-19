@@ -532,7 +532,7 @@ namespace EQLogParser
           }
 
           // send update
-          DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new DamageGroupCollection(DamageGroups) };
+          DataPointEvent de = new DataPointEvent { Action = action, Iterator = new DamageGroupCollection(DamageGroups) };
 
           if (selected != null)
           {
