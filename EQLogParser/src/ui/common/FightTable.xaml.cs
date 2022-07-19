@@ -138,17 +138,6 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateCurrentItem(object sender, MouseButtonEventArgs e)
-    {
-      var gridPoint = e.GetPosition(dataGrid);
-      var vis = VisualTreeHelper.HitTest(dataGrid, gridPoint);
-
-      if (vis != null && vis.VisualHit is FrameworkElement elem && elem.DataContext != null)
-      {
-        dataGrid.CurrentItem = elem.DataContext;
-      }
-    }
-
     private void AddFight(Fight fight)
     {
       lock (FightsToProcess)
@@ -316,10 +305,11 @@ namespace EQLogParser
       var callingDataGrid = menu.PlacementTarget as SfDataGrid;
       if (callingDataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
       {
+        var name = npc.Name;
         Task.Delay(120).ContinueWith(_ =>
         {
-          PlayerManager.Instance.AddVerifiedPet(npc.Name);
-          PlayerManager.Instance.AddPetToPlayer(npc.Name, Labels.UNASSIGNED);
+          PlayerManager.Instance.AddVerifiedPet(name);
+          PlayerManager.Instance.AddPetToPlayer(name, Labels.UNASSIGNED);
         }, TaskScheduler.Default);
       }
     }
@@ -327,10 +317,11 @@ namespace EQLogParser
     private void SetPlayerClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
+      var callingDataGrid = menu.PlacementTarget as SfDataGrid;
       if (callingDataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
       {
-        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(npc.Name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
+        var name = npc.Name;
+        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
       }
     }
 

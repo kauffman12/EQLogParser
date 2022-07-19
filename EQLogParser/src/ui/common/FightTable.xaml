@@ -58,7 +58,6 @@
                            GridLinesVisibility="Horizontal"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
-                           PreviewMouseDown="UpdateCurrentItem"
                            RowHeaderWidth="40"
                            RowStyle="{StaticResource FightRowStyle}"
                            SelectionChanged="SelectionChanged"
