@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.16" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.17" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -154,24 +154,27 @@
       <Component Win64="yes" Id="Syncfusion.GridCommon.WPF.dll" Guid="FD6E7B0D-868C-4D6E-A211-057D973D622D">
         <File Id="Syncfusion.GridCommon.WPF.dll" Name="Syncfusion.GridCommon.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.GridCommon.WPF.dll" />
       </Component>
-      <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="197A0E8A-FAEC-41C1-BA86-F62C3B8E7947">
-        <File Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
-      </Component>   
+      <Component Win64="yes" Id="Syncfusion.Licensing.dll" Guid="EFFABA69-9397-4C0B-B68B-151C2DED424F">
+        <File Id="Syncfusion.Licensing.dll" Name="Syncfusion.Licensing.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Licensing.dll" />
+      </Component>
       <Component Win64="yes" Id="Syncfusion.SfChart.WPF.dll" Guid="EB9F99E6-52B6-4CB0-BB4A-C18AEA3182B3">
         <File Id="Syncfusion.SfChart.WPF.dll" Name="Syncfusion.SfChart.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfChart.WPF.dll" />
-      </Component>      
+      </Component>
       <Component Win64="yes" Id="Syncfusion.SfSkinManager.WPF.dll" Guid="33F08F96-DA5F-471D-88F0-C4E7A5A50621">
         <File Id="Syncfusion.SfSkinManager.WPF.dll" Name="Syncfusion.SfSkinManager.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfSkinManager.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="F4BA3FAD-F8AB-4E34-93E2-6290EB3D2221">
+        <File Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Themes.FluentDark.WPF.dll" Guid="29DA2539-32C2-467B-B287-8220449773FD">
         <File Id="Syncfusion.Themes.FluentDark.WPF.dll" Name="Syncfusion.Themes.FluentDark.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.FluentDark.WPF.dll" />
       </Component>
+      <Component Win64="yes" Id="Syncfusion.Tools.WPF.Classic.dll" Guid="BDFC58AB-E906-42A5-B081-402299D84EE1">
+        <File Id="Syncfusion.Tools.WPF.Classic.dll" Name="Syncfusion.Tools.WPF.Classic.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.Classic.dll" />
+      </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
         <File Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
       </Component>
-      <Component Win64="yes" Id="Syncfusion.Tools.WPF.Classic.dll" Guid="BDFC58AB-E906-42A5-B081-402299D84EE1">
-        <File Id="Syncfusion.Tools.WPF.Classic.dll" Name="Syncfusion.Tools.WPF.Classic.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.Classic.dll" />
-      </Component>      
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
