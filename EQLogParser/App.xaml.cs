@@ -7,6 +7,11 @@ namespace EQLogParser
   /// </summary>
   public partial class App : Application
   {
+    public App()
+    {
+      Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("key");
+    }
+
     private void CloseOverlay_MouseClick(object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay(Dispatcher);
   }
 }
