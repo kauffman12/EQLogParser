@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.Windows.Controls.Input;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace EQLogParser
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static bool Running = false;
 
-    private List<string> PlayerAutoCompleteList = new List<string>();
+    private List<string> PlayerAutoCompleteList;
     private Paragraph MainParagraph;
     private readonly DispatcherTimer FilterTimer;
     private readonly DispatcherTimer RefreshTimer;
@@ -49,14 +50,9 @@ namespace EQLogParser
       textFilter.Text = EQLogParser.Resource.CHAT_TEXT_FILTER;
       startDate.DateTime = new DateTime(1999, 3, 16);
       endDate.DateTime = DateTime.Now;
+      toFilter.Text = EQLogParser.Resource.CHAT_TO_FILTER;
+      fromFilter.Text = EQLogParser.Resource.CHAT_FROM_FILTER;
 
-      var context = new AutoCompleteText() { Text = EQLogParser.Resource.CHAT_TO_FILTER };
-      context.Items.AddRange(PlayerAutoCompleteList);
-      toFilter.DataContext = context;
-
-      context = new AutoCompleteText() { Text = EQLogParser.Resource.CHAT_FROM_FILTER };
-      context.Items.AddRange(PlayerAutoCompleteList);
-      fromFilter.DataContext = context;
       var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
 
       try
@@ -287,37 +283,34 @@ namespace EQLogParser
 
     private void LoadPlayers(string updatedPlayer = null)
     {
-      _ = Dispatcher.InvokeAsync(() =>
+      if (updatedPlayer == null || (updatedPlayer != null && !players.Items.Contains(updatedPlayer)))
+      {
+        var playerList = ChatManager.GetArchivedPlayers();
+        if (playerList.Count > 0)
         {
-          if (updatedPlayer == null || (updatedPlayer != null && !players.Items.Contains(updatedPlayer)))
+          if (players.ItemsSource == null)
           {
-            var playerList = ChatManager.GetArchivedPlayers();
-            if (playerList.Count > 0)
-            {
-              if (players.ItemsSource == null)
-              {
-                players.Items.Clear();
-              }
-
-              players.ItemsSource = playerList;
-
-              string player = ConfigUtil.GetSetting("ChatSelectedPlayer");
-              if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
-              {
-                player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
-              }
-
-              players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
-            }
+            players.Items.Clear();
           }
-          else
+
+          players.ItemsSource = playerList;
+
+          string player = ConfigUtil.GetSetting("ChatSelectedPlayer");
+          if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
           {
-            if (!RefreshTimer.IsEnabled)
-            {
-              RefreshTimer.Start();
-            }
+            player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
           }
-        }, DispatcherPriority.DataBind);
+
+          players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
+        }
+      }
+      else
+      {
+        if (!RefreshTimer.IsEnabled)
+        {
+          RefreshTimer.Start();
+        }
+      }
     }
 
     private List<string> GetSelectedChannels(out bool changed)
@@ -551,16 +544,18 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape)
       {
-        if (filter.DataContext is AutoCompleteText context && context.Items.Count > 0)
+        if (filter is SfTextBoxExt filterExt)
         {
-          context.Items.Clear();
-          filter.DataContext = null;
-          filter.DataContext = context;
+          filterExt.AutoCompleteSource = null;
         }
 
         filter.Text = text;
         filter.FontStyle = FontStyles.Italic;
         chatBox.Focus();
+      }
+      else if (filter is SfTextBoxExt filterExt)
+      {
+        filterExt.AutoCompleteSource = PlayerAutoCompleteList;
       }
     }
 
@@ -568,14 +563,6 @@ namespace EQLogParser
     {
       if (filter.Text == text)
       {
-        if (filter.DataContext is AutoCompleteText context)
-        {
-          context.Items.Clear();
-          context.Items.AddRange(PlayerAutoCompleteList);
-          filter.DataContext = null;
-          filter.DataContext = context;
-        }
-
         filter.Text = "";
         filter.FontStyle = FontStyles.Normal;
       }
@@ -585,11 +572,9 @@ namespace EQLogParser
     {
       if (filter.Text.Length == 0)
       {
-        if (filter.DataContext is AutoCompleteText context && context.Items.Count > 0)
+        if (filter is SfTextBoxExt filterExt)
         {
-          context.Items.Clear();
-          filter.DataContext = null;
-          filter.DataContext = context;
+          filterExt.AutoCompleteSource = null;
         }
 
         filter.Text = text;
