@@ -144,17 +144,17 @@ namespace EQLogParser
           {
             if (CurrentFilterModifier == 0)
             {
-              result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1 || 
+              result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1 ||
               row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1;
             }
             else if (CurrentFilterModifier == 1)
             {
-              result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1 && 
+              result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1 &&
               row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1;
             }
             else if (CurrentFilterModifier == 2)
             {
-              result = row.Actor?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true || 
+              result = row.Actor?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true ||
               row.Target?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true;
             }
           }

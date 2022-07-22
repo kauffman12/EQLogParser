@@ -22,7 +22,7 @@
       <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <syncfusion:UpDown x:Name="timeChooser" Margin="0,0,0,2" Width="70" TextAlignment="Right" Value="0" MaxValue="0" MinValue="0" ValueChanged="MaxTimeChanged">
+      <syncfusion:UpDown x:Name="timeChooser" Margin="0,0,0,2" Width="60" TextAlignment="Right" Value="0" MaxValue="0" MinValue="0" ValueChanged="MaxTimeChanged">
         <syncfusion:UpDown.NumberFormatInfo>
           <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
         </syncfusion:UpDown.NumberFormatInfo>
