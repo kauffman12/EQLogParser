@@ -130,9 +130,6 @@
 	    <Component Win64="yes" Id="FontAwesome5.Net.dll" Guid="57EB460B-BA13-4DA0-9036-DC113FE8635B">
 	      <File Id="FontAwesome5.Net.dll" Name="FontAwesome5.Net.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.Net.dll" />
 	    </Component>		  
-      <Component Win64="yes" Id="WPFTextBoxAutoComplete.dll" Guid="2AE4D9AC-7BB6-4239-88B0-37E94A1B6944">
-        <File Id="WPFTextBoxAutoComplete.dll" Name="WPFTextBoxAutoComplete.dll" Source="$(var.EQLogParser.TargetDir)WPFTextBoxAutoComplete.dll" />
-      </Component>
       <Component Win64="yes" Id="Newtonsoft.Json.dll" Guid="6D0CCBFE-C08A-492C-8583-800E5E35D846">
         <File Id="Newtonsoft.Json.dll" Name="Newtonsoft.Json.dll" Source="$(var.EQLogParser.TargetDir)Newtonsoft.Json.dll" />
       </Component>
