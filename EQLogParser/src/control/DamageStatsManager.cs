@@ -133,7 +133,7 @@ namespace EQLogParser
                 myIndex = list.Count;
               }
 
-              if (myIndex == list.Count || selectedClass == Properties.Resources.ANY_CLASS || selectedClass == playerStats.ClassName)
+              if (myIndex == list.Count || selectedClass == EQLogParser.Resource.ANY_CLASS || selectedClass == playerStats.ClassName)
               {
                 list.Add(playerStats);
               }

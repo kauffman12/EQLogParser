@@ -8,6 +8,8 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -47,7 +49,7 @@ namespace EQLogParser
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void LogLoadingComplete(object sender, bool e) => Load();
-    private void MenuItemRefresh(object sender, RoutedEventArgs e) => Load();
+    private void RefreshClick(object sender, RoutedEventArgs e) => Load();
 
     private void SelectionChange(object sender, System.Collections.IList e)
     {

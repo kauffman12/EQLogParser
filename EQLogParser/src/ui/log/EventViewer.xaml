@@ -10,6 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <local:DateTimeConverter x:Key="DateTimeConverter" />
       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">
@@ -33,17 +34,15 @@
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showEnterZone" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Entered Area</CheckBox>
-      <CheckBox x:Name="showMezBreaks" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Mez Breaks</CheckBox>
-      <CheckBox x:Name="showKillShots" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Kill Shots</CheckBox>
-      <CheckBox x:Name="showPlayerKillsPlayer" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Player Killing</CheckBox>
-      <CheckBox x:Name="showPlayerSlain" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Player Slain</CheckBox>
-      <ComboBox x:Name="eventFilterModifier" Margin="0,0,0,2" SelectedIndex="0" Width="84" DropDownClosed="OptionsChange">
+      <ComboBox x:Name="eventFilterModifier" Margin="0,0,0,2" SelectedIndex="0" Width="84" DropDownClosed="FilterOptionChange">
         <ComboBoxItem>Includes</ComboBoxItem>
         <ComboBoxItem>Excludes</ComboBoxItem>
         <ComboBoxItem>Equals</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="eventFilter" Margin="0,0,8,2"  FontStyle="Italic" Width="190" LostFocus="Filter_LostFocus" GotFocus="Filter_GotFocus" PreviewKeyDown="Filter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
+      <TextBox x:Name="eventFilter" Margin="0,0,8,2"  FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" />
+      <ComboBox x:Name="selectedOptions" Width="140" Margin="0,0,8,2" 
+                DropDownClosed="SelectOptions" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
@@ -55,6 +54,7 @@
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
                            IsReadOnly="True"
+                           ItemsSourceChanged="ItemsSourceChanged"
                            RowHeaderWidth="30"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
@@ -84,12 +84,6 @@
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
-          </MenuItem>
-          <Separator />       
-          <MenuItem IsEnabled="True" Header="Reload Data" Click="MenuItemRefresh">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Redo" />
-            </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>      

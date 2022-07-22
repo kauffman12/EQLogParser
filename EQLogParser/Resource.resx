@@ -183,6 +183,9 @@
   <data name="NPC_SEARCH_TEXT" xml:space="preserve">
     <value>FIght/NPC Search</value>
   </data>
+  <data name="OPTIONS_SELECTED" xml:space="preserve">
+    <value>Options Selected</value>
+  </data>
   <data name="PAL" xml:space="preserve">
     <value>Paladin</value>
   </data>

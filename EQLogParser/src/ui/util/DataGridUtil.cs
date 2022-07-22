@@ -4,7 +4,6 @@ using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -289,7 +288,7 @@ namespace EQLogParser
       ConfigUtil.RemoveSetting("TankingBreakdownColumnsDisplayIndex");
       ConfigUtil.Save();
       _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.",
-        Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
+        EQLogParser.Resource.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     internal static void LoadColumns(ComboBox columnCombo, dynamic gridBase)
@@ -369,7 +368,7 @@ namespace EQLogParser
       columns = SetColumns(columnCombo, gridBase, updated);
 
       int selectedCount = 0;
-      List<ComboBoxItemDetails> list = new List<ComboBoxItemDetails>();
+      var list = new List<ComboBoxItemDetails>();
       for (int i = 0; i < columns.Count; i++)
       {
         list.Add(new ComboBoxItemDetails
@@ -382,7 +381,7 @@ namespace EQLogParser
       }
 
       columnCombo.ItemsSource = list;
-      SetSelectedColumnsTitle(columnCombo, selectedCount);
+      UIElementUtil.SetComboBoxTitle(columnCombo, selectedCount, EQLogParser.Resource.COLUMNS_SELECTED);
     }
 
     private static dynamic SetColumns(ComboBox columnCombo, SfDataGrid dataGrid, dynamic updated)
@@ -444,7 +443,7 @@ namespace EQLogParser
           }
         }
 
-        SetSelectedColumnsTitle(columnCombo, visible.Count);
+        UIElementUtil.SetComboBoxTitle(columnCombo, visible.Count, EQLogParser.Resource.COLUMNS_SELECTED);
 
         dynamic columns = null;
         if (gridBase is SfDataGrid)
@@ -466,19 +465,6 @@ namespace EQLogParser
           ConfigUtil.SetSetting(columnCombo.Tag.ToString(), string.Join(",", visible));
         }
       }
-    }
-
-    private static void SetSelectedColumnsTitle(ComboBox columns, int count)
-    {
-      if (!(columns.SelectedItem is ComboBoxItemDetails selected))
-      {
-        selected = columns.Items[0] as ComboBoxItemDetails;
-      }
-
-      string countString = columns.Items.Count == count ? "All" : count.ToString(CultureInfo.CurrentCulture);
-      selected.SelectedText = countString + " " + Properties.Resources.COLUMNS_SELECTED;
-      columns.SelectedIndex = -1;
-      columns.SelectedItem = selected;
     }
   }
 }

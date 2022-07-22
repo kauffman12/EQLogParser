@@ -24,6 +24,7 @@
       <ComboBox Margin="0,0,0,2" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
@@ -78,12 +79,6 @@
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
-          </MenuItem>
-          <Separator />
-          <MenuItem IsEnabled="True" Header="Reload Data" Click="MenuItemRefresh">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Redo" />
-            </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>

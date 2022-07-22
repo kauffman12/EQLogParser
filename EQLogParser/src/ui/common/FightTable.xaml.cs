@@ -53,7 +53,7 @@ namespace EQLogParser
 
       // fight search box
       fightSearchBox.FontStyle = FontStyles.Italic;
-      fightSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
+      fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
 
       menuItemClear.IsEnabled = menuItemSelectAll.IsEnabled = menuItemUnselectAll.IsEnabled =
       menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = false;
@@ -397,7 +397,7 @@ namespace EQLogParser
 
     private void FightSearchBoxGotFocus(object sender, RoutedEventArgs e)
     {
-      if (fightSearchBox.Text == Properties.Resources.NPC_SEARCH_TEXT)
+      if (fightSearchBox.Text == EQLogParser.Resource.NPC_SEARCH_TEXT)
       {
         fightSearchBox.Text = "";
         fightSearchBox.FontStyle = FontStyles.Normal;
@@ -408,7 +408,7 @@ namespace EQLogParser
     {
       if (fightSearchBox.Text.Length == 0)
       {
-        fightSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
+        fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
         fightSearchBox.FontStyle = FontStyles.Italic;
       }
     }
@@ -419,7 +419,7 @@ namespace EQLogParser
       {
         if (e.Key == Key.Escape)
         {
-          fightSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
+          fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
           fightSearchBox.FontStyle = FontStyles.Italic;
           if (CurrentSearchEntry != null)
           {

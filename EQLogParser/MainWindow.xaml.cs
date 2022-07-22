@@ -194,17 +194,6 @@ namespace EQLogParser
       ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
       // Show Healing Summary at startup
       ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
-
-      // allow for summary windows to load so the tab group gets created properly
-      Dispatcher.InvokeAsync(() =>
-      {
-        // Show Tanking Summary at startup
-        ConfigUtil.IfSet("ShowTankingChartAtStartup", OpenTankingChart);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowHealingChartAtStartup", OpenHealingChart);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowDamageChartAtStartup", OpenDamageChart);
-      }, DispatcherPriority.Background);
     }
 
     private void HandleChartUpdate(string key, DataPointEvent e)
@@ -308,7 +297,8 @@ namespace EQLogParser
       }
       else
       {
-        _ = MessageBox.Show("Nothing to Save. Display a Summary View and Try Again.", Properties.Resources.FILEMENU_EXPORT_SUMMARY, MessageBoxButton.OK, MessageBoxImage.Exclamation);
+        _ = MessageBox.Show("Nothing to Save. Display a Summary View and Try Again.", EQLogParser.Resource.FILEMENU_EXPORT_SUMMARY,
+          MessageBoxButton.OK, MessageBoxImage.Exclamation);
       }
     }
 
@@ -861,9 +851,6 @@ namespace EQLogParser
       ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", opened.ContainsKey(damageSummaryIcon.Tag as string).ToString());
       ConfigUtil.SetSetting("ShowHealingSummaryAtStartup", opened.ContainsKey(healingSummaryIcon.Tag as string).ToString());
       ConfigUtil.SetSetting("ShowTankingSummaryAtStartup", opened.ContainsKey(tankingSummaryIcon.Tag as string).ToString());
-      ConfigUtil.SetSetting("ShowDamageChartAtStartup", opened.ContainsKey(damageChartIcon.Tag as string).ToString());
-      ConfigUtil.SetSetting("ShowHealingChartAtStartup", opened.ContainsKey(healingChartIcon.Tag as string).ToString());
-      ConfigUtil.SetSetting("ShowTankingChartAtStartup", opened.ContainsKey(tankingChartIcon.Tag as string).ToString());
 
       StopProcessing();
       OverlayUtil.CloseOverlay();

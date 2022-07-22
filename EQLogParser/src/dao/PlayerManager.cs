@@ -65,7 +65,7 @@ namespace EQLogParser
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues(typeof(SpellClass)))
       {
-        string name = Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item), CultureInfo.CurrentCulture);
+        var name = EQLogParser.Resource.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item), CultureInfo.CurrentCulture);
         ClassNames[(SpellClass)item] = name;
         ClassesByName[name] = (SpellClass)item;
       }
