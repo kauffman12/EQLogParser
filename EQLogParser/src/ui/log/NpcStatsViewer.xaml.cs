@@ -140,7 +140,7 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
-    private void MenuItemRefresh(object sender, RoutedEventArgs e) => Load();
+    private void RefreshClick(object sender, RoutedEventArgs e) => Load();
     private void EventsLogLoadingComplete(object sender, bool e) => Load();
 
     #region IDisposable Support

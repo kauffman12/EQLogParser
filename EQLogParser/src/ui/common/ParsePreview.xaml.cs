@@ -36,9 +36,9 @@ namespace EQLogParser
       playerParseTextDoTime.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowTime", true);
 
       // this window is either hidden or visible and doesn't need to implement dispose
-      DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-      TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
 
       TitleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       TitleTimer.Tick += (sender, e) =>
@@ -51,7 +51,7 @@ namespace EQLogParser
         }
       };
 
-      customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+      customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
       customParseTitle.FontStyle = FontStyles.Italic;
       parseList.Focus();
       initialized = true;
@@ -120,12 +120,9 @@ namespace EQLogParser
       }
     }
 
-    private void CopyToEQButtonClick(object sender = null, RoutedEventArgs e = null)
-    {
-      CopyToEQClick(parseList.SelectedItem?.ToString());
-    }
+    private void CopyToEQButtonClick(object sender = null, RoutedEventArgs e = null) => CopyToEQClick(parseList.SelectedItem?.ToString());
 
-    private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    private void EventsGenerationStatus(object sender, StatsGenerationEvent e)
     {
       switch (e.State)
       {
@@ -173,26 +170,23 @@ namespace EQLogParser
 
     private void PlayerParseTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
-      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == Properties.Resources.SHARE_DPS_SELECTED)
+      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == EQLogParser.Resource.SHARE_DPS_SELECTED)
       {
-        copyToEQButton.IsEnabled = false;
-        sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_SELECTED;
+        sharePlayerParseLabel.Text = EQLogParser.Resource.SHARE_DPS_SELECTED;
         sharePlayerParseLabel.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
       }
       else if (playerParseTextBox.Text.Length > 509)
       {
-        copyToEQButton.IsEnabled = false;
-        sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_TOO_BIG;
+        sharePlayerParseLabel.Text = EQLogParser.Resource.SHARE_DPS_TOO_BIG;
         sharePlayerParseLabel.Foreground = Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Foreground = Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush; ;
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
-      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Properties.Resources.SHARE_DPS_SELECTED)
+      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != EQLogParser.Resource.SHARE_DPS_SELECTED)
       {
-        copyToEQButton.IsEnabled = true;
         if (parseList.SelectedItem != null && Parses.TryGetValue(parseList.SelectedItem as string, out ParseData data))
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
@@ -244,7 +238,7 @@ namespace EQLogParser
 
     private void CustomTitleGotFocus(object sender, RoutedEventArgs e)
     {
-      if (customParseTitle.Text == Properties.Resources.CUSTOM_PARSE_TITLE)
+      if (customParseTitle.Text == EQLogParser.Resource.CUSTOM_PARSE_TITLE)
       {
         customParseTitle.Text = "";
         customParseTitle.FontStyle = FontStyles.Normal;
@@ -255,7 +249,7 @@ namespace EQLogParser
     {
       if (customParseTitle.Text.Length == 0)
       {
-        customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+        customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
         customParseTitle.FontStyle = FontStyles.Italic;
       }
     }
@@ -264,7 +258,7 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape)
       {
-        customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+        customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
         customParseTitle.FontStyle = FontStyles.Italic;
         parseList.Focus();
       }
