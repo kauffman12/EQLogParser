@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace EQLogParser.Properties {
+namespace EQLogParser {
     using System;
     
     
@@ -19,17 +19,17 @@ namespace EQLogParser.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Resources {
+    internal class Resource {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
         private static global::System.Globalization.CultureInfo resourceCulture;
         
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal Resources() {
+        internal Resource() {
         }
         
         /// <summary>
@@ -39,7 +39,7 @@ namespace EQLogParser.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("EQLogParser.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("EQLogParser.Resource", typeof(Resource).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -106,29 +106,11 @@ namespace EQLogParser.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to End Date.
-        /// </summary>
-        internal static string CHAT_END_DATE {
-            get {
-                return ResourceManager.GetString("CHAT_END_DATE", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to From.
         /// </summary>
         internal static string CHAT_FROM_FILTER {
             get {
                 return ResourceManager.GetString("CHAT_FROM_FILTER", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Start Date.
-        /// </summary>
-        internal static string CHAT_START_DATE {
-            get {
-                return ResourceManager.GetString("CHAT_START_DATE", resourceCulture);
             }
         }
         
@@ -273,6 +255,15 @@ namespace EQLogParser.Properties {
         internal static string NPC_SEARCH_TEXT {
             get {
                 return ResourceManager.GetString("NPC_SEARCH_TEXT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Options Selected.
+        /// </summary>
+        internal static string OPTIONS_SELECTED {
+            get {
+                return ResourceManager.GetString("OPTIONS_SELECTED", resourceCulture);
             }
         }
         

@@ -49,7 +49,7 @@ namespace EQLogParser
     private Dictionary<int, double> PrevList = null;
     private bool IsHideOverlayOtherPlayersEnabled = false;
     private bool IsShowOverlayCritRateEnabled = false;
-    private string SelectedClass = Properties.Resources.ANY_CLASS;
+    private string SelectedClass = EQLogParser.Resource.ANY_CLASS;
     private int CurrentMaxRows = 5;
     private int CurrentFontSize = 13;
 
@@ -110,7 +110,7 @@ namespace EQLogParser
         WindowStyle = WindowStyle.SingleBorderWindow;
         SetVisible(true);
         var list = PlayerManager.Instance.GetClassList();
-        list.Insert(0, Properties.Resources.ANY_CLASS);
+        list.Insert(0, EQLogParser.Resource.ANY_CLASS);
         classesList.ItemsSource = list;
         classesList.SelectedItem = SelectedClass;
         maxRowsSelection.SelectedItem = maxRowsSelection.Items[CurrentMaxRows - 5];

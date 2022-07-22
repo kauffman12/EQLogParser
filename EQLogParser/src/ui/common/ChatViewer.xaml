@@ -20,28 +20,31 @@
       <RowDefinition Height="20" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,0,2" SelectionChanged="Player_Changed">
+      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,0,2" SelectionChanged="PlayerChanged" FontSize="14" FontWeight="Bold" Foreground="{StaticResource EQEQMenuIconBrush}">
         <ComboBoxItem Content="No Chat Data"/>
       </ComboBox>
-      <ComboBox x:Name="channels" Width="135" Margin="0,0,0,2" DropDownClosed="Channels_DropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
+      <ComboBox x:Name="channels" Width="135" Margin="0,0,0,2" DropDownClosed="ChannelsDropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
         <ComboBox.ItemContainerStyle>
           <Style>
-            <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="Channel_PreviewMouseDown"/>
+            <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="ChannelPreviewMouseDown"/>
           </Style>
         </ComboBox.ItemContainerStyle>
       </ComboBox>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <syncfusion:DateTimeEdit x:Name="startDate" Width="120" Margin="0,0,0,2" CanEdit="False" FlowDirection="RightToLeft" DateTimeChanged="SelectedDatesChanged"/>
+      <syncfusion:DateTimeEdit x:Name="startDate" Width="90" Margin="0,0,0,2" CanEdit="False" FlowDirection="RightToLeft" DateTimeChanged="SelectedDatesChanged"/>
       <fa:ImageAwesome Height="14" Width="14" Margin="8,0,8,0" HorizontalAlignment="Center" Icon="Solid_ArrowRight" Foreground="{StaticResource ContentForeground}"/>
-      <syncfusion:DateTimeEdit x:Name="endDate" Width="120" Margin="0,0,8,2" CanEdit="False" FlowDirection="RightToLeft" DateTimeChanged="SelectedDatesChanged"/>
-      <TextBox x:Name="toFilter" Margin="0,0,0,2" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Items}" behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase" FontStyle="Italic" Width="
-               0" LostFocus="ToFilter_LostFocus" GotFocus="ToFilter_GotFocus" PreviewKeyDown="ToFilter_KeyDown" TextChanged="Filter_TextChanged" />
-      <TextBox x:Name="fromFilter" Margin="0,0,0,2" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Items}" behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase" FontStyle="Italic" Width="100" LostFocus="FromFilter_LostFocus" GotFocus="FromFilter_GotFocus" PreviewKeyDown="FromFilter_KeyDown" TextChanged="Filter_TextChanged" />
-      <TextBox x:Name="textFilter" Margin="0,0,8,2" FontStyle="Italic" Width="200" LostFocus="TextFilter_LostFocus" GotFocus="TextFilter_GotFocus" PreviewKeyDown="TextFilter_KeyDown" TextChanged="Filter_TextChanged" />
+      <syncfusion:DateTimeEdit x:Name="endDate" Width="90" Margin="0,0,8,2" CanEdit="False" FlowDirection="RightToLeft" DateTimeChanged="SelectedDatesChanged"/>
+      <TextBox x:Name="toFilter" Margin="0,0,0,2" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Items}" 
+               behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase" FontStyle="Italic" Width="80" LostFocus="ToFilterLostFocus" GotFocus="ToFilterGotFocus" PreviewKeyDown="ToFilterKeyDown" TextChanged="FilterTextChanged" />
+      <TextBox x:Name="fromFilter" Margin="0,0,0,2" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Items}" 
+               behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase" FontStyle="Italic" Width="80" LostFocus="FromFilterLostFocus" GotFocus="FromFilterGotFocus" PreviewKeyDown="FromFilterKeyDown" TextChanged="FilterTextChanged" />
+      <TextBox x:Name="textFilter" Margin="0,0,8,2" FontStyle="Italic" Width="170" LostFocus="TextFilterLostFocus" GotFocus="TextFilterGotFocus" PreviewKeyDown="TextFilterKeyDown" TextChanged="FilterTextChanged" />
+      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <ScrollViewer x:Name="chatScroller" Grid.Row="1">
-      <RichTextBox x:Name="chatBox" FontSize="16" Margin="15" BorderThickness="0" IsInactiveSelectionHighlightEnabled="True" PreviewKeyDown="Chat_KeyDown" IsReadOnly="True" PreviewMouseWheel="Chat_MouseWheel">
+      <RichTextBox x:Name="chatBox" FontSize="16" Margin="15" BorderThickness="0" ContextMenu="{x:Null}" IsInactiveSelectionHighlightEnabled="True"
+                   PreviewKeyDown="ChatKeyDown" IsReadOnly="True" PreviewMouseWheel="ChatMouseWheel">
         <FlowDocument>
         </FlowDocument>
       </RichTextBox>
@@ -50,10 +53,10 @@
       <TextBlock x:Name="statusCount"/>
     </StatusBar>
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,1,0,0">
-      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="12" Width="120" SelectionChanged="FontFamily_Changed" />
-      <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="12" SelectionChanged="FontSize_Changed" />
+      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="12" Width="120" SelectionChanged="FontFamilyChanged" />
+      <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="12" SelectionChanged="FontSizeChanged" />
       <syncfusion:ColorPicker x:Name="colorPicker" Width="34" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
-        HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColor_Changed" />
+        HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColorChanged" />
     </StackPanel>
   </Grid>
 </UserControl>

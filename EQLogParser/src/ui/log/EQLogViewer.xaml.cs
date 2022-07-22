@@ -63,12 +63,12 @@ namespace EQLogParser
         fontSize.SelectedValue = logBox.FontSize;
       }
 
-      logSearch.Text = Properties.Resources.LOG_SEARCH_TEXT;
-      logSearch2.Text = Properties.Resources.LOG_SEARCH_TEXT;
+      logSearch.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
+      logSearch2.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
       progress.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
-      searchButton.Focus();
+      logBox.Focus();
 
-      logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
+      logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       FilterTimer.Tick += (sender, e) =>
       {
@@ -81,7 +81,7 @@ namespace EQLogParser
     {
       FilteredLinePositionMap.Clear();
 
-      if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT)
+      if (logFilter.Text == EQLogParser.Resource.LOG_FILTER_TEXT)
       {
         logBox.Text = string.Join(Environment.NewLine, UnFiltered);
         UpdateStatusCount(UnFiltered.Count);
@@ -90,7 +90,7 @@ namespace EQLogParser
           GoToLine(logBox, logBox.Lines.Count);
         }
       }
-      else if (logFilter.Text != Properties.Resources.LOG_FILTER_TEXT && logFilter.Text.Length > 1)
+      else if (logFilter.Text != EQLogParser.Resource.LOG_FILTER_TEXT && logFilter.Text.Length > 1)
       {
         var filtered = new List<string>();
         int lineCount = -1;
@@ -222,12 +222,12 @@ namespace EQLogParser
                   int firstIndex = -2;
                   int secondIndex = -2;
 
-                  if (logSearchText != Properties.Resources.LOG_SEARCH_TEXT && logSearchText.Length > 1)
+                  if (logSearchText != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
                   {
                     firstIndex = line.IndexOf(logSearchText, StringComparison.OrdinalIgnoreCase);
                   }
 
-                  if (logSearchText2 != Properties.Resources.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
+                  if (logSearchText2 != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
                   {
                     secondIndex = line.IndexOf(logSearchText2, StringComparison.OrdinalIgnoreCase);
                   }
@@ -279,7 +279,7 @@ namespace EQLogParser
 
                 // reset filter
                 tabControl.SelectedItem = resultsTab;
-                logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
+                logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
                 logFilter.FontStyle = FontStyles.Italic;
                 UpdateStatusCount(UnFiltered.Count);
                 if (logBox.Lines.Count > 0)
@@ -294,7 +294,7 @@ namespace EQLogParser
 
           Dispatcher.InvokeAsync(() =>
           {
-            searchButton.IsEnabled = true;
+            searchIcon.IsEnabled = true;
             searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
             progress.Visibility = Visibility.Hidden;
             Running = false;
@@ -304,7 +304,7 @@ namespace EQLogParser
       }
       else
       {
-        searchButton.IsEnabled = false;
+        searchIcon.IsEnabled = false;
         Running = false;
       }
     }
@@ -453,8 +453,8 @@ namespace EQLogParser
 
     private void SearchTextChange(object sender, RoutedEventArgs e)
     {
-      searchButton.IsEnabled = (logSearch.Text != Properties.Resources.LOG_SEARCH_TEXT && (logSearch.Text.Length > 1) ||
-        logSearch2.Text != Properties.Resources.LOG_SEARCH_TEXT && logSearch2.Text.Length > 1);
+      searchIcon.IsEnabled = (logSearch.Text != EQLogParser.Resource.LOG_SEARCH_TEXT && (logSearch.Text.Length > 1) ||
+        logSearch2.Text != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearch2.Text.Length > 1);
     }
 
     private void SearchKeyDown(object sender, KeyEventArgs e)
@@ -462,15 +462,15 @@ namespace EQLogParser
       var textBox = sender as TextBox;
       if (e.Key == Key.Escape)
       {
-        if (searchButton.Focus())
+        if (logBox.Focus())
         {
-          textBox.Text = Properties.Resources.LOG_SEARCH_TEXT;
+          textBox.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
           textBox.FontStyle = FontStyles.Italic;
         }
       }
       else if (e.Key == Key.Enter)
       {
-        searchButton.Focus();
+        logBox.Focus();
         SearchClick(sender, null);
       }
     }
@@ -478,7 +478,7 @@ namespace EQLogParser
     private void SearchGotFocus(object sender, RoutedEventArgs e)
     {
       var textBox = sender as TextBox;
-      if (textBox.Text == Properties.Resources.LOG_SEARCH_TEXT)
+      if (textBox.Text == EQLogParser.Resource.LOG_SEARCH_TEXT)
       {
         textBox.Text = "";
         textBox.FontStyle = FontStyles.Normal;
@@ -490,7 +490,7 @@ namespace EQLogParser
       var textBox = sender as TextBox;
       if (string.IsNullOrEmpty(textBox.Text))
       {
-        textBox.Text = Properties.Resources.LOG_SEARCH_TEXT;
+        textBox.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
         textBox.FontStyle = FontStyles.Italic;
       }
     }
@@ -526,7 +526,7 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape)
       {
-        logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
+        logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
         logFilter.FontStyle = FontStyles.Italic;
         logBox.Focus();
       }
@@ -534,7 +534,7 @@ namespace EQLogParser
 
     private void FilterGotFocus(object sender, RoutedEventArgs e)
     {
-      if (logFilter.Text == Properties.Resources.LOG_FILTER_TEXT)
+      if (logFilter.Text == EQLogParser.Resource.LOG_FILTER_TEXT)
       {
         logFilter.Text = "";
         logFilter.FontStyle = FontStyles.Normal;
@@ -545,7 +545,7 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(logFilter.Text))
       {
-        logFilter.Text = Properties.Resources.LOG_FILTER_TEXT;
+        logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
         logFilter.FontStyle = FontStyles.Italic;
       }
     }
@@ -579,7 +579,13 @@ namespace EQLogParser
       }
     }
 
-    private void tabControl_PreviewSelectedItemChangedEvent(object sender, Syncfusion.Windows.Tools.Controls.PreviewSelectedItemChangedEventArgs e)
+    private void SearchIconIsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+      var brush = (searchIcon.IsEnabled) ? "EQEQMenuIconBrush" : "ContentBackgroundAlt5";
+      searchIcon.Foreground = Application.Current.Resources[brush] as SolidColorBrush;
+    }
+
+    private void PreviewSelectedItemChangedEvent(object sender, Syncfusion.Windows.Tools.Controls.PreviewSelectedItemChangedEventArgs e)
     {
       if (e.NewSelectedItem == resultsTab)
       {
@@ -591,12 +597,13 @@ namespace EQLogParser
       }
     }
 
-    private void tabControl_TabClosed(object sender, Syncfusion.Windows.Tools.Controls.CloseTabEventArgs e)
+    private void TabClosed(object sender, Syncfusion.Windows.Tools.Controls.CloseTabEventArgs e)
     {
       // can only close the context and display the results
       UpdateStatusCount(logBox.Lines.Count - 1);
     }
 
     private void OptionsChange(object sender, EventArgs e) => UpdateUI();
+
   }
 }

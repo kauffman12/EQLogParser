@@ -14,8 +14,6 @@ namespace EQLogParser
   /// </summary>
   public partial class LootViewer : UserControl, IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     private const string ALLPLAYERS = "All Players";
     private const string ALLITEMS = "All Loot";
     private const string ONLYASS = "Only Assigned";
@@ -41,7 +39,7 @@ namespace EQLogParser
       string[] desc = new string[] { "Quantity" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LootViewer_EventsLogLoadingComplete;
+      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
       Load();
     }
 
@@ -114,6 +112,8 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void RefreshClick(object sender, RoutedEventArgs e) => Load();
+    private void EventsLogLoadingComplete(object sender, bool e) => Load();
 
     private void UpdateUI()
     {
@@ -222,9 +222,6 @@ namespace EQLogParser
       return string.Join(", ", values);
     }
 
-    private void LootViewer_EventsLogLoadingComplete(object sender, bool e) => Load();
-    private void MenuItemRefresh(object sender, RoutedEventArgs e) => Load();
-
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
 
@@ -232,7 +229,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LootViewer_EventsLogLoadingComplete;
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
         disposedValue = true;
       }
