@@ -1,0 +1,304 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+
+    </ResourceDictionary.MergedDictionaries>
+
+    <shared:StringToVisibility x:Key="StringToVisibilityConverter" />
+
+    <shared:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+
+    <Style x:Key="SyncfusionPinnableListBoxStyle" TargetType="{x:Type shared:PinnableListBox}">
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness1}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type shared:PinnableListBox}">
+                    <Grid x:Name="PART_Grid">
+                        <Border
+                            x:Name="Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="true">
+                            <Grid x:Name="ContenHost">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock
+                                    x:Name="Header"
+                                    Padding="4"
+                                    VerticalAlignment="Center"
+                                    FontSize="{StaticResource MaterialLightCustom.SubTitleTextStyle}"
+                                    FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                    Foreground="{StaticResource ContentForeground}"
+                                    Text="{TemplateBinding Header}" />
+                                <Line
+                                    Grid.Row="1"
+                                    Height="1"
+                                    HorizontalAlignment="Stretch"
+                                    SnapsToDevicePixels="true"
+                                    Stretch="Uniform"
+                                    Stroke="{StaticResource BorderAlt}"
+                                    StrokeThickness="{StaticResource MaterialLightCustom.StrokeThickness1}"
+                                    Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Header, Converter={StaticResource StringToVisibilityConverter}}"
+                                    X1="0"
+                                    X2="1"
+                                    Y1="0"
+                                    Y2="0" />
+                                <ScrollViewer x:Name="ScrollViewer" Grid.Row="2">
+                                    <Grid x:Name="ItemsContainer">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <shared:PinnableItemsControl
+                                            x:Name="PART_PinnedItems"
+                                            IsPinnedContainer="True"
+                                            ItemsSource="{Binding PinnedItems, RelativeSource={RelativeSource TemplatedParent}}" />
+                                        <Line
+                                            x:Name="pinline"
+                                            Grid.Row="1"
+                                            Height="1"
+                                            HorizontalAlignment="Stretch"
+                                            SnapsToDevicePixels="true"
+                                            Stretch="Uniform"
+                                            Stroke="{StaticResource BorderAlt}"
+                                            StrokeThickness="{StaticResource MaterialLightCustom.StrokeThickness1}"
+                                            Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=PinnedItems.Count, Converter={StaticResource CountToVisibilityConverter}}"
+                                            X1="0"
+                                            X2="1"
+                                            Y1="0"
+                                            Y2="0" />
+                                        <shared:PinnableItemsControl
+                                            x:Name="PART_UnpinnedItems"
+                                            Grid.Row="2"
+                                            ItemsSource="{Binding UnpinnedItems, RelativeSource={RelativeSource TemplatedParent}}" />
+                                    </Grid>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter TargetName="Header" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPinnableListBoxStyle}" TargetType="{x:Type shared:PinnableListBox}" />
+
+    <Style x:Key="MaterialPinnableButtonStyle" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border
+                        x:Name="border"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="0"
+                        SnapsToDevicePixels="true">
+                        <ContentPresenter
+                            x:Name="contentPresenter"
+                            Margin="{TemplateBinding Padding}"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                            Focusable="False"
+                            RecognizesAccessKey="True"
+                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionPinnableListBoxItemStyle" TargetType="{x:Type shared:PinnableListBoxItem}">
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness}" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type shared:PinnableListBoxItem}">
+
+                    <Border
+                        x:Name="OuterBorder"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="0"
+                        SnapsToDevicePixels="true"
+                        >
+                        <Grid x:Name="ContentHost" Background="{TemplateBinding Background}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid x:Name="ItemHost">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Rectangle
+                                    x:Name="InnerPath"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    RadiusX="3"
+                                    RadiusY="3" />
+                                <Grid Margin="{TemplateBinding Padding}" VerticalAlignment="Center">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Image
+                                        x:Name="Icon"
+                                        Grid.RowSpan="2"
+                                        VerticalAlignment="Center"
+                                        Source="{TemplateBinding Icon}" />
+                                    <ContentPresenter
+                                        x:Name="ItemContent"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        TextElement.FontFamily="{TemplateBinding FontFamily}"
+                                        TextElement.FontSize="{TemplateBinding FontSize}"
+                                        TextElement.FontWeight="{TemplateBinding FontWeight}" />
+                                    <TextBlock
+                                        x:Name="Description"
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontFamily="{TemplateBinding FontFamily}"
+                                        FontSize="{StaticResource MaterialLightCustom.CaptionText}"
+                                        FontWeight="{StaticResource MaterialLightCustom.FontWeightNormal}"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        Text="{TemplateBinding Description}"
+                                        TextTrimming="WordEllipsis"
+                                        Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Description, Converter={StaticResource StringToVisibilityConverter}}" />
+                                </Grid>
+                            </Grid>
+                            <Button
+                                x:Name="pinnedButton"
+                                Grid.Column="1"
+                                Width="24"
+                                Background="Transparent"
+                                BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                Command="{x:Static shared:PinnableListBoxItem.PinCommand}"
+                                Style="{StaticResource MaterialPinnableButtonStyle}"
+                                Visibility="Collapsed">
+                                <Path
+                                    x:Name="Pinpath"
+                                    Width="12"
+                                    Height="8"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom"
+                                    Fill="{StaticResource IconColor}"
+                                    Stretch="Fill" >
+                                    <Path.Data>
+                                        <PathGeometry>M5,0 L6,0 8,2 14,2 14,1 16,1 16,9 14,9 14,8 8,8 6,10 5,10 5,6 0,6 0,4 5,4 z</PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger SourceName="ContentHost" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ItemContent" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="Description" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="ContentHost" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="pinnedButton" Property="Visibility" Value="Visible" />
+
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="OuterBorder" Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
+                            <Setter TargetName="ItemContent" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="Description" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="ContentHost" Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
+
+                            <Setter TargetName="Pinpath" Property="Fill" Value="{StaticResource ContentForeground}"/>
+                        </Trigger>
+
+                        <Trigger SourceName="pinnedButton" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="pinnedButton" Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
+                        </Trigger>
+                        <Trigger SourceName="pinnedButton" Property="IsPressed" Value="True">
+                            <Setter TargetName="pinnedButton" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
+                        </Trigger>
+
+                        <Trigger Property="IsPinned" Value="True">
+                            <Setter TargetName="pinnedButton" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Pinpath" Property="Width" Value="12" />
+                            <Setter TargetName="Pinpath" Property="Height" Value="12" />
+                            <Setter TargetName="Pinpath" Property="Data">
+                                <Setter.Value>
+                                    <PathGeometry>M9.1920009,0 L14.849001,5.6580005 13.435001,7.0720008 12.728001,6.3650007 8.4850008,10.608001 8.4850008,13.436001 7.7780006,14.143002 4.9490005,11.315001 1.4140005,14.850001 0,13.436001 3.5350003,9.900001 0.70700026,7.0720008 1.4140005,6.3650007 4.2420003,6.3650007 8.4850008,2.1230001 7.7780006,1.415 z</PathGeometry>
+                                </Setter.Value>
+                            </Setter>
+
+                        </Trigger>                      
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="OuterBorder" Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
+                            <Setter TargetName="ItemContent" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter TargetName="Description" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter TargetName="ContentHost" Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
+                            <Setter TargetName="Pinpath" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                        </Trigger>
+                        <Trigger Property="Icon" Value="{x:Null}">
+                            <Setter TargetName="ItemContent" Property="Grid.ColumnSpan" Value="2" />
+                        </Trigger>
+                        <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                            <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionPinnableListBoxItemStyle}" TargetType="{x:Type shared:PinnableListBoxItem}" />
+
+</ResourceDictionary>

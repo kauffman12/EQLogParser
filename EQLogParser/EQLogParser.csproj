@@ -171,7 +171,8 @@
     <Analyzer Include="..\..\..\..\..\..\Program Files %28x86%29\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.IO.Compression.dll" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.WPF_NET50.csproj" />
+    <ProjectReference Include="..\MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.csproj" />
+    <ProjectReference Include="..\MaterialLightCustom\Syncfusion.Themes.MaterialLightCustom.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Syncfusion.Edit.Wpf">
@@ -192,6 +193,9 @@
     <Reference Include="Syncfusion.Themes.MaterialDark.WPF">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.Themes.MaterialDark.WPF.dll</HintPath>
     </Reference>
+    <Reference Include="Syncfusion.Themes.MaterialLight.WPF">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.Themes.MaterialLight.WPF.dll</HintPath>
+    </Reference>    
     <Reference Include="Syncfusion.Tools.Wpf">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.2.0.36\Assemblies\4.6\Syncfusion.Tools.WPF.dll</HintPath>
     </Reference>

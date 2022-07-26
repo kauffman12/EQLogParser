@@ -1,7 +1,6 @@
 ﻿using FontAwesome5;
 using log4net;
 using log4net.Core;
-using Syncfusion.SfSkinManager;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -25,6 +24,7 @@ namespace EQLogParser
   public partial class MainWindow : ChromelessWindow, IDisposable
   {
     internal event EventHandler<bool> EventsLogLoadingComplete;
+    internal event EventHandler<string> EventsThemeChanged;
 
     // global settings
     internal static string CurrentLogFile;
@@ -65,6 +65,7 @@ namespace EQLogParser
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
     private string CurrentTheme = "MaterialDark";
+    private bool DoneLoading = false;
 
     public MainWindow()
     {
@@ -76,15 +77,9 @@ namespace EQLogParser
         Width = resolution.Width * 0.85 / dpi.DpiScaleX;
         Height = resolution.Height * 0.75 / dpi.DpiScaleY;
 
-        // set theme
-        if (CurrentTheme == "MaterialDark")
-        {
-          SfSkinManager.SetTheme(this, new Theme("MaterialDarkCustom;MaterialDark"));
-          BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
-          Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
-          Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
-          Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
-        }
+        // load theme
+        CurrentTheme = ConfigUtil.GetSetting("CurrentTheme") ?? CurrentTheme;
+        MainActions.LoadTheme(this, CurrentTheme);
 
         InitializeComponent();
 
@@ -186,14 +181,19 @@ namespace EQLogParser
     {
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
     }
+
     private void DockSiteLoaded(object sender, RoutedEventArgs e)
     {
-      // Show Tanking Summary at startup
-      ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
-      // Show Healing Summary at startup
-      ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
-      // Show Healing Summary at startup
-      ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
+      if (!DoneLoading)
+      {
+        // Show Tanking Summary at startup
+        ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
+        DoneLoading = true;
+      }
     }
 
     private void HandleChartUpdate(string key, DataPointEvent e)
@@ -337,6 +337,8 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting("AutoMonitor", (enableAutoMonitorIcon.Visibility == Visibility.Hidden).ToString(CultureInfo.CurrentCulture));
       enableAutoMonitorIcon.Visibility = enableAutoMonitorIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+
+      MainActions.LoadTheme(this, "MaterialLight");
     }
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
@@ -381,6 +383,28 @@ namespace EQLogParser
       ConfigUtil.SetSetting("IgnoreCharmPets", IsIgnoreCharmPetsEnabled.ToString(CultureInfo.CurrentCulture));
       ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
       MessageBox.Show("Restart EQLogParser when changing the Ignore Charm Pets setting for it to take effect.");
+    }
+    
+    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e)
+    {
+      if (CurrentTheme != "MaterialDark")
+      {
+        CurrentTheme = "MaterialDark";
+        MainActions.LoadTheme(this, CurrentTheme);
+        ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
+        EventsThemeChanged?.Invoke(this, CurrentTheme);
+      }
+    }
+
+    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e)
+    {
+      if (CurrentTheme != "MaterialLight")
+      {
+        CurrentTheme = "MaterialLight";
+        MainActions.LoadTheme(this, CurrentTheme);
+        ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
+        EventsThemeChanged?.Invoke(this, CurrentTheme);
+      }
     }
 
     private void UpdateDamageOption(ImageAwesome icon, bool enabled, string option)
@@ -787,16 +811,27 @@ namespace EQLogParser
 
     private void WindowIconLoaded(object sender, RoutedEventArgs e)
     {
-      if (sender is FrameworkElement icon && icon.Tag is string name)
+      if (sender is FrameworkElement icon)
       {
-        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        if (opened.TryGetValue(name, out ContentControl control))
+        if (icon.Tag is string name)
         {
-          icon.Visibility = DockingManager.GetState(control) != DockState.Hidden ? Visibility.Visible : Visibility.Hidden;
+          var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+          if (opened.TryGetValue(name, out ContentControl control))
+          {
+            icon.Visibility = DockingManager.GetState(control) != DockState.Hidden ? Visibility.Visible : Visibility.Hidden;
+          }
+          else
+          {
+            icon.Visibility = Visibility.Hidden;
+          }
         }
-        else
+        else if (icon == themeDarkIcon)
         {
-          icon.Visibility = Visibility.Hidden;
+          icon.Visibility = CurrentTheme == "MaterialDark" ? Visibility.Visible : Visibility.Hidden;
+        }
+        else if (icon == themeLightIcon)
+        {
+          icon.Visibility = CurrentTheme == "MaterialLight" ? Visibility.Visible : Visibility.Hidden;
         }
       }
     }

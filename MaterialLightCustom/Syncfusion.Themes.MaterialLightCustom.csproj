@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <RootNamespace>Syncfusion.Themes.MaterialDarkCustom.WPF</RootNamespace>
-    <AssemblyName>Syncfusion.Themes.MaterialDarkCustom.WPF</AssemblyName>
+    <RootNamespace>Syncfusion.Themes.MaterialLightCustom.WPF</RootNamespace>
+    <AssemblyName>Syncfusion.Themes.MaterialLightCustom.WPF</AssemblyName>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <EnableDefaultEmbeddedResourceItems>False</EnableDefaultEmbeddedResourceItems>
     <EnableDefaultItems>false</EnableDefaultItems>
-	<ProjectGuid>{8df8c0e0-12b0-42da-b928-7d4d5b51639a}</ProjectGuid>
+	<ProjectGuid>{fa4bc5a6-b47e-4c88-99cf-2e7480ee5514}</ProjectGuid>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -38,13 +38,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release-Xml|AnyCPU'">
     <OutputPath>bin\Release-Xml\</OutputPath>
     <DefineConstants>TRACE;NETCORE;NET50;</DefineConstants>
-    <DocumentationFile>..\bin\Release-Xml\Syncfusion.Themes.MaterialDarkCustom.WPF.XML</DocumentationFile>
+    <DocumentationFile>..\bin\Release-Xml\Syncfusion.Themes.MaterialLightCustom.WPF.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug-Xml|AnyCPU'">
     <OutputPath>bin\Debug-Xml\</OutputPath>
     <DefineConstants>TRACE;DEBUG;NETCORE;NET50;</DefineConstants>
-    <DocumentationFile>..\bin\Debug-Xml\Syncfusion.Themes.MaterialDarkCustom.WPF.XML</DocumentationFile>
+    <DocumentationFile>..\bin\Debug-Xml\Syncfusion.Themes.MaterialLightCustom.WPF.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
@@ -69,9 +69,14 @@
 		<PackageReference Include="Syncfusion.PivotTable.Wpf" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.SfChart.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.SfDiagram.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfGauge.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfKanban.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfTreeMap.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfMaps.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.SfSmithChart.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.SfSunburstChart.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.SfBulletGraph.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfHeatMap.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.Tools.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.SfColorPalette.WPF" Version="20.2.0.36" />
@@ -90,9 +95,10 @@
 		<PackageReference Include="Syncfusion.Edit.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.SfSpreadsheet.WPF" Version="20.2.0.36" />
 		<PackageReference Include="Syncfusion.SfImageEditor.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfDiagramRibbon.WPF" Version="20.2.0.36" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MaterialDarkCustomSkinHelper.cs" />
+    <Compile Include="MaterialLightCustomSkinHelper.cs" />
 	<!-- Fluent Control Reference -->
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
@@ -305,11 +311,7 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="PrintPreviewControl\PrintPreviewControl.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\GroupBox.xaml">
+	<Page Include="PrintPreview\PrintPreview.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -317,11 +319,11 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="PrintPreview\PrintPreview.xaml">
+	<Page Include="PrintPreviewControl\PrintPreviewControl.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="Stencil\Stencil.xaml">
+	<Page Include="MSControl\GroupBox.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -545,6 +547,34 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
+	<Page Include="Ribbon\Ribbon.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Ribbon\QATCustomizationDialog.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\RadioButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\TabControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="TreeViewAdv\TreeViewAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GlyphTreeExpander.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\TreeView.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
 	<Page Include="TabSplitter\TabSplitter.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
@@ -573,10 +603,6 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="MSControl\RadioButton.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
 	<Page Include="MSControl\FlatToggleButton.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
@@ -590,14 +616,6 @@
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="SfNavigationDrawer\PrimarySfNavigationDrawer.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="TreeViewAdv\TreeViewAdv.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\GlyphTreeExpander.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -630,10 +648,6 @@
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="SfRichTextBoxAdv\SfRichTextRibbon.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\TabControl.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -670,18 +684,6 @@
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="MSControl\StatusBar.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="Ribbon\Ribbon.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="Ribbon\QATCustomizationDialog.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\TreeView.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>

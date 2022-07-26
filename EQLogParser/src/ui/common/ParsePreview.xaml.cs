@@ -173,16 +173,16 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == EQLogParser.Resource.SHARE_DPS_SELECTED)
       {
         sharePlayerParseLabel.Text = EQLogParser.Resource.SHARE_DPS_SELECTED;
-        sharePlayerParseLabel.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush; ;
+        sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
         sharePlayerParseWarningLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
       }
       else if (playerParseTextBox.Text.Length > 509)
       {
         sharePlayerParseLabel.Text = EQLogParser.Resource.SHARE_DPS_TOO_BIG;
-        sharePlayerParseLabel.Foreground = Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush; ;
+        sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "EQWarnForegroundBrush");
         sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
-        sharePlayerParseWarningLabel.Foreground = Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush; ;
+        sharePlayerParseWarningLabel.SetResourceReference(TextBlock.ForegroundProperty, "EQWarnForegroundBrush");
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
       else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != EQLogParser.Resource.SHARE_DPS_SELECTED)
@@ -194,9 +194,9 @@ namespace EQLogParser
           sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
         }
 
-        sharePlayerParseLabel.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush; ;
+        sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
         sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + " / " + 509;
-        sharePlayerParseWarningLabel.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush; ;
+        sharePlayerParseWarningLabel.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
     }

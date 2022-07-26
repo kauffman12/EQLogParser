@@ -1,0 +1,610 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	
+    xmlns:local="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Shared.WPF"
+    xmlns:skin="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+   >
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <local:SizeToDoubleConverter x:Key="sizeToDoubleConverter"/>
+
+    <DataTemplate x:Key="LargeIconTemplate">
+        <Image x:Name="LargeImage"
+            Width="{Binding Width, RelativeSource={RelativeSource TemplatedParent}}"
+            Height="{Binding Height, RelativeSource={RelativeSource TemplatedParent}}"
+            Source="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="SmallIconTemplate">
+        <Image x:Name="smallimage"
+            Width="{Binding Width, RelativeSource={RelativeSource TemplatedParent}}"
+            Height="{Binding Height, RelativeSource={RelativeSource TemplatedParent}}"
+            Source="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" />
+    </DataTemplate>
+
+    <ControlTemplate x:Key="SyncfusionDropDownButtonAdvControlTemplate" TargetType="{x:Type local:DropDownButtonAdv}">
+        <Grid>
+            <Border
+                Name="ItemBorder1"
+                MinHeight="{StaticResource MaterialLightCustom.MinHeight}"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}"
+                Effect="{StaticResource Default.ShadowDepth1}"
+                SnapsToDevicePixels="True"
+                >
+                <StackPanel
+                    Margin="{TemplateBinding Padding}"
+                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                    <ContentPresenter x:Name="LargeIconContent" ContentTemplate="{TemplateBinding IconTemplate}" Content="{Binding }" Margin="2"
+                                                              MinWidth="{TemplateBinding MinWidth}"
+                                                              MinHeight="{TemplateBinding MinHeight}"
+                                                              ContentTemplateSelector="{TemplateBinding IconTemplateSelector}"/>
+                    <TextBlock
+                        x:Name="PART_TextAreaLarge"
+                        Margin="2,0,4,0"
+						Text="{TemplateBinding Label}"
+                        TextBlock.FontFamily="{TemplateBinding FontFamily}"
+                        TextBlock.FontSize="{TemplateBinding FontSize}"
+                        TextBlock.FontWeight="{TemplateBinding FontWeight}"
+                        HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                        VerticalAlignment="{TemplateBinding VerticalAlignment}" >
+                    </TextBlock>
+                    <Path
+                                    x:Name="Arrow"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Width="8"
+                                    Height="5"
+                                    Fill="{StaticResource IconColor}">
+                        <Path.Data>
+                            <PathGeometry>M 0 0 L 4 4 L 8 0 Z</PathGeometry>
+                        </Path.Data>
+                        <Path.Margin>
+                            <Thickness>0</Thickness>
+                        </Path.Margin>
+                        <Path.LayoutTransform>
+                            <RotateTransform Angle="0"/>
+                        </Path.LayoutTransform>
+                    </Path>
+                </StackPanel>
+            </Border>
+            <Popup
+                x:Name="PART_DropDown"
+                AllowsTransparency="True"
+                Placement="Bottom"
+                StaysOpen="{TemplateBinding StaysOpen}">
+                <Border
+                    MinWidth="{TemplateBinding MinWidth}"
+                    MinHeight="{TemplateBinding MinHeight}"
+                    Background="{StaticResource PopupBackground}"
+                    BorderBrush="{StaticResource BorderAlt}"
+                    
+                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                    Effect="{StaticResource Default.ShadowDepth2}">
+                    <Border.Margin>
+                        <Thickness>8,1,8,8</Thickness>
+                    </Border.Margin>
+                    <ContentPresenter/>
+                </Border>
+            </Popup>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter TargetName="Arrow" Property="Path.Margin" Value="0,5,0,0" />
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                <Setter Property="Data" TargetName="Arrow" Value="M 0 0 L 6 6 L 12 0 Z"/>
+                <Setter Property="Width" TargetName="Arrow" Value="12"/>
+                <Setter Property="Height" TargetName="Arrow" Value="10"/>
+            </Trigger>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter TargetName="ItemBorder1" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
+                <Setter TargetName="ItemBorder1" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                <Setter TargetName="PART_TextAreaLarge" Property="TextBlock.Foreground" Value="{StaticResource SecondaryForeground}" />
+                <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+                <Setter TargetName="Arrow" Property="Path.Fill" Value="{StaticResource IconColor}" />
+                <Setter TargetName="ItemBorder1" Property="Effect" Value="{StaticResource Default.ShadowDepth2}" />
+            </Trigger>
+            <Trigger Property="IsMultiLine" Value="True">
+                <Setter Property="TextBlock.TextWrapping" Value="Wrap" TargetName="PART_TextAreaLarge"/>
+            </Trigger>
+            <Trigger Property="IsMultiLine" Value="False">
+                <Setter Property="TextBlock.TextWrapping" Value="NoWrap" TargetName="PART_TextAreaLarge"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="true">
+                <Setter TargetName="ItemBorder1" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
+                <Setter TargetName="ItemBorder1" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                <Setter TargetName="PART_TextAreaLarge" Property="TextBlock.Foreground" Value="{StaticResource SecondaryForeground}" />
+                <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+                <Setter TargetName="Arrow" Property="Path.Fill" Value="{StaticResource IconColor}" />
+                <Setter TargetName="ItemBorder1" Property="Effect" Value="{StaticResource Default.ShadowDepth2}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="ItemBorder1" Property="Border.Background" Value="{StaticResource SecondarySelectionBackground}" />
+                <Setter TargetName="ItemBorder1" Property="Border.BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                <Setter TargetName="PART_TextAreaLarge" Property="TextBlock.Foreground" Value="{StaticResource SecondaryForeground}" />
+                <Setter TargetName="Arrow" Property="Path.Fill" Value="{StaticResource IconColor}"/>
+                <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+                <Setter TargetName="ItemBorder1" Property="Effect" Value="{StaticResource Default.ShadowDepth3}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="LargeIconContent" Property="Opacity" Value="0.38" />
+                <Setter TargetName="ItemBorder1" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
+                <Setter TargetName="ItemBorder1" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                <Setter TargetName="PART_TextAreaLarge" Property="TextBlock.Foreground" Value="{StaticResource SecondaryForegroundDisabled}" />
+                <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundDisabled}" />
+                <Setter Property="Effect" TargetName="ItemBorder1" Value="{x:Null}"/>
+            </Trigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="IconTemplate" Value="{x:Null}"/>
+                    <Condition Property="IconTemplateSelector" Value="{x:Null}"/>
+                </MultiTrigger.Conditions>
+                <Setter Property="ContentTemplate" TargetName="LargeIconContent" Value="{StaticResource LargeIconTemplate}"/>
+                <Setter Property="Tag" TargetName="LargeIconContent" Value="{Binding LargeIcon, RelativeSource={RelativeSource TemplatedParent}}"/>
+            </MultiTrigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style x:Key="SyncfusionDropDownButtonAdvStyle" TargetType="{x:Type local:DropDownButtonAdv}">
+        <Setter Property="SmallIcon" Value="/Syncfusion.Shared.WPF;component//Controls/ButtonControls/Images/WordArt16.png" />
+        <Setter Property="LargeIcon" Value="/Syncfusion.Shared.WPF;component//Controls/ButtonControls/Images/WordArt32.png" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Label" Value="Dropdown Button" />
+        <Setter Property="Background" Value="{StaticResource SecondaryBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource SecondaryBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightMedium}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:DropDownButtonAdv}">
+                    <Grid>
+                        <Border
+                            Name="ItemBorder"
+                            MinHeight="{StaticResource MaterialLightCustom.MinHeight}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}"
+                            Effect="{StaticResource Default.ShadowDepth1}"
+                            SnapsToDevicePixels="True"
+                            >
+                            <Grid Margin="{TemplateBinding Padding}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition x:Name="dropDownColumn" Width="30" />
+                                </Grid.ColumnDefinitions>
+                                <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition />
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter x:Name="SmallIconContent" ContentTemplate="{TemplateBinding IconTemplate}" Content="{Binding }" Margin="2"
+                                                              ContentTemplateSelector="{TemplateBinding IconTemplateSelector}"/>
+                                    <TextBlock
+                                        x:Name="PART_Text"
+                                        Grid.Column="1"
+                                        Margin="2,0,4,0"
+                                        HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                        FontFamily="{TemplateBinding FontFamily}"
+                                        FontSize="{TemplateBinding FontSize}"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        FontWeight="{TemplateBinding FontWeight}"
+                                        Text="{TemplateBinding Label}" />
+                                </Grid>
+                                <Path
+                                    x:Name="Arrow"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Width="8"
+                                    Height="5"
+                                    Fill="{StaticResource IconColor}">
+                                    <Path.Data>
+                                        <PathGeometry>M 0 0 L 4 4 L 8 0 Z</PathGeometry>
+                                    </Path.Data>
+                                    <Path.Margin>
+                                        <Thickness>0</Thickness>
+                                    </Path.Margin>
+                                    <Path.LayoutTransform>
+                                        <RotateTransform Angle="0"/>
+                                    </Path.LayoutTransform>
+                                </Path>
+                            </Grid>
+                        </Border>
+
+                        <Popup
+                            x:Name="PART_DropDown"
+                            AllowsTransparency="True"
+                            Placement="Bottom"
+                            StaysOpen="{TemplateBinding StaysOpen}">
+                            <Border
+                                MinWidth="{TemplateBinding MinWidth}"
+                                MinHeight="{TemplateBinding MinHeight}"
+                                Background="{StaticResource PopupBackground}"
+                                BorderBrush="{StaticResource BorderAlt}"
+                                
+                                BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                Effect="{StaticResource Default.ShadowDepth2}">
+                                <Border.Margin>
+                                    <Thickness>8,1,8,8</Thickness>
+                                </Border.Margin>
+                                <ContentPresenter/>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="SizeMode" Value="Small">
+                            <Setter TargetName="dropDownColumn" Property="Width" Value="Auto"/>
+                            <Setter TargetName="Arrow" Property="Margin" Value="2,1,2,1"/>
+                            <Setter TargetName="PART_Text" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="Arrow" Property="Path.Margin" Value="0,5,0,0" />
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter Property="Data" TargetName="Arrow" Value="M 0 0 L 6 6 L 12 0 Z"/>
+                            <Setter Property="Width" TargetName="Arrow" Value="12"/>
+                            <Setter Property="Height" TargetName="Arrow" Value="10"/>
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="ItemBorder" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="PART_Text" Property="TextBlock.Foreground" Value="{StaticResource SecondaryForeground}" />
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+                            <Setter TargetName="Arrow" Property="Path.Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="ItemBorder" Property="Effect" Value="{StaticResource Default.ShadowDepth2}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter TargetName="ItemBorder" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="ItemBorder" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="PART_Text" Property="TextBlock.Foreground" Value="{StaticResource SecondaryForeground}" />
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+                            <Setter TargetName="Arrow" Property="Path.Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="ItemBorder" Property="Effect" Value="{StaticResource Default.ShadowDepth2}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Border.Background" Value="{StaticResource SecondarySelectionBackground}" />
+                            <Setter TargetName="ItemBorder" Property="Border.BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                            <Setter TargetName="PART_Text" Property="TextBlock.Foreground" Value="{StaticResource SecondaryForeground}" />
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+                            <Setter TargetName="Arrow" Property="Path.Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="ItemBorder" Property="Effect" Value="{StaticResource Default.ShadowDepth3}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="SmallIconContent" Property="Border.Opacity" Value="0.38" />
+                            <Setter TargetName="ItemBorder" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="ItemBorder" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="PART_Text" Property="TextBlock.Foreground" Value="{StaticResource SecondaryForegroundDisabled}" />
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundDisabled}" />
+                            <Setter TargetName="Arrow" Property="Path.Fill" Value="{StaticResource IconDisabledColor}" />
+                            <Setter Property="Effect" TargetName="ItemBorder" Value="{x:Null}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IconTemplate" Value="{x:Null}"/>
+                                <Condition Property="IconTemplateSelector" Value="{x:Null}"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="ContentTemplate" TargetName="SmallIconContent" Value="{StaticResource SmallIconTemplate}"/>
+                            <Setter Property="Tag" TargetName="SmallIconContent" Value="{Binding SmallIcon, RelativeSource={RelativeSource TemplatedParent}}"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="SizeMode" Value="Large">
+                <Setter Property="Template" Value="{StaticResource SyncfusionDropDownButtonAdvControlTemplate}" />
+            </Trigger>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionDropDownButtonAdvStyle}" TargetType="{x:Type local:DropDownButtonAdv}" />
+
+    <Style x:Key="SyncfusionDropDownMenuGroupStyle" TargetType="{x:Type local:DropDownMenuGroup}">
+        <Setter Property="Background" Value="{StaticResource PopupBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:DropDownMenuGroup}">
+                    <Grid Name="gri" Background="{TemplateBinding Background}">
+                        <Grid.Resources>
+                            <local:TextToVisibilityConverter x:Key="TextConverter" />
+                            <BooleanToVisibilityConverter x:Key="BoolConverter" />
+                            <local:VisibilityToThicknessConverter x:Key="ThicknessConverter" />
+                        </Grid.Resources>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Border
+                            x:Name="PART_Header"
+                            Grid.Row="0"
+                            Height="20"
+                            HorizontalAlignment="Stretch"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="0"
+                            Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Header, Converter={StaticResource TextConverter}}">
+                            <ContentControl
+                                x:Name="header"
+                                Margin="5,0,0,0"
+                                VerticalAlignment="Center"
+                                HorizontalContentAlignment="Left"
+                                Content="{TemplateBinding Header}"
+                                FontWeight="Bold"
+                                Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <Border Grid.Row="1">
+                            <Grid>
+                                <Border
+                                    x:Name="IconTray"
+                                    Width="23"
+                                    HorizontalAlignment="Left"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness0010}"
+                                    Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IconBarEnabled, Converter={StaticResource BoolConverter}}" />
+                                <Border>
+                                    <ScrollViewer
+                                        x:Name="PART_ScrollViewer"
+                                        BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ScrollBarVisibility, Converter={StaticResource ThicknessConverter}}"
+                                        KeyboardNavigation.DirectionalNavigation="Cycle"
+                                        VerticalScrollBarVisibility="{TemplateBinding ScrollBarVisibility}">
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <Border Grid.Row="2">
+                            <Grid>
+                                <Border
+                                    Width="23" x:Name="MoreitemBar"
+                                    HorizontalAlignment="Left"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness0010}"
+                                    Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsMoreItemsIconTrayEnabled, Converter={StaticResource BoolConverter}}" />
+                                <ItemsControl ItemsSource="{TemplateBinding MoreItems}" />
+                            </Grid>
+                        </Border>
+                        <Border
+                            Grid.Row="3"
+                            Width="{Binding ElementName=PART_ResizeThumb, Path=ActualWidth}"
+                            HorizontalAlignment="Stretch"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="0,1,0,0"
+                            Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsResizable, Converter={StaticResource BoolConverter}}">
+                            <Grid>
+                                <Border HorizontalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border
+                                            Width="3"
+                                            Height="3"
+                                            Background="Transparent" />
+                                        <Border
+                                            Width="3"
+                                            Height="3"
+                                            Margin="-5,0,0,0"
+                                            Background="{StaticResource IconColor}"
+                                            SnapsToDevicePixels="True" />
+                                        <Border
+                                            Width="3"
+                                            Height="3"
+                                            Margin="3,0,0,0"
+                                            Background="Transparent"
+                                            CornerRadius="2" />
+                                        <Border
+                                            Width="3"
+                                            Height="3"
+                                            Margin="-5,0,0,0"
+                                            Background="{StaticResource IconColor}"
+                                            SnapsToDevicePixels="True" />
+                                        <Border
+                                            Width="3"
+                                            Height="3"
+                                            Margin="3,0,0,0"
+                                            Background="Transparent"
+                                            CornerRadius="2" />
+                                        <Border
+                                            Width="3"
+                                            Height="3"
+                                            Margin="-5,0,0,0"
+                                            Background="{StaticResource IconColor}"
+                                            SnapsToDevicePixels="True" />
+                                    </StackPanel>
+                                </Border>
+                                <Thumb
+                                    x:Name="PART_ResizeThumb"
+                                    Cursor="SizeNS"
+                                    Opacity="0" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="IconTray" Property="Width" Value="{StaticResource MaterialLightCustom.IconPanelSize}" />
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionDropDownMenuGroupStyle}" TargetType="{x:Type local:DropDownMenuGroup}" />
+
+    <Style x:Key="SyncfusionDropDownMenuItemStyle" TargetType="{x:Type local:DropDownMenuItem}">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Background" Value="{StaticResource PopupBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="MinHeight" Value="24" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:DropDownMenuItem">
+                    <Border
+                        Name="Bd"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid
+                            x:Name="DropDownTray"
+                            Margin="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="Icontraywidth" Width="25" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition x:Name="SubItemPath" Width="20" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.Resources>
+                                <BooleanToVisibilityConverter x:Key="BoolConverter" />
+                            </Grid.Resources>
+                            <Border Grid.Column="1">
+                                <ContentControl
+                                    Name="content"
+                                    Margin="0"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    Content="{TemplateBinding Header}"
+                                    ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    IsTabStop="False" />
+                            </Border>
+                            <Border Grid.Column="2">
+                                <Path     
+                                        Name="path"    
+                                        Height="5" Width="3"
+                                        Margin="0,0,7,0"
+                                        VerticalAlignment="Center" HorizontalAlignment="Right"
+                                        Data="M0,0L4,3.5 0,7z"
+                                        Fill="{StaticResource IconColor}" 
+										Stroke="{StaticResource IconColor}"
+                                        Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=HasItems, Converter={StaticResource BoolConverter}}" />
+                            </Border>
+                            <Border Margin="2">
+                                <ContentControl
+                                    x:Name="Part_Icon"
+                                    Width="{TemplateBinding IconSize, Converter= {StaticResource sizeToDoubleConverter}, ConverterParameter=width}"
+                                    Height="{TemplateBinding IconSize, Converter= {StaticResource sizeToDoubleConverter}, ConverterParameter=height}" 
+                                    Margin="1"
+                                    BorderThickness="2"
+                                    Content="{TemplateBinding Icon}"
+                                    IsTabStop="False" />
+                            </Border>
+                            <Border
+                                x:Name="PART_CheckedBorder"
+                                Width="18"
+                                Height="18"
+                                Margin="2"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                SnapsToDevicePixels="True"
+                                Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsChecked, Converter={StaticResource BoolConverter}}">
+                                <Path
+                                    x:Name="CheckIcon"
+                                    Width="10.5"
+                                    Height="10"
+                                    Data="M102.03442,598.79645 L105.22962,597.78918 L106.78825,600.42358 C106.78825,600.42358 108.51028,595.74304 110.21724,593.60419 C112.00967,591.35822 114.89314,591.42316 114.89314,591.42316 C114.89314,591.42316 112.67844,593.42645 111.93174,594.44464 C110.7449,596.06293 107.15683,604.13837 107.15683,604.13837 z"
+                                    Fill="{TemplateBinding Foreground}"
+                                    FlowDirection="LeftToRight"
+                                    Stretch="Fill" />
+                            </Border>
+                            <Popup
+                                x:Name="PART_DropDown"
+                                Margin="2,0,0,0"
+                                AllowsTransparency="True"
+                                IsOpen="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsMouseOver, Mode=OneWay}"
+                                Placement="Right"
+                                VerticalOffset="1"
+                                Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=HasItems, Converter={StaticResource BoolConverter}}">
+                                <Grid x:Name="PART_poup">
+                                    <Border
+                                        Width="{Binding Path=ActualWidth, ElementName=DropDownTray}"
+                                        Background="{StaticResource PopupBackground}"
+                                        BorderBrush="{StaticResource BorderAlt}"
+                                        BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                        
+                                        SnapsToDevicePixels="True">
+                                        <ItemsPresenter Margin="2"/>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="Width" TargetName="Icontraywidth" Value="{StaticResource MaterialLightCustom.IconPanelSize}"/>
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Bd" Property="Border.Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="Bd" Property="Border.BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="content" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="path" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Border.Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="Bd" Property="Border.BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="content" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="content" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="path" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Border.Background" Value="{StaticResource ContentBackgroundSelection}" />
+                            <Setter TargetName="Bd" Property="Border.BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="content" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="path" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Border.Background" Value="{StaticResource PopupBackground}" />
+                            <Setter TargetName="Bd" Property="Border.BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="content" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter TargetName="path" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter Property="Background" Value="{StaticResource PopupBackground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionDropDownMenuItemStyle}" TargetType="{x:Type local:DropDownMenuItem}" />
+
+</ResourceDictionary>

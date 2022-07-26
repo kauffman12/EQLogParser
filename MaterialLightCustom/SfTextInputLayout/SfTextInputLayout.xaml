@@ -1,0 +1,165 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sync="clr-namespace:Syncfusion.UI.Xaml.TextInputLayout;assembly=Syncfusion.SfTextInputLayout.WPF"
+                    
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+    
+    <BooleanToVisibilityConverter x:Key="VisibilityConverter" />
+
+    <Style  x:Key="SyncfusionSfTextInputLayoutStyle"
+            TargetType="sync:SfTextInputLayout">
+        <Setter Property="OutlineCornerRadius" Value="4"></Setter>
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness}"></Setter>
+        <Setter Property="FocusedStrokeThickness" Value="{StaticResource MaterialLightCustom.StrokeThickness2}"></Setter>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialLightCustom.CaptionText}"></Setter>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialLightCustom.ThemeFontFamily}"></Setter>
+        <Setter Property="Foreground"
+                Value="{StaticResource PlaceholderForeground}"></Setter>
+        <Setter Property="FocusedForeground"
+                Value="{StaticResource PrimaryColorForeground}"></Setter>
+        <Setter Property="ErrorForeground"
+                Value="{StaticResource ErrorForeground}"></Setter>
+        <Setter Property="IsTabStop"
+                Value="False" />
+        <Setter Property="ContainerBackground"
+                Value="{StaticResource ContentBackgroundAlt2}"></Setter>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource Border}"></Setter>
+        <Setter Property="FocusedBorderBrush"
+                Value="{StaticResource PrimaryBackground}"></Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type sync:SfTextInputLayout}">
+                    <StackPanel>
+                        <Grid x:Name="ContentGrid"
+                              Background="Transparent">
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="0" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="0" />
+                                <ColumnDefinition Width="0" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock x:Name="PART_HintTextBlock"
+                                       Panel.ZIndex="1"
+                                       Grid.Row="0"
+                                       Grid.RowSpan="4"
+                                       Grid.Column="1"                                       
+                                       FontFamily="{TemplateBinding FontFamily}"
+                                       IsHitTestVisible="False"
+                                       Text="{TemplateBinding Hint}"
+                                       Visibility="{TemplateBinding HintVisibility}"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Center">
+                            </TextBlock>
+
+                            <Border x:Name="PART_ToggleButtonBorder" Grid.RowSpan="4" 
+                                    Visibility="Collapsed" 
+                                    Grid.Column="1" Panel.ZIndex="2"
+                                    HorizontalAlignment="Right"
+                                    IsHitTestVisible="False">
+                                <Path VerticalAlignment="Center" x:Name="Arrow"
+                                      Width="9" Height="7" Stretch="Fill">
+                                    <Path.Data>
+                                        <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                            </Border>
+
+                            <Grid x:Name="PART_BottomGrid"
+                                  Grid.Row="4"
+                                  Grid.Column="1"
+                                  Grid.ColumnSpan="2">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock x:Name="PART_HelperTextBlock"
+                                           Grid.Row="0"
+                                           Grid.Column="0"
+                                           Padding="0,4,0,0"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           FontFamily="{TemplateBinding FontFamily}"
+                                           Foreground="{StaticResource ContentForegroundAlt}"
+                                           Text="{TemplateBinding HelperText}"
+                                           Visibility="{TemplateBinding HelperTextVisibility}"
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Center" />
+
+                                <TextBlock x:Name="PART_ErrorTextBlock"
+                                           Grid.Row="0"
+                                           Grid.Column="0"
+                                           Padding="0,4,0,0"
+                                           HorizontalAlignment="Left"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           FontFamily="{TemplateBinding FontFamily}"
+                                           VerticalAlignment="Center"
+                                           Foreground="{TemplateBinding ErrorForeground}"
+                                           Text="{TemplateBinding ErrorText}"
+                                           Visibility="{TemplateBinding HasError, Converter={StaticResource VisibilityConverter}}" />
+
+                                <TextBlock x:Name="PART_CounterTextBlock"
+                                           Grid.Row="0"
+                                           Visibility="{TemplateBinding CharCountVisibility}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           FontFamily="{TemplateBinding FontFamily}"
+                                           Grid.Column="1"
+                                           Foreground="{StaticResource ContentForeground}"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           TextAlignment="Right" />
+                            </Grid>
+
+                            <Rectangle x:Name="PART_BaseLine"
+                                       Panel.ZIndex="1"
+                                       Grid.Row="3"
+                                       Grid.Column="0"
+                                       StrokeThickness="0"
+                                       Grid.ColumnSpan="3"
+                                       Height="1"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=Self},Path=IsEnabled}"
+                                     Value="False">
+                            <Setter Property="ContainerBackground"
+                                    Value="{StaticResource ContentBackground}"></Setter>
+                            <Setter Property="BorderBrush"
+                                    Value="{StaticResource BorderDark}"></Setter>
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource DisabledForeground}"></Setter>
+                            <Setter TargetName="PART_HelperTextBlock"
+                                    Property="Foreground"
+                                    Value="Transparent"></Setter>
+                            <Setter TargetName="PART_CounterTextBlock"
+                                    Property="Foreground"
+                                    Value="Transparent"></Setter>
+                            <Setter TargetName="Arrow" Property="Fill" 
+                                    Value="{StaticResource BorderDark}" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sync:SfTextInputLayout" BasedOn="{StaticResource SyncfusionSfTextInputLayoutStyle}"/>
+</ResourceDictionary>

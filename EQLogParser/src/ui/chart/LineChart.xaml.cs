@@ -290,7 +290,7 @@ namespace EQLogParser
       return collection;
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CopyImage(Dispatcher, sfLineChart, titleLabel);
+    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CreateImage(Dispatcher, sfLineChart, titleLabel);
 
     private void PlotSelected(List<PlayerStats> selected)
     {

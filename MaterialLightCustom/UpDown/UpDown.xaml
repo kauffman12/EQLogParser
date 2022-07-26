@@ -1,0 +1,380 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/DoubleTextBox/DoubleTextBox.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphRepeatButton.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <shared:NullToVisibilityConverter x:Key="UpDownNullToVisibilityConverter" />
+    <shared:ClipConverter x:Key="UpDownclipConverter" />
+    <shared:RadiusConverter x:Key="UpDownradiusConverter" />
+    <shared:ProgressConverter x:Key="ProgressConverter" />
+
+    <DataTemplate x:Key="WatermarkContentTemplate">
+        <TextBlock Style="{x:Null}" Text="{Binding}" />
+    </DataTemplate>
+    
+    <Style x:Key="SyncfusionUpDownDoubleTextBoxStyle" BasedOn="{StaticResource SyncfusionDoubleTextBoxStyle}" TargetType="{x:Type shared:DoubleTextBox}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type shared:DoubleTextBox}">
+                    <Grid x:Name="ContentHost">
+                        <Border
+                            x:Name="Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}"
+                            SnapsToDevicePixels="True">
+                            <Border.Clip>
+                                <RectangleGeometry RadiusX="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Border}}, Path=CornerRadius, Converter={StaticResource CornerRadiusConverter}}" RadiusY="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Border}}, Path=CornerRadius, Converter={StaticResource CornerRadiusConverter}}">
+                                    <RectangleGeometry.Rect>
+                                        <MultiBinding Converter="{StaticResource ClipConverter}">
+                                            <Binding Path="ActualWidth" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Border}}" />
+                                            <Binding Path="ActualHeight" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Border}}" />
+                                        </MultiBinding>
+                                    </RectangleGeometry.Rect>
+                                </RectangleGeometry>
+                            </Border.Clip>
+                            <Grid x:Name="InnerContentHost">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border
+                                    x:Name="RangeAdornerBorder"
+                                    Background="{TemplateBinding RangeAdornerBackground}"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                    IsHitTestVisible="False"
+                                    Visibility="Collapsed"
+                                    >
+                                    <Border.RenderTransform>
+                                        <ScaleTransform>
+                                            <ScaleTransform.ScaleX>
+                                                <MultiBinding Converter="{StaticResource ProgressConverter}">
+                                                    <Binding Path="Value" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                    <Binding Path="MaxValue" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                    <Binding Path="MinValue" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                </MultiBinding>
+                                            </ScaleTransform.ScaleX>
+                                        </ScaleTransform>
+                                    </Border.RenderTransform>
+                                </Border>
+
+                                <ScrollViewer
+                                    x:Name="PART_ContentHost"
+                                    VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    Background="{TemplateBinding Background}"
+                                    SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                    Visibility="{TemplateBinding ContentElementVisibility}" />
+
+                                <ContentControl
+                                    x:Name="PART_Watermark"
+                                    Grid.Row="0"
+                                    Padding="{TemplateBinding Padding}"
+                                    Margin="{TemplateBinding Padding}"
+                                    VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    Background="{TemplateBinding WatermarkBackground}"
+                                    Content="{TemplateBinding WatermarkText}"
+                                    ContentTemplate="{TemplateBinding WatermarkTemplate}"
+                                    FontFamily="{TemplateBinding FontFamily}"
+                                    FontSize="{StaticResource MaterialLightCustom.BodyTextStyle}"
+                                    FontStretch="{TemplateBinding FontStretch}"
+                                    FontStyle="{TemplateBinding FontStyle}"
+                                    FontWeight="{StaticResource MaterialLightCustom.FontWeightNormal}"
+                                    Foreground="{TemplateBinding WatermarkTextForeground}"
+                                    IsHitTestVisible="False"
+                                    IsTabStop="False"
+                                    Opacity="{TemplateBinding WatermarkOpacity}"
+                                    Visibility="{TemplateBinding WatermarkVisibility}" />
+                                
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="EnableRangeAdorner" Value="False">
+                            <Setter TargetName="Border" Property="Clip" Value="{x:Null}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Border" Property="Background" Value="transparent" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="EnableRangeAdorner" Value="True" />
+                                <Condition Property="IsFocused" Value="False" />
+                                <Condition Property="IsKeyboardFocused" Value="False" />
+                                <Condition Property="IsKeyboardFocusWithin" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="RangeAdornerBorder" Property="Visibility" Value="Visible" />
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+   
+    <Style x:Key="SyncfusionUpDownStyle" TargetType="{x:Type shared:UpDown}">
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.ThemeBorderThicknessVariant1}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="NegativeBackground" Value="{StaticResource ContentBackground}" />
+        <Setter Property="NegativeBorderBrush" Value="{StaticResource ErrorBorder}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="NegativeForeground" Value="{StaticResource ErrorForeground}" />
+        <Setter Property="RangeAdornerBackground" Value="{StaticResource PrimaryLightest}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Border}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FocusedBackground" Value="{StaticResource ContentBackground}" />
+        <Setter Property="FocusedBorderBrush" Value="{StaticResource PrimaryBackground}" />
+        <Setter Property="FocusedForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="ZeroColor" Value="{StaticResource WarningForeground}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type shared:UpDown}">
+                    <Grid>
+                        <Border
+                            x:Name="Border"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}"
+                            SnapsToDevicePixels="True">
+                            <Border.Clip>
+                                <RectangleGeometry RadiusX="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Border}}, Path=CornerRadius, Converter={StaticResource UpDownradiusConverter}}" RadiusY="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Border}}, Path=CornerRadius, Converter={StaticResource UpDownradiusConverter}}">
+                                    <RectangleGeometry.Rect>
+                                        <MultiBinding Converter="{StaticResource UpDownclipConverter}">
+                                            <Binding Path="ActualWidth" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Border}}" />
+                                            <Binding Path="ActualHeight" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Border}}" />
+                                        </MultiBinding>
+                                    </RectangleGeometry.Rect>
+                                </RectangleGeometry>
+                            </Border.Clip>
+
+                            <Grid ClipToBounds="True">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+
+                                <shared:DoubleTextBox
+                                    x:Name="textBox"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="0"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    ApplyNegativeForeground="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=EnableNegativeColors, Mode=TwoWay}"
+                                    ApplyZeroColor="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ApplyZeroColor, Mode=TwoWay}"
+                                    Background="Transparent"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                    ContextMenu="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ContextMenu}"
+                                    Culture="{TemplateBinding Culture}"
+                                    EnableExtendedScrolling="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=EnableExtendedScrolling, Mode=TwoWay}"
+                                    EnableRangeAdorner="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=EnableRangeAdorner, Mode=TwoWay}"
+                                    EnableTouch="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=EnableTouch, Mode=TwoWay}"
+                                    EnterToMoveNext="False"
+                                    Focusable="{TemplateBinding Focusable}"
+                                    MinHeight="{TemplateBinding MinHeight}"
+                                    GroupSeperatorEnabled="{TemplateBinding GroupSeperatorEnabled}"
+                                    IsTabStop="{TemplateBinding IsTabStop}"
+                                    NumberFormat="{TemplateBinding NumberFormatInfo}"
+                                    PositiveForeground="{TemplateBinding Foreground}"
+                                    RangeAdornerBackground="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=RangeAdornerBackground, Mode=TwoWay}"
+                                    Style="{StaticResource SyncfusionUpDownDoubleTextBoxStyle}"
+                                    TabIndex="{TemplateBinding TabIndex}"
+                                    TextAlignment="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=TextAlignment, Mode=TwoWay}"
+                                    Visibility="Collapsed"
+                                    ZeroColor="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ZeroColor, Mode=TwoWay}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    FontWeight="{TemplateBinding FontWeight}"
+                                    FontFamily="{TemplateBinding FontFamily}"/>
+                                <shared:DoubleTextBox
+                                    x:Name="DoubleTextBox"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="0"
+                                    Padding="{TemplateBinding Padding}"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    ApplyNegativeForeground="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=EnableNegativeColors, Mode=TwoWay}"
+                                    ApplyZeroColor="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ApplyZeroColor, Mode=TwoWay}"
+                                    Background="Transparent"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                    ContextMenu="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ContextMenu}"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Culture="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Culture, Mode=TwoWay}"
+                                    EnableExtendedScrolling="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=EnableExtendedScrolling, Mode=TwoWay}"
+                                    EnableRangeAdorner="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=EnableRangeAdorner, Mode=TwoWay}"
+                                    EnableTouch="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=EnableTouch, Mode=TwoWay}"
+                                    EnterToMoveNext="False"
+                                    Focusable="{TemplateBinding Focusable}"
+                                    GroupSeperatorEnabled="{TemplateBinding GroupSeperatorEnabled}"
+                                    IsReadOnly="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsReadOnly, Mode=TwoWay}"
+                                    IsScrollingOnCircle="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsScrollingOnCircle, Mode=TwoWay}"
+                                    IsTabStop="{TemplateBinding IsTabStop}"
+                                    MinHeight="{TemplateBinding MinHeight}"
+                                    MaxValidation="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=MaxValidation, Mode=TwoWay}"
+                                    MaxValue="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=MaxValue, Mode=TwoWay}"
+                                    MaxValueOnExceedMaxDigit="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=MaxValueOnExceedMaxDigit, Mode=TwoWay}"
+                                    MinValidation="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=MinValidation, Mode=TwoWay}"
+                                    MinValue="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=MinValue, Mode=TwoWay}"
+                                    MinValueOnExceedMinDigit="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=MinValueOnExceedMinDigit, Mode=TwoWay}"
+                                    NullValue="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=NullValue, Mode=TwoWay}"
+                                    NumberDecimalDigits="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=NumberDecimalDigits, Mode=TwoWay}"
+                                    NumberFormat="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=NumberFormatInfo, Mode=TwoWay}"
+                                    PositiveForeground="{TemplateBinding Foreground}"
+                                    RangeAdornerBackground="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=RangeAdornerBackground, Mode=TwoWay}"
+                                    Step="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Step, Mode=TwoWay}"
+                                    Style="{StaticResource SyncfusionDoubleTextBoxStyle}"
+                                    TabIndex="{TemplateBinding TabIndex}"
+                                    TextAlignment="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=TextAlignment, Mode=TwoWay}"
+                                    UseNullOption="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=UseNullOption, Mode=TwoWay}"
+                                    WatermarkText="{TemplateBinding NullValueText}"
+                                    WatermarkTextForeground="{TemplateBinding Foreground}"
+                                    WatermarkTextIsVisible="True"
+                                    ZeroColor="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ZeroColor, Mode=TwoWay}"
+                                    Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					                FontSize="{TemplateBinding FontSize}"
+                                    FontWeight="{TemplateBinding FontWeight}"
+                                    FontFamily="{TemplateBinding FontFamily}"/>
+
+                                <RepeatButton
+                                    x:Name="upbutton"
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Width="16"
+                                    MinHeight="0"
+                                    Padding="{TemplateBinding Padding}"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                    Background="Transparent"
+                                    Command="shared:UpDown.m_upValue"
+                                    Focusable="{TemplateBinding Focusable}"
+                                    IsTabStop="False"
+                                    SnapsToDevicePixels="True"
+                                    Style="{StaticResource WPFGlyphRepeatButtonStyle}">
+                                    <RepeatButton.Content>
+                                        <Path
+                                            x:Name="upbuttonpath"
+                                            Width="8"
+                                            Height="4"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                            StrokeThickness="{StaticResource MaterialLightCustom.StrokeThickness1}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Uniform" 
+                                            Data="F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z"/>
+                                    </RepeatButton.Content>
+                                </RepeatButton>
+
+                                <RepeatButton
+                                    x:Name="downbutton"
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Width="16"
+                                    MinHeight="0"
+                                    Padding="{TemplateBinding Padding}"
+                                    Background="Transparent"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                    Command="shared:UpDown.m_downValue"
+                                    Focusable="{TemplateBinding Focusable}"
+                                    IsTabStop="False"
+                                    SnapsToDevicePixels="True"
+                                    Style="{StaticResource WPFGlyphRepeatButtonStyle}">
+                                    <RepeatButton.Content>
+                                        <Path
+                                            x:Name="downbuttonpath"
+                                            Width="8"
+                                            Height="4"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                            StrokeThickness="{StaticResource MaterialLightCustom.StrokeThickness1}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Uniform" 
+                                            Data="F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z"/>
+                                    </RepeatButton.Content>
+                                </RepeatButton>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter TargetName="DoubleTextBox" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter TargetName="downbuttonpath" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                            <Setter TargetName="upbuttonpath" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                        </Trigger>
+                        <Trigger SourceName="Border" Property="CornerRadius" Value="0">
+                            <Setter TargetName="Border" Property="Clip" Value="{x:Null}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt2}" />
+                        </Trigger>
+                        <Trigger Property="IsUpdownFocused" Value="true">
+                            <Setter TargetName="Border" Property="Background" Value="{Binding Path=FocusedBackground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{Binding Path=FocusedBorderBrush, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter TargetName="DoubleTextBox" Property="Foreground" Value="{Binding Path=FocusedForeground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter TargetName="textBox" Property="Foreground" Value="{Binding Path=FocusedForeground, RelativeSource={RelativeSource TemplatedParent}}" />
+                        </Trigger>
+                        <Trigger Property="IsValueNegative" Value="true">
+                            <Setter TargetName="Border" Property="Background" Value="{Binding Path=NegativeBackground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{Binding Path=NegativeBorderBrush, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter Property="Foreground" Value="{Binding Path=NegativeForeground, RelativeSource={RelativeSource TemplatedParent}}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsKeyboardFocusWithin" Value="true" />
+                                <Condition Property="EnableFocusedColors" Value="true" />
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" Value="{Binding Path=FocusedBackground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter Property="BorderBrush" Value="{Binding Path=FocusedBorderBrush, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter TargetName="DoubleTextBox" Property="Foreground" Value="{Binding Path=FocusedForeground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter TargetName="textBox" Property="Foreground" Value="{Binding Path=FocusedForeground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.ThemeBorderThicknessVariant2}" />
+                            <Setter Property="Padding" Value="0,0,0,-1" />
+                        </MultiTrigger>
+
+                        <Trigger SourceName="upbutton" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="upbuttonpath" Property="Fill" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger SourceName="upbutton" Property="IsPressed" Value="True">
+                            <Setter TargetName="upbuttonpath" Property="Fill" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger SourceName="downbutton" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="downbuttonpath" Property="Fill" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger SourceName="downbutton" Property="IsPressed" Value="True">
+                            <Setter TargetName="downbuttonpath" Property="Fill" Value="{StaticResource IconColor}" />
+                        </Trigger>                        
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionUpDownStyle}" TargetType="{x:Type shared:UpDown}" />
+</ResourceDictionary>

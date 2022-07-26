@@ -1,0 +1,186 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    
+                    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+    
+    <Style x:Key="ListBoxItemFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WPFListBoxItemStyle"
+           TargetType="{x:Type ListBoxItem}">
+        <Setter Property="FocusVisualStyle"
+                Value="{StaticResource ListBoxItemFocusVisual}"/>
+        <Setter Property="Background"
+                Value="Transparent"/>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialLightCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialLightCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialLightCustom.FontWeightNormal}"/>
+        <Setter Property="BorderThickness" 
+                Value="{StaticResource MaterialLightCustom.BorderThickness}"/>
+        <Setter Property="Padding" Value="4,3"/>
+        <Setter Property="MinHeight" Value="{StaticResource MaterialLightCustom.MinHeight}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                    <Border x:Name="Bd" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            Background="{TemplateBinding Background}" 
+                            Padding="{TemplateBinding Padding}" 
+                            SnapsToDevicePixels="true"
+                            >
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" >
+                            <ContentPresenter.Resources>
+                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" TargetName="Bd"
+                                    Value="{StaticResource ContentBackgroundHover}"/>
+                            <Setter Property="BorderBrush" TargetName="Bd"
+                                    Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource HoverForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected"
+                                 Value="true">
+                            <Setter Property="Background" TargetName="Bd"
+                                    Value="{StaticResource ContentBackgroundSelection}"/>
+                            <Setter Property="BorderBrush" TargetName="Bd"
+                                    Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource SelectionForeground}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected"
+                                           Value="true"/>
+                                <Condition Property="IsMouseOver"
+                                           Value="true"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" TargetName="Bd"
+                                    Value="{StaticResource ContentBackgroundSelection}"/>
+                            <Setter Property="BorderBrush" TargetName="Bd"
+                                    Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource SelectionForeground}"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected"
+                                           Value="true"/>
+                                <Condition Property="Selector.IsSelectionActive"
+                                           Value="false"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" TargetName="Bd"
+                                    Value="{StaticResource ContentBackgroundAlt3}"/>
+                            <Setter Property="BorderBrush" TargetName="Bd"
+                                    Value="{StaticResource ContentBackgroundAlt3}"/>
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource ContentForeground}"/>
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled"
+                                 Value="false">
+                            <Setter Property="Background" TargetName="Bd"
+                                    Value="Transparent"/>
+                            <Setter Property="BorderBrush" TargetName="Bd"
+                                    Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource WPFListBoxItemStyle}" TargetType="{x:Type ListBoxItem}"/>
+
+    <Style x:Key="WPFListBoxStyle"
+           TargetType="{x:Type ListBox}">
+        <Setter Property="Background"
+                Value="Transparent"/>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness}"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" 
+                Value="Auto"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" 
+                Value="Auto"/>
+        <Setter Property="ScrollViewer.CanContentScroll" 
+                Value="true"/>
+        <Setter Property="ScrollViewer.PanningMode"
+                Value="Both"/>
+        <Setter Property="Stylus.IsFlicksEnabled"
+                Value="False"/>
+        <Setter Property="VerticalContentAlignment"
+                Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBox}">
+                    <Border Name="Bd"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="true">
+                        <ScrollViewer x:Name="scrollviewer" 
+                                      Focusable="false"
+                                      Padding="{TemplateBinding Padding}">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </ScrollViewer>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsGrouping"
+                                 Value="true">
+                            <Setter Property="ScrollViewer.CanContentScroll"
+                                    Value="false"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Background" TargetName="Bd" Value="Transparent"/>
+                            <Setter Property="BorderBrush" TargetName="Bd" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource WPFListBoxStyle}" TargetType="{x:Type ListBox}"/>
+
+</ResourceDictionary>

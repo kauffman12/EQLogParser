@@ -1,10 +1,13 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using Syncfusion.SfSkinManager;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -17,6 +20,46 @@ namespace EQLogParser
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new SortablePetMappingComparer();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
+
+    internal static void LoadTheme(MainWindow window, string theme)
+    {
+      if (theme == "MaterialLight")
+      {
+        Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
+        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf") };
+        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFa7baab") };
+        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFeaa6ac") };
+        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFb02021") };
+        SfSkinManager.SetTheme(window, new Theme("MaterialLightCustom;MaterialLight"));
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/CheckBox.xaml");
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLightCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLightCustom.WPF;component/Common/Brushes.xaml");
+        window.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
+
+        if (!string.IsNullOrEmpty(window.statusText?.Text))
+        {
+          window.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
+        }
+      }
+      else
+      {
+        Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.LightGreen };
+        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF4F9FE2") };
+        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF314435") };
+        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF96410d") };
+        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = Colors.Orange };
+        SfSkinManager.SetTheme(window, new Theme("MaterialDarkCustom;MaterialDark"));
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
+        window.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
+
+        if (!string.IsNullOrEmpty(window.statusText?.Text))
+        {
+          window.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
+        }
+      }
+    }
 
     internal static void Clear(ContentControl petsWindow, ContentControl playersWindow)
     {

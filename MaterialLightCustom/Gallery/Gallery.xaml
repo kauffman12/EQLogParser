@@ -1,0 +1,689 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:syncfusion="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+
+    <!--  GalleryItem style  -->
+    <Style x:Key="SyncfusionGalleryItemStyle" TargetType="{x:Type syncfusion:GalleryItem}">
+        <Setter Property="ContentTemplate" Value="{Binding Path=ItemContentTemplate, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" />
+        <Setter Property="ContentTemplateSelector" Value="{Binding Path=ItemContentTemplateSelector, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" />
+        <Setter Property="VisualMode" Value="{Binding Path=VisualMode, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" />
+        <Setter Property="IsAlwaysShownCaption" Value="{Binding Path=IsAlwaysShownCaption, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" />
+        <Setter Property="AllowDrop" Value="{Binding Path=AllowDrop, RelativeSource={RelativeSource TemplatedParent}}" />
+        <Setter Property="Margin" Value="{Binding Path=ItemMargin, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Style.Triggers>
+            <Trigger Property="VisualMode" Value="Detailed">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type syncfusion:GalleryItem}">
+                            <Border
+                                Name="border"
+                                MinHeight="98"
+                                Background="{Binding Path=ItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                BorderBrush="{Binding Path=ItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                BorderThickness="{Binding Path=ItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                CornerRadius="{Binding Path=ItemCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                SnapsToDevicePixels="True">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="102" />
+                                        <ColumnDefinition />
+                                    </Grid.ColumnDefinitions>
+                                    <Border
+                                        Grid.Column="0"
+                                        MinWidth="92"
+                                        Margin="10,2,0,2"
+                                        Background="{StaticResource ContentBackgroundAlt2}"
+                                        BorderBrush="{StaticResource BorderAlt}"
+                                        BorderThickness="1">
+                                        <ContentPresenter
+                                            MinWidth="0"
+                                            Margin="2,1,1,1"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            ContentSource="Content"
+                                            ContentTemplate="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplate}"
+                                            ContentTemplateSelector="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplateSelector}" />
+                                    </Border>
+                                    <Border
+                                        Grid.Column="1"
+                                        Margin="2"
+                                        Background="{Binding Path=CaptionBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        BorderBrush="{Binding Path=CaptionBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        BorderThickness="{Binding Path=CaptionBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        CornerRadius="{Binding Path=CaptionCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}">
+                                        <TextBlock
+                                            Name="HeaderText"
+                                            Grid.Column="1"
+                                            Margin="10,3,3,20"
+                                            DockPanel.Dock="Top"
+                                            FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                            FontSize="{StaticResource MaterialLightCustom.TitleTextStyle}"
+                                            FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                            Foreground="{Binding Path=ItemForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                            Text="{Binding Path=Caption, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryItem}}}" />
+                                    </Border>
+                                    <TextBlock
+                                        Name="Description"
+                                        Grid.Column="1"
+                                        Margin="12,30,3,3"
+                                        DockPanel.Dock="Bottom"
+                                        TextWrapping="Wrap"
+                                        FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                        FontSize="{StaticResource MaterialLightCustom.BodyTextStyle}"
+                                        FontWeight="{StaticResource MaterialLightCustom.FontWeightNormal}"
+                                        Foreground="{Binding Path=ItemForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        Text="{Binding Path=Description, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryItem}}}" />
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="HasFocus" Value="True">
+                                    <Setter TargetName="border" Property="BorderThickness" Value="{Binding Path=FocusedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="border" Property="Background" Value="{Binding Path=FocusedItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{Binding Path=FocusedItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="HeaderText" Property="Foreground" Value="{Binding Path=FocusedItemForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="Description" Property="Foreground" Value="{Binding Path=FocusedItemForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{Binding Path=ItemMouseOverBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{Binding Path=ItemMouseOverBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="HeaderText" Property="Foreground" Value="{Binding Path=ItemMouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="Description" Property="Foreground" Value="{Binding Path=ItemMouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="border" Property="BorderThickness" Value="{Binding Path=SelectedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="border" Property="Background" Value="{Binding Path=ItemSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{Binding Path=ItemSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="HeaderText" Property="Foreground" Value="{Binding Path=ItemSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="Description" Property="Foreground" Value="{Binding Path=ItemSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter TargetName="border" Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="Transparent" />
+                                    <Setter TargetName="HeaderText" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                                    <Setter TargetName="Description" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                                </Trigger>
+                                <Trigger Property="IsDragOver" Value="true">
+                                    <Setter TargetName="border" Property="BorderThickness" Value="{Binding Path=FocusedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="border" Property="Background" Value="{Binding Path=FocusedItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{Binding Path=FocusedItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="VisualMode" Value="Standard" />
+                    <Condition Property="IsAlwaysShownCaption" Value="False" />
+                </MultiTrigger.Conditions>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type syncfusion:GalleryItem}">
+                            <shared:TrippleBorder
+                                Name="contentBorder"
+                                MinWidth="0"
+                                Background="{Binding Path=ItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                BorderBrush="{Binding Path=ItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                BorderThickness="{Binding Path=ItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                CornerRadius="{Binding Path=ItemCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                SnapsToDevicePixels="True">
+                                <ContentPresenter
+                                    MinWidth="0"
+                                    Margin="{Binding Path=ItemPadding, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    ContentSource="Content"
+                                    ContentTemplate="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplate}"
+                                    ContentTemplateSelector="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplateSelector}"
+                                    TextBlock.Foreground="{TemplateBinding Foreground}" />
+                            </shared:TrippleBorder>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="HasFocus" Value="true">
+                                    <Setter TargetName="contentBorder" Property="BorderThickness" Value="{Binding Path=SelectedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=ItemSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=ItemSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=FocusedItemForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsSelected" Value="true" />
+                                        <Condition Property="HasFocus" Value="true" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="contentBorder" Property="BorderThickness" Value="{Binding Path=FocusedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=FocusedItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=FocusedItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=ItemSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </MultiTrigger>
+                                <Trigger Property="IsDragOver" Value="true">
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=FocusedItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=FocusedItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=ItemMouseOverBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=ItemMouseOverBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="true">
+                                    <Setter TargetName="contentBorder" Property="BorderThickness" Value="{Binding Path=SelectedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=ItemSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=ItemSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=ItemSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsSelected" Value="true" />
+                                        <Condition Property="IsMouseOver" Value="true" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="contentBorder" Property="BorderThickness" Value="{Binding Path=SelectedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=ItemSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=ItemSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=ItemSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </MultiTrigger>
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{StaticResource ContentBackgroundDisabled}" />
+                                    <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </MultiTrigger>
+
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="VisualMode" Value="Standard" />
+                    <Condition Property="IsAlwaysShownCaption" Value="True" />
+                </MultiTrigger.Conditions>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type syncfusion:GalleryItem}">
+                            <shared:TrippleBorder
+                                Name="contentBorder"
+                                MinWidth="0"
+                                Background="{Binding Path=ItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                BorderBrush="{Binding Path=ItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                BorderThickness="{Binding Path=ItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                CornerRadius="{Binding Path=ItemCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                SnapsToDevicePixels="True">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Name="contentGridColumn0" Width="0" />
+                                        <ColumnDefinition Name="contentGridColumn1" Width="0" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Name="contentGridColumn3" Width="0" />
+                                        <ColumnDefinition Name="contentGridColumn4" Width="0" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Name="contentGridRow0" Height="0" />
+                                        <RowDefinition Name="contentGridRow1" Height="0" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Name="contentGridRow3" Height="0" />
+                                        <RowDefinition Name="contentGridRow4" Height="0" />
+                                    </Grid.RowDefinitions>
+                                    <Border
+                                        Name="headerTextBorder"
+                                        Grid.Row="0"
+                                        Grid.Column="2"
+                                        Margin="1"
+                                        Background="{Binding Path=CaptionBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        BorderBrush="{Binding Path=CaptionBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        BorderThickness="{Binding Path=CaptionBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        CornerRadius="{Binding Path=CaptionCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}">
+                                        <TextBlock
+                                            Name="headerText"
+                                            Grid.Row="0"
+                                            Grid.Column="2"
+                                            FontSize="{StaticResource MaterialLightCustom.TitleTextStyle}"
+                                            FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                            Text="{Binding Path=Caption, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryItem}}}"
+                                            TextAlignment="Center" />
+                                    </Border>
+                                    <ContentPresenter
+                                        Grid.Row="2"
+                                        Grid.Column="2"
+                                        MinWidth="0"
+                                        MinHeight="0"
+                                        ContentSource="Content"
+                                        ContentTemplate="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplate}"
+                                        ContentTemplateSelector="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplateSelector}" />
+                                    <Border
+                                        Name="descriptionBorder"
+                                        Grid.Row="4"
+                                        Grid.Column="2"
+                                        Margin="1"
+                                        Background="{Binding Path=CaptionBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        BorderBrush="{Binding Path=CaptionBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        BorderThickness="{Binding Path=CaptionBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                        CornerRadius="{Binding Path=CaptionCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}">
+                                        <TextBlock
+                                            Name="description"
+                                            Grid.Row="4"
+                                            Grid.Column="2"
+                                            FontSize="{StaticResource MaterialLightCustom.BodyTextStyle}"
+                                            Text="{Binding Path=Description, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryItem}}}"
+                                            TextAlignment="Center" />
+                                    </Border>
+                                </Grid>
+                            </shared:TrippleBorder>
+                            <ControlTemplate.Triggers>
+                                <DataTrigger Binding="{Binding Path=CaptionAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" Value="Top">
+                                    <Setter TargetName="contentGridRow0" Property="Height" Value="16" />
+                                </DataTrigger>
+
+                                <DataTrigger Binding="{Binding Path=CaptionAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" Value="Bottom">
+                                    <Setter TargetName="contentGridRow3" Property="Height" Value="16" />
+                                    <Setter TargetName="headerTextBorder" Property="Grid.Row" Value="3" />
+                                    <Setter TargetName="headerText" Property="Grid.Row" Value="3" />
+                                </DataTrigger>
+
+                                <DataTrigger Binding="{Binding Path=CaptionAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" Value="Left">
+                                    <Setter TargetName="contentGridColumn0" Property="Width" Value="16" />
+                                    <Setter TargetName="headerTextBorder" Property="Grid.Row" Value="2" />
+                                    <Setter TargetName="headerText" Property="Grid.Row" Value="2" />
+                                    <Setter TargetName="headerTextBorder" Property="Grid.Column" Value="0" />
+                                    <Setter TargetName="headerText" Property="Grid.Column" Value="0" />
+                                    <Setter TargetName="headerText" Property="VerticalAlignment" Value="Bottom" />
+                                    <Setter TargetName="headerText" Property="LayoutTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="270" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+
+                                <DataTrigger Binding="{Binding Path=CaptionAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" Value="Right">
+                                    <Setter TargetName="contentGridColumn3" Property="Width" Value="16" />
+                                    <Setter TargetName="headerTextBorder" Property="Grid.Row" Value="2" />
+                                    <Setter TargetName="headerText" Property="Grid.Row" Value="2" />
+                                    <Setter TargetName="headerTextBorder" Property="Grid.Column" Value="3" />
+                                    <Setter TargetName="headerText" Property="LayoutTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="90" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Path=DescriptionAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" Value="Top">
+                                    <Setter TargetName="contentGridRow1" Property="Height" Value="14" />
+                                    <Setter TargetName="descriptionBorder" Property="Grid.Row" Value="1" />
+                                    <Setter TargetName="description" Property="Grid.Row" Value="1" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Path=DescriptionAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" Value="Bottom">
+                                    <Setter TargetName="contentGridRow4" Property="Height" Value="14" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Path=DescriptionAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" Value="Left">
+                                    <Setter TargetName="contentGridColumn1" Property="Width" Value="14" />
+                                    <Setter TargetName="descriptionBorder" Property="Grid.Row" Value="2" />
+                                    <Setter TargetName="description" Property="Grid.Row" Value="2" />
+                                    <Setter TargetName="descriptionBorder" Property="Grid.Column" Value="1" />
+                                    <Setter TargetName="description" Property="Grid.Column" Value="1" />
+                                    <Setter TargetName="description" Property="VerticalAlignment" Value="Bottom" />
+                                    <Setter TargetName="description" Property="LayoutTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="270" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Path=DescriptionAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" Value="Right">
+                                    <Setter TargetName="contentGridColumn4" Property="Width" Value="14" />
+                                    <Setter TargetName="descriptionBorder" Property="Grid.Row" Value="2" />
+                                    <Setter TargetName="description" Property="Grid.Row" Value="2" />
+                                    <Setter TargetName="descriptionBorder" Property="Grid.Column" Value="4" />
+                                    <Setter TargetName="description" Property="Grid.Column" Value="4" />
+                                    <Setter TargetName="description" Property="LayoutTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="90" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                                <Trigger Property="IsSelected" Value="true">
+                                    <Setter TargetName="contentBorder" Property="BorderThickness" Value="{Binding Path=SelectedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=ItemSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=ItemSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=ItemSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=ItemMouseOverBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=ItemMouseOverBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=ItemMouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <Trigger Property="HasFocus" Value="true">
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=FocusedItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=FocusedItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=FocusedItemForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsSelected" Value="true" />
+                                        <Condition Property="HasFocus" Value="true" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="contentBorder" Property="BorderThickness" Value="{Binding Path=FocusedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=FocusedItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=FocusedItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=ItemSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </MultiTrigger>
+                                <Trigger Property="IsDragOver" Value="true">
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=FocusedItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=FocusedItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsMouseOver" Value="True" />
+                                        <Condition Property="HasFocus" Value="True" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{Binding Path=FocusedItemMouseOverBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{Binding Path=FocusedItemMouseOverBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter Property="Foreground" Value="{Binding Path=ItemMouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </MultiTrigger>
+                                <Trigger Property="IsEnabled" Value="true">
+                                    <Setter TargetName="contentBorder" Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
+                                    <Setter TargetName="contentBorder" Property="BorderBrush" Value="{StaticResource ContentBackgroundDisabled}" />
+                                    <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </MultiTrigger>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionGalleryItemStyle}" TargetType="{x:Type syncfusion:GalleryItem}" />
+
+    <!--  GalleryGroup style  -->
+    <Style x:Key="SyncfusionGalleryGroupStyle" TargetType="{x:Type syncfusion:GalleryGroup}">
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="ItemContentTemplate" Value="{Binding Path=ItemContentTemplate, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="ItemContentTemplateSelector" Value="{Binding Path=ItemContentTemplateSelector, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="AllowDrop" Value="{Binding Path=AllowDrop, RelativeSource={RelativeSource TemplatedParent}}" />
+        <Setter Property="IsAlwaysShownCaption" Value="{Binding Path=IsAlwaysShownCaption, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="CaptionAlignment" Value="{Binding Path=CaptionAlignment, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="DescriptionAlignment" Value="{Binding Path=DescriptionAlignment, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:GalleryGroup}">
+                    <DockPanel
+                        Name="GroupStandardPanel"
+                        MinHeight="20"
+                        Background="Transparent">
+                        <Border
+                            Name="groupHeader"
+                            MinHeight="32"
+                            Margin="{Binding Path=GroupMargin, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            Padding="{Binding Path=GroupPadding, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            Background="{Binding Path=GroupBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            BorderBrush="{Binding Path=GroupBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            BorderThickness="{Binding Path=GroupBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            CornerRadius="{Binding Path=GroupCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            DockPanel.Dock="Top"
+                            Visibility="{Binding Path=IsHeaderVisible, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type syncfusion:Gallery}}, Converter={StaticResource BooleanToVisibility}}">
+                            <ContentPresenter
+                                Name="headerText"
+                                Margin="2"
+                                VerticalAlignment="Center"
+                                ContentSource="Header"
+                                TextBlock.FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                TextBlock.FontSize="{StaticResource MaterialLightCustom.SubHeaderTextStyle}"
+                                TextBlock.Foreground="{Binding Path=GroupForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                        </Border>
+                        <Border
+                            Name="groupContentPanel"
+                            Margin="{Binding Path=GroupStandardBorderMargin, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            Padding="{Binding Path=PanelPadding, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            Background="{Binding Path=PanelBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            BorderBrush="{Binding Path=PanelBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            BorderThickness="{Binding Path=PanelBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                            CornerRadius="{Binding Path=PanelCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}">
+                            <ItemsPresenter />
+                        </Border>
+                    </DockPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="syncfusion:Gallery.IsSelected" Value="True">
+                            <Setter TargetName="groupContentPanel" Property="Background" Value="{Binding Path=PanelSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupContentPanel" Property="BorderBrush" Value="{Binding Path=PanelSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupHeader" Property="Background" Value="{Binding Path=GroupSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupHeader" Property="BorderBrush" Value="{Binding Path=GroupSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="headerText" Property="TextBlock.Foreground" Value="{Binding Path=GroupSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                        </Trigger>
+                        <Trigger Property="IsDragOver" Value="true">
+                            <Setter TargetName="groupContentPanel" Property="Background" Value="{Binding Path=PanelSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupContentPanel" Property="BorderBrush" Value="{Binding Path=PanelSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupHeader" Property="Background" Value="{Binding Path=GroupSelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupHeader" Property="BorderBrush" Value="{Binding Path=GroupSelectedBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="headerText" Property="TextBlock.Foreground" Value="{Binding Path=GroupSelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                        </Trigger>
+
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="groupContentPanel" Property="Background" Value="{Binding Path=PanelMouseOverBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupContentPanel" Property="BorderBrush" Value="{Binding Path=PanelMouseOverBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupHeader" Property="Background" Value="{Binding Path=GroupMouseOverBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="groupHeader" Property="BorderBrush" Value="{Binding Path=GroupMouseOverBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                            <Setter TargetName="headerText" Property="TextBlock.Foreground" Value="{Binding Path=GroupMouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="groupHeader" Property="Background" Value="Transparent" />
+                            <Setter TargetName="groupHeader" Property="BorderBrush" Value="{StaticResource ContentBackgroundDisabled}" />
+                            <Setter TargetName="headerText" Property="TextBlock.Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <syncfusion:WrapPanelExt
+                        HorizontalAlignment="{Binding Path=HorizontalAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}"
+                        VerticalAlignment="{Binding Path=VerticalAlignment, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}"
+                        ClipToBounds="True"
+                        ItemHeight="{Binding Path=ItemHeight, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}"
+                        ItemMaxHeight="{Binding Path=ItemMaxHeight, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}"
+                        ItemMaxWidth="{Binding Path=ItemMaxWidth, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}"
+                        ItemMinHeight="{Binding Path=ItemMinHeight, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}"
+                        ItemMinWidth="{Binding Path=ItemMinWidth, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}"
+                        ItemWidth="{Binding Path=ItemWidth, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GalleryGroup}}}" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <Style.Triggers>
+            <Trigger Property="VisualMode" Value="Detailed">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type syncfusion:GalleryGroup}">
+                            <StackPanel MinHeight="50" Background="Transparent">
+                                <Border
+                                    Name="groupHeader"
+                                    MinHeight="32"
+                                    Margin="{Binding Path=GroupMargin, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    Padding="{Binding Path=GroupPadding, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    Background="{Binding Path=GroupBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    BorderBrush="{Binding Path=GroupBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    BorderThickness="{Binding Path=GroupBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    CornerRadius="{Binding Path=GroupCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    DockPanel.Dock="Top">
+                                    <Border
+                                        VerticalAlignment="Center">
+                                        <ContentPresenter
+                                            Name="headerText"
+                                            ContentSource="Header"
+                                            TextBlock.FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                            TextBlock.FontSize="{StaticResource MaterialLightCustom.SubHeaderTextStyle}"
+                                            TextBlock.Foreground="{Binding Path=GroupForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" >
+                                            <ContentPresenter.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ContentPresenter.Resources>
+                                        </ContentPresenter>
+                                    </Border>
+                                </Border>
+                                <Border 
+                                    BorderBrush="{Binding Path=GroupBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"/>
+                                <Border
+                                    Name="groupContentPanel"
+                                    MinHeight="30"
+                                    Margin="{Binding Path=GroupStandardBorderMargin, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    Padding="{Binding Path=PanelPadding, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    Background="{Binding Path=PanelBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    BorderBrush="{Binding Path=PanelBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    BorderThickness="{Binding Path=PanelBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
+                                    CornerRadius="{Binding Path=PanelCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}">
+                                    <ItemsPresenter />
+                                </Border>
+                            </StackPanel>
+
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="groupContentPanel" Property="Background" Value="{Binding Path=PanelMouseOverBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="groupContentPanel" Property="BorderBrush" Value="{Binding Path=PanelMouseOverBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="headerText" Property="TextBlock.Foreground" Value="{Binding Path=GroupMouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="groupHeader" Property="Background" Value="Transparent" />
+                                    <Setter TargetName="groupHeader" Property="BorderBrush" Value="{StaticResource ContentBackgroundDisabled}" />
+                                    <Setter TargetName="headerText" Property="TextBlock.Foreground" Value="{StaticResource DisabledForeground}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="ItemsPanel">
+                    <Setter.Value>
+                        <ItemsPanelTemplate>
+                            <StackPanel />
+                        </ItemsPanelTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionGalleryGroupStyle}" TargetType="{x:Type syncfusion:GalleryGroup}" />
+
+    <!--  GalleryDeterminedStyle  -->
+    <Style x:Key="SyncfusionGalleryDeterminedStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{Binding Path=Background, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="BorderThickness" Value="{Binding Path=BorderThickness, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="BorderBrush" Value="{Binding Path=BorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="CornerRadius" Value="{Binding Path=GalleryCornerRadius, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="Padding" Value="{Binding Path=Padding, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type syncfusion:Gallery}}}" />
+        <Setter Property="Margin" Value="{Binding Path=Margin, RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type syncfusion:Gallery}}}" />
+    </Style>
+
+    <!--  Gallery  style  -->
+    <Style x:Key="SyncfusionGalleryStyle" TargetType="{x:Type syncfusion:Gallery}">
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="CaptionBackground" Value="Transparent" />
+        <Setter Property="CaptionBorderBrush" Value="Transparent" />
+
+        <Setter Property="ItemBackground" Value="Transparent" />
+        <Setter Property="ItemBorderBrush" Value="Transparent" />
+        <Setter Property="ItemForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="ItemMouseOverBackground" Value="{StaticResource ContentBackgroundHover}" />
+        <Setter Property="ItemMouseOverBorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+        <Setter Property="ItemMouseOverForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="ItemSelectedBackground" Value="{StaticResource ContentBackgroundSelection}" />
+        <Setter Property="ItemSelectedBorderBrush" Value="{StaticResource ContentBackgroundSelection}" />
+        <Setter Property="ItemSelectedForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FocusedItemBackground" Value="{StaticResource ContentBackgroundHover}" />
+        <Setter Property="FocusedItemBorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+        <Setter Property="FocusedItemForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FocusedItemMouseOverBackground" Value="{StaticResource ContentBackgroundHover}" />
+        <Setter Property="FocusedItemMouseOverBorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+        <Setter Property="FocusedItemMouseOverForeground" Value="{StaticResource ContentForeground}" />
+
+        <Setter Property="GroupBackground" Value="{StaticResource ContentBackgroundAlt2}" />
+        <Setter Property="GroupForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="GroupBorderBrush" Value="Transparent" />
+        <Setter Property="GroupMouseOverBackground" Value="Transparent" />
+        <Setter Property="GroupMouseOverBorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+        <Setter Property="GroupMouseOverForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="GroupSelectedBackground" Value="Transparent" />
+        <Setter Property="GroupSelectedBorderBrush" Value="{StaticResource ContentBackgroundSelection}" />
+        <Setter Property="GroupSelectedForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="GroupStandardBorderMargin" Value="0" />
+        <Setter Property="GroupBorderThickness" Value="0"/>
+        <Setter Property="GroupMargin" Value="0"/>
+        <Setter Property="GroupCornerRadius" Value="0"/>
+        <Setter Property="GroupPadding" Value="10,0,0,0" />
+
+        <Setter Property="PanelBackground" Value="Transparent" />
+        <Setter Property="PanelBorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="PanelSelectedBackground" Value="Transparent" />
+        <Setter Property="PanelSelectedBorderBrush" Value="{StaticResource ContentBackgroundSelection}" />
+        <Setter Property="PanelMouseOverBackground" Value="Transparent" />
+        <Setter Property="PanelMouseOverBorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+        <Setter Property="PanelBorderThickness" Value="0" />
+        <Setter Property="PanelCornerRadius" Value="0"/>
+        <Setter Property="PanelPadding" Value="0"/>
+        
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FocusedItemBorderThickness" Value="1"/>
+        <Setter Property="SelectedItemBorderThickness" Value="1"/>
+        <Setter Property="ItemBorderThickness" Value="1"/>
+        <Setter Property="ItemPadding" Value="3,3,0,0" />
+        <Setter Property="ItemCornerRadius" Value="0"/>
+
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="AllowDrop" Value="{Binding Path=AllowDrop, RelativeSource={RelativeSource Self}}" />
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:Gallery}">
+                    <Border Style="{StaticResource SyncfusionGalleryDeterminedStyle}">
+                        <ItemsPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <syncfusion:GalleryStackPanel Background="Transparent" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="VisualMode" Value="Standard">
+                <Setter Property="PanelMargin" Value="5" />
+                <Setter Property="PanelPadding" Value="4" />
+                <Setter Property="ItemMargin" Value="3" />
+            </Trigger>
+            <Trigger Property="VisualMode" Value="Detailed">
+                <Setter Property="PanelPadding" Value="0,10,0,10" />
+                <Setter Property="ItemMargin" Value="0,1,0,1" />
+            </Trigger>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                <Setter Property="ItemMargin" Value="0,1,0,1" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionGalleryStyle}" TargetType="{x:Type syncfusion:Gallery}" />
+</ResourceDictionary>

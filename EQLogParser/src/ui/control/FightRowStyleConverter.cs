@@ -8,15 +8,13 @@ namespace EQLogParser
 {
   internal class FightRowStyleConverter : IValueConverter
   {
-    private static readonly SolidColorBrush BREAK_TIME_BRUSH = Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush;
-
     object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
       if (value is Fight npc)
       {
         if (npc.BeginTimeString == Fight.BREAKTIME)
         {
-          return BREAK_TIME_BRUSH;
+          return Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush;
         }
       }
       return null;

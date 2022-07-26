@@ -1,0 +1,385 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Syncfusion.Windows.Controls.Navigation;assembly=Syncfusion.SfTreeNavigator.WPF"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Controls;assembly=Syncfusion.Shared.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphButton.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <BooleanToVisibilityConverter x:Key="VisibilityConverter" />
+
+    <Style
+        x:Key="SyncfusionBackButtonStyle"
+        BasedOn="{StaticResource WPFGlyphButtonStyle}"
+        TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Margin" Value="0,0,10,0" />
+        <Setter Property="AutomationProperties.AutomationId" Value="BackButton" />
+        <Setter Property="AutomationProperties.Name" Value="Back" />
+        <Setter Property="AutomationProperties.ItemType" Value="Navigation Button" />
+        <Setter Property="Content">
+            <Setter.Value>
+                <Path
+                    x:Name="pressed"
+                    Width="14"
+                    Height="12"
+                    Data="M5.9351995,1.7166138E-05 C6.191056,-0.0014829636 6.4475377,0.094773293 6.6440237,0.28928566 6.8420093,0.48429823 6.9410022,0.74231482 6.9410022,1.0003314 6.9410022,1.2543476 6.8450091,1.508364 6.6520231,1.7033765 L3.3947313,5.0000117 15.000005,5.0000117 C15.551995,5.0000117 15.999982,5.4470137 15.999982,5.9999681 15.999982,6.5529836 15.551995,6.9999245 15.000005,6.9999247 L3.3942476,6.9999247 6.6531771,10.296778 C7.041169,10.689766 7.0361641,11.322734 6.6451815,11.710718 6.2511781,12.099739 5.6181968,12.095711 5.2302049,11.702723 L0.30932209,6.723164 0.29647896,6.711699 C0.12499117,6.5423756 0.027763774,6.3257717 0.005131483,6.1027555 L0.0021214279,6.0465301 0,6.0069036 0.0012931195,5.9759599 0.0012681484,5.9738314 0.0016320664,5.9678491 0.0040085315,5.9109814 C0.0068687879,5.8790751 0.011253239,5.8472761 0.017163038,5.8157039 L0.025305054,5.7814223 0.030626058,5.7560618 0.034627981,5.7421685 0.039469003,5.7217855 0.045940916,5.7028938 0.051231145,5.6845279 0.064685996,5.6481761 0.070932622,5.6299419 0.073595236,5.6241055 0.077336069,5.6139987 C0.087086182,5.5907491 0.097648721,5.5680073 0.10898232,5.5458007 L0.11082071,5.5425071 0.11155963,5.5408874 0.11558152,5.5339777 0.14525579,5.4808138 0.15603949,5.4644702 0.16135572,5.4553368 0.16924511,5.444456 0.18590831,5.4192016 0.21347794,5.3834515 0.22032713,5.3740053 0.22354037,5.3704034 0.23069285,5.3611286 C0.24628233,5.342379 0.26251909,5.3242466 0.27936194,5.3067587 L0.28624425,5.3001137 0.28847954,5.2976079 5.2301252,0.29728603 C5.4241112,0.10077333 5.6793425,0.001516819 5.9351995,1.7166138E-05 z"
+                    Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                    Stretch="Fill"
+                    StrokeThickness="0" />
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="Width" Value="{StaticResource TouchMode.MinWidth}"/>
+                <Setter Property="Height" Value="{StaticResource TouchMode.MinHeight}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TreeHeaderStyle" TargetType="ContentControl">
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.SubHeaderTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+
+    <Style x:Key="SyncfusionSfTreeNavigatorItemStyle" TargetType="local:SfTreeNavigatorItem">
+        <Setter Property="BorderThickness" Value="0,0,0,0" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Padding" Value="10,5,5,5" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:SfTreeNavigatorItem">
+                    <Border x:Name="MainBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        >
+                            <Grid>
+                                <Border
+                                    x:Name="PART_Selection"
+                                    Grid.ColumnSpan="2"
+                                    Background="{TemplateBinding Background}" />
+                                <Grid RenderTransformOrigin="0.5,0.5"
+                                    Margin="{TemplateBinding Padding}"
+                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    Background="Transparent">
+                                        <Grid.RenderTransform>
+                                            <TranslateTransform />
+                                        </Grid.RenderTransform>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ContentPresenter
+                                            x:Name="contentControl"
+                                            VerticalAlignment="Center"
+                                            Content="{TemplateBinding Header}"
+                                            ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                            ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}">
+                                            <ContentPresenter.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="TextBlock" />
+                                            </ContentPresenter.Resources>
+                                        </ContentPresenter>
+                                        <Path
+                                            x:Name="PART_Arrow"
+                                            Grid.Column="1"
+                                            Width="6"
+                                            Height="10"
+                                            Margin="0,5,5,5"
+                                            HorizontalAlignment="Right"
+                                            Data="M1 1L6.5 6.5L1 12"
+                                            Stretch="Fill"
+                                            Stroke="{StaticResource IconColor}"
+                                            StrokeThickness="{StaticResource MaterialLightCustom.StrokeThickness1}"
+                                            Visibility="{Binding HasItems, Converter={StaticResource VisibilityConverter}, RelativeSource={RelativeSource TemplatedParent}}" />
+                                </Grid>
+                            </Grid>
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="SelectionStates">
+                                <VisualState x:Name="Selected" />
+                                <VisualState x:Name="UnSelected" />
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver" />
+                                <VisualState x:Name="Pressed" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="true">
+                            <Setter Property="BorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="PART_Selection" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="MainBorder" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="contentControl" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter TargetName="PART_Selection" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="PART_Arrow" Property="Stroke" Value="{StaticResource IconColor}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="contentControl" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="true">
+                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
+                            <Setter TargetName="PART_Selection" Property="Background" Value="{StaticResource PrimaryBackground}" />
+                            <Setter TargetName="MainBorder" Property="Background" Value="{StaticResource PrimaryBackground}" />
+                            <Setter TargetName="contentControl" Property="TextElement.Foreground" Value="{StaticResource PrimaryForeground}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Setter TargetName="PART_Selection" Property="Background" Value="Transparent" />
+                            <Setter TargetName="contentControl" Property="Control.Foreground" Value="{StaticResource IconDisabledColor}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfTreeNavigatorItemStyle}" TargetType="local:SfTreeNavigatorItem" />
+    <Style x:Key="SyncfusionTreeNavigatorHeaderItemStyle" TargetType="local:TreeNavigatorHeaderItem">
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt2}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.SubHeaderTextStyle}" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:TreeNavigatorHeaderItem">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+
+                        <Grid 
+                            Margin="10,5,5,5"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                            Background="Transparent">
+                                <Grid.RenderTransform>
+                                    <TranslateTransform />
+                                </Grid.RenderTransform>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <ContentPresenter
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Header}"
+                                    ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                    ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}" />
+                                <Path
+                                    x:Name="PART_Arrow"
+                                    Grid.Column="1"
+                                    Width="6"
+                                    Height="10"
+                                    Margin="0,5,5,5"
+                                    HorizontalAlignment="Right"
+                                    Data="M6.5 1L1 6.5L6.5 12"
+                                    Stretch="Uniform"
+                                    Stroke="{StaticResource IconColor}"
+                                    StrokeThickness="{StaticResource MaterialLightCustom.StrokeThickness1}" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionTreeNavigatorHeaderItemStyle}" TargetType="local:TreeNavigatorHeaderItem" />
+
+    <Style x:Key="SyncfusionTreeNavigatorItemsHostStyle" TargetType="local:TreeNavigatorItemsHost">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:TreeNavigatorItemsHost">
+                    <Grid>
+                        <Border
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter Grid.Row="1" />
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionTreeNavigatorItemsHostStyle}" TargetType="local:TreeNavigatorItemsHost" />
+
+    <Style x:Key="SyncfusionSfTreeNavigatorStyle" TargetType="local:SfTreeNavigator">
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" /> 
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness1}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:SfTreeNavigator">
+                    <Border
+                        x:Name="NavigationBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+						Margin="0,0,-2,0"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid Margin="{TemplateBinding Padding}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+
+                            <Border
+                                x:Name="PART_DefaultModeHeader"
+                                MinHeight="36"
+                                Padding="10,0,0,0"
+                                BorderBrush="{StaticResource BorderAlt}"
+                                Background="{StaticResource ContentBackgroundAlt2}"> 
+                                <Border.BorderThickness>
+                                    <Thickness>0</Thickness>
+                                </Border.BorderThickness>
+                                <Grid VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Button
+                                        x:Name="PART_BackButton"
+                                        Grid.Column="0"
+                                        IsTabStop="{TemplateBinding IsTabStop}"
+                                        Style="{StaticResource SyncfusionBackButtonStyle}" />
+
+                                    <ContentPresenter
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Content="{Binding DrillDownItem.Header,RelativeSource={RelativeSource TemplatedParent}}"                                
+                                        ContentTemplate="{Binding DrillDownItem.HeaderTemplate,RelativeSource={RelativeSource TemplatedParent}}"
+                                        ContentTemplateSelector="{Binding DrillDownItem.HeaderTemplateSelector,RelativeSource={RelativeSource TemplatedParent}}"
+                                        TextElement.FontWeight="{StaticResource MaterialLightCustom.FontWeightNormal}"
+                                        TextElement.FontSize="{StaticResource MaterialLightCustom.SubHeaderTextStyle}"
+                                        TextElement.Foreground="{StaticResource ContentForeground}">
+                                        <ContentPresenter.Resources>
+                                            <Style BasedOn="{x:Null}" TargetType="TextBlock" />
+                                        </ContentPresenter.Resources>
+                                    </ContentPresenter>
+                                </Grid>
+                            </Border>
+                            <Grid x:Name="PART_ExtendedModeHeader" Visibility="Collapsed">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition x:Name="extendedHeaderRow" MinHeight="36" />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                                <Border Background="{StaticResource ContentBackgroundAlt2}"
+                                        BorderBrush="{StaticResource BorderAlt}">
+                                    <Border.BorderThickness>
+                                        <Thickness>0,0,0,1</Thickness>
+                                    </Border.BorderThickness>
+                                    <ContentPresenter
+                                        Margin="10,2,0,0"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Content="{TemplateBinding Header}"
+                                        ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                        ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+                                        TextElement.FontWeight="{StaticResource MaterialLightCustom.FontWeightNormal}"
+                                        TextElement.FontSize="{StaticResource MaterialLightCustom.SubHeaderTextStyle}"
+                                        TextElement.Foreground="{StaticResource ContentForeground}">
+                                        <ContentPresenter.Resources>
+                                            <Style BasedOn="{x:Null}" TargetType="TextBlock" />
+                                        </ContentPresenter.Resources>
+                                    </ContentPresenter>
+                                </Border>
+                                <local:TreeNavigatorItemsHost
+                                    x:Name="PART_DrillDownItemsHost"
+                                    Grid.Row="1"
+                                    HorizontalAlignment="Stretch"
+                                    IsHeaderHost="True"
+                                    ItemContainerStyle="{TemplateBinding ItemContainerStyle}"
+                                    ItemContainerStyleSelector="{TemplateBinding ItemContainerStyleSelector}"
+                                    ItemTemplate="{TemplateBinding ItemTemplate}"
+                                    ItemTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                    ItemsSource="{TemplateBinding DrillDownItems}" />
+                            </Grid>
+
+                            <shared:SfNavigator
+                                x:Name="PART_Navigator"
+                                Grid.Row="2"
+
+                                ActiveIndex="0"
+                                Background="{TemplateBinding Background}"
+                                IsTabStop="False">
+                                <local:TreeNavigatorItemsHost
+                                    x:Name="PART_Host"
+                                    Header="{TemplateBinding Header}"
+                                    Focusable="False"
+                                    IsTabStop="False"
+                                    ItemContainerStyle="{TemplateBinding ItemContainerStyle}"
+                                    ItemContainerStyleSelector="{TemplateBinding ItemContainerStyleSelector}"
+                                    ItemTemplate="{TemplateBinding ItemTemplate}"
+                                    ItemTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                    ItemsSource="{Binding Items, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                            </shared:SfNavigator>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter TargetName="NavigationBorder" Property="Opacity" Value="0.5" />
+                        </Trigger>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" TargetName="PART_DefaultModeHeader" Value="40"/>
+                            <Setter Property="MinHeight" TargetName="extendedHeaderRow" Value="40"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfTreeNavigatorStyle}" TargetType="{x:Type local:SfTreeNavigator}" />
+
+</ResourceDictionary>

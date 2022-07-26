@@ -29,35 +29,43 @@ namespace EQLogParser
       }
     }
 
-    internal static void CopyImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
+    internal static void CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
     {
       Task.Delay(100).ContinueWith((task) => dispatcher.InvokeAsync(() =>
       {
         var wasHidden = content.Visibility != Visibility.Visible;
         content.Visibility = Visibility.Visible;
 
-        var titleHeight = titleLabel.DesiredSize.Height - (titleLabel.Padding.Top + titleLabel.Padding.Bottom);
-        var titleWidth = titleLabel.DesiredSize.Width;
-        var height = (int)content.ActualHeight + (int)titleHeight;
+        int titlePadding = 0;
+        int titleHeight = 0;
+        int titleWidth = 0;
+        if (titleLabel != null)
+        {
+          titlePadding = (int)titleLabel.Padding.Top + (int)titleLabel.Padding.Bottom;
+          titleHeight = (int)titleLabel.ActualHeight - titlePadding - 4;
+          titleWidth = (int)titleLabel.DesiredSize.Width;
+        }
+
+        var height = (int)content.ActualHeight + (int)titleHeight + (int)titlePadding;
         var width = (int)content.ActualWidth;
 
         var dpiScale = VisualTreeHelper.GetDpi(content);
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + 20, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
           var brush = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
-          ctx.DrawRectangle(brush, null, new Rect(new Point(0, 0), new Size(width, height)));
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, 0), new Size(width, height + 20)));
 
           if (titleLabel != null)
           {
             var titleBrush = new VisualBrush(titleLabel);
-            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(4, 0), new Size(titleWidth, titleHeight)));
+            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(4, titlePadding / 2), new Size(titleWidth, titleHeight)));
           }
 
           var chartBrush = new VisualBrush(content);
-          ctx.DrawRectangle(chartBrush, null, new Rect(new Point(0, titleHeight), new Size(width, height - titleHeight)));
+          ctx.DrawRectangle(chartBrush, null, new Rect(new Point(0, titleHeight + titlePadding), new Size(width, height - titleHeight)));
         }
 
         rtb.Render(dv);

@@ -1,0 +1,180 @@
+<ResourceDictionary 
+     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:tools="clr-namespace:Syncfusion.Windows.Controls.Notification;assembly=Syncfusion.Tools.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <tools:ArithmeticConverter
+        x:Key="arithmeticConverter"
+        Operand="2"
+        Operator="Division" />
+    <tools:ContrastBrushConverter x:Key="ColorCoverter" />
+
+    <Style x:Key="SfBadgeStyle" TargetType="{x:Type tools:SfBadge}">
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="StrokeThickness" Value="{StaticResource MaterialLightCustom.StrokeThickness1}"/>
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.CaptionText}"/>
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}"/>
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}"/>
+		<Setter Property="Padding" Value="4,1,4,1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools:SfBadge}">
+                    <Border>
+                        <Border.Resources>
+                            <Storyboard x:Key="Animation">
+                                <DoubleAnimation
+                                    x:Name="CenterX"
+                                    Storyboard.TargetName="BadgeBorder"
+                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.CenterX)"
+                                    From="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=ActualWidth, Converter={StaticResource arithmeticConverter}}"
+                                    To="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=ActualWidth, Converter={StaticResource arithmeticConverter}}"
+                                    Duration="0:0:0" />
+                                <DoubleAnimation
+                                    x:Name="CenterY"
+                                    Storyboard.TargetName="BadgeBorder"
+                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.CenterY)"
+                                    From="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=ActualHeight, Converter={StaticResource arithmeticConverter}}"
+                                    To="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=ActualHeight, Converter={StaticResource arithmeticConverter}}"
+                                    Duration="0:0:0" />
+                                <DoubleAnimation
+                                    Storyboard.TargetName="BadgeBorder"
+                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                    From="0"
+                                    To="1"
+                                    Duration="0:0:0.2" />
+                                <DoubleAnimation
+                                    Storyboard.TargetName="BadgeBorder"
+                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                    From="0"
+                                    To="1"
+                                    Duration="0:0:0.2" />
+                            </Storyboard>
+                        </Border.Resources>
+                        <Border
+                            x:Name="BadgeBorder"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Path
+                                    x:Name="BadgePath"
+                                    Stretch="Fill"
+                                    Stroke="{TemplateBinding Stroke}"
+                                    StrokeThickness="{TemplateBinding StrokeThickness}">
+                                    <Path.Fill>
+                                        <MultiBinding Converter="{StaticResource ColorCoverter}">
+                                            <MultiBinding.ConverterParameter>
+                                                <x:Array Type="{x:Type SolidColorBrush}">
+                                                    <SolidColorBrush Color="{StaticResource BadgeBackground.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource ContentBackgroundAlt5.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource PrimaryBackground.Color}"/>
+                                                    <SolidColorBrush Color="{StaticResource ErrorForeground.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource SuccessForeground.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource WarningForeground.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource LinkForeground.Color}" />
+                                                </x:Array>
+                                            </MultiBinding.ConverterParameter>
+                                            <Binding Path="Fill" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                            <Binding Path="Shape" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                            <Binding Path="Content" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                            <Binding Path="Background" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                        </MultiBinding>
+                                    </Path.Fill>
+                                </Path>
+                                <ContentPresenter
+                                    x:Name="BadgeContent"
+                                    Margin="{TemplateBinding Padding}"
+                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                                    <TextElement.Foreground>
+                                        <MultiBinding Converter="{StaticResource ColorCoverter}">
+                                            <MultiBinding.ConverterParameter>
+                                                <x:Array Type="{x:Type SolidColorBrush}">
+                                                    <SolidColorBrush Color="{StaticResource BadgeForeground.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource ContentForeground.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource PrimaryForeground.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource White.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource White.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource Black.Color}" />
+                                                    <SolidColorBrush Color="{StaticResource White.Color}" />
+                                                </x:Array>
+                                            </MultiBinding.ConverterParameter>
+                                            <Binding Path="Fill" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                            <Binding Path="Shape" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                            <Binding Path="Content" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                            <Binding Path="Background" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                            <Binding Path="Foreground" RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                            <Binding RelativeSource="{RelativeSource Mode=TemplatedParent}" />
+                                        </MultiBinding>
+                                    </TextElement.Foreground>
+                                </ContentPresenter>
+                            </Grid>
+                            <Border.RenderTransform>
+                                <ScaleTransform />
+                            </Border.RenderTransform>
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="AnimationStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="ScaleAnimation" Storyboard="{StaticResource ResourceKey=Animation}" />
+                                <VisualState x:Name="OpacityAnimation">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="BadgeBorder"
+                                            Storyboard.TargetProperty="(UIElement.Opacity)"
+                                            From="0"
+                                            To="1"
+                                            Duration="0:0:0.5" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt4}"/>
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                            <Setter Property="Stroke" Value="{StaticResource ContentBackgroundAlt4}"/>
+                            <Setter Property="StrokeThickness" Value="{StaticResource MaterialLightCustom.StrokeThickness1}"/>
+                        </Trigger>
+                        <Trigger Property="Fill" Value="Default">
+                            <Setter Property="Stroke" Value="{StaticResource BadgeBackground}"/>
+                        </Trigger>
+                        <Trigger Property="Fill" Value="Alt">
+                            <Setter Property="Stroke" Value="{StaticResource ContentBackgroundAlt5}"/>
+                        </Trigger>
+                        <Trigger Property="Fill" Value="Accent">
+                            <Setter Property="Stroke" Value="{StaticResource PrimaryBackground}"/>
+                        </Trigger>
+                        <Trigger Property="Fill" Value="Success">
+                            <Setter Property="Stroke" Value="{StaticResource SuccessForeground}"/>
+                        </Trigger>
+                        <Trigger Property="Fill" Value="Warning">
+                            <Setter Property="Stroke" Value="{StaticResource WarningForeground}"/>
+                        </Trigger>
+                        <Trigger Property="Fill" Value="Error">
+                            <Setter Property="Stroke" Value="{StaticResource ErrorForeground}"/>
+                        </Trigger>
+                        <Trigger Property="Fill" Value="Information">
+                            <Setter Property="Stroke" Value="{StaticResource LinkForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SfBadgeStyle}" TargetType="{x:Type tools:SfBadge}" />
+
+</ResourceDictionary>

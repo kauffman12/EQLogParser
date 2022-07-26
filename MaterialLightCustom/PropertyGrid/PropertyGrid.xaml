@@ -1,0 +1,661 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:propertygrid="clr-namespace:Syncfusion.Windows.PropertyGrid;assembly=Syncfusion.PropertyGrid.WPF"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:syncfusion="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphPrimaryToggleButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.PropertyGrid.WPF;component/Themes/DataTemlates.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ScrollViewer.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <propertygrid:StringTrimmerConverter x:Key="StringTrimmerConverter" />
+    <propertygrid:PropertyItemToNameConverter x:Key="NameConverter" />
+    <propertygrid:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <propertygrid:LevelToThicknessConverterForTogglebutton x:Key="LevelConverter" />
+    <propertygrid:InvertBooleanVisibilityConverter x:Key="InvertBooleanVisibilityConverter" />
+    <propertygrid:BooleanToSortDirectionConverter x:Key="BooleanToSortDirectionConverter" />
+    <propertygrid:InvertBooleanConverter x:Key="InvertBooleanConverter" />
+
+    <DataTemplate x:Key="DescriptionTemplate">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <propertygrid:DescriptionNameTextBlock Grid.Row="0"
+                                                     Margin="5"
+                                                     FontWeight="Bold"
+                                                     Text="{Binding Name}"/>
+            <propertygrid:DescriptionDetailsTextBlock x:Name="DescriptionTextBlock"
+                                                        Margin="5"
+                                                        Grid.Row="1"
+                                                        TextWrapping="Wrap"
+                                                        TextTrimming="CharacterEllipsis"
+                                                        Text="{Binding Description}">
+                <propertygrid:DescriptionDetailsTextBlock.ToolTip>
+                    <ToolTip DataContext="{Binding Path=PlacementTarget, RelativeSource={RelativeSource Self}}">
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+                    </ToolTip>
+                </propertygrid:DescriptionDetailsTextBlock.ToolTip>
+            </propertygrid:DescriptionDetailsTextBlock>
+        </Grid>
+    </DataTemplate>
+
+    <Style x:Key="MaterialExpanderButtonStyle" TargetType="{x:Type ToggleButton}">
+        <Setter Property="FrameworkElement.Focusable" Value="False" />
+        <Setter Property="FrameworkElement.Width" Value="16" />
+        <Setter Property="FrameworkElement.Height" Value="16" />
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border
+                        x:Name="ExpandButtonBorder"
+                        Width="{TemplateBinding Width}"
+                        Height="{TemplateBinding Height}"
+                        Background="Transparent"
+                        BorderBrush="Transparent">
+                        <Path
+                            Name="ExpandButtonPath"
+                            Width="4"
+                            Height="7"
+                            HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                            Fill="{StaticResource IconColor}"
+                            Stretch="Fill" >
+                            <Path.Data>
+                                <PathGeometry>M0,0 L4,3.5 0,7 z</PathGeometry>
+                            </Path.Data>
+                        </Path>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="ToggleButton.IsChecked" Value="True">
+                            <Setter TargetName="ExpandButtonPath" Property="Width" Value="7" />
+                            <Setter TargetName="ExpandButtonPath" Property="Height" Value="4" />
+                            <Setter TargetName="ExpandButtonPath" Property="Data" Value="M0,0 L7.0000002,0 3.5,3.9999999 z" />
+                            <Setter TargetName="ExpandButtonPath" Property="Data" Value="M0.74499548,0 L5.0119957,4.7700001 9.2630047,0.017000169 10.008001,0.68400005 5.0119957,6.2700001 0,0.66699985 z" />
+                        </Trigger>
+                        <Trigger Property="UIElement.IsMouseOver" Value="True">
+                            <Setter TargetName="ExpandButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="ExpandButtonBorder" Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="ExpandButtonBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="ExpandButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="ExpandButtonBorder" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
+                            <Setter TargetName="ExpandButtonBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                        </Trigger>
+                        <Trigger Property="UIElement.IsEnabled" Value="False">
+                            <Setter TargetName="ExpandButtonPath" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                            <Setter TargetName="ExpandButtonBorder" Property="Background" Value="Transparent" />
+                            <Setter TargetName="ExpandButtonBorder" Property="BorderBrush" Value="Transparent" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TreeViewItem}}}" Value="True">
+                            <Setter TargetName="ExpandButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=IsMouseOver, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TreeViewItem}}}" Value="True">
+                            <Setter TargetName="ExpandButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionPropertyViewItemStyle" TargetType="propertygrid:PropertyViewItem">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="0,2" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="EditorTemplate" Value="{StaticResource PropertyNameTemplate}" />
+        <Setter Property="Background" Value="{Binding Path=PropertyView.ViewBackgroundColor, RelativeSource={RelativeSource Self}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="propertygrid:PropertyViewItem">
+                    <Grid x:Name="RootGrid">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid x:Name="PART_PropertyView">
+                            <Border
+                                x:Name="PropertyViewBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True">
+                                <Grid x:Name="ViewGrid">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="{Binding Path=PropertyNameColumnDefinition, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type propertygrid:PropertyGrid}}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <ColumnDefinition Width="3" />
+                                        <ColumnDefinition Width="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ResizeColumn2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="44" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border
+                                        x:Name="Border"
+                                        Background="{TemplateBinding Background}"
+                                        SnapsToDevicePixels="True">
+                                        <Grid Margin="{Binding PropertyLevel, Mode=OneWay, Converter={StaticResource LevelConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition x:Name="expanderColumn" Width="25" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <ToggleButton
+                                                x:Name="NestedToggleButton"
+                                                Width="15"
+                                                Height="15"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                IsChecked="{Binding Path=IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                                Style="{StaticResource MaterialExpanderButtonStyle}"
+                                                Tag="ViewItem"
+                                                Visibility="Collapsed" />
+
+                                            <ContentPresenter
+                                                x:Name="PART_Content"
+                                                Grid.Column="1"
+                                                Margin="{TemplateBinding Padding}"
+                                                Content="{TemplateBinding HeaderedItemsControl.Header}"
+                                                ContentTemplate="{TemplateBinding EditorTemplate}" >
+                                                <ContentPresenter.Resources>
+                                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                                </ContentPresenter.Resources>
+                                            </ContentPresenter>
+                                        </Grid>
+                                    </Border>
+                                    <GridSplitter
+                                        Grid.Column="1"
+                                        Width="3"
+                                        HorizontalAlignment="Stretch"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        IsTabStop="False"
+                                        Visibility="{TemplateBinding IsCategoryEditorEnabled,
+                                                                     Converter={StaticResource InvertBooleanVisibilityConverter}}" />
+                                    <ContentPresenter
+                                        x:Name="PART_Content1"
+                                        Grid.Column="2"
+                                        Content="{TemplateBinding HeaderedItemsControl.Header}"
+                                        ContentTemplate="{StaticResource PropertyValueTemplate}"
+                                        Visibility="{TemplateBinding IsCategoryEditorEnabled,
+                                                                     Converter={StaticResource InvertBooleanVisibilityConverter}}" >
+                                    </ContentPresenter>
+                                </Grid>
+                            </Border>
+                            <Border
+                                x:Name="PropertySideborder"
+                                Width="25"
+                                HorizontalAlignment="Left"
+                                BorderThickness="0"
+                                SnapsToDevicePixels="True">
+                                <ToggleButton
+                                    x:Name="ToggleButton"
+                                    Width="15"
+                                    Height="15"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{Binding Path=IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                    Style="{StaticResource MaterialExpanderButtonStyle}"
+                                    Visibility="Collapsed" />
+                            </Border>
+                        </Grid>
+                        <ItemsPresenter
+                            x:Name="SubItemPresenter"
+                            Grid.Row="1"
+                            Visibility="Collapsed" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding Path=PropertyExpandMode, RelativeSource={RelativeSource Self}}" Value="NestedMode">
+                            <Setter TargetName="ToggleButton" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="NestedToggleButton" Property="Visibility" Value="{Binding HasChildren, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </DataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=PropertyExpandMode, RelativeSource={RelativeSource Self}}" Value="NestedMode" />
+                                <Condition Binding="{Binding Path=PropertyLevel}" Value="1" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="NestedToggleButton" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="ToggleButton" Property="Visibility" Value="{Binding HasChildren, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </MultiDataTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition SourceName="ToggleButton" Property="Visibility" Value="Visible" />
+                                <Condition SourceName="ToggleButton" Property="IsChecked" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="SubItemPresenter" Property="Visibility" Value="Visible" />
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition SourceName="NestedToggleButton" Property="Visibility" Value="Visible" />
+                                <Condition SourceName="NestedToggleButton" Property="IsChecked" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="SubItemPresenter" Property="Visibility" Value="Visible" />
+                        </MultiTrigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition SourceName="Border" Property="IsMouseOver" Value="True" />
+                                <Condition SourceName="NestedToggleButton" Property="IsMouseOver" Value="False" />
+                                <Condition SourceName="ToggleButton" Property="IsMouseOver" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="Border" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </MultiTrigger>
+
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
+                            <Setter TargetName="Border" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter TargetName="Border" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel VirtualizationMode="Recycling"/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <!--<Style.Triggers>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility"/>
+                    <Condition Binding="{Binding Path=PropertyExpandMode, RelativeSource={RelativeSource Self}}" Value="FlatMode" />
+                </MultiTrigger.Conditions>
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </MultiTrigger>
+        </Style.Triggers>-->
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionPropertyViewItemStyle}" TargetType="{x:Type propertygrid:PropertyViewItem}" />
+
+    <Style x:Key="SyncfusionPropertyCatagoryViewItemStyle" TargetType="propertygrid:PropertyCatagoryViewItem">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Padding" Value="0,4" />
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Background" Value="{Binding Path=LineColor, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type propertygrid:PropertyGrid}}, Mode=TwoWay}" />
+        <Setter Property="HeaderTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Background="{Binding Background, RelativeSource={RelativeSource AncestorType=ContentControl}}"
+                        Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentControl}}"
+                        Text="{Binding Path=., Converter={StaticResource StringTrimmerConverter}}" />
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="propertygrid:PropertyCatagoryViewItem">
+                    <Grid x:Name="RootGrid" Background="{TemplateBinding Background}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="5*" />
+                            <RowDefinition Height="5*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border
+                            x:Name="CatagoryHeaderBorder"
+                            Grid.Column="1"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                            <Grid x:Name="CatagoryHeaderGrid">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition x:Name="expanderColumn" Width="25" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border
+                                    x:Name="innerBorder"
+                                    Padding="{TemplateBinding Padding}"
+                                    Background="Transparent"
+                                    SnapsToDevicePixels="True">
+                                    <ToggleButton
+                                        x:Name="PART_Expander"
+                                        Width="15"
+                                        Height="15"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
+                                        IsThreeState="False"
+                                        Opacity="1"
+                                        Style="{StaticResource MaterialExpanderButtonStyle}" />
+                                </Border>
+                                <ContentControl
+                                    x:Name="PART_Header"
+                                    Grid.Column="1"
+                                    Padding="{TemplateBinding Padding}"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    Content="{TemplateBinding Header}"
+                                    ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                    FocusVisualStyle="{x:Null}"
+                                    FontSize="{StaticResource MaterialLightCustom.SubTitleTextStyle}"
+                                    FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                    Foreground="{TemplateBinding CategoryForeground}"
+                                    IsTabStop="{TemplateBinding IsTabStop}" />
+                            </Grid>
+                        </Border>
+
+                        <Border
+                            x:Name="PropertyItemBorder"
+                            Grid.Row="1"
+                            Grid.ColumnSpan="2"
+                            Background="{TemplateBinding Background}">
+                            <ItemsPresenter x:Name="PART_Presenter" Visibility="Collapsed" />
+                        </Border>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="PART_Presenter" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger SourceName="PART_Header" Property="IsFocused" Value="True">
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel VirtualizationMode="Recycling"/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionPropertyCatagoryViewItemStyle}" TargetType="{x:Type propertygrid:PropertyCatagoryViewItem}" />
+
+    <Style x:Key="PropertyGridScrollViewer" TargetType="{x:Type ScrollViewer}" BasedOn="{StaticResource WPFScrollViewerStyle}"/>
+
+    <Style x:Key="SyncfusionPropertyViewStyle" TargetType="propertygrid:PropertyView">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="propertygrid:PropertyView">
+                    <Border
+                        x:Name="PropertyViewBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <propertygrid:PropertyGridScrollViewer
+                                    x:Name="ScrollViewer"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    HorizontalScrollBarVisibility="Disabled"
+                                    VerticalScrollBarVisibility="Auto"
+                                    Style="{StaticResource PropertyGridScrollViewer}"
+                                    CanContentScroll="True">
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                        </propertygrid:PropertyGridScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel VirtualizationMode="Recycling"/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionPropertyViewStyle}" TargetType="{x:Type propertygrid:PropertyView}" />
+
+    <Style x:Key="SyncfusionPropertyGridStyle" TargetType="propertygrid:PropertyGrid">
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="CategoryForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="LineColor" Value="{StaticResource ContentBackground}" />
+        <Setter Property="ViewBackgroundColor" Value="{StaticResource ContentBackground}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="DescriptionPanelHeight" Value="55" />
+        <Setter Property="DescriptionTemplate" Value="{StaticResource DescriptionTemplate}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="propertygrid:PropertyGrid">
+                    <Border
+                        x:Name="PropertyGridBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}"
+                        SnapsToDevicePixels="True">
+                        <Grid x:Name="RootGrid">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="{TemplateBinding DescriptionPanelHeight}" />
+                            </Grid.RowDefinitions>
+
+                            <Border
+                                x:Name="InnerBorder"
+                                Background="{StaticResource ContentBackgroundAlt2}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                SnapsToDevicePixels="True">
+                                <Grid
+                                    x:Name="InnerGrid"
+                                    Grid.Row="0"
+                                    Background="{StaticResource ContentBackgroundAlt2}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton
+                                        x:Name="PART_GroupButton"
+                                        Width="24"
+                                        Height="24"
+                                        Margin="4"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Focusable="True"
+                                        IsChecked="{Binding EnableGrouping, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                        Style="{StaticResource WPFGlyphPrimaryToggleButtonStyle}"
+                                        ToolTip="{propertygrid:PropertyGridLocalizationResourceExtension ResourceName=Categorized}"
+                                        Visibility="{TemplateBinding ButtonPanelVisibility}" >
+                                        <Path Width="16"
+                                              Height="16"
+                                              Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}}}" 
+                                              Stretch="Fill" >
+                                            <Path.Data>
+                                                <PathGeometry>M9,11 L16,11 16,13 9,13 z M3,10 L3,12 1,12 1,13 3,13 3,15 4,15 4,13 6,13 6,12 4,12 4,10 z M0,9 L7,9 7,16 0,16 z M9,3 L16,3 16,5 9,5 z M3,1 L3,3 1,3 1,4 3,4 3,6 4,6 4,4 6,4 6,3 4,3 4,1 z M0,0 L7,0 7,7 0,7 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </ToggleButton>
+
+                                    <ToggleButton
+                                        x:Name="PART_SortButton"
+                                        Grid.Column="1"
+                                        Width="24"
+                                        Height="24"
+                                        Margin="0,4"
+                                        Focusable="True"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        IsChecked="{Binding EnableGrouping, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, Converter={StaticResource InvertBooleanConverter}}"
+                                        Style="{StaticResource WPFGlyphPrimaryToggleButtonStyle}"
+                                        ToolTip="{propertygrid:PropertyGridLocalizationResourceExtension ResourceName=Alphabetical}"
+                                        Visibility="{TemplateBinding ButtonPanelVisibility}" >
+                                        <Path Width="16"
+                                              Height="16"
+                                              Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}}}" 
+                                              Stretch="Fill" >
+                                            <Path.Data>
+                                                <PathGeometry>M6.8349915,13.864976 L10.516998,13.864976 8.6759949,15.705 z M4.1959839,5.0679875 L2.6629944,9.1599632 5.7290039,9.1599632 z M9.2919922,3.345028 L15.850983,3.345028 15.850983,4.3400222 11.165009,11.135974 16,11.135974 16,12.392015 9.2609863,12.392015 9.2609863,11.371997 13.937988,4.6099802 9.2919922,4.6099802 z M3.5559998,3.3369714 L4.8519897,3.3369714 8.3989868,12.392015 6.9459839,12.392015 6.2189941,10.455983 2.1809998,10.455983 1.45401,12.392015 0,12.392015 z M8.6759949,0 L10.540009,1.864988 6.8110046,1.864988 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </ToggleButton>
+
+                                    <Grid
+                                        x:Name="SearchTextBoxGrid"
+                                        Grid.Column="2"
+                                        Margin="4"
+                                        Visibility="{TemplateBinding SearchBoxVisibility}">
+                                        <syncfusion:MaskedTextBox
+                                            x:Name="PART_SearchText"
+                                            Height="24"
+                                            Padding="2,0,0,-1"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
+                                            BorderBrush="Transparent"
+                                            CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}"
+                                            WatermarkText="{propertygrid:PropertyGridLocalizationResourceExtension ResourceName=Search}"
+                                            WatermarkTextIsVisible="True" />
+                                        <Button
+                                            x:Name="PART_Clear"
+                                            Width="16"
+                                            Height="16"
+                                            Margin="2,0"
+                                            HorizontalAlignment="Right"
+                                            IsTabStop="False"
+                                            ToolTip="{propertygrid:PropertyGridLocalizationResourceExtension ResourceName=Clear}"
+                                            Style="{StaticResource WPFGlyphButtonStyle}"
+                                            Visibility="Collapsed" >
+                                            <Path Width="8"
+                                                  Height="8"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                                  SnapsToDevicePixels="True"
+                                                  Stretch="Fill" >
+                                                <Path.Data>
+                                                    <PathGeometry>M10.586002,0 L12.000003,1.4140021 7.413983,5.9987224 12,10.583006 10.586,11.997005 5.9997823,7.4125217 1.4140045,11.997 3.0398377E-06,10.582997 4.5855133,5.9987873 0,1.4150074 1.414,0.0010076167 5.9997136,4.5849875 z</PathGeometry>
+                                                </Path.Data>
+                                            </Path>
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <Grid x:Name="PropertyViewGrid" Grid.Row="1">
+                                <propertygrid:PropertyView
+                                    x:Name="PART_PropertyView"
+                                    CategoryForeground="{Binding CategoryForeground, RelativeSource={RelativeSource TemplatedParent}}"
+                                    EditableBackground="{Binding EditableBackground, RelativeSource={RelativeSource TemplatedParent}}"
+                                    EditableFontWeight="{Binding EditableFontWeight, RelativeSource={RelativeSource TemplatedParent}}"
+                                    EnableGrouping="{TemplateBinding EnableGrouping}"
+                                    FocusVisualStyle="{x:Null}"
+                                    IsTabStop="False"
+                                    ItemsSource="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Properties}"
+                                    LineColor="{Binding Path=LineColor, RelativeSource={RelativeSource TemplatedParent}}"
+                                    ReadOnlyBackground="{Binding ReadOnlyBackground, RelativeSource={RelativeSource TemplatedParent}}"
+                                    ReadOnlyFontWeight="{Binding ReadOnlyFontWeight, RelativeSource={RelativeSource TemplatedParent}}"
+                                    VirtualizingStackPanel.IsVirtualizing="{Binding RelativeSource={RelativeSource TemplatedParent},Path=IsVirtualizing}"
+                                    ViewBackgroundColor="{Binding Path=ViewBackgroundColor, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </Grid>
+
+                            <GridSplitter
+                                x:Name="GridSplitter"
+                                Grid.Row="2"
+                                Height="3" 
+                                Focusable="False"
+                                IsTabStop="False"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center"
+                                Visibility="{TemplateBinding DescriptionPanelVisibility}" />
+
+                            <Border
+                                x:Name="DescriptionPanelBorder"
+                                Grid.Row="3"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Visibility="{TemplateBinding DescriptionPanelVisibility}">
+                                <Grid x:Name="DescriptionGrid">
+                                    <ContentPresenter x:Name="DescriptionTextBlock" DataContext=""
+                                                        Margin="5"  ContentTemplate="{Binding Path=SelectedItem, ElementName=PART_PropertyView, Converter={StaticResource NameConverter}, ConverterParameter=DescriptionTemplate}" ContentTemplateSelector="{Binding Path=SelectedItem, ElementName=PART_PropertyView, Converter={StaticResource NameConverter}, ConverterParameter=DescriptionTemplateSelector}"
+                                                        Grid.Row="1"
+                                                        Content="{Binding Path=SelectedItem, ElementName=PART_PropertyView, Converter={StaticResource NameConverter}, ConverterParameter=Description}">
+                                    </ContentPresenter>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="InnerBorder" Property="Background" Value="{StaticResource ContentBackgroundAlt2}" />
+                            <Setter TargetName="InnerGrid" Property="Background" Value="{StaticResource ContentBackgroundAlt2}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionPropertyGridStyle}" TargetType="{x:Type propertygrid:PropertyGrid}" />
+
+    <Style x:Key="SyncfusionItemsSourceControlStyle" TargetType="{x:Type propertygrid:ItemsSourceControl}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type propertygrid:ItemsSourceControl}">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="Part_Text"
+                                Grid.Column="0"
+                                Margin="2,0"
+                                Text="{propertygrid:PropertyGridLocalizationResourceExtension ResourceName=CollectionEditorWatermark}"
+                                VerticalAlignment="Center" />
+                            <Button
+                                x:Name="Part_Btn"
+                                Grid.Column="1"
+                                Content="..." />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionItemsSourceControlStyle}" TargetType="{x:Type propertygrid:ItemsSourceControl}" />
+
+</ResourceDictionary>

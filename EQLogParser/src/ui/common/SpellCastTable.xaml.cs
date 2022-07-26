@@ -1,12 +1,10 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -15,7 +13,6 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCastTable : UserControl, IDisposable
   {
-    private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
     private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
     private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
     private readonly Dictionary<string, byte> UniqueNames = new Dictionary<string, byte>();
@@ -38,6 +35,8 @@ namespace EQLogParser
       castTypes.SelectedIndex = 0;
       spellTypes.ItemsSource = SpellTypes;
       spellTypes.SelectedIndex = 0;
+
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
       Display();
     }
 
@@ -63,11 +62,12 @@ namespace EQLogParser
       int max = 0;
 
       double lastTime = double.NaN;
+      var list = new List<IDictionary<string, object>>();
       foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
       {
         if (!double.IsNaN(lastTime) && action.BeginTime != lastTime)
         {
-          AddRow(playerSpells, max, lastTime, startTime);
+          AddRow(list, playerSpells, max, lastTime, startTime);
           playerSpells.Clear();
           max = 0;
         }
@@ -98,14 +98,16 @@ namespace EQLogParser
 
       if (playerSpells.Count > 0 && max > 0)
       {
-        AddRow(playerSpells, max, lastTime, startTime);
+        AddRow(list, playerSpells, max, lastTime, startTime);
       }
 
-      dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(Records);
+      dataGrid.ItemsSource = list;
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged();
+    private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => OptionsChanged();
 
     private int AddToList(Dictionary<string, List<string>> dict, string key, string value)
     {
@@ -119,6 +121,17 @@ namespace EQLogParser
       }
 
       return dict[key].Count;
+    }
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      // toggle styles to get them to re-render
+      foreach (var column in dataGrid.Columns)
+      {
+        var style = column.CellStyle;
+        column.CellStyle = null;
+        column.CellStyle = style;
+      }
     }
 
     private bool IsValid(ReceivedSpell spell, Dictionary<string, byte> uniqueNames, string player, out SpellData replaced)
@@ -145,7 +158,7 @@ namespace EQLogParser
       return valid;
     }
 
-    private void AddRow(Dictionary<string, List<string>> playerSpells, int max, double beginTime, double startTime)
+    private void AddRow(List<IDictionary<string, object>>  list, Dictionary<string, List<string>> playerSpells, int max, double beginTime, double startTime)
     {
       for (int i = 0; i < max; i++)
       {
@@ -165,16 +178,14 @@ namespace EQLogParser
           }
         }
 
-        Records.Add(row);
+        list.Add(row);
       }
     }
 
     private void OptionsChanged()
     {
-      if (Records.Count > 0)
+      if (dataGrid?.View != null)
       {
-        Records.Clear();
-
         for (int i = dataGrid.Columns.Count - 1; i > 1; i--)
         {
           dataGrid.Columns.RemoveAt(i);
@@ -187,9 +198,6 @@ namespace EQLogParser
       }
     }
 
-    private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged();
-    private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => OptionsChanged();
-
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
 
@@ -197,6 +205,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         dataGrid.Dispose();
         disposedValue = true;
       }
