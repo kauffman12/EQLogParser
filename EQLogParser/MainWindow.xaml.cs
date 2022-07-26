@@ -384,7 +384,7 @@ namespace EQLogParser
       ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
       MessageBox.Show("Restart EQLogParser when changing the Ignore Charm Pets setting for it to take effect.");
     }
-    
+
     private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e)
     {
       if (CurrentTheme != "MaterialDark")

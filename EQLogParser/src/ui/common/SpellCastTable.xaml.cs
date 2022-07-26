@@ -158,7 +158,7 @@ namespace EQLogParser
       return valid;
     }
 
-    private void AddRow(List<IDictionary<string, object>>  list, Dictionary<string, List<string>> playerSpells, int max, double beginTime, double startTime)
+    private void AddRow(List<IDictionary<string, object>> list, Dictionary<string, List<string>> playerSpells, int max, double beginTime, double startTime)
     {
       for (int i = 0; i < max; i++)
       {
