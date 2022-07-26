@@ -13,13 +13,14 @@
     </Grid.RowDefinitions>
     <StackPanel x:Name="titlePane" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel1" Style="{StaticResource EQTitleStyle}" Padding="5,5,0,5"/>
-      <Label x:Name="titleLabel2" Style="{StaticResource EQTitleStyle}" Foreground="{StaticResource EQEQMenuIconBrush}" Padding="0,5"/>
+      <Label x:Name="titleLabel2" Style="{StaticResource EQTitleStyle}" Foreground="{DynamicResource PrimaryLight}" Padding="0,5"/>
       <Label x:Name="titleLabel3" Style="{StaticResource EQTitleStyle}" Padding="0,5,5,5"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,8,2" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common.">Self Only</CheckBox>
       <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="0,0,8,2" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
       <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="0,0,8,2" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
+      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <Grid Grid.Row="1">
       <Grid.RowDefinitions>
@@ -37,18 +38,12 @@
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImage">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <Separator />
-          <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload ADPS Data" Click="ReloadClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Redo" />
-            </MenuItem.Icon>
-          </MenuItem>          
         </ContextMenu>
       </Grid.ContextMenu>
       <ScrollViewer x:Name="headerScroller" Grid.Row="0" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Hidden">

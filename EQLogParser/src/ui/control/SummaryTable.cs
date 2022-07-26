@@ -106,39 +106,40 @@ namespace EQLogParser
 
     internal List<string[]> GetHeaders()
     {
+      var headers = new List<string[]>();
+      headers.Add(new string[] { "Rank", "Rank" });
+
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
-        return treeGrid.Columns.Select(column =>
+        foreach (var column in treeGrid.Columns)
         {
           string binding = (column.ValueBinding as Binding).Path.Path;
           string title = column.HeaderText;
-          return new string[] { binding, title };
-        }).ToList();
+          headers.Add(new string[] { binding, title });
+        }
       }
       else if (TheDataGrid is SfDataGrid dataGrid)
       {
-        return dataGrid.Columns.Select(column =>
+        foreach (var column in dataGrid.Columns)
         {
           string binding = (column.ValueBinding as Binding).Path.Path;
           string title = column.HeaderText;
-          return new string[] { binding, title };
-        }).ToList();
+          headers.Add(new string[] { binding, title });
+        }
       }
-      else
-      {
-        return new List<string[]> { };
-      }
+
+      return headers;
     }
 
     internal List<PlayerStats> GetSelectedStats()
     {
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
-        return treeGrid.SelectedItems.ToList().Cast<PlayerStats>().ToList();
+        return treeGrid.SelectedItems.Cast<PlayerStats>().ToList();
       }
       else if (TheDataGrid is SfDataGrid dataGrid)
       {
-        return dataGrid.SelectedItems.ToList().Cast<PlayerStats>().ToList();
+        return dataGrid.SelectedItems.Cast<PlayerStats>().ToList();
       }
       else
       {
@@ -148,38 +149,30 @@ namespace EQLogParser
 
     internal List<PlayerStats> GetPlayerStats()
     {
-      var results = new List<PlayerStats>();
-      if (TheDataGrid.View != null)
+      if (TheDataGrid is SfDataGrid dataGrid)
       {
-        foreach (var node in TheDataGrid.View.Nodes)
+        return dataGrid.View.Records.Select(record => record.Data).Cast<PlayerStats>().ToList();
+      }
+      else if (TheDataGrid is SfTreeGrid treeGrid)
+      {
+        var results = new List<PlayerStats>();
+        foreach (var stats in treeGrid.View.Nodes.Where(node => node.Level == 0).Select(node => node.Item).Cast<PlayerStats>())
         {
-          if (node.Item is PlayerStats stats)
+          results.Add(stats);
+          if (CurrentStats.Children.ContainsKey(stats.Name))
           {
-            results.Add(stats);
-            if (CurrentStats.Children.ContainsKey(stats.Name))
-            {
-              results.AddRange(CurrentStats.Children[stats.Name]);
-            }
+            results.AddRange(CurrentStats.Children[stats.Name]);
           }
         }
+        return results;
       }
 
-      return results;
+      return new List<PlayerStats>();
     }
 
     internal List<PlayerStats> GetStatsByClass(string className)
     {
-      List<PlayerStats> selectedStats = new List<PlayerStats>();
-      foreach (var record in TheDataGrid.View.Nodes)
-      {
-        PlayerStats stats = record.Item as PlayerStats;
-        if (stats.ClassName == className)
-        {
-          selectedStats.Add(stats);
-        }
-      }
-
-      return selectedStats;
+      return GetPlayerStats().Where(stats => stats.IsTopLevel && stats.ClassName == className).ToList();
     }
 
     internal void DataGridSelectAllClick(object sender, RoutedEventArgs e)
@@ -197,8 +190,7 @@ namespace EQLogParser
     internal void SetPetClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement)?.Parent as ContextMenu;
-      SfDataGrid callingDataGrid = menu?.PlacementTarget as SfDataGrid;
-      if (callingDataGrid.SelectedItem is PlayerStats stats)
+      if (menu?.PlacementTarget is SfGridBase gridBase && gridBase.SelectedItem is PlayerStats stats)
       {
         Task.Delay(100).ContinueWith(_ =>
         {
@@ -224,7 +216,8 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Timeline"))
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCastTable),
+          "spellCastsWindow", "Spell Cast Timeline"))
         {
           (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
         }
@@ -236,7 +229,8 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCountTable), "spellCountsWindow", "Spell Counts"))
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCountTable),
+          "spellCountsWindow", "Spell Counts"))
         {
           (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
         }

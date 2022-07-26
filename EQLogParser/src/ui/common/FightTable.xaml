@@ -18,11 +18,11 @@
       <Style x:Key="FightRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
         <Style.Triggers>
           <DataTrigger Binding="{Binding IsSearchResult, UpdateSourceTrigger=PropertyChanged}" Value="True" >
-            <Setter Property="Background" Value="{StaticResource EQSearchBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource EQSearchBackgroundBrush}"/>
           </DataTrigger>
         </Style.Triggers>
         <Setter Property="Background" Value="{Binding Converter={StaticResource FightRowStyleConverter}}"/>
-        <Setter Property="RowHoverForeground" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="RowHoverForeground" Value="{DynamicResource ContentForeground}"/>
       </Style>
       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">
@@ -59,7 +59,7 @@
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            RowHeaderWidth="40"
-                           RowStyle="{StaticResource FightRowStyle}"
+                           RowStyle="{DynamicResource FightRowStyle}"
                            SelectionChanged="SelectionChanged"
                            SelectionMode="Extended"
                            ShowRowHeader="True"                           

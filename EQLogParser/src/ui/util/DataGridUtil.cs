@@ -18,6 +18,7 @@ namespace EQLogParser
   class DataGridUtil
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static int StartRow = 0;
 
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
     {
@@ -167,25 +168,16 @@ namespace EQLogParser
 
     internal static void CreateImage(SfGridBase gridBase, Label titleLabel)
     {
-      Task.Delay(50).ContinueWith((t) => gridBase.Dispatcher.InvokeAsync(() =>
+      gridBase.SelectedItems.Clear();
+      gridBase.IsHitTestVisible = false;
+      Task.Delay(100).ContinueWith((t) => gridBase.Dispatcher.InvokeAsync(() =>
       {
         try
         {
-          gridBase.SelectedItems.Clear();
-
-          double totalColumnWidth = 0;
-          if (gridBase is SfTreeGrid)
-          {
-            totalColumnWidth = ((SfTreeGrid)gridBase).Columns.ToList().Sum(column => column.ActualWidth);
-          }
-          else if (gridBase is SfDataGrid)
-          {
-            totalColumnWidth = ((SfDataGrid)gridBase).Columns.ToList().Sum(column => column.ActualWidth);
-          }
-
           var realTableHeight = gridBase.ActualHeight + gridBase.HeaderRowHeight + 1;
-          var realColumnWidth = gridBase.ActualWidth < totalColumnWidth ? gridBase.ActualWidth : totalColumnWidth;
-          var titleHeight = titleLabel.DesiredSize.Height - (titleLabel.Padding.Top + titleLabel.Padding.Bottom);
+          var realColumnWidth = gridBase.ActualWidth;
+          var titlePadding = titleLabel.Padding.Top + titleLabel.Padding.Bottom;
+          var titleHeight = titleLabel.ActualHeight - titlePadding - 4;
           var titleWidth = titleLabel.DesiredSize.Width;
 
           var dpiScale = VisualTreeHelper.GetDpi(gridBase);
@@ -195,11 +187,14 @@ namespace EQLogParser
           DrawingVisual dv = new DrawingVisual();
           using (DrawingContext ctx = dv.RenderOpen())
           {
+            var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
+            ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(realColumnWidth, titleHeight + titlePadding)));
+
             var brush = new VisualBrush(titleLabel);
-            ctx.DrawRectangle(brush, null, new Rect(new Point(4, 0), new Size(titleWidth, titleHeight)));
+            ctx.DrawRectangle(brush, null, new Rect(new Point(4, titlePadding / 2), new Size(titleWidth, titleHeight)));
 
             brush = new VisualBrush(gridBase);
-            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight), new Size(gridBase.ActualWidth, gridBase.ActualHeight +
+            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight + titlePadding), new Size(realColumnWidth, gridBase.ActualHeight +
               SystemParameters.HorizontalScrollBarHeight)));
           }
 
@@ -209,6 +204,10 @@ namespace EQLogParser
         catch (Exception ex)
         {
           LOG.Error("Could not Copy Image", ex);
+        }
+        finally
+        {
+          gridBase.IsHitTestVisible = true;
         }
       }));
     }
@@ -231,11 +230,13 @@ namespace EQLogParser
 
     internal static void EnableMouseSelection(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-      if (sender is SfTreeGrid treeGrid && e.OriginalSource is FrameworkElement elem && elem.DataContext is PlayerSubStats stats)
+      dynamic elem = e.OriginalSource;
+      if (sender is SfTreeGrid treeGrid && elem?.DataContext is PlayerSubStats stats)
       {
+        StartRow = treeGrid.ResolveToRowIndex(stats);
         // Left click happened, current item is selected, now listen for mouse movement and release of left button
         treeGrid.PreviewMouseLeftButtonUp += PreviewMouseLeftButtonUp;
-        treeGrid.MouseMove += MouseMove;
+        treeGrid.PreviewMouseMove += MouseMove;
       }
     }
 
@@ -245,27 +246,48 @@ namespace EQLogParser
       {
         // remove listeners if left button released
         treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
-        treeGrid.MouseMove -= MouseMove;
+        treeGrid.PreviewMouseMove -= MouseMove;
       }
     }
 
     private static void MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-      if (sender is SfTreeGrid treeGrid && e.OriginalSource is FrameworkElement elem && elem.DataContext is PlayerSubStats stats)
+      dynamic elem = e.OriginalSource;
+      if (sender is SfTreeGrid treeGrid)
       {
-        if (treeGrid.CurrentItem != stats)
+        if (e.LeftButton == System.Windows.Input.MouseButtonState.Released)
         {
-          if (!treeGrid.SelectedItems.Contains(stats))
+          // remove listeners if left button released
+          treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
+          treeGrid.PreviewMouseMove -= MouseMove;
+        }
+        else if (elem?.DataContext is PlayerSubStats stats)
+        {
+          int row = treeGrid.ResolveToRowIndex(stats);
+          if (treeGrid.CurrentItem != stats)
           {
-            treeGrid.SelectedItems.Add(stats);
-          }
-          else
-          {
-            treeGrid.SelectedItems.Remove(treeGrid.CurrentItem);
-            treeGrid.SelectedItems.Remove(stats);
-          }
+            if (!treeGrid.SelectionController.SelectedRows.Contains(row))
+            {
+              treeGrid.SelectRows(StartRow, row);
+            }
+            else
+            {
+              treeGrid.SelectionController.ClearSelections(false);
+              int direction = 0;
+              if (StartRow < row)
+              {
+                direction = -1;
+              }
+              else if (StartRow > row)
+              {
+                direction = 1;
+              }
 
-          treeGrid.CurrentItem = stats;
+              treeGrid.SelectRows(StartRow, row + direction);
+            }
+
+            treeGrid.CurrentItem = stats;
+          }
         }
       }
     }

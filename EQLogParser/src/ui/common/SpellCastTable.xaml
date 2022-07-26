@@ -42,7 +42,7 @@
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
-                           AutoGenerateColumns="True"
+                           AutoGenerateColumns="False"
                            ColumnSizer="Auto"
                            FrozenColumnCount="2"
                            Grid.Row="1"

@@ -51,7 +51,7 @@
 <Color x:Key="PrimaryColorDark2.Color">#FF004C87</Color>
 <Color x:Key="BorderAlt1.Color">#66000000</Color>
 <Color x:Key="PrimaryColorLight2.Color">#FF219EFF</Color>
-<Color x:Key="ContentBackgroundAlt3.Color">#FF292929</Color>
+<Color x:Key="ContentBackgroundAlt3.Color">#FF888888</Color>
 <Color x:Key="Overlay.Color">#26FFFFFF</Color>
 <Color x:Key="IconColorSelected.Color">#FF000000</Color>
 <Color x:Key="BorderAlt3.Color">#FF000000</Color>
@@ -78,7 +78,7 @@
 <SolidColorBrush x:Key="ContentBackgroundAlt" Color="#FF1A1A1A" />
 <SolidColorBrush x:Key="ContentBackgroundAlt1" Color="#FF1A1A1A" />
 <SolidColorBrush x:Key="ContentBackgroundAlt2" Color="#FF1F1F1F" />
-<SolidColorBrush x:Key="ContentBackgroundAlt3" Color="#FF292929" />
+<SolidColorBrush x:Key="ContentBackgroundAlt3" Color="#FF888888" />
 <SolidColorBrush x:Key="ContentBackgroundAlt4" Color="#FF313131" />
 <SolidColorBrush x:Key="ContentBackgroundAlt5" Color="#FF404040" />
 <SolidColorBrush x:Key="ContentBackgroundHover" Color="#FF303030" />

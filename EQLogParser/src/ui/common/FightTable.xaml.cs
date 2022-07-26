@@ -103,14 +103,28 @@ namespace EQLogParser
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
-      DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
-      DataManager.Instance.EventsNewFight += Instance_EventsNewFight;
-      DataManager.Instance.EventsUpdateFight += Instance_EventsUpdateFight;
-      DataManager.Instance.EventsNewNonTankingFight += Instance_EventsNewNonTankingFight;
+      DataManager.Instance.EventsRemovedFight += EventsRemovedFight;
+      DataManager.Instance.EventsNewFight += EventsNewFight;
+      DataManager.Instance.EventsUpdateFight += EventsUpdateFight;
+      DataManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
     internal IEnumerable<Fight> GetSelectedFights() => dataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
     internal IEnumerable<Fight> GetFights() => Fights.Where(item => !item.IsInactivity);
+
+    private void EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
+    private void EventsRemovedFight(object sender, string name) => RemoveFight(name);
+    private void EventsNewFight(object sender, Fight fight) => AddFight(fight);
+    private void EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      // just toggle row style to get it to refresh
+      var style = dataGrid.RowStyle;
+      dataGrid.RowStyle = null;
+      dataGrid.RowStyle = style;
+    }
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
@@ -540,10 +554,5 @@ namespace EQLogParser
       CurrentNonTankingGroup = 1;
       CurrentSearchEntry = null;
     }
-
-    private void Instance_EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
-    private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
-    private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
-    private void Instance_EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
   }
 }

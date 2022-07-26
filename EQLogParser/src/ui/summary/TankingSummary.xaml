@@ -56,7 +56,7 @@
               <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
                 <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                   <Grid>
-                    <TextBlock HorizontalAlignment="Center" Foreground="{StaticResource ContentForeground}" VerticalAlignment="Center" Text="{Binding Rank}" TextAlignment="Center" />
+                    <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center" Text="{Binding Rank}" TextAlignment="Center" />
                   </Grid>
                 </Border>
               </ControlTemplate>

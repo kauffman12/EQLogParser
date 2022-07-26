@@ -44,7 +44,6 @@ namespace EQLogParser
     private int CurrentSpellType = 0;
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowProcs = false;
-    private bool CurrentShowInterrupts = false;
 
     public SpellCountTable()
     {
@@ -61,6 +60,7 @@ namespace EQLogParser
       // default these columns to descending
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, SortDescs);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, SortDescs);
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
@@ -81,6 +81,16 @@ namespace EQLogParser
         }
 
         Display();
+      }
+    }
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      if (dataGrid.Columns.Count > 0)
+      {
+        var style = dataGrid.Columns[0].CellStyle;
+        dataGrid.Columns[0].CellStyle = null;
+        dataGrid.Columns[0].CellStyle = style;
       }
     }
 
@@ -151,7 +161,9 @@ namespace EQLogParser
           {
             HeaderText = header,
             MappingName = name,
-            TextAlignment = TextAlignment.Right
+            TextAlignment = TextAlignment.Right,
+            ShowHeaderToolTip = true,
+            HeaderToolTipTemplate = Application.Current.Resources["HeaderSpellCountsTemplateToolTip"] as DataTemplate
           };
 
           dataGrid.Columns.Add(playerCol);
@@ -267,7 +279,7 @@ namespace EQLogParser
     private void AddPlayerRow(string player, string spell, string value, IDictionary<string, object> row)
     {
       string count = value.ToString(CultureInfo.CurrentCulture);
-      if (CurrentShowInterrupts && TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) &&
+      if (TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) &&
         TheSpellCounts.PlayerInterruptedCounts[player].TryGetValue(spell, out uint interrupts) && interrupts > 0)
       {
         count = count + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
@@ -322,7 +334,6 @@ namespace EQLogParser
         CurrentSpellType = spellTypes.SelectedIndex;
         CurrentShowSelfOnly = showSelfOnly.IsChecked.Value;
         CurrentShowProcs = showProcs.IsChecked.Value;
-        CurrentShowInterrupts = showInterrupts.IsChecked.Value;
         Display();
       }
     }
@@ -533,6 +544,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         dataGrid.Dispose();
         disposedValue = true;
       }

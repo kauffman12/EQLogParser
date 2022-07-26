@@ -19,7 +19,7 @@
       <RowDefinition Height="20" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,0,2" SelectionChanged="PlayerChanged" FontSize="14" FontWeight="Bold" Foreground="{StaticResource EQEQMenuIconBrush}">
+      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,0,2" SelectionChanged="PlayerChanged" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource EQMenuIconBrush}">
         <ComboBoxItem Content="No Chat Data"/>
       </ComboBox>
       <ComboBox x:Name="channels" Width="135" Margin="0,0,0,2" DropDownClosed="ChannelsDropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}">

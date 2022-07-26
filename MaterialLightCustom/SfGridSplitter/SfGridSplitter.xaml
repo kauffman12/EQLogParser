@@ -1,0 +1,295 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Microsoft_Windows_Aero="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:input="clr-namespace:Syncfusion.Windows.Controls.Input;assembly=Syncfusion.SfInput.WPF"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shared_converters="clr-namespace:Syncfusion.Windows.Converters;assembly=Syncfusion.SfInput.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    
+    mc:Ignorable="d">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <BooleanToVisibilityConverter x:Key="BooleanVisibilityConverter" />
+
+    <Style x:Key="ArrowButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid Background="{TemplateBinding Background}">
+                        <ContentPresenter />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="ExpandCollapseButtonTemplate">
+        <Grid>
+            <Ellipse
+                x:Name="EllipseButton"
+                Width="24"
+                Height="24"
+                HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                Fill="{StaticResource SecondaryBackground}"
+                SnapsToDevicePixels="True"
+                Stroke="{StaticResource BorderAlt}" />
+            <Path
+                        x:Name="Arrow"
+                        Width="12"
+                        Height="7.401"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Fill="{StaticResource IconColor}"
+                        Stroke="transparent"
+                        StrokeThickness="1"
+                        Stretch="Fill" >
+                <Path.Data>
+                    <PathGeometry>M1.4120439,0 L6.0010185,4.5759883 10.589016,0 12.001,1.4159849 6.0010185,7.4010001 0,1.4159849 z</PathGeometry>
+                </Path.Data>
+            </Path>
+        </Grid>
+        <DataTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="true">
+                <Setter TargetName="EllipseButton" Property="Fill" Value="{StaticResource SecondarySelectionBackground}" />
+                <Setter TargetName="EllipseButton" Property="Stroke" Value="{StaticResource SecondaryHoverBackground}" />
+                <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconColor}" />
+            </Trigger>
+           
+            <DataTrigger Binding="{Binding Path=IsPressed, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="True">
+                <Setter TargetName="EllipseButton" Property="Fill" Value="{StaticResource PrimaryBackground}" />
+                <Setter TargetName="EllipseButton" Property="Stroke" Value="{StaticResource PrimaryBackground}" />
+                <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource PrimaryForeground}" />
+            </DataTrigger>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="MinHeight" TargetName="EllipseButton" Value="{StaticResource TouchMode.MinHeight}" />
+                <Setter Property="MinWidth" TargetName="EllipseButton" Value="{StaticResource TouchMode.MinWidth}" />
+            </Trigger>
+            
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="GripperTemplate">
+        <StackPanel
+                x:Name="HorizontalResizeGripperPanel"
+                Width="13"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="Transparent"
+                Orientation="Horizontal">
+            <Path
+                    x:Name="HorizontalGripper"
+                    Width="3"
+                    Height="13"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Fill="{StaticResource IconColor}"
+                    Stroke="{StaticResource IconColor}"
+                    StrokeThickness="{StaticResource MaterialLightCustom.StrokeThickness1}"
+                    Stretch="Fill">
+                <Path.Data>
+                    <PathGeometry>M1.5000002,12 C2.3290002,12 3.0000002,12.672 3.0000002,13.5 3.0000002,14.329 2.3290002,15 1.5000002,15 0.67200012,15 1.2855162E-07,14.329 2.2351742E-07,13.5 1.2855162E-07,12.672 0.67200012,12 1.5000002,12 z M1.5000252,5.9999981 C2.3290047,5.9999981 3.0000252,6.6719952 3.0000252,7.499998 3.0000252,8.3289928 2.3290047,8.9999981 1.5000252,8.9999981 0.6720223,8.9999981 2.5226207E-05,8.3289928 2.5257469E-05,7.499998 2.5226207E-05,6.6719952 0.6720223,5.9999981 1.5000252,5.9999981 z M1.5000002,0 C2.3290002,0 3.0000002,0.67199993 3.0000002,1.5 3.0000002,2.3290002 2.3290002,3 1.5000002,3 0.67200012,3 1.2855162E-07,2.3290002 0,1.5 1.2855162E-07,0.67199993 0.67200012,0 1.5000002,0 z</PathGeometry>
+                </Path.Data>
+                <Path.LayoutTransform>
+                    <RotateTransform x:Name="Transform" Angle="90" />
+                </Path.LayoutTransform>
+            </Path>
+        </StackPanel>
+        <DataTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="HorizontalGripper" Property="Fill" Value="{StaticResource IconColor}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="HorizontalGripper" Property="Fill" Value="{StaticResource PrimaryForeground}" />
+            </Trigger>
+            <DataTrigger Binding="{Binding Path=IsPressed, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="True">
+                <Setter TargetName="HorizontalGripper" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=Orientation, RelativeSource={RelativeSource AncestorType={x:Type input:SfGridSplitter}},UpdateSourceTrigger=PropertyChanged}" Value="Columns">
+                <Setter Property="Orientation" TargetName="HorizontalResizeGripperPanel" Value="Vertical"></Setter>
+                <Setter Property="Width" TargetName="HorizontalResizeGripperPanel" Value="3"></Setter>
+                <Setter Property="Height" TargetName="HorizontalResizeGripperPanel" Value="13"></Setter>
+                <Setter Property="LayoutTransform" TargetName="HorizontalGripper">
+                    <Setter.Value>
+                        <RotateTransform Angle="0"></RotateTransform>
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <ControlTemplate x:Key="SyncfusionSfGridSplitterHorizontalControlTemplate" TargetType="{x:Type input:SfGridSplitter}">
+        <Grid
+            x:Name="HorizontalGrid"
+            Width="{TemplateBinding Width}"
+            Height="{TemplateBinding Height}"
+            Background="{TemplateBinding Background}">
+            <ContentPresenter ContentTemplate="{Binding HorizontalGripperTemplate,RelativeSource={RelativeSource Mode=TemplatedParent}}"></ContentPresenter>
+            <Popup
+                x:Name="Popup_Up"
+                AllowsTransparency="True"
+                Placement="Center"
+                PopupAnimation="Fade"
+                VerticalOffset="-18">
+                <Button
+                    x:Name="PART_Up"
+                    Style="{StaticResource ArrowButtonStyle}"
+                    Foreground="{StaticResource SecondaryBackground}"
+                    ContentTemplate="{Binding UpButtonTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                    Visibility="{Binding EnableCollapseButton, RelativeSource={RelativeSource Mode=TemplatedParent}, Converter={StaticResource BooleanVisibilityConverter}}">
+                    <Button.LayoutTransform>
+                        <RotateTransform Angle="180" />
+                    </Button.LayoutTransform>
+                </Button>
+            </Popup>
+            <Popup
+                x:Name="Popup_Down"
+                AllowsTransparency="True"
+                Placement="Center"
+                PopupAnimation="Fade"
+                VerticalOffset="18">
+                <Button
+                    x:Name="PART_Down"
+                    Style="{StaticResource ArrowButtonStyle}"
+                    Grid.Column="1"
+                    Foreground="{StaticResource SecondaryBackground}"
+                    ContentTemplate="{Binding DownButtonTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                    Visibility="{Binding EnableCollapseButton, RelativeSource={RelativeSource Mode=TemplatedParent}, Converter={StaticResource BooleanVisibilityConverter}}" />
+            </Popup>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
+            </Trigger>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter TargetName="Popup_Up" Property="VerticalOffset" Value="-26"/>
+                <Setter TargetName="Popup_Down" Property="VerticalOffset" Value="26"/>
+            </Trigger>
+            <DataTrigger Binding="{Binding Path=IsPressed, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PrimaryBackground}" />
+            </DataTrigger>
+            <Trigger Property="IsEnabled" Value="false">
+                <Setter Property="Background" Value="{StaticResource BorderAlt}" />
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <ControlTemplate x:Key="SyncfusionSfGridSplitterVerticalControlTemplate" TargetType="{x:Type input:SfGridSplitter}">
+        <Grid
+            x:Name="VerticalGrid"
+            Width="{TemplateBinding Width}"
+            Background="{TemplateBinding Background}">
+            <ContentPresenter ContentTemplate="{Binding VerticalGripperTemplate,RelativeSource={RelativeSource Mode=TemplatedParent}}"></ContentPresenter>
+            <Popup
+                x:Name="Popup_Left"
+                AllowsTransparency="True"
+                HorizontalOffset="-18"
+                Placement="Center"
+                PopupAnimation="Fade">
+                <Button
+                    x:Name="PART_Left"
+                    Style="{StaticResource ArrowButtonStyle}"
+                    Foreground="{StaticResource SecondaryBackground}"
+                    ContentTemplate="{Binding LeftButtonTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                    Visibility="{Binding EnableCollapseButton, RelativeSource={RelativeSource Mode=TemplatedParent}, Converter={StaticResource BooleanVisibilityConverter}}">
+                    <Button.LayoutTransform>
+                        <RotateTransform Angle="90" />
+                    </Button.LayoutTransform>
+                </Button>
+            </Popup>
+            <Popup
+                x:Name="Popup_Right"
+                AllowsTransparency="True"
+                HorizontalOffset="18"
+                Placement="Center"
+                PopupAnimation="Fade">
+                <Button
+                    x:Name="PART_Right"
+                    Style="{StaticResource ArrowButtonStyle}"
+                    Grid.Row="1"
+                    Foreground="{StaticResource SecondaryBackground}"
+                    ContentTemplate="{Binding RightButtonTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                    Visibility="{Binding EnableCollapseButton, RelativeSource={RelativeSource Mode=TemplatedParent}, Converter={StaticResource BooleanVisibilityConverter}}">
+                    <Button.LayoutTransform>
+                        <RotateTransform Angle="270" />
+                    </Button.LayoutTransform>
+                </Button>
+            </Popup>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
+            </Trigger>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter TargetName="Popup_Right" Property="HorizontalOffset" Value="26"/>
+                <Setter TargetName="Popup_Left" Property="HorizontalOffset" Value="-26"/>
+            </Trigger>
+            <DataTrigger Binding="{Binding Path=IsPressed, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="True">
+                <Setter Property="Background" Value="{StaticResource PrimaryBackground}" />
+            </DataTrigger>
+
+            <Trigger Property="IsEnabled" Value="false">
+                <Setter Property="Background" Value="{StaticResource BorderAlt}" />
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style x:Key="SyncfusionSfGridSplitterStyle" TargetType="{x:Type input:SfGridSplitter}">   
+        <Setter Property="Background" Value="{StaticResource BorderAlt}" />
+        <Setter Property="IsTabStop" Value="true" />
+        <Setter Property="UpButtonTemplate" Value="{StaticResource ExpandCollapseButtonTemplate}" />
+        <Setter Property="DownButtonTemplate" Value="{StaticResource ExpandCollapseButtonTemplate}" />
+        <Setter Property="LeftButtonTemplate" Value="{StaticResource ExpandCollapseButtonTemplate}"/>
+        <Setter Property="RightButtonTemplate" Value="{StaticResource ExpandCollapseButtonTemplate}"/>
+        <Setter Property="HorizontalGripperTemplate" Value="{StaticResource GripperTemplate}"/>
+        <Setter Property="VerticalGripperTemplate" Value="{StaticResource GripperTemplate}"/>
+        <Setter Property="PreviewStyle">
+            <Setter.Value>
+                <Style TargetType="Control">
+                    <Setter Property="Width" Value="{Binding Width, RelativeSource={RelativeSource Self}}" />
+                    <Setter Property="Height" Value="{Binding Height, RelativeSource={RelativeSource Self}}" />
+                    <Setter Property="Background" Value="{StaticResource PrimaryBackground}" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Control">
+                                <Grid x:Name="Root" Opacity=".5">
+                                    <Rectangle Fill="{TemplateBinding Background}" />
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding RelativeSource={RelativeSource Mode=Self}, Path=Orientation, Mode=OneWay}" Value="Rows" />
+                    <Condition Binding="{Binding RelativeSource={RelativeSource Mode=Self}, Path=HorizontalAlignment}" Value="Stretch" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Template" Value="{StaticResource SyncfusionSfGridSplitterHorizontalControlTemplate}" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding RelativeSource={RelativeSource Mode=Self}, Path=Orientation, Mode=OneWay}" Value="Columns" />
+                    <Condition Binding="{Binding RelativeSource={RelativeSource Mode=Self}, Path=VerticalAlignment}" Value="Stretch" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Template" Value="{StaticResource SyncfusionSfGridSplitterVerticalControlTemplate}" />
+            </MultiDataTrigger>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfGridSplitterStyle}" TargetType="{x:Type input:SfGridSplitter}" />
+
+</ResourceDictionary>
