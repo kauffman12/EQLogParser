@@ -1,4 +1,5 @@
 ﻿using FontAwesome5;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -18,12 +19,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static readonly SolidColorBrush GRID_BRUSH = Application.Current.Resources["ContentForeground"] as SolidColorBrush;
-    private static readonly List<Brush> BlockBrushes = new List<Brush>()
-    {
-      Application.Current.Resources["EQEQMenuIconBrush"] as SolidColorBrush,
-      Application.Current.Resources["PrimaryLight"] as SolidColorBrush
-    };
+    private static readonly List<string> BlockBrushes = new List<string>() { "EQMenuIconBrush", "PrimaryLight" };
 
     private const int ROW_HEIGHT = 24;
     private const int LABELS_WIDTH = 180;
@@ -148,18 +144,24 @@ namespace EQLogParser
       Display();
     }
 
+    private void RefreshClick(object sender, RoutedEventArgs e)
+    {
+      Ignore.Clear();
+      Display();
+    }
+
     private bool ClassFilter(SpellData data)
     {
       return (TankingMode && (data.Adps & TANK_ADPS) != 0) || (!TankingMode && ((data.Adps & CASTER_ADPS) != 0 || (data.Adps & MELEE_ADPS) != 0));
     }
 
-    private void UpdateSpellRange(SpellData spellData, double beginTime, Brush brush)
+    private void UpdateSpellRange(SpellData spellData, double beginTime, string brush)
     {
       if (!SpellRanges.TryGetValue(spellData.NameAbbrv, out SpellRange spellRange))
       {
         spellRange = new SpellRange { Adps = spellData.Adps };
         var duration = GetDuration(spellData, EndTime, beginTime);
-        spellRange.Ranges.Add(new TimeRange() { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
+        spellRange.Ranges.Add(new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
         SpellRanges[spellData.NameAbbrv] = spellRange;
       }
       else
@@ -173,7 +175,7 @@ namespace EQLogParser
         else
         {
           var duration = GetDuration(spellData, EndTime, beginTime);
-          spellRange.Ranges.Add(new TimeRange() { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
+          spellRange.Ranges.Add(new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
         }
       }
     }
@@ -182,7 +184,7 @@ namespace EQLogParser
     {
       try
       {
-        List<string> labels = new List<string>();
+        var labels = new List<string>();
         foreach (var visual in contentLabels.Children)
         {
           if (visual is TextBlock block)
@@ -191,9 +193,9 @@ namespace EQLogParser
           }
         }
 
-        DictionaryUniqueListHelper<string, Rectangle> helper = new DictionaryUniqueListHelper<string, Rectangle>();
-        Dictionary<string, List<Rectangle>> player1 = new Dictionary<string, List<Rectangle>>();
-        Dictionary<string, List<Rectangle>> player2 = new Dictionary<string, List<Rectangle>>();
+        var helper = new DictionaryUniqueListHelper<string, Rectangle>();
+        var player1 = new Dictionary<string, List<Rectangle>>();
+        var player2 = new Dictionary<string, List<Rectangle>>();
 
         foreach (var visual in content.Children)
         {
@@ -201,7 +203,7 @@ namespace EQLogParser
           {
             if (rectangle.Tag is string adps && !string.IsNullOrEmpty(adps))
             {
-              if (BlockBrushes[0] == rectangle.Fill)
+              if (titleLabel1.Foreground.ToString() == rectangle?.Fill.ToString())
               {
                 helper.AddToList(player1, adps, rectangle);
               }
@@ -213,7 +215,7 @@ namespace EQLogParser
           }
         }
 
-        List<List<object>> playerData = new List<List<object>>();
+        var playerData = new List<List<object>>();
         labels.ForEach(label =>
         {
           if (player1.TryGetValue(label, out List<Rectangle> l1))
@@ -252,33 +254,33 @@ namespace EQLogParser
       }
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e)
+    private void CreateImage(object sender, RoutedEventArgs e)
     {
-      Task.Delay(100).ContinueWith((task) => Dispatcher.InvokeAsync(() =>
+      Task.Delay(50).ContinueWith((t) => Dispatcher.InvokeAsync(() =>
       {
-        int paddingTop = 4;
-        int padding = 8;
+        var titlePadding = titleLabel1.Padding.Top + titleLabel1.Padding.Bottom;
+        var titleHeight = titleLabel1.DesiredSize.Height - titlePadding - 4;
+        var headerHeight = contentHeader.DesiredSize.Height;
+        var headerPadding = contentHeader.ActualHeight - headerHeight;
+        int height = (int)content.DesiredSize.Height + (int)contentHeader.ActualHeight + (int)titleHeight + (int)titlePadding;
+        int width = (int)contentLabels.ActualWidth + (int)content.ActualWidth;
 
-        var titleHeight = titleLabel1.ActualHeight - titleLabel1.Padding.Top * 2;
-        var height = (int)content.ActualHeight + (int)contentHeader.ActualHeight + (int)titleHeight;
-        var width = (int)contentLabels.ActualWidth + (int)content.ActualWidth;
-
-        var dpiScale = VisualTreeHelper.GetDpi(content);
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + (int)titleHeight + padding, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        var dpiScale = VisualTreeHelper.GetDpi(content);      // extra 26 for showing last row?
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + 28, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
-          var grayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2d2d30"));
+          var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
           var titleBrush = new VisualBrush(titlePane);
           var headerBrush = new VisualBrush(contentHeader);
           var labelsBrush = new VisualBrush(contentLabels);
           var contentBrush = new VisualBrush(content);
-          ctx.DrawRectangle(grayBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
-          ctx.DrawRectangle(titleBrush, null, new Rect(new Point(6, paddingTop), new Size(titlePane.ActualWidth, titleHeight))); // add padding that's normally on the label
-          ctx.DrawRectangle(headerBrush, null, new Rect(new Point(0, titleHeight + padding), new Size(width, contentHeader.ActualHeight)));
-          ctx.DrawRectangle(labelsBrush, null, new Rect(new Point(0, contentHeader.ActualHeight + titleHeight + padding), new Size(contentLabels.ActualWidth, height - contentHeader.ActualHeight)));
-          ctx.DrawRectangle(contentBrush, null, new Rect(new Point(contentLabels.ActualWidth, contentHeader.ActualHeight + titleHeight + padding), new Size(content.ActualWidth, height - contentHeader.ActualHeight)));
+          ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(width, height + 28)));
+          ctx.DrawRectangle(titleBrush, null, new Rect(new Point(4, titlePadding / 2), new Size(titlePane.ActualWidth, titleHeight)));
+          ctx.DrawRectangle(headerBrush, null, new Rect(new Point(contentLabels.ActualWidth - 30, titleHeight + titlePadding + headerPadding / 2), new Size(contentHeader.DesiredSize.Width - contentLabels.ActualWidth + 30, headerHeight)));
+          ctx.DrawRectangle(labelsBrush, null, new Rect(new Point(0, headerHeight + headerPadding + titleHeight + titlePadding), new Size(contentLabels.ActualWidth, height - headerHeight - headerPadding)));
+          ctx.DrawRectangle(contentBrush, null, new Rect(new Point(contentLabels.ActualWidth, headerHeight + headerPadding + titleHeight + titlePadding), new Size(content.ActualWidth, height - headerHeight - headerPadding)));
         }
 
         rtb.Render(dv);
@@ -334,29 +336,29 @@ namespace EQLogParser
         Height = 12,
         Width = 12,
         Icon = EFontAwesomeIcon.Solid_Times,
-        Foreground = new SolidColorBrush(Color.FromRgb(81, 145, 193)),
         Margin = new Thickness(4, hPos + 6, 4, 0)
       };
 
+      image.SetResourceReference(ImageAwesome.ForegroundProperty, "EQMenuIconBrush");
       image.PreviewMouseLeftButtonDown += (object sender, MouseButtonEventArgs e) =>
       {
         Ignore[name] = 1;
         Display();
       };
 
-      var textBlock = new TextBlock()
+      var textBlock = new TextBlock
       {
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
-        Foreground = GRID_BRUSH,
         Text = name,
         Width = LABELS_WIDTH - 20,
         FontSize = 12,
         Margin = new Thickness(24, hPos + 4, 0, 0)
       };
 
-      image.SetValue(Panel.ZIndexProperty, 10);
+      textBlock.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
       textBlock.SetValue(Panel.ZIndexProperty, 10);
+      image.SetValue(Panel.ZIndexProperty, 10);
       contentLabels.Children.Add(image);
       contentLabels.Children.Add(textBlock);
     }
@@ -365,7 +367,6 @@ namespace EQLogParser
     {
       var textBlock = new TextBlock()
       {
-        Foreground = GRID_BRUSH,
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Center,
         Text = text,
@@ -375,15 +376,15 @@ namespace EQLogParser
       };
 
       Headers.Add(textBlock);
+      textBlock.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
       textBlock.SetValue(Panel.ZIndexProperty, 10);
       contentHeader.Children.Add(textBlock);
     }
 
     private void AddDivider(Grid target, int hPos, double left)
     {
-      var rectangle = new Rectangle()
+      var rectangle = new Rectangle
       {
-        Stroke = GRID_BRUSH,
         StrokeThickness = 0.3,
         Height = hPos,
         Width = 0.3,
@@ -393,6 +394,7 @@ namespace EQLogParser
       };
 
       Dividers.Add(rectangle);
+      rectangle.SetResourceReference(Rectangle.StrokeProperty, "ContentForeground");
       target.Children.Add(rectangle);
     }
 
@@ -456,25 +458,17 @@ namespace EQLogParser
       }
     }
 
-    private void ReloadClick(object sender, RoutedEventArgs e)
-    {
-      Ignore.Clear();
-      Display();
-    }
-
-    private static Rectangle CreateAdpsBlock(string label, int hPos, int start, int length, Brush blockBrush, int count)
+    private static Rectangle CreateAdpsBlock(string label, int hPos, int start, int length, string blockBrush, int count)
     {
       var offset = count == 1 ? 0 : blockBrush == BlockBrushes[0] ? -3 : 3;
       var zIndex = blockBrush == BlockBrushes[0] ? 11 : 10;
 
-      var block = new Rectangle()
+      var block = new Rectangle
       {
-        Stroke = GRID_BRUSH,
         StrokeThickness = 0.2,
         Height = ROW_HEIGHT / 3,
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
-        Fill = blockBrush,
         Opacity = 1.0,
         Width = length,
         Margin = new Thickness(start, hPos + (ROW_HEIGHT / 3) + offset, 0, 0),
@@ -484,20 +478,24 @@ namespace EQLogParser
         Tag = label
       };
 
+      block.SetResourceReference(Rectangle.FillProperty, blockBrush);
+      block.SetResourceReference(Rectangle.StrokeProperty, "ContentForeground");
       block.SetValue(Panel.ZIndexProperty, zIndex);
       return block;
     }
 
     private static Rectangle CreateRowBlock(int hPos)
     {
-      return new Rectangle()
+      var block = new Rectangle
       {
         Height = ROW_HEIGHT,
-        Stroke = GRID_BRUSH,
         StrokeThickness = 0.2,
         VerticalAlignment = VerticalAlignment.Top,
         Margin = new Thickness(0, hPos, 0, 0)
       };
+
+      block.SetResourceReference(Rectangle.StrokeProperty, "ContentForeground");
+      return block;
     }
 
     private int GetDuration(SpellData spell, double endTime, double currentTime)
@@ -546,7 +544,7 @@ namespace EQLogParser
     {
       public int BeginSeconds { get; set; }
       public int Duration { get; set; }
-      public Brush BlockBrush { get; set; }
+      public string BlockBrush { get; set; }
     }
   }
 }

@@ -1,0 +1,1057 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:spreadsheet="clr-namespace:Syncfusion.UI.Xaml.Spreadsheet;assembly=Syncfusion.SfSpreadsheet.WPF"
+	
+    xmlns:system="clr-namespace:System;assembly=mscorlib" 
+    xmlns:theme="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
+    xmlns:tools="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF"
+    xmlns:microsoftWindowsThemes="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Luna"
+    xmlns:converter="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Shared.WPF"
+    xmlns:skinmanager="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/SfSpreadsheet/SfSpreadsheetIcons.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/TabControlExt/TabControlExt.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Button.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ToggleButton.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <tools:CloseButtonTypeToVisibilityConverter x:Key="CloseButtonTypeToVisibilityConverter"/>
+    <converter:BooleanToVisibilityConverterEx x:Key="BooleanToVisibilityConverterEx"/>
+    <tools:ImageAlignmentToDockConverter x:Key="ImageAlignmentToDockConverter"/>
+    <spreadsheet:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
+
+    <Style x:Key="SyncfusionSpreadsheetTabPanelAdvStyle" TargetType="{x:Type tools:TabPanelAdv}"
+			BasedOn="{StaticResource SyncfusionTabControlExtTabPanelAdvStyle}">
+        <Setter Property="Padding" Value="0,2,0,0"/>
+        <Setter Property="Margin" Value="0,2,0,0"/>
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools:TabPanelAdv}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"></RowDefinition>
+                            <RowDefinition Height="1"></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <Border Name="Bord" Grid.Row="0" Background="{Binding TabPanelBackground,RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type tools:TabControlExt}},FallbackValue=Transparent}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+							Padding="{TemplateBinding Padding}"
+                            Margin="{TemplateBinding Margin}"
+							CornerRadius="{TemplateBinding CornerRadius}"
+                            HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                            <DockPanel LastChildFill="True" Margin="0,-2,0,0">
+                                <Border Name="BottomBorder" Height="0" DockPanel.Dock="Bottom" Background="Transparent"/>
+                                <ContentPresenter x:Name="PART_CustomItems"  AllowDrop="False" ContentSource="TabPanelItem"
+                                              MaxHeight="{Binding Path=ActualHeight, ElementName=PART_TabItems}" Margin="2,0,0,0" DockPanel.Dock="Right" 
+                                              Content="{Binding Path=TabPanelItem, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools:TabControlExt}},FallbackValue=''}">
+                                </ContentPresenter>
+                                <tools:NewTabLayout>
+                                    <ContentPresenter x:Name="PART_ToolBarTray" Content="{Binding Path=ToolBarTray, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools:TabControlExt}},FallbackValue=''}" />
+                                    <Button BorderThickness="80" Name="PART_NewTab"  ContentTemplate="{Binding Path=NewTabButtonTemplate, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools:TabControlExt}}}" Background="Transparent" DockPanel.Dock="Top"/>
+                                </tools:NewTabLayout>
+                                <Button Name="PART_CloseButton" Width="16" Height="16" Margin="0,0,8,0"
+                                  DockPanel.Dock="Right"
+                                  Focusable="False" 
+                                  AllowDrop="False"
+                                  Visibility="{Binding Path=CloseButtonType, Converter={StaticResource CloseButtonTypeToVisibilityConverter}, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools:TabControlExt}},FallbackValue=Collapsed}"
+							      Style="{StaticResource TabPanelCaptionButtonsStyle}"                                  
+                                  Command="tools:TabControlCommands.CloseCurrentTabItem">
+                                    <Button.Content>
+                                        <Path
+                                        x:Name="CloseButtonPath"
+                                        Width="8"
+                                        Height="8"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Fill="{Binding Foreground, ElementName=PART_CloseButton}"
+                                        SnapsToDevicePixels="True"
+                                        Stretch="Fill" >
+                                            <Path.Data>
+                                                <PathGeometry>M2.999979,0C3.8000264,0,4.4999763,0.30000305,5.1000115,0.90000927L15.999954,11.700012 26.899959,0.90000927C28.099967,-0.29998779 29.999927,-0.29998779 31.099961,0.90000927 32.299972,2.1000061 32.299972,4 31.099961,5.1000061L20.199958,16 31.099961,26.900009C32.299972,28.100006 32.299972,30 31.099961,31.100006 29.899951,32.300003 27.999931,32.300003 26.899959,31.100006L15.999954,20.200012 5.1000115,31.100006C3.9000017,32.300003 1.9999809,32.300003 0.90000743,31.100006 -0.30000248,29.900009 -0.30000248,28 0.90000743,26.900009L11.800011,16 0.90000743,5.1000061C-0.30000248,3.9000092 -0.30000248,2 0.90000743,0.90000927 1.4999818,0.30000305 2.1999928,0 2.999979,0z</PathGeometry>
+                                             </Path.Data>
+                                        </Path>
+                                    </Button.Content>
+                                </Button>
+                                <Button Name="PART_MenuButton" Width="16" Height="16" Margin="0,0,8,0"
+                                  DockPanel.Dock="Right"
+                                  AllowDrop="False"
+                                  Focusable="False"
+                                  Visibility="{Binding Path=ShowTabListContextMenu, Converter={StaticResource BooleanToVisibilityConverterEx}, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools:TabControlExt}},FallbackValue=Collapsed}"
+							      Style="{StaticResource TabPanelCaptionButtonsStyle}"
+                                  Command="tools:TabControlCommands.OpenContextMenu">
+                                    <Button.Content>
+                                        <Path
+                                        x:Name="MenuButtonPath"
+                                        Width="8"
+                                        Height="4"
+                                        Fill="{Binding Foreground, ElementName=PART_MenuButton}"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        SnapsToDevicePixels="True"
+                                        Stretch="Fill" >
+                                            <Path.Data>
+                                                <PathGeometry>M0.87499046,0L31.12499,0C31.92399,0,32.22299,0.49899435,31.82399,0.9979887L16.648991,21.064764C16.24999,21.563759,15.65099,21.563759,15.250991,21.064764L0.1759901,0.9979887C-0.22300911,0.49899435,0.075990677,0,0.87499046,0z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </Button.Content>
+                                </Button>
+
+                                <Button Name="PART_LastTab" Focusable="False" 
+                                        Width="16"
+                                        MinHeight="16"
+										Margin="0,0,8,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        DockPanel.Dock="Left" Tag="LastTab" 
+                                        Visibility="Collapsed" 
+                                        Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools:TabControlExt}}}">
+                                    <Button.Content>
+                                        <Path
+                                        Width="8"
+                                        Height="8"
+                                        Fill="{Binding Foreground, ElementName=PART_LastTab}"
+                                        SnapsToDevicePixels="True"
+                                        Stretch="Fill" >
+                                            <Path.Data>
+                                                <PathGeometry>M1.4710002,0.0089941425 L7.0000001,6.0179982 1.4880004,12.010002 0.015999794,10.656001 4.2820001,6.0179982 0,1.3629951 z M8.9989967,0 L10.998997,0 10.998997,12 8.9989967,12 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </Button.Content>
+                                </Button>
+                                <Button Name="PART_PrevTab" 
+                                        Focusable="False" 
+                                        Width="16"
+                                        MinHeight="16"
+										Margin="0,0,8,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        DockPanel.Dock="Left" 
+                                        Tag="PrevTab" Visibility="Collapsed" 
+                                        Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools:TabControlExt}}}">
+                                    <Button.Content>
+                                        <Path
+                                        Width="4"
+                                        Height="8"
+                                        Fill="{Binding Foreground, ElementName=PART_PrevTab}"
+                                        SnapsToDevicePixels="True"
+                                        Stretch="Fill">
+                                            <Path.Data>
+                                                <PathGeometry>M7.7109926,0 L9.0010002,1.529007 3.1009803,6.5099945 8.97799,11.472 7.6879824,13 0,6.5099945 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </Button.Content>
+                                </Button>
+                                <Button Name="PART_NextTab" 
+                                        Focusable="False" 
+                                        Width="16"
+                                        MinHeight="16"
+										Margin="0,0,8,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        DockPanel.Dock="Left" 
+                                        Tag="NextTab" Visibility="Collapsed" 
+                                        Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools:TabControlExt}}}">
+                                    <Button.Content>
+                                        <Path
+                                        Width="4"
+                                        Height="8"
+                                        Fill="{Binding Foreground, ElementName=PART_NextTab}"
+                                        SnapsToDevicePixels="True"
+                                        Stretch="Fill">
+                                            <Path.Data>
+                                                <PathGeometry>M1.2899816,0 L9.0010002,6.5099945 1.3129919,13 0.022979841,11.472 5.9000094,6.5099945 0,1.529007 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </Button.Content>
+                                </Button>
+                                <Button Name="PART_NextPage" 
+                                        Focusable="False" 
+                                        Width="16"
+                                        MinHeight="16"
+										Margin="0,0,8,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        DockPanel.Dock="Left" 
+                                        Tag="NextPage" Visibility="Collapsed" 
+                                        Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools:TabControlExt}}}">
+                                    <Button.Content>
+                                        <Path
+                                        Width="8"
+                                        Height="8"
+                                        Fill="{Binding Foreground, ElementName=PART_NextPage}"
+                                        SnapsToDevicePixels="True"
+                                        Stretch="Fill">
+                                            <Path.Data>
+                                                <PathGeometry>M1.2899995,1.4306011E-06 L9.0009968,6.5090012 1.3129997,12.999001 0.02300024,11.471001 5.8999981,6.5090012 0,1.5280014 z M8.2900028,0 L16.001002,6.5090003 8.3130016,12.999 7.0230044,11.471 12.900004,6.5090003 7.0000017,1.5279997 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </Button.Content>
+                                </Button>
+                                <Button Name="PART_PrevPage" 
+                                        Focusable="False" 
+                                        Width="16"
+                                        MinHeight="16"
+										Margin="0,0,8,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        DockPanel.Dock="Left" 
+                                        Tag="PrevPage" 
+                                        Visibility="Collapsed" 
+                                        Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools:TabControlExt}}}">
+                                    <Button.Content>
+                                        <Path
+                                        Width="8"
+                                        Height="8"
+                                        Fill="{Binding Foreground, ElementName=PART_PrevPage}"
+                                        SnapsToDevicePixels="True"
+                                        Stretch="Fill" >
+                                            <Path.Data>
+                                                <PathGeometry>M7.7109995,1.4306008E-06 L9.0009995,1.5280014 3.1009996,6.5090012 8.9779992,11.471001 7.6879995,12.999001 0,6.5090012 z M14.710999,0 L16.000999,1.5279997 10.100999,6.5090003 15.977999,11.471 14.688,12.999 7,6.5090003 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </Button.Content>
+                                </Button>
+                                <Button Name="PART_FirstTab"
+                                        Width="16"
+                                        MinHeight="16"
+										Margin="0,0,8,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        Focusable="False" DockPanel.Dock="Left" 
+                                        Tag="FirstTab" 
+                                        Visibility="Collapsed" 
+                                        Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools:TabControlExt}}}">
+                                    <Button.Content>
+                                        <Path
+                                        Width="8"
+                                        Height="8"
+                                        Fill="{Binding Foreground, ElementName=PART_FirstTab}"
+                                        SnapsToDevicePixels="True"
+                                        Stretch="Fill">
+                                            <Path.Data>
+                                                <PathGeometry>M9.5280266,0.0090068526 L11.000011,1.3629964 6.718029,6.0179985 10.98402,10.656002 9.5120354,12.010007 4.0000115,6.0179985 z M0,0 L2,0 2,12 0,12 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
+                                    </Button.Content>
+                                </Button>
+                                <ContentPresenter x:Name="PART_TabItems" ContentSource="TabItems" 
+                                              DockPanel.Dock="Right" 
+                                              Content="{TemplateBinding Content}"/>
+                            </DockPanel>
+                        </Border>
+                        <Border Grid.Row="1" Background="{StaticResource ContentBackground}"></Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="skinmanager:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="PART_MenuButton" Property="MinWidth" Value="{StaticResource TouchMode.MinSize}" />
+                            <Setter TargetName="PART_CloseButton" Property="MinWidth" Value="{StaticResource TouchMode.MinSize}" />
+                            <Setter TargetName="PART_PrevPage" Property="MinWidth" Value="{StaticResource TouchMode.MinSize}" />
+                            <Setter TargetName="PART_NextPage" Property="MinWidth" Value="{StaticResource TouchMode.MinSize}" />
+                            <Setter TargetName="PART_PrevTab" Property="MinWidth" Value="{StaticResource TouchMode.MinSize}" />
+                            <Setter TargetName="PART_NextTab" Property="MinWidth" Value="{StaticResource TouchMode.MinSize}" />
+                            <Setter TargetName="PART_LastTab" Property="MinWidth" Value="{StaticResource TouchMode.MinSize}" />
+                            <Setter TargetName="PART_FirstTab" Property="MinWidth" Value="{StaticResource TouchMode.MinSize}" />
+                            <Setter TargetName="PART_PrevPage" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_NextPage" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_PrevTab" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_NextTab" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_LastTab" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_FirstTab" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding Path=TabStripPlacement,RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TabControl}},FallbackValue=Top}" Value="Bottom">
+                            <Setter Property="LayoutTransform" TargetName="PART_CustomItems">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-180"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="LayoutTransform" TargetName="PART_CloseButton">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-180"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="LayoutTransform" TargetName="PART_MenuButton">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-180"/>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=IsAllTabsClosed,RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools:TabControlExt}},FallbackValue=false}" Value="True">
+                            <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Hidden"/>
+                            <Setter TargetName="PART_MenuButton" Property="Visibility" Value="Hidden"/>
+                            <Setter TargetName="BottomBorder" Property="Height" Value="0"/>
+                        </DataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=Items.Count,RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type tools:TabControlExt}},FallbackValue=0}" Value="1" />
+                                <Condition Binding="{Binding Path=HideHeaderOnSingleChild,RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type tools:TabControlExt}}}" Value="True" />
+                                <Condition Binding="{Binding Path=ShowTabListContextMenu,RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type tools:TabControlExt}}}" Value="False" />
+                                <Condition Binding="{Binding ElementName=PART_CloseButton, Path=Visibility}"  Value="Collapsed"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Bord" Property="Visibility" Value="Collapsed"/>
+                        </MultiDataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSpreadsheetTabPanelAdvStyle}" TargetType="{x:Type tools:TabPanelAdv}"/>
+
+    <Style x:Key="SyncfusionSpreadsheetTabControlExtStyle" TargetType="{x:Type tools:TabControlExt}" BasedOn="{StaticResource SyncfusionTabControlExtStyle}">
+        <Setter Property="SelectedItemFontWeight" Value="Bold"/>
+        <Setter Property="ShowTabListContextMenu" Value="False"/>
+        <Setter Property="CloseButtonType" Value="Hide"/>
+        <Setter Property="TabScrollStyle" Value="Normal"/>
+        <Setter Property="TabStripPlacement" Value="Bottom"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="TabScrollButtonVisibility" Value="Visible"/>
+        <Setter Property="EnableLabelEdit" Value="True"/>
+        <Setter Property="IsCustomTabItemContextMenuEnabled" Value="True"/>
+        <Setter Property="TabPanelStyle" Value="{StaticResource SyncfusionSpreadsheetTabPanelAdvStyle}" />
+        <Setter Property="AllowDrop" Value="True"/>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionSpreadsheetTabControlExtStyle}" TargetType="{x:Type tools:TabControlExt}"/>
+
+    <DataTemplate x:Key="NewButton" >
+        <Border Name="border" Margin="22,0,0,0" Background="Transparent">
+            <Grid>
+                <Grid Name="backgroundGrid" Width="20"  Height="20" Visibility="Visible">
+                    <Ellipse Fill="Transparent" Stroke="{StaticResource IconColor}" Name="Rect" Visibility="Visible" Width="17" Height="17" Margin="0,0,0,1" />
+                </Grid>
+                <Path Name="Path1" Data="M19.833,0L32.501,0 32.501,19.833999 52.334,19.833999 52.334,32.500999 32.501,32.500999 32.501,52.333 19.833,52.333 19.833,32.500999 0,32.500999 0,19.833999 19.833,19.833999z"  Stretch="Uniform" Fill="{StaticResource IconColor}" Width="9" Height="9" Margin="0,0,0,1">
+                    <Path.RenderTransform>
+                        <TransformGroup>
+                            <TransformGroup.Children>
+                                <RotateTransform Angle="0" />
+                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                            </TransformGroup.Children>
+                        </TransformGroup>
+                    </Path.RenderTransform>
+                </Path>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <Style x:Key="PasteOptionsMenuItemTemplateKey" TargetType="MenuItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid>
+                        <ContentPresenter Margin="30,3,6,3" ContentSource="Header" RecognizesAccessKey="True" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+  
+    <Style x:Key="SyncfusionSpreadsheetGroupButtonStyle" TargetType="spreadsheet:SpreadsheetGroupButton" BasedOn="{StaticResource WPFToggleButtonStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="spreadsheet:SpreadsheetGroupButton">
+                    <Border Name="border" Background="Transparent">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualState x:Name="Checked">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames
+                                                Storyboard.TargetName="Path1"
+                                                Storyboard.TargetProperty="(UIElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="0">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Visibility>Visible
+                                                    </Visibility>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+
+                                <VisualState x:Name="Unchecked">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames
+                                                Storyboard.TargetName="Path1"
+                                                Storyboard.TargetProperty="(UIElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="0">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Visibility>Collapsed
+                                                    </Visibility>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid>
+                            <Grid Name="backgroundGrid" Width="20" Height="20" Visibility="Visible">
+                                <Rectangle Fill="{TemplateBinding Background}" Stroke="{TemplateBinding BorderBrush}" Name="Rect" Visibility="Visible" />
+                            </Grid>
+                            <Path Name="Path1" Data="M19.833,0L32.501,0 32.501,19.833999 52.334,19.833999 52.334,32.500999 32.501,32.500999 32.501,52.333 19.833,52.333 19.833,32.500999 0,32.500999 0,19.833999 19.833,19.833999z"  Stretch="Uniform" Fill="{TemplateBinding Foreground}" Width="10" Height="10" Margin="0">
+                                <Path.RenderTransform>
+                                    <TransformGroup>
+                                        <TransformGroup.Children>
+                                            <RotateTransform Angle="0" />
+                                            <ScaleTransform ScaleX="1" ScaleY="1" />
+                                        </TransformGroup.Children>
+                                    </TransformGroup>
+                                </Path.RenderTransform>
+                            </Path>
+
+                            <Path Name="Path2" Data="M0,0L53.333,0 53.333,8.888 0,8.888z"  Stretch="Uniform" Fill="{TemplateBinding Foreground}" Width="10" Height="10" Margin="0" >
+                                <Path.RenderTransform>
+                                    <TransformGroup>
+                                        <TransformGroup.Children>
+                                            <RotateTransform Angle="0" />
+                                            <ScaleTransform ScaleX="1" ScaleY="1" />
+                                        </TransformGroup.Children>
+                                    </TransformGroup>
+                                </Path.RenderTransform>
+                            </Path>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionSpreadsheetGroupButtonStyle}" TargetType="spreadsheet:SpreadsheetGroupButton"/>
+
+    <Style x:Key="SyncfusionProgressRingStyle" TargetType="spreadsheet:ProgressRing">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="spreadsheet:ProgressRing">
+                    <ControlTemplate.Resources>
+                        <Storyboard x:Key="BusyAnimation" RepeatBehavior="Forever">
+                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_BusyIndicatorPresenter" Storyboard.TargetProperty="(UIElement.Visibility)">
+                                <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+                            </ObjectAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path11" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path10" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.3" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path9" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.3" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.4" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path8" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.3" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.4" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.5" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path7" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.4" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.5" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.6" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path6" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.5" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.6" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.7" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path5" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.6" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.7" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.8" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path4" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.7" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.8" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.9" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path3" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.8" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.9" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:1.0" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path2" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.9" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:1.0" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:1.1" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path1" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:1.0" Value="0.3" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:1.1" Value="1" />
+                                <EasingDoubleKeyFrame KeyTime="0:0:1.2" Value="0.3" />
+                            </DoubleAnimationUsingKeyFrames>
+                        </Storyboard>
+                    </ControlTemplate.Resources>
+                    <Border Width="{TemplateBinding Width}"
+                            Height="{TemplateBinding Height}"
+                            HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{StaticResource BorderAlt}"
+                            BorderThickness="0"
+                            CornerRadius="5"
+                            Padding="10">
+                        <StackPanel>
+                            <Viewbox x:Name="PART_BusyIndicatorPresenter"
+                                     Width="40"
+                                     Height="40"
+                                     Visibility="Collapsed">
+                                <Grid x:Name="PART_BusyIndicatorPath"
+                                      Grid.Row="1"
+                                      Canvas.Left="76.686"
+                                      Width="47.586"
+                                      Height="47.866"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Grid.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform />
+                                            <SkewTransform />
+                                            <RotateTransform />
+                                            <TranslateTransform />
+                                        </TransformGroup>
+                                    </Grid.RenderTransform>
+                                    <Path x:Name="Path1"
+                                          Margin="21.922,0,16.664,38.866"
+                                          Data="F1M0,4.5C0,2.015 2.015,0 4.5,0 6.985,0 9,2.015 9,4.5 9,6.985 6.985,9 4.5,9 2.015,9 0,6.985 0,4.5"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path2"
+                                          Margin="11.023,1.852,27.562,37.013"
+                                          Data="F1M0.714,6.932C-0.629,4.841 -0.022,2.057 2.07,0.714 4.161,-0.629 6.945,-0.022 8.288,2.07 9.63,4.161 9.023,6.945 6.932,8.288 4.84,9.63 2.057,9.023 0.714,6.932"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path3"
+                                          Margin="2.853,9.298,35.731,29.566"
+                                          Data="F1M2.628,8.593C0.367,7.558 -0.626,4.888 0.409,2.628 1.444,0.368 4.114,-0.625 6.374,0.41 8.634,1.444 9.626,4.115 8.592,6.375 7.558,8.634 4.888,9.628 2.628,8.593"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path4"
+                                          Margin="0,19.978,38.584,18.886"
+                                          Data="F1M5.757,8.822C3.37,9.515 0.874,8.143 0.18,5.756 -0.513,3.37 0.859,0.873 3.246,0.179 5.633,-0.514 8.129,0.859 8.823,3.245 9.516,5.632 8.144,8.129 5.757,8.822"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path5"
+                                          Margin="3.371,30.507,35.215,8.359"
+                                          Data="F1M7.44,7.907C5.56,9.531 2.718,9.322 1.094,7.441 -0.531,5.56 -0.322,2.718 1.56,1.094 3.442,-0.53 6.282,-0.321 7.906,1.56 9.53,3.441 9.322,6.283 7.44,7.907"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path6"
+                                          Margin="11.893,37.545,26.691,1.318"
+                                          Data="F1M8.816,5.779C8.11,8.162 5.606,9.521 3.223,8.816 0.84,8.11 -0.519,5.606 0.187,3.223 0.892,0.84 3.396,-0.52 5.779,0.186 8.162,0.892 9.522,3.396 8.816,5.779"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path7"
+                                          Margin="22.868,38.864,15.716,0"
+                                          Data="F1M8.823,3.246C9.516,5.633 8.144,8.129 5.757,8.823 3.371,9.516 0.874,8.144 0.18,5.757 -0.513,3.37 0.86,0.874 3.246,0.18 5.633,-0.513 8.13,0.859 8.823,3.246"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path8"
+                                          Margin="32.818,34.046,5.768,4.82"
+                                          Data="F1M7.458,1.109C9.331,2.743 9.525,5.585 7.891,7.458 6.257,9.331 3.414,9.525 1.542,7.891 -0.331,6.257 -0.525,3.415 1.109,1.542 2.743,-0.331 5.585,-0.525 7.458,1.109"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path9"
+                                          Margin="38.585,24.615,0,14.25"
+                                          Data="F1M5.158,0.049C7.617,0.412 9.315,2.699 8.952,5.158 8.589,7.617 6.302,9.316 3.843,8.952 1.385,8.589 -0.314,6.302 0.049,3.843 0.412,1.385 2.699,-0.314 5.158,0.049"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path10"
+                                          Margin="38.345,13.563,0.239,25.301"
+                                          Data="F1M2.649,0.4C4.914,-0.623 7.579,0.384 8.602,2.649 9.625,4.915 8.618,7.58 6.353,8.603 4.088,9.625 1.422,8.618 0.4,6.353 -0.623,4.088 0.384,1.423 2.649,0.4"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                    <Path x:Name="Path11"
+                                          Margin="32.172,4.394,6.413,34.471"
+                                          Data="F1M0.726,2.049C2.08,-0.035 4.867,-0.628 6.951,0.726 9.035,2.079 9.628,4.866 8.274,6.951 6.92,9.035 4.133,9.627 2.049,8.274 -0.035,6.92 -0.628,4.133 0.726,2.049"
+                                          Fill="{TemplateBinding Foreground}"
+                                          Opacity="0.3" />
+                                </Grid>
+                            </Viewbox>
+                            <TextBlock x:Name="PART_Loading" Padding="3"
+                                       HorizontalAlignment="Center"
+                                       FontSize="16"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       Text="{TemplateBinding Text}"
+                                       Visibility="{TemplateBinding Text,
+                                                                    Converter={StaticResource StringToVisibilityConverter}}" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard Storyboard="{StaticResource BusyAnimation}" />
+                        </EventTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionProgressRingStyle}" TargetType="spreadsheet:ProgressRing"/>
+    
+    <Style x:Key="CollapseButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource WPFButtonStyle}"/>
+
+    <Style x:Key="SyncfusionSfSpreadsheetStyle" TargetType="spreadsheet:SfSpreadsheet">
+        <Setter Property="SpreadsheetResourceDictionary">
+            <Setter.Value>
+                <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/SfSpreadsheet/SfSpreadsheet.xaml"/>
+            </Setter.Value>
+        </Setter>
+		<Setter Property="Background" Value="{StaticResource ContentBackground}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="spreadsheet:SfSpreadsheet">
+
+                    <Grid x:Name="MainGrid" 
+							Background="{TemplateBinding Background}"
+							DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Busy">
+                                    <Storyboard>
+                                        <BooleanAnimationUsingKeyFrames Storyboard.TargetName="PART_BusyDecorator" Storyboard.TargetProperty="IsBusy">
+                                            <DiscreteBooleanKeyFrame KeyTime="0" Value="True" />
+                                        </BooleanAnimationUsingKeyFrames>
+                                        <DoubleAnimation Duration="0"
+                                                         Storyboard.TargetName="PART_FormulaBar"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.5" />
+                                        <DoubleAnimation Duration="0"
+                                                         Storyboard.TargetName="Part_Grid"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.5" />
+                                        <DoubleAnimation Duration="0"
+                                                         Storyboard.TargetName="GridSplitter"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.5" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Normal" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="0" MinHeight="30" MaxHeight="480"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <spreadsheet:FormulaBar x:Name="PART_FormulaBar" 
+                                          DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}" 
+                                          Visibility="{TemplateBinding FormulaBarVisibility}"/>
+                        <GridSplitter x:Name="GridSplitter" HorizontalAlignment="Stretch" Focusable="False" Grid.Row="1" ResizeBehavior="PreviousAndNext" MinHeight="3" Background="Transparent"
+                                      Visibility="{TemplateBinding FormulaBarVisibility}"/>
+                        <Grid x:Name="Part_Grid" Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="0"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="0"/>
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <spreadsheet:OutlinesPanel x:Name="ColumnGroupPanel" Orientation="Horizontal" Grid.Column="1" GroupLineColor="{StaticResource IconColor}"/>
+                            <spreadsheet:OutlinesPanel x:Name="RowGroupPanel" Orientation="Vertical"  Grid.Row="1" GroupLineColor="{StaticResource IconColor}"/>
+                            <tools:TabControlExt x:Name="PART_TabControlExt" Grid.Row="1" Grid.Column="1" 
+                                                      Style="{StaticResource SyncfusionSpreadsheetTabControlExtStyle}" 
+                                                      IsNewButtonEnabled="True"
+												      BorderThickness="0"													  
+                                                      NewTabButtonTemplate="{StaticResource NewButton}"
+                                                      SelectedIndex="{Binding Path=SelectedTabIndex,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}" 
+                                                      SelectedItem="{Binding Path=SelectedTabItem,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}"
+                                                      ShowTabItemContextMenu="{Binding AllowTabItemContextMenu}">
+                            </tools:TabControlExt>
+                            <Grid.ContextMenu>
+                                <ContextMenu x:Name="TabItemContextMenu">
+                                    <ContextMenu.Items>
+                                        <MenuItem Name="InsertSheetMenuItem"
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Insert}"
+                                          Icon="{StaticResource InserSheetIcon}">
+                                        </MenuItem>
+                                        <MenuItem Name="DeleteSheetMenuItem"
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Delete}"
+                                          Icon="{StaticResource DeleteSheetIcon}">
+                                        </MenuItem>
+                                        <MenuItem Name="RenameSheetMenuItem"
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Rename}">
+                                        </MenuItem>
+                                        <MenuItem Name="ProtectSheetMenuItem"
+                                          Icon="{StaticResource ProtectsheetIcon}">
+                                        </MenuItem>
+                                        <MenuItem Name="HideSheetMenuItem"
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Hide}">
+                                        </MenuItem>
+                                        <MenuItem Name="UnhideSheetMenuItem"
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=UnHide}">
+                                        </MenuItem>
+                                    </ContextMenu.Items>
+                                </ContextMenu>
+                            </Grid.ContextMenu>
+
+                        </Grid>
+                        <spreadsheet:BusyDecorator x:Name="PART_BusyDecorator"
+                                             Grid.Row="2"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center" />
+                        <Grid.ContextMenu>
+                            <ContextMenu x:Name="CellContextMenu">
+                                <ContextMenu.Items>
+                                    <MenuItem Name="CutMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Cut}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource CutIcon1}">
+                                    </MenuItem>
+                                    <MenuItem Name="CopyMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Copy}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource CopyIcon1}">
+                                    </MenuItem>
+                                    <MenuItem Name="GraphicCellPaste" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Paste}"
+                                          BorderThickness="0" Visibility="Collapsed"
+                                          Icon="{StaticResource PasteOptionsIcon}">
+                                    </MenuItem>
+                                    <MenuItem Name="PasteTitleMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_PasteOptions}"
+                                          BorderThickness="0" FontWeight="Bold" IsHitTestVisible="False"
+                                          Icon="{StaticResource PasteOptionsIcon}">
+                                    </MenuItem>
+                                    <MenuItem Name="PasteOptionsMenuItem"
+                                          IsEnabled="True" Style="{StaticResource PasteOptionsMenuItemTemplateKey}"
+                                          BorderThickness="0">
+                                        <MenuItem.Header>
+                                            <StackPanel Name="PasteItemsStackpanel" Orientation="Horizontal">
+                                                <Button Name="PasteAllButton" ToolTip="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_PasteAll}"
+                                                    BorderThickness="0" Background="Transparent"
+                                                    Content="{StaticResource PasteAllIcon}"/>
+                                                <Button Name="PasteValueButton" ToolTip="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_PasteValues}"
+                                                    BorderThickness="0" Margin="2,0,0,0" Padding="2,0,0,0" Background="Transparent"
+                                                    Content="{StaticResource PasteValueIcon}"/>
+                                                <Button Name="PasteFormatButton" ToolTip="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_PasteFormat}"
+                                                    BorderThickness="0" Margin="2,0,0,0" Padding="2,0,0,0" Background="Transparent"
+                                                    Content="{StaticResource PasteFormatIcon}"/>
+                                                <Button Name="PasteFormulaButton" ToolTip="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_PasteFormulas}"
+                                                    BorderThickness="0" Margin="2,0,0,0" Padding="2,0,0,0" Background="Transparent"
+                                                    Content="{StaticResource PasteFormulaIcon}"/>
+                                                <Button Name="PasteValueFormatButton" ToolTip="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_ValuesAndFormatting}"
+                                                    BorderThickness="0" Margin="2,0,0,0" Padding="2,0,0,0" Background="Transparent"
+                                                    Content="{StaticResource PasteValueFormatIcon}"/>
+                                                <Button Name="PasteTextOnlyButton" Visibility="Collapsed"
+                                                    BorderThickness="0" Margin="2,0,0,0" Padding="2,0,0,0" Background="Transparent"
+                                                    Content="{StaticResource PasteTextOnlyIcon}"/>
+                                                <Button Name="TempPasteAllButton" Visibility="Collapsed"
+                                                    BorderThickness="0" Background="Transparent"
+                                                    Content="{StaticResource PasteAllIcon}"/>
+                                            </StackPanel>
+                                        </MenuItem.Header>
+                                    </MenuItem>
+                                    <Separator Margin="0" BorderThickness="0"/>
+                                    <MenuItem Name="InsertMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_Insert}"
+                                          BorderThickness="0">
+                                    </MenuItem>
+                                    <MenuItem Name="DeleteMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_Delete}"
+                                          BorderThickness="0">
+                                    </MenuItem>
+                                    <MenuItem Name="ClearContentsMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_ClearContents}"
+                                          BorderThickness="0">
+                                    </MenuItem>
+                                    <Separator Margin="0" BorderThickness="0"/>
+                                    <MenuItem Name="ColumnWidthMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=ColumnWidth}"
+                                          BorderThickness="0">
+                                    </MenuItem>
+                                    <MenuItem Name="HideColumnMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Hide}"
+                                          BorderThickness="0">
+                                    </MenuItem>
+                                    <MenuItem Name="UnhideColumnMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=UnhideSheet_Title}"
+                                          BorderThickness="0">
+                                    </MenuItem>
+                                    <MenuItem Name="InsertCommentMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_InsertComment}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource InsertCommentIcon}">
+                                    </MenuItem>
+                                    <MenuItem Name="EditCommentMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=EditComment}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource EditCommentIcon1}">
+                                    </MenuItem>
+                                    <MenuItem Name="DeleteCommentMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_DeleteComment}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource DeleteCommentIcon1}">
+                                    </MenuItem>
+                                    <Separator Margin="0" BorderThickness="0"/>
+                                    <MenuItem Name="FormatCellsMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_FormatCells}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource FormatCellsIcon}">
+                                    </MenuItem>
+                                    <MenuItem Name="DefineNameMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_DefineName}"
+                                          BorderThickness="0">
+                                    </MenuItem>
+                                    <MenuItem Name="InsertHyperlinkMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_Hyperlink}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource HyperlinkIcon1}">
+                                    </MenuItem>
+                                    <MenuItem Name="EditHyperlinkMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_EditHyperlink}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource HyperlinkIcon1}">
+                                    </MenuItem>
+                                    <MenuItem Name="OpenHyperlinkMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_OpenHyperlink}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource HyperlinkIcon1}">
+                                    </MenuItem>
+                                    <MenuItem Name="RemoveHyperlinkMenuItem" Height="26" 
+                                          Header="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_RemoveHyperlink}"
+                                          BorderThickness="0"
+                                          Icon="{StaticResource RemoveHyperlinkIcon}">
+                                    </MenuItem>
+                                </ContextMenu.Items>
+                            </ContextMenu>
+                        </Grid.ContextMenu>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionSfSpreadsheetStyle}" TargetType="spreadsheet:SfSpreadsheet"/>
+
+    <Style x:Key="SyncfusionSpreadsheetFormulaBarStyle" TargetType="spreadsheet:FormulaBar">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="spreadsheet:FormulaBar">
+                    <Grid ShowGridLines="False">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"  MinWidth="120" MaxWidth="900"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*" MinWidth="100"/>
+                        </Grid.ColumnDefinitions>
+                        <shared:ComboBoxAdv x:Name="NameBox" IsEditable="True" Grid.Column="0" Margin="6,2,2,0" IsTextSearchEnabled="False" 
+                                     VerticalContentAlignment="Center" Padding="10,1,1,1"
+                                     VerticalAlignment="Top" DisplayMemberPath="Name" 
+                                     BorderThickness="1" 
+                                     HorizontalAlignment="Stretch" MinHeight="26" IsReadOnly="False"  MinWidth="110"/>
+                        <GridSplitter x:Name="Splitter" Grid.Column="1" Width="15" MinHeight="15" Margin="-1,8,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                          BorderThickness="1" Focusable="False"
+                                          ResizeBehavior="PreviousAndCurrent" Template="{StaticResource SplitterIcon}">
+                        </GridSplitter>
+                        <Border x:Name="PART_ButtonsBorder" Background="Transparent" BorderBrush="{Binding BorderBrush,ElementName=NameBox}" MinHeight="26" Margin="2,2,2,1" 
+                                VerticalAlignment="Top" BorderThickness="1" Grid.Column="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30" MinWidth="30"/>
+                                    <ColumnDefinition Width="30" MinWidth="30"/>
+                                    <ColumnDefinition Width="0" MinWidth="0"/>
+                                </Grid.ColumnDefinitions>
+                                <shared:ButtonAdv x:Name="CancelEditButton" Grid.Column="0"
+                                                      IconTemplate="{StaticResource CancelEditIcon}"
+                                                      BorderThickness="0" Focusable="False" 
+                                                      SizeMode="Small" IsEnabled="False"
+                                                      Background="Transparent" Width="30" 
+                                                      MinHeight="26" Opacity="0.8"
+                                                      IconStretch="UniformToFill"  IconHeight="18" IconWidth="18"  
+                                                      VerticalAlignment="Center" HorizontalContentAlignment="Center">
+                                </shared:ButtonAdv>
+                                <shared:ButtonAdv x:Name="EndEditButton" Focusable="False" Grid.Column="1"
+                                                      IconTemplate="{StaticResource EndEditIcon}" SizeMode="Small" 
+                                                      Background="Transparent" BorderThickness="0" 
+                                                      Width="30" MinHeight="26" IsEnabled="False" Opacity="0.8"
+                                                      IconStretch="Uniform" IconHeight="18" IconWidth="18"  
+                                                      VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                                      VerticalContentAlignment="Center" 
+                                                      HorizontalContentAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <TextBox x:Name="FormulaTextBox" Grid.Column="3" Margin="2,2,6,1" MinHeight="26"
+                                 Text="{Binding Path=CurrentCellValue, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                 ScrollViewer.CanContentScroll="True" 
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                 TextWrapping="Wrap" HorizontalAlignment="Stretch" Padding="2" 
+                                 VerticalContentAlignment="Top" VerticalAlignment="Stretch" 
+                                 HorizontalContentAlignment="Stretch"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="skinmanager:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                            <Setter TargetName="NameBox" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="Splitter" Property="Margin" Value="-1,10,0,0" />
+                            <Setter TargetName="PART_ButtonsBorder" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="CancelEditButton" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="EndEditButton" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="FormulaTextBox" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionSpreadsheetFormulaBarStyle}" TargetType="spreadsheet:FormulaBar"/>
+    
+    <Style x:Key="SyncfusionSpreadsheetGridStyle" TargetType="spreadsheet:SpreadsheetGrid">
+        <Setter Property="Background" Value="{Binding TabPanelBackground,RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type tools:TabControlExt}},FallbackValue=Transparent}"/>
+        <Setter Property="HeaderBackground" Value="{StaticResource ContentBackgroundAlt2}"/>
+        <Setter Property="HeaderForeground" Value="{StaticResource ContentForeground}"/>
+		<Setter Property="HeaderCellBorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="SelectionBorderBrush" Value="{StaticResource PrimaryBackground}"/>
+        <Setter Property="ActiveHeaderBackground" Value="{StaticResource ContentBackgroundAlt4}"/>
+        <Setter Property="ActiveHeaderForeground" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness" Value="1,1,1,0" />
+        <Setter Property="ScrollViewer.PanningMode" Value="Both" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="spreadsheet:SpreadsheetGrid">
+                    <Border BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ScrollViewer" FocusVisualStyle="{TemplateBinding FocusVisualStyle}"
+                                          IsDeferredScrollingEnabled="False"
+                                          CanContentScroll="True"
+                                          IsTabStop="False"
+                                          PanningMode="{TemplateBinding ScrollViewer.PanningMode}"
+                                          HorizontalScrollBarVisibility="{Binding ElementName=PART_VisualContainer, Path=HorizontalScrollBarVisibility}"
+                                          VerticalScrollBarVisibility="{Binding ElementName=PART_VisualContainer, Path=VerticalScrollBarVisibility}"
+                                          >
+
+                            <spreadsheet:VisualContainerExt x:Name="PART_VisualContainer"
+                                                />
+
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Resources>
+            <Style TargetType="TextBox" BasedOn="{x:Null}"/>
+            <Style TargetType="TextBlock" BasedOn="{x:Null}"/>
+        </Style.Resources>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionSpreadsheetGridStyle}" TargetType="spreadsheet:SpreadsheetGrid"/>
+    
+    <Style x:Key="SyncfusionPasteDropDownItemStyle" TargetType="spreadsheet:PasteDropDownItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="spreadsheet:PasteDropDownItem">
+                    <Border BorderThickness="1" Background="{StaticResource PopupBackground}" BorderBrush="{StaticResource PopupBackground}">
+                        <shared:ButtonAdv x:Name="PART_PasteButton" IconHeight="24" IconWidth="24" IconTemplate="{StaticResource PasteIcon1}"  SizeMode="Small"  BorderThickness="0"  IconStretch="UniformToFill" >
+                            <Popup Name="popup" >
+                                <ListView Name="FillList" Width="220" 
+                                          Background="{StaticResource PopupBackground}"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                                          ScrollViewer.VerticalScrollBarVisibility="Disabled" 
+                                          BorderThickness="1">
+                                    <ListViewItem Width="250" BorderThickness="0"   Margin="3">
+                                        <shared:ButtonAdv x:Name="PasteAllButton" Background="Transparent" IconHeight="24" IconWidth="24" HorizontalContentAlignment="Left"  Width="250"  BorderThickness="0"  IconStretch="UniformToFill" IconTemplate="{StaticResource PasteSmall}" Label="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Paste}" ></shared:ButtonAdv>
+                                    </ListViewItem>
+                                    <ListViewItem Width="250" BorderThickness="0"  Margin="3">
+                                        <shared:ButtonAdv x:Name="PasteFormulaButton" Background="Transparent" IconHeight="24" IconWidth="24" Width="250" HorizontalContentAlignment="Left"    BorderThickness="0"  IconStretch="UniformToFill"  IconTemplate="{StaticResource PasteFormula}"  Label="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_PasteFormulas}" ></shared:ButtonAdv>
+                                    </ListViewItem>
+                                    <ListViewItem Width="250" BorderThickness="0"   Margin="3">
+                                        <shared:ButtonAdv x:Name="PasteFormulaFormatButton" Background="Transparent" IconHeight="24" IconWidth="24" HorizontalContentAlignment="Left" Width="250" BorderThickness="0"  IconStretch="UniformToFill"  IconTemplate="{StaticResource PasteFormulaAndNumberFormat}"  Label="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_FormulaFormatting}" ></shared:ButtonAdv>
+                                    </ListViewItem>
+                                    <ListViewItem Width="250" BorderThickness="0"  Margin="3">
+                                        <shared:ButtonAdv x:Name="PasteValueButton" Background="Transparent" IconHeight="24" IconWidth="24" HorizontalContentAlignment="Left" Width="250" BorderThickness="0" IconStretch="UniformToFill"  IconTemplate="{StaticResource PasteValue}"  Label="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_PasteValues}" ></shared:ButtonAdv>
+                                    </ListViewItem>
+                                    <ListViewItem Width="250" BorderThickness="0"  Margin="3">
+                                        <shared:ButtonAdv x:Name="PasteValueFormatButton" IconHeight="24" IconWidth="24" HorizontalContentAlignment="Left" Width="250" BorderThickness="0"  IconStretch="UniformToFill"  IconTemplate="{StaticResource PasteValueAndSourceFormatting}"  Label="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_ValueFormatting}" ></shared:ButtonAdv>
+                                    </ListViewItem>
+                                    <ListViewItem Width="250" BorderThickness="0"  Margin="3">
+                                        <shared:ButtonAdv x:Name="PasteFormatButton" Background="Transparent" IconHeight="24" IconWidth="24" HorizontalContentAlignment="Left" Width="250" BorderThickness="0"  IconStretch="UniformToFill"  IconTemplate="{StaticResource PasteFormat}" Label="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Context_PasteFormat}"  ></shared:ButtonAdv>
+                                    </ListViewItem>
+                                </ListView>
+                            </Popup>
+                        </shared:ButtonAdv>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPasteDropDownItemStyle}" TargetType="spreadsheet:PasteDropDownItem"></Style>
+
+    <Style x:Key="SyncfusionFillDropDownItemStyle" TargetType="spreadsheet:FillDropDownItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="spreadsheet:FillDropDownItem">
+                    <Border BorderThickness="1" Background="{StaticResource PopupBackground}" BorderBrush="{StaticResource PopupBackground}">
+                        <shared:ButtonAdv  Name="dropdownSplitter" IconHeight="24" IconWidth="24" IconTemplate="{StaticResource FillIcon}"  SizeMode="Small"  BorderThickness="0"  IconStretch="UniformToFill">
+                            <Popup Name="fillDropdownPopup" >
+                                <ListBox Name="FillList" MinWidth="50" MinHeight="50" 
+                                         Background="{StaticResource PopupBackground}"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                                          ScrollViewer.VerticalScrollBarVisibility="Disabled" BorderThickness="1">
+                                    <!--WPF-45471 Fillseries popup misaligned-->
+                                    <ListBoxItem>
+                                        <RadioButton  Width="160" Height="17" Name="CopyCells" Content="Copy Cells" GroupName="Fill" IsChecked="True" />
+                                    </ListBoxItem>
+                                    <ListBoxItem>
+                                        <RadioButton  Width="160" Height="17" Name="FillSeries" Content="Fill Series" GroupName="Fill" />
+                                    </ListBoxItem>
+                                    <ListBoxItem>
+                                        <RadioButton  Width="160" Height="17" Name="FillFormattingOnly" Content="Fill Formatting Only" GroupName="Fill" />
+                                    </ListBoxItem>
+                                    <ListBoxItem>
+                                        <RadioButton  Width="160" Height="17" Name="FillWithoutFormatting" Content="Fill Without Formatting" GroupName="Fill" />
+                                    </ListBoxItem>
+                                    <ListBoxItem>
+                                        <RadioButton Width="160" Height="17" Name="FillDays" Content="Fill Days" GroupName="Fill" ></RadioButton>
+                                    </ListBoxItem>
+                                    <ListBoxItem>
+                                        <RadioButton  Width="160" Height="17" Name="FillWeekDays" Content="Fill Weekdays" GroupName="Fill"></RadioButton>
+                                    </ListBoxItem>
+                                    <ListBoxItem>
+                                        <RadioButton  Width="160" Height="17" Name="FillMonths" Content="Fill Months" GroupName="Fill"></RadioButton>
+                                    </ListBoxItem>
+                                    <ListBoxItem>
+                                        <RadioButton  Width="160" Height="17" Name="FillYears" Content="Fill Years" GroupName="Fill"></RadioButton>
+                                    </ListBoxItem>
+                                </ListBox>
+                            </Popup>
+                        </shared:ButtonAdv>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionFillDropDownItemStyle}" TargetType="spreadsheet:FillDropDownItem"></Style>
+
+</ResourceDictionary>

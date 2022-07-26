@@ -1,0 +1,935 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Microsoft_Windows_Luna="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Luna"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:system="clr-namespace:System;assembly=mscorlib"
+    
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:tools_controls="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphPrimaryToggleButton.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style
+        x:Key="TabSplitterButtonStyle"
+        BasedOn="{StaticResource WPFGlyphPrimaryToggleButtonStyle}"
+        TargetType="{x:Type ToggleButton}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <Border
+                        Name="border"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}">
+                        
+                        <ContentPresenter
+                            x:Name="contentPresenter"
+                            Margin="{TemplateBinding Padding}"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                            RecognizesAccessKey="True"
+                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ContentPresenter.Resources>
+                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="Transparent" />
+                            <Setter TargetName="border" Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="SyncfusionTabSplitterItemStyle" TargetType="{x:Type tools_controls:TabSplitterItem}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForegroundAlt}" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="BorderThickness" Value="0,0,0,2" />
+        <Setter Property="Control.HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Control.VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:TabSplitterItem}">
+                    <Border
+                        Name="TabSplitterItemBorder"
+                        Margin="{TemplateBinding Margin}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <DockPanel x:Name="PART_DockPanel" LastChildFill="True">
+                            <Image
+                                x:Name="PART_Image"
+                                VerticalAlignment="Center"
+                                DockPanel.Dock="Left"
+                                SnapsToDevicePixels="True"
+                                Source="{TemplateBinding tools_controls:TabSplitter.Image}"
+                                Stretch="None" />
+                            <ContentPresenter
+                                x:Name="TabSplitterItemContent"
+                                Margin="6,4,10,2"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding HeaderedContentControl.Header}"
+                                ContentSource="Header"
+                                ContentTemplate="{TemplateBinding HeaderedContentControl.HeaderTemplate}"
+                                RecognizesAccessKey="True"
+                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"
+                                TextElement.FontFamily="{TemplateBinding FontFamily}"
+                                TextElement.FontSize="{TemplateBinding FontSize}"
+                                TextElement.FontWeight="{TemplateBinding FontWeight}"
+                                TextElement.Foreground="{TemplateBinding Foreground}">
+                                <ContentPresenter.Resources>
+                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <DataTrigger Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="9999">
+                            <Setter Property="FrameworkElement.Margin" Value="0" />
+                        </DataTrigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource ContentForegroundAlt}" />
+                            <Setter Property="Background" Value="{StaticResource PrimaryBackgroundOpacity}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackgroundOpacity}" />
+                        </Trigger>
+
+                        <DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryColorForeground}" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
+                        </DataTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionTabSplitterItemStyle}" TargetType="{x:Type tools_controls:TabSplitterItem}" />
+
+    <Style x:Key="SyncfusionSplitterPageStyle" TargetType="{x:Type tools_controls:SplitterPage}">
+        <Setter Property="FrameworkElement.FocusVisualStyle">
+            <Setter.Value>
+                <Style TargetType="IFrameworkInputElement">
+                    <Setter Property="Control.Template" Value="{x:Null}" />
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Height" Value="26" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForegroundAlt}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ContentBackgroundAlt3}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt3}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="ToolTip" Value="{Binding Path=Header, RelativeSource={RelativeSource Mode=Self}}" />
+        <Setter Property="Margin" Value="0,1,0,0" />
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:SplitterPage}">
+                    <tools_controls:VS2008SplitterItemBorder
+                        x:Name="SplitterPageBorder"
+                        Height="{TemplateBinding Height}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        ToolTip="{TemplateBinding ToolTip}">
+                        <DockPanel x:Name="PART_DockPanel" LastChildFill="True">
+                            <Image
+                                x:Name="PART_Image"
+                                Width="11"
+                                Height="11"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                DockPanel.Dock="Left"
+                                SnapsToDevicePixels="True"
+                                Source="{TemplateBinding Image}" />
+                            <ContentPresenter
+                                x:Name="Content"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding HeaderedContentControl.Header}"
+                                ContentSource="Header"
+                                ContentTemplate="{TemplateBinding HeaderedContentControl.HeaderTemplate}"
+                                RecognizesAccessKey="True"
+                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"
+                                TextBlock.FontFamily="{TemplateBinding FontFamily}"
+                                TextBlock.FontSize="{TemplateBinding FontSize}"
+                                TextBlock.FontWeight="{TemplateBinding FontWeight}"
+                                TextBlock.Foreground="{TemplateBinding Foreground}">
+                                <ContentPresenter.Resources>
+                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </DockPanel>
+                    </tools_controls:VS2008SplitterItemBorder>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Top">
+                            <Setter Property="Margin" Value="0,2,0,-2" />
+                            <Setter TargetName="Content" Property="Margin" Value="4,0,8,0" />
+                            <Setter TargetName="PART_DockPanel" Property="VerticalAlignment" Value="Center" />
+                        </DataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Top" />
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Margin" Value="0,2,0,-2" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="9999" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Top" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Margin" Value="-12,1,0,-1" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="9999" />
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Top" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Margin" Value="-12,2,0,-2" />
+                        </MultiDataTrigger>
+
+                        <DataTrigger Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom">
+                            <Setter TargetName="Content" Property="Margin" Value="4,0,4,0" />
+                            <Setter TargetName="PART_Image" Property="Margin" Value="14,0,0,0" />
+                            <Setter TargetName="PART_DockPanel" Property="Margin" Value="0,0,0,2" />
+                            <Setter TargetName="PART_DockPanel" Property="VerticalAlignment" Value="Center" />
+                            <Setter Property="FlowDirection" Value="LeftToRight" />
+                            <Setter Property="Margin" Value="0,2,-12,-1" />
+                            <Setter TargetName="PART_DockPanel" Property="LayoutTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-180" />
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="9999" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                                <Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="False" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Margin" Value="0,1,-13,-1" />
+                            <Setter TargetName="PART_Image" Property="Margin" Value="8,0,0,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                                <Condition Binding="{Binding Path=BottomPanelHeight, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" Value="0" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Image" Property="Margin" Value="14,0,0,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="10000" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                                <Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="False" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Image" Property="Margin" Value="8,0,0,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="9999" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                                <Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Self}}" Value="False" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Image" Property="Margin" Value="8,0,0,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="9999" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                                <Condition Binding="{Binding Path=BottomPanelHeight, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" Value="0" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Image" Property="Margin" Value="8,0,0,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Margin" Value="-1,2,-13,-2" />
+                            <Setter TargetName="PART_Image" Property="Margin" Value="8,0,0,0" />
+                        </MultiDataTrigger>
+
+                        <Trigger Property="Image" Value="{x:Null}">
+                            <Setter TargetName="PART_Image" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=Image, RelativeSource={RelativeSource Self}}" Value="{x:Null}" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Content" Property="Margin" Value="14,0,4,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="9999" />
+                                <Condition Binding="{Binding Path=Image, RelativeSource={RelativeSource Self}}" Value="{x:Null}" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Content" Property="Margin" Value="8,0,4,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(Panel.ZIndex), RelativeSource={RelativeSource Self}}" Value="10000" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                                <Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="False" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Content" Property="Margin" Value="8,0,4,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=Image, RelativeSource={RelativeSource Self}}" Value="{x:Null}" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Bottom" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Content" Property="Margin" Value="8,0,4,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Right" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Image" Property="Margin" Value="4,0,0,5" />
+                            <Setter TargetName="Content" Property="Content" Value=" " />
+                            <Setter Property="Margin" Value="0,1,-12,-1" />
+                            <Setter Property="Width" Value="48.5" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Right" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Content" Property="Content" Value=" " />
+                            <Setter Property="Margin" Value="0,0,-12,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Left" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Image" Property="Margin" Value="4,0,0,5" />
+                            <Setter Property="Margin" Value="0,1,-13,0" />
+                            <Setter TargetName="Content" Property="Content" Value=" " />
+                            <Setter Property="Width" Value="48.5" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Left" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Margin" Value="0,0,-14,1" />
+                            <Setter TargetName="Content" Property="Content" Value=" " />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Left" />
+                                <Condition Binding="{Binding Path=RightPanelWidth, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" Value="0" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Content" Property="Content" Value=" " />
+                            <Setter Property="Margin" Value="0,1,-13,0" />
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding Path=(tools_controls:SplitterPage.TabStripPlacement), RelativeSource={RelativeSource Self}}" Value="Left" />
+                                <Condition Binding="{Binding Path=RightPanelWidth, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" Value="0" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Content" Property="Content" Value=" " />
+                            <Setter Property="Margin" Value="0,-1,-13,1" />
+                        </MultiDataTrigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelectedPage" Value="False" />
+                                <Condition Property="IsMouseOver" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Foreground" Value="{Binding Path=MouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" />
+                            <Setter Property="Background" Value="{Binding Path=MouseOverBackground, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource ContentBackgroundAlt4}" />
+                        </MultiTrigger>
+
+                        <DataTrigger Binding="{Binding Path=IsSelectedPage, RelativeSource={RelativeSource Self}}" Value="True">
+                            <Setter Property="Foreground" Value="{Binding Path=SelectedForeground, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" />
+                            <Setter Property="Background" Value="{Binding Path=SelectedBackground, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </DataTrigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                        </Trigger>
+
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSplitterPageStyle}" TargetType="{x:Type tools_controls:SplitterPage}" />
+
+    <Style x:Key="SyncfusionTabPanelAdvStyle" TargetType="{x:Type tools_controls:TabPanelAdv}">
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness0001}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:TabPanelAdv}">
+                    <Border
+                        x:Name="TabPanelBorder"
+                        Padding="{TemplateBinding Padding}"
+                        HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                        VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                        <DockPanel x:Name="TabPanel" LastChildFill="True">
+                            <Button
+                                Name="PART_CloseButton"
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                AllowDrop="False"
+                                Command="tools_controls:TabSplitterCommands.CloseCurrentTabSplitterItem"
+                                DockPanel.Dock="Right"
+                                Focusable="False"
+                                Style="{StaticResource WPFGlyphButtonStyle}"
+                                Visibility="Visible">
+                                <Path
+                                    x:Name="CloseButtonPath"
+                                    Width="8"
+                                    Height="8"
+                                    Margin="0.5,0,0,0"
+                                    Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                    Stretch="Fill" >
+                                    <Path.Data>
+                                        <PathGeometry>M10.586002,0 L12.000003,1.4140021 7.413983,5.9987224 12,10.583006 10.586,11.997005 5.9997823,7.4125217 1.4140045,11.997 3.0398377E-06,10.582997 4.5855133,5.9987873 0,1.4150074 1.414,0.0010076167 5.9997136,4.5849875 z</PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                            </Button>
+                            <Button
+                                Name="PART_MenuButton"
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,8,0"
+                                AllowDrop="False"
+                                Command="tools_controls:TabSplitterCommands.OpenContextMenu"
+                                DockPanel.Dock="Right"
+                                Focusable="False"
+                                Style="{StaticResource WPFGlyphButtonStyle}"
+                                Visibility="Visible">
+                                <Path
+                                    Name="MenuButtonPath"
+                                    Width="8"
+                                    Height="4"
+                                    Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                    SnapsToDevicePixels="True"
+                                    Stretch="Fill" >
+                                    <Path.Data>
+                                        <PathGeometry>M0,0 L7.0000002,0 3.5,3.9999999 z</PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                            </Button>
+                            <ContentPresenter
+                                x:Name="PART_TabItems"
+                                Content="{TemplateBinding Content}"
+                                ContentSource="TabItems"
+                                DockPanel.Dock="Right" />
+                        </DockPanel>
+                    </Border>
+                </ControlTemplate>
+
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionTabSplitterStyle" TargetType="{x:Type tools_controls:TabSplitter}">
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForegroundAlt}" />
+        <Setter Property="SelectedBackground" Value="{StaticResource ContentBackground}" />
+        <Setter Property="SelectedForeground" Value="{StaticResource PrimaryColorForeground}" />
+        <Setter Property="MouseOverBackground" Value="{StaticResource ContentBackgroundAlt4}" />
+        <Setter Property="MouseOverForeground" Value="{StaticResource ContentForegroundAlt}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Control.Padding" Value="4" />
+        <Setter Property="AllowDrop" Value="False" />
+        <Setter Property="MinHeight" Value="150" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:TabSplitter}">
+                    <Border
+                        x:Name="TabSplitterBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid
+                            x:Name="TabSplitterGrid"
+                            Background="{TemplateBinding Background}"
+                            ClipToBounds="False"
+                            KeyboardNavigation.TabNavigation="Local"
+                            SnapsToDevicePixels="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Name="ColumnDefinition0" />
+                                <ColumnDefinition Name="ColumnDefinition1" Width="0" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Name="RowDefinition0" Height="Auto" />
+                                <RowDefinition Name="RowDefinition1" Height="*" />
+                            </Grid.RowDefinitions>
+                            <tools_controls:LayoutPanel
+                                x:Name="HeaderPanel"
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Height="24"
+                                HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                Panel.ZIndex="1"
+                                Focusable="False">
+                                <tools_controls:TabPanelAdv
+                                    x:Name="PART_TabPanel"
+                                    Height="24"
+                                    HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{StaticResource SyncfusionTabPanelAdvStyle}">
+                                    <tools_controls:TabSplitterItemPanel
+                                        x:Name="PART_TabLayoutPanel"
+                                        Margin="0,0,2,0"
+                                        HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                        VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                        AllowDrop="False"
+                                        IsItemsHost="True"
+                                        KeyboardNavigation.TabIndex="1" />
+                                </tools_controls:TabPanelAdv>
+                            </tools_controls:LayoutPanel>
+                            <shared:Border3D
+                                Name="ContentPanel"
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                AllowDrop="False"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                CornerRadius="2"
+                                KeyboardNavigation.DirectionalNavigation="Contained"
+                                KeyboardNavigation.TabIndex="2"
+                                KeyboardNavigation.TabNavigation="Local">
+                                <Border
+                                    x:Name="PART_ContentPanelInnerBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    CornerRadius="2">
+                                    <Grid Name="ResizedContentGrid" Background="{TemplateBinding Background}">
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <tools_controls:LayoutPanel
+                                            x:Name="PART_TopPanel"
+                                            Grid.Row="0"
+                                            Grid.Column="1"
+                                            Background="{TemplateBinding Background}">
+                                            <ScrollContentPresenter
+                                                x:Name="PART_TopScrollContent"
+                                                Margin="{Binding Path=Padding, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}"
+                                                Content="{TemplateBinding TopSelectedContent}"
+                                                ContentSource="TopSelectedContent"
+                                                TextBlock.FontFamily="{TemplateBinding FontFamily}"
+                                                TextBlock.FontSize="{TemplateBinding FontSize}"
+                                                TextBlock.FontWeight="{TemplateBinding FontWeight}"
+                                                TextBlock.Foreground="{StaticResource ContentForeground}" />
+                                        </tools_controls:LayoutPanel>
+                                        <tools_controls:CustomGridSplitter
+                                            x:Name="PART_Splitter"
+                                            Grid.Row="1"
+                                            Grid.Column="1"
+                                            Panel.ZIndex="1"
+                                            Background="{StaticResource ContentBackgroundAlt2}"
+                                            BorderBrush="{StaticResource BorderAlt}"
+                                            ResizeDirection="Rows"
+                                            ShowsPreview="True">
+                                            <tools_controls:CustomGridSplitter.Style>
+                                                <Style TargetType="{x:Type tools_controls:CustomGridSplitter}">
+                                                    <Setter Property="MinHeight" Value="30" />
+                                                    <Setter Property="HorizontalAlignment" Value="Center" />
+                                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="{x:Type tools_controls:CustomGridSplitter}">
+                                                                <tools_controls:LayoutPanel x:Name="PART_SplitHeaderPanel" Panel.ZIndex="1">
+                                                                    <Border
+                                                                        x:Name="PART_SplitBorder"
+                                                                        Background="{TemplateBinding Background}"
+                                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                                        BorderThickness="0,1,0,1">
+                                                                        <tools_controls:SplitHeaderPanel>
+                                                                            <ItemsControl x:Name="PART_TopPages" DockPanel.Dock="Left">
+                                                                                <ItemsControl.ItemsPanel>
+                                                                                    <ItemsPanelTemplate>
+                                                                                        <tools_controls:PagesLayoutPanel>
+                                                                                            <tools_controls:PagesLayoutPanel.LayoutTransform>
+                                                                                                <RotateTransform Angle="-180" />
+                                                                                            </tools_controls:PagesLayoutPanel.LayoutTransform>
+                                                                                        </tools_controls:PagesLayoutPanel>
+                                                                                    </ItemsPanelTemplate>
+                                                                                </ItemsControl.ItemsPanel>
+                                                                            </ItemsControl>
+                                                                            <Button
+                                                                                x:Name="PART_SplitButton"
+                                                                                Width="18"
+                                                                                Height="18"
+                                                                                DockPanel.Dock="Left"
+                                                                                Focusable="False"
+                                                                                Style="{StaticResource WPFGlyphButtonStyle}"
+                                                                                ToolTip="Swap Panes">
+                                                                                <Path
+                                                                                    x:Name="SwapButtonPath"
+                                                                                    Width="14"
+                                                                                    Height="14"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                                                    Stretch="Fill" >
+                                                                                    <Path.Data>
+                                                                                        <PathGeometry>M8,4 L10,4 10,12.999999 12,12.999999 9,16 6,12.999999 8,12.999999 z M2.9999998,0 L6,2.9999995 4,2.9999995 3.9999998,12.999999 1.9999998,12.999999 1.9999998,3 0,2.9999995 z</PathGeometry>
+                                                                                    </Path.Data>
+                                                                                </Path>
+                                                                            </Button>
+                                                                            <ItemsControl x:Name="PART_BottomPages" DockPanel.Dock="Left">
+                                                                                <ItemsControl.ItemsPanel>
+                                                                                    <ItemsPanelTemplate>
+                                                                                        <tools_controls:PagesLayoutPanel />
+                                                                                    </ItemsPanelTemplate>
+                                                                                </ItemsControl.ItemsPanel>
+                                                                            </ItemsControl>
+                                                                            <DockPanel
+                                                                                x:Name="PART_SplitterMunuPanel"
+                                                                                Height="{TemplateBinding Height}"
+                                                                                HorizontalAlignment="Right"
+                                                                                DockPanel.Dock="Right">
+                                                                                <Button
+                                                                                    x:Name="PART_VerticalButton"
+                                                                                    Width="16"
+                                                                                    Height="16"
+                                                                                    MinHeight="16"
+                                                                                    Margin="0,0,8,0"
+                                                                                    Focusable="False"
+                                                                                    SnapsToDevicePixels="True"
+                                                                                    Style="{StaticResource WPFGlyphButtonStyle}"
+                                                                                    ToolTip="Vertical Split">
+                                                                                    <Path
+                                                                                        x:Name="VerticalButtonPath"
+                                                                                        Width="10"
+                                                                                        Height="10"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                                                        Stretch="Fill" >
+                                                                                        <Path.Data>
+                                                                                            <PathGeometry>M7,5 L9,5 9,11 7,11 z M2,2 L2,14 14,14 14,2 z M0,0 L16,0 16,16 0,16 z</PathGeometry>
+                                                                                        </Path.Data>
+                                                                                    </Path>
+                                                                                </Button>
+                                                                                <Button
+                                                                                    x:Name="PART_HorizontalButton"
+                                                                                    Width="16"
+                                                                                    Height="16"
+                                                                                    MinHeight="16"
+                                                                                    Margin="0,0,8,0"
+                                                                                    Focusable="False"
+                                                                                    SnapsToDevicePixels="True"
+                                                                                    Style="{StaticResource WPFGlyphButtonStyle}"
+                                                                                    ToolTip="Horizontal Split">
+                                                                                    <Path
+                                                                                        x:Name="HorizontalButtonPath"
+                                                                                        Width="10"
+                                                                                        Height="10"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                                                        Stretch="Fill" >
+                                                                                        <Path.Data>
+                                                                                            <PathGeometry>M5,7 L11,7 11,9 5,9 z M2,2 L2,14 14,14 14,2 z M0,0 L16,0 16,16 0,16 z</PathGeometry>
+                                                                                        </Path.Data>
+                                                                                    </Path>
+                                                                                </Button>
+                                                                                <ToggleButton
+                                                                                    x:Name="PART_Expand_ColapseButtons"
+                                                                                    Width="16"
+                                                                                    Height="16"
+                                                                                    Margin="0,0,8,0"
+                                                                                    Background="Transparent"
+                                                                                    BorderBrush="Transparent"
+                                                                                    Command="tools_controls:TabSplitterCommands.CollapseBottomSelectedItem"
+                                                                                    Focusable="False"
+                                                                                    SnapsToDevicePixels="True"
+                                                                                    Style="{StaticResource TabSplitterButtonStyle}"
+                                                                                    ToolTip="Collapse Pane">
+                                                                                    <Path
+                                                                                        x:Name="ExpandCollpaseButtonPath"
+                                                                                        Width="8"
+                                                                                        Height="7"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Stroke="{Binding Foreground, ElementName=PART_Expand_ColapseButtons}"
+                                                                                        
+                                                                                        Stretch="Fill" >
+                                                                                        <Path.Data>
+                                                                                            <PathGeometry>M1.4859998,7.9919975 L6.0000001,13.008995 10.514,7.9919975 12,9.3299968 6.0000001,15.998994 0,9.3299968 z M1.4839927,0 L5.9999982,4.9840028 10.516004,0 11.997998,1.3440024 5.9999982,7.9630001 0.0019982989,1.3440024 z</PathGeometry>
+                                                                                        </Path.Data>
+                                                                                    </Path>
+                                                                                </ToggleButton>
+                                                                            </DockPanel>
+                                                                            <Border
+                                                                                Name="PART_HorizContainerBorder"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center"
+                                                                                SnapsToDevicePixels="True">
+                                                                                <Border
+                                                                                    Name="ResizedOptionLine"
+                                                                                    Width="16"
+                                                                                    Height="4"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Background="Transparent"
+                                                                                    BorderBrush="{StaticResource IconDisabledColor}"
+                                                                                    BorderThickness="0,1,0,1" />
+                                                                            </Border>
+                                                                        </tools_controls:SplitHeaderPanel>
+                                                                    </Border>
+                                                                    <Canvas
+                                                                        x:Name="DragPreviewLine"
+                                                                        Height="3"
+                                                                        Visibility="Collapsed">
+                                                                        <Line
+                                                                            x:Name="Line1"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            Fill="{StaticResource PrimaryBackground}"
+                                                                            Stroke="{StaticResource PrimaryBackground}"
+                                                                            StrokeDashArray="1,1"
+                                                                            StrokeThickness="1"
+                                                                            X2="{TemplateBinding ActualWidth}" />
+                                                                        <Line
+                                                                            x:Name="Line2"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            Fill="{StaticResource PrimaryBackground}"
+                                                                            Stroke="{StaticResource PrimaryBackground}"
+                                                                            StrokeDashArray="1,1"
+                                                                            StrokeThickness="1"
+                                                                            X1="1"
+                                                                            X2="{TemplateBinding ActualWidth}"
+                                                                            Y1="1"
+                                                                            Y2="1" />
+                                                                        <Line
+                                                                            x:Name="Line3"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            Fill="{StaticResource PrimaryBackground}"
+                                                                            Stroke="{StaticResource PrimaryBackground}"
+                                                                            StrokeDashArray="1,1"
+                                                                            StrokeThickness="1"
+                                                                            X2="{TemplateBinding ActualWidth}"
+                                                                            Y1="2"
+                                                                            Y2="2" />
+                                                                    </Canvas>
+                                                                </tools_controls:LayoutPanel>
+                                                                <ControlTemplate.Triggers>
+
+                                                                    <Trigger Property="ResizeDirection" Value="Columns">
+                                                                        <Setter Property="MinWidth" Value="30" />
+                                                                        <Setter TargetName="PART_BottomPages" Property="Margin" Value="0" />
+                                                                        <Setter TargetName="PART_SplitterMunuPanel" Property="Height" Value="{Binding Path=ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:CustomGridSplitter}}}" />
+                                                                        <Setter TargetName="PART_SplitHeaderPanel" Property="LayoutTransform">
+                                                                            <Setter.Value>
+                                                                                <RotateTransform Angle="90" />
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Setter TargetName="Line1" Property="X2" Value="{Binding Path=ActualHeight, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:CustomGridSplitter}}}" />
+                                                                        <Setter TargetName="Line2" Property="X2" Value="{Binding Path=ActualHeight, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:CustomGridSplitter}}}" />
+                                                                        <Setter TargetName="Line3" Property="X2" Value="{Binding Path=ActualHeight, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:CustomGridSplitter}}}" />
+                                                                        <Setter TargetName="PART_VerticalButton" Property="LayoutTransform">
+                                                                            <Setter.Value>
+                                                                                <RotateTransform Angle="90" />
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Setter TargetName="PART_HorizontalButton" Property="LayoutTransform">
+                                                                            <Setter.Value>
+                                                                                <RotateTransform Angle="90" />
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Setter TargetName="PART_VerticalButton" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
+                                                                        <Setter TargetName="PART_VerticalButton" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                                                                        <Setter TargetName="PART_HorizontalButton" Property="Background" Value="Transparent" />
+                                                                        <Setter TargetName="PART_HorizontalButton" Property="BorderBrush" Value="Transparent" />
+                                                                    </Trigger>
+                                                                    <Trigger Property="ResizeDirection" Value="Rows">
+                                                                        <Setter TargetName="PART_BottomPages" Property="Margin" Value="-6,0,0,0" />
+                                                                        <Setter TargetName="PART_HorizontalButton" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
+                                                                        <Setter TargetName="PART_HorizontalButton" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                                                                        <Setter TargetName="PART_VerticalButton" Property="Background" Value="Transparent" />
+                                                                        <Setter TargetName="PART_VerticalButton" Property="BorderBrush" Value="Transparent" />
+                                                                    </Trigger>
+                                                                    <DataTrigger Binding="{Binding BottomPanelHeight, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" Value="0">
+                                                                        <Setter TargetName="PART_HorizontalButton" Property="Background" Value="Transparent" />
+                                                                        <Setter TargetName="PART_HorizontalButton" Property="BorderBrush" Value="Transparent" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding RightPanelWidth, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}" Value="0">
+                                                                        <Setter TargetName="PART_VerticalButton" Property="Background" Value="Transparent" />
+                                                                        <Setter TargetName="PART_VerticalButton" Property="BorderBrush" Value="Transparent" />
+                                                                    </DataTrigger>
+                                                                    <Trigger Property="IsEnabled" Value="false">
+                                                                        <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt2}" />
+                                                                        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </tools_controls:CustomGridSplitter.Style>
+                                        </tools_controls:CustomGridSplitter>
+                                        <tools_controls:LayoutPanel
+                                            x:Name="PART_BottomPanel"
+                                            Grid.Row="2"
+                                            Grid.Column="1"
+                                            Background="{Binding Background, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}">
+                                            <ScrollContentPresenter
+                                                x:Name="PART_BottomScrollContent"
+                                                Margin="{Binding Path=Padding, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabSplitter}}}"
+                                                Content="{TemplateBinding BottomSelectedContent}"
+                                                ContentSource="BottomSelectedContent"
+                                                TextBlock.FontFamily="{TemplateBinding FontFamily}"
+                                                TextBlock.FontSize="{TemplateBinding FontSize}"
+                                                TextBlock.FontWeight="{TemplateBinding FontWeight}"
+                                                TextBlock.Foreground="{StaticResource ContentForeground}" />
+                                        </tools_controls:LayoutPanel>
+                                    </Grid>
+                                </Border>
+                            </shared:Border3D>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" TargetName="PART_TabLayoutPanel" Value="{StaticResource TouchMode.MinHeight}"/>
+                            <Setter Property="MinHeight" TargetName="HeaderPanel" Value="{StaticResource TouchMode.MinHeight}"/>
+                            <Setter Property="MinHeight" TargetName="PART_TabPanel" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="UIElement.IsEnabled" Value="False">
+                            <Setter Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding Path=SelectedItem.(tools_controls:TabSplitterItem.Orientation), RelativeSource={RelativeSource Self}}" Value="Vertical">
+
+                            <Setter TargetName="PART_TopPanel" Property="Grid.Row" Value="1" />
+                            <Setter TargetName="PART_TopPanel" Property="Grid.Column" Value="0" />
+
+                            <Setter TargetName="PART_Splitter" Property="Grid.Row" Value="1" />
+                            <Setter TargetName="PART_Splitter" Property="Grid.Column" Value="1" />
+
+                            <Setter TargetName="PART_BottomPanel" Property="Grid.Row" Value="1" />
+                            <Setter TargetName="PART_BottomPanel" Property="Grid.Column" Value="2" />
+
+                            <Setter TargetName="PART_Splitter" Property="ResizeDirection" Value="Columns" />
+                            <Setter TargetName="PART_Splitter" Property="Grid.ColumnSpan" Value="1" />
+                        </DataTrigger>
+                        <Trigger Property="HasItems" Value="False">
+                            <Setter TargetName="PART_Splitter" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionTabSplitterStyle}" TargetType="{x:Type tools_controls:TabSplitter}" />
+
+</ResourceDictionary>

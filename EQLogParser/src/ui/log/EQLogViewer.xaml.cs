@@ -580,7 +580,7 @@ namespace EQLogParser
 
     private void SearchIconIsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-      var brush = (searchIcon.IsEnabled) ? "EQEQMenuIconBrush" : "ContentBackgroundAlt5";
+      var brush = (searchIcon.IsEnabled) ? "EQMenuIconBrush" : "ContentBackgroundAlt5";
       searchIcon.Foreground = Application.Current.Resources[brush] as SolidColorBrush;
     }
 
