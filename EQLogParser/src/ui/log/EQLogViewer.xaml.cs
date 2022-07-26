@@ -17,7 +17,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for EQLogViewer.xaml
   /// </summary>
-  public partial class EQLogViewer : UserControl
+  public partial class EQLogViewer : UserControl, IDisposable
   {
     private const int CONTEXT = 30000;
     private const int MAX_ROWS = 250000;
@@ -38,17 +38,6 @@ namespace EQLogParser
       fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
       fontFamily.ItemsSource = System.Windows.Media.Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
-      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
-
-      try
-      {
-        var fgColor = ConfigUtil.GetSetting("EQLogViewerFontFgColor", TextFormatUtils.GetHexString(defaultColor));
-        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
-      }
-      catch (FormatException)
-      {
-        colorPicker.Color = defaultColor;
-      }
 
       string family = ConfigUtil.GetSetting("EQLogViewerFontFamily");
       fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : logBox.FontFamily;
@@ -63,6 +52,8 @@ namespace EQLogParser
         fontSize.SelectedValue = logBox.FontSize;
       }
 
+      UpdateCurrentTextColor();
+
       logSearch.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
       logSearch2.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
       logBox.Focus();
@@ -74,6 +65,26 @@ namespace EQLogParser
         UpdateUI();
         FilterTimer.Stop();
       };
+
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+    }
+
+    private void EventsThemeChanged(object sender, string e) => UpdateCurrentTextColor();
+
+    private void UpdateCurrentTextColor()
+    {
+      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
+
+      try
+      {
+        var colorSetting = "EQLogViewerFontFgColor" + MainWindow.CurrentTheme;
+        var fgColor = ConfigUtil.GetSetting(colorSetting, TextFormatUtils.GetHexString(defaultColor));
+        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
+      }
+      catch (FormatException)
+      {
+        colorPicker.Color = defaultColor;
+      }
     }
 
     private void UpdateUI()
@@ -497,7 +508,8 @@ namespace EQLogParser
     {
       logBox.Foreground = new SolidColorBrush(colorPicker.Color);
       contextBox.Foreground = new SolidColorBrush(colorPicker.Color);
-      ConfigUtil.SetSetting("EQLogViewerFontFgColor", TextFormatUtils.GetHexString(colorPicker.Color));
+      var colorSetting = "EQLogViewerFontFgColor" + MainWindow.CurrentTheme;
+      ConfigUtil.SetSetting(colorSetting, TextFormatUtils.GetHexString(colorPicker.Color));
     }
 
     private void FontSize_Changed(object sender, SelectionChangedEventArgs e)
@@ -604,5 +616,29 @@ namespace EQLogParser
 
     private void OptionsChange(object sender, EventArgs e) => UpdateUI();
 
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        logBox.Dispose();
+        contextBox.Dispose();
+        tabControl.Dispose();
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }

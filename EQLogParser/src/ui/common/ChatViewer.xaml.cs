@@ -53,18 +53,6 @@ namespace EQLogParser
       toFilter.Text = EQLogParser.Resource.CHAT_TO_FILTER;
       fromFilter.Text = EQLogParser.Resource.CHAT_FROM_FILTER;
 
-      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
-
-      try
-      {
-        var fgColor = ConfigUtil.GetSetting("EQLogViewerFontFgColor", TextFormatUtils.GetHexString(defaultColor));
-        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
-      }
-      catch (FormatException)
-      {
-        colorPicker.Color = defaultColor;
-      }
-
       string family = ConfigUtil.GetSetting("ChatFontFamily");
       fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : chatBox.FontFamily;
 
@@ -77,6 +65,8 @@ namespace EQLogParser
       {
         fontSize.SelectedValue = chatBox.FontSize;
       }
+
+      UpdateCurrentTextColor();
 
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       FilterTimer.Tick += (sender, e) =>
@@ -132,8 +122,10 @@ namespace EQLogParser
 
       ChatManager.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
       ChatManager.EventsNewChannels += ChatManagerEventsNewChannels;
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
+    private void EventsThemeChanged(object sender, string e) => UpdateCurrentTextColor();
     private void RefreshClick(object sender, RoutedEventArgs e) => ChangeSearch(true);
     private void ChatManagerEventsUpdatePlayer(object sender, string player) => LoadPlayers(player);
     private void ToFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(toFilter, EQLogParser.Resource.CHAT_TO_FILTER);
@@ -146,6 +138,21 @@ namespace EQLogParser
     private void FromFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(fromFilter, EQLogParser.Resource.CHAT_FROM_FILTER);
     private void TextFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(textFilter, EQLogParser.Resource.CHAT_TEXT_FILTER);
 
+    private void UpdateCurrentTextColor()
+    {
+      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
+
+      try
+      {
+        var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
+        var fgColor = ConfigUtil.GetSetting(colorSetting, TextFormatUtils.GetHexString(defaultColor));
+        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
+      }
+      catch (FormatException)
+      {
+        colorPicker.Color = defaultColor;
+      }
+    }
 
     private void ChatManagerEventsNewChannels(object sender, List<string> e)
     {
@@ -518,7 +525,8 @@ namespace EQLogParser
     private void FontFgColorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
       chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
-      ConfigUtil.SetSetting("ChatFontFgColor", TextFormatUtils.GetHexString(colorPicker.Color));
+      var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
+      ConfigUtil.SetSetting(colorSetting, TextFormatUtils.GetHexString(colorPicker.Color));
     }
 
     private void FontSizeChanged(object sender, SelectionChangedEventArgs e)
@@ -636,6 +644,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         ChatManager.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
         ChatManager.EventsNewChannels -= ChatManagerEventsNewChannels;
 
