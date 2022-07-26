@@ -132,8 +132,11 @@ namespace EQLogParser
         window = new ContentControl { Name = key };
         DockingManager.SetHeader(window, title);
         DockingManager.SetState(window, DockState.Document);
+        DockingManager.SetCanDock(window, false);
         window.Content = instance;
+        dockSite.BeginInit();
         dockSite.Children.Add(window);
+        dockSite.EndInit();
         nowOpen = true;
       }
 
@@ -156,11 +159,14 @@ namespace EQLogParser
         window = new ContentControl { Name = key };
         DockingManager.SetHeader(window, title);
         DockingManager.SetState(window, DockState.Document);
+        DockingManager.SetCanDock(window, false);
         window.Content = chart;
 
         if (dockSite.DocContainer.Items.Count == 0)
         {
+          dockSite.BeginInit();
           dockSite.Children.Add(window);
+          dockSite.EndInit();
         }
         else if (tabControl == null || tabControl.Items.Count == 0)
         {

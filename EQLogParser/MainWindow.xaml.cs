@@ -37,6 +37,7 @@ namespace EQLogParser
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static bool IsIgnoreCharmPetsEnabled = false;
     internal static readonly int ACTION_INDEX = 27;
+    internal static string CurrentTheme = "MaterialDark";
 
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -64,7 +65,6 @@ namespace EQLogParser
     private DocumentTabControl ChartTab = null;
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
-    private string CurrentTheme = "MaterialDark";
     private bool DoneLoading = false;
 
     public MainWindow()
