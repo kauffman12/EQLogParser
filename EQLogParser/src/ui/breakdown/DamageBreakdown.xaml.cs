@@ -49,11 +49,16 @@ namespace EQLogParser
         {
           foreach (ref var childStat in ChildStats[stats.Name].ToArray().AsSpan())
           {
-            PlayerStats.Add(childStat);
-            BuildGroups(childStat, childStat.SubStats);
+            // Damage Summary is a Tree which can have child and parent selected so check that we haven't
+            // already added the entry
+            if (!PlayerStats.Contains(childStat))
+            {
+              PlayerStats.Add(childStat);
+              BuildGroups(childStat, childStat.SubStats);
+            }
           }
         }
-        else
+        else if (!PlayerStats.Contains(stats))
         {
           PlayerStats.Add(stats);
           BuildGroups(stats, stats.SubStats);
