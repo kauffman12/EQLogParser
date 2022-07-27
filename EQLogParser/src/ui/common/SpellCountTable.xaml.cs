@@ -72,7 +72,7 @@ namespace EQLogParser
 
       if (selectedStats != null && raidStats != null)
       {
-        PlayerList = selectedStats.Select(stats => stats.OrigName).ToList();
+        PlayerList = selectedStats.Select(stats => stats.OrigName).Distinct().ToList();
         TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
 
         if (TheSpellCounts.PlayerCastCounts.Count > 0)
@@ -346,7 +346,7 @@ namespace EQLogParser
       unselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0 && records.Count > 0;
     }
 
-    private void ReloadClick(object sender, RoutedEventArgs e)
+    private void RefreshClick(object sender, RoutedEventArgs e)
     {
       HiddenSpells.Clear();
       OptionsChanged(true);
@@ -510,31 +510,37 @@ namespace EQLogParser
 
     private void RemoveSelectedRowsClick(object sender, RoutedEventArgs e)
     {
-      var modified = false;
-      while (dataGrid.SelectedItems.Count > 0)
+      Dispatcher.InvokeAsync(() =>
       {
-        if (dataGrid.SelectedItem is IDictionary<string, object> spr)
+        var modified = false;
+        while (dataGrid.SelectedItems.Count > 0)
         {
-          HiddenSpells[spr["Spell"] as string] = 1;
-          SpellRows.Remove(spr);
-          modified = true;
+          if (dataGrid.SelectedItem is IDictionary<string, object> spr)
+          {
+            HiddenSpells[spr["Spell"] as string] = 1;
+            SpellRows.Remove(spr);
+            modified = true;
+          }
         }
-      }
 
-      if (modified)
-      {
-        OptionsChanged();
-      }
+        if (modified)
+        {
+          OptionsChanged();
+        }
+      });
     }
 
     private void RemoveSpellMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is ImageAwesome image && image.DataContext is IDictionary<string, object> spr)
+      Dispatcher.InvokeAsync(() =>
       {
-        HiddenSpells[spr["Spell"] as string] = 1;
-        SpellRows.Remove(spr);
-        OptionsChanged();
-      }
+        if (sender is ImageAwesome image && image.DataContext is IDictionary<string, object> spr)
+        {
+          HiddenSpells[spr["Spell"] as string] = 1;
+          SpellRows.Remove(spr);
+          OptionsChanged();
+        }
+      });
     }
 
     #region IDisposable Support

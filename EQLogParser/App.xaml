@@ -31,6 +31,9 @@
     <DataTemplate x:Key="TemplateToolTip">
       <TextBlock FontSize="12" Text="{Binding TooltipText}" />
     </DataTemplate>
+    <DataTemplate x:Key="HeaderSpecialTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="6 = Staunch, 7 = Intensity, D = Dragon Glyph, G = Destruction Glyph, M = Mana Burn, L = Life Burn" />
+    </DataTemplate>
     <DataTemplate x:Key="HeaderSpellCountsTemplateToolTip">
       <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Cast Count (# Interrupted)" />
     </DataTemplate>    

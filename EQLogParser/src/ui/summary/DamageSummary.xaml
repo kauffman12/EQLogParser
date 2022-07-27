@@ -158,7 +158,7 @@
         <syncfusion:TreeGridNumericColumn Width="80" MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />
         <syncfusion:TreeGridTextColumn Width="60" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
         <syncfusion:TreeGridTextColumn Width="75" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
-        <syncfusion:TreeGridTextColumn MappingName="Special" TextAlignment="Left" HeaderText="Special" />
+        <syncfusion:TreeGridTextColumn MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
         <syncfusion:TreeGridTextColumn Width="90" MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfTreeGrid.Columns>
     </syncfusion:SfTreeGrid>

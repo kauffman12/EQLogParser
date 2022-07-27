@@ -22,6 +22,7 @@
       <ComboBox Margin="0,0,0,2" x:Name="minFreqList" SelectionChanged="OptionsSelectionChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="spellTypes" SelectionChanged="OptionsSelectionChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="castTypes" SelectionChanged="OptionsSelectionChanged" />
+      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
@@ -86,15 +87,10 @@
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
             </MenuItem.Icon>
           </MenuItem>
-          <Separator />          
+          <Separator />
           <MenuItem IsEnabled="True" x:Name="removeRowClick" Header="Clear Selected Rows" Click="RemoveSelectedRowsClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem IsEnabled="True" x:Name="reloadClick" Header="Reload Data" Click="ReloadClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Redo" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>

@@ -15,7 +15,7 @@ namespace EQLogParser
   {
     private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
     private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
-    private readonly Dictionary<string, byte> UniqueNames = new Dictionary<string, byte>();
+    private readonly Dictionary<string, bool> UniqueNames = new Dictionary<string, bool>();
     private PlayerStats RaidStats;
     private int CurrentCastType = 0;
     private int CurrentSpellType = 0;
@@ -29,7 +29,7 @@ namespace EQLogParser
     internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
       titleLabel.Content = currentStats?.ShortTitle ?? "";
-      selectedStats?.ForEach(stats => UniqueNames[stats.OrigName] = 1);
+      selectedStats?.ForEach(stats => UniqueNames[stats.OrigName] = true);
       RaidStats = currentStats?.RaidStats;
       castTypes.ItemsSource = CastTypes;
       castTypes.SelectedIndex = 0;
@@ -134,12 +134,12 @@ namespace EQLogParser
       }
     }
 
-    private bool IsValid(ReceivedSpell spell, Dictionary<string, byte> uniqueNames, string player, out SpellData replaced)
+    private bool IsValid(ReceivedSpell spell, Dictionary<string, bool> unique, string player, out SpellData replaced)
     {
       bool valid = false;
       replaced = spell.SpellData;
 
-      if (!string.IsNullOrEmpty(player) && uniqueNames.ContainsKey(player))
+      if (!string.IsNullOrEmpty(player) && unique.ContainsKey(player))
       {
         SpellData spellData = spell.SpellData ?? null;
 
