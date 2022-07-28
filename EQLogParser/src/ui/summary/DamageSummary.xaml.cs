@@ -72,8 +72,6 @@ namespace EQLogParser
       {
         if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
         {
-          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Nodes.Count;
-          menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
           menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
           menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
           menuItemShowAdpsTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
@@ -91,7 +89,7 @@ namespace EQLogParser
         }
         else
         {
-          menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowDamageLog.IsEnabled =
+          menuItemShowBreakdown.IsEnabled = menuItemShowDamageLog.IsEnabled =
             menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
             copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
         }

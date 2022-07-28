@@ -42,11 +42,12 @@
                            AutoExpandMode="None"
                            AutoGenerateColumns="False"
                            ChildPropertyName="Children"
-                           ColumnSizer="AutoFillColumn"                     
+                           ColumnSizer="AutoFillColumn"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"
-                           GridLinesVisibility="Horizontal"
+                           GridLinesVisibility="Both"
+                           HeaderRowHeight="26"
                            RequestTreeItems="RequestTreeItems"
                            RowHeaderWidth="40"
                            IsReadOnly="True"
@@ -69,9 +70,15 @@
             </Setter.Value>
           </Setter>
         </Style>
-      </syncfusion:SfTreeGrid.Resources>      
+      </syncfusion:SfTreeGrid.Resources>
       <syncfusion:SfTreeGrid.ContextMenu>
         <ContextMenu>
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="copyDamageParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
@@ -131,14 +138,10 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAllClick">
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAllClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>

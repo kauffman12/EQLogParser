@@ -74,12 +74,6 @@ namespace EQLogParser
       {
         PlayerList = selectedStats.Select(stats => stats.OrigName).Distinct().ToList();
         TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
-
-        if (TheSpellCounts.PlayerCastCounts.Count > 0)
-        {
-          selectAll.IsEnabled = true;
-        }
-
         Display();
       }
     }
@@ -266,15 +260,6 @@ namespace EQLogParser
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UIElementUtil.CheckHideTitlePanel(titlePanel, settingsPanel);
     private void OptionsSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => OptionsChanged(true);
-    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
-    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => UpdateSelection();
-
-    // workaround since select all API doesn't seem to fire selection changed
-    private void SelectAllClick(object sender, RoutedEventArgs e)
-    {
-      DataGridUtil.SelectAll(sender as FrameworkElement);
-      Dispatcher.InvokeAsync(() => UpdateSelection());
-    }
 
     private void AddPlayerRow(string player, string spell, string value, IDictionary<string, object> row)
     {
@@ -336,14 +321,6 @@ namespace EQLogParser
         CurrentShowProcs = showProcs.IsChecked.Value;
         Display();
       }
-    }
-
-    private void UpdateSelection()
-    {
-      // adds a delay where a drag-select doesn't keep sending events
-      var records = dataGrid.View.Records;
-      selectAll.IsEnabled = (dataGrid.SelectedItems.Count < records.Count) && records.Count > 0;
-      unselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0 && records.Count > 0;
     }
 
     private void RefreshClick(object sender, RoutedEventArgs e)
@@ -527,7 +504,7 @@ namespace EQLogParser
         {
           OptionsChanged();
         }
-      });
+      }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void RemoveSpellMouseDown(object sender, MouseButtonEventArgs e)

@@ -52,8 +52,6 @@ namespace EQLogParser
       {
         if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
         {
-          menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
-          menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
           menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
           menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
           copyHealParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
@@ -64,7 +62,7 @@ namespace EQLogParser
         }
         else
         {
-          menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
+          menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
             menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
         }
       });

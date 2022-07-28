@@ -312,6 +312,7 @@
                                ColumnSizer="AutoLastColumnFill"
                                CurrentCellDropDownSelectionChanged="PetMappingDropDownSelectionChanged"
                                EditTrigger="OnTap"
+                               HeaderRowHeight="26"
                                ShowRowHeader="False"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                SelectionMode="Extended">
@@ -327,6 +328,7 @@
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
                                ColumnSizer="AutoLastColumnFill"
+                               HeaderRowHeight="26"
                                IsReadOnly="True"
                                RowHeaderWidth="25"
                                ShowRowHeader="True"
@@ -358,6 +360,7 @@
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
                                ColumnSizer="AutoLastColumnFill"
+                               HeaderRowHeight="26"
                                IsReadOnly="True"
                                RowHeaderWidth="25"
                                ShowRowHeader="True"
