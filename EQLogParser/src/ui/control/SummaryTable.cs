@@ -62,7 +62,6 @@ namespace EQLogParser
     internal string GetTitle() => TheTitle.Content as string;
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
     internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
-    internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
     internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetSelectedStats());
     internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e) => ShowBreakdown2(GetSelectedStats());
     internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetStatsByClass((sender as MenuItem)?.Header as string));
@@ -173,12 +172,6 @@ namespace EQLogParser
     internal List<PlayerStats> GetStatsByClass(string className)
     {
       return GetPlayerStats().Where(stats => stats.IsTopLevel && stats.ClassName == className).ToList();
-    }
-
-    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e)
-    {
-      DataGridUtil.SelectAll(sender as FrameworkElement);
-      Dispatcher.InvokeAsync(() => DataGridSelectionChanged());
     }
 
     internal void DataGridSelectionChanged()

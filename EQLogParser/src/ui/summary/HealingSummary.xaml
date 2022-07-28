@@ -36,10 +36,11 @@
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"
                            GridLinesVisibility="Horizontal"
-                           RowHeaderWidth="40"
+                           HeaderRowHeight="26"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
+                           RowHeaderWidth="40"
                            SelectionMode="Extended"
                            SelectionChanged="DataGridSelectionChanged"
                            ShowRowHeader="True">
@@ -60,15 +61,18 @@
       </syncfusion:SfDataGrid.Resources>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="copyHealParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
-            </MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>            
           </MenuItem>
-          <MenuItem IsEnabled="False" x:Name="copyTopHealsParseToEQClick" Header="Copy Top Heals Parse" Click="CopyTopHealsToEQClick">
+          <MenuItem IsEnabled="True" Header="Copy Parse">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="copyTopHealsParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
+            <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Selected" Click="CopyToEQClick" />
+            <MenuItem IsEnabled="False" x:Name="copyTopHealsParseToEQClick" Header="Top Heals" Click="CopyTopHealsToEQClick" />
           </MenuItem>
           <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
             <MenuItem.Icon>
@@ -108,14 +112,10 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSelectAll" IsEnabled="False" Header="Select All" Click="DataGridSelectAllClick">
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="menuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="DataGridUnselectAllClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>

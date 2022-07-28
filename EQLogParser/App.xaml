@@ -25,12 +25,13 @@
       <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
     </DataTemplate>
     <DataTemplate x:Key="QuantityTemplate">
-      <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center"></TextBlock>
+      <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center" VerticalAlignment="Center"></TextBlock>
     </DataTemplate>
-
+    
     <DataTemplate x:Key="TemplateToolTip">
       <TextBlock FontSize="12" Text="{Binding TooltipText}" />
     </DataTemplate>
+    
     <DataTemplate x:Key="HeaderSpecialTemplateToolTip">
       <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="6 = Staunch, 7 = Intensity, D = Dragon Glyph, G = Destruction Glyph, M = Mana Burn, L = Life Burn" />
     </DataTemplate>

@@ -38,14 +38,26 @@
       ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
             <ContextMenu>
+              <MenuItem Command="Copy" />
+              <Separator />
               <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Click="SelectedContext" />
+              <Separator />
+              <MenuItem Command="SelectAll" />
             </ContextMenu>
           </syncfusion:EditControl.ContextMenu>
         </syncfusion:EditControl>
       </syncfusion:TabItemExt>
       <syncfusion:TabItemExt x:Name="contextTab" Header="Context" CanClose="True" FontSize="14" Visibility="Hidden">
         <syncfusion:EditControl x:Name="contextBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
-      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+          <syncfusion:EditControl.ContextMenu>
+            <ContextMenu>
+              <MenuItem Command="Copy" />
+              <Separator />
+              <MenuItem Command="SelectAll" />
+            </ContextMenu>
+          </syncfusion:EditControl.ContextMenu>        
+        </syncfusion:EditControl>
       </syncfusion:TabItemExt>      
     </syncfusion:TabControlExt>
     <StatusBar Grid.Row="2" FontSize="11">

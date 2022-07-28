@@ -23,7 +23,7 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showPets" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Show Pets</CheckBox>
       <Label Margin="0,0,4,2" VerticalAlignment="Center" FontStyle="Italic" FontSize="14">Combine:</Label>
-      <CheckBox x:Name="groupDoT" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">DoTs</CheckBox>
+      <CheckBox x:Name="groupDoT" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Damage Over Time</CheckBox>
       <CheckBox x:Name="groupDirectDamage" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Direct Damage</CheckBox>
       <CheckBox x:Name="groupProcs" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Procs</CheckBox>
       <ComboBox x:Name="selectedColumns" Tag="DamageBreakdownColumns" Width="140" Margin="0,0,8,2" 
@@ -44,6 +44,7 @@
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
+                           HeaderRowHeight="26"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
@@ -52,6 +53,12 @@
                            ShowRowHeader="False">
       <syncfusion:SfTreeGrid.ContextMenu>
         <ContextMenu>
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
@@ -66,6 +73,13 @@
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
+          </MenuItem>
+          <Separator />
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfTreeGrid.ContextMenu>

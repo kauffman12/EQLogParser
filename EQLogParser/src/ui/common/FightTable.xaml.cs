@@ -55,8 +55,8 @@ namespace EQLogParser
       fightSearchBox.FontStyle = FontStyles.Italic;
       fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
 
-      menuItemClear.IsEnabled = menuItemSelectAll.IsEnabled = menuItemUnselectAll.IsEnabled =
-      menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = false;
+      menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = 
+        menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = false;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 700) };
       SelectionTimer.Tick += (sender, e) =>
@@ -271,7 +271,8 @@ namespace EQLogParser
         BeginTime = lastTime,
         IsInactivity = true,
         BeginTimeString = Fight.BREAKTIME,
-        Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
+        Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds),
+        TooltipText = "No Data During This Time"
       };
 
       divider.SortId = CurrentSortId++;
@@ -301,16 +302,7 @@ namespace EQLogParser
     }
 
     private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
-    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
-    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => UpdateSelection();
-
-    // workaround since select all API doesn't seem to fire selection changed
-    private void SelectAllClick(object sender, RoutedEventArgs e)
-    {
-      NeedSelectionChange = false;
-      DataGridUtil.SelectAll(sender as FrameworkElement);
-      Dispatcher.InvokeAsync(() => UpdateSelection());
-    }
+    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void SetPetClick(object sender, RoutedEventArgs e)
     {
@@ -338,15 +330,14 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateSelection()
+    internal void DataGridSelectionChanged()
     {
+      NeedSelectionChange = false;
       // adds a delay where a drag-select doesn't keep sending events
       SelectionTimer.Stop();
       SelectionTimer.Start();
 
       var items = dataGrid.View.Records;
-      menuItemSelectAll.IsEnabled = (dataGrid.SelectedItems.Count < items.Count) && items.Count > 0;
-      menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0 && items.Count > 0;
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = items.Count > 0;
 
       var selected = dataGrid.SelectedItem as Fight;
