@@ -137,7 +137,7 @@ namespace EQLogParser
         LastFightProcessTime = processed.BeginTime;
 
         var ttl = fight.LastTime - fight.BeginTime + 1;
-        fight.TooltipText = string.Format(CultureInfo.CurrentCulture, "#Hits To Players: {0}, #Hits From Players: {1}, Time Alive: {2}s", fight.TankHits, fight.DamageHits, ttl);
+        fight.TooltipText = string.Format("#Hits To Players: {0}, #Hits From Players: {1}, Time Alive: {2}s", fight.TankHits, fight.DamageHits, ttl);
 
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
       }
