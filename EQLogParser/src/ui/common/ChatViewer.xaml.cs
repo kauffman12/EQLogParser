@@ -272,20 +272,15 @@ namespace EQLogParser
         new ComboBoxItemDetails { Text = EQLogParser.Resource.UNSELECT_ALL }
       };
 
-      int selectedCount = 0;
+      int count = 0;
       ChatManager.GetChannels(playerAndServer).ForEach(chan =>
       {
-        selectedCount += chan.IsChecked ? 1 : 0;
+        count += chan.IsChecked ? 1 : 0;
         items.Add(chan);
       });
 
       channels.ItemsSource = items;
-
-      if (items.Count > 0)
-      {
-        items[0].SelectedText = selectedCount + " Channels Selected";
-        channels.SelectedItem = items[0];
-      }
+      UIElementUtil.SetComboBoxTitle(channels, count, EQLogParser.Resource.CHANNELS_SELECTED, true);
     }
 
     private void LoadPlayers(string updatedPlayer = null)
@@ -506,14 +501,7 @@ namespace EQLogParser
           }
         }
 
-        if (!(channels.SelectedItem is ComboBoxItemDetails selected))
-        {
-          selected = channels.Items[2] as ComboBoxItemDetails;
-        }
-
-        selected.SelectedText = string.Format(CultureInfo.CurrentCulture, "{0} {1}", count, EQLogParser.Resource.CHANNELS_SELECTED);
-        channels.SelectedIndex = -1;
-        channels.SelectedItem = selected;
+        UIElementUtil.SetComboBoxTitle(channels, count, EQLogParser.Resource.CHANNELS_SELECTED, true);
       }
 
       if (Ready)

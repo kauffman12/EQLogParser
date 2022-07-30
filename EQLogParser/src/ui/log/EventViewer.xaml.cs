@@ -45,7 +45,7 @@ namespace EQLogParser
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = PLAYERKILL_EVENT });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = PLAYERSLAIN_EVENT });
       selectedOptions.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Count, EQLogParser.Resource.OPTIONS_SELECTED);
+      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Count, EQLogParser.Resource.EVENT_TYPES_SELECTED);
 
       eventFilter.Text = EQLogParser.Resource.EVENT_FILTER_TEXT;
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
@@ -204,7 +204,7 @@ namespace EQLogParser
           }
         }
 
-        UIElementUtil.SetComboBoxTitle(selectedOptions, count, EQLogParser.Resource.OPTIONS_SELECTED);
+        UIElementUtil.SetComboBoxTitle(selectedOptions, count, EQLogParser.Resource.EVENT_TYPES_SELECTED);
         UpdateUI();
       }
     }

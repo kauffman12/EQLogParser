@@ -130,7 +130,7 @@
     <value>Beastlord</value>
   </data>
   <data name="CHANNELS_SELECTED" xml:space="preserve">
-    <value>Channels Selected</value>
+    <value>Channels</value>
   </data>
   <data name="CHAT_FROM_FILTER" xml:space="preserve">
     <value>From</value>
@@ -145,7 +145,7 @@
     <value>Cleric</value>
   </data>
   <data name="COLUMNS_SELECTED" xml:space="preserve">
-    <value>Columns Selected</value>
+    <value>Columns</value>
   </data>
   <data name="CUSTOM_PARSE_TITLE" xml:space="preserve">
     <value>Custom Parse Title</value>
@@ -158,6 +158,9 @@
   </data>
   <data name="EVENT_FILTER_TEXT" xml:space="preserve">
     <value>Actor | Target Filter</value>
+  </data>
+  <data name="EVENT_TYPES_SELECTED" xml:space="preserve">
+    <value>Event Types</value>
   </data>
   <data name="FILEMENU_EXPORT_SUMMARY" xml:space="preserve">
     <value>Can Not Save Summary Data</value>
@@ -182,9 +185,6 @@
   </data>
   <data name="NPC_SEARCH_TEXT" xml:space="preserve">
     <value>FIght/NPC Search</value>
-  </data>
-  <data name="OPTIONS_SELECTED" xml:space="preserve">
-    <value>Options Selected</value>
   </data>
   <data name="PAL" xml:space="preserve">
     <value>Paladin</value>

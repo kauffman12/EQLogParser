@@ -20,15 +20,16 @@ namespace EQLogParser
       }
     }
 
-    internal static void SetComboBoxTitle(ComboBox columns, int count, string value)
+    internal static void SetComboBoxTitle(ComboBox columns, int count, string value, bool hasSelectAll = false)
     {
       if (!(columns.SelectedItem is ComboBoxItemDetails selected))
       {
-        selected = columns.Items[0] as ComboBoxItemDetails;
+        selected = hasSelectAll ? columns.Items[2] as ComboBoxItemDetails : columns.Items[0] as ComboBoxItemDetails;
       }
 
-      string countString = columns.Items.Count == count ? "All" : count.ToString();
-      selected.SelectedText = countString + " " + value;
+      var total = hasSelectAll ? columns.Items.Count - 2 : columns.Items.Count;
+      string countString = total == count ? "All" : count.ToString();
+      selected.SelectedText = countString + " " + value + ((total == count) ? "" : " Selected");
       columns.SelectedIndex = -1;
       columns.SelectedItem = selected;
     }
