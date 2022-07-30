@@ -97,7 +97,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Channels Selected.
+        ///   Looks up a localized string similar to Channels.
         /// </summary>
         internal static string CHANNELS_SELECTED {
             get {
@@ -142,7 +142,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Columns Selected.
+        ///   Looks up a localized string similar to Columns.
         /// </summary>
         internal static string COLUMNS_SELECTED {
             get {
@@ -183,6 +183,15 @@ namespace EQLogParser {
         internal static string EVENT_FILTER_TEXT {
             get {
                 return ResourceManager.GetString("EVENT_FILTER_TEXT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Event Types.
+        /// </summary>
+        internal static string EVENT_TYPES_SELECTED {
+            get {
+                return ResourceManager.GetString("EVENT_TYPES_SELECTED", resourceCulture);
             }
         }
         
@@ -255,15 +264,6 @@ namespace EQLogParser {
         internal static string NPC_SEARCH_TEXT {
             get {
                 return ResourceManager.GetString("NPC_SEARCH_TEXT", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Options Selected.
-        /// </summary>
-        internal static string OPTIONS_SELECTED {
-            get {
-                return ResourceManager.GetString("OPTIONS_SELECTED", resourceCulture);
             }
         }
         
