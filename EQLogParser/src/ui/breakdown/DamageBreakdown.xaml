@@ -26,7 +26,7 @@
       <CheckBox x:Name="groupDoT" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Damage Over Time</CheckBox>
       <CheckBox x:Name="groupDirectDamage" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Direct Damage</CheckBox>
       <CheckBox x:Name="groupProcs" IsChecked="True" IsEnabled="False" Margin="0,0,8,2" Checked="OptionsChange" Unchecked="OptionsChange">Procs</CheckBox>
-      <ComboBox x:Name="selectedColumns" Tag="DamageBreakdownColumns" Width="140" Margin="0,0,8,2" 
+      <ComboBox x:Name="selectedColumns" Tag="DamageBreakdownColumns" Width="135" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
 
     </StackPanel>

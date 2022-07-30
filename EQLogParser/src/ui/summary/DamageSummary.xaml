@@ -30,7 +30,7 @@
       </syncfusion:UpDown>
       <ComboBox Margin="0,0,0,2" x:Name="petOrPlayerList" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
-      <ComboBox x:Name="selectedColumns" Tag="DamageSummaryColumns" Width="140" Margin="0,0,8,2" 
+      <ComboBox x:Name="selectedColumns" Tag="DamageSummaryColumns" Width="135" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
     <syncfusion:SfTreeGrid x:Name="dataGrid"
