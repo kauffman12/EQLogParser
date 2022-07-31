@@ -213,6 +213,9 @@
   <data name="SHM" xml:space="preserve">
     <value>Shaman</value>
   </data>
+  <data name="SPELL_TYPES_SELECTED" xml:space="preserve">
+    <value>Spell Types</value>
+  </data>
   <data name="UNSELECT_ALL" xml:space="preserve">
     <value>Unselect All</value>
   </data>
