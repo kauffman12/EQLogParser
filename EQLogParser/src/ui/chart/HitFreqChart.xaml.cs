@@ -19,9 +19,9 @@ namespace EQLogParser
     private const string CRIT_HITTYPE = "Critical";
     private const string NON_CRIT_HITTYPE = "Non-Critical";
     private Dictionary<string, List<HitFreqChartData>> PlayerData = null;
-    private readonly List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
+    private readonly List<string> MinFreqs = new List<string>()
+    { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
     private int PageSize = 9;
-    private static bool Updating = false;
     private List<ColumnData> Columns = new List<ColumnData>();
 
     public HitFreqChart()
@@ -63,79 +63,65 @@ namespace EQLogParser
 
     private void UserSelectionChanged()
     {
-      if (!Updating)
+      try
       {
-        Updating = true;
-
-        Task.Delay(20).ContinueWith(task =>
+        if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type &&
+        critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
         {
-          Dispatcher.InvokeAsync(() =>
+          var data = PlayerData[player];
+          int minFreq = minFreqList.SelectedIndex > -1 ? minFreqList.SelectedIndex : 0;
+          HitFreqChartData first = data.Find(d => d.HitType == type);
+          Columns.Clear();
+
+          if (critType == CRIT_HITTYPE)
           {
-            try
+            for (int i = 0; i < first.CritYValues.Count; i++)
             {
-              if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type &&
-              critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
+              if (first.CritYValues[i] > minFreq)
               {
-                var data = PlayerData[player];
-                int minFreq = GetMinFreq();
-                HitFreqChartData first = data.Find(d => d.HitType == type);
-                Columns.Clear();
-
-                if (critType == CRIT_HITTYPE)
+                var diff = (i > 0) ? (first.CritXValues[i] - first.CritXValues[i - 1]) : 0;
+                var diffString = (diff == 0) ? "" : "+" + diff;
+                Columns.Add(new ColumnData
                 {
-                  for (int i = 0; i < first.CritYValues.Count; i++)
-                  {
-                    if (first.CritYValues[i] > minFreq)
-                    {
-                      var diff = (i > 0) ? (first.CritXValues[i] - first.CritXValues[i - 1]) : 0;
-                      var diffString = (diff == 0) ? "" : "+" + diff;
-                      Columns.Add(new ColumnData
-                      {
-                        Diff = diff,
-                        Y = first.CritYValues[i],
-                        XLongValue = first.CritXValues[i],
-                        X = first.CritXValues[i] + "\n" + diffString
-                      });
-                    }
-                  }
-                }
-                else
-                {
-                  for (int i = 0; i < first.NonCritYValues.Count; i++)
-                  {
-                    if (first.NonCritYValues[i] > minFreq)
-                    {
-                      var diff = (i > 0) ? (first.NonCritXValues[i] - first.NonCritXValues[i - 1]) : 0;
-                      var diffString = (diff == 0) ? "" : "+" + diff;
-                      Columns.Add(new ColumnData
-                      {
-                        Diff = diff,
-                        Y = first.NonCritYValues[i],
-                        XLongValue = first.NonCritXValues[i],
-                        X = first.NonCritXValues[i] + "\n" + diffString
-                      });
-                    }
-                  }
-                }
+                  Diff = diff,
+                  Y = first.CritYValues[i],
+                  XLongValue = first.CritXValues[i],
+                  X = first.CritXValues[i] + "\n" + diffString
+                });
               }
+            }
+          }
+          else
+          {
+            for (int i = 0; i < first.NonCritYValues.Count; i++)
+            {
+              if (first.NonCritYValues[i] > minFreq)
+              {
+                var diff = (i > 0) ? (first.NonCritXValues[i] - first.NonCritXValues[i - 1]) : 0;
+                var diffString = (diff == 0) ? "" : "+" + diff;
+                Columns.Add(new ColumnData
+                {
+                  Diff = diff,
+                  Y = first.NonCritYValues[i],
+                  XLongValue = first.NonCritXValues[i],
+                  X = first.NonCritXValues[i] + "\n" + diffString
+                });
+              }
+            }
+          }
+        }
 
-              pageSlider.Value = 0;
-              UpdatePageSize();
-              DisplayPage();
-              Updating = false;
-            }
-            catch (ArgumentNullException ex)
-            {
-              Updating = false;
-              LOG.Error(ex);
-            }
-            catch (InvalidOperationException ioe)
-            {
-              Updating = false;
-              LOG.Error(ioe);
-            }
-          });
-        }, TaskScheduler.Default);
+        pageSlider.Value = 0;
+        UpdatePageSize();
+        DisplayPage();
+      }
+      catch (ArgumentNullException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (InvalidOperationException ioe)
+      {
+        LOG.Error(ioe);
       }
     }
 
@@ -187,31 +173,6 @@ namespace EQLogParser
           pageSlider.Focus();
         }
       }
-    }
-
-    private int GetMinFreq()
-    {
-      int result = 1;
-      string selected = minFreqList.SelectedItem as string;
-      switch (selected)
-      {
-        case "Any Freq":
-          result = 0;
-          break;
-        case "Freq > 1":
-          result = 1;
-          break;
-        case "Freq > 2":
-          result = 2;
-          break;
-        case "Freq > 3":
-          result = 3;
-          break;
-        case "Freq > 4":
-          result = 4;
-          break;
-      }
-      return result;
     }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
