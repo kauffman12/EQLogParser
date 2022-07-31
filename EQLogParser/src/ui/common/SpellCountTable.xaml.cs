@@ -33,29 +33,41 @@ namespace EQLogParser
     private readonly ObservableCollection<IDictionary<string, object>> SpellRows = new ObservableCollection<IDictionary<string, object>>();
     private readonly DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
     private readonly Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
-    private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
-    private readonly List<string> CountTypes = new List<string>() { "Show Counts", "Show Percent", "Show Counts/Minute" };
-    private readonly List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
-    private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
+    private readonly List<string> CountTypes = new List<string>() { "Counts", "Percentages", "Counts/Minute" };
+    private readonly List<string> MinFreqs = new List<string>() { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
     private readonly HashSet<string> SortDescs = new HashSet<string>();
-    private int CurrentCastType = 0;
+    private const string BENEFICIAL_SPELLS_TYPE = "Beneficial Spells";
+    private const string CAST_SPELLS_TYPE = "Cast Spells";
+    private const string DET_SPELLS_TYPE = "Detrimental Spells";
+    private const string PROC_SPELLS_TYPE = "Spell Procs";
+    private const string RECEIVED_SPELLS_TYPE = "Received Spells";
+    private const string SELF_SPELLS_TYPE = "Spells Only You See";
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
-    private int CurrentSpellType = 0;
+    private bool CurrentShowBeneficialSpells = true;
+    private bool CurrentShowCastSpells = true;
+    private bool CurrentShowDetSpells = true;
+    private bool CurrentShowReceivedSpells = true;
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowProcs = false;
 
     public SpellCountTable()
     {
       InitializeComponent();
-      castTypes.ItemsSource = CastTypes;
-      castTypes.SelectedIndex = 0;
       countTypes.ItemsSource = CountTypes;
       countTypes.SelectedIndex = 0;
       minFreqList.ItemsSource = MinFreqs;
       minFreqList.SelectedIndex = 0;
-      spellTypes.ItemsSource = SpellTypes;
-      spellTypes.SelectedIndex = 0;
+
+      var list = new List<ComboBoxItemDetails>();
+      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = BENEFICIAL_SPELLS_TYPE });
+      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = CAST_SPELLS_TYPE });
+      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = DET_SPELLS_TYPE });
+      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = RECEIVED_SPELLS_TYPE });
+      list.Add(new ComboBoxItemDetails { IsChecked = false, Text = SELF_SPELLS_TYPE });
+      list.Add(new ComboBoxItemDetails { IsChecked = false, Text = PROC_SPELLS_TYPE });
+      selectedOptions.ItemsSource = list;
+      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), EQLogParser.Resource.SPELL_TYPES_SELECTED);
 
       // default these columns to descending
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, SortDescs);
@@ -88,10 +100,16 @@ namespace EQLogParser
       }
     }
 
-    private void Display()
+    private void Display(bool clear = false)
     {
       try
       {
+        if (clear)
+        {
+          SpellRows.Clear();
+        }
+
+        dataGrid.Columns.Clear();
         var headerCol = new GridTextColumn
         {
           HeaderText = "",
@@ -110,7 +128,7 @@ namespace EQLogParser
         {
           filteredPlayerMap[player] = new Dictionary<string, uint>();
 
-          if ((CurrentCastType == 0 || CurrentCastType == 1) && TheSpellCounts.PlayerCastCounts.ContainsKey(player))
+          if (CurrentShowCastSpells && TheSpellCounts.PlayerCastCounts.ContainsKey(player))
           {
             foreach (string id in TheSpellCounts.PlayerCastCounts[player].Keys)
             {
@@ -118,7 +136,7 @@ namespace EQLogParser
             }
           }
 
-          if ((CurrentCastType == 0 || CurrentCastType == 2) && TheSpellCounts.PlayerReceivedCounts.ContainsKey(player))
+          if (CurrentShowReceivedSpells && TheSpellCounts.PlayerReceivedCounts.ContainsKey(player))
           {
             foreach (string id in TheSpellCounts.PlayerReceivedCounts[player].Keys)
             {
@@ -278,7 +296,7 @@ namespace EQLogParser
     {
       var spellData = TheSpellCounts.UniqueSpells[id];
 
-      var spellTypeCheck = CurrentSpellType == 0 || (CurrentSpellType == 1 && spellData.IsBeneficial) || (CurrentSpellType == 2 && !spellData.IsBeneficial);
+      var spellTypeCheck = (CurrentShowBeneficialSpells && spellData.IsBeneficial) || (CurrentShowDetSpells && !spellData.IsBeneficial);
       var selfOnlyCheck = !received || CurrentShowSelfOnly == true || !string.IsNullOrEmpty(spellData.LandsOnOther);
       var procCheck = CurrentShowProcs == true || spellData.Proc == 0;
 
@@ -305,21 +323,52 @@ namespace EQLogParser
 
     private void OptionsChanged(bool clear = false)
     {
-      if (dataGrid.View != null)
+      if (dataGrid?.View != null)
       {
-        if (clear)
-        {
-          SpellRows.Clear();
-        }
-
-        dataGrid.Columns.Clear();
-        CurrentCastType = castTypes.SelectedIndex;
         CurrentCountType = countTypes.SelectedIndex;
         CurrentMinFreqCount = minFreqList.SelectedIndex;
-        CurrentSpellType = spellTypes.SelectedIndex;
-        CurrentShowSelfOnly = showSelfOnly.IsChecked.Value;
-        CurrentShowProcs = showProcs.IsChecked.Value;
-        Display();
+        Display(clear);
+      }
+    }
+
+    private void SelectOptions(object sender, EventArgs e)
+    {
+      if (dataGrid?.View != null && selectedOptions?.Items != null)
+      {
+        int count = 0;
+        foreach (var item in selectedOptions.Items.Cast<ComboBoxItemDetails>())
+        {
+          switch (item.Text)
+          {
+            case BENEFICIAL_SPELLS_TYPE:
+              CurrentShowBeneficialSpells = item.IsChecked;
+              count += item.IsChecked ? 1 : 0;
+              break;
+            case CAST_SPELLS_TYPE:
+              CurrentShowCastSpells = item.IsChecked;
+              count += item.IsChecked ? 1 : 0;
+              break;
+            case DET_SPELLS_TYPE:
+              CurrentShowDetSpells = item.IsChecked;
+              count += item.IsChecked ? 1 : 0;
+              break;
+            case RECEIVED_SPELLS_TYPE:
+              CurrentShowReceivedSpells = item.IsChecked;
+              count += item.IsChecked ? 1 : 0;
+              break;
+            case PROC_SPELLS_TYPE:
+              CurrentShowProcs = item.IsChecked;
+              count += item.IsChecked ? 1 : 0;
+              break;
+            case SELF_SPELLS_TYPE:
+              CurrentShowSelfOnly = item.IsChecked;
+              count += item.IsChecked ? 1 : 0;
+              break;
+          }
+        }
+
+        UIElementUtil.SetComboBoxTitle(selectedOptions, count, EQLogParser.Resource.SPELL_TYPES_SELECTED);
+        Display(true);
       }
     }
 

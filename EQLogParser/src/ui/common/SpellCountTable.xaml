@@ -9,6 +9,9 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid SizeChanged="GridSizeChanged">
+    <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
+    </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
@@ -17,12 +20,10 @@
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,8,2" VerticalAlignment="Center" IsEnabled="False" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Self Only</CheckBox>
-      <CheckBox x:Name="showProcs" IsChecked="False" Margin="0,0,8,2" VerticalAlignment="Center" IsEnabled="True" ToolTip="Include spell procs from augs and weapons." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Spell Procs</CheckBox>
       <ComboBox Margin="0,0,0,2" x:Name="countTypes" SelectionChanged="OptionsSelectionChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="minFreqList" SelectionChanged="OptionsSelectionChanged" />
-      <ComboBox Margin="0,0,0,2" x:Name="spellTypes" SelectionChanged="OptionsSelectionChanged" />
-      <ComboBox Margin="0,0,8,2" x:Name="castTypes" SelectionChanged="OptionsSelectionChanged" />
+      <ComboBox x:Name="selectedOptions" Width="140" Margin="0,0,8,2" 
+                DropDownClosed="SelectOptions" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"

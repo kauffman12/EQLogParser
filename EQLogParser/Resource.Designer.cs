@@ -349,6 +349,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Spell Types.
+        /// </summary>
+        internal static string SPELL_TYPES_SELECTED {
+            get {
+                return ResourceManager.GetString("SPELL_TYPES_SELECTED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Unselect All.
         /// </summary>
         internal static string UNSELECT_ALL {
