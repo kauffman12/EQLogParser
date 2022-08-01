@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="EQLogParser.SpellCastTable"
+﻿<local:CastTable x:Class="EQLogParser.SpellCastTable"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -10,6 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
+        <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <local:DateTimeConverter x:Key="dateTimeConverter" />
       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">
@@ -33,11 +34,10 @@
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,8,2" VerticalAlignment="Center" IsEnabled="False" 
-                ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common." 
-                VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Self Only</CheckBox>
-      <ComboBox Margin="0,0,0,2" x:Name="spellTypes" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,8,2" x:Name="castTypes" SelectionChanged="OptionsChanged" />
+      <ComboBox x:Name="selectedSpellRestrictions" Width="150" Margin="0,0,0,2" 
+                DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <ComboBox x:Name="selectedCastTypes" Width="140" Margin="0,0,8,2" 
+                DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>    
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
@@ -92,6 +92,6 @@
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>
-</UserControl>
+</local:CastTable>
 
 

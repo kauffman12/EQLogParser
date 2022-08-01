@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="EQLogParser.SpellCountTable"
+﻿<local:CastTable x:Class="EQLogParser.SpellCountTable"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -20,10 +20,12 @@
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,0,2" x:Name="countTypes" SelectionChanged="OptionsSelectionChanged" />
-      <ComboBox Margin="0,0,0,2" x:Name="minFreqList" SelectionChanged="OptionsSelectionChanged" />
-      <ComboBox x:Name="selectedOptions" Width="140" Margin="0,0,8,2" 
-                DropDownClosed="SelectOptions" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <ComboBox Margin="0,0,0,2" x:Name="countTypes" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="minFreqList" SelectionChanged="OptionsChanged" />
+      <ComboBox x:Name="selectedSpellRestrictions" Width="145" Margin="0,0,0,2" 
+                DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <ComboBox x:Name="selectedCastTypes" Width="140" Margin="0,0,8,2" 
+                DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
@@ -116,4 +118,4 @@
       </syncfusion:SfDataGrid.Resources>
     </syncfusion:SfDataGrid>
   </Grid>
-</UserControl>
+</local:CastTable>
