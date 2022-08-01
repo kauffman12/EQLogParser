@@ -14,7 +14,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -23,7 +22,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for SpellCountTable.xaml
   /// </summary>
-  public partial class SpellCountTable : UserControl, IDisposable
+  public partial class SpellCountTable : CastTable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -36,20 +35,8 @@ namespace EQLogParser
     private readonly List<string> CountTypes = new List<string>() { "Counts", "Percentages", "Counts/Minute" };
     private readonly List<string> MinFreqs = new List<string>() { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
     private readonly HashSet<string> SortDescs = new HashSet<string>();
-    private const string BENEFICIAL_SPELLS_TYPE = "Beneficial Spells";
-    private const string CAST_SPELLS_TYPE = "Cast Spells";
-    private const string DET_SPELLS_TYPE = "Detrimental Spells";
-    private const string PROC_SPELLS_TYPE = "Spell Procs";
-    private const string RECEIVED_SPELLS_TYPE = "Received Spells";
-    private const string SELF_SPELLS_TYPE = "Spells Only You See";
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
-    private bool CurrentShowBeneficialSpells = true;
-    private bool CurrentShowCastSpells = true;
-    private bool CurrentShowDetSpells = true;
-    private bool CurrentShowReceivedSpells = true;
-    private bool CurrentShowSelfOnly = false;
-    private bool CurrentShowProcs = false;
 
     public SpellCountTable()
     {
@@ -59,20 +46,10 @@ namespace EQLogParser
       minFreqList.ItemsSource = MinFreqs;
       minFreqList.SelectedIndex = 0;
 
-      var list = new List<ComboBoxItemDetails>();
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = BENEFICIAL_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = CAST_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = DET_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = RECEIVED_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = false, Text = SELF_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = false, Text = PROC_SPELLS_TYPE });
-      selectedOptions.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), EQLogParser.Resource.SPELL_TYPES_SELECTED);
-
+      InitCastTable(dataGrid, titleLabel, selectedCastTypes, selectedSpellRestrictions);
       // default these columns to descending
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, SortDescs);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, SortDescs);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
@@ -87,16 +64,6 @@ namespace EQLogParser
         PlayerList = selectedStats.Select(stats => stats.OrigName).Distinct().ToList();
         TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
         Display();
-      }
-    }
-
-    private void EventsThemeChanged(object sender, string e)
-    {
-      if (dataGrid.Columns.Count > 0)
-      {
-        var style = dataGrid.Columns[0].CellStyle;
-        dataGrid.Columns[0].CellStyle = null;
-        dataGrid.Columns[0].CellStyle = style;
       }
     }
 
@@ -128,17 +95,17 @@ namespace EQLogParser
         {
           filteredPlayerMap[player] = new Dictionary<string, uint>();
 
-          if (CurrentShowCastSpells && TheSpellCounts.PlayerCastCounts.ContainsKey(player))
+          foreach (ref var id in TheSpellCounts.PlayerCastCounts[player].Keys.ToArray().AsSpan())
           {
-            foreach (string id in TheSpellCounts.PlayerCastCounts[player].Keys)
+            if (PassFilters(TheSpellCounts.UniqueSpells[id], false))
             {
               totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
             }
           }
 
-          if (CurrentShowReceivedSpells && TheSpellCounts.PlayerReceivedCounts.ContainsKey(player))
+          foreach (ref var id in TheSpellCounts.PlayerReceivedCounts[player].Keys.ToArray().AsSpan())
           {
-            foreach (string id in TheSpellCounts.PlayerReceivedCounts[player].Keys)
+            if (PassFilters(TheSpellCounts.UniqueSpells[id], true))
             {
               totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
             }
@@ -273,11 +240,8 @@ namespace EQLogParser
       }
     }
 
-    private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged(true);
-    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UIElementUtil.CheckHideTitlePanel(titlePanel, settingsPanel);
-    private void OptionsSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => OptionsChanged(true);
+    private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateOptions(true);
 
     private void AddPlayerRow(string player, string spell, string value, IDictionary<string, object> row)
     {
@@ -294,34 +258,25 @@ namespace EQLogParser
     private uint UpdateMaps(string id, string player, uint playerCount, Dictionary<string, uint> maxCounts, Dictionary<string, uint> totalCountMap,
       Dictionary<string, uint> uniqueSpellsMap, Dictionary<string, Dictionary<string, uint>> filteredPlayerMap, bool received, uint totalCasts)
     {
-      var spellData = TheSpellCounts.UniqueSpells[id];
+      string name = TheSpellCounts.UniqueSpells[id].NameAbbrv;
 
-      var spellTypeCheck = (CurrentShowBeneficialSpells && spellData.IsBeneficial) || (CurrentShowDetSpells && !spellData.IsBeneficial);
-      var selfOnlyCheck = !received || CurrentShowSelfOnly == true || !string.IsNullOrEmpty(spellData.LandsOnOther);
-      var procCheck = CurrentShowProcs == true || spellData.Proc == 0;
-
-      if (spellTypeCheck && selfOnlyCheck && procCheck)
+      if (received)
       {
-        string name = spellData.NameAbbrv;
+        name = "Received " + name;
+      }
 
-        if (received)
-        {
-          name = "Received " + name;
-        }
-
-        if (!HiddenSpells.ContainsKey(name) && maxCounts[id] > CurrentMinFreqCount)
-        {
-          AddHelper.Add(totalCountMap, player, playerCount);
-          AddHelper.Add(uniqueSpellsMap, name, playerCount);
-          AddHelper.Add(filteredPlayerMap[player], name, playerCount);
-          totalCasts += playerCount;
-        }
+      if (!HiddenSpells.ContainsKey(name) && maxCounts[id] > CurrentMinFreqCount)
+      {
+        AddHelper.Add(totalCountMap, player, playerCount);
+        AddHelper.Add(uniqueSpellsMap, name, playerCount);
+        AddHelper.Add(filteredPlayerMap[player], name, playerCount);
+        totalCasts += playerCount;
       }
 
       return totalCasts;
     }
 
-    private void OptionsChanged(bool clear = false)
+    private void UpdateOptions(bool clear = false)
     {
       if (dataGrid?.View != null)
       {
@@ -331,43 +286,12 @@ namespace EQLogParser
       }
     }
 
-    private void SelectOptions(object sender, EventArgs e)
+    private void CastTypesChanged(object sender, EventArgs e)
     {
-      if (dataGrid?.View != null && selectedOptions?.Items != null)
+      if (dataGrid?.View != null && selectedCastTypes?.Items != null)
       {
-        int count = 0;
-        foreach (var item in selectedOptions.Items.Cast<ComboBoxItemDetails>())
-        {
-          switch (item.Text)
-          {
-            case BENEFICIAL_SPELLS_TYPE:
-              CurrentShowBeneficialSpells = item.IsChecked;
-              count += item.IsChecked ? 1 : 0;
-              break;
-            case CAST_SPELLS_TYPE:
-              CurrentShowCastSpells = item.IsChecked;
-              count += item.IsChecked ? 1 : 0;
-              break;
-            case DET_SPELLS_TYPE:
-              CurrentShowDetSpells = item.IsChecked;
-              count += item.IsChecked ? 1 : 0;
-              break;
-            case RECEIVED_SPELLS_TYPE:
-              CurrentShowReceivedSpells = item.IsChecked;
-              count += item.IsChecked ? 1 : 0;
-              break;
-            case PROC_SPELLS_TYPE:
-              CurrentShowProcs = item.IsChecked;
-              count += item.IsChecked ? 1 : 0;
-              break;
-            case SELF_SPELLS_TYPE:
-              CurrentShowSelfOnly = item.IsChecked;
-              count += item.IsChecked ? 1 : 0;
-              break;
-          }
-        }
-
-        UIElementUtil.SetComboBoxTitle(selectedOptions, count, EQLogParser.Resource.SPELL_TYPES_SELECTED);
+        UpdateSelectedCastTypes(selectedCastTypes);
+        UpdateSelectedRestrictions(selectedSpellRestrictions);
         Display(true);
       }
     }
@@ -375,7 +299,7 @@ namespace EQLogParser
     private void RefreshClick(object sender, RoutedEventArgs e)
     {
       HiddenSpells.Clear();
-      OptionsChanged(true);
+      UpdateOptions(true);
     }
 
     private void ImportClick(object sender, RoutedEventArgs e)
@@ -444,7 +368,7 @@ namespace EQLogParser
             }
           }
 
-          OptionsChanged(true);
+          UpdateOptions(true);
         }
       }
       catch (IOException ex)
@@ -551,7 +475,7 @@ namespace EQLogParser
 
         if (modified)
         {
-          OptionsChanged();
+          UpdateOptions();
         }
       }, System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -564,33 +488,10 @@ namespace EQLogParser
         {
           HiddenSpells[spr["Spell"] as string] = 1;
           SpellRows.Remove(spr);
-          OptionsChanged();
+          UpdateOptions();
         }
       });
     }
-
-    #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
-        dataGrid.Dispose();
-        disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 
   internal class SpellCountsSerialized
