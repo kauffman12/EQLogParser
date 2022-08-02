@@ -69,12 +69,12 @@ namespace EQLogParser
       if (obj is SfDataGrid dataGrid)
       {
         dataGrid.SelectAll();
-        dataGrid.Dispatcher.InvokeAsync(() => CallSelectionChanged(dataGrid.Parent));
+        dataGrid.Dispatcher.InvokeAsync(() => DataGridUtil.CallSelectionChanged(dataGrid.Parent));
       }
       else if (obj is SfTreeGrid treeGrid)
       {
         treeGrid.SelectAll();
-        treeGrid.Dispatcher.InvokeAsync(() => CallSelectionChanged(treeGrid.Parent));
+        treeGrid.Dispatcher.InvokeAsync(() => DataGridUtil.CallSelectionChanged(treeGrid.Parent));
       }
     }
 
@@ -115,27 +115,6 @@ namespace EQLogParser
       }
 
       return false;
-    }
-
-    private static void CallSelectionChanged(dynamic obj)
-    {
-      while (obj != null)
-      {
-        var type = obj.GetType();
-
-        if (type == typeof(ContentControl))
-        {
-          break;
-        }
-
-        if (type.GetDeclaredMethod("DataGridSelectionChanged") != null)
-        {
-          obj.DataGridSelectionChanged();
-          break;
-        }
-
-        obj = obj.Parent;
-      }
     }
   }
 }

@@ -14,7 +14,7 @@
         TitleBarHeight="26"
         ShowTitle="False"
         TextOptions.TextFormattingMode="Display"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="Manual"
         StateChanged="WindowStateChanged">
   <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
     <listCollection:ArrayList>
