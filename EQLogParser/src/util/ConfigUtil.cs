@@ -63,6 +63,15 @@ namespace EQLogParser
       return result;
     }
 
+    internal static double GetSettingAsDouble(string key, double def = 0.0)
+    {
+      if (double.TryParse(GetSetting(key), out double result) == false)
+      {
+        result = def;
+      }
+      return result;
+    }
+
     internal static int GetSettingAsInteger(string key)
     {
       if (int.TryParse(GetSetting(key), out int result) == false)
