@@ -158,7 +158,7 @@ namespace EQLogParser
     {
       if (selected.Items[0] is ComboBoxItemDetails onlyYou && selected.Items[1] is ComboBoxItemDetails procs)
       {
-        string title = "";
+        string title;
         if (!procs.IsChecked && !onlyYou.IsChecked)
         {
           title = "Hide Nothing";

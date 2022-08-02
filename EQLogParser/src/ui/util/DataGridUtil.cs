@@ -229,6 +229,27 @@ namespace EQLogParser
       }
     }
 
+    internal static void CallSelectionChanged(dynamic obj)
+    {
+      while (obj != null)
+      {
+        var type = obj.GetType();
+
+        if (type == typeof(ContentControl))
+        {
+          break;
+        }
+
+        if (type.GetDeclaredMethod("DataGridSelectionChanged") != null)
+        {
+          obj.DataGridSelectionChanged();
+          break;
+        }
+
+        obj = obj.Parent;
+      }
+    }
+
     internal static void EnableMouseSelection(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
       dynamic elem = e.OriginalSource;
@@ -288,6 +309,7 @@ namespace EQLogParser
             }
 
             treeGrid.CurrentItem = stats;
+            CallSelectionChanged(treeGrid.Parent);
           }
         }
       }

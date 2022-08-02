@@ -74,8 +74,31 @@ namespace EQLogParser
         // DPI and sizing
         var dpi = VisualTreeHelper.GetDpi(this);
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-        Width = resolution.Width * 0.85 / dpi.DpiScaleX;
-        Height = resolution.Height * 0.75 / dpi.DpiScaleY;
+        var defaultHeight = resolution.Height * 0.75 / dpi.DpiScaleY;
+        var defaultWidth = resolution.Width * 0.85 / dpi.DpiScaleX;
+        Height = ConfigUtil.GetSettingAsDouble("WindowHeight", defaultHeight);
+        Width = ConfigUtil.GetSettingAsDouble("WindowWidth", defaultWidth);
+
+        var top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
+        var left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
+        if (top < 0 && left < 0)
+        {
+          top = 0;
+          left = 0;
+        }
+
+        Top = top;
+        Left = left;
+
+        switch (ConfigUtil.GetSetting("WindowState", "Normal"))
+        {
+          case "Maximized":
+            WindowState = WindowState.Maximized;
+            break;
+          default:
+            WindowState = WindowState.Normal;
+            break;
+        }
 
         // load theme
         CurrentTheme = ConfigUtil.GetSetting("CurrentTheme") ?? CurrentTheme;
@@ -886,6 +909,15 @@ namespace EQLogParser
       ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", opened.ContainsKey(damageSummaryIcon.Tag as string).ToString());
       ConfigUtil.SetSetting("ShowHealingSummaryAtStartup", opened.ContainsKey(healingSummaryIcon.Tag as string).ToString());
       ConfigUtil.SetSetting("ShowTankingSummaryAtStartup", opened.ContainsKey(tankingSummaryIcon.Tag as string).ToString());
+      ConfigUtil.SetSetting("WindowState", WindowState.ToString());
+
+      if (WindowState != WindowState.Maximized)
+      {
+        ConfigUtil.SetSetting("WindowLeft", Left.ToString());
+        ConfigUtil.SetSetting("WindowTop", Top.ToString());
+        ConfigUtil.SetSetting("WindowHeight", Height.ToString());
+        ConfigUtil.SetSetting("WindowWidth", Width.ToString());
+      }
 
       StopProcessing();
       OverlayUtil.CloseOverlay();
