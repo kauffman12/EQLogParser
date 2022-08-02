@@ -465,10 +465,16 @@ namespace EQLogParser
         chartValues[aggregate.Name] = playerValues;
       }
 
-      DataPoint test;
-      if (playerValues.Count > 0 && (test = playerValues.Last()) != null && test.CurrentTime == newEntry.CurrentTime)
+      if (playerValues.Count > 0 && playerValues.Last() is DataPoint test && test != null)
       {
-        playerValues[playerValues.Count - 1] = newEntry;
+        if (test.CurrentTime == newEntry.CurrentTime)
+        {
+          playerValues[playerValues.Count - 1] = newEntry;
+        }
+        else if (newEntry.CurrentTime > test.CurrentTime)
+        {
+          playerValues.Add(newEntry);
+        }
       }
       else
       {

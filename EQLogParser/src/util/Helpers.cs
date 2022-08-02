@@ -144,10 +144,9 @@ namespace EQLogParser
     }
 
     internal static bool OpenChart(Dictionary<string, ContentControl> opened, DockingManager dockSite, string key, List<string> choices,
-      string title, DocumentTabControl tabControl, bool includePets, out ContentControl window)
+      string title, DocumentTabControl tabControl, bool includePets)
     {
       bool nowOpen = false;
-      window = null;
 
       if (opened != null && opened.TryGetValue(key, out ContentControl control))
       {
@@ -156,7 +155,7 @@ namespace EQLogParser
       else
       {
         var chart = new LineChart(choices, includePets);
-        window = new ContentControl { Name = key };
+        var window = new ContentControl { Name = key };
         DockingManager.SetHeader(window, title);
         DockingManager.SetState(window, DockState.Document);
         DockingManager.SetCanDock(window, false);

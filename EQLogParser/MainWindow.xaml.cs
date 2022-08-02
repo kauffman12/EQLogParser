@@ -521,33 +521,48 @@ namespace EQLogParser
     private void OpenDamageChart()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "Damage Chart", ChartTab, true, out ContentControl control))
+      if (Helpers.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "Damage Chart", ChartTab, true))
       {
-        var summary = control.Content as DamageSummary;
+        List<PlayerStats> selected = null;
+        if (opened.TryGetValue(damageSummaryIcon.Tag as string, out ContentControl window) && window.Content is DamageSummary summary)
+        {
+          selected = summary?.GetSelectedStats();
+        }
+
         var options = new GenerateStatsOptions { RequestChartData = true };
-        DamageStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats());
+        DamageStatsManager.Instance.FireChartEvent(options, "UPDATE", selected);
       }
     }
 
     private void OpenHealingChart()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenChart(opened, dockSite, healingChartIcon.Tag as string, HEALING_CHOICES, "Healing Chart", ChartTab, false, out ContentControl control))
+      if (Helpers.OpenChart(opened, dockSite, healingChartIcon.Tag as string, HEALING_CHOICES, "Healing Chart", ChartTab, false))
       {
-        var summary = control.Content as HealingSummary;
+        List<PlayerStats> selected = null;
+        if (opened.TryGetValue(healingSummaryIcon.Tag as string, out ContentControl window) && window.Content is HealingSummary summary)
+        {
+          selected = summary?.GetSelectedStats();
+        }
+
         var options = new GenerateStatsOptions { RequestChartData = true };
-        HealingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats());
+        HealingStatsManager.Instance.FireChartEvent(options, "UPDATE", selected);
       }
     }
 
     private void OpenTankingChart()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenChart(opened, dockSite, tankingChartIcon.Tag as string, TANKING_CHOICES, "Tanking Chart", ChartTab, false, out ContentControl control))
+      if (Helpers.OpenChart(opened, dockSite, tankingChartIcon.Tag as string, TANKING_CHOICES, "Tanking Chart", ChartTab, false))
       {
-        var summary = control.Content as TankingSummary;
+        List<PlayerStats> selected = null;
+        if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl window) && window.Content is TankingSummary summary)
+        {
+          selected = summary?.GetSelectedStats();
+        }
+
         var options = new GenerateStatsOptions { RequestChartData = true };
-        TankingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats());
+        TankingStatsManager.Instance.FireChartEvent(options, "UPDATE", selected);
       }
     }
 
