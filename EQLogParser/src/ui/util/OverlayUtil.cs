@@ -28,7 +28,7 @@ namespace EQLogParser
 
     internal static bool LoadSettings() => IsDamageOverlayEnabled = ConfigUtil.IfSet("IsDamageOverlayEnabled");
 
-    internal static void UpdateTheme() => MainActions.SetTheme(Overlay, MainWindow.CurrentTheme);
+    internal static void UpdateTheme() => MainActions.SetTheme(Overlay, "MaterialDark");
 
     internal static void OpenIfEnabled()
     {

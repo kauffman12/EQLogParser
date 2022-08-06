@@ -408,7 +408,6 @@ namespace EQLogParser
         MainActions.LoadTheme(this, CurrentTheme);
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
         EventsThemeChanged?.Invoke(this, CurrentTheme);
-        OverlayUtil.UpdateTheme();
       }
     }
 
@@ -420,7 +419,6 @@ namespace EQLogParser
         MainActions.LoadTheme(this, CurrentTheme);
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
         EventsThemeChanged?.Invoke(this, CurrentTheme);
-        OverlayUtil.UpdateTheme();
       }
     }
 
