@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Height="198" Width="500"
-        MinWidth="365"
+        MinWidth="345"
         Topmost="True"
         Title="Configure Overlay (Set Position/Size Before Saving)"
         Style="{StaticResource OverlayStyle}" Closing="WindowClosing" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False">
@@ -48,7 +48,7 @@
         <ComboBoxItem Tag="50">Reset 50s</ComboBoxItem>
         <ComboBoxItem Tag="60">Reset 60s</ComboBoxItem>
       </ComboBox>
-      <ComboBox x:Name="classesList" FontSize="11" ToolTip="Select the player class to show on the Overlay in addition to your own parse." MaxWidth="65" MaxHeight="22" Margin="0" SelectionChanged="SelectPlayerClassChanged"/>
+      <ComboBox x:Name="classesList" FontSize="11" ToolTip="Select the player class to show on the Overlay in addition to your own parse." MaxWidth="38" MaxHeight="22" Margin="0" SelectionChanged="SelectPlayerClassChanged"/>
     </StackPanel>
     <DockPanel x:Name="savePanel" HorizontalAlignment="Center">
       <Button x:Name="saveButton" Width="100" MaxHeight="22" FontSize="12" Click="SaveClick" HorizontalAlignment="Center" Content="Save"/>
