@@ -164,9 +164,12 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
         };
 
+        if (dataGrid.SelectedItems.Count > 0)
+        {
+          dataGrid.SelectedItems.Clear();
+        }
+
         dataGrid.View.RefreshFilter();
-        dataGrid.SelectedItems.Clear();
-        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null);
       }
     }
 
@@ -177,7 +180,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "UPDATE");
+        HealingStatsManager.Instance.FireChartEvent("UPDATE");
         HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
         CurrentStats = null;

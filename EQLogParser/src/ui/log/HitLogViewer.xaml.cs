@@ -80,11 +80,12 @@ namespace EQLogParser
       PlayerStats = playerStats;
       titleLabel.Content = currentStats?.ShortTitle;
 
-      // hide columns dependnig on type of data
-      // TextColumns contains the same instance of columns 0 to 5 and 13 to end
-      var firstAction = groups?.First()?.First()?.Actions?.First();
+      IAction firstAction = groups.First()?.First();
+
       if (firstAction is DamageRecord && !defending)
       {
+        // hide columns dependnig on type of data
+        // TextColumns contains the same instance of columns 0 to 5 and 13 to end
         ActedOption = "All Defenders";
         TextColumns[4].HeaderText = "Damage";
         TextColumns[5].IsHidden = true;

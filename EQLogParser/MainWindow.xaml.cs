@@ -269,28 +269,22 @@ namespace EQLogParser
     private void ComputeStats()
     {
       var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id);
-      string name = filtered?.FirstOrDefault()?.Name;
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
 
-      var damageOptions = new GenerateStatsOptions { Name = name, RequestChartData = opened.ContainsKey(damageChartIcon.Tag as string) };
+      var damageOptions = new GenerateStatsOptions();
       damageOptions.Npcs.AddRange(filtered);
-      damageOptions.RequestSummaryData = opened.ContainsKey(damageSummaryIcon.Tag as string);
+      Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
 
-      var healingOptions = new GenerateStatsOptions { Name = name, RequestChartData = opened.ContainsKey(healingChartIcon.Tag as string) };
+      var healingOptions = new GenerateStatsOptions();
       healingOptions.Npcs.AddRange(filtered);
-      healingOptions.RequestSummaryData = opened.ContainsKey(healingSummaryIcon.Tag as string);
+      Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingOptions));
 
-      var tankingOptions = new GenerateStatsOptions { Name = name, RequestChartData = opened.ContainsKey(tankingChartIcon.Tag as string) };
+      var tankingOptions = new GenerateStatsOptions();
       tankingOptions.Npcs.AddRange(filtered);
-
-      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl control))
+      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl control) && control != null)
       {
-        tankingOptions.RequestSummaryData = true;
         tankingOptions.DamageType = ((TankingSummary)control.Content).DamageType;
       }
-
-      Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
-      Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingOptions));
       Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingOptions));
     }
 
@@ -351,9 +345,7 @@ namespace EQLogParser
       IsAoEHealingEnabled = !IsAoEHealingEnabled;
       ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
-
-      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
-      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options, true));
+      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(true));
     }
 
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
@@ -366,7 +358,7 @@ namespace EQLogParser
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
     {
-      var enabled = OverlayUtil.ToggleOverlay(Dispatcher);
+      var enabled = OverlayUtil.ToggleOverlay();
       enableDamageOverlayIcon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
     }
 
@@ -416,6 +408,7 @@ namespace EQLogParser
         MainActions.LoadTheme(this, CurrentTheme);
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
         EventsThemeChanged?.Invoke(this, CurrentTheme);
+        OverlayUtil.UpdateTheme();
       }
     }
 
@@ -427,6 +420,7 @@ namespace EQLogParser
         MainActions.LoadTheme(this, CurrentTheme);
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
         EventsThemeChanged?.Invoke(this, CurrentTheme);
+        OverlayUtil.UpdateTheme();
       }
     }
 
@@ -434,7 +428,7 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting(option, enabled.ToString(CultureInfo.CurrentCulture));
       icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
-      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      var options = new GenerateStatsOptions();
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
     }
 
@@ -529,8 +523,7 @@ namespace EQLogParser
           selected = summary?.GetSelectedStats();
         }
 
-        var options = new GenerateStatsOptions { RequestChartData = true };
-        DamageStatsManager.Instance.FireChartEvent(options, "UPDATE", selected);
+        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
       }
     }
 
@@ -545,8 +538,7 @@ namespace EQLogParser
           selected = summary?.GetSelectedStats();
         }
 
-        var options = new GenerateStatsOptions { RequestChartData = true };
-        HealingStatsManager.Instance.FireChartEvent(options, "UPDATE", selected);
+        HealingStatsManager.Instance.FireChartEvent("UPDATE", selected);
       }
     }
 
@@ -561,8 +553,7 @@ namespace EQLogParser
           selected = summary?.GetSelectedStats();
         }
 
-        var options = new GenerateStatsOptions { RequestChartData = true };
-        TankingStatsManager.Instance.FireChartEvent(options, "UPDATE", selected);
+        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
       }
     }
 
@@ -575,7 +566,7 @@ namespace EQLogParser
         if (DamageStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true };
+          var damageOptions = new GenerateStatsOptions();
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
         }
       }
@@ -590,8 +581,7 @@ namespace EQLogParser
         if (HealingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var healingOptions = new GenerateStatsOptions() { RequestSummaryData = true };
-          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));
+          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
         }
       }
     }
@@ -605,7 +595,7 @@ namespace EQLogParser
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true, DamageType = (control.Content as TankingSummary).DamageType };
+          var tankingOptions = new GenerateStatsOptions {DamageType = (control.Content as TankingSummary).DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
@@ -613,14 +603,14 @@ namespace EQLogParser
 
     private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "SELECT", data.Selected);
+      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview?.UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      HealingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { RequestChartData = true }, "SELECT", data.Selected);
+      HealingStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
       bool addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEALPARSE, Labels.TOPHEALSPARSE);
@@ -628,7 +618,7 @@ namespace EQLogParser
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "SELECT", data.Selected);
+      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
       bool addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].SubStats2?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANKPARSE, Labels.RECEIVEDHEALPARSE);
@@ -679,7 +669,7 @@ namespace EQLogParser
             }
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
-            OverlayUtil.OpenIfEnabled(Dispatcher);
+            OverlayUtil.OpenIfEnabled();
             LOG.Info("Finished Loading Log File in " + seconds.ToString(CultureInfo.CurrentCulture) + " seconds.");
             EventsLogLoadingComplete?.Invoke(this, true);
           }

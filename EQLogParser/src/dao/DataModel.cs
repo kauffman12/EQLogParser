@@ -95,12 +95,9 @@ namespace EQLogParser
 
   internal class GenerateStatsOptions
   {
-    public string Name { get; set; }
     public List<Fight> Npcs { get; } = new List<Fight>();
-    public bool RequestChartData { get; set; }
-    public bool RequestSummaryData { get; set; }
-
     public long MaxSeconds { get; set; } = -1;
+    public long MinSeconds { get; set; } = -1;
     public int DamageType { get; set; }
   }
 
@@ -445,6 +442,7 @@ namespace EQLogParser
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }
     public double MaxTime { get; set; }
+    public double MinTime { get; set; }
   }
 
 }
