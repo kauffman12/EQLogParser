@@ -281,9 +281,12 @@ namespace EQLogParser
           return string.IsNullOrEmpty(CurrentClass) || (!string.IsNullOrEmpty(name) && CurrentClass == className);
         };
 
-        dataGrid.SelectedItems.Clear();
+        if (dataGrid.SelectedItems.Count > 0)
+        {
+          dataGrid.SelectedItems.Clear();
+        }
+
         dataGrid.View.RefreshFilter();
-        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null);
       }
     }
 
@@ -302,7 +305,7 @@ namespace EQLogParser
 
         if (needRequery)
         {
-          var tankingOptions = new GenerateStatsOptions { RequestSummaryData = true, RequestChartData = true, DamageType = DamageType };
+          var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
@@ -315,7 +318,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "UPDATE");
+        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE");
         TankingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;

@@ -21,6 +21,21 @@ namespace EQLogParser
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new SortablePetMappingComparer();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
 
+    internal static void SetTheme(Window window, string theme)
+    {
+      if (window != null)
+      {
+        if (theme == "MaterialLight")
+        {
+          SfSkinManager.SetTheme(window, new Theme("MaterialLightCustom;MaterialLight"));
+        }
+        else
+        {
+          SfSkinManager.SetTheme(window, new Theme("MaterialDarkCustom;MaterialDark"));
+        }
+      }
+    }
+
     internal static void LoadTheme(MainWindow window, string theme)
     {
       if (theme == "MaterialLight")

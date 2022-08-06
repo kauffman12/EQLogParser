@@ -194,7 +194,7 @@ namespace EQLogParser
       if (!configure)
       {
         var settingsButton = OverlayUtil.CreateButton("Change Settings", "\xE713", CurrentFontSize - 1);
-        settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(Dispatcher, true, false);
+        settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(true, false);
         settingsButton.Margin = new Thickness(4, 0, 0, 0);
 
         var copyButton = OverlayUtil.CreateButton("Copy Parse", "\xE8C8", CurrentFontSize - 1);
@@ -207,7 +207,7 @@ namespace EQLogParser
         };
 
         var refreshButton = OverlayUtil.CreateButton("Cancel Current Parse", "\xE8BB", CurrentFontSize - 1);
-        refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay(Dispatcher);
+        refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay();
 
         ButtonPopup = new Popup();
         ButtonsPanel = OverlayUtil.CreateNameStackPanel();
@@ -764,7 +764,7 @@ namespace EQLogParser
         });
       }
 
-      OverlayUtil.OpenOverlay(Dispatcher, false, true);
+      OverlayUtil.OpenOverlay(false, true);
     }
 
     private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
