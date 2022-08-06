@@ -45,8 +45,12 @@ namespace EQLogParser
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1200) };
       SelectionTimer.Tick += (sender, e) =>
       {
-        var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true, MaxSeconds = (long)timeChooser.Value };
-        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
+        if (minTimeChooser.Value < maxTimeChooser.Value)
+        {
+          var damageOptions = new GenerateStatsOptions { MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
+          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
+        }
+
         SelectionTimer.Stop();
       };
     }
@@ -212,8 +216,10 @@ namespace EQLogParser
           case "STARTED":
             title.Content = "Calculating DPS...";
             dataGrid.ItemsSource = null;
-            timeChooser.Value = 0;
-            timeChooser.MaxValue = 0;
+            maxTimeChooser.Value = 0;
+            maxTimeChooser.MaxValue = 0;
+            minTimeChooser.Value = 0;
+            minTimeChooser.MaxValue = 0;
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;
@@ -227,8 +233,14 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              timeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
-              timeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds);
+              maxTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+              if (maxTimeChooser.MaxValue > 0)
+              {
+                maxTimeChooser.MinValue = 1;
+              }
+              maxTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds + CurrentStats.RaidStats.MinTime);
+              minTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+              minTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.MinTime);
               UpdateList();
             }
 
@@ -285,20 +297,23 @@ namespace EQLogParser
           return result;
         };
 
-        dataGrid.SelectedItems.Clear();
+        if (dataGrid.SelectedItems.Count > 0)
+        {
+          dataGrid.SelectedItems.Clear();
+        }
+
         dataGrid.View.RefreshFilter();
       }
     }
 
-    private void MaxTimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private void TimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (timeChooser.IsEnabled && e.OldValue.ToString() != "0" && e.NewValue.ToString() != "0")
+      if (dataGrid.ItemsSource != null)
       {
         SelectionTimer.Stop();
         SelectionTimer.Start();
       }
     }
-
 
     private void RequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
     {
@@ -322,7 +337,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { MaxSeconds = long.MinValue, RequestChartData = true }, "UPDATE");
+        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
         DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData; if (disposing)
           CurrentStats = null;

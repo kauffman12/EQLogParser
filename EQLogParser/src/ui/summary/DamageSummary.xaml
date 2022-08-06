@@ -22,8 +22,15 @@
       <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <syncfusion:UpDown x:Name="timeChooser" Margin="0,0,0,2" Width="60" ZeroColor="{StaticResource ContentForeground}" TextAlignment="Right" 
-                         Value="0" MaxValue="0" MinValue="0" ValueChanged="MaxTimeChanged">
+      <syncfusion:UpDown x:Name="minTimeChooser" Margin="0,0,0,2" Width="60" ZeroColor="{StaticResource ContentForeground}" TextAlignment="Right" 
+                         Value="0" MaxValue="0" MinValue="0" ValueChanged="TimeChanged" ToolTip="Start Time (seconds)">
+        <syncfusion:UpDown.NumberFormatInfo>
+          <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+        </syncfusion:UpDown.NumberFormatInfo>
+      </syncfusion:UpDown>      
+      <fa:ImageAwesome Height="14" Width="14" Margin="8,0,8,0" HorizontalAlignment="Center" Icon="Solid_ArrowRight" Foreground="{StaticResource ContentForeground}"/>
+      <syncfusion:UpDown x:Name="maxTimeChooser" Margin="0,0,8,2" Width="60" ZeroColor="{StaticResource ContentForeground}" TextAlignment="Right" 
+                         Value="0" MaxValue="0" MinValue="0" ValueChanged="TimeChanged" ToolTip="End Time (seconds)">
         <syncfusion:UpDown.NumberFormatInfo>
           <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
         </syncfusion:UpDown.NumberFormatInfo>
