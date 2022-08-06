@@ -80,7 +80,18 @@ namespace EQLogParser
       PlayerStats = playerStats;
       titleLabel.Content = currentStats?.ShortTitle;
 
-      IAction firstAction = groups.First()?.First();
+      IAction firstAction = null;
+      foreach (var group in groups)
+      {
+        foreach (var list in group)
+        {
+          foreach (var action in list.Actions)
+          {
+            firstAction = action;
+            break;
+          }
+        }
+      }
 
       if (firstAction is DamageRecord && !defending)
       {
