@@ -30,7 +30,7 @@ namespace EQLogParser
       "ExtraRate", "CritRate", "LuckRate", "TwincastRate", "MeleeAccRate", "MeleeHitRate", "Absorbs", "Blocks", "Dodges", "Invulnerable",
       "Misses", "Parries", "StrikethroughHits", "RiposteHits", "RampageRate", "TotalAss", "TotalFinishing", "TotalHead", "TotalRiposte",
       "TotalSlay", "AvgNonTwincast", "AvgNonTwincastCrit", "AvgNonTwincastLucky", "TwincastHits", "Resists", "DoubleBowRate",
-      "FlurryRate", "ResistRate"};
+      "FlurryRate", "ResistRate", "MeleeAttempts", "MeleeUndefended"};
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);

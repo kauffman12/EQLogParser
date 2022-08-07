@@ -428,6 +428,7 @@ namespace EQLogParser
     public float Percent { get; set; }
     public float PercentOfRaid { get; set; }
     public string Special { get; set; }
+    public uint MeleeUndefended { get; set; }
     public string ClassName { get; set; }
     public string Key { get; set; }
     public TimeRange Ranges { get; } = new TimeRange();
