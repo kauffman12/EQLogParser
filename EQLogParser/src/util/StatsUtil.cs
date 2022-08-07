@@ -453,6 +453,8 @@ namespace EQLogParser
           stats.MeleeAccRate = (float)Math.Round((float)stats.MeleeHits / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks - stats.Invulnerable - stats.Absorbs) * 100, 2);
         }
 
+        stats.MeleeUndefended = stats.MeleeHits - stats.StrikethroughHits;
+
         if (stats.SpellHits > 0)
         {
           var tcMult = stats.Type == Labels.DD ? 2 : 1;
