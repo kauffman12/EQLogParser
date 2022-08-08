@@ -80,18 +80,19 @@
       </syncfusion:SfTreeGrid.Resources>
       <syncfusion:SfTreeGrid.ContextMenu>
         <ContextMenu>
+          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Send Parse to EQ" Click="CopyToEQClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="copyDamageParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Copy Selected Parse" Click="CopyToEQClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="copyDamageParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
+          <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>

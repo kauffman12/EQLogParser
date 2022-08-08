@@ -288,7 +288,7 @@ namespace EQLogParser
           {
             foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
             {
-              string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
+              string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
               string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + damageFormat);
             }
@@ -301,13 +301,13 @@ namespace EQLogParser
         }
         else if (type == Labels.RECEIVEDHEALPARSE)
         {
-          if (selected?.Count == 1 && selected[0].SubStats2.Count > 0)
+          if (selected?.Count == 1 && selected[0].MoreStats != null)
           {
             int rank = 1;
             long totals = 0;
-            foreach (var stats in selected[0].SubStats2.OrderByDescending(stats => stats.Total).Take(10))
+            foreach (var stats in selected[0].MoreStats.SubStats2.OrderByDescending(stats => stats.Total).Take(10))
             {
-              string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(CultureInfo.CurrentCulture, StatsUtil.PLAYER_FORMAT, stats.Name);
+              string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
               string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + damageFormat);
               totals += stats.Total;

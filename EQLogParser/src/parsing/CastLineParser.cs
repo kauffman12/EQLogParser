@@ -51,6 +51,12 @@ namespace EQLogParser
           // [Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
           // [Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
           // [Sun Mar 01 22:34:58 2020] You have entered The Eastern Wastes.
+          // improved taunt same from your perspective or someone elses
+          // [Sun Aug 07 01:57:24 2022] A war beast is focused on attacking Rorcal due to an improved taunt.
+          // [Sat Aug 06 22:14:18 2022] You capture a slithering adder's attention!
+          // [Sun Jul 31 19:03:18 2022] Goodurden has captured liquid shadow's attention!
+          // [Sun Jul 31 20:10:07 2022] Foob failed to taunt Doomshade.
+          // You have failed to capture npc's attention.
           if (sList[0] == "You")
           {
             player = ConfigUtil.PlayerName;

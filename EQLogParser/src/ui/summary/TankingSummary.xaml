@@ -67,20 +67,21 @@
       </syncfusion:SfDataGrid.Resources>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
-          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
-                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem IsEnabled="True" Header="Copy Parse">
+          <MenuItem IsEnabled="True" Header="Send Parse to EQ">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="False" x:Name="copyTankingParseToEQClick" Header="Selected" Click="CopyToEQClick" />
             <MenuItem IsEnabled="False" x:Name="copyReceivedHealingParseToEQClick" Header="Received Healing" Click="CopyReceivedHealingToEQClick" />
           </MenuItem>
-          <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy Summary As">
+          <Separator />
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem IsEnabled="False" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
