@@ -617,7 +617,7 @@ namespace EQLogParser
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
-      bool addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].SubStats2?.Count > 0;
+      bool addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANKPARSE, Labels.RECEIVEDHEALPARSE);
     }
