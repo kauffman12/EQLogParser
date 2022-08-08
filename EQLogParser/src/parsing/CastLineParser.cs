@@ -51,52 +51,45 @@ namespace EQLogParser
           // [Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
           // [Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
           // [Sun Mar 01 22:34:58 2020] You have entered The Eastern Wastes.
-          // improved taunt same from your perspective or someone elses
-          // [Sun Aug 07 01:57:24 2022] A war beast is focused on attacking Rorcal due to an improved taunt.
-          // [Sat Aug 06 22:14:18 2022] You capture a slithering adder's attention!
-          // [Sun Jul 31 19:03:18 2022] Goodurden has captured liquid shadow's attention!
-          // [Sun Jul 31 20:10:07 2022] Foob failed to taunt Doomshade.
-          // You have failed to capture npc's attention.
           if (sList[0] == "You")
           {
             player = ConfigUtil.PlayerName;
             isYou = true;
 
-            if (sList[1] == "activate")
+            if (sList[1] == "activate" && sList.Count > 2)
             {
-              spellName = ParseNewSpellName(sList, 2);
+              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 2);
             }
-
-            if (sList[1] == "begin")
+            else if (sList[1] == "begin" && sList.Count > 3)
             {
               if (sList[2] == "casting")
               {
-                spellName = ParseNewSpellName(sList, 3);
+                spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 3);
                 isSpell = true;
               }
               else if (sList[2] == "singing")
               {
-                spellName = ParseNewSpellName(sList, 3);
+                spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 3);
               }
             }
           }
           else if (sList[1] == "activates")
           {
             player = sList[0];
-            spellName = ParseNewSpellName(sList, 2);
+            spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 2);
           }
-          else if (sList.FindIndex(1, sList.Count - 1, s => s == "begins") is int bIndex && bIndex > -1)
+          else if (sList.Count > 3 && sList.FindIndex(1, sList.Count - 1, s => s == "begins") is int bIndex && bIndex > -1 && (bIndex + 2) < sList.Count)
           {
             if (sList[bIndex + 1] == "casting")
             {
               player = string.Join(" ", sList.ToArray(), 0, bIndex);
-              spellName = ParseNewSpellName(sList, bIndex + 2);
+              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), bIndex + 2);
               isSpell = true;
             }
             else if (sList[bIndex + 1] == "singing")
             {
               player = string.Join(" ", sList.ToArray(), 0, bIndex);
-              spellName = ParseNewSpellName(sList, bIndex + 2);
+              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), bIndex + 2);
             }
             else if (sList.Count > 5 && sList[2] == "to" && sList[4] == "a")
             {
@@ -242,11 +235,6 @@ namespace EQLogParser
       {
         DataManager.Instance.AddSpecial(new SpecialSpell() { Code = codes[key], Player = player, BeginTime = currentTime });
       }
-    }
-
-    private static string ParseNewSpellName(List<string> split, int spellIndex)
-    {
-      return string.Join(" ", split.ToArray(), spellIndex, split.Count - spellIndex).Trim('.');
     }
 
     private static string ParseOldSpellName(List<string> split, int spellIndex)

@@ -166,6 +166,11 @@
                 <fa:ImageAwesome x:Name="spellResistsIcon" Tag="spellResistsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
+            <MenuItem x:Name="tauntStatsMenuItem" Header="_Taunt Usage" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="tauntStatsIcon" Tag="tauntStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>            
           </MenuItem>
           <Separator />
           <MenuItem x:Name="windowList" Header="_Windows" Height="24">
