@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -253,9 +252,9 @@ namespace EQLogParser
     internal static void EnableMouseSelection(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
       dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid && elem?.DataContext is PlayerSubStats stats)
+      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row && row > -1)
       {
-        StartRow = treeGrid.ResolveToRowIndex(stats);
+        StartRow = row;
         // Left click happened, current item is selected, now listen for mouse movement and release of left button
         treeGrid.PreviewMouseLeftButtonUp += PreviewMouseLeftButtonUp;
         treeGrid.PreviewMouseMove += MouseMove;
@@ -283,9 +282,8 @@ namespace EQLogParser
           treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
           treeGrid.PreviewMouseMove -= MouseMove;
         }
-        else if (elem?.DataContext is PlayerSubStats stats)
+        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row && row > -1)
         {
-          int row = treeGrid.ResolveToRowIndex(stats);
           if (treeGrid.CurrentItem != stats)
           {
             if (!treeGrid.SelectionController.SelectedRows.Contains(row))

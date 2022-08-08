@@ -12,11 +12,31 @@ namespace EQLogParser
     private static readonly Dictionary<string, bool> ValidCombo = new Dictionary<string, bool>();
     private const int RECENTSPELLTIME = 300;
 
-    public NpcDamageManager() => DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
+    public NpcDamageManager()
+    {
+      DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
+      DamageLineParser.EventsNewTaunt += HandleNewTaunt;
+    }
 
-    ~NpcDamageManager() => DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
+    internal void Reset()
+    {
+      LastFightProcessTime = double.NaN;
+      CurrentNpcID = 1;
+      RecentSpellCache.Clear();
+      ValidCombo.Clear();
+    }
 
-    internal void ResetTime() => LastFightProcessTime = double.NaN;
+    private void HandleNewTaunt(object sender, TauntEvent e)
+    {
+      Fight fight = DataManager.Instance.GetFight(e.Record.Npc);
+
+      if (fight == null)
+      {
+        fight = Create(e.Record.Npc, e.BeginTime);
+      }
+
+      Helpers.AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
+    }
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {

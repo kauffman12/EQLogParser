@@ -498,6 +498,11 @@ namespace EQLogParser
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         Helpers.OpenWindow(dockSite, opened, out _, typeof(SpellDamageStatsViewer), npcSpellDamageIcon.Tag as string, "Spell Damage");
       }
+      else if (e.Source == tauntStatsMenuItem)
+      {
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(TauntStatsViewer), tauntStatsIcon.Tag as string, "Taunt Usage");
+      }
       else if ((sender as MenuItem)?.Icon is ImageAwesome icon && icon.Tag is string name)
       {
         // any other core windows that just get hidden
@@ -669,11 +674,11 @@ namespace EQLogParser
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
             OverlayUtil.OpenIfEnabled();
             LOG.Info("Finished Loading Log File in " + seconds.ToString(CultureInfo.CurrentCulture) + " seconds.");
-            EventsLogLoadingComplete?.Invoke(this, true);
+            Task.Delay(1000).ContinueWith(task => Dispatcher.InvokeAsync(() => EventsLogLoadingComplete?.Invoke(this, true)));
           }
           else
           {
-            _ = Task.Delay(500).ContinueWith(task => UpdateLoadingProgress(), TaskScheduler.Default);
+            Task.Delay(500).ContinueWith(task => UpdateLoadingProgress(), TaskScheduler.Default);
           }
         }
       });
@@ -777,7 +782,7 @@ namespace EQLogParser
           DataManager.Instance.Clear();
           PlayerChatManager = new ChatManager();
           CurrentLogFile = theFile;
-          NpcDamageManager.ResetTime();
+          NpcDamageManager.Reset();
           EQLogReader = new LogReader(theFile, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
           UpdateLoadingProgress();

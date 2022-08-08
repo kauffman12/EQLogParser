@@ -16,16 +16,18 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellDamageStatsViewer : UserControl, IDisposable
   {
-    private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
     private readonly ObservableCollection<string> Players = new ObservableCollection<string>();
     private readonly ObservableCollection<string> Spells = new ObservableCollection<string>();
     private readonly ObservableCollection<string> Types = new ObservableCollection<string>();
+    private bool CurrentShowPlayers = true;
+    private string CurrentPlayer = null;
+    private string CurrentSpell = null;
+    private string CurrentType = null;
     private const string NODATA = "No Spell Damage Data Found";
 
     public SpellDamageStatsViewer()
     {
       InitializeComponent();
-      dataGrid.ItemsSource = Records;
       typeList.ItemsSource = Types;
       spellList.ItemsSource = Spells;
       playerList.ItemsSource = Players;
@@ -63,7 +65,6 @@ namespace EQLogParser
       string selectedPlayer = playerList.SelectedItem as string;
       bool isPlayerOnly = showPlayers.IsChecked.Value;
 
-      Records.Clear();
       Spells.Clear();
       Spells.Add("All Spells");
       Players.Clear();
@@ -116,14 +117,15 @@ namespace EQLogParser
         }
       }
 
+      var list = new List<IDictionary<string, object>>();
       foreach (ref var stats in playerDoTTotals.Values.ToArray().AsSpan())
       {
-        AddRow(stats, Labels.DOT);
+        AddRow(list, stats, Labels.DOT);
       }
 
       foreach (ref var stats in playerDDTotals.Values.ToArray().AsSpan())
       {
-        AddRow(stats, Labels.DD);
+        AddRow(list, stats, Labels.DD);
       }
 
       foreach (var key in uniqueSpells.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
@@ -138,13 +140,14 @@ namespace EQLogParser
 
       spellList.SelectedIndex = (Spells.IndexOf(selectedSpell) is int s && s > -1) ? s : 0;
       playerList.SelectedIndex = (Players.IndexOf(selectedPlayer) is int p && p > -1) ? p : 0;
+      dataGrid.ItemsSource = list;
 
       dataGrid.SortColumnDescriptions.Clear();
       dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Avg", SortDirection = ListSortDirection.Descending });
-      titleLabel.Content = Records.Count == 0 ? NODATA : "Spell Damage Stats for " + uniqueSpells.Count + " Unique Spells";
+      titleLabel.Content = list.Count == 0 ? NODATA : "Spell Damage Stats for " + uniqueSpells.Count + " Unique Spells";
     }
 
-    private void AddRow(SpellDamageStats stats, string type)
+    private void AddRow(List<IDictionary<string, object>> list, SpellDamageStats stats, string type)
     {
       var row = new ExpandoObject() as IDictionary<string, object>;
       row["Caster"] = stats.Caster;
@@ -154,35 +157,53 @@ namespace EQLogParser
       row["Avg"] = stats.Total / stats.Count;
       row["Total"] = stats.Total;
       row["Type"] = type;
-      Records.Add(row);
+      list.Add(row);
+    }
+
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
+    {
+      if (dataGrid.View != null)
+      {
+        dataGrid.View.Filter = (item) =>
+        {
+          bool pass = false;
+          if (item is IDictionary<string, object> dict)
+          {
+            pass = !CurrentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) || 
+              PlayerManager.Instance.IsMerc(dict["Caster"] as string);
+            pass = pass && (CurrentType == null || CurrentType.Equals(dict["Type"])) && (CurrentSpell == null || 
+              CurrentSpell.Equals(dict["Spell"])) && (CurrentPlayer == null || CurrentPlayer.Equals(dict["Caster"]));
+          }
+          return pass;
+        };
+
+        if (dataGrid.SelectedItems.Count > 0)
+        {
+          dataGrid.SelectedItems.Clear();
+        }
+
+        dataGrid.View.RefreshFilter();
+      }
     }
 
     private void OptionsChanged(object sender, EventArgs e)
     {
       if (dataGrid != null && dataGrid.View != null)
       {
-        string type = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
-        string spell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
-        string player = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
-        bool isPlayerOnly = showPlayers.IsChecked.Value;
+        CurrentType = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
+        CurrentSpell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
+        CurrentPlayer = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
+        CurrentShowPlayers = showPlayers.IsChecked.Value;
 
         if (sender == fightOption)
         {
           Load();
         }
-
-        dataGrid.View.Filter = new Predicate<object>(item =>
+        else
         {
-          bool pass = false;
-          if (item is IDictionary<string, object> dict)
-          {
-            pass = !isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) || PlayerManager.Instance.IsMerc(dict["Caster"] as string);
-            pass = pass && (type == null || type.Equals(dict["Type"])) && (spell == null || spell.Equals(dict["Spell"])) && (player == null || player.Equals(dict["Caster"]));
-          }
-          return pass;
-        });
-
-        dataGrid.View.RefreshFilter();
+          dataGrid.SelectedItems.Clear();
+          dataGrid.View.RefreshFilter();
+        }
       }
     }
 

@@ -31,7 +31,13 @@
     <DataTemplate x:Key="TemplateToolTip">
       <TextBlock FontSize="12" Text="{Binding TooltipText}" />
     </DataTemplate>
-    
+
+    <DataTemplate x:Key="HeaderImprovedTauntToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Improved Taunts can not Fail" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderFailedTauntToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Failed Taunts" />
+    </DataTemplate>    
     <DataTemplate x:Key="HeaderSpecialTemplateToolTip">
       <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="6 = Staunch, 7 = Intensity, D = Dragon Glyph, G = Destruction Glyph, M = Mana Burn, L = Life Burn" />
     </DataTemplate>

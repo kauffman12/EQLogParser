@@ -140,8 +140,8 @@ namespace EQLogParser
 
       if (needUpdate)
       {
-        dataGrid.View?.RefreshFilter();
         dataGrid.SelectedItems.Clear();
+        dataGrid.View?.RefreshFilter();
       }
     }
 
@@ -197,8 +197,8 @@ namespace EQLogParser
           if (CurrentStats != null)
           {
             HealingStatsManager.Instance.PopulateHealing(CurrentStats);
-            dataGrid.View.RefreshFilter();
             dataGrid.SelectedItems.Clear();
+            dataGrid.View.RefreshFilter();
 
             if (!MainWindow.IsAoEHealingEnabled)
             {
@@ -300,8 +300,8 @@ namespace EQLogParser
         ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue.ToString(CultureInfo.CurrentCulture));
         ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType.ToString(CultureInfo.CurrentCulture));
 
-        dataGrid.View.RefreshFilter();
         dataGrid.SelectedItems.Clear();
+        dataGrid.View.RefreshFilter();
 
         if (needRequery)
         {

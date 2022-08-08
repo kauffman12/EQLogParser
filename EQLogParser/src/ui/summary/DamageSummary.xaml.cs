@@ -114,8 +114,8 @@ namespace EQLogParser
 
       if (needUpdate)
       {
-        dataGrid.View?.RefreshFilter();
         dataGrid.SelectedItems.Clear();
+        dataGrid.View?.RefreshFilter();
       }
     }
 
@@ -148,8 +148,8 @@ namespace EQLogParser
       // if list stayed the same then update the filter
       if (beforeList == dataGrid.ItemsSource)
       {
-        dataGrid.View.RefreshFilter();
         dataGrid.SelectedItems.Clear();
+        dataGrid.View.RefreshFilter();
       }
     }
 

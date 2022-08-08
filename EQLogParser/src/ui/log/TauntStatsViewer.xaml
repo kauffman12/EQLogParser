@@ -1,72 +1,69 @@
-﻿<UserControl x:Class="EQLogParser.SpellDamageStatsViewer"
+﻿<UserControl x:Class="EQLogParser.TauntStatsViewer"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-             xmlns:fa="http://schemas.fontawesome.com/icons/"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"             
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-  <Grid>
+    <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
+      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" Content="Taunt Usage By Player"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showPlayers" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
-      <ComboBox Margin="0,0,0,2" x:Name="fightOption" SelectedIndex="0" SelectionChanged="OptionsChanged">
+      <ComboBox Margin="0,0,8,2" x:Name="fightOption" SelectedIndex="0" SelectionChanged="OptionsChanged">
         <ComboBoxItem>All Fights</ComboBoxItem>
-        <ComboBoxItem>Selected Fights</ComboBoxItem>        
+        <ComboBoxItem>Selected Fights</ComboBoxItem>
       </ComboBox>
-      <ComboBox Margin="0,0,0,2" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,0,2" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,8,2" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
-    <syncfusion:SfDataGrid x:Name="dataGrid"
+    <syncfusion:SfTreeGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
+                           ChildPropertyName="Children"
                            ColumnSizer="Auto"
+                           AutoExpandMode="RootNodesExpanded"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="26"
                            IsReadOnly="True"
-                           ItemsSourceChanged="ItemsSourceChanged"
                            RowHeaderWidth="30"
+                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
-      <syncfusion:SfDataGrid.Resources>
-        <Style TargetType="syncfusion:GridRowHeaderCell">
+      <syncfusion:SfTreeGrid.Resources>
+        <local:ZeroConverter x:Key="ZeroConverter" />
+        <Style TargetType="syncfusion:TreeGridRowHeaderCell">
           <Setter Property="Template">
             <Setter.Value>
-              <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+              <ControlTemplate TargetType="syncfusion:TreeGridRowHeaderCell">
                 <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                   <Grid>
-                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                    <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
                   </Grid>
                 </Border>
               </ControlTemplate>
             </Setter.Value>
           </Setter>
         </Style>
-      </syncfusion:SfDataGrid.Resources>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell" Width="250"/>
-        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster" Width="150"/>
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" Width="120"/>
-        <syncfusion:GridNumericColumn MappingName="Avg" Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Av Hit" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Max" Width="75" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Max Hit" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Total" Width="100" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Total" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Hits" Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="# Hits" TextAlignment="Right"/>
-      </syncfusion:SfDataGrid.Columns>
-      <syncfusion:SfDataGrid.ContextMenu>
+      </syncfusion:SfTreeGrid.Resources>
+      <syncfusion:SfTreeGrid.Columns>
+        <syncfusion:TreeGridTextColumn Width="150" MappingName="Name" HeaderText="Name" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="Taunt" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Taunt" />
+        <syncfusion:TreeGridNumericColumn Width="75" MappingName="Failed" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderFailedTauntToolTip}" HeaderText="# Failed" />
+        <syncfusion:TreeGridTextColumn Width="90" MappingName="SuccessRate" DisplayBinding="{Binding Path=SuccessRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Success" />
+        <syncfusion:TreeGridNumericColumn Width="90" MappingName="Improved" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderImprovedTauntToolTip}" HeaderText="# Improved" />
+      </syncfusion:SfTreeGrid.Columns>
+      <syncfusion:SfTreeGrid.ContextMenu>
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
@@ -97,7 +94,7 @@
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
-      </syncfusion:SfDataGrid.ContextMenu>
-    </syncfusion:SfDataGrid>
+      </syncfusion:SfTreeGrid.ContextMenu>
+    </syncfusion:SfTreeGrid>      
   </Grid>
 </UserControl>
