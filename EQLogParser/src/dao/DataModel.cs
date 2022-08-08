@@ -158,6 +158,20 @@ namespace EQLogParser
     public bool IsCurrency { get; set; }
   }
 
+  internal class TauntRecord : IAction
+  {
+    public string Player { get; set; }
+    public string Npc { get; set; }
+    public bool Success { get; set; }
+    public bool IsImproved { get; set; }
+  }
+
+  internal class TauntEvent
+  {
+    public TauntRecord Record { get; set; }
+    public double BeginTime { get; set; }
+  }
+
   internal class DeathRecord : IAction
   {
     public string Killed { get; set; }
@@ -282,6 +296,7 @@ namespace EQLogParser
     public Dictionary<string, TimeSegment> InitialTankSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> InitialTankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
+    public List<ActionBlock> TauntBlocks { get; } = new List<ActionBlock>();
     public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new Dictionary<string, SpellDamageStats>();
     public Dictionary<string, SpellDamageStats> DDDamage { get; } = new Dictionary<string, SpellDamageStats>();
   }

@@ -80,8 +80,8 @@ namespace EQLogParser
 
       if (needUpdate)
       {
-        dataGrid.View?.RefreshFilter();
         dataGrid.SelectedItems.Clear();
+        dataGrid.View?.RefreshFilter();
       }
     }
 
