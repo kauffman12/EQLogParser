@@ -151,6 +151,7 @@ namespace EQLogParser
                   {
                     // var spell = string.Join(" ", split, 1, i - 4);
                     var npc = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('.');
+                    npc = TextFormatUtils.ToUpper(npc);
                     DataManager.Instance.UpdateNpcSpellReflectStats(npc);
                     handled = true;
                   }
@@ -159,6 +160,7 @@ namespace EQLogParser
                   if (resistedIndex > 0 && resistedIndex + 1 == i && split.Length > i + 1 && split[split.Length - 1].EndsWith("!", StringComparison.Ordinal))
                   {
                     string npc = string.Join(" ", split, 0, resistedIndex);
+                    npc = TextFormatUtils.ToUpper(npc);
                     string spell = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('!');
                     DataManager.Instance.AddResistRecord(new ResistRecord { Defender = npc, Spell = spell }, lineData.BeginTime);
                     handled = true;
@@ -168,7 +170,9 @@ namespace EQLogParser
                   if (awakenedIndex > -1 && awakenedIndex == (i - 1) && split.Length > 5 && split[i - 2] == "been" && split[i - 3] == "has")
                   {
                     string awakened = string.Join(" ", split, 0, i - 3);
+                    awakened = TextFormatUtils.ToUpper(awakened);
                     string breaker = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('.');
+                    breaker = TextFormatUtils.ToUpper(breaker);
                     DataManager.Instance.AddMiscRecord(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, lineData.BeginTime);
                     handled = true;
                   }
@@ -196,6 +200,7 @@ namespace EQLogParser
                     uint count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]);
                     string item = string.Join(" ", split, 4, i - 4);
                     string npc = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Replace("'s corpse", "");
+                    npc = TextFormatUtils.ToUpper(npc);
 
                     if (count > 0 && count != ushort.MaxValue)
                     {

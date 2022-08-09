@@ -32,7 +32,7 @@ namespace EQLogParser
 
     private static readonly List<string> ChestTypes = new List<string>
     {
-      " chest", " cache", " satchel", " treasure box"
+      " chest", " cache", " satchel", " treasure box", " lost treasure"
     };
 
     private static readonly Dictionary<string, SpellResist> SpellResistMap = new Dictionary<string, SpellResist>
@@ -615,7 +615,8 @@ namespace EQLogParser
             }
           }
 
-          var death = new DeathRecord() { Killed = string.Intern(slain), Killer = killer };
+          killer = TextFormatUtils.ToUpper(killer);
+          var death = new DeathRecord { Killed = string.Intern(slain), Killer = string.Intern(killer) };
           DataManager.Instance.AddDeathRecord(death, currentTime);
         }
       }
@@ -630,6 +631,7 @@ namespace EQLogParser
       {
         // Needed to replace 'You' and 'you', etc
         defender = PlayerManager.Instance.ReplacePlayer(defender, defender);
+        defender = TextFormatUtils.ToUpper(defender);
 
         if (string.IsNullOrEmpty(attacker))
         {
@@ -645,6 +647,7 @@ namespace EQLogParser
           attacker = PlayerManager.Instance.ReplacePlayer(attacker, attacker);
         }
 
+        attacker = TextFormatUtils.ToUpper(attacker);
         if (resist != SpellResist.UNDEFINED && ConfigUtil.PlayerName == attacker && defender != attacker)
         {
           DataManager.Instance.UpdateNpcSpellResistStats(defender, resist);
@@ -666,8 +669,8 @@ namespace EQLogParser
 
         DamageRecord record = new DamageRecord
         {
-          Attacker = string.Intern(FixName(attacker)),
-          Defender = string.Intern(FixName(defender)),
+          Attacker = string.Intern(attacker),
+          Defender = string.Intern(defender),
           Type = string.Intern(type),
           SubType = string.Intern(subType),
           Total = damage,
@@ -749,12 +752,6 @@ namespace EQLogParser
         len = end;
       }
       return found;
-    }
-
-    private static string FixName(string name)
-    {
-      // changed to always be upper so merc/npc names match for spell counts and other things easier
-      return TextFormatUtils.ToUpper(name);
     }
 
     private static string GetTypeFromSpell(string name, string type)

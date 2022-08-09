@@ -295,7 +295,7 @@ namespace EQLogParser
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     internal bool IsOldSpell(string name) => OldSpellNamesDB.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
-    internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name) || LifetimeFights.ContainsKey(TextFormatUtils.FlipCase(name));
+    internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name);
 
     internal string AbbreviateSpellName(string spell)
     {
@@ -402,10 +402,7 @@ namespace EQLogParser
       Fight result = null;
       if (!string.IsNullOrEmpty(name))
       {
-        if (!ActiveFights.TryGetValue(name, out result))
-        {
-          ActiveFights.TryGetValue(TextFormatUtils.FlipCase(name), out result);
-        }
+        ActiveFights.TryGetValue(name, out result);
       }
       return result;
     }
@@ -591,14 +588,12 @@ namespace EQLogParser
 
     internal void UpdateNpcSpellReflectStats(string npc)
     {
-      string lower = npc.ToLower(CultureInfo.CurrentCulture);
-
       lock (NpcTotalSpellCounts)
       {
-        if (!NpcTotalSpellCounts.TryGetValue(lower, out TotalCount value))
+        if (!NpcTotalSpellCounts.TryGetValue(npc, out TotalCount value))
         {
           value = new TotalCount { Reflected = 1 };
-          NpcTotalSpellCounts[lower] = value;
+          NpcTotalSpellCounts[npc] = value;
         }
         else
         {
@@ -609,14 +604,13 @@ namespace EQLogParser
 
     internal void UpdateNpcSpellResistStats(string npc, SpellResist resist, bool resisted = false)
     {
-      string lower = npc.ToLower(CultureInfo.CurrentCulture);
-
+      // NPC is always upper case after it is parsed
       lock (NpcResistStats)
       {
-        if (!NpcResistStats.TryGetValue(lower, out Dictionary<SpellResist, ResistCount> stats))
+        if (!NpcResistStats.TryGetValue(npc, out Dictionary<SpellResist, ResistCount> stats))
         {
           stats = new Dictionary<SpellResist, ResistCount>();
-          NpcResistStats[lower] = stats;
+          NpcResistStats[npc] = stats;
         }
 
         if (!stats.TryGetValue(resist, out ResistCount count))
@@ -638,10 +632,10 @@ namespace EQLogParser
 
       lock (NpcTotalSpellCounts)
       {
-        if (!NpcTotalSpellCounts.TryGetValue(lower, out TotalCount value))
+        if (!NpcTotalSpellCounts.TryGetValue(npc, out TotalCount value))
         {
           value = new TotalCount { Landed = 1 };
-          NpcTotalSpellCounts[lower] = value;
+          NpcTotalSpellCounts[npc] = value;
         }
         else
         {

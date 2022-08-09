@@ -96,7 +96,7 @@ namespace EQLogParser
       {
         if (!npcStatsRows.TryGetValue(kv.Key, out NpcStatsRow updateRow))
         {
-          updateRow = new NpcStatsRow { Name = TextFormatUtils.CapitalizeNpc(kv.Key) };
+          updateRow = new NpcStatsRow { Name = kv.Key };
         }
 
         var rate = GetRate(kv.Value.Landed, kv.Value.Reflected);
