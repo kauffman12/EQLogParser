@@ -30,7 +30,6 @@ namespace EQLogParser
         {
           string player = null;
           string spellName = null;
-          bool isYou = false;
           bool isSpell = false;
           bool isInterrupted = false;
 
@@ -50,8 +49,6 @@ namespace EQLogParser
           if (sList[0] == "You")
           {
             player = ConfigUtil.PlayerName;
-            isYou = true;
-
             if (sList[1] == "activate" && sList.Count > 2)
             {
               spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 2);

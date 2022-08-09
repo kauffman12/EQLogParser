@@ -55,7 +55,7 @@ namespace EQLogParser
       fightSearchBox.FontStyle = FontStyles.Italic;
       fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
 
-      menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = 
+      menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled =
         menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = false;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 700) };

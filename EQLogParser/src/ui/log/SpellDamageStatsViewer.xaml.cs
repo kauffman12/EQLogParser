@@ -169,9 +169,9 @@ namespace EQLogParser
           bool pass = false;
           if (item is IDictionary<string, object> dict)
           {
-            pass = !CurrentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) || 
+            pass = !CurrentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) ||
               PlayerManager.Instance.IsMerc(dict["Caster"] as string);
-            pass = pass && (CurrentType == null || CurrentType.Equals(dict["Type"])) && (CurrentSpell == null || 
+            pass = pass && (CurrentType == null || CurrentType.Equals(dict["Type"])) && (CurrentSpell == null ||
               CurrentSpell.Equals(dict["Spell"])) && (CurrentPlayer == null || CurrentPlayer.Equals(dict["Caster"]));
           }
           return pass;

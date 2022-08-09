@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -203,7 +202,7 @@ namespace EQLogParser
                       uint critHits = subStats.CritHits;
                       StatsUtil.UpdateStats(subStats, record);
 
-                        // dont count misses/dodges or where no damage was done
+                      // dont count misses/dodges or where no damage was done
                       if (record.Total > 0)
                       {
                         Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;

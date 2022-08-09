@@ -425,7 +425,7 @@ namespace EQLogParser
                       uint critHits = subStats.CritHits;
                       StatsUtil.UpdateStats(subStats, record, isAttackerPet);
 
-                        // dont count misses/dodges or where no damage was done
+                      // dont count misses/dodges or where no damage was done
                       if (record.Total > 0)
                       {
                         Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
