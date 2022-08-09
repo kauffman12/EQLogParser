@@ -9,14 +9,10 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly char[] OldSpellChars = new char[] { '<', '>' };
 
-    private static readonly Dictionary<string, string> SpecialLandsOnCodes = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> SpecialCastCodes = new Dictionary<string, string>()
     {
-      { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }, { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }
-    };
-
-    private static readonly Dictionary<string, string> SpecialYouCodes = new Dictionary<string, string>()
-    {
-      { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
+      { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" },
+      { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }, { "Glyph of Arcane Secrets", "S" }
     };
 
     private static readonly Dictionary<string, bool> PetSpells = new Dictionary<string, bool>()
@@ -127,10 +123,10 @@ namespace EQLogParser
 
             if (!isInterrupted)
             {
-              if (isSpell && isYou)
+              if (isSpell)
               {
                 // For some reason Glyphs don't show up for current player
-                CheckForSpecial(SpecialYouCodes, spellName, player, currentTime);
+                CheckForSpecial(SpecialCastCodes, spellName, player, currentTime);
               }
 
               var spellData = DataManager.Instance.GetSpellByName(spellName);
@@ -203,7 +199,6 @@ namespace EQLogParser
         if (searchResult.SpellData.Count == 1)
         {
           newSpell.SpellData = searchResult.SpellData.First();
-          CheckForSpecial(SpecialLandsOnCodes, newSpell.SpellData.Name, newSpell.Receiver, beginTime);
         }
         else
         {
