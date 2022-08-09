@@ -518,8 +518,12 @@ namespace EQLogParser
                 }
                 else if (failedIndex == 2 && split.Length > 6 && split[1] == "have" && split[3] == "to")
                 {
-                  var taunt = new TauntRecord { Player = ConfigUtil.PlayerName, Success = false, 
-                    Npc = TextFormatUtils.ToUpper(TextFormatUtils.ParseSpellOrNpc(split, 5)) };
+                  var taunt = new TauntRecord
+                  {
+                    Player = ConfigUtil.PlayerName,
+                    Success = false,
+                    Npc = TextFormatUtils.ToUpper(TextFormatUtils.ParseSpellOrNpc(split, 5))
+                  };
                   EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
                 }
               }

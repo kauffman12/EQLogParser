@@ -598,7 +598,7 @@ namespace EQLogParser
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions {DamageType = (control.Content as TankingSummary).DamageType };
+          var tankingOptions = new GenerateStatsOptions { DamageType = (control.Content as TankingSummary).DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
