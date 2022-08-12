@@ -90,6 +90,15 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = totals.Values;
+
+      if (totals.Values.Count > 0)
+      {
+        titleLabel.Content = "Taunt Usage By Player";
+      }
+      else
+      {
+        titleLabel.Content = "No Taunt Data Found";
+      }
     }
 
     private void UpdateRow(TauntRecord record, dynamic row)

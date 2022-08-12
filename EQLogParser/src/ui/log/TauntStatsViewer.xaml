@@ -14,7 +14,7 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" Content="Taunt Usage By Player"/>
+      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="0,0,8,2" x:Name="fightOption" SelectedIndex="0" SelectionChanged="OptionsChanged">
