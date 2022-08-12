@@ -21,7 +21,6 @@ namespace EQLogParser
 
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LogLoadingComplete;
       (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
-
       dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Taunt", SortDirection = ListSortDirection.Descending });
 
       // default these columns to descending

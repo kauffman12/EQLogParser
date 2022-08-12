@@ -117,7 +117,7 @@ namespace EQLogParser
     public string Defender { get; set; }
   }
 
-  internal class RolledRecord : IAction
+  internal class RandomRecord : IAction
   {
     public string Player { get; set; }
     public int Rolled { get; set; }

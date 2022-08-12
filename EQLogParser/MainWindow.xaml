@@ -146,6 +146,11 @@
                 <fa:ImageAwesome x:Name="playerLootIcon" Tag="lootWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
+            <MenuItem x:Name="randomsMenuItem" Header="_Random Rolls" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="randomsIcon" Tag="randomsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>            
             <MenuItem x:Name="eventMenuItem" Header="Special _Events" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="eventIcon" Tag="specialEventsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />

@@ -467,6 +467,11 @@ namespace EQLogParser
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         Helpers.OpenWindow(dockSite, opened, out _, typeof(EventViewer), eventIcon.Tag as string, "Special Events");
       }
+      else if (e.Source == randomsMenuItem)
+      {
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(RandomViewer), randomsIcon.Tag as string, "Random Rolls");
+      }
       else if (e.Source == playerLootMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
