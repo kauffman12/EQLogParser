@@ -68,6 +68,7 @@ namespace EQLogParser
     internal event EventHandler<Fight> EventsNewFight;
     internal event EventHandler<Fight> EventsNewNonTankingFight;
     internal event EventHandler<Fight> EventsNewOverlayFight;
+    internal event EventHandler<RandomRecord> EventsNewRandomRecord;
     internal event EventHandler<Fight> EventsUpdateFight;
     internal event EventHandler<bool> EventsClearedActiveData;
 
@@ -87,7 +88,7 @@ namespace EQLogParser
     private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllResistBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllRolledBlocks = new List<ActionBlock>();
+    private readonly List<ActionBlock> AllRandomBlocks = new List<ActionBlock>();
     private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
     private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
     private readonly List<LootRecord> AssignedLoot = new List<LootRecord>();
@@ -279,9 +280,9 @@ namespace EQLogParser
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
-    internal void AddRolledRecord(RolledRecord record, double beginTime) => Helpers.AddAction(AllRolledBlocks, record, beginTime);
     internal List<Fight> GetOverlayFights() => OverlayFights.Values.ToList();
     internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
+    internal List<ActionBlock> GetAllRandoms() => AllRandomBlocks.ToList();
     internal string GetClassFromTitle(string title) => TitleToClass.ContainsKey(title) ? TitleToClass[title] : null;
     internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
     internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
@@ -355,6 +356,12 @@ namespace EQLogParser
       {
         AssignedLoot.Add(record);
       }
+    }
+
+    internal void AddRandomRecord(RandomRecord record, double beginTime)
+    {
+      Helpers.AddAction(AllRandomBlocks, record, beginTime);
+      EventsNewRandomRecord?.Invoke(this, record);
     }
 
     internal void AddResistRecord(ResistRecord record, double beginTime)
@@ -845,6 +852,7 @@ namespace EQLogParser
         AllResistBlocks.Clear();
         AllHealBlocks.Clear();
         AllLootBlocks.Clear();
+        AllRandomBlocks.Clear();
         AllSpecialActions.Clear();
         SpellAbbrvCache.Clear();
         NpcTotalSpellCounts.Clear();

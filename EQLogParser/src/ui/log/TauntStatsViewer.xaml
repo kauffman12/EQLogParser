@@ -8,7 +8,7 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"             
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+  <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
@@ -36,25 +36,11 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="26"
                            IsReadOnly="True"
-                           RowHeaderWidth="30"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            SelectionMode="Extended"
-                           ShowRowHeader="True">
+                           ShowRowHeader="False">
       <syncfusion:SfTreeGrid.Resources>
         <local:ZeroConverter x:Key="ZeroConverter" />
-        <Style TargetType="syncfusion:TreeGridRowHeaderCell">
-          <Setter Property="Template">
-            <Setter.Value>
-              <ControlTemplate TargetType="syncfusion:TreeGridRowHeaderCell">
-                <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                  <Grid>
-                    <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
-                  </Grid>
-                </Border>
-              </ControlTemplate>
-            </Setter.Value>
-          </Setter>
-        </Style>
       </syncfusion:SfTreeGrid.Resources>
       <syncfusion:SfTreeGrid.Columns>
         <syncfusion:TreeGridTextColumn Width="150" MappingName="Name" HeaderText="Name" />
@@ -95,6 +81,6 @@
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfTreeGrid.ContextMenu>
-    </syncfusion:SfTreeGrid>      
+    </syncfusion:SfTreeGrid>
   </Grid>
 </UserControl>

@@ -105,7 +105,7 @@ namespace EQLogParser
                     string rolled = split[24].Substring(0, split[24].Length - 1);
                     if (int.TryParse(split[14], out int fromNumber) && int.TryParse(to, out int toNumber) && int.TryParse(rolled, out int rolledNumber))
                     {
-                      DataManager.Instance.AddRolledRecord(new RolledRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber },
+                      DataManager.Instance.AddRandomRecord(new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber },
                         lineData.BeginTime);
                     }
                   }
