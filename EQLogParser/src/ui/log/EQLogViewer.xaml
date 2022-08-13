@@ -5,93 +5,68 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-             xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
-    <Grid.Resources>
-      <local:DateTimeConverter x:Key="DateTimeConverter" />
-    </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30" />
       <RowDefinition Height="300*" />
       <RowDefinition Height="20" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
-    </StackPanel>
-    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="logSearch" Margin="4,0,0,0" Height="24" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown" BorderBrush="#FF707070"/>
-      <ComboBox x:Name="logSearchModifier" Margin="0,0,0,0" Height="24" SelectedIndex="0" Width="76" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE">
+      <TextBox x:Name="logSearch" Margin="8,0,0,2" ToolTip="Minimum of 2 Characters" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <ComboBox x:Name="logSearchModifier" Margin="0,0,0,2" SelectedIndex="0" Width="76" VerticalContentAlignment="Center">
         <ComboBoxItem>And</ComboBoxItem>
         <ComboBoxItem>Or</ComboBoxItem>
         <ComboBoxItem>Excluding</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logSearch2" Margin="0,0,0,0" Height="24" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown" BorderBrush="#FF707070"/>
-      <ComboBox x:Name="logSearchTime" Margin="0,0,0,0" Height="24" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" />
-      <Button x:Name="searchButton" Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="SearchClick">
-        <fa:ImageAwesome x:Name="searchIcon" Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Search" ToolTip="Search Log" Foreground="#FF4F9FE2"/>
-      </Button>
-      <Label x:Name="progress" Visibility="Hidden" Height="24" FontStyle="Italic" />
+      <TextBox x:Name="logSearch2" Margin="0,0,0,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <ComboBox x:Name="logSearchTime" Margin="0,0,0,2" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" />
+      <fa:ImageAwesome x:Name="searchIcon" Margin="6,4,0,2" Height="16" Icon="Solid_Search" ToolTip="Search Log" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged" />
+      <Label x:Name="progress" Visibility="Hidden" FontStyle="Italic" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox x:Name="logFilterModifier" Margin="4,0,0,0" Height="24" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange" Background="#101010" Foreground="#EEEEEE">
+      <ComboBox x:Name="logFilterModifier" Margin="0,0,0,2" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange">
         <ComboBoxItem>Includes</ComboBoxItem>
         <ComboBoxItem>Excludes</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" BorderBrush="#FF707070"/>
+      <TextBox x:Name="logFilter" Margin="0,0,8,2" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
     </StackPanel>
-    <syncfusion:TabControlExt x:Name="tabControl" TabClosed="tabControl_TabClosed" PreviewSelectedItemChangedEvent="tabControl_PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
-      <syncfusion:TabItemExt x:Name="resultsTab" Header="Search Results" CloseButtonState="Hidden" CanClose="False">
-        <syncfusion:EditControl x:Name="logBox" SelectedTextChanged="logBox_SelectedTextChanged" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,0" Foreground="White" Background="#FF202020" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
-      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" SelectionBackground="#134369" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+    <syncfusion:TabControlExt x:Name="tabControl" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
+      <syncfusion:TabItemExt x:Name="resultsTab" Background="{DynamicResource ContentBackgroundAlt2}" Header="Search Results" FontSize="14" CloseButtonState="Hidden" CanClose="False">
+        <syncfusion:EditControl x:Name="logBox" SelectedTextChanged="logBox_SelectedTextChanged" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
+      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
             <ContextMenu>
-              <MenuItem IsEnabled="True" Header="Copy" Command="Copy">
-                <MenuItem.Icon>
-                  <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
-                </MenuItem.Icon>
-              </MenuItem>
+              <MenuItem Command="Copy" />
               <Separator />
-              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Click="SelectedContext" ></MenuItem>
+              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Click="SelectedContext" />
               <Separator />
-              <MenuItem IsEnabled="True" Header="Select All" Command="SelectAll">
-                <MenuItem.Icon>
-                  <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
-                </MenuItem.Icon>
-              </MenuItem>
+              <MenuItem Command="SelectAll" />
             </ContextMenu>
           </syncfusion:EditControl.ContextMenu>
         </syncfusion:EditControl>
       </syncfusion:TabItemExt>
-      <syncfusion:TabItemExt x:Name="contextTab" Header="Context" CanClose="True" Visibility="Hidden">
-        <syncfusion:EditControl x:Name="contextBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,0" Foreground="White" Background="#FF202020" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
-      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" SelectionBackground="#134369" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <syncfusion:TabItemExt x:Name="contextTab" Header="Context" CanClose="True" FontSize="14" Visibility="Hidden">
+        <syncfusion:EditControl x:Name="contextBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
+      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
             <ContextMenu>
-              <MenuItem IsEnabled="True" Header="Copy" Command="Copy">
-                <MenuItem.Icon>
-                  <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
-                </MenuItem.Icon>
-              </MenuItem>
+              <MenuItem Command="Copy" />
               <Separator />
-              <MenuItem IsEnabled="True" Header="Select All" Command="SelectAll">
-                <MenuItem.Icon>
-                  <fa:ImageAwesome Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
-                </MenuItem.Icon>
-              </MenuItem>
+              <MenuItem Command="SelectAll" />
             </ContextMenu>
-          </syncfusion:EditControl.ContextMenu>
+          </syncfusion:EditControl.ContextMenu>        
         </syncfusion:EditControl>
       </syncfusion:TabItemExt>      
     </syncfusion:TabControlExt>
-    <StatusBar Grid.Row="2" FontSize="11" Background="#151515">
+    <StatusBar Grid.Row="2" FontSize="11">
       <TextBlock x:Name="statusCount">0 Lines</TextBlock>
     </StatusBar>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"  Margin="0,0,0,0">
-      <ComboBox x:Name="fontFamily" Height="20" FontSize="11" Width="120" SelectionChanged="FontFamily_Changed" />
-      <ComboBox x:Name="fontSize" Height="20" FontSize="11" SelectionChanged="FontSize_Changed" />
-      <syncfusion:ColorPicker x:Name="colorPicker" Width="35" Height="12" BorderThickness="0" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
+      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="12" Width="120" SelectionChanged="FontFamily_Changed" />
+      <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="12" SelectionChanged="FontSize_Changed" />
+      <syncfusion:ColorPicker x:Name="colorPicker" Width="34" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
         HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColor_Changed" />
     </StackPanel>    
   </Grid>

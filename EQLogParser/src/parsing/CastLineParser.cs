@@ -9,14 +9,10 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly char[] OldSpellChars = new char[] { '<', '>' };
 
-    private static readonly Dictionary<string, string> SpecialLandsOnCodes = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> SpecialCastCodes = new Dictionary<string, string>()
     {
-      { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }, { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }
-    };
-
-    private static readonly Dictionary<string, string> SpecialYouCodes = new Dictionary<string, string>()
-    {
-      { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" }
+      { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" },
+      { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }, { "Glyph of Arcane Secrets", "S" }
     };
 
     private static readonly Dictionary<string, bool> PetSpells = new Dictionary<string, bool>()
@@ -34,7 +30,6 @@ namespace EQLogParser
         {
           string player = null;
           string spellName = null;
-          bool isYou = false;
           bool isSpell = false;
           bool isInterrupted = false;
 
@@ -54,43 +49,40 @@ namespace EQLogParser
           if (sList[0] == "You")
           {
             player = ConfigUtil.PlayerName;
-            isYou = true;
-
-            if (sList[1] == "activate")
+            if (sList[1] == "activate" && sList.Count > 2)
             {
-              spellName = ParseNewSpellName(sList, 2);
+              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 2);
             }
-
-            if (sList[1] == "begin")
+            else if (sList[1] == "begin" && sList.Count > 3)
             {
               if (sList[2] == "casting")
               {
-                spellName = ParseNewSpellName(sList, 3);
+                spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 3);
                 isSpell = true;
               }
               else if (sList[2] == "singing")
               {
-                spellName = ParseNewSpellName(sList, 3);
+                spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 3);
               }
             }
           }
           else if (sList[1] == "activates")
           {
             player = sList[0];
-            spellName = ParseNewSpellName(sList, 2);
+            spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 2);
           }
-          else if (sList.FindIndex(1, sList.Count - 1, s => s == "begins") is int bIndex && bIndex > -1)
+          else if (sList.Count > 3 && sList.FindIndex(1, sList.Count - 1, s => s == "begins") is int bIndex && bIndex > -1 && (bIndex + 2) < sList.Count)
           {
             if (sList[bIndex + 1] == "casting")
             {
               player = string.Join(" ", sList.ToArray(), 0, bIndex);
-              spellName = ParseNewSpellName(sList, bIndex + 2);
+              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), bIndex + 2);
               isSpell = true;
             }
             else if (sList[bIndex + 1] == "singing")
             {
               player = string.Join(" ", sList.ToArray(), 0, bIndex);
-              spellName = ParseNewSpellName(sList, bIndex + 2);
+              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), bIndex + 2);
             }
             else if (sList.Count > 5 && sList[2] == "to" && sList[4] == "a")
             {
@@ -128,10 +120,10 @@ namespace EQLogParser
 
             if (!isInterrupted)
             {
-              if (isSpell && isYou)
+              if (isSpell)
               {
                 // For some reason Glyphs don't show up for current player
-                CheckForSpecial(SpecialYouCodes, spellName, player, currentTime);
+                CheckForSpecial(SpecialCastCodes, spellName, player, currentTime);
               }
 
               var spellData = DataManager.Instance.GetSpellByName(spellName);
@@ -186,7 +178,7 @@ namespace EQLogParser
 
         searchResult = DataManager.Instance.GetLandsOnOther(sList, out player);
         if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player) && searchResult.SpellData[0].Target == (int)SpellTarget.PET
-          && PlayerManager.Instance.IsPossiblePlayerName(player))
+          && PlayerManager.IsPossiblePlayerName(player))
         {
           foreach (var spell in PetSpells.Keys)
           {
@@ -204,7 +196,6 @@ namespace EQLogParser
         if (searchResult.SpellData.Count == 1)
         {
           newSpell.SpellData = searchResult.SpellData.First();
-          CheckForSpecial(SpecialLandsOnCodes, newSpell.SpellData.Name, newSpell.Receiver, beginTime);
         }
         else
         {
@@ -236,11 +227,6 @@ namespace EQLogParser
       {
         DataManager.Instance.AddSpecial(new SpecialSpell() { Code = codes[key], Player = player, BeginTime = currentTime });
       }
-    }
-
-    private static string ParseNewSpellName(List<string> split, int spellIndex)
-    {
-      return string.Join(" ", split.ToArray(), spellIndex, split.Count - spellIndex).Trim('.');
     }
 
     private static string ParseOldSpellName(List<string> split, int spellIndex)

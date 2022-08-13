@@ -1,0 +1,1130 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    
+                    xmlns:resources="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:PrintPreview_printing="clr-namespace:Syncfusion.Windows.Shared.Printing;assembly=Syncfusion.Shared.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/TextBox.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/TextBlock.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Slider.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ScrollViewer.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphRepeatButton.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ComboBox.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/ChromelessWindow/ChromelessWindow.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/PrimaryButton.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Button.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/UpDown/UpDown.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <resources:BooleanToVisibilityConverterEx x:Key="BooleanToVisibilityConverter" />
+    <PrintPreview_printing:PageSizeTextConverter x:Key="PageSizeTextConverter"/>
+    <PrintPreview_printing:PrintQueueNameToVisibilityConverter x:Key="PrintQueueNameToVisibilityConverter"/>
+
+    <Style x:Key="PrintWindowStyle" TargetType="{x:Type resources:ChromelessWindow}" BasedOn="{StaticResource SyncfusionChromelessWindowStyle}">
+        <Setter Property="Height" 
+                Value="650" />
+        <Setter Property="Width"
+                Value="840" />
+        <Setter Property="MinHeight"
+                Value="400" />
+        <Setter Property="MinWidth"
+                Value="500" />
+        <Setter Property="Title" 
+                Value="{resources:SharedLocalizationResourceExtension ResourceName=PrintPreview}" />
+    </Style>
+
+    <Style x:Key="SyncfusionPrintPageControlStyle" TargetType="{x:Type PrintPreview_printing:PrintPageControl}">
+        <Setter Property="Background" 
+                Value="Transparent" />
+        <Setter Property="BorderBrush" 
+                Value="Transparent" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource MaterialLightCustom.BorderThickness1}" />
+        <Setter Property="Focusable" 
+                Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type PrintPreview_printing:PrintPageControl}">
+                    <Viewbox x:Name="PART_Viewbox">
+                        <Border Width="{Binding PageWidth}"
+                                Height="{Binding PageHeight}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True">
+                            <Border Margin="{Binding PageMargin}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <ContentControl x:Name="Part_PageHeader" 
+                                                    Height="{Binding PageHeaderHeight}"
+                                                    ContentTemplate="{Binding PageHeaderTemplate}" 
+                                                    Focusable="False"/>
+                                    <Border x:Name="Part_ScalingBorder"
+                                            Grid.Row="1">
+                                        <ContentPresenter x:Name="Part_Panel"
+                                                          Focusable="False" />
+                                    </Border>
+                                    <ContentControl x:Name="Part_PageFooter"
+                                                    Grid.Row="2"
+                                                    Focusable="False"
+                                                    Height="{Binding PageFooterHeight}"
+                                                    ContentTemplate="{Binding PageFooterTemplate}" />
+                                </Grid>
+                            </Border>
+                        </Border>
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPrintPageControlStyle}" TargetType="{x:Type PrintPreview_printing:PrintPageControl}" />    
+    
+    <Style x:Key="Print_ComboBoxStyle"  TargetType="{x:Type ComboBox}" BasedOn="{StaticResource WPFComboBoxStyle}">
+        <Setter Property="Popup.Placement"
+                Value="Custom"/>
+        <Setter Property="Popup.CustomPopupPlacementCallback"
+                Value="{x:Static PrintPreview_printing:DropDownCustomPopupPlacement.Callback}"/>
+        <Setter Property="Height" 
+                Value="43"/>
+        <Setter Property="Width"
+                Value="220"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+                Value="Auto" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+                Value="Auto" />
+        <Setter Property="Padding"
+                Value="3,3,10,3" />
+    </Style>
+
+    <DataTemplate x:Key="OrientationTemplate">
+        <Border>
+            <Grid Height="43">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="8*" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="24" 
+                      Height="24"
+                      Margin="5,3,5,5">
+                    <Path Data="{Binding Path=ImagePath}"                   
+                          RenderTransformOrigin="0.5,0.5"        
+                          Opacity=".54"
+                          Fill="{StaticResource ContentForeground}"
+                          Stretch="Uniform" />
+                </Grid>
+                <TextBlock Grid.Column="1" 
+                           Margin="5,0,0,4" 
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           Text="{Binding Path=OrientationName}"
+                           Style="{StaticResource WPFTextBlockStyle}"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="PageRangeSelectionTemplate">
+        <Border>
+            <Grid Height="43">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="8*" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="24" 
+                      Height="24"
+                      Margin="5,3,5,5">
+                    <Path Data="{Binding Path=ImagePath}"                 
+                          RenderTransformOrigin="0.5,0.5"
+                          Opacity=".54"                          
+                          Fill="{StaticResource ContentForeground}"
+                          Stretch="Uniform" />
+                </Grid>
+                <Grid Grid.Column="1"
+                      Margin="5,4,0,6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition  Height="17"/>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" 
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Center" 
+                               Text="{Binding Path=PageRangeSelectionName}"
+                               Style="{StaticResource WPFTextBlockStyle}"/>
+                    <Grid Grid.Row="1" >
+                        <StackPanel Orientation="Horizontal"  >
+                            <TextBlock  HorizontalAlignment="Left" 
+                                        VerticalAlignment="Bottom">
+                                <TextBlock.Style>
+                                    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource WPFTextBlockStyle}">
+                                        <Setter Property="Text" 
+                                                Value="{resources:SharedLocalizationResourceExtension ResourceName=PrintPreview_AllPages_ToolTip}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Path=PageRangeSelectionName}" Value="{resources:SharedLocalizationResourceExtension ResourceName=PrintPreview_UserPages}" >
+                                                <Setter Property="Text" 
+                                                        Value="{resources:SharedLocalizationResourceExtension ResourceName=PrintPreview_UserPages_ToolTip}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="CollatedTemplate">
+        <Border>
+            <Grid Height="43">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="8*" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="24"
+                      Height="24"
+                      Margin="5,3,5,5">
+                    <Path Data="{Binding Path=ImagePath}"                            
+                          Fill="{StaticResource ContentForeground}"
+                          Opacity=".54"
+                          RenderTransformOrigin="0.5,0.5"
+                          Stretch="Uniform" />
+                </Grid>
+                <Grid Grid.Column="1"
+                      Margin="5,4,0,6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition  Height="17"/>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0"  
+                               HorizontalAlignment="Left" 
+                               VerticalAlignment="Center"
+                               Text="{Binding Path=CollationName}"
+                               Style="{StaticResource WPFTextBlockStyle}"/>
+                    <Grid Grid.Row="1">
+                        <StackPanel Orientation="Horizontal" >
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Bottom">
+                                <TextBlock.Style>
+                                    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource WPFTextBlockStyle}">
+                                        <Setter Property="Text"
+                                                Value="1,2,3   1,2,3   1,2,3"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Path=CollationName}" Value="Uncollated" >
+                                                <Setter Property="Text"
+                                                        Value="1,1,1   2,2,2   3,3,3"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ScaleOptionTemplate">
+        <Border Background="Transparent">
+            <Grid Height="43">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="24"
+                      Height="24"
+                      Margin="5,3,5,5">
+                    <Path Data="{Binding Path=ImagePath}"                            
+                          Fill="{StaticResource ContentForeground}"
+                          Opacity=".54"
+                          Stretch="Uniform" >
+                    </Path>
+                </Grid>
+                <TextBlock Grid.Column="1"
+                           Margin="5,0,0,4"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           Text="{Binding Path=ScaleName}"
+                           Style="{StaticResource WPFTextBlockStyle}"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="MarginTemplate">
+        <Border Background="Transparent">
+            <Grid Height="49">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="24" 
+                      Height="24" 
+                      Margin="5,3,5,15">
+                    <Path Data="{Binding Path=ImagePath}"                            
+                          Fill="{StaticResource ContentForeground}"
+                          Opacity=".54"
+                          Stretch="Uniform" />
+                </Grid>
+                <Grid Grid.Column="1" 
+                      Margin="5,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition  Height="18"/>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock Margin="3,0,0,0"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Top"
+                               Text="{Binding Path=MarginName}" 
+                               Style="{StaticResource WPFTextBlockStyle}"/>
+                    <Grid Grid.Row="1" >
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="3,2,1,1">
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Top"
+                                       Text="{resources:SharedLocalizationResourceExtension ResourceName=Left}" 
+                                       Style="{StaticResource WPFTextBlockStyle}"/>
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Top"
+                                       Text="{Binding Path=Thickness.Left, StringFormat=: {0} cm,Mode=TwoWay}"  
+                                       Style="{StaticResource WPFTextBlockStyle}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1"
+                                    Margin="3,2,1,1"
+                                    Orientation="Horizontal">
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Top"
+                                       Text="{resources:SharedLocalizationResourceExtension ResourceName=Right}"
+                                       Style="{StaticResource WPFTextBlockStyle}"/>
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Top"
+                                       Text="{Binding Path=Thickness.Right, StringFormat=: {0} cm,Mode=TwoWay}" 
+                                       Style="{StaticResource WPFTextBlockStyle}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" 
+                                    Orientation="Horizontal"
+                                    Margin="3,2,1,0">
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Top"
+                                       Text="{resources:SharedLocalizationResourceExtension ResourceName=Top}" 
+                                       Style="{StaticResource WPFTextBlockStyle}"/>
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Top"
+                                       Text="{Binding Path=Thickness.Top, StringFormat=: {0} cm,Mode=TwoWay}" 
+                                       Style="{StaticResource WPFTextBlockStyle}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="1"
+                                    Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Margin="3,2,1,0">
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Top"
+                                       Text="{resources:SharedLocalizationResourceExtension ResourceName=Bottom}"
+                                       Style="{StaticResource WPFTextBlockStyle}"/>
+                            <TextBlock HorizontalAlignment="Left" 
+                                       VerticalAlignment="Top"
+                                       Text="{Binding Path=Thickness.Bottom, StringFormat=: {0} cm,Mode=TwoWay}"
+                                       Style="{StaticResource WPFTextBlockStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="PageSizeTemplate">
+        <Border Background="Transparent">
+            <Grid Height="43">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="8*" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="24"
+                      Height="24"
+                      Margin="5,3,5,5"
+                      VerticalAlignment="Top">
+                    <Path Data="{Binding Path=ImagePath.Data}"                           
+                          Width="{Binding Path=ImagePath.Width}"
+                          Height="{Binding Path=ImagePath.Height}"                            
+                          Fill="{StaticResource ContentForeground}"
+                          Opacity=".54"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Center"
+                          Stretch="Fill" />
+                </Grid>
+                <Grid Grid.Column="1" Margin="5,0,0,4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock HorizontalAlignment="Left"
+                               VerticalAlignment="Center"
+                               Text="{Binding Path=PageSizeName}"
+                               Style="{StaticResource WPFTextBlockStyle}"/>
+                    <TextBlock Grid.Row="1"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource WPFTextBlockStyle}">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource PageSizeTextConverter}">
+                                <MultiBinding.Bindings>
+                                    <Binding Path="Size" />
+                                    <Binding Path="PageSizeUnit"/>
+                                </MultiBinding.Bindings>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="PrintersListItemTemplate">
+        <Border x:Name="Border">
+            <Grid Height="43">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="35" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid x:Name="Printer_Grid"                      
+                      Margin="3,3,2,3"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Center">
+                    <Grid x:Name="Printer"
+                          Visibility="{Binding PrintQueue.Name,Converter={StaticResource PrintQueueNameToVisibilityConverter},ConverterParameter=Printer}" 
+                          HorizontalAlignment="Left" 
+                          VerticalAlignment="Top"
+                          Height="24"  
+                          Width="24">
+                        <Path Data="M4,17 L14,17 14,24 4,24 z M17,15 L19,15 19,17 17,17 z M0,4 L1,4 1,12 17,12 17,4 18,4 18,13 0,13 z M4,0 L14,0 14,7 4,7 z"
+                              Margin="3,1,2,1"
+                              Fill="White" 
+                              Stretch="Fill"/>
+                        <Path Data="M5.0000001,17 L11,17 11,18 5.0000001,18 z M5.0000001,15 L11,15 11,16 5.0000001,16 z M0,0 L2.0000001,0 2.0000001,4 14,4 14,0 16,0 16,8 0,8 z" 
+                              Margin="4,5,4,3"
+                              Fill="#FF4D82B9"
+                              Stretch="Fill" />
+                        <Path Data="M6.9999999,18 L6.9999999,20 6.9999999,25 17,25 17,20 17,18 z M20,16 L20,18 22,18 22,16 z M2,6 L3.0000002,6 3.0000002,14 21,14 21,6 22,6 C23.104,6 24,6.8959999 24,8 L24,18 C24,19.104 23.104,20 22,20 L18,20 18,26 6,26 6,20 2,20 C0.89599991,20 0,19.104 0,18 L0,8 C0,6.8959999 0.89599991,6 2,6 z M6.9999999,1 L6.9999999,8 17,8 17,1 z M6,0 L18,0 18,9 6,9 z" 
+                              Fill="#FF848484" 
+                              Stretch="Fill"/>
+                    </Grid>
+                    <Grid x:Name="Fax"
+                          Visibility="{Binding PrintQueue.Name,Converter={StaticResource PrintQueueNameToVisibilityConverter},ConverterParameter=Fax}"
+                          HorizontalAlignment="Left" 
+                          VerticalAlignment="Top"
+                          Height="24"
+                          Width="24">
+                        <Path Data="M0,15 L16,15 16,16 0,16 z M17.5,9.9999999 C17.776001,10 18,10.223999 18,10.5 18,10.776001 17.776001,11 17.5,11 17.223999,11 17,10.776001 17,10.5 17,10.223999 17.223999,10 17.5,9.9999999 z M2,0 L14,0 14,7 2,7 z" 
+                              Margin="3,1,1,3" 
+                              Fill="White"
+                              Stretch="Fill"/>
+                        <Path Data="M3,16 L3,17 19,17 19,16 z M20.5,11 C20.223999,11 20,11.223999 20,11.5 20,11.776001 20.223999,12 20.5,12 20.776001,12 21,11.776001 21,11.5 21,11.223999 20.776001,11 20.5,11 z M2,6.9999999 L3,6.9999999 3,7.9999999 3,9 3,10 19,10 19,9 19,7.9999999 19,6.9999999 20,6.9999999 C21.104,7 22,7.8959999 22,9 L22,18 C22,19.104 21.104,20 20,20 L2,20 C0.89599991,20 0,19.104 0,18 L0,9 C0,7.8959999 0.89599991,7 2,6.9999999 z M7,4.9999998 L15,4.9999998 15,5.9999999 7,5.9999999 z M7,3 L15,3 15,4.0000002 7,4.0000002 z M5,1 L5,7.9999999 17,7.9999999 17,1 z M4,0 L18,0 18,9 4,9 z"
+                              Fill="#FF848484"
+                              Stretch="Fill" />
+                    </Grid>
+                    <Grid x:Name="Tick" 
+                          Visibility="{Binding IsDefault, Converter={StaticResource BooleanToVisibilityConverter}}"
+                          HorizontalAlignment="Right" 
+                          VerticalAlignment="Bottom"
+                          Height="14" 
+                          Width="14"
+                          Margin="10,10,0,0">
+                        <Path Data="M8,0 C12.418,0 16,3.5820001 16,8.0000002 16,12.418 12.418,16 8,16 3.582,16 0,12.418 0,8.0000002 0,3.5820001 3.582,0 8,0 z" 
+                              Fill="White"
+                              Stretch="Fill"/>
+                        <Path Data="M10.506004,3.7540016 L5.8660049,8.4070015 3.4940033,6.026001 2.572998,6.9449997 5.8660049,10.246002 11.427002,4.6710014 z M7,0 C10.866005,0 14,3.1340027 14,7 14,10.866001 10.866005,14 7,14 3.1340027,14 0,10.866001 0,7 0,3.1340027 3.1340027,0 7,0 z"
+                              Margin="1"
+                              Fill="#FF0F6E12" 
+                              Stretch="Fill" />
+                        <Path Data="M9.5060043,2.7540016 L4.8660049,7.4070015 2.4940033,5.026001 1.572998,5.9449997 4.8660049,9.2460022 10.427002,3.6710014 z M6,0 C9.3130035,0 12,2.6860008 12,6 12,9.3129997 9.3130035,12 6,12 2.6860046,12 0,9.3129997 0,6 0,2.6860008 2.6860046,0 6,0 z" 
+                              Margin="2" 
+                              Fill="#FF00A302" 
+                              Stretch="Fill" />
+                    </Grid>
+                </Grid>
+                <TextBlock Grid.Column="1" 
+                           Margin="1,0,0,1"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center" 
+                           Text="{Binding  PrintQueue.Name}"
+                           Style="{StaticResource WPFTextBlockStyle}"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <Style x:Key="SyncfusionPrintOptionsControlStyle" TargetType="{x:Type PrintPreview_printing:PrintOptionsControl}">
+        <Setter Property="Focusable"
+                Value="False"/>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="BorderThickness"
+                Value="0,0,1,0"/>
+        <Setter Property="Background"
+                Value="{StaticResource PopupBackground}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type PrintPreview_printing:PrintOptionsControl}">
+                    <Border x:Name="PART_Border" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            Background="{TemplateBinding Background}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Style="{StaticResource WPFScrollViewerStyle}">
+                            <Grid HorizontalAlignment="Center">
+                                <StackPanel>
+                                    <StackPanel  Orientation="Horizontal">
+                                        <Button x:Name="Part_QuickPrintButton"
+                                                Height="85"
+                                                Width="85"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"                                                
+                                                Command="{Binding QuickPrintCommand}"                                                
+                                                Style="{StaticResource WPFButtonStyle}"
+                                                Tag="Print"
+                                                Margin="0,12,17,20">
+                                            <Grid
+                                                SnapsToDevicePixels="True">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition />
+                                                    <RowDefinition />
+                                                </Grid.RowDefinitions>
+                                                <Path x:Name="path"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" 
+                                                      Width="31" 
+                                                      Height="31"                                                      
+                                                      Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}" 
+                                                      Stretch="Fill" 
+                                                      SnapsToDevicePixels="True"                                      
+                                                      Margin="24.1, 2, 24.1, 8">
+                                                    <Path.Data>
+                                                        <PathGeometry>M5,9.0000038 L5,12.000004 11,12.000004 11,9.0000038 z M12,6.0000038 L12,8.0000038 14,8.0000038 14,6.0000038 z M1.994,4.0000038 L14.006,4.0000038 C15.108,4.0000038 16,4.8870039 16,6.0060039 L16,11.000004 13,11.000004 13,14.000004 3,14.000004 3,11.000004 0,11.000004 0,6.0060039 C0,4.8980036 0.89499998,4.0000038 1.994,4.0000038 z M2.9999809,0 L12.999981,0 12.999981,3 2.9999809,3 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
+                                                <TextBlock x:Name="textBlock"
+                                                           Grid.Row="1"
+                                                           Height="14"           
+                                                           Foreground="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           SnapsToDevicePixels="True"
+                                                           Text="{resources:SharedLocalizationResourceExtension ResourceName=Print}" />
+                                            </Grid>
+                                        </Button>
+                                        <TextBlock x:Name="Part_Copies"
+                                                   Width="39" 
+                                                   Height="16"
+                                                   HorizontalAlignment="Left" 
+                                                   VerticalAlignment="Top"
+                                                   Margin="0,22,0,0"
+                                                   Text="{Binding Source={resources:SharedLocalizationResourceExtension ResourceName=PrintPreview_Copies}, StringFormat={}{0}:}" 
+                                                   Style="{StaticResource WPFTextBlockStyle}">
+                                            </TextBlock>
+                                        <Grid x:Name="Part_CopyCount_Grid" 
+                                              Width="60"
+                                              Height="24"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Top"
+                                              Margin="5,18,0,0">
+                                            <Border x:Name="Border"
+                                                    Width="{TemplateBinding Width}"
+                                                    SnapsToDevicePixels="True"
+                                                    BorderThickness="1"    
+                                                    
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    Background="{TemplateBinding Background}">
+                                                <Grid  ClipToBounds="True">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition/>
+                                                        <RowDefinition/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBox x:Name="Part_CopyTextBox" 
+                                                             Grid.Column="0" 
+                                                             Grid.RowSpan="2"  
+                                                             BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                                             Width="{TemplateBinding Width}"
+                                                             Height="{TemplateBinding Height}"
+                                                             HorizontalContentAlignment="Left"
+                                                             VerticalContentAlignment="Center"
+                                                             Style="{StaticResource WPFTextBoxStyle}"
+                                                             Text="{Binding CopiesCount,Mode=TwoWay}"/>
+                                                    <RepeatButton x:Name="Copy_upbutton"
+                                                                  Grid.Row="0" 
+                                                                  Grid.Column="1"
+                                                                  Width="15"
+                                                                  Focusable="{TemplateBinding Focusable}"
+                                                                  IsTabStop="False" 
+                                                                  Margin=".5,1,.5,0"
+                                                                  Style="{StaticResource WPFGlyphRepeatButtonStyle}">
+                                                        <Path x:Name="Copy_upbuttonpath"
+                                                              Height="6"
+                                                              Width="6"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
+                                                              Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                              Stretch="Uniform"
+                                                              RenderTransformOrigin=".5,.5"
+                                                              Margin="-1">
+                                                            <Path.RenderTransform>
+                                                                <TransformGroup>
+                                                                    <ScaleTransform />
+                                                                    <SkewTransform />
+                                                                    <RotateTransform Angle="180" />
+                                                                    <TranslateTransform />
+                                                                </TransformGroup>
+                                                            </Path.RenderTransform>
+                                                        </Path>
+                                                    </RepeatButton>
+                                                    <RepeatButton x:Name="Copy_downbutton"
+                                                                  Grid.Row="2" 
+                                                                  Grid.Column="1" 
+                                                                  Width="15"
+                                                                  IsTabStop="False"  
+                                                                  Focusable="{TemplateBinding Focusable}"
+                                                                  Margin=".5,0,.5,.5"
+                                                                  Style="{StaticResource WPFGlyphRepeatButtonStyle}">
+                                                        <Path x:Name="Copy_downbuttonpath"
+                                                              Height="6" 
+                                                              Width="6" 
+                                                              HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"
+                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
+                                                              Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"                                                              
+                                                              Stretch="Uniform" 
+                                                              Margin="-1">
+                                                        </Path>
+                                                    </RepeatButton>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                    <TextBlock x:Name="Part_PrinterTitle" 
+                                               HorizontalAlignment="Left"
+                                               Text="{resources:SharedLocalizationResourceExtension ResourceName=PrintPreview_Printer}" 
+                                               Style="{StaticResource WPFTextBlockStyle}"
+                                               FontSize="16"
+                                               Margin="0,2,10,0">
+                                    </TextBlock>
+                                    <ComboBox x:Name="PART_PrintersComboBox"
+                                              HorizontalAlignment="Left"
+                                              ItemsSource="{Binding Printers}"
+                                              ItemTemplate="{StaticResource PrintersListItemTemplate}"
+                                              Style="{StaticResource Print_ComboBoxStyle}"
+                                              SelectedItem="{Binding SelectedPrinter}"
+                                              Margin="0,8,0,5">
+                                    </ComboBox>
+                                    <TextBlock x:Name="Part_SettingsTitle"                                                
+                                               HorizontalAlignment="Left"
+                                               Text="{resources:SharedLocalizationResourceExtension ResourceName=Settings}" 
+                                               Style="{StaticResource WPFTextBlockStyle}"
+                                               FontSize="16"
+                                               Margin="0,8,10,2">
+                                    </TextBlock>
+                                    <ComboBox x:Name="PART_PageRangeSelection"
+                                              HorizontalAlignment="Left"
+                                              SelectedValue="{Binding SelectedPrintPageRange, Mode=TwoWay}"
+                                              SelectedValuePath="PageRangeSelection"
+                                              ItemsSource="{Binding PrintPageRangeSelectionOptions}"
+                                              ItemTemplate="{StaticResource PageRangeSelectionTemplate}"
+                                              Style="{StaticResource Print_ComboBoxStyle}"
+                                              Margin="0,10,0,8">
+                                    </ComboBox>
+                                    <StackPanel Orientation="Horizontal"
+                                                Margin="5,7,0,4">
+                                        <TextBlock x:Name="Part_Pages"
+                                                   HorizontalAlignment="Left" 
+                                                   VerticalAlignment="Center" 
+                                                   Text="{Binding Source={resources:SharedLocalizationResourceExtension ResourceName=PrintPreview_Pages}, StringFormat={}{0}:}"
+                                                   Style="{StaticResource WPFTextBlockStyle}">
+                                        </TextBlock>
+                                        <Grid x:Name="Part_FromPage_Grid" 
+                                              Width="60"
+                                              Height="24" 
+                                              HorizontalAlignment="Left" 
+                                              VerticalAlignment="Top"
+                                              Margin="5,0,8,0" >
+                                            <Border x:Name="FromPage_Border"   
+                                                    Width="{TemplateBinding Width}"
+                                                    SnapsToDevicePixels="True"
+                                                    BorderThickness="1" 
+                                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                                    Background="{TemplateBinding Background}">
+                                                <Grid ClipToBounds="True">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition/>
+                                                        <RowDefinition/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBox x:Name="Part_FromPageTextBox"
+                                                             Grid.Column="0" 
+                                                             Grid.RowSpan="2"                                                              
+                                                             BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                                             Width="{TemplateBinding Width}"
+                                                             Height="{TemplateBinding Height}" 
+                                                             HorizontalContentAlignment="Left"
+                                                             VerticalContentAlignment="Center"
+                                                             Text="{Binding FromPage,Mode=TwoWay}"                                                            
+                                                             Style="{StaticResource WPFTextBoxStyle}"/>
+                                                    <RepeatButton x:Name="FromPage_upbutton"
+                                                                  Grid.Row="0"
+                                                                  Grid.Column="1"  
+                                                                  Width="15"
+                                                                  IsTabStop="False" 
+                                                                  Margin=".5,1,.5,0"
+                                                                  Focusable="{TemplateBinding Focusable}"
+                                                                  Style="{StaticResource WPFGlyphRepeatButtonStyle}" >
+                                                        <Path x:Name="FromPage_upbuttonpath"
+                                                              Height="6" 
+                                                              Width="6"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
+                                                              Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                              Stretch="Uniform"
+                                                              RenderTransformOrigin=".5,.5"
+                                                              Margin="-1">
+                                                            <Path.RenderTransform>
+                                                                <TransformGroup>
+                                                                    <ScaleTransform />
+                                                                    <SkewTransform />
+                                                                    <RotateTransform Angle="180" />
+                                                                    <TranslateTransform />
+                                                                </TransformGroup>
+                                                            </Path.RenderTransform>
+                                                        </Path>
+                                                    </RepeatButton>
+                                                    <RepeatButton x:Name="FromPage_downbutton"
+                                                                  Grid.Row="2" 
+                                                                  Grid.Column="1"
+                                                                  Width="15"
+                                                                  Focusable="{TemplateBinding Focusable}"
+                                                                  IsTabStop="False"
+                                                                  Margin=".5,0,.5,.5" 
+                                                                  Style="{StaticResource WPFGlyphRepeatButtonStyle}">
+                                                        <Path x:Name="FromPage_downbuttonpath"
+                                                              Height="6" 
+                                                              Width="6"
+                                                              HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"
+                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
+                                                              Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                              Stretch="Uniform"
+                                                              Margin="-1">
+                                                        </Path>
+                                                    </RepeatButton>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                        <TextBlock x:Name="Part_To" 
+                                                   HorizontalAlignment="Left" 
+                                                   VerticalAlignment="Center" 
+                                                   Text="{resources:SharedLocalizationResourceExtension ResourceName=PrintPreview_To}" 
+                                                   Style="{StaticResource WPFTextBlockStyle}">
+                                        </TextBlock>
+                                        <Grid x:Name="Part_ToPage_Grid"
+                                              Height="24"
+                                              Width="60"
+                                              HorizontalAlignment="Left" 
+                                              VerticalAlignment="Top"
+                                              Margin="5,0,8,0" >
+                                            <Border x:Name="ToPage_Border"  
+                                                    Width="{TemplateBinding Width}"  
+                                                    BorderThickness="1" 
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    Background="{TemplateBinding Background}"                                                    
+                                                    SnapsToDevicePixels="True">
+                                                <Grid  ClipToBounds="True">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"></ColumnDefinition>
+                                                        <ColumnDefinition Width="Auto">
+                                                        </ColumnDefinition>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition></RowDefinition>
+                                                        <RowDefinition></RowDefinition>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBox x:Name="Part_ToPageTextBox"
+                                                             Grid.Column="0"
+                                                             Grid.RowSpan="2"                                                             
+                                                             BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                                             Width="{TemplateBinding Width}"
+                                                             Height="{TemplateBinding Height}"
+                                                             HorizontalContentAlignment="Left" 
+                                                             VerticalContentAlignment="Center"
+                                                             Style="{StaticResource WPFTextBoxStyle}"
+                                                             Text="{Binding ToPage,Mode=TwoWay}"/>
+                                                    <RepeatButton x:Name="ToPage_upbutton" 
+                                                                  Grid.Row="0" 
+                                                                  Grid.Column="1"
+                                                                  Width="15"
+                                                                  Focusable="{TemplateBinding Focusable}" 
+                                                                  IsTabStop="False"
+                                                                  Margin=".5,1,.5,0" 
+                                                                  Style="{StaticResource WPFGlyphRepeatButtonStyle}">
+                                                        <Path x:Name="ToPage_upbuttonpath"
+                                                              Height="6" 
+                                                              Width="6"
+                                                              HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"
+                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"                                                               
+                                                              Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}" 
+                                                              Stretch="Uniform"
+                                                              RenderTransformOrigin=".5,.5"
+                                                              Margin="-1">
+                                                            <Path.RenderTransform>
+                                                                <TransformGroup>
+                                                                    <ScaleTransform />
+                                                                    <SkewTransform />
+                                                                    <RotateTransform Angle="180" />
+                                                                    <TranslateTransform />
+                                                                </TransformGroup>
+                                                            </Path.RenderTransform>
+                                                        </Path>
+                                                    </RepeatButton>
+                                                    <RepeatButton x:Name="ToPage_downbutton"
+                                                                  Grid.Row="2" 
+                                                                  Grid.Column="1"
+                                                                  Width="15"
+                                                                  Focusable="{TemplateBinding Focusable}"
+                                                                  IsTabStop="False"  
+                                                                  Margin=".5,0,.5,.5" 
+                                                                  Style="{StaticResource WPFGlyphRepeatButtonStyle}">
+                                                        <Path x:Name="ToPage_downbuttonpath"
+                                                              Height="6" 
+                                                              Width="6"
+                                                              HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"
+                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
+                                                              Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                              Stretch="Uniform"    
+                                                              Margin="-1">
+                                                        </Path>
+                                                    </RepeatButton>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                    <ComboBox x:Name="PART_Collated"
+                                              Margin="0,2,0,4" 
+                                              HorizontalAlignment="Left"
+                                              SelectedValue="{Binding SelectedCollation, Mode=TwoWay}"
+                                              SelectedValuePath="Collation"
+                                              ItemsSource="{Binding PrintPageCollationOptions}"                                              
+                                              ItemTemplate="{StaticResource CollatedTemplate}"
+                                              Style="{StaticResource Print_ComboBoxStyle}">
+                                    </ComboBox>
+                                    <ComboBox x:Name="PART_OrientationComboBox"
+                                              Margin="0,2,0,4" 
+                                              HorizontalAlignment="Left"
+                                              SelectedValue="{Binding PrintOrientation, Mode=TwoWay}"
+                                              SelectedValuePath="Orientation"
+                                              ItemsSource="{Binding OrientationOptions}"
+                                              ItemTemplate="{StaticResource OrientationTemplate}"
+                                              Style="{StaticResource Print_ComboBoxStyle}">
+                                    </ComboBox>
+                                    <Grid>
+                                        <ComboBox x:Name="PART_PapersComboBox"
+                                                  Margin="0,2,0,4"
+                                                  HorizontalAlignment="Left"
+                                                  ItemTemplate="{StaticResource PageSizeTemplate}"
+                                                  ItemsSource="{Binding PageSizeOptions}"
+                                                  Style="{StaticResource Print_ComboBoxStyle}"
+                                                  SelectedItem="{Binding SelectedPageSize}" />
+                                        <Grid Width="Auto"
+                                              Height="Auto">
+                                            <TextBlock IsHitTestVisible="False"
+                                                       VerticalAlignment="Center"
+                                                       Margin="10,0,0,10">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource WPFTextBlockStyle}">
+                                                        <Setter Property="Text" 
+                                                                Value="Choose any PageSize"/>
+                                                        <Setter Property="Visibility"
+                                                                Value="Hidden"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Path=Items.Count, ElementName=PART_PapersComboBox}" 
+                                                                         Value="0">
+                                                                <Setter Property="Text" 
+                                                                        Value="Unable to connect"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Path=SelectedIndex, ElementName=PART_PapersComboBox}"
+                                                                         Value="-1">
+                                                                <Setter Property="Visibility"
+                                                                        Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </Grid>
+                                    <ComboBox x:Name="PART_MarginComboBox"                                              
+                                              Margin="0,2,0,4" 
+                                              HorizontalAlignment="Left"
+                                              ItemTemplate="{StaticResource MarginTemplate}"
+                                              ItemsSource="{Binding MarginOptions}"
+                                              Style="{StaticResource Print_ComboBoxStyle}">
+                                    </ComboBox>
+                                    <ComboBox x:Name="PART_ScaleOptionComboBox"
+                                              Margin="0,2,0,4"
+                                              HorizontalAlignment="Left"
+                                              SelectedIndex="{Binding SelectedScaleIndex}"
+                                              ItemTemplate="{StaticResource ScaleOptionTemplate}"
+                                              ItemsSource="{Binding ScaleOptions}"
+                                              Style="{StaticResource Print_ComboBoxStyle}">
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPrintOptionsControlStyle}" TargetType="{x:Type PrintPreview_printing:PrintOptionsControl}" />
+
+    <Style x:Key="SyncfusionPrintPreviewAreaControlStyle" TargetType="{x:Type PrintPreview_printing:PrintPreviewAreaControl}">
+        <Setter Property="Background"
+                Value="{StaticResource ContentBackgroundAlt2}" />
+        <Setter Property="Focusable"
+                Value="False"/>
+        <Setter Property="Margin"
+                Value="5"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type PrintPreview_printing:PrintPreviewAreaControl}">
+                    <Border Margin="{TemplateBinding Margin}" 
+                            Background="{TemplateBinding Background}">
+                        <ScrollViewer CanContentScroll="True"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Style="{StaticResource WPFScrollViewerStyle}">
+                            <PrintPreview_printing:PrintPreviewPanel x:Name="PART_PrintPreviewPanel"
+                                                                     Background="{StaticResource ContentBackgroundAlt2}"/>
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPrintPreviewAreaControlStyle}" TargetType="{x:Type PrintPreview_printing:PrintPreviewAreaControl}" />
+
+    <Style x:Key="SyncfusionPrintPreviewStyle" TargetType="{x:Type PrintPreview_printing:PrintPreview}">
+        <Setter Property="Background" 
+                Value="{StaticResource PopupBackground}" />
+        <Setter Property="Focusable"
+                Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type PrintPreview_printing:PrintPreview}">
+                    <Grid Background="{StaticResource PopupBackground}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="250" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <PrintPreview_printing:PrintOptionsControl x:Name="PART_PrintOptionsControl"
+                                                               DataContext="{Binding ElementName=PART_PrintOptionsControl}"/>
+                        <Grid Grid.Column="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="40" />
+                            </Grid.RowDefinitions>
+                            <PrintPreview_printing:PrintPreviewAreaControl x:Name="PART_PrintPreviewAreaControl" />
+                            <Grid Grid.Row="1"
+                                  DataContext="{Binding ElementName=PART_PrintPreviewAreaControl}">
+                                <Border BorderBrush="{StaticResource BorderAlt}"
+                                        BorderThickness="0,1,0,0" Margin="0,2,0,0">
+                                    <DockPanel Height="32" VerticalAlignment="Center"> 
+                                        <StackPanel HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                DockPanel.Dock="Left"
+                                                Orientation="Horizontal"
+                                                Margin="15,0,0,0">
+                                            <Button x:Name="FirstPageButton"
+                                                Margin="2,0,0,0"
+                                                Height="24"
+                                                Width="24"
+                                                Command="{Binding FirstCommand}"
+                                                Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Path Width="10.999"
+                                                  Height="12.01"
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                    <Path.Data>
+                                                        <PathGeometry>M9.5280266,0.0090068526 L11.000011,1.3629964 6.718029,6.0179985 10.98402,10.656002 9.5120354,12.010007 4.0000115,6.0179985 z M0,0 L2,0 2,12 0,12 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
+                                            </Button>
+                                            <Button x:Name="PerviousPageButton"
+                                                Margin="5,0,0,0"
+                                                Height="24"
+                                                Width="24"
+                                                Command="{Binding PreviousCommand}"
+                                                Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Path Height="13" 
+                                                  Width="9.001"
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                    <Path.Data>
+                                                        <PathGeometry>M7.7109926,0 L9.0010002,1.529007 3.1009803,6.5099945 8.97799,11.472 7.6879824,13 0,6.5099945 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
+                                            </Button>
+                                            <TextBox x:Name="PART_TextBox"
+                                                 Margin="2,0,0,0"
+                                                 Width="24"
+                                                 Height="16"    
+                                                 BorderThickness="{StaticResource MaterialLightCustom.ThemeBorderThicknessVariant1}"
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center"
+                                                 HorizontalContentAlignment="Left"
+                                                 VerticalContentAlignment="Center"
+                                                 Text="{Binding PageIndex}"
+                                                 Style="{StaticResource WPFTextBoxStyle}">
+                                            </TextBox>
+                                            <TextBlock x:Name="PART_TextBlock" 
+                                                   HorizontalAlignment="Center"                                                   
+                                                   VerticalAlignment="Center"
+                                                   Width="24"
+                                                   Text="{Binding TotalPages, StringFormat= /  {0}}"
+                                                   Style="{StaticResource WPFTextBlockStyle}"
+                                                   TextAlignment="Center"
+                                                   Margin="2,0,0,0">
+                                            </TextBlock>
+                                            <Button x:Name="NextPageButton"
+                                                Margin="5,0,0,0"
+                                                Height="24"
+                                                Width="24"
+                                                Command="{Binding NextCommand}"
+                                                Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Path Height="13" 
+                                                  Width="9.001"
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                    <Path.Data>
+                                                        <PathGeometry>M1.2899816,0 L9.0010002,6.5099945 1.3129919,13 0.022979841,11.472 5.9000094,6.5099945 0,1.529007 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
+                                            </Button>
+                                            <Button x:Name="LastPageButton"
+                                                Margin="5,0,0,0"
+                                                Height="24"
+                                                Width="24"
+                                                Command="{Binding LastCommand}"
+                                                Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Path Width="10.999"
+                                                  Height="12.01"
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                    <Path.Data>
+                                                        <PathGeometry>M1.4710002,0.0089941425 L7.0000001,6.0179982 1.4880004,12.010002 0.015999794,10.656001 4.2820001,6.0179982 0,1.3629951 z M8.9989967,0 L10.998997,0 10.998997,12 8.9989967,12 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
+                                            </Button>
+                                        </StackPanel>
+                                        <Grid HorizontalAlignment="Right" DockPanel.Dock="Right" Margin="0,0,15,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="PART_ZoomPercentage"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" 
+                                                   Text="{Binding ElementName=PART_ZoomSlider, Path=Value, StringFormat={}{0:#}%}"
+                                                   Style="{StaticResource WPFTextBlockStyle}">
+                                            </TextBlock>
+                                            <Button x:Name="PART_PlusZoomButton"                                                
+                                                Grid.Column="3"
+                                                Width="24"
+                                                Height="24"
+                                                Focusable="False"
+                                                HorizontalAlignment="Center"
+                                                Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Path x:Name="pluspath"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" 
+                                                  Width="12" 
+                                                  Height="12"
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                                  Stretch="Fill" 
+                                                  SnapsToDevicePixels="True">
+                                                    <Path.Data>
+                                                        <PathGeometry>M6.9999886,4.0000038 L8.9999886,4.0000038 8.9999886,7.0000038 11.999989,7.0000038 11.999989,9.0000038 8.9999886,9.0000038 8.9999886,12.000004 6.9999886,12.000004 6.9999886,9.0000038 3.9999886,9.0000038 3.9999886,7.0000038 6.9999886,7.0000038 z M8,2 C4.6910095,2 2,4.6910095 2,8 2,11.309006 4.6910095,14 8,14 11.30899,14 14,11.309006 14,8 14,4.6910095 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5890045 16,8 16,12.410995 12.411011,16 8,16 3.5890198,16 0,12.410995 0,8 0,3.5890045 3.5890198,0 8,0 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
+                                            </Button>
+                                            <Slider x:Name="PART_ZoomSlider"
+                                                Grid.Column="2"
+                                                Width="150"
+                                                Height="24"
+                                                Maximum="500"
+                                                Minimum="10"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                HorizontalContentAlignment="Center"
+                                                Orientation="Horizontal"
+                                                Focusable="False"
+                                                IsMoveToPointEnabled="True"
+                                                Value="{Binding ZoomFactor}"
+                                                Style="{StaticResource WPFSliderStyle}">
+                                            </Slider>
+                                            <Button x:Name="PART_MinusZoomButton"
+                                                Grid.Column="1"
+                                                Width="24"
+                                                Height="24"
+                                                Focusable="False"
+                                                HorizontalAlignment="Center"
+                                                Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Path x:Name="minuspath"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" 
+                                                  Width="12" 
+                                                  Height="12"
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                                  Stretch="Fill" 
+                                                  SnapsToDevicePixels="True">
+                                                    <Path.Data>
+                                                        <PathGeometry>M3.9999886,7.0000038 L11.999989,7.0000038 11.999989,9.0000038 3.9999886,9.0000038 z M8,2 C4.6910095,2 2,4.6910095 2,8 2,11.309006 4.6910095,14 8,14 11.30899,14 14,11.309006 14,8 14,4.6910095 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5890045 16,8 16,12.410995 12.411011,16 8,16 3.5890198,16 0,12.410995 0,8 0,3.5890045 3.5890198,0 8,0 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
+                                            </Button>
+                                        </Grid>
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPrintPreviewStyle}" TargetType="{x:Type PrintPreview_printing:PrintPreview}" />
+    
+</ResourceDictionary>

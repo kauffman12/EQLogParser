@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -7,8 +8,6 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -17,21 +16,17 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellDamageStatsViewer : UserControl, IDisposable
   {
-    private readonly object LockObject = new object();
-    private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
     private readonly ObservableCollection<string> Players = new ObservableCollection<string>();
     private readonly ObservableCollection<string> Spells = new ObservableCollection<string>();
     private readonly ObservableCollection<string> Types = new ObservableCollection<string>();
-    private const string NODATA = "No Spell Damage Data Found";
+    private bool CurrentShowPlayers = true;
+    private string CurrentPlayer = null;
+    private string CurrentSpell = null;
+    private string CurrentType = null;
 
     public SpellDamageStatsViewer()
     {
       InitializeComponent();
-      dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(Records);
-      BindingOperations.EnableCollectionSynchronization(Records, LockObject);
-      BindingOperations.EnableCollectionSynchronization(Players, LockObject);
-      BindingOperations.EnableCollectionSynchronization(Spells, LockObject);
-      BindingOperations.EnableCollectionSynchronization(Types, LockObject);
       typeList.ItemsSource = Types;
       spellList.ItemsSource = Spells;
       playerList.ItemsSource = Players;
@@ -40,13 +35,22 @@ namespace EQLogParser
       Types.Add(Labels.DOT);
       typeList.SelectedIndex = 0;
 
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += SpellDamageStatsViewer_EventsLogLoadingComplete;
-      (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SpellDamageStatsViewer_EventsSelectionChange;
-      dataGrid.Sorting += CustomSorting;
+      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LogLoadingComplete;
+      (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
+
+      // default these columns to descending
+      string[] desc = new string[] { "Avg", "Max", "Total", "Hits" };
+      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       Load();
     }
 
-    private void SpellDamageStatsViewer_EventsSelectionChange(object sender, System.Collections.IList e)
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void LogLoadingComplete(object sender, bool e) => Load();
+    private void RefreshClick(object sender, RoutedEventArgs e) => Load();
+
+    private void SelectionChange(object sender, System.Collections.IList e)
     {
       if (fightOption.SelectedIndex != 0)
       {
@@ -54,17 +58,12 @@ namespace EQLogParser
       }
     }
 
-    private void SpellDamageStatsViewer_EventsLogLoadingComplete(object sender, bool e) => Load();
-
-    private void RefreshMouseClick(object sender, MouseButtonEventArgs e) => Load();
-
     private void Load()
     {
       string selectedSpell = spellList.SelectedItem as string;
       string selectedPlayer = playerList.SelectedItem as string;
       bool isPlayerOnly = showPlayers.IsChecked.Value;
 
-      Records.Clear();
       Spells.Clear();
       Spells.Add("All Spells");
       Players.Clear();
@@ -117,14 +116,15 @@ namespace EQLogParser
         }
       }
 
-      foreach (var stats in playerDoTTotals.Values)
+      var list = new List<IDictionary<string, object>>();
+      foreach (ref var stats in playerDoTTotals.Values.ToArray().AsSpan())
       {
-        AddRow(stats, Labels.DOT);
+        AddRow(list, stats, Labels.DOT);
       }
 
-      foreach (var stats in playerDDTotals.Values)
+      foreach (ref var stats in playerDDTotals.Values.ToArray().AsSpan())
       {
-        AddRow(stats, Labels.DD);
+        AddRow(list, stats, Labels.DD);
       }
 
       foreach (var key in uniqueSpells.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
@@ -139,17 +139,10 @@ namespace EQLogParser
 
       spellList.SelectedIndex = (Spells.IndexOf(selectedSpell) is int s && s > -1) ? s : 0;
       playerList.SelectedIndex = (Players.IndexOf(selectedPlayer) is int p && p > -1) ? p : 0;
-
-      if (dataGrid.ItemsSource is ListCollectionView view)
-      {
-        view.SortDescriptions.Clear();
-        view.SortDescriptions.Add(new SortDescription("Avg", ListSortDirection.Descending));
-      }
-
-      titleLabel.Content = Records.Count == 0 ? NODATA : "Spell Damage Stats for " + uniqueSpells.Count + " Unique Spells";
+      dataGrid.ItemsSource = list;
     }
 
-    private void AddRow(SpellDamageStats stats, string type)
+    private void AddRow(List<IDictionary<string, object>> list, SpellDamageStats stats, string type)
     {
       var row = new ExpandoObject() as IDictionary<string, object>;
       row["Caster"] = stats.Caster;
@@ -159,67 +152,54 @@ namespace EQLogParser
       row["Avg"] = stats.Total / stats.Count;
       row["Total"] = stats.Total;
       row["Type"] = type;
-
-      lock (LockObject)
-      {
-        Records.Add(row);
-      }
+      list.Add(row);
     }
 
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      // set header count
-      if (e.Row != null)
+      if (dataGrid.View != null)
       {
-        e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
-      }
-    }
-
-    private void CustomSorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e.Column.Header != null && e.Column.Header.ToString() != "Name" && dataGrid.ItemsSource != null)
-      {
-        e.Handled = true;
-        var direction = ListSortDirection.Descending;
-        if (e.Column.SortDirection != null)
-        {
-          direction = (e.Column.SortDirection == ListSortDirection.Descending) ? ListSortDirection.Ascending : ListSortDirection.Descending;
-        }
-
-        if (dataGrid.ItemsSource is ListCollectionView view)
-        {
-          view.SortDescriptions.Clear();
-          view.SortDescriptions.Add(new SortDescription(((e.Column as DataGridTextColumn).Binding as Binding).Path.Path, direction));
-        }
-
-        e.Column.SortDirection = direction;
-      }
-    }
-
-    private void OptionsChanged(object sender, EventArgs e)
-    {
-      if (dataGrid != null && Records.Count > 0 && dataGrid.ItemsSource is ListCollectionView view)
-      {
-        string type = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
-        string spell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
-        string player = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
-        bool isPlayerOnly = showPlayers.IsChecked.Value;
-
-        if (sender == showPlayers || sender == fightOption)
-        {
-          Load();
-        }
-
-        view.Filter = new Predicate<object>(item =>
+        dataGrid.View.Filter = (item) =>
         {
           bool pass = false;
           if (item is IDictionary<string, object> dict)
           {
-            pass = !isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) || PlayerManager.Instance.IsMerc(dict["Caster"] as string);
-            pass = pass && (type == null || type.Equals(dict["Type"])) && (spell == null || spell.Equals(dict["Spell"])) && (player == null || player.Equals(dict["Caster"]));
+            pass = !CurrentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) ||
+              PlayerManager.Instance.IsMerc(dict["Caster"] as string);
+            pass = pass && (CurrentType == null || CurrentType.Equals(dict["Type"])) && (CurrentSpell == null ||
+              CurrentSpell.Equals(dict["Spell"])) && (CurrentPlayer == null || CurrentPlayer.Equals(dict["Caster"]));
           }
           return pass;
-        });
+        };
+
+        UpdateTitle();
+      }
+    }
+
+    private void UpdateTitle()
+    {
+      dataGrid?.View?.RefreshFilter();
+      int count = (dataGrid?.View != null) ? dataGrid.View.Records.Count : 0;
+      titleLabel.Content = count == 0 ? "No Spell Data Found" : count + " Spell Entries Found";
+    }
+
+    private void OptionsChanged(object sender, EventArgs e)
+    {
+      if (dataGrid != null && dataGrid.View != null)
+      {
+        CurrentType = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
+        CurrentSpell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
+        CurrentPlayer = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
+        CurrentShowPlayers = showPlayers.IsChecked.Value;
+
+        if (sender == fightOption)
+        {
+          Load();
+        }
+        else
+        {
+          UpdateTitle();
+        }
       }
     }
 
@@ -230,14 +210,9 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-          Records.Clear();
-        }
-
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= SpellDamageStatsViewer_EventsLogLoadingComplete;
-        (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SpellDamageStatsViewer_EventsSelectionChange;
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
+        (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
+        dataGrid.Dispose();
         disposedValue = true;
       }
     }

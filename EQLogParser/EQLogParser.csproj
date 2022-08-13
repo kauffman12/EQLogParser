@@ -79,18 +79,6 @@
     <AssemblyOriginatorKeyFile>newsigner.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.DataGrid.Contrib.Wpf, Version=19.1.681.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v21.1.1\Assemblies\ActiproSoftware.DataGrid.Contrib.Wpf.dll</HintPath>
-    </Reference>
-    <Reference Include="ActiproSoftware.Docking.Wpf, Version=19.1.681.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v21.1.1\Assemblies\ActiproSoftware.Docking.Wpf.dll</HintPath>
-    </Reference>
-    <Reference Include="ActiproSoftware.Shared.Wpf, Version=19.1.681.0, Culture=neutral, PublicKeyToken=36ff2196ab5654b9, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Actipro Software\WPF-Controls\v21.1.1\Assemblies\ActiproSoftware.Shared.Wpf.dll</HintPath>
-    </Reference>
     <Reference Update="System">
       <Private>False</Private>
     </Reference>
@@ -120,7 +108,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="licenses.licx" />
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
@@ -158,16 +145,9 @@
     <Resource Include="EQLogParser.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="icons\Collapse_16x.png" />
-    <Resource Include="icons\Expand_16x.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="data\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\Dependencies\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>    
   </ItemGroup>
   <ItemGroup>
     <None Remove="..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll" />
@@ -184,32 +164,32 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
     </PackageReference>
-    <PackageReference Include="Syncfusion.Edit.WPF" Version="20.2.0.38" />
-    <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.2.0.38" />
-    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.2.0.38" />
-    <PackageReference Include="Syncfusion.Shared.WPF" Version="20.2.0.38" />
-    <PackageReference Include="Syncfusion.Themes.FluentDark.WPF" Version="20.2.0.38" />
-    <PackageReference Include="Syncfusion.Tools.WPF" Version="20.2.0.38" />
-    <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="19.4.0.56" />
-    <PackageReference Include="WPFTextBoxAutoComplete">
-      <Version>1.0.5</Version>
-    </PackageReference>
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.2.0.40" />
+    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.2.0.40" />
+    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="20.2.0.40" />
+    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="20.2.0.40" />
+    <PackageReference Include="Syncfusion.Tools.WPF" Version="20.2.0.40" />
+    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\..\..\..\..\..\Program Files %28x86%29\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.IO.Compression.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="Properties\Settings.Designer.cs">
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    <ProjectReference Include="..\MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.csproj" />
+    <ProjectReference Include="..\MaterialLightCustom\Syncfusion.Themes.MaterialLightCustom.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Resource.Designer.cs">
+      <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
+      <DependentUpon>Resource.resx</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <None Update="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
+    <EmbeddedResource Update="Resource.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

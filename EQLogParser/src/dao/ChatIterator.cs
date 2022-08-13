@@ -98,7 +98,7 @@ namespace EQLogParser
         string nextLine;
         while (result == END_RESULT && (nextLine = CurrentReader.ReadLine()) != null)
         {
-          string action = nextLine.Substring(LineParsing.ActionIndex);
+          string action = nextLine.Substring(MainWindow.ACTION_INDEX);
           var chatType = ChatLineParser.ParseChatType(action);
           if (chatType != null)
           {

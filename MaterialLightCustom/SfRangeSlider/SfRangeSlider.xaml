@@ -1,0 +1,880 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Input="clr-namespace:Syncfusion.Windows.Controls.Input;assembly=Syncfusion.SfInput.WPF"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    
+    mc:Ignorable="d">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom" />
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/TextBlock.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ToolTip.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!--  Theme Keys for SfRangeSlider  -->
+
+    <!--  Style for Thumb of SfRangeSlider  -->
+    <Style x:Key="SyncfusionSfRangeSliderThumbStyle" TargetType="Thumb">
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness1}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Background" Value="{StaticResource PrimaryBackground}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border
+                        x:Name="ThumbBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="8" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="ThumbBorder" Property="MinHeight" Value="16" />
+                            <Setter TargetName="ThumbBorder" Property="MinWidth" Value="16" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource BorderDark}" />
+                            <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource ContentBackground}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource PrimaryDark}" />
+                            <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource PrimaryDark}" />
+                        </Trigger>
+						<Trigger Property="IsDragging" Value="True">
+							<Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource PrimaryDarken}" />
+							<Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource PrimaryDarken}" />
+						</Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style
+        x:Key="SyncfusionSfRangeSliderHorizontalThumbStyle"
+        BasedOn="{StaticResource SyncfusionSfRangeSliderThumbStyle}"
+        TargetType="Thumb">
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="MinHeight" Value="10" />
+    </Style>
+
+    <Style
+        x:Key="SyncfusionSfRangeSliderVerticalThumbStyle"
+        BasedOn="{StaticResource SyncfusionSfRangeSliderThumbStyle}"
+        TargetType="Thumb">
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="MinHeight" Value="10" />
+    </Style>
+
+    <!--  Style for TooltTip of Thumb  -->
+    <Style x:Key="ThumbToolTipStyle" TargetType="ToolTip">
+        <Setter Property="Background" Value="{StaticResource TooltipBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource White}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.CaptionText}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="BorderBrush" Value="{StaticResource TooltipBackground}" />
+    </Style>
+
+    <Style
+        x:Key="TopToolTipStyle"
+        BasedOn="{StaticResource ThumbToolTipStyle}"
+        TargetType="ToolTip">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+                        <Path
+                            x:Name="ToolTipPath"
+                            Height="30"
+                            Margin="0,1,0,0"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center"
+                            Data="M1,0 L15,0 C15.553,0 16,0.44800001 16,1 L16,10.511001 C16,11.063001 15.553,11.511001 15,11.511001 L10.173,11.511001 8,14 5.8150001,11.511001 1,11.511001 C0.44800001,11.511001 0,11.063001 0,10.511001 L0,1 C0,0.44800001 0.44800001,0 1,0 z"
+                            Fill="{TemplateBinding Background}"
+                            Stretch="Fill"
+                            Stroke="{TemplateBinding BorderBrush}"
+                            StrokeThickness="1" />
+                        <TextBlock
+                            Margin="10,0,10,5"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center"
+                            FontFamily="{TemplateBinding FontFamily}"
+                            FontSize="{TemplateBinding FontSize}"
+                            FontWeight="{TemplateBinding FontWeight}"
+                            Foreground="{TemplateBinding Foreground}"
+                            Text="{TemplateBinding Content}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style
+        x:Key="BottomToolTipStyle"
+        BasedOn="{StaticResource ThumbToolTipStyle}"
+        TargetType="ToolTip">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+                        <Path
+                            x:Name="ToolTipPath"
+                            Height="30"
+                            Margin="0,1,0,0"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center"
+                            Data="M1,0 L15,0 C15.553,0 16,0.44800001 16,1 L16,10.511001 C16,11.063001 15.553,11.511001 15,11.511001 L10.173,11.511001 8,14 5.8150001,11.511001 1,11.511001 C0.44800001,11.511001 0,11.063001 0,10.511001 L0,1 C0,0.44800001 0.44800001,0 1,0 z"
+                            Fill="{TemplateBinding Background}"
+                            Stretch="Fill"
+                            Stroke="{TemplateBinding BorderBrush}"
+                            StrokeThickness="1">
+                            <Path.LayoutTransform>
+                                <RotateTransform Angle="180" />
+                            </Path.LayoutTransform>
+                        </Path>
+                        <TextBlock
+                            Margin="10,5,10,0"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center"
+                            FontFamily="{TemplateBinding FontFamily}"
+                            FontSize="{TemplateBinding FontSize}"
+                            FontWeight="{TemplateBinding FontWeight}"
+                            Foreground="{TemplateBinding Foreground}"
+                            Text="{TemplateBinding Content}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style
+        x:Key="RightToolTipStyle"
+        BasedOn="{StaticResource ThumbToolTipStyle}"
+        TargetType="ToolTip">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="6" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path
+                            Grid.Column="0"
+                            Width="6"
+                            Height="32"
+                            HorizontalAlignment="Left"
+                            Data="M309.085,301.3628L309.085,370.4708L364.838,411.2828L309.153,444.7618L309.153,510.1278"
+                            Fill="{TemplateBinding Background}"
+                            Stretch="Fill"
+                            Stroke="{TemplateBinding BorderBrush}"
+                            StrokeThickness="1">
+                            <Path.LayoutTransform>
+                                <RotateTransform Angle="180" />
+                            </Path.LayoutTransform>
+                        </Path>
+                        <Grid Grid.Column="1">
+                            <Border
+                                Margin="-0.25,0,0,0"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="0,1,1,1">
+                                <TextBlock
+                                    Height="30"
+                                    Padding="5,6,5,5"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    FontFamily="{TemplateBinding FontFamily}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    FontWeight="{TemplateBinding FontWeight}"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    Text="{TemplateBinding Content}" />
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style
+        x:Key="LeftToolTipStyle"
+        BasedOn="{StaticResource ThumbToolTipStyle}"
+        TargetType="ToolTip">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="7" />
+                        </Grid.ColumnDefinitions>
+                        <Path
+                            Grid.Column="1"
+                            Width="6"
+                            Height="32"
+                            HorizontalAlignment="Left"
+                            Data="M309.085,301.3628L309.085,370.4708L364.838,411.2828L309.153,444.7618L309.153,510.1278"
+                            Fill="{TemplateBinding Background}"
+                            Stretch="Fill"
+                            Stroke="{TemplateBinding BorderBrush}"
+                            StrokeThickness="1" />
+                        <Grid Grid.Column="0">
+                            <Border
+                                Margin="0,0,-0.25,0"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1,1,0,1">
+                                <TextBlock
+                                    Height="30"
+                                    Padding="5,6,5,5"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    FontFamily="{TemplateBinding FontFamily}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    FontWeight="{TemplateBinding FontWeight}"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    Text="{TemplateBinding Content}" />
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--  Style for inactive track of SfRangeSlider  -->
+    <Style x:Key="SyncfusionSfRangeSliderInactiveTrackStyle" TargetType="Rectangle">
+        <Setter Property="Height" Value="2" />
+        <Setter Property="Fill" Value="{StaticResource BorderAlt}" />
+    </Style>
+
+    <Style x:Key="SyncfusionSfRangeSliderVerticalInactiveTrackStyle" TargetType="Rectangle">
+        <Setter Property="Width" Value="2" />
+        <Setter Property="Fill" Value="{StaticResource BorderAlt}" />
+    </Style>
+
+    <!--  Style for active track of SfRangeSlider  -->
+    <Style x:Key="SyncfusionSfRangeSliderActiveTrackStyle" TargetType="Rectangle">
+        <Setter Property="Height" Value="2" />
+        <Setter Property="Fill" Value="{StaticResource PrimaryBackground}" />
+    </Style>
+
+    <Style x:Key="SyncfusionSfRangeSliderVerticalActiveTrackStyle" TargetType="Rectangle">
+        <Setter Property="Width" Value="2" />
+        <Setter Property="Fill" Value="{StaticResource PrimaryBackground}" />
+    </Style>
+
+    <!--  Style for TickBar of SfRangeSlider  -->
+    <Style x:Key="SyncfusionSfRangeSliderTickBarStyle" TargetType="Input:TickBar">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Input:TickBar">
+                    <Grid x:Name="PART_Layout" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfRangeSliderTickBarStyle}" TargetType="Input:TickBar" />
+
+    <!--  Style for TickBarItem of SfRangeSlider  -->
+    <Style x:Key="SyncfusionSfRangeSliderTickBarItemStyle" TargetType="Input:TickBarItem">
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.CaptionText}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Input:TickBarItem">
+                    <Grid x:Name="PART_TickBarItem">
+                        <Grid x:Name="TopLeftPanel" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Line
+                                x:Name="PART_TopLeftLine"
+                                Opacity="{TemplateBinding LineOpacity}"
+                                X1="{TemplateBinding StartPointX}"
+                                X2="{TemplateBinding EndPointX}"
+                                Y1="{TemplateBinding StartPointY}"
+                                Y2="{TemplateBinding EndPointY}" />
+                            <TextBlock
+                                x:Name="PART_TopLeftText"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Background="{TemplateBinding Background}"
+                                FontFamily="{TemplateBinding FontFamily}"
+                                FontSize="{TemplateBinding FontSize}"
+                                FontWeight="{TemplateBinding FontWeight}"
+                                Foreground="{TemplateBinding Foreground}"
+                                Text="{TemplateBinding Tick}"
+                                TextTrimming="WordEllipsis"
+                                Visibility="Collapsed">
+                                <TextBlock.Resources>
+                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                </TextBlock.Resources>
+                            </TextBlock>
+                        </Grid>
+                        <Grid x:Name="BottomRightPanel" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Line
+                                x:Name="PART_BottomRightLine"
+                                Opacity="{TemplateBinding LineOpacity}"
+                                X1="{TemplateBinding StartPointX}"
+                                X2="{TemplateBinding EndPointX}"
+                                Y1="{TemplateBinding StartPointY}"
+                                Y2="{TemplateBinding EndPointY}" />
+                            <TextBlock
+                                x:Name="PART_BottomRightText"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Background="{TemplateBinding Background}"
+                                FontFamily="{TemplateBinding FontFamily}"
+                                FontSize="{TemplateBinding FontSize}"
+                                FontWeight="{TemplateBinding FontWeight}"
+                                Foreground="{TemplateBinding Foreground}"
+                                Text="{TemplateBinding Tick}"
+                                TextTrimming="WordEllipsis"
+                                Visibility="Collapsed">
+                                <TextBlock.Resources>
+                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                </TextBlock.Resources>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="PART_TopLeftText" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter TargetName="PART_TopLeftText" Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter TargetName="PART_BottomRightText" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter TargetName="PART_BottomRightText" Property="Background" Value="{StaticResource ContentBackground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfRangeSliderTickBarItemStyle}" TargetType="Input:TickBarItem" />
+
+    <!--  Template for HorizontalRangeSlider  -->
+    <ControlTemplate x:Key="SyncfusionSfRangeSliderHorizontalControlTemplate" TargetType="Input:SfRangeSlider">
+        <Border
+            x:Name="border"
+            Background="Transparent"
+            BorderBrush="Transparent"
+            SnapsToDevicePixels="True">
+            <Grid
+                x:Name="HorizontalTemplate"
+                Margin="{TemplateBinding Padding}"
+                Background="Transparent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Rectangle
+                    x:Name="HorizontalTrackRectangle"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="3"
+                    Width="{TemplateBinding ActualWidth}"
+                    Style="{TemplateBinding InactiveTrackStyle}" />
+                <Rectangle
+                    x:Name="HorizontalDecreaseRectangle"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="3"
+                    Width="{TemplateBinding ActualWidth}"
+                    Style="{TemplateBinding ActiveTrackStyle}" />
+                <Input:TickBar
+                    x:Name="TopTickBar"
+                    Grid.ColumnSpan="3"
+                    Margin="0,0,-1,2"
+                    IsTabStop="False"
+                    VerticalAlignment="Bottom"
+                    CustomLabels="{TemplateBinding CustomLabels}"
+                    IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                    IsHitTestVisible="False"
+                    LabelOrientation="{TemplateBinding LabelOrientation}"
+                    LabelPlacement="{TemplateBinding LabelPlacement}"
+                    Maximum="{TemplateBinding Maximum}"
+                    Minimum="{TemplateBinding Minimum}"
+                    Orientation="{TemplateBinding Orientation}"
+                    ShowCustomLabels="{TemplateBinding ShowCustomLabels}"
+                    ShowValueLabels="{TemplateBinding ShowValueLabels}"
+                    TickFrequency="{TemplateBinding TickFrequency}"
+                    TickPlacement="{TemplateBinding TickPlacement}"
+                    ValuePlacement="{TemplateBinding ValuePlacement}"
+                    Visibility="Collapsed" />
+                <Input:TickBar
+                    x:Name="HorizontalInlineTickBar"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="3"
+                    IsTabStop="False"
+                    CustomLabels="{TemplateBinding CustomLabels}"
+                    IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                    IsHitTestVisible="False"
+                    LabelOrientation="{TemplateBinding LabelOrientation}"
+                    LabelPlacement="{TemplateBinding LabelPlacement}"
+                    Maximum="{TemplateBinding Maximum}"
+                    Minimum="{TemplateBinding Minimum}"
+                    Orientation="{TemplateBinding Orientation}"
+                    ShowCustomLabels="{TemplateBinding ShowCustomLabels}"
+                    ShowValueLabels="{TemplateBinding ShowValueLabels}"
+                    TickFrequency="{TemplateBinding TickFrequency}"
+                    TickPlacement="{TemplateBinding TickPlacement}"
+                    ValuePlacement="{TemplateBinding ValuePlacement}"
+                    Visibility="Collapsed" />
+                <Input:TickBar
+                    x:Name="BottomTickBar"
+                    Grid.Row="2"
+                    Grid.ColumnSpan="3"
+                    Margin="0,2,-1,0"
+                    IsTabStop="False"
+                    VerticalAlignment="Top"
+                    CustomLabels="{TemplateBinding CustomLabels}"
+                    IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                    IsHitTestVisible="False"
+                    LabelOrientation="{TemplateBinding LabelOrientation}"
+                    LabelPlacement="{TemplateBinding LabelPlacement}"
+                    Maximum="{TemplateBinding Maximum}"
+                    Minimum="{TemplateBinding Minimum}"
+                    Orientation="{TemplateBinding Orientation}"
+                    ShowCustomLabels="{TemplateBinding ShowCustomLabels}"
+                    ShowValueLabels="{TemplateBinding ShowValueLabels}"
+                    TickFrequency="{TemplateBinding TickFrequency}"
+                    TickPlacement="{TemplateBinding TickPlacement}"
+                    ValuePlacement="{TemplateBinding ValuePlacement}"
+                    Visibility="Collapsed" />
+                <Rectangle
+                    x:Name="HorizontalBorder"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="3"
+                    Stroke="{TemplateBinding BorderBrush}"
+                    StrokeThickness="{TemplateBinding BorderThickness}" />
+                <Thumb
+                    x:Name="HorizontalRangeStartThumb"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    DataContext="{TemplateBinding Value}"
+                    Style="{TemplateBinding ThumbStyle}"
+                    Visibility="Collapsed" />
+                <Thumb
+                    x:Name="HorizontalRangeEndThumb"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    DataContext="{TemplateBinding Value}"
+                    Style="{TemplateBinding ThumbStyle}" />
+                <Rectangle
+                    x:Name="FocusVisualWhiteHorizontal"
+                    Grid.RowSpan="3"
+                    Grid.ColumnSpan="3"
+                    IsHitTestVisible="False"
+                    Opacity="0"
+                    StrokeDashArray="1,1"
+                    StrokeDashOffset="1.5"
+                    StrokeEndLineCap="Square" />
+                <Rectangle
+                    x:Name="FocusVisualBlackHorizontal"
+                    Grid.RowSpan="3"
+                    Grid.ColumnSpan="3"
+                    IsHitTestVisible="False"
+                    Opacity="0"
+                    StrokeDashArray="1,1"
+                    StrokeDashOffset="0.5"
+                    StrokeEndLineCap="Square" />
+                <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal" />
+                        <VisualState x:Name="Pressed">
+                            <Storyboard>
+                                <ColorAnimation
+                                    Storyboard.TargetName="HorizontalDecreaseRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource PrimaryDarken.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="HorizontalTrackRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                            </Storyboard>
+                        </VisualState>
+                        <VisualState x:Name="Disabled">
+                            <Storyboard>
+                                <ColorAnimation
+                                    Storyboard.TargetName="HorizontalDecreaseRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource BorderDark.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="HorizontalTrackRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="bottomTickBarColor"
+                                    Storyboard.TargetProperty="Color"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="horizontalInlineTickBarColor"
+                                    Storyboard.TargetProperty="Color"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="topTickBarColor"
+                                    Storyboard.TargetProperty="Color"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                            </Storyboard>
+                        </VisualState>
+                        <VisualState x:Name="PointerOver">
+                            <Storyboard>
+                                <ColorAnimation
+                                    Storyboard.TargetName="HorizontalDecreaseRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource PrimaryDark.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="HorizontalTrackRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                            </Storyboard>
+                        </VisualState>
+                    </VisualStateGroup>
+                    <VisualStateGroup x:Name="FocusStates">
+                        <VisualState x:Name="Focused" />
+                        <VisualState x:Name="Unfocused" />
+                    </VisualStateGroup>
+                </VisualStateManager.VisualStateGroups>
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter TargetName="HorizontalTrackRectangle" Property="Height" Value="4" />
+                <Setter TargetName="HorizontalDecreaseRectangle" Property="Height" Value="4" />
+            </Trigger>
+		    <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Fill" TargetName="HorizontalDecreaseRectangle" Value="{StaticResource BorderAlt}"/>
+                <Setter Property="Fill" TargetName="HorizontalTrackRectangle" Value="{StaticResource BorderAlt}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <!--  Template for VerticalRangeSlider  -->
+    <ControlTemplate x:Key="SyncfusionSfRangeSliderVerticalControlTemplate" TargetType="Input:SfRangeSlider">
+        <Border
+            x:Name="border"
+            Background="Transparent"
+            BorderBrush="Transparent"
+            SnapsToDevicePixels="True">
+            <Grid
+                x:Name="VerticalTemplate"
+                Margin="{TemplateBinding Padding}"
+                Background="Transparent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Rectangle
+                    x:Name="VerticalTrackRectangle"
+                    Grid.RowSpan="3"
+                    Grid.Column="1"
+                    Height="{TemplateBinding ActualHeight}"
+                    Style="{TemplateBinding InactiveTrackStyle}" />
+                <Rectangle
+                    x:Name="VerticalDecreaseRectangle"
+                    Grid.RowSpan="3"
+                    Grid.Column="1"
+                    Height="{TemplateBinding ActualHeight}"
+                    Style="{TemplateBinding ActiveTrackStyle}" />
+                <Input:TickBar
+                    x:Name="LeftTickBar"
+                    Grid.RowSpan="3"
+                    Margin="0,0,2,0"
+                    IsTabStop="False"
+                    HorizontalAlignment="Right"
+                    CustomLabels="{TemplateBinding CustomLabels}"
+                    IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                    IsHitTestVisible="False"
+                    LabelOrientation="{TemplateBinding LabelOrientation}"
+                    LabelPlacement="{TemplateBinding LabelPlacement}"
+                    Maximum="{TemplateBinding Maximum}"
+                    Minimum="{TemplateBinding Minimum}"
+                    Orientation="{TemplateBinding Orientation}"
+                    ShowCustomLabels="{TemplateBinding ShowCustomLabels}"
+                    ShowValueLabels="{TemplateBinding ShowValueLabels}"
+                    TickFrequency="{TemplateBinding TickFrequency}"
+                    TickPlacement="{TemplateBinding TickPlacement}"
+                    ValuePlacement="{TemplateBinding ValuePlacement}"
+                    Visibility="Collapsed" />
+                <Input:TickBar
+                    x:Name="VerticalInlineTickBar"
+                    Grid.RowSpan="3"
+                    Grid.Column="1"
+                    IsTabStop="False"
+                    CustomLabels="{TemplateBinding CustomLabels}"
+                    IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                    IsHitTestVisible="False"
+                    LabelOrientation="{TemplateBinding LabelOrientation}"
+                    LabelPlacement="{TemplateBinding LabelPlacement}"
+                    Maximum="{TemplateBinding Maximum}"
+                    Minimum="{TemplateBinding Minimum}"
+                    Orientation="{TemplateBinding Orientation}"
+                    ShowCustomLabels="{TemplateBinding ShowCustomLabels}"
+                    ShowValueLabels="{TemplateBinding ShowValueLabels}"
+                    TickFrequency="{TemplateBinding TickFrequency}"
+                    TickPlacement="{TemplateBinding TickPlacement}"
+                    ValuePlacement="{TemplateBinding ValuePlacement}"
+                    Visibility="Collapsed" />
+                <Input:TickBar
+                    x:Name="RightTickBar"
+                    Grid.RowSpan="3"
+                    Grid.Column="2"
+                    Margin="2,0,0,0"
+                    IsTabStop="False"
+                    HorizontalAlignment="Left"
+                    CustomLabels="{TemplateBinding CustomLabels}"
+                    IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                    IsHitTestVisible="False"
+                    LabelOrientation="{TemplateBinding LabelOrientation}"
+                    LabelPlacement="{TemplateBinding LabelPlacement}"
+                    Maximum="{TemplateBinding Maximum}"
+                    Minimum="{TemplateBinding Minimum}"
+                    Orientation="{TemplateBinding Orientation}"
+                    ShowCustomLabels="{TemplateBinding ShowCustomLabels}"
+                    ShowValueLabels="{TemplateBinding ShowValueLabels}"
+                    TickFrequency="{TemplateBinding TickFrequency}"
+                    TickPlacement="{TemplateBinding TickPlacement}"
+                    ValuePlacement="{TemplateBinding ValuePlacement}"
+                    Visibility="Collapsed" />
+                <Rectangle
+                    x:Name="VerticalBorder"
+                    Grid.RowSpan="3"
+                    Grid.Column="1"
+                    Stroke="{TemplateBinding BorderBrush}"
+                    StrokeThickness="{TemplateBinding BorderThickness}" />
+                <Thumb
+                    x:Name="VerticalRangeStartThumb"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    DataContext="{TemplateBinding Value}"
+                    Style="{TemplateBinding ThumbStyle}"
+                    Visibility="Collapsed" />
+                <Thumb
+                    x:Name="VerticalRangeEndThumb"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    DataContext="{TemplateBinding Value}"
+                    Style="{TemplateBinding ThumbStyle}" />
+                <Rectangle
+                    x:Name="FocusVisualWhiteVertical"
+                    Grid.RowSpan="3"
+                    Grid.ColumnSpan="3"
+                    IsHitTestVisible="False"
+                    Opacity="0"
+                    Stroke="Black"
+                    StrokeDashArray="1,1"
+                    StrokeDashOffset="1.5"
+                    StrokeEndLineCap="Square" />
+                <Rectangle
+                    x:Name="FocusVisualBlackVertical"
+                    Grid.RowSpan="3"
+                    Grid.ColumnSpan="3"
+                    IsHitTestVisible="False"
+                    Opacity="0"
+                    Stroke="Black"
+                    StrokeDashArray="1,1"
+                    StrokeDashOffset="0.5"
+                    StrokeEndLineCap="Square" />
+                <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal" />
+                        <VisualState x:Name="Pressed">
+                            <Storyboard>
+                                <ColorAnimation
+                                    Storyboard.TargetName="VerticalDecreaseRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource PrimaryDarken.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="VerticalTrackRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                            </Storyboard>
+                        </VisualState>
+                        <VisualState x:Name="Disabled">
+                            <Storyboard>
+                                <ColorAnimation
+                                    Storyboard.TargetName="VerticalDecreaseRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource BorderDark.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="VerticalTrackRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="leftTickBarColor"
+                                    Storyboard.TargetProperty="Color"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="verticalInlineTickBarColor"
+                                    Storyboard.TargetProperty="Color"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="rightTickBarColor"
+                                    Storyboard.TargetProperty="Color"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                            </Storyboard>
+                        </VisualState>
+                        <VisualState x:Name="PointerOver">
+                            <Storyboard>
+                                <ColorAnimation
+                                    Storyboard.TargetName="VerticalDecreaseRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource PrimaryDark.Color}"
+                                    Duration="0" />
+                                <ColorAnimation
+                                    Storyboard.TargetName="VerticalTrackRectangle"
+                                    Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                    To="{StaticResource BorderAlt.Color}"
+                                    Duration="0" />
+                            </Storyboard>
+                        </VisualState>
+                    </VisualStateGroup>
+                    <VisualStateGroup x:Name="FocusStates">
+                        <VisualState x:Name="Focused" />
+                        <VisualState x:Name="Unfocused" />
+                    </VisualStateGroup>
+                </VisualStateManager.VisualStateGroups>
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter TargetName="VerticalTrackRectangle" Property="Height" Value="4" />
+                <Setter TargetName="VerticalDecreaseRectangle" Property="Height" Value="4" />
+            </Trigger>
+		    <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Fill" TargetName="VerticalDecreaseRectangle" Value="{StaticResource BorderAlt}"/>
+                <Setter Property="Fill" TargetName="VerticalTrackRectangle" Value="{StaticResource BorderAlt}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <!--  Style for SfRangeSlider  -->
+    <Style x:Key="SyncfusionSfRangeSliderStyle" TargetType="Input:SfRangeSlider">
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="TickStroke" Value="{StaticResource BorderDark1}" />
+        <Setter Property="MinorTickStroke" Value="{StaticResource BorderDark1}" />
+        <Setter Property="ActiveMinorTickStroke" Value="{StaticResource PrimaryColorForeground}" />
+        <Setter Property="ActiveTickStroke" Value="{StaticResource PrimaryColorForeground}" />
+        <Setter Property="TickStrokeThickness" Value="{StaticResource MaterialLightCustom.StrokeThickness1}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness2}" />
+        <Setter Property="TickLength" Value="5" />
+        <Setter Property="MinorTickLength" Value="2.5" />
+        <Setter Property="Maximum" Value="100" />
+        <Setter Property="SmallChange" Value="1" />
+        <Style.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="TickLength" Value="10" />
+                <Setter Property="MinorTickLength" Value="5" />
+            </Trigger>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="InactiveTrackStyle" Value="{StaticResource SyncfusionSfRangeSliderInactiveTrackStyle}" />
+                <Setter Property="ActiveTrackStyle" Value="{StaticResource SyncfusionSfRangeSliderActiveTrackStyle}" />
+                <Setter Property="ThumbStyle" Value="{StaticResource SyncfusionSfRangeSliderHorizontalThumbStyle}" />
+                <Setter Property="Template" Value="{StaticResource SyncfusionSfRangeSliderHorizontalControlTemplate}" />
+            </Trigger>
+            <Trigger Property="Orientation" Value="Vertical">
+                <Setter Property="InactiveTrackStyle" Value="{StaticResource SyncfusionSfRangeSliderVerticalInactiveTrackStyle}" />
+                <Setter Property="ActiveTrackStyle" Value="{StaticResource SyncfusionSfRangeSliderVerticalActiveTrackStyle}" />
+                <Setter Property="ThumbStyle" Value="{StaticResource SyncfusionSfRangeSliderVerticalThumbStyle}" />
+                <Setter Property="Template" Value="{StaticResource SyncfusionSfRangeSliderVerticalControlTemplate}" />
+            </Trigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="Orientation" Value="Horizontal" />
+                    <Condition Property="ThumbToolTipPlacement" Value="TopLeft" />
+                </MultiTrigger.Conditions>
+                <Setter Property="ToolTipStyle" Value="{StaticResource TopToolTipStyle}" />
+            </MultiTrigger>
+
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="Orientation" Value="Horizontal" />
+                    <Condition Property="ThumbToolTipPlacement" Value="BottomRight" />
+                </MultiTrigger.Conditions>
+                <Setter Property="ToolTipStyle" Value="{StaticResource BottomToolTipStyle}" />
+            </MultiTrigger>
+
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="Orientation" Value="Vertical" />
+                    <Condition Property="ThumbToolTipPlacement" Value="TopLeft" />
+                </MultiTrigger.Conditions>
+                <Setter Property="ToolTipStyle" Value="{StaticResource LeftToolTipStyle}" />
+            </MultiTrigger>
+
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="Orientation" Value="Vertical" />
+                    <Condition Property="ThumbToolTipPlacement" Value="BottomRight" />
+                </MultiTrigger.Conditions>
+                <Setter Property="ToolTipStyle" Value="{StaticResource RightToolTipStyle}" />
+            </MultiTrigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="TickStroke" Value="{StaticResource BorderAlt}"/>
+                <Setter Property="MinorTickStroke" Value="{StaticResource BorderAlt}"/>
+                <Setter Property="ActiveMinorTickStroke" Value="{StaticResource BorderAlt}"/>
+                <Setter Property="ActiveTickStroke" Value="{StaticResource BorderAlt}"/>
+            </Trigger>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfRangeSliderStyle}" TargetType="Input:SfRangeSlider" />
+
+</ResourceDictionary>

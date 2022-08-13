@@ -21,7 +21,7 @@ namespace EQLogParser
           PlayerManager.Instance.AddVerifiedPlayer(action.Substring(19), lineData.BeginTime);
           found = true; // ignore anything that starts with Targeted
         }
-        else if (action.EndsWith(" shrinks.") && PlayerManager.Instance.IsPossiblePlayerName(action, action.Length - 9))
+        else if (action.EndsWith(" shrinks.") && PlayerManager.IsPossiblePlayerName(action, action.Length - 9))
         {
           string test = action.Substring(0, action.Length - 9);
           PlayerManager.Instance.AddPetOrPlayerAction(test);
@@ -29,7 +29,7 @@ namespace EQLogParser
         }
         else if (action.EndsWith(" joined the raid.") && !action.StartsWith("You have"))
         {
-          if (PlayerManager.Instance.IsPossiblePlayerName(action, action.Length - 17))
+          if (PlayerManager.IsPossiblePlayerName(action, action.Length - 17))
           {
             string test = action.Substring(0, action.Length - 17);
             PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
@@ -39,7 +39,7 @@ namespace EQLogParser
         else if (action.EndsWith(" has joined the group."))
         {
           string test = action.Substring(0, action.Length - 22);
-          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          if (PlayerManager.IsPossiblePlayerName(test))
           {
             PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
           }
@@ -53,7 +53,7 @@ namespace EQLogParser
         else if (action.EndsWith(" has left the raid."))
         {
           string test = action.Substring(0, action.Length - 19);
-          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          if (PlayerManager.IsPossiblePlayerName(test))
           {
             PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
             found = true;
@@ -62,7 +62,7 @@ namespace EQLogParser
         else if (action.EndsWith(" has left the group."))
         {
           string test = action.Substring(0, action.Length - 20);
-          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          if (PlayerManager.IsPossiblePlayerName(test))
           {
             PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
           }
@@ -76,7 +76,7 @@ namespace EQLogParser
         else if (action.EndsWith(" is now the leader of your raid.", StringComparison.Ordinal))
         {
           string test = action.Substring(0, action.Length - 32);
-          if (PlayerManager.Instance.IsPossiblePlayerName(test))
+          if (PlayerManager.IsPossiblePlayerName(test))
           {
             PlayerManager.Instance.AddVerifiedPlayer(test, lineData.BeginTime);
             found = true;

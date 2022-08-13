@@ -78,7 +78,7 @@ namespace EQLogParser
 
         if (((To == null || receiverIsTo) && (From == null || senderIsFrom)) || (senderIsTo && receiverIsFrom) || (To == From && (sender == Player && receiverIsTo || receiver == Player && senderIsFrom)))
         {
-          if (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender))
+          if (chatType.SenderIsYou || (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender)))
           {
             if (Keyword != null)
             {

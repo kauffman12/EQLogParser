@@ -13,14 +13,12 @@ namespace EQLogParser
     private double increment = 0.0;
 
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
-
     internal static string FormatDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
-
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
+    internal static string FormatSimpleHMS(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    internal static string FormatSimpleMS(double seconds) => new DateTime().AddSeconds(seconds).ToString("mm:ss", CultureInfo.InvariantCulture);
 
-    internal static string FormatSimpleTime(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-
-    internal static string FormatGeneralTime(double seconds)
+    internal static string FormatGeneralTime(double seconds, bool showSeconds = false)
     {
       TimeSpan diff = TimeSpan.FromSeconds(seconds);
       string result = "";
@@ -58,6 +56,18 @@ namespace EQLogParser
             break;
           default:
             result += diff.Minutes + " minutes";
+            break;
+        }
+      }
+      else if (showSeconds && diff.Seconds >= 1)
+      {
+        switch (diff.Seconds)
+        {
+          case 1:
+            result += diff.Seconds + " second";
+            break;
+          default:
+            result += diff.Seconds + " seconds";
             break;
         }
       }
