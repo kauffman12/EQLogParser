@@ -1,0 +1,891 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    
+                    xmlns:skinmanager="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:spreadsheet="clr-namespace:Syncfusion.UI.Xaml.Spreadsheet;assembly=Syncfusion.SfSpreadsheet.WPF"
+                    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/TextBox.xaml"/>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+    
+    <shared:StringVisibilityConverter x:Key="textBlockVisibilityConverter"/>
+    <shared:EmptyCollectionToObjectConverter x:Key="listItemsVisiblityConverter" EmptyValue="Collapsed" NotEmptyValue="Visible" />
+    <shared:VisibilityNegationConverter x:Key="reverseVisibilityConverter" />
+    <spreadsheet:LoadingVisibilityConverter x:Key="loadingVisiblityConverter" />
+    <spreadsheet:HeightToMarginConverter x:Key="heightToMarginConverter" />
+	<BooleanToVisibilityConverter x:Key="booleanConverter"/>
+
+    <Style x:Key="sortAscendingBtnStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource WPFButtonStyle}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid x:Name="PART_SortAscendingButtonPresenter" Background="Transparent">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundHover.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundSelection.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="AscendingIcon" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundSelection.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="AscendingIcon" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource BorderAlt.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="SortingStates">
+                                <VisualState x:Name="Sorted">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="AscendingIcon" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundSelection.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="AscendingIcon" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource BorderAlt.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="UnSorted">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="AscendingIcon" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundHover.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="PART_RootBorder" Background="Transparent" BorderBrush="Transparent" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="AscendingIcon" Height="21" Width="21" Margin="1,3,5,0" BorderThickness="1" Background="Transparent" BorderBrush="Transparent">
+                                    <Grid  Height="16.163" Width="14.813" >
+                                        <Path Data="F1M107.5252,42.965L108.7512,39.827C108.8162,39.704,108.8162,39.519,108.8802,39.334C108.9442,39.519,109.0092,39.704,109.0092,39.827L110.2352,42.965z M108.4282,38.411L105.3962,45.796L106.4282,45.796L107.2032,43.704L110.5572,43.704L111.3962,45.796L112.4282,45.796L109.3962,38.411z" Fill="#FF4D82B8" Height="7.385" Stretch="Fill" Width="7.032" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                        <Path Data="F1M105.9124,47.8268L110.0414,47.8268L105.5254,54.1648L105.5254,54.4108L111.3314,54.4108L111.3314,53.6118L106.8804,53.6118L111.3964,47.2108L111.3964,47.0268L105.9124,47.0268z" Fill="#FF8959AB" Height="7.384" Stretch="Fill" Width="5.871" HorizontalAlignment="Left" Margin="0.129,0,0,0.001" VerticalAlignment="Bottom"/>
+                                        <Path Data="F1M120.3963,49.5265L117.8963,52.1345L117.8963,38.4115L116.6463,38.4115L116.6463,52.0725L114.1463,49.4885L114.1513,51.2185L117.2713,54.4115L120.3963,51.2965z" Fill="{StaticResource IconColor}" Stretch="Fill" Width="6.25" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                </Border>
+                                <ContentPresenter Grid.Column="1"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  OpacityMask="{x:Null}"
+                                                  RecognizesAccessKey="True"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="sortDescendingBtnStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource WPFButtonStyle}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid x:Name="PART_SortDescendingButtonPresenter" Background="Transparent">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundHover.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundSelection.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="SortingStates">
+                                <VisualState x:Name="Sorted">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="DescendingIcon" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundSelection.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="DescendingIcon" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource BorderAlt.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="UnSorted">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="DescendingIcon" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundHover.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="PART_RootBorder" Background="Transparent" BorderBrush="Transparent" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="DescendingIcon" Height="21" Width="21" Margin="1,3,5,0" BorderThickness="1" Background="Transparent" BorderBrush="Transparent">
+                                    <Grid Height="16.163" Width="14.813">
+                                        <Path Data="F1M79.5252,51.5807L80.7512,48.4417C80.8162,48.3187,80.8162,48.1347,80.8802,47.9497C80.9442,48.1347,81.0092,48.3187,81.0092,48.4417L82.2352,51.5807z M80.4282,47.0267L77.3962,54.4117L78.4282,54.4117L79.2032,52.3187L82.5572,52.3187L83.3962,54.4117L84.4282,54.4117L81.3962,47.0267z" Fill="#FF4D82B8" Height="7.385" Stretch="Fill" Width="7.032" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+                                        <Path Data="F1M78.3641,39.2111L82.4931,39.2111L77.9771,45.5501L77.9771,45.7961L83.7831,45.7961L83.7831,44.9961L79.3321,44.9961L83.8481,38.5961L83.8481,38.4111L78.3641,38.4111z" Fill="#FF8959AB" Height="7.385" Stretch="Fill" Width="5.871" HorizontalAlignment="Left" Margin="0.581,0,0,0" VerticalAlignment="Top"/>
+                                        <Path Data="F1M92.3963,49.5265L89.8963,52.1345L89.8963,38.4115L88.6463,38.4115L88.6463,52.0725L86.1463,49.4885L86.1513,51.2185L89.2713,54.4115L92.3963,51.2965z" Fill="{StaticResource IconColor}" Stretch="Fill" Width="6.25" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                </Border>
+                                <ContentPresenter Grid.Column="1"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  OpacityMask="{x:Null}"
+                                                  RecognizesAccessKey="True"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="clearFilterBtnStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource WPFButtonStyle}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid x:Name="PART_ClearButtonPresenter" Background="Transparent">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundHover.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundSelection.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_ClearButtonPresenter" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                            <EasingDoubleKeyFrame KeyTime="0" Value="0.5" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundHover.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="PART_RootBorder" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" >
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Height="21" Width="21" Margin="1,3,5,0" BorderThickness="1" Background="Transparent" BorderBrush="Transparent">
+                                    <Grid Height="16.163" Width="14.813">
+                                        <Path Data="F1M196.3963,39.4113L207.3963,39.4113L207.3963,40.3903L203.3803,44.4113L203.3843,50.4113L200.3963,50.4113L200.4123,44.4323L196.3963,40.3693z" Fill="{StaticResource IconColor}" Stretch="Fill" Margin="0,0,3.813,5.163"/>
+                                        <Path Data="F1M202.3963,49.4113L201.3963,49.4113L201.3963,43.9083L197.8023,40.4113L199.1463,40.4113L202.3963,43.4113z" Fill="White" Stretch="Fill" Width="4.594" HorizontalAlignment="Left" Margin="1.406,1,0,6.163"/>
+                                        <Path Data="M1.9192451,2.9325485E-05 C2.1697409,-0.0019894838 2.4200954,0.10016555 2.5959413,0.30364537 L4.5374453,2.4192493 4.5826132,2.3934999 C5.6569526,1.7823573 7.7919853,0.63299876 7.7919853,0.63299875 L8.1090057,0.93799326 C8.1090057,0.93799323 6.6954744,2.1184361 5.442446,3.2046986 L5.3399594,3.2937272 8.2640092,6.479984 7.9410059,6.7960012 4.5010316,4.0322323 4.4444406,4.0829875 C4.1985309,4.3040335 3.9872146,4.4990957 3.831737,4.6509697 3.1857014,5.2819664 1.5445949,7.3479545 1.5445949,7.3479545 1.2065768,7.71995 0.61854343,7.7379515 0.25852083,7.3869517 -0.1004946,7.0359561 -0.083495265,6.4619586 0.29651757,6.1319592 0.29651754,6.1319592 1.9947793,4.3273942 3.4283066,3.1748488 L3.4310989,3.1726191 1.3389261,1.4917106 C0.96692161,1.1636926 0.95192145,0.59766155 1.3069258,0.25064251 1.477084,0.084695935 1.6982195,0.0018105507 1.9192451,2.9325485E-05 z" Fill="#FFD65532" Height="7.639" Margin="6.549,0,0,0" Stretch="Fill" VerticalAlignment="Bottom"/>
+                                    </Grid>
+                                </Border>
+                                <ContentPresenter Grid.Column="1"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  OpacityMask="{x:Null}"
+                                                  RecognizesAccessKey="True"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            </Grid>
+                        </Border>
+                        <Border Grid.ColumnSpan="2"
+                                Margin="30,0,0,0"
+                                BorderBrush="{StaticResource BorderAlt}"
+                                BorderThickness="0,1,0,0" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AdvancedFiltersBtnStyle" TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid x:Name="PART_AdvancedFiltersButtonPresenter" Background="Transparent">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundSelection.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundSelection.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_AdvancedFiltersButtonPresenter" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                            <EasingDoubleKeyFrame KeyTime="0" Value="0.5" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="{StaticResource ContentBackgroundHover.Color}" />
+                                        </ColorAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                            <EasingColorKeyFrame KeyTime="0" Value="Transparent" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="PointerFocused" />
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ExpansionStates">
+                                <VisualState x:Name="Expanded">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_ExpanderCellPath" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(RotateTransform.Angle)">
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="0">
+                                                <EasingDoubleKeyFrame.EasingFunction>
+                                                    <CubicEase EasingMode="EaseIn" />
+                                                </EasingDoubleKeyFrame.EasingFunction>
+                                            </EasingDoubleKeyFrame>
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Collapsed">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_ExpanderCellPath" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(RotateTransform.Angle)">
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="90">
+                                                <EasingDoubleKeyFrame.EasingFunction>
+                                                    <CubicEase EasingMode="EaseIn" />
+                                                </EasingDoubleKeyFrame.EasingFunction>
+                                            </EasingDoubleKeyFrame>
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="PART_RootBorder" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" >
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="29" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        Width="16"
+                                        Height="16"
+                                        BorderBrush="{StaticResource BorderAlt}"
+                                        BorderThickness="1,1,1,1"
+                                        Visibility="Collapsed" />
+
+                                <Path x:Name="PART_FilteredFromCheck"
+                                      Width="14"
+                                      Height="14"
+                                      Margin="4,5,4,4"
+                                      Data="M 12.4227,0.00012207C 12.4867,0.126587 12.5333,0.274536 12.6787,0.321411C 9.49199,3.24792 6.704,6.57336 4.69865,10.6827C 4.04399,11.08 3.47066,11.5573 2.83199,11.9706C 2.09467,10.2198 1.692,8.13196 3.8147e-006,7.33606C 0.500004,6.79871 1.31733,6.05994 1.93067,6.2428C 2.85999,6.51868 3.14,7.9054 3.60399,8.81604C 5.80133,5.5387 8.53734,2.19202 12.4227,0.00012207 Z "
+                                      Fill="{StaticResource IconColor}"
+                                      Stretch="Uniform"
+                                      Visibility="Collapsed">
+                                    <Path.RenderTransform>
+                                        <TransformGroup>
+                                            <TransformGroup.Children>
+                                                <RotateTransform Angle="0" />
+                                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                                            </TransformGroup.Children>
+                                        </TransformGroup>
+                                    </Path.RenderTransform>
+                                </Path>
+                                <ContentPresenter Grid.Column="1"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  OpacityMask="{x:Null}"
+                                                  RecognizesAccessKey="True"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                <Grid Grid.Column="2"
+                                      Width="20"
+                                      Height="20"
+                                      Margin="4,5,10,2">
+                                    <Path x:Name="PART_ExpanderCellPath"
+                                          Width="7.758"
+                                          Height="10.667"
+                                          Data="F1 M 335.667,278.908L 335.667,268.241L 343.425,273.574L 335.667,278.908 Z "
+                                          Fill="{StaticResource IconColor}"
+                                          RenderTransformOrigin="0.5,0.5"
+                                          Stretch="Fill">
+                                        <Path.RenderTransform>
+                                            <TransformGroup>
+                                                <TransformGroup.Children>
+                                                    <RotateTransform Angle="0" />
+                                                </TransformGroup.Children>
+                                            </TransformGroup>
+                                        </Path.RenderTransform>
+                                    </Path>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionSpreadsheetCheckboxFilterControlStyle" TargetType="{x:Type spreadsheet:CheckboxFilterControl}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type spreadsheet:CheckboxFilterControl}">
+                    <Grid Height="{TemplateBinding Height}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="30" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                                Width="19"
+                                Height="19"
+                                Margin="4,39,4,4"
+                                VerticalAlignment="Top"
+                                BorderBrush="{StaticResource BorderAlt}"
+                                BorderThickness="1,1,1,1"
+                                Visibility="Collapsed">
+                            <Path x:Name="PART_FilteredFromCheck1"
+                                  Width="15"
+                                  Height="15"
+                                  Data="M 12.4227,0.00012207C 12.4867,0.126587 12.5333,0.274536 12.6787,0.321411C 9.49199,3.24792 6.704,6.57336 4.69865,10.6827C 4.04399,11.08 3.47066,11.5573 2.83199,11.9706C 2.09467,10.2198 1.692,8.13196 3.8147e-006,7.33606C 0.500004,6.79871 1.31733,6.05994 1.93067,6.2428C 2.85999,6.51868 3.14,7.9054 3.60399,8.81604C 5.80133,5.5387 8.53734,2.19202 12.4227,0.00012207 Z "
+                                  Fill="{StaticResource IconColor}"
+                                  Stretch="Uniform"
+                                  Visibility="Collapsed">
+                                <Path.RenderTransform>
+                                    <TransformGroup>
+                                        <TransformGroup.Children>
+                                            <RotateTransform Angle="0" />
+                                            <ScaleTransform ScaleX="1" ScaleY="1" />
+                                        </TransformGroup.Children>
+                                    </TransformGroup>
+                                </Path.RenderTransform>
+                            </Path>
+                        </Border>
+
+                        <Grid Grid.Column="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Margin="0,8,4,2" Background="{TemplateBinding Background}" Visibility="Visible">
+
+                                <TextBox x:Name="PART_SearchTextBox" Style="{StaticResource WPFTextBoxStyle}"
+                                         Height="25"
+                                         HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Center"
+                                         VerticalContentAlignment="Center"/>
+
+                                <TextBlock Margin="5,0,0,0"
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"
+                                           Opacity="0.7"
+                                           Text="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Filter_Search}"
+                                           Visibility="{TemplateBinding SearchTextBlockVisibility}" />
+
+                                <Border Width="18"
+                                        Height="18"
+                                        Margin="0,0,5,0"
+                                        BorderThickness="{Binding BorderThickness,ElementName=PART_SearchTextBox}"
+                                        HorizontalAlignment="Right"
+                                        Visibility="{Binding Text,
+                                                             ElementName=PART_SearchTextBox,
+                                                             ConverterParameter=true,
+                                                             Converter={StaticResource textBlockVisibilityConverter}}">
+
+                                    <Path Fill="{StaticResource IconColor}"
+                                          RenderTransformOrigin="0.5,0.5"
+                                          Stretch="Uniform">
+                                        <Path.Data>
+                                            <PathGeometry>M6,2 C3.7939453,2 2,3.7940063 2,6 2,8.2060089 3.7939453,10 6,10 8.2059937,10 10,8.2060089 10,6 10,3.7940063 8.2059937,2 6,2 z M6,0 C9.30896,-2.8819613E-11 12,2.6910095 12,6 12,7.44769 11.484919,8.7770891 10.628358,9.8146038 L10.585051,9.8658056 11.142985,10.420998 11.945992,10.420998 16.000025,14.485999 14.486012,16 10.420979,11.945998 10.420979,11.142998 9.8657846,10.585068 9.8145847,10.628373 C8.7770662,11.484927 7.44767,12 6,12 2.690979,12 0,9.3090057 0,6 0,2.6910095 2.690979,-2.8819613E-11 6,0 z</PathGeometry>
+                                        </Path.Data>
+                                        <Path.RenderTransform>
+                                            <TransformGroup>
+                                                <RotateTransform Angle="0" />
+                                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                                            </TransformGroup>
+                                        </Path.RenderTransform>
+                                    </Path>
+                                </Border>
+                                <Button x:Name="PART_DeleteButton"
+                                        Width="24"
+                                        Height="24"
+                                        Margin="-1,0,1,0"
+                                        Style="{StaticResource WPFGlyphButtonStyle}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Stretch"
+                                        BorderBrush="Transparent"   
+                                        Visibility="{Binding Text,
+                                                             ElementName=PART_SearchTextBox,
+                                                             ConverterParameter=false,
+                                                             Converter={StaticResource textBlockVisibilityConverter}}">
+                                        <Path x:Name="PART_DeleteButtonPath"
+                                            Margin="3"
+                                            Height="10"
+                                            Width="10"
+                                            Data="F1M54.0573,47.8776L38.1771,31.9974 54.0547,16.1198C55.7604,14.4141 55.7604,11.6511 54.0573,9.94531 52.3516,8.23962 49.5859,8.23962 47.8802,9.94531L32.0026,25.8229 16.1224,9.94531C14.4167,8.23962 11.6511,8.23962 9.94794,9.94531 8.24219,11.6511 8.24219,14.4141 9.94794,16.1198L25.8255,32 9.94794,47.8776C8.24219,49.5834 8.24219,52.3477 9.94794,54.0534 11.6511,55.7572 14.4167,55.7585 16.1224,54.0534L32.0026,38.1745 47.8802,54.0534C49.5859,55.7585 52.3516,55.7572 54.0573,54.0534 55.7604,52.3477 55.763,49.5834 54.0573,47.8776z"
+                                            Fill="{StaticResource IconColor}"
+                                            Stretch="Fill">
+                                            <Path.RenderTransform>
+                                                <TransformGroup>
+                                                    <RotateTransform Angle="0" />
+                                                    <ScaleTransform ScaleX="1" ScaleY="1" />
+                                                </TransformGroup>
+                                            </Path.RenderTransform>
+                                        </Path>
+                                </Button>
+                            </Grid>
+                            <Border Grid.Row="1"
+                                    Margin="0,4,4,4"
+                                    BorderBrush="{StaticResource BorderAlt}"
+                                    BorderThickness="1">
+                                <Grid>
+                                    <Grid Visibility="Visible">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+                                        <Grid Grid.Row="1">
+                                            <Grid.Resources>
+                                                <Storyboard x:Key="LoadingAnimation" RepeatBehavior="Forever">
+                                                    <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Path" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)">
+                                                        <EasingDoubleKeyFrame KeyTime="0" Value="0" />
+                                                        <EasingDoubleKeyFrame KeyTime="0:0:5" Value="1170" />
+                                                    </DoubleAnimationUsingKeyFrames>
+                                                </Storyboard>
+                                            </Grid.Resources>
+                                            <Path x:Name="Path"
+                                                  Width="26"
+                                                  Height="26"
+                                                  Data="M33.091251,58.314999C35.398258,58.314999 37.268002,60.186188 37.268002,62.490997 37.268002,64.797111 35.398258,66.667 33.091251,66.667 30.786645,66.667 28.917001,64.797111 28.917001,62.490997 28.917001,60.186188 30.786645,58.314999 33.091251,58.314999z M47.2943,55.271999C49.601437,55.271999 51.471003,57.141811 51.471003,59.447948 51.471003,61.752788 49.601437,63.624 47.2943,63.624 44.989765,63.624 43.119999,61.752788 43.119999,59.447948 43.119999,57.141811 44.989765,55.271999 47.2943,55.271999z M18.6666,54.257999C21.252921,54.257999 23.352,56.354423 23.352,58.94035 23.352,61.526379 21.252921,63.624 18.6666,63.624 16.08058,63.624 13.984001,61.526379 13.984001,58.94035 13.984001,56.354423 16.08058,54.257999 18.6666,54.257999z M57.4405,45.199001C59.3416,45.199001 60.891001,46.743435 60.891001,48.651199 60.891001,50.557564 59.3416,52.102001 57.4405,52.102001 55.534201,52.102001 53.99,50.557564 53.99,48.651199 53.99,46.743435 55.534201,45.199001 57.4405,45.199001z M8.3045502,43.967003C10.890694,43.967003 12.987,46.064644 12.987,48.6507 12.987,51.236656 10.890694,53.333 8.3045502,53.333 5.7185383,53.333 3.6219997,51.236656 3.6219997,48.6507 3.6219997,46.064644 5.7185383,43.967003 8.3045502,43.967003z M61.643499,30.851999C63.544542,30.851999 65.093996,32.396133 65.093996,34.30365 65.093996,36.209869 63.544542,37.754002 61.643499,37.754002 59.737253,37.754002 58.193001,36.209869 58.193001,34.30365 58.193001,32.396133 59.737253,30.851999 61.643499,30.851999z M4.6824703,29.619999C7.268652,29.619999 9.3649998,31.717722 9.3649998,34.30365 9.3649998,36.88958 7.268652,38.986 4.6824703,38.986 2.0965385,38.986 0,36.88958 0,34.30365 0,31.717722 2.0965385,29.619999 4.6824703,29.619999z M57.440451,16.938999C59.101923,16.938999 60.455999,18.287865 60.455999,19.9543 60.455999,21.620834 59.101923,22.971001 57.440451,22.971001 55.773779,22.971001 54.425001,21.620834 54.425001,19.9543 54.425001,18.287865 55.773779,16.938999 57.440451,16.938999z M8.3045502,15.272C10.890694,15.272 12.987,17.368345 12.987,19.9543 12.987,22.540255 10.890694,24.637999 8.3045502,24.637999 5.7185383,24.637999 3.6219997,22.540255 3.6219997,19.9543 3.6219997,17.368345 5.7185383,15.272 8.3045502,15.272z M47.294703,7.0829992C48.875502,7.0829996 50.167002,8.3696136 50.167002,9.9543542 50.167002,11.540385 48.875502,12.827 47.294703,12.827 45.711302,12.827 44.425001,11.540385 44.425001,9.9543542 44.425001,8.3696136 45.711302,7.0829996 47.294703,7.0829992z M18.666401,4.0399989C21.61159,4.0399999 23.997,6.4307284 23.997001,9.3748798 23.997,12.319001 21.61159,14.710999 18.666401,14.710999 15.72391,14.710999 13.336,12.319001 13.335999,9.3748798 13.336,6.4307284 15.72391,4.0399999 18.666401,4.0399989z M33.091201,0C36.294464,-7.5211233E-08 38.891,2.59503 38.891,5.7968797 38.891,8.9987201 36.294464,11.595 33.091201,11.595 29.890533,11.595 27.294,8.9987201 27.294001,5.7968797 27.294,2.59503 29.890533,-7.5211233E-08 33.091201,0z"
+                                                  Fill="{StaticResource IconColor}"
+                                                  RenderTransformOrigin="0.5,0.5"
+                                                  Stretch="Uniform"
+                                                  Visibility="{Binding IsItemSourceLoaded,
+                                                                       Mode=TwoWay,
+                                                                       RelativeSource={RelativeSource TemplatedParent},
+                                                                       ConverterParameter={StaticResource LoadingAnimation},
+                                                                       Converter={StaticResource ResourceKey=loadingVisiblityConverter}}">
+                                                <Path.RenderTransform>
+                                                    <TransformGroup>
+                                                        <ScaleTransform />
+                                                        <SkewTransform />
+                                                        <RotateTransform />
+                                                        <TranslateTransform />
+                                                    </TransformGroup>
+                                                </Path.RenderTransform>
+                                            </Path>
+                                            <ItemsControl x:Name="PART_ItemsControl"
+                                                          Height="{TemplateBinding Height}"
+                                                          HorizontalAlignment="Stretch"
+                                                          VerticalAlignment="Stretch"
+                                                          HorizontalContentAlignment="Stretch"
+                                                          VerticalContentAlignment="Stretch"
+                                                          ItemsSource="{TemplateBinding ItemsSource}"
+                                                          KeyboardNavigation.TabNavigation="Continue"
+                                                          Visibility="{Binding IsItemSourceLoaded,
+                                                                               RelativeSource={RelativeSource TemplatedParent},
+                                                                               Converter={StaticResource booleanConverter}}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <CheckBox Margin="4"
+                                                                  HorizontalAlignment="Stretch"
+                                                                  HorizontalContentAlignment="Stretch"
+                                                                  Content="{Binding Path = DisplayText}"
+                                                                  Focusable="False"
+                                                                  FontFamily="{Binding FontFamily,RelativeSource={RelativeSource Self}}"
+                                                                  FontSize="{Binding FontSize,RelativeSource={RelativeSource Self}}"
+                                                                  FontStretch="{Binding FontStretch,RelativeSource={RelativeSource Self}}"
+                                                                  FontStyle="{Binding FontStyle,RelativeSource={RelativeSource Self}}"
+                                                                  FontWeight="{Binding FontWeight,RelativeSource={RelativeSource Self}}"
+                                                                  Foreground="{Binding Foreground,RelativeSource={RelativeSource Self}}"
+                                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                                <ItemsControl.Template>
+                                                    <ControlTemplate TargetType="{x:Type ItemsControl}">
+                                                        <Border Background="{TemplateBinding Background}"
+                                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <Grid>
+                                                                <ScrollViewer HorizontalAlignment="Stretch"
+                                                                              CanContentScroll="True"
+                                                                              HorizontalScrollBarVisibility="Auto"
+                                                                              Padding="2"
+                                                                              SnapsToDevicePixels="true"
+                                                                              VerticalScrollBarVisibility="Auto">
+                                                                    <ItemsPresenter x:Name="PART_ItemsPresenter"
+                                                                                    Margin="{Binding ActualHeight,
+                                                                          ElementName=PART_CheckBox, UpdateSourceTrigger=PropertyChanged,
+                                                                                                     Converter={StaticResource heightToMarginConverter}}"
+                                                                                    ClipToBounds="True"
+                                                                                    Focusable="False" />
+                                                                </ScrollViewer>
+                                                                <TextBlock Margin="{Binding ElementName=PART_ItemsPresenter,
+                                                                                            Path=Margin}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Top"
+                                                                           Foreground="{TemplateBinding Foreground}"
+                                                                           Text="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Filter_NoMatches}"
+                                                                           Visibility="{Binding ItemsSource,
+                                                                                                RelativeSource={RelativeSource TemplatedParent},
+                                                                                                ConverterParameter=true,
+                                                                                                Converter={StaticResource ResourceKey=listItemsVisiblityConverter}}" />
+                                                            </Grid>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </ItemsControl.Template>
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <VirtualizingStackPanel HorizontalAlignment="Stretch" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                            </ItemsControl>
+                                        </Grid>
+                                        <Border Grid.Row="1"
+                                                Margin="0,0,20,0"
+                                                VerticalAlignment="Top"
+                                                Background="{TemplateBinding Background}"
+                                                Visibility="{Binding ItemsSource,
+                                                                     ElementName=PART_ItemsControl,
+                                                                     ConverterParameter=false,
+                                                                     Converter={StaticResource ResourceKey=listItemsVisiblityConverter}}">
+                                            <CheckBox x:Name="PART_CheckBox"
+                                                      Margin="10,10,4,4"
+                                                      HorizontalAlignment="Stretch"
+                                                      VerticalAlignment="Center"
+                                                      Content="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=SelectAll}"
+                                                      Focusable="False"
+                                                      FontFamily="{TemplateBinding FontFamily}"
+                                                      FontSize="{TemplateBinding FontSize}"
+                                                      FontStretch="{TemplateBinding FontWeight}"
+                                                      FontStyle="{TemplateBinding FontStyle}"
+                                                      FontWeight="{TemplateBinding FontWeight}"
+                                                      Foreground="{TemplateBinding Foreground}"
+                                                      IsThreeState="True"
+                                                      Visibility="{Binding Visibility,
+                                                                           ElementName=PART_ItemsControl}" />
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionSpreadsheetCheckboxFilterControlStyle}" TargetType="{x:Type spreadsheet:CheckboxFilterControl}" />
+
+    <Style x:Key="SyncfusionSpreadsheetFilterControlStyle" TargetType="{x:Type spreadsheet:SpreadsheetFilterControl}">
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type spreadsheet:SpreadsheetFilterControl}">
+                    <Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="FilterControlStates">
+                                <VisualState x:Name="AdvancedFilter">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_AdvancedFilterControl" Storyboard.TargetProperty="(FrameworkElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_CheckboxFilterControl" Storyboard.TargetProperty="(FrameworkElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="CheckboxFilter">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_AdvancedFilterControl" Storyboard.TargetProperty="(FrameworkElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_CheckboxFilterControl" Storyboard.TargetProperty="(FrameworkElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <!--<ContentControl ContentTemplate="{TemplateBinding ContentTemplate}">-->
+                        <Border KeyboardNavigation.TabNavigation="Cycle" x:Name="PART_FilterPopUpBorder"
+                                        MinWidth="260"
+                                        MinHeight="380"
+                                        Width="{Binding FilterPopupWidth,
+                                                        Mode=TwoWay,
+                                                        RelativeSource={RelativeSource TemplatedParent}}"
+                                        Height="{Binding FilterPopupHeight,
+                                                         Mode=TwoWay,
+                                                         RelativeSource={RelativeSource TemplatedParent}}"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <StackPanel Margin="2,0,0,0">
+                                    <Button x:Name="PART_SortAscendingButton"
+                                                              Height="28"
+                                                              Content="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=SortAscending}"
+                                                              HorizontalAlignment="Stretch"
+                                                              VerticalAlignment="Stretch"
+                                                              HorizontalContentAlignment="Left"
+                                                              FontWeight="{TemplateBinding FontWeight}"
+                                                              Foreground="{TemplateBinding Foreground}"
+                                                              Style="{StaticResource sortAscendingBtnStyle}"
+                                                              Visibility="Visible">
+                                    </Button>
+
+                                    <Button x:Name="PART_SortDescendingButton"
+                                                              Height="28"
+                                                              Content="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=SortDescending}"
+                                                              HorizontalAlignment="Stretch"
+                                                              VerticalAlignment="Stretch"
+                                                              HorizontalContentAlignment="Left"
+                                                              FontWeight="{TemplateBinding FontWeight}"
+                                                              Foreground="{TemplateBinding Foreground}"
+                                                              Style="{StaticResource sortDescendingBtnStyle}"
+                                                              Visibility="Visible">
+                                    </Button>
+
+                                    <Button x:Name="PART_ClearFilterButton"
+                                                    Height="27"
+                                                    IsEnabled="False"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    Content="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=ClearFilter}"
+                                                    FontWeight="{TemplateBinding FontWeight}"
+                                                    Foreground="{TemplateBinding Foreground}"
+                                                    Style="{StaticResource clearFilterBtnStyle}" />
+
+                                    <Button x:Name="PART_AdvancedFilterButton"
+                                                    Height="27"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    Content="{Binding FilterColumnType,
+                                                                      RelativeSource={RelativeSource TemplatedParent}}"
+                                                    FontFamily="{TemplateBinding FontFamily}"
+                                                    FontSize="{TemplateBinding FontSize}"
+                                                    FontStretch="{TemplateBinding FontWeight}"
+                                                    FontStyle="{TemplateBinding FontStyle}"
+                                                    FontWeight="{TemplateBinding FontWeight}"
+                                                    Foreground="{TemplateBinding Foreground}"
+                                                    Style="{StaticResource AdvancedFiltersBtnStyle}"
+                                                    Visibility="Collapsed" />
+
+                                </StackPanel>
+                                <Grid Grid.Row="1" Background="{TemplateBinding Background}"  Margin="2,0,0,0">
+                                    <spreadsheet:CheckboxFilterControl x:Name="PART_CheckboxFilterControl"
+                                                                           FontFamily="{TemplateBinding FontFamily}"
+                                                                           FontSize="{TemplateBinding FontSize}"
+                                                                           FontStretch="{TemplateBinding FontWeight}"
+                                                                           FontStyle="{TemplateBinding FontStyle}"
+                                                                           FontWeight="{TemplateBinding FontWeight}"
+                                                                           Foreground="{TemplateBinding Foreground}"
+                                                                           Background="{TemplateBinding Background}"
+                                                                           Focusable="False"
+                                                                           Visibility="{Binding IsAdvancedFilterVisible,
+                                                                                              RelativeSource={RelativeSource TemplatedParent},
+                                                                                              Converter={StaticResource reverseVisibilityConverter}}" />
+
+                                    <spreadsheet:AdvancedFilterControl x:Name="PART_AdvancedFilterControl"
+                                                                         Focusable="False"
+                                                                         FontFamily="{TemplateBinding FontFamily}"
+                                                                         FontSize="{TemplateBinding FontSize}"
+                                                                         FontStretch="{TemplateBinding FontWeight}"
+                                                                         FontStyle="{TemplateBinding FontStyle}"
+                                                                         FontWeight="{TemplateBinding FontWeight}"
+                                                                         Foreground="{TemplateBinding Foreground}"
+                                                                         Background="{TemplateBinding Background}"
+                                                                         Visibility="{Binding IsAdvancedFilterVisible,
+                                                                                              RelativeSource={RelativeSource TemplatedParent},
+                                                                                              Converter={StaticResource booleanConverter}}" />
+                                </Grid>
+                                <Border Grid.Row="2"
+                                                BorderBrush="{StaticResource BorderAlt}"
+                                                BorderThickness="0,0,0,1" />
+                                <StackPanel Grid.Row="3">
+                                    <StackPanel Margin="0,10,4,5"
+                                                        HorizontalAlignment="Right"
+                                                        Orientation="Horizontal">
+                                        <Button x:Name="PART_OkButton"
+                                                        Height="22"
+                                                        Width="32"
+                                                        Margin="8,8,4,0"
+                                                        Content="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Ok}"
+                                                        Style="{StaticResource WPFFlatButtonStyle}"
+                                                        Visibility="Visible"/>
+                                        <Button x:Name="PART_CancelButton"
+                                                        Height="22"
+                                                        Width="52"
+                                                        Margin="4,8,8,0"
+                                                        Content="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Cancel}"
+                                                        Style="{StaticResource WPFFlatButtonStyle}"/>
+                                    </StackPanel>
+                                    <Border Height="10"
+                                                    BorderBrush="{StaticResource BorderAlt}"
+                                                    BorderThickness="0" Background="Transparent">
+                                        <Thumb x:Name="PART_ThumbGripper"
+                                                       HorizontalAlignment="Right"
+                                                       Cursor="SizeNWSE">
+                                            <Thumb.Template>
+                                                <ControlTemplate>
+                                                    <Grid Background="Transparent">
+                                                        <Path Width="8"
+                                                                      Height="8"
+                                                                      Data="M36.396,36.017 L47.901,36.017 47.901,47.521999 36.396,47.521999 z M18.198,36.017 L29.716,36.017 29.716,47.521999 18.198,47.521999 z M0,36.017 L11.511999,36.017 11.511999,47.521999 0,47.521999 z M36.396,18.191001 L47.901,18.191001 47.901,29.696 36.396,29.696 z M18.198,18.191 L29.716,18.191 29.716,29.696 18.198,29.696 z M36.396,0 L47.901,0 47.901,11.512 36.396,11.512 z"
+                                                                      Fill="{StaticResource IconColor}"
+                                                                      Stretch="Fill" />
+                                                    </Grid>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionSpreadsheetFilterControlStyle}" TargetType="{x:Type spreadsheet:SpreadsheetFilterControl}" />
+
+</ResourceDictionary>

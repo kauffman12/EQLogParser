@@ -1,15 +1,12 @@
-﻿using Syncfusion.SfSkinManager;
+﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -19,11 +16,6 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageSummary : SummaryTable, IDisposable
   {
-    private static readonly BitmapImage COLLAPSE_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Collapse_16x.png"));
-    private static readonly BitmapImage EXPAND_BITMAP = new BitmapImage(new Uri(@"pack://application:,,,/icons/Expand_16x.png"));
-
-    // workaround for adjusting column withs of player datagrid
-    private List<DataGrid> ChildGrids = new List<DataGrid>();
     private string CurrentClass = null;
     private int CurrentGroupCount = 0;
     private int CurrentPetOrPlayerOption = 0;
@@ -32,20 +24,9 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(timeChooser, new Theme("FluentDark"));
-      InitSummaryTable(title, dataGrid, selectedColumns);
-
-      PropertyDescriptor widthPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
-      PropertyDescriptor orderPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn));
-
-      foreach (var column in dataGrid.Columns)
-      {
-        widthPd.AddValueChanged(column, new EventHandler(ColumnWidthPropertyChanged));
-        orderPd.AddValueChanged(column, new EventHandler(ColumnDisplayIndexPropertyChanged));
-      }
 
       var list = PlayerManager.Instance.GetClassList();
-      list.Insert(0, Properties.Resources.ANY_CLASS);
+      list.Insert(0, EQLogParser.Resource.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
@@ -56,33 +37,177 @@ namespace EQLogParser
       CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
       CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
 
-      DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
+      // call after everything else is initialized
+      InitSummaryTable(title, dataGrid, selectedColumns);
+      DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1200) };
       SelectionTimer.Tick += (sender, e) =>
       {
-        var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true, MaxSeconds = (long)timeChooser.Value };
-        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
+        if (minTimeChooser.Value < maxTimeChooser.Value)
+        {
+          var damageOptions = new GenerateStatsOptions { MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
+          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
+        }
+
         SelectionTimer.Stop();
       };
     }
 
-    internal new void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtil.ShowColumns(selectedColumns, dataGrid, ChildGrids);
+    internal override void ShowBreakdown(List<PlayerStats> selected)
+    {
+      if (selected?.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(DamageBreakdown),
+          "damageBreakdownWindow", "Damage Breakdown"))
+        {
+          (breakdown.Content as DamageBreakdown).Init(CurrentStats, selected);
+        }
+      }
+    }
+
+    override internal void UpdateDataGridMenuItems()
+    {
+      string selectedName = "Unknown";
+
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
+        {
+          menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
+          menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
+          menuItemShowAdpsTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
+          copyDamageParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
+
+          if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
+          {
+            menuItemSetAsPet.IsEnabled = !PlayerManager.Instance.IsVerifiedPet(playerStats.OrigName) && !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
+            selectedName = playerStats.OrigName;
+          }
+
+          EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
+          EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
+          EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats?.UniqueClasses);
+        }
+        else
+        {
+          menuItemShowBreakdown.IsEnabled = menuItemShowDamageLog.IsEnabled =
+            menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
+            copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
+        }
+
+        menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);
+      });
+    }
 
     private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.DAMAGEPARSE);
-
     internal override bool IsPetsCombined() => CurrentPetOrPlayerOption == 0;
+    private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
-    private void Instance_EventsClearedActiveData(object sender, bool cleared)
+    private void ClassSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+      var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
+      var needUpdate = CurrentClass != update;
+      CurrentClass = update;
+
+      if (needUpdate)
+      {
+        dataGrid.SelectedItems.Clear();
+        dataGrid.View?.RefreshFilter();
+      }
+    }
+
+    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+      var needUpdate = CurrentPetOrPlayerOption != petOrPlayerList.SelectedIndex;
+      CurrentPetOrPlayerOption = petOrPlayerList.SelectedIndex;
+
+      if (needUpdate)
+      {
+        UpdateList();
+      }
+    }
+
+    private void UpdateList()
+    {
+      var beforeList = dataGrid.ItemsSource;
+      switch (CurrentPetOrPlayerOption)
+      {
+        case 0:
+          dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
+          break;
+        case 1:
+        case 2:
+        case 3:
+          dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
+          break;
+      }
+
+      // if list stayed the same then update the filter
+      if (beforeList == dataGrid.ItemsSource)
+      {
+        dataGrid.SelectedItems.Clear();
+        dataGrid.View.RefreshFilter();
+      }
+    }
+
+    private List<PlayerStats> UpdateRank(List<PlayerStats> list)
+    {
+      int rank = 1;
+      foreach (ref var stats in list.OrderByDescending(stats => stats.Total).ToArray().AsSpan())
+      {
+        stats.Rank = (ushort)rank++;
+      }
+
+      return list;
+    }
+
+    private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems?.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "damageLogWindow", "Damage Log"))
+        {
+          (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        }
+      }
+    }
+
+    private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems.Count == 1)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
+        {
+          (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
+        }
+      }
+    }
+
+    private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
+        {
+          ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups);
+        }
+      }
+    }
+
+    private void EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
       dataGrid.ItemsSource = null;
-      ChildGrids.Clear();
       title.Content = DEFAULT_TABLE_LABEL;
     }
 
-    private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    private void EventsGenerationStatus(object sender, StatsGenerationEvent e)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -91,9 +216,10 @@ namespace EQLogParser
           case "STARTED":
             title.Content = "Calculating DPS...";
             dataGrid.ItemsSource = null;
-            ChildGrids.Clear();
-            timeChooser.Value = 0;
-            timeChooser.MaxValue = 0;
+            maxTimeChooser.Value = 0;
+            maxTimeChooser.MaxValue = 0;
+            minTimeChooser.Value = 0;
+            minTimeChooser.MaxValue = 0;
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;
@@ -107,9 +233,15 @@ namespace EQLogParser
             else
             {
               title.Content = CurrentStats.FullTitle;
-              timeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
-              timeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds);
-              UpdateView();
+              maxTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+              if (maxTimeChooser.MaxValue > 0)
+              {
+                maxTimeChooser.MinValue = 1;
+              }
+              maxTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds + CurrentStats.RaidStats.MinTime);
+              minTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+              minTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.MinTime);
+              UpdateList();
             }
 
             if (e.Limited)
@@ -129,221 +261,11 @@ namespace EQLogParser
       });
     }
 
-    internal void DataGridSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ItemsSourceChanged(object sender, TreeGridItemsSourceChangedEventArgs e)
     {
-      FireSelectionChangedEvent(GetSelectedStats());
-      UpdateDataGridMenuItems();
-    }
-
-    internal override void ShowBreakdown(List<PlayerStats> selected)
-    {
-      if (selected?.Count > 0)
+      if (dataGrid.View != null)
       {
-        var main = Application.Current.MainWindow as MainWindow;
-        var damageTable = new DamageBreakdown(CurrentStats);
-        damageTable.Show(selected);
-        Helpers.OpenNewTab(main.dockSite, "damageWindow", "Damage Breakdown", damageTable);
-      }
-    }
-
-    private void ColumnWidthPropertyChanged(object sender, EventArgs e)
-    {
-      var column = sender as DataGridColumn;
-      ChildGrids.ForEach(grid => grid.Columns[column.DisplayIndex].Width = column.ActualWidth);
-    }
-
-    private void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e)
-    {
-      ChildGrids.ForEach(grid =>
-      {
-        for (int i = 0; i < dataGrid.Columns.Count; i++)
-        {
-          if (dataGrid.Columns[i].DisplayIndex != grid.Columns[i].DisplayIndex)
-          {
-            grid.Columns[i].DisplayIndex = dataGrid.Columns[i].DisplayIndex;
-          }
-        }
-      });
-    }
-
-    private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
-    {
-      var timeline = new GanttChart(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups);
-      var main = Application.Current.MainWindow as MainWindow;
-      var window = Helpers.OpenNewTab(main.dockSite, "adpsTimeline", "ADPS Timeline", timeline, 400, 300);
-      window.CanFloat = true;
-      window.CanClose = true;
-    }
-
-    private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
-    {
-      if (dataGrid.SelectedItems.Count == 1)
-      {
-        var log = new HitLogViewer(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
-        var main = Application.Current.MainWindow as MainWindow;
-        var window = Helpers.OpenNewTab(main.dockSite, "damageLog", "Damage Log", log, 400, 300);
-        window.CanFloat = true;
-        window.CanClose = true;
-      }
-    }
-
-    private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
-    {
-      if (dataGrid.SelectedItems.Count == 1)
-      {
-        var chart = new HitFreqChart();
-        var main = Application.Current.MainWindow as MainWindow;
-        var hitFreqWindow = Helpers.OpenNewTab(main.dockSite, "damageFreqChart", "Damage Hit Frequency", chart, 400, 300);
-
-        chart.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
-        hitFreqWindow.CanFloat = true;
-        hitFreqWindow.CanClose = true;
-      }
-    }
-
-    private void DataGridExpanderLoaded(object sender, RoutedEventArgs e)
-    {
-      Image image = sender as Image;
-      var children = CurrentStats?.Children;
-
-      if (image.DataContext is PlayerStats stats && children != null && children.ContainsKey(stats.Name))
-      {
-        var list = children[stats.Name];
-        if (list.Count > 1 || (list.Count == 1 && !list[0].Name.StartsWith(stats.Name, StringComparison.Ordinal)))
-        {
-          if (dataGrid.ItemContainerGenerator.ContainerFromItem(stats) is DataGridRow container)
-          {
-            image.Source = container.DetailsVisibility != Visibility.Visible ? EXPAND_BITMAP : COLLAPSE_BITMAP;
-          }
-        }
-      }
-    }
-
-    private void DataGridExpanderMouseDown(object sender, MouseButtonEventArgs e)
-    {
-      Image image = (sender as Image);
-      PlayerStats stats = image.DataContext as PlayerStats;
-
-      if (image != null && dataGrid.ItemContainerGenerator.ContainerFromItem(stats) is DataGridRow container)
-      {
-        if (image.Source == COLLAPSE_BITMAP)
-        {
-          image.Source = EXPAND_BITMAP;
-          container.DetailsVisibility = Visibility.Collapsed;
-        }
-        else if (image.Source == EXPAND_BITMAP)
-        {
-          image.Source = COLLAPSE_BITMAP;
-          container.DetailsVisibility = Visibility.Visible;
-        }
-      }
-    }
-
-    private void ChildrenDataGridPrevMouseWheel(object sender, MouseEventArgs e)
-    {
-      if (!e.Handled)
-      {
-        e.Handled = true;
-        MouseWheelEventArgs wheelArgs = e as MouseWheelEventArgs;
-        var newEvent = new MouseWheelEventArgs(wheelArgs.MouseDevice, wheelArgs.Timestamp, wheelArgs.Delta)
-        {
-          RoutedEvent = MouseWheelEvent
-        };
-
-        var container = dataGrid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
-        container.RaiseEvent(newEvent);
-      }
-    }
-
-    private void ChildrenGridRowDetailsVis(object sender, DataGridRowDetailsEventArgs e)
-    {
-      var children = CurrentStats?.Children;
-      if (e.Row.Item is PlayerStats stats && e.DetailsElement is DataGrid childrenDataGrid && children != null && children.ContainsKey(stats.Name))
-      {
-        // initialize data one time
-        if (childrenDataGrid.ItemsSource != children[stats.Name])
-        {
-          childrenDataGrid.ItemsSource = children[stats.Name];
-          ChildGrids.Add(childrenDataGrid);
-
-          // fix column widths and hidden values
-          for (int i = 0; i < dataGrid.Columns.Count; i++)
-          {
-            var column = dataGrid.Columns[i];
-            var childColumn = childrenDataGrid.Columns[i];
-
-            if (childColumn.Width != column.ActualWidth)
-            {
-              childColumn.Width = column.ActualWidth;
-            }
-
-            if (childColumn.DisplayIndex != column.DisplayIndex)
-            {
-              childColumn.DisplayIndex = column.DisplayIndex;
-            }
-
-            if (TheShownColumns != null && TheShownColumns.Count > 0)
-            {
-              // never let users hide the first two columns
-              if (i > 1)
-              {
-                var vis = TheShownColumns.ContainsKey(column.Header as string) ? Visibility.Visible : Visibility.Hidden;
-                if (vis != childColumn.Visibility)
-                {
-                  childColumn.Visibility = vis;
-                }
-              }
-            }
-            else
-            {
-              if (childColumn.Visibility != dataGrid.Columns[i].Visibility)
-              {
-                childColumn.Visibility = dataGrid.Columns[i].Visibility;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    private void UpdateDataGridMenuItems()
-    {
-      string selectedName = "Unknown";
-
-      if (CurrentStats?.ExpandedStatsList?.Count > 0)
-      {
-        menuItemSelectAll.IsEnabled = dataGrid.SelectedItems.Count < dataGrid.Items.Count;
-        menuItemUnselectAll.IsEnabled = dataGrid.SelectedItems.Count > 0;
-        menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
-        menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
-        menuItemShowAdpsTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
-        copyDamageParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
-
-        if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
-        {
-          menuItemSetAsPet.IsEnabled = !PlayerManager.Instance.IsVerifiedPet(playerStats.OrigName) && !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
-          selectedName = playerStats.OrigName;
-        }
-
-        EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
-        EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
-        EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats?.UniqueClasses);
-      }
-      else
-      {
-        menuItemUnselectAll.IsEnabled = menuItemSelectAll.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowDamageLog.IsEnabled =
-          menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
-          copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
-      }
-
-      menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Set {0} as Pet", selectedName);
-    }
-
-    private ICollectionView SetFilter(ICollectionView view)
-    {
-      if (view != null)
-      {
-        view.Filter = (stats) =>
+        dataGrid.View.Filter = (stats) =>
         {
           string name = "";
           string className = "";
@@ -375,50 +297,36 @@ namespace EQLogParser
           return result;
         };
 
-        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "FILTER", null, view.Filter);
-      }
-
-      return view;
-    }
-
-    private void UpdateView()
-    {
-      if (dataGrid != null && CurrentStats?.ExpandedStatsList != null)
-      {
-        petOrPlayerList.IsEnabled = classesList.IsEnabled = timeChooser.IsEnabled = false;
-        Task.Delay(20).ContinueWith(task =>
+        if (dataGrid.SelectedItems.Count > 0)
         {
-          // until i figure out something better just re-rank everything
-          var statsList = CurrentPetOrPlayerOption == 0 ? CurrentStats.StatsList : CurrentStats.ExpandedStatsList;
-          for (int i = 0; i < statsList.Count; i++)
-          {
-            statsList[i].Rank = Convert.ToUInt16(i + 1);
-          }
+          dataGrid.SelectedItems.Clear();
+        }
 
-          Dispatcher.InvokeAsync(() =>
-          {
-            var view = CollectionViewSource.GetDefaultView(statsList);
-            dataGrid.ItemsSource = SetFilter(view);
-            petOrPlayerList.IsEnabled = timeChooser.IsEnabled = true;
-            classesList.IsEnabled = CurrentPetOrPlayerOption != 2;
-          });
-        }, TaskScheduler.Default);
+        dataGrid.View.RefreshFilter();
       }
     }
 
-    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void TimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      CurrentClass = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      CurrentPetOrPlayerOption = petOrPlayerList.SelectedIndex;
-      UpdateView();
-    }
-
-    private void MaxTimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-      if (timeChooser.IsEnabled && e.OldValue.ToString() != "0" && e.NewValue.ToString() != "0")
+      if (dataGrid.ItemsSource != null)
       {
         SelectionTimer.Stop();
         SelectionTimer.Start();
+      }
+    }
+
+    private void RequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
+    {
+      if (dataGrid.ItemsSource is List<PlayerStats> playerList)
+      {
+        if (e.ParentItem == null)
+        {
+          e.ChildItems = dataGrid.ItemsSource as List<PlayerStats>;
+        }
+        else if (e.ParentItem is PlayerStats stats && CurrentStats.Children.TryGetValue(stats.Name, out List<PlayerStats> childs))
+        {
+          e.ChildItems = childs;
+        }
       }
     }
 
@@ -427,19 +335,13 @@ namespace EQLogParser
 
     protected virtual void Dispose(bool disposing)
     {
-      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions() { MaxSeconds = long.MinValue, RequestChartData = true }, "UPDATE");
-
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
+        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
+        DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData; if (disposing)
           CurrentStats = null;
-          ChildGrids = null;
-        }
-
-        DamageStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData -= Instance_EventsClearedActiveData;
+        dataGrid.Dispose();
         disposedValue = true;
       }
     }

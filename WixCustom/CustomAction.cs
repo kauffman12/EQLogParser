@@ -18,8 +18,7 @@ namespace WixCustom
     public static ActionResult CheckDotNetVersion(Session session)
     {
       var minVersion = new Version(6, 0, 0);
-      var command = "/c \"" + session["ProgramFiles64Folder"] + "dotnet\\dotnet.exe\" --list-runtimes"; // /c is important here
-      session.Log("Running = " + command);
+      var command = "/c dotnet --list-runtimes";// /c is important here
       var output = string.Empty;
       using (var p = new Process())
       {
@@ -36,10 +35,10 @@ namespace WixCustom
         while (!p.StandardOutput.EndOfStream)
         {
           output += $"{p.StandardOutput.ReadLine()}{Environment.NewLine}";
-          session.Log(output);
         }
         p.WaitForExit();
 
+        //throw new Exception($"{p.ExitCode}:{p.StandardError.ReadToEnd()}");
         if (p.ExitCode != 0)
         {
           session["DOTNET6INSTALLED"] = "0";

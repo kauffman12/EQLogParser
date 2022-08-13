@@ -1,56 +1,97 @@
-﻿<UserControl x:Class="EQLogParser.SpellCastTable"
+﻿<local:CastTable x:Class="EQLogParser.SpellCastTable"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
-      <local:DateTimeConverter x:Key="DateTimeConverter" />
+        <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
+      <local:DateTimeConverter x:Key="dateTimeConverter" />
+      <Style TargetType="syncfusion:GridRowHeaderCell">
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+              <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                <Grid>
+                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                </Grid>
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="4,0,4,0" VerticalAlignment="Center" IsEnabled="False" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common." VerticalContentAlignment="Center" Checked="CheckedOptionsChanged" Unchecked="CheckedOptionsChanged">Self Only</CheckBox>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <ComboBox Margin="4,0,0,0" x:Name="spellTypes" Height="26" SelectionChanged="Options_SelectionChanged" />
-      <ComboBox Margin="0,0,4,0" x:Name="castTypes" Height="26" SelectionChanged="Options_SelectionChanged" />
+      <ComboBox x:Name="selectedSpellRestrictions" Width="150" Margin="0,0,0,2" 
+                DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <ComboBox x:Name="selectedCastTypes" Width="140" Margin="0,0,8,2" 
+                DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>    
-    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="50" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Extended">
-      <DataGrid.ContextMenu>
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="Auto"
+                           FrozenColumnCount="2"
+                           HeaderRowHeight="26"
+                           Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Both"
+                           IsReadOnly="True"
+                           RowHeaderWidth="40"
+                           ShowRowHeader="True"
+                           SelectionMode="Extended">
+      <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
+          <Separator />
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
         </ContextMenu>
-      </DataGrid.ContextMenu>
-      <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="92" Width="92" />
-        <DataGridTextColumn Binding="{Binding Seconds}" Header="Sec" CanUserReorder="True" MinWidth="45" Width="45" />
-      </DataGrid.Columns>
-    </datagrid:ThemedDataGrid>
+      </syncfusion:SfDataGrid.ContextMenu>
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
+                                   Width="100" TextAlignment="Center" HeaderText="Time" />
+        <syncfusion:GridTextColumn MappingName="Seconds" SortMode="Value" DisplayBinding="{Binding Path=Seconds}" TextAlignment="Right" HeaderText="Sec" />
+      </syncfusion:SfDataGrid.Columns>
+    </syncfusion:SfDataGrid>
   </Grid>
-</UserControl>
+</local:CastTable>
 
 

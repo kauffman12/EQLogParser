@@ -1,10 +1,14 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -15,90 +19,69 @@ namespace EQLogParser
 
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
-    internal DataGrid TheDataGrid;
-    internal ComboBox TheSelectedColumns;
+    internal dynamic TheDataGrid;
+    internal ComboBox TheColumnsCombo;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
     internal List<List<ActionBlock>> CurrentGroups;
-    internal Dictionary<string, bool> TheShownColumns;
 
-    internal void InitSummaryTable(Label title, DataGrid dataGrid, ComboBox columns)
+    internal void InitSummaryTable(Label title, SfGridBase gridBase, ComboBox columnsCombo)
     {
-      TheDataGrid = dataGrid;
-      TheSelectedColumns = columns;
+      TheDataGrid = gridBase;
+      TheColumnsCombo = columnsCombo;
+      TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
       TheTitle = title;
+      TheTitle.Content = DEFAULT_TABLE_LABEL;
 
-      if (title != null)
+      // default these columns to descending
+      string[] desc = new string[] { "PercentOfRaid", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
+      "ExtraRate", "CritRate", "LuckRate", "MeleeHitRate", "MeleeAccRate", "RampageRate", "Special"};
+
+      if (TheDataGrid is SfTreeGrid treeGrid)
       {
-        TheTitle.Content = DEFAULT_TABLE_LABEL;
+        treeGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+        treeGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      }
+      else if (TheDataGrid is SfDataGrid dataGrid)
+      {
+        dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+        dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       }
 
-      if (TheDataGrid != null)
-      {
-        TheDataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
+      DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
 
-        PropertyDescriptor orderPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn));
-        foreach (var column in dataGrid.Columns)
-        {
-          orderPd.AddValueChanged(column, new EventHandler(ColumnDisplayIndexPropertyChanged));
-        }
-
-        if (TheSelectedColumns != null)
-        {
-          TheShownColumns = DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid, 1);
-        }
-      }
+      // workaround to avoid drag/drop failing when grid has no data
+      TheDataGrid.ItemsSource = new List<PlayerStats>();
     }
 
     internal virtual bool IsPetsCombined() => false;
+    internal virtual void ShowBreakdown(List<PlayerStats> selected) => new object(); // need to override this method
+    internal virtual void ShowBreakdown2(List<PlayerStats> selected) => new object(); // need to override this method
+    internal virtual void UpdateDataGridMenuItems() => new object(); // need to override this method
     internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
     internal string GetTitle() => TheTitle.Content as string;
-    internal List<PlayerStats> GetSelectedStats() => TheDataGrid.SelectedItems.Cast<PlayerStats>().ToList();
-    internal void DataGridSelectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.SelectAll(sender as FrameworkElement);
-    internal void DataGridUnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
+    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
+    internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
     internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetSelectedStats());
     internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e) => ShowBreakdown2(GetSelectedStats());
-    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
-    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown2(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown2(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal void DataGridShowSpellCountsClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetSelectedStats());
-    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetSelectedStats());
-    internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetPlayerStatsByClass((sender as MenuItem)?.Header as string));
-    internal Predicate<object> GetFilter() => (TheDataGrid.ItemsSource as ICollectionView)?.Filter;
-    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
-    internal void SelectDataGridColumns(object sender, EventArgs e) => TheShownColumns = DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
-    private void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtil.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
-
-    internal void CreateImageClick(object sender, RoutedEventArgs e)
-    {
-      // lame workaround to toggle scrollbar to fix UI
-      TheDataGrid.IsEnabled = false;
-      TheDataGrid.SelectedItem = null;
-      TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
-      TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
-
-      Task.Delay(50).ContinueWith((bleh) =>
-      {
-        Dispatcher.InvokeAsync(() =>
-        {
-          TheDataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-          TheDataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          TheDataGrid.Items.Refresh();
-          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(TheDataGrid, TheTitle)), TaskScheduler.Default);
-        });
-      }, TaskScheduler.Default);
-    }
-
+    internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
+    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
     {
-      MenuItem selected = new MenuItem() { IsEnabled = false, Header = "Selected" };
+      MenuItem selected = new MenuItem { IsEnabled = false, Header = "Selected" };
       selected.Click += new RoutedEventHandler(selectedHandler);
       parent.Items.Add(selected);
 
       PlayerManager.Instance.GetClassList().ForEach(name =>
       {
-        MenuItem item = new MenuItem() { IsEnabled = false, Header = name };
+        MenuItem item = new MenuItem { IsEnabled = false, Header = name };
         item.Click += new RoutedEventHandler(classHandler);
         parent.Items.Add(item);
       });
@@ -110,74 +93,99 @@ namespace EQLogParser
       TheDataGrid.ItemsSource = null;
     }
 
-    internal static void EnableClassMenuItems(MenuItem menu, DataGrid dataGrid, Dictionary<string, byte> uniqueClasses)
+    internal static void EnableClassMenuItems(MenuItem menu, SfGridBase gridBase, Dictionary<string, byte> uniqueClasses)
     {
       foreach (var item in menu.Items)
       {
         MenuItem menuItem = item as MenuItem;
-        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? dataGrid.SelectedItems.Count > 0 : uniqueClasses != null && uniqueClasses.ContainsKey(menuItem.Header as string);
+        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? gridBase.SelectedItems.Count > 0 : uniqueClasses != null &&
+          uniqueClasses.ContainsKey(menuItem.Header as string);
       }
     }
 
     internal List<string[]> GetHeaders()
     {
-      return TheDataGrid.Columns.Select(column =>
-      {
-        string binding = "";
-        string title = "";
-        if (column is DataGridTextColumn textColumn && textColumn.Binding is System.Windows.Data.Binding theBinding)
-        {
-          title = textColumn.Header as string;
-          binding = theBinding.Path.Path;
-        }
+      var headers = new List<string[]>();
+      headers.Add(new string[] { "Rank", "Rank" });
 
-        return new string[] { binding, title };
-      }).ToList();
+      if (TheDataGrid is SfTreeGrid treeGrid)
+      {
+        foreach (var column in treeGrid.Columns)
+        {
+          string binding = (column.ValueBinding as Binding).Path.Path;
+          string title = column.HeaderText;
+          headers.Add(new string[] { binding, title });
+        }
+      }
+      else if (TheDataGrid is SfDataGrid dataGrid)
+      {
+        foreach (var column in dataGrid.Columns)
+        {
+          string binding = (column.ValueBinding as Binding).Path.Path;
+          string title = column.HeaderText;
+          headers.Add(new string[] { binding, title });
+        }
+      }
+
+      return headers;
+    }
+
+    internal List<PlayerStats> GetSelectedStats()
+    {
+      if (TheDataGrid is SfTreeGrid treeGrid)
+      {
+        return treeGrid.SelectedItems.Cast<PlayerStats>().ToList();
+      }
+      else if (TheDataGrid is SfDataGrid dataGrid)
+      {
+        return dataGrid.SelectedItems.Cast<PlayerStats>().ToList();
+      }
+      else
+      {
+        return new List<PlayerStats>();
+      }
     }
 
     internal List<PlayerStats> GetPlayerStats()
     {
-      var results = new List<PlayerStats>();
-      if (TheDataGrid.ItemsSource != null)
+      if (TheDataGrid is SfDataGrid dataGrid)
       {
-        foreach (var item in TheDataGrid.ItemsSource as ICollectionView)
+        return dataGrid.View.Records.Select(record => record.Data).Cast<PlayerStats>().ToList();
+      }
+      else if (TheDataGrid is SfTreeGrid treeGrid)
+      {
+        var results = new List<PlayerStats>();
+        foreach (var stats in treeGrid.View.Nodes.Where(node => node.Level == 0).Select(node => node.Item).Cast<PlayerStats>())
         {
-          if (item is PlayerStats stats)
+          results.Add(stats);
+          if (CurrentStats.Children.ContainsKey(stats.Name))
           {
-            results.Add(stats);
-            if (CurrentStats.Children.ContainsKey(stats.Name))
-            {
-              results.AddRange(CurrentStats.Children[stats.Name]);
-            }
+            results.AddRange(CurrentStats.Children[stats.Name]);
           }
         }
+        return results;
       }
 
-      return results;
+      return new List<PlayerStats>();
     }
 
-    internal List<PlayerStats> GetPlayerStatsByClass(string className)
+    internal List<PlayerStats> GetStatsByClass(string className)
     {
-      List<PlayerStats> selectedStats = new List<PlayerStats>();
-      foreach (var item in TheDataGrid.Items)
-      {
-        PlayerStats stats = item as PlayerStats;
-        if (stats.ClassName == className)
-        {
-          selectedStats.Add(stats);
-        }
-      }
+      return GetPlayerStats().Where(stats => stats.IsTopLevel && stats.ClassName == className).ToList();
+    }
 
-      return selectedStats;
+    internal void DataGridSelectionChanged()
+    {
+      FireSelectionChangedEvent(GetSelectedStats());
+      UpdateDataGridMenuItems();
     }
 
     internal void SetPetClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement)?.Parent as ContextMenu;
-      DataGrid callingDataGrid = menu?.PlacementTarget as DataGrid;
-      if (callingDataGrid.SelectedItem is PlayerStats stats)
+      if (menu?.PlacementTarget is SfGridBase gridBase && gridBase.SelectedItem is PlayerStats stats)
       {
-        Task.Delay(150).ContinueWith(_ =>
+        Task.Delay(100).ContinueWith(_ =>
         {
           PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
           PlayerManager.Instance.AddPetToPlayer(stats.OrigName, Labels.UNASSIGNED);
@@ -187,29 +195,25 @@ namespace EQLogParser
 
     internal void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
-      var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
-      selectionChanged.Selected.AddRange(selected);
-      selectionChanged.CurrentStats = CurrentStats;
-      EventsSelectionChange(this, selectionChanged);
-    }
-
-    internal virtual void ShowBreakdown(List<PlayerStats> selected)
-    {
-      // need to override this method
-    }
-
-    internal virtual void ShowBreakdown2(List<PlayerStats> selected)
-    {
-      // need to override this method
+      Dispatcher.InvokeAsync(() =>
+      {
+        var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
+        selectionChanged.Selected.AddRange(selected);
+        selectionChanged.CurrentStats = CurrentStats;
+        EventsSelectionChange(this, selectionChanged);
+      });
     }
 
     internal void ShowSpellCasts(List<PlayerStats> selected)
     {
       if (selected?.Count > 0)
       {
-        var spellTable = new SpellCastTable(CurrentStats?.ShortTitle ?? "", selected, CurrentStats);
         var main = Application.Current.MainWindow as MainWindow;
-        Helpers.OpenNewTab(main.dockSite, "spellCastsWindow", "Spell Cast Timeline", spellTable);
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCastTable),
+          "spellCastsWindow", "Spell Cast Timeline"))
+        {
+          (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
+        }
       }
     }
 
@@ -217,18 +221,12 @@ namespace EQLogParser
     {
       if (selected?.Count > 0)
       {
-        var spellTable = new SpellCountTable(CurrentStats?.ShortTitle ?? "", CurrentStats.RaidStats.TotalSeconds);
-        spellTable.ShowSpells(selected, CurrentStats);
         var main = Application.Current.MainWindow as MainWindow;
-        Helpers.OpenNewTab(main.dockSite, "spellCountsWindow", "Spell Counts", spellTable);
-      }
-    }
-
-    private void DataGrid_Sorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e.Column.Header != null && e.Column.Header.ToString() != "Name")
-      {
-        e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCountTable),
+          "spellCountsWindow", "Spell Counts"))
+        {
+          (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
+        }
       }
     }
   }

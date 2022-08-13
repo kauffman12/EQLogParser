@@ -1,0 +1,277 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Sync_Resources="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:conv="clr-namespace:Syncfusion.Windows.Tools;assembly=Syncfusion.Shared.WPF"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Syncfusion.Shared.WPF;component/SkinManager/MetroThemeBrushes.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Shared.WPF;component/Controls/ColorPicker/Themes/NullBrush.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/ColorEdit/ColorEdit.xaml" />
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <conv:ValueToStringConverter x:Key="FloatToString" />
+    <conv:ColorToStringConverter x:Key="ColorToString" />
+    <conv:ColorToValueConverter x:Key="ColorToValue" />
+    <conv:ColorToBrushConverter x:Key="ColorToBrush" />
+    <conv:GradientBrushToVisibilityConverter x:Key="BrushToVisibility" />
+    <conv:ColorToWordKnownColorsConverter x:Key="ColorToWordKnownColors" />
+    <conv:RGBToStringConverter x:Key="RGBToString" />
+    <conv:RangedFloatToStringConverter x:Key="RangedFloatToString" />
+    <conv:BrushToTextConverter x:Key="brushToTextConverter" />
+    <shared:ColorItemList x:Key="ColorList" />
+    <conv:DoubleToPointConverter x:Key="DoubleToPointConverter" />
+
+    <Style x:Key="ToggleDropDownButtonStyle" TargetType="ToggleButton">
+        <Setter Property="BorderBrush" Value="{StaticResource Border}" />
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border
+                        Background="Transparent"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="0"
+                        SnapsToDevicePixels="True">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ContentPresenter
+                                Grid.Column="0"
+                                HorizontalAlignment="{TemplateBinding Control.HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding Control.VerticalContentAlignment}"
+                                Content="{TemplateBinding ContentControl.Content}"
+                                ContentTemplate="{TemplateBinding ContentControl.ContentTemplate}"
+                                RecognizesAccessKey="True"
+                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
+
+                            <Border
+                                x:Name="MainBorder"
+                                Grid.Column="1"
+                                Margin="0,0,3,0"
+                                SnapsToDevicePixels="True">
+                                <Viewbox Width="9" Height="7">
+                                    <Path
+                                        x:Name="Arrow"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Fill="{StaticResource IconColor}"
+                                        Stroke="Transparent"
+                                        StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}">
+                                        <Path.LayoutTransform>
+                                            <RotateTransform Angle="0" />
+                                        </Path.LayoutTransform>
+                                        <Path.Data>
+                                            <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
+                                        </Path.Data>
+                                    </Path>
+                                </Viewbox>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="Arrow" Property="LayoutTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="180" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="ColorItemTemplate">
+        <StackPanel
+            Name="colorName"
+            Orientation="Horizontal"
+            Style="{StaticResource colorNameStyle}">
+            <Border
+                Width="20"
+                Height="12"
+                Margin="1,1,3,1"
+                Background="{Binding Path=Brush}"
+                BorderBrush="Black"
+                BorderThickness="1" />
+            <TextBlock
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Text="{Binding Path=Name}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="defaultHeaderTemplate" DataType="shared:ColorPicker">
+        <StackPanel Orientation="Horizontal">
+            <Border
+                Name="selectedColorRect"
+                Width="20"
+                Height="20"
+                Margin="2"
+                HorizontalAlignment="Left"
+                Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}}" />
+            <TextBlock
+                Name="SelectedColorText"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Foreground="{StaticResource ContentForeground}">
+                <TextBlock.Text>
+                    <MultiBinding Converter="{StaticResource brushToTextConverter}">
+                        <Binding Path="Brush" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}" />
+                        <Binding Path="Color" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}" />
+                        <Binding Path="GradientBrushDisplayMode" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}" />
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
+        </StackPanel>
+        <DataTemplate.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding BrushMode, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}}" Value="Solid" />
+                    <Condition Binding="{Binding Color.A, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}}" Value="0" />
+                </MultiDataTrigger.Conditions>
+                <MultiDataTrigger.Setters>
+                    <Setter TargetName="selectedColorRect" Property="Background" Value="{StaticResource TransparentBrush}" />
+                </MultiDataTrigger.Setters>
+            </MultiDataTrigger>
+            <DataTrigger Binding="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}}" Value="{x:Null}">
+                <Setter TargetName="selectedColorRect" Property="Background" Value="{StaticResource NullBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}}" Value="False">
+                <Setter TargetName="SelectedColorText" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!--  SyncfusionColorPickerStyle  -->
+    <Style x:Key="SyncfusionColorPickerStyle" TargetType="{x:Type shared:ColorPicker}">
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Border}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="ColorEditBackground" Value="{StaticResource PopupBackground}" />
+        <Setter Property="HeaderTemplate" Value="{StaticResource defaultHeaderTemplate}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="MinHeight" Value="24" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type shared:ColorPicker}">
+                    <Border
+                        Name="mainBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        FocusVisualStyle="{TemplateBinding FocusVisualStyle}"
+                        SnapsToDevicePixels="True"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+                        <Grid Margin="{TemplateBinding Padding}">
+                            <ToggleButton
+                                Name="colorToggleButton"
+                                Grid.Column="2"
+                                ClickMode="Press"
+                                Command="shared:ColorPicker.M_displayPopup"
+                                ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                FocusVisualStyle="{TemplateBinding FocusVisualStyle}"
+                                Style="{StaticResource ToggleDropDownButtonStyle}" />
+                            <Popup
+                                Name="colorEditPopup"
+                                MinWidth="300"
+                                AllowsTransparency="True"
+                                IsOpen="{Binding ElementName=colorToggleButton, Path=IsChecked}"
+                                PlacementTarget="{Binding ElementName=colorToggleButton}"
+                                PopupAnimation="Slide"
+                                StaysOpen="False">
+                                <Border Padding="7">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="10" Direction="-75" Opacity="0.5" ShadowDepth="2" />
+                                    </Border.Effect>
+                                    <StackPanel Background="{StaticResource PopupBackground}">
+                                        <shared:ColorEdit Name="ColorEdit" VisualizationStyle="{TemplateBinding VisualizationStyle}" />
+                                        <Border
+                                            Name="systemColorsPanel"
+                                            DataContext="{DynamicResource ColorList}"
+                                            Visibility="Collapsed">
+                                            <ComboBox
+                                                Name="systemColors"
+                                                Margin="4,2,4,4"
+                                                DockPanel.Dock="Left"
+                                                IsSynchronizedWithCurrentItem="False"
+                                                ItemTemplate="{StaticResource ColorItemTemplate}"
+                                                ItemsSource="{Binding}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="mainBorder" Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="mainBorder" Property="BorderBrush" Value="{StaticResource BorderAlt2}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="mainBorder" Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter TargetName="mainBorder" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryForeground}" />
+                            <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                        </Trigger>
+                        <Trigger SourceName="colorToggleButton" Property="IsChecked" Value="True">
+                            <Setter TargetName="mainBorder" Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryForeground}" />
+                            <Setter TargetName="mainBorder" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
+                            <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding Path=IsColorPaletteVisible, RelativeSource={RelativeSource Self}}" Value="True">
+                            <Setter TargetName="ColorEdit" Property="BorderThickness" Value="1,1,1,0" />
+                            <Setter TargetName="systemColorsPanel" Property="BorderBrush" Value="{Binding ElementName=ColorEdit, Path=BorderBrush}" />
+                            <Setter TargetName="systemColorsPanel" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="systemColorsPanel" Property="BorderThickness" Value="1,0,1,1" />
+                        </DataTrigger>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="colorEditPopup" Property="MinWidth" Value="370" />
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="mainBorder" Property="Background" Value="{StaticResource ContentBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter TargetName="mainBorder" Property="BorderBrush" Value="{StaticResource BorderDark}" />
+                        </Trigger>
+                        <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                            <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionColorPickerStyle}" TargetType="{x:Type shared:ColorPicker}" />
+</ResourceDictionary>

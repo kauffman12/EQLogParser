@@ -3,66 +3,102 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"                      
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
     <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <local:ZeroConverter x:Key="ZeroConverter" />
-      <local:NumberFormatConverter x:Key="NumberFormatConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox x:Name="selectedColumns" Tag="TankingBreakdownColumns" Height="26" Width="140" Margin="0,0,4,0" DropDownClosed="SelectDataGridColumns" BorderBrush="#FF707070">
-        <ComboBox.ItemTemplateSelector>
-          <local:ComboBoxItemTemplateSelector>
-            <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
-                <TextBlock Text="{Binding SelectedText}" />
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-            <local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
-                <StackPanel Orientation="Horizontal">
-                  <CheckBox IsChecked="{Binding IsChecked}" Width="20" />
-                  <TextBlock Text="{Binding Text}" IsHitTestVisible="false" />
-                </StackPanel>
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-          </local:ComboBoxItemTemplateSelector>
-        </ComboBox.ItemTemplateSelector>
-      </ComboBox>
+      <ComboBox x:Name="selectedColumns" Tag="TankingBreakdownColumns" Width="135" Margin="0,0,8,2" 
+                DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="dataGrid" AlternatingRowBackground="{x:Null}" Grid.Row="1" RowHeaderWidth="0" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" Sorting="CustomSorting" LoadingRow="LoadingRow">
-      <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="160" Width="160*"/>
-        <DataGridTextColumn Binding="{Binding Percent, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource PlayerTotalColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Player" IsReadOnly="True" CanUserReorder="True" MinWidth="70" Width="70*"/>
-        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Damaged" IsReadOnly="True" CanUserReorder="True" MinWidth="90" Width="90*"/>
-        <DataGridTextColumn Binding="{Binding DPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource DPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="DPS" IsReadOnly="True" CanUserReorder="True" MinWidth="65" Width="65*"/>
-        <DataGridTextColumn Binding="{Binding SDPS, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource SDPSColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="SDPS" IsReadOnly="True" CanUserReorder="True" MinWidth="65" Width="65*"/>
-        <DataGridTextColumn Binding="{Binding TotalSeconds, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Sec" IsReadOnly="True" CanUserReorder="True" MinWidth="55" Width="55*"/>
-        <DataGridTextColumn Binding="{Binding Hits, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Hits" IsReadOnly="True" CanUserReorder="True" MinWidth="55" Width="55*"/>
-        <DataGridTextColumn Binding="{Binding Max, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Max Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="70" Width="70*"/>
-        <DataGridTextColumn Binding="{Binding Avg, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Av Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="60" Width="60*"/>
-        <DataGridTextColumn Binding="{Binding MeleeAccRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource MeleeAccRateColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Acc" IsReadOnly="True" CanUserReorder="True" MinWidth="55" Width="55*"/>
-        <DataGridTextColumn Binding="{Binding MeleeHitRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource MeleeHitRateColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Hit" IsReadOnly="True" CanUserReorder="True" MinWidth="55" Width="55*"/>
-        <DataGridTextColumn Binding="{Binding Absorbs, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Absorbs" IsReadOnly="True" CanUserReorder="True" MinWidth="75" Width="75*"/>
-        <DataGridTextColumn Binding="{Binding Blocks, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Blocked" IsReadOnly="True" CanUserReorder="True" MinWidth="70" Width="70*"/>
-        <DataGridTextColumn Binding="{Binding Dodges, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Dodged" IsReadOnly="True" CanUserReorder="True" MinWidth="70" Width="70*"/>
-        <DataGridTextColumn Binding="{Binding Invulnerable, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Invulnerable" IsReadOnly="True" CanUserReorder="True" MinWidth="96" Width="96*"/>
-        <DataGridTextColumn Binding="{Binding Misses, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Missed" IsReadOnly="True" CanUserReorder="True" MinWidth="65" Width="65*"/>
-        <DataGridTextColumn Binding="{Binding Parries, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Parried" IsReadOnly="True" CanUserReorder="True" MinWidth="65" Width="65*"/>
-        <DataGridTextColumn Binding="{Binding StrikethroughHits, Converter={StaticResource NumberFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Strikethrough" IsReadOnly="True" CanUserReorder="True" MinWidth="105" Width="105*"/>
-        <DataGridTextColumn Binding="{Binding RiposteHits, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="# Riposte" IsReadOnly="True" CanUserReorder="True" MinWidth="80" Width="80*"/>
-        <DataGridTextColumn Binding="{Binding RampageRate, Converter={StaticResource ZeroConverter}}" HeaderStyle="{StaticResource RampageColumnStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="% Rampage" IsReadOnly="True" CanUserReorder="True" MinWidth="84" Width="84*"/>
-      </DataGrid.Columns>
-    </datagrid:ThemedDataGrid>
+    <syncfusion:SfTreeGrid x:Name="dataGrid"
+                           AllowAutoSizingExpanderColumn="True"
+                           AllowDraggingColumns="True"
+                           AllowResizingColumns="True"
+                           AllowSelectionOnPointerPressed="True"
+                           AllowSorting="True"
+                           AutoExpandMode="AllNodesExpanded"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="Auto"
+                           ChildPropertyName="SubStats"
+                           FrozenColumnCount="1"
+                           Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
+                           HeaderRowHeight="26"
+                           IsReadOnly="True"
+                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
+                           SelectionMode="Extended"
+                           ShowRowHeader="False">
+      <syncfusion:SfTreeGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+          <Separator />
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </ContextMenu>
+      </syncfusion:SfTreeGrid.ContextMenu>
+      <syncfusion:SfTreeGrid.Columns>
+        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
+        <syncfusion:TreeGridTextColumn Width="70" MappingName="Percent" DisplayBinding="{Binding Path=Percent, Converter={StaticResource ZeroConverter}}" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Player" />
+        <syncfusion:TreeGridNumericColumn Width="90" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Total" TextAlignment="Right" HeaderText="Damaged" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
+        <syncfusion:TreeGridNumericColumn Width="70" MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
+        <syncfusion:TreeGridNumericColumn Width="55" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:TreeGridNumericColumn Width="60" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
+        <syncfusion:TreeGridNumericColumn Width="75" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:TreeGridNumericColumn Width="65" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
+        <syncfusion:TreeGridTextColumn Width="65" MappingName="MeleeAccRate" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
+        <syncfusion:TreeGridTextColumn Width="60" MappingName="MeleeHitRate" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
+        <syncfusion:TreeGridNumericColumn Width="90" MappingName="MeleeAttempts" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAttemptsTemplateToolTip}" TextAlignment="Right" HeaderText="# Attempts" />
+        <syncfusion:TreeGridNumericColumn Width="105" MappingName="MeleeUndefended" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeUndefendedTemplateToolTip}" TextAlignment="Right" HeaderText="# Undefended" />
+        <syncfusion:TreeGridNumericColumn Width="85" MappingName="Absorbs" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Absorbs" />
+        <syncfusion:TreeGridNumericColumn Width="80" MappingName="Blocks" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Blocked" />
+        <syncfusion:TreeGridNumericColumn Width="85" MappingName="Dodges" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Dodged" />
+        <syncfusion:TreeGridNumericColumn Width="110" MappingName="Invulnerable" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Invulnerable" />
+        <syncfusion:TreeGridNumericColumn Width="80" MappingName="Misses" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Missed" />
+        <syncfusion:TreeGridNumericColumn Width="80" MappingName="Parries" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Parried" />
+        <syncfusion:TreeGridNumericColumn Width="120" MappingName="StrikethroughHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Strikethrough" />
+        <syncfusion:TreeGridNumericColumn Width="90" MappingName="RiposteHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Riposte" />
+        <syncfusion:TreeGridTextColumn Width="95" MappingName="RampageRate" DisplayBinding="{Binding Path=RampageRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderRampageTemplateToolTip}" TextAlignment="Right" HeaderText="% Rampage" />
+      </syncfusion:SfTreeGrid.Columns>
+    </syncfusion:SfTreeGrid>
   </Grid>
 </local:BreakdownTable>

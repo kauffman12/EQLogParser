@@ -1,0 +1,446 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF.Classic"
+    xmlns:converter="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ToolTip.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <local:BalloonTipHeaderTemplateSelector x:Key="SyncfusionBalloonTipHeaderTemplateSelector" />
+    <local:BalloonTipContentTemplateSelector x:Key="SyncfusionBalloonTipContentTemplateSelector" />
+    <converter:BrushToColorConverter x:Key="BrushToColorConverter" />
+    <converter:HeaderVisibilityToVisibilityConverter x:Key="HeaderVisibilityToVisibilityConverter" />
+
+    <ControlTemplate x:Key="SyncfusionNotifyIconToolTipTemplate" TargetType="{x:Type ToolTip}">
+        <Border Background="{StaticResource TooltipBackground}"
+                BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
+                BorderBrush="{StaticResource TooltipBackground}"
+                Padding="5,3,5,3"
+                SnapsToDevicePixels="True"
+                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                Effect="{StaticResource Default.ShadowDepth3}">
+            <ContentPresenter ContentTemplate="{Binding Path=ToolTipTemplate, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:NotifyIcon}}}"
+                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                <ContentPresenter.Resources>
+                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Border>
+    </ControlTemplate>
+
+    <DataTemplate x:Key="SyncfusionNotifyIconToolTipContentTemplate">
+        <TextBlock
+                Name="PART_Text"
+                Text="{Binding Path=Text, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:NotifyIcon}}}"
+                TextWrapping="Wrap" />
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Path=Text, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:NotifyIcon}}}" Value="{x:Null}">
+                <Setter TargetName="PART_Text" Property="Text" Value="{Binding Path=Text, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:NotifyIcon}}}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="BalloonTipContentIconTemplate">
+        <Grid 
+            Width="20"
+            Height="20"
+            Margin="0,0,5,0">
+            <Path
+                    x:Name="Cancel"
+                    Width="16"
+                    Height="16"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Data="M5.9120088,4.5019755 L7.9994998,6.586482 10.086991,4.5019755 11.49999,5.9169765 9.4145126,7.9994717 11.500003,10.08198 10.087005,11.496981 7.9995003,9.4124613 5.9119954,11.496981 4.4989967,10.08198 6.5844874,7.9994712 4.4990106,5.9169765 z M8,2 C4.6910095,2 2,4.690979 2,8 2,11.309021 4.6910095,14 8,14 11.30899,14 14,11.309021 14,8 14,4.690979 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5889893 16,8 16,12.411011 12.411011,16 8,16 3.5889893,16 0,12.411011 0,8 0,3.5889893 3.5889893,0 8,0 z"
+                    Fill="{StaticResource ErrorForeground}"
+                    Stretch="Fill"
+                    Visibility="Collapsed" />
+            <Path
+                    x:Name="Warning"
+                    Width="16"
+                    Height="14"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Data="M7,10 L7,12 9,12 9,10 z M7,5 L7,9 9,9 9,5 z M8,0 L16,14 0,14 z"
+                    Fill="{StaticResource WarningForeground}"
+                    Stretch="Fill"
+                    Visibility="Collapsed" />
+            <Path
+                    x:Name="Info_Line"
+                    Width="16"
+                    Height="16"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Data="M7,7 L9,7 9,12 7,12 z M7,4 L9,4 9,6 7,6 z M8,2 C4.6910019,2 2,4.6910019 2,8 2,11.308998 4.6910019,14 8,14 11.308998,14 14,11.308998 14,8 14,4.6910019 11.308998,2 8,2 z M8,0 C12.411003,0 16,3.5890007 16,8 16,12.410999 12.411003,16 8,16 3.5889969,16 0,12.410999 0,8 0,3.5890007 3.5889969,0 8,0 z"
+                    Fill="{StaticResource ContentForeground}"
+                    Stretch="Fill"
+                    Visibility="Collapsed" />
+            <Image
+                    Name="PART_ContentImage"
+                    Source="{x:Null}"
+                    Visibility="Collapsed" />
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Path=BalloonTipIcon, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:BalloonTip}}}" Value="Error">
+                <Setter TargetName="Cancel" Property="Visibility" Value="Visible" />
+                <Setter TargetName="Warning" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Info_Line" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="PART_ContentImage" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=BalloonTipIcon, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:BalloonTip}}}" Value="Warning">
+                <Setter TargetName="Cancel" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Warning" Property="Visibility" Value="Visible" />
+                <Setter TargetName="Info_Line" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="PART_ContentImage" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=BalloonTipIcon, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:BalloonTip}}}" Value="Info">
+                <Setter TargetName="Cancel" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Warning" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Info_Line" Property="Visibility" Value="Visible" />
+                <Setter TargetName="PART_ContentImage" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=BalloonTipIcon, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:BalloonTip}}}" Value="Custom">
+                <Setter TargetName="Cancel" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Warning" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Info_Line" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="PART_ContentImage" Property="Visibility" Value="Visible" />
+                <Setter TargetName="PART_ContentImage" Property="Source" Value="{Binding Path=Icon, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:NotifyIcon}}}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <Style x:Key="SyncfusionBallonTipHeaderCloseButtonStyle"
+        BasedOn="{StaticResource WPFGlyphButtonStyle}"
+        TargetType="{x:Type Button}">
+        <Setter Property="Content">
+            <Setter.Value>
+                <Path
+                    Width="10"
+                    Height="10"
+                    Margin="3"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Data="M1,1 L9,9 M1,9 L9,1"
+                    Stroke="{Binding RelativeSource={RelativeSource AncestorType={x:Type Button}}, Path=Foreground, TargetNullValue=Black}"
+                    StrokeThickness="1" />
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SyncfusionBalloonTipHeaderStyle" TargetType="{x:Type local:BalloonTipHeader}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:BalloonTipHeader}">
+                    <Border
+                        Name="PART_Border"
+                        Padding="12,7,0,7"
+                        CornerRadius="{TemplateBinding Border.CornerRadius}"
+                        Background="{TemplateBinding Background}"
+                        TextBlock.Foreground="{TemplateBinding Foreground}">
+                        <DockPanel Height="18" LastChildFill="True">
+                            <Button
+                                Name="PART_CloseButton"
+                                VerticalAlignment="Top"
+                                DockPanel.Dock="Right"
+                                Width="16"
+                                Height="16"
+                                Style="{StaticResource SyncfusionBallonTipHeaderCloseButtonStyle}">
+                                <Button.Margin>
+                                    <Thickness>0,0,5,0</Thickness>
+                                </Button.Margin>
+                            </Button>
+                            <Border
+                                Name="PART_HeaderIconBorder"
+                                Margin="1,1,3,1"
+                                DockPanel.Dock="Left">
+                                <Image Width="16" Source="{TemplateBinding HeaderImage}" />
+                            </Border>
+                            <ContentPresenter
+                                VerticalAlignment="Center"
+                                Content="{Binding Path=Header, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:BalloonTip}}}"
+                                ContentTemplate="{Binding Path=HeaderTemplate, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:BalloonTip}}}"
+                                ContentTemplateSelector="{Binding Path=HeaderTemplateSelector, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:BalloonTip}}}"
+                                TextBlock.FontWeight="{StaticResource MaterialDarkCustom.FontWeightMedium}"
+                                TextBlock.FontSize="{StaticResource MaterialDarkCustom.TitleTextStyle}">
+                                <ContentPresenter.Resources>
+                                    <Style BasedOn="{x:Null}" TargetType="TextBlock"/>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="PART_Border" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_CloseButton" Property="MinHeight" Value="12" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding Path=HeaderImage, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                            <Setter TargetName="PART_HeaderIconBorder" Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=BalloonTipShape, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:BalloonTip}}}" Value="RoundedRectangle">
+                            <Setter TargetName="PART_CloseButton" Property="Height" Value="16" />
+                            <Setter TargetName="PART_CloseButton" Property="Width" Value="16" />
+                            <Setter TargetName="PART_CloseButton" Property="Margin" Value="0,0,5,0" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionBalloonTipHeaderStyle}" TargetType="{x:Type local:BalloonTipHeader}" />
+
+    <Style x:Key="SyncfusionBalloonTipStyle" TargetType="{x:Type local:BalloonTip}">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="HeaderBackground" Value="{StaticResource PopupBackground}" />
+        <Setter Property="HeaderForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness1}" />
+        <Setter Property="IconTemplate" Value="{StaticResource BalloonTipContentIconTemplate}" />
+        <Setter Property="HeaderTemplateSelector" Value="{StaticResource SyncfusionBalloonTipHeaderTemplateSelector}" />
+        <Setter Property="ContentTemplateSelector" Value="{StaticResource SyncfusionBalloonTipContentTemplateSelector}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:BalloonTip}">
+                    <local:BalloonTipBorder
+                        x:Name="PART_Border"
+                        Margin="8"
+                        Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}"
+                        BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource TemplatedParent}}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding Border.CornerRadius}"
+                        Effect="{StaticResource Default.ShadowDepth3}"
+                        Opacity="{TemplateBinding Opacity}">
+                        <DockPanel
+                            Name="PART_DockPanel"
+                            Margin="-8"
+                            LastChildFill="True">
+                            <local:BalloonTipHeader
+                                x:Name="PART_Header"
+                                Background="{Binding Path=HeaderBackground, RelativeSource={RelativeSource TemplatedParent}}"
+                                DockPanel.Dock="Top"
+                                Foreground="{Binding Path=HeaderForeground, RelativeSource={RelativeSource TemplatedParent}}"
+                                HeaderImage="{TemplateBinding HeaderImage}"
+                                Visibility="{TemplateBinding BalloonTipHeaderVisibility,
+                                                             Converter={StaticResource HeaderVisibilityToVisibilityConverter}}" />
+                            <Border
+                                Name="PART_ContentBorder"
+                                Margin="0,2,0,4"
+                                Padding="12,0,12,0"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}"
+                                TextBlock.Foreground="{Binding Path=Foreground, RelativeSource={RelativeSource TemplatedParent}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <ContentPresenter
+                                        Name="PART_IconColumn"
+                                        Grid.Column="0"
+										VerticalAlignment="Top"
+                                        ContentTemplate="{TemplateBinding IconTemplate}" />
+                                    <ContentPresenter
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Content="{TemplateBinding Content}"
+                                        ContentTemplate="{TemplateBinding ContentTemplate}"
+                                        ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}" >
+                                        <ContentPresenter.Resources>
+                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
+                                        </ContentPresenter.Resources>
+                                    </ContentPresenter>
+                                    <Border
+                                        Name="PART_DownBorder"
+                                        Grid.Row="1"
+                                        Grid.ColumnSpan="2"
+                                        Height="5"
+                                        Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}"
+                                        Visibility="{TemplateBinding BalloonTipHeaderVisibility,
+                                                                     Converter={StaticResource HeaderVisibilityToVisibilityConverter}}" />
+                                </Grid>
+                            </Border>
+                        </DockPanel>
+                    </local:BalloonTipBorder>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="PART_ContentBorder" Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="BalloonTipHeaderVisibility" Value="Visible">
+                            <Setter Property="Background" Value="{StaticResource PopupBackground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                        </Trigger>
+                        <Trigger Property="BalloonTipIcon" Value="None">
+                            <Setter TargetName="PART_IconColumn" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="BalloonTipShape" Value="Balloon">
+                            <Setter TargetName="PART_DownBorder" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="BalloonTipShape" Value="RoundedRectangle">
+                            <Setter TargetName="PART_ContentBorder" Property="CornerRadius" Value="12" />
+                            <Setter TargetName="PART_Header" Property="Border.CornerRadius" Value="12, 12, 0, 0" />
+                        </Trigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=BalloonTipShape, RelativeSource={RelativeSource TemplatedParent}}" Value="RoundedRectangle" />
+                                <Condition Binding="{Binding Path=BalloonTipHeaderVisibility, RelativeSource={RelativeSource TemplatedParent}}" Value="Visible" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_DownBorder" Property="CornerRadius" Value="0, 0, 12, 12" />
+                            <Setter TargetName="PART_ContentBorder" Property="CornerRadius" Value="0, 0, 12, 12" />
+                        </MultiDataTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="BalloonTipShape" Value="Balloon" />
+                                <Condition Property="TaskBarDirection" Value="Left" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Border" Property="LayoutTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="-1" />
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="PART_DockPanel" Property="LayoutTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="-1" />
+                                </Setter.Value>
+                            </Setter>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="BalloonTipShape" Value="Balloon" />
+                                <Condition Property="TaskBarDirection" Value="Top" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Border" Property="LayoutTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleY="-1" />
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="PART_DockPanel" Property="LayoutTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleY="-1" />
+                                </Setter.Value>
+                            </Setter>
+                        </MultiTrigger>
+                        <Trigger Property="BalloonTipShape" Value="Balloon">
+                            <Setter Property="Border.CornerRadius" Value="0"  />
+                        </Trigger>
+                        <Trigger Property="BalloonTipShape" Value="Rectangle">
+                            <Setter Property="Border.CornerRadius" Value="0" />
+                        </Trigger>
+                        <Trigger Property="BalloonTipShape" Value="RoundedRectangle">
+                            <Setter Property="Border.CornerRadius" Value="12" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionBalloonTipStyle}" TargetType="{x:Type local:BalloonTip}" />
+
+    <Style x:Key="SyncfusionNotifyIconStyle" TargetType="{x:Type local:NotifyIcon}">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Background" Value="{StaticResource PopupBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="HeaderBackground" Value="{StaticResource PopupBackground}" />
+        <Setter Property="HeaderForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness1}" />
+        <Setter Property="IconTemplate" Value="{StaticResource BalloonTipContentIconTemplate}" />
+        <Setter Property="ToolTipTemplate" Value="{StaticResource SyncfusionNotifyIconToolTipContentTemplate}" />
+        <Setter Property="HeaderTemplateSelector" Value="{StaticResource SyncfusionBalloonTipHeaderTemplateSelector}" />
+        <Setter Property="ContentTemplateSelector" Value="{StaticResource SyncfusionBalloonTipContentTemplateSelector}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:NotifyIcon}">
+                    <Border Name="PART_Border">
+                        <Border.ToolTip>
+                            <ToolTip
+                                Name="tooltip"
+                                IsOpen="{Binding Path=IsToolTipOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                Placement="Absolute"
+                                Template="{StaticResource SyncfusionNotifyIconToolTipTemplate}" />
+                        </Border.ToolTip>
+                        <shared:NonStickingPopup
+                            Name="PART_BalloonTipPopup"
+                            AllowsTransparency="True"
+                            IsOpen="{Binding ElementName=PART_BalloonTip, Path=IsOpen}"
+                            Placement="Absolute"
+                            StaysOpen="True">
+                            <local:BalloonTip
+                                x:Name="PART_BalloonTip"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}"
+                                Background="{TemplateBinding Background}"
+                                BalloonTipAnimationEffect="{TemplateBinding BalloonTipAnimationEffect}"
+                                BalloonTipHeaderVisibility="{TemplateBinding BalloonTipHeaderVisibility}"
+                                BalloonTipIcon="{TemplateBinding BalloonTipIcon}"
+                                BalloonTipLocation="{TemplateBinding BalloonTipLocation}"
+                                BalloonTipShape="{TemplateBinding BalloonTipShape}"
+                                BalloonTipSize="{TemplateBinding BalloonTipSize}"
+                                BalloonTipText="{TemplateBinding BalloonTipText}"
+                                BalloonTipTitle="{TemplateBinding BalloonTipTitle}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
+                                CustomAnimatedProperty="{TemplateBinding CustomAnimatedProperty}"
+                                CustomHidingAnimation="{TemplateBinding CustomHidingAnimation}"
+                                CustomShowingAnimation="{TemplateBinding CustomShowingAnimation}"
+                                Foreground="{TemplateBinding Foreground}"
+                                Header="{TemplateBinding Header}"
+                                HeaderBackground="{TemplateBinding HeaderBackground}"
+                                HeaderForeground="{TemplateBinding HeaderForeground}"
+                                HeaderImage="{TemplateBinding HeaderImage}"
+                                HeaderTemplate="{TemplateBinding HeaderTemplate}"
+                                HeaderTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+                                HideBalloonTipTime="{TemplateBinding HideBalloonTipTime}"
+                                IconTemplate="{TemplateBinding IconTemplate}"
+                                ShowBalloonTipTime="{TemplateBinding ShowBalloonTipTime}" />
+                        </shared:NonStickingPopup>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="BalloonTipHeaderVisibility" Value="Visible">
+                            <Setter Property="Background" Value="{StaticResource PopupBackground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionNotifyIconStyle}" TargetType="{x:Type local:NotifyIcon}" />
+
+</ResourceDictionary>

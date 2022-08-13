@@ -1,0 +1,230 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:sunburstChart="clr-namespace:Syncfusion.UI.Xaml.SunburstChart;assembly=Syncfusion.SfSunburstChart.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <DataTemplate x:Key="DataLabelTemplateForTrim">
+        <Border Width="{Binding LabelWidth}"
+                VerticalAlignment="Stretch"
+                HorizontalAlignment="Stretch"
+                IsHitTestVisible="False">
+            <TextBlock Text="{Binding Category}"
+                       TextTrimming="CharacterEllipsis"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Margin="2"
+                       FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                       FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                       FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DataLabelTemplateForHide">
+        <Border HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsHitTestVisible="False">
+            <TextBlock Text="{Binding Category}"
+                       Margin="2"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                       FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                       FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        </Border>
+    </DataTemplate>
+
+    <Style x:Key="SyncfusionSfSunburstChartStyle"
+           TargetType="sunburstChart:SfSunburstChart">
+        <Setter Property="SunburstResourceDictionary">
+            <Setter.Value>
+                <ResourceDictionary Source="SfSunburstChart.xaml" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Palette"
+                Value="Custom"></Setter>
+        <Setter Property="ColorModel">
+            <Setter.Value>
+                <sunburstChart:SunburstColorModel>
+                    <sunburstChart:SunburstColorModel.CustomBrushes>
+                        <SolidColorBrush Color="{StaticResource Series1.Color}" />
+                        <SolidColorBrush Color="{StaticResource Series6.Color}" />
+                        <SolidColorBrush Color="{StaticResource Series3.Color}" />
+                        <SolidColorBrush Color="{StaticResource Series7.Color}" />
+                    </sunburstChart:SunburstColorModel.CustomBrushes>
+                </sunburstChart:SunburstColorModel>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Background"
+                Value="Transparent"></Setter>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}"></Setter>
+        <Setter Property="BorderThickness"
+                Value="0"></Setter>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"></Setter>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"></Setter>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"></Setter>
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}"></Setter>
+        <Setter Property="Stroke"
+                Value="{StaticResource White}"></Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionSunburstLegendStyle"
+           TargetType="sunburstChart:SunburstLegend">
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Padding"
+                Value="5" />
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.CaptionText}" />
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}"></Setter>
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal"
+                                Margin="{Binding ItemMargin}"
+                                Opacity="{Binding Opacity}">
+                        <ContentPresenter Height="{Binding IconHeight}"
+                                          Width="{Binding IconWidth}"
+                                          Content="{Binding}"
+                                          ContentTemplate="{Binding LegendIconTemplate}">
+                            <ContentPresenter.Resources>
+                                <Style BasedOn="{x:Null}"
+                                       TargetType="{x:Type TextBlock}" />
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                        <ContentPresenter>
+                            <ContentPresenter.Resources>
+                                <Style BasedOn="{x:Null}"
+                                       TargetType="{x:Type TextBlock}" />
+                            </ContentPresenter.Resources>
+                            <ContentPresenter.Content>
+                        <TextBlock Text="{Binding Label}"
+                                   VerticalAlignment="Center"
+                                   Margin="3,0,0,0" />
+                            </ContentPresenter.Content>
+                        </ContentPresenter>
+                    </StackPanel>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="ToolTipTemplate">
+        <Border Background="{StaticResource TooltipBackground}"
+                BorderBrush="{StaticResource TooltipBackground}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                Padding="7">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Row="0"
+                           Grid.Column="0"
+                           Text="{sunburstChart:SunburstChartLocalizationResourceExtension ResourceName=TooltipCategory}"
+                           Foreground="{StaticResource White}"
+                           FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                <TextBlock Grid.Row="0"
+                           Grid.Column="1"
+                           Text=": "
+                           Foreground="{StaticResource White}"
+                           FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
+                           Margin="0,-1,0,0" />
+                <TextBlock Grid.Row="0"
+                           Grid.Column="2"
+                           Text="{Binding Category}"
+                           Foreground="{StaticResource White}"
+                           FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="0"
+                           Text="{sunburstChart:SunburstChartLocalizationResourceExtension ResourceName=TooltipValue}"
+                           Foreground="{StaticResource White}"
+                           FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="1"
+                           Text=": "
+                           Foreground="{StaticResource White}"
+                           FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
+                           Margin="0,-1,0,0" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="2"
+                           Text="{Binding Value}"
+                           Foreground="{StaticResource White}"
+                           FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ToolBarTemplate">
+        <Border BorderBrush="{StaticResource BorderAlt}"
+                BorderThickness="0"
+                Background="{StaticResource ContentBackgroundAlt}">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="{Binding ToolBarItemWidth}"
+                        ToolTipService.IsEnabled="True"
+                        ToolTip="{sunburstChart:SunburstChartLocalizationResourceExtension ResourceName=ZoomBack}"
+                        Height="{Binding ToolBarItemHeight}"
+                        Margin="{Binding ToolBarItemMargin}"
+                        CornerRadius="3"
+                        Padding="6.2,8.75,6.2,8.75"
+                        Background="Transparent"
+                        BorderBrush="Transparent"
+                        BorderThickness="1"
+                        Tag="ZoomBack">
+                    <Path Fill="White"
+                          Stretch="Fill"
+                          IsHitTestVisible="False"
+                          Stroke="{StaticResource IconColor}"
+                          StrokeThickness=".5"
+                          Data="M5.4642924,3.4809113E-05 C5.5922993,0.0015349388 5.7198061,0.051783562 5.8163112,0.15028095 6.0093216,0.34727573 6.0063213,0.66426754 5.8083109,0.85726213 L1.5767243,4.9999986 14.500996,4.9999986 C14.776997,4.9999986 15.000996,5.2239976 15.000996,5.4999985 15.000996,5.7759995 14.776997,5.9999986 14.500996,5.9999986 L1.5863444,5.9999986 5.8493127,10.141017 C6.0473236,10.333013 6.0523237,10.650004 5.8593134,10.847999 5.7613081,10.948997 5.6313013,10.999995 5.5002941,10.999995 5.3752874,10.999995 5.2502807,10.952996 5.1522754,10.857999 L0.47602536,6.3171185 C0.25201349,6.0981243 0.0010000535,5.8531307 0,5.5011399 0,5.1491492 0.24901332,4.9031557 0.41302212,4.7411599 L5.1092733,0.14228106 C5.2077788,0.04578352 5.3362855,-0.0014648438 5.4642924,3.4809113E-05 z" />
+                </Border>
+
+                <Border Width="{Binding ToolBarItemWidth}"
+                        ToolTipService.IsEnabled="True"
+                        ToolTip="{sunburstChart:SunburstChartLocalizationResourceExtension ResourceName=ZoomReset}"
+                        Height="{Binding ToolBarItemHeight}"
+                        Margin="{Binding ToolBarItemMargin}"
+                        CornerRadius="3"
+                        Padding="6"
+                        Background="Transparent"
+                        BorderBrush="Transparent"
+                        Tag="ZoomReset">
+                    <Path Fill="White"
+                          Stretch="Fill"
+                          IsHitTestVisible="False"
+                          Stroke="{StaticResource IconColor}"
+                          StrokeThickness=".5"
+                          Data="M0,8.3570066 L4.2329985,8.3570066 C4.5099985,8.3570066 4.7329983,8.5800061 4.7329983,8.8570066 4.7329983,9.1330066 4.5099985,9.3570075 4.2329985,9.3570075 L2.0512851,9.3570075 2.061235,9.3837304 C2.8886227,11.534686 5.0482611,12.999932 7.4698128,12.999932 10.158801,12.999932 12.46679,11.2478 13.080787,8.7376132 13.139411,8.5030952 13.355754,8.3497396 13.586453,8.3572736 13.61941,8.3583493 13.65266,8.3627095 13.685785,8.370585 13.953783,8.4365907 14.117782,8.7076106 14.052782,8.9756303 13.327786,11.933852 10.620799,14.000006 7.4698128,14.000006 4.5383887,14.000006 1.9316759,12.156701 1.0343023,9.4838662 L0.99999975,9.3779178 0.99999975,12.571009 C0.99999966,12.847009 0.77599975,13.071009 0.49999976,13.071009 0.22399992,13.071009 0,12.847009 0,12.571009 z M7.5305552,0 C10.46197,2.5859208E-08 13.068676,1.8431729 13.966049,4.5158053 L14,4.6206613 14,1.4290066 C14,1.1520063 14.224,0.92900618 14.5,0.92900613 14.776,0.92900618 15,1.1520063 15,1.4290066 L15,5.6430092 10.767002,5.6430092 C10.490002,5.6430092 10.267002,5.4190092 10.267002,5.1430087 10.267002,4.8670087 10.490002,4.6430087 10.767002,4.6430087 L12.949046,4.6430087 12.938955,4.6159325 C12.110853,2.4651375 9.9521012,1.0000004 7.5305552,1.0000004 4.841571,1.0000004 2.5335882,2.7519999 1.9185908,5.262003 1.8625914,5.4899998 1.6585943,5.6429997 1.4335971,5.6429997 1.3935967,5.6429997 1.3535961,5.6390019 1.3135956,5.6289997 1.0455996,5.5630055 0.88159923,5.2920017 0.94760078,5.024004 1.6725941,2.0660026 4.3795761,2.5529062E-08 7.5305552,0 z" />
+                </Border>
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <Style BasedOn="{StaticResource SyncfusionSfSunburstChartStyle}"
+           TargetType="sunburstChart:SfSunburstChart" />
+
+    <Style BasedOn="{StaticResource SyncfusionSunburstLegendStyle}"
+           TargetType="sunburstChart:SunburstLegend" />
+    
+</ResourceDictionary>

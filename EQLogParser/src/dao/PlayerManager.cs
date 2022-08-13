@@ -65,7 +65,7 @@ namespace EQLogParser
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues(typeof(SpellClass)))
       {
-        string name = Properties.Resources.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item), CultureInfo.CurrentCulture);
+        var name = EQLogParser.Resource.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item), CultureInfo.CurrentCulture);
         ClassNames[(SpellClass)item] = name;
         ClassesByName[name] = (SpellClass)item;
       }
@@ -152,13 +152,6 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name) && !VerifiedPets.ContainsKey(name))
       {
-        if (name.IndexOf("Fade", StringComparison.OrdinalIgnoreCase) > -1)
-        {
-          if (true)
-          {
-
-          }
-        }
         name = string.Intern(name);
         lock (LockObject)
         {
@@ -597,7 +590,7 @@ namespace EQLogParser
       }
     }
 
-    internal int FindPossiblePlayerName(string part, out bool isCrossServer, int start = 0, int stop = -1, char end = char.MaxValue)
+    internal static int FindPossiblePlayerName(string part, out bool isCrossServer, int start = 0, int stop = -1, char end = char.MaxValue)
     {
       isCrossServer = false;
       int dotCount = 0;
@@ -642,7 +635,7 @@ namespace EQLogParser
       return -1;
     }
 
-    internal bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out bool _, 0, stop) > -1;
+    internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out bool _, 0, stop) > -1;
 
     private static void AddMultiCase(string[] values, ConcurrentDictionary<string, byte> dict)
     {

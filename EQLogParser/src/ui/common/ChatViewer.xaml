@@ -6,80 +6,56 @@
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-  	         xmlns:behaviors="clr-namespace:WPFTextBoxAutoComplete;assembly=WPFTextBoxAutoComplete"
              x:Class="EQLogParser.ChatViewer"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
+    <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
+    </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30" />
       <RowDefinition Height="300*" />
       <RowDefinition Height="20" />
     </Grid.RowDefinitions>
-    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-      <ComboBox x:Name="players" SelectedIndex="0" Height="24" Width="120" Margin="4,0,0,0" SelectionChanged="Player_Changed" BorderBrush="#FF707070">
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,0,2" SelectionChanged="PlayerChanged" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource EQMenuIconBrush}">
         <ComboBoxItem Content="No Chat Data"/>
       </ComboBox>
-      <ComboBox x:Name="channels" Height="24" Width="135" Margin="0,0,0,0" DropDownClosed="Channels_DropDownClosed" BorderBrush="#FF707070">
+      <ComboBox x:Name="channels" Width="135" Margin="0,0,0,2" DropDownClosed="ChannelsDropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
         <ComboBox.ItemContainerStyle>
           <Style>
-            <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="Channel_PreviewMouseDown"/>
+            <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="ChannelPreviewMouseDown"/>
           </Style>
         </ComboBox.ItemContainerStyle>
-        <ComboBox.ItemTemplateSelector>
-          <local:ComboBoxItemTemplateSelector>
-            <local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
-                <TextBlock Text="{Binding SelectedText}" />
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.SelectedItemTemplates>
-            <local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-              <DataTemplate DataType="{x:Type local:ComboBoxItemDetails}">
-                <StackPanel Orientation="Horizontal">
-                  <CheckBox IsChecked="{Binding IsChecked}" Width="20" />
-                  <TextBlock Text="{Binding Text}" IsHitTestVisible="false" />
-                </StackPanel>
-              </DataTemplate>
-            </local:ComboBoxItemTemplateSelector.DropDownItemTemplates>
-          </local:ComboBoxItemTemplateSelector>
-        </ComboBox.ItemTemplateSelector>
       </ComboBox>
-      <Button Height="24" Width="30" PreviewMouseLeftButtonUp="Refresh_MouseClick">
-        <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Redo" ToolTip="Refresh Results" Foreground="#FF4F9FE2"/>
-      </Button>
     </StackPanel>
-    <Popup x:Name="calendarPopup" StaysOpen="True">
-      <Calendar x:Name="calendar" SelectedDatesChanged="Calendar_SelectedDatesChanged" />
-    </Popup>
-    <StackPanel  Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <StackPanel Orientation="Horizontal">
-        <TextBox x:Name="startDate" Cursor="Hand" Margin="0,0,0,0" Height="24" Width="82" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" BorderBrush="#FF707070" LostFocus="DateChooser_LostFocus" GotFocus="DateChooser_GotFocus" PreviewKeyDown="DateChooser_KeyDown" TextChanged="Filter_TextChanged"/>
-        <fa:ImageAwesome Height="14" Width="14" Margin="-21,0,0,0" HorizontalAlignment="Center" Icon="Solid_CalendarAlt" Foreground="#FF4F9FE2" PreviewMouseLeftButtonUp="StartDate_MouseClick"/>
-      </StackPanel>
-      <fa:ImageAwesome Height="14" Width="14" Margin="6,1,6,0" HorizontalAlignment="Center" Icon="Solid_ArrowRight"  Foreground="#FF4F9FE2"/>
-      <StackPanel Margin="0,0,4,0" Orientation="Horizontal">
-        <TextBox x:Name="endDate" Cursor="Hand" Margin="0,0,0,0" Height="24" Width="82" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" BorderBrush="#FF707070" LostFocus="DateChooser_LostFocus" GotFocus="DateChooser_GotFocus" PreviewKeyDown="DateChooser_KeyDown" TextChanged="Filter_TextChanged"/>
-        <fa:ImageAwesome Height="14" Width="14" Margin="-21,0,0,0" HorizontalAlignment="Center" Icon="Solid_CalendarAlt"  Foreground="#FF4F9FE2" PreviewMouseLeftButtonUp="EndDate_MouseClick" />
-      </StackPanel>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <TextBox x:Name="toFilter" Margin="4,0,0,0" Height="24" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Items}" behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="100" LostFocus="ToFilter_LostFocus" GotFocus="ToFilter_GotFocus" PreviewKeyDown="ToFilter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
-      <TextBox x:Name="fromFilter" Margin="0,0,0,0" Height="24" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Items}" behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="100" LostFocus="FromFilter_LostFocus" GotFocus="FromFilter_GotFocus" PreviewKeyDown="FromFilter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
-      <TextBox x:Name="textFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="200" LostFocus="TextFilter_LostFocus" GotFocus="TextFilter_GotFocus" PreviewKeyDown="TextFilter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <syncfusion:DateTimeEdit x:Name="startDate" Width="90" Margin="0,0,0,2" CanEdit="False" FlowDirection="RightToLeft" DateTimeChanged="SelectedDatesChanged"/>
+      <fa:ImageAwesome Height="14" Width="14" Margin="8,0,8,0" HorizontalAlignment="Center" Icon="Solid_ArrowRight" Foreground="{StaticResource ContentForeground}"/>
+      <syncfusion:DateTimeEdit x:Name="endDate" Width="90" Margin="0,0,8,2" CanEdit="False" FlowDirection="RightToLeft" DateTimeChanged="SelectedDatesChanged"/>
+      <syncfusion:SfTextBoxExt x:Name="toFilter" Margin="0,0,0,2" VerticalContentAlignment="Center" FontStyle="Italic"
+                               AutoCompleteMode="SuggestAppend" Width="80" LostFocus="ToFilterLostFocus" GotFocus="ToFilterGotFocus" PreviewKeyDown="ToFilterKeyDown" TextChanged="FilterTextChanged" />
+      <syncfusion:SfTextBoxExt x:Name="fromFilter" Margin="0,0,0,2" VerticalContentAlignment="Center" FontStyle="Italic"
+                               AutoCompleteMode="SuggestAppend" Width="80" LostFocus="FromFilterLostFocus" GotFocus="FromFilterGotFocus" PreviewKeyDown="FromFilterKeyDown" TextChanged="FilterTextChanged" />
+      <TextBox x:Name="textFilter" Margin="0,0,8,2" FontStyle="Italic" Width="170" LostFocus="TextFilterLostFocus" GotFocus="TextFilterGotFocus" PreviewKeyDown="TextFilterKeyDown" TextChanged="FilterTextChanged" />
+      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
-    <ScrollViewer x:Name="chatScroller" Grid.Row="1" BorderThickness="1" BorderBrush="Black">
-      <RichTextBox x:Name="chatBox" FontSize="16" Margin="0,0,0,0" IsInactiveSelectionHighlightEnabled="True" Style="{x:Null}" PreviewKeyDown="Chat_KeyDown" IsReadOnly="True" PreviewMouseWheel="Chat_MouseWheel" BorderThickness="0" BorderBrush="{x:Null}" Background="#FF202020">
+    <ScrollViewer x:Name="chatScroller" Grid.Row="1">
+      <RichTextBox x:Name="chatBox" FontSize="16" Margin="15" BorderThickness="0" ContextMenu="{x:Null}" IsInactiveSelectionHighlightEnabled="True"
+                   PreviewKeyDown="ChatKeyDown" IsReadOnly="True" PreviewMouseWheel="ChatMouseWheel">
         <FlowDocument>
         </FlowDocument>
       </RichTextBox>
     </ScrollViewer>
-    <StatusBar Grid.Row="2" FontSize="11" Background="#151515">
+    <StatusBar Grid.Row="2" FontSize="11">
       <TextBlock x:Name="statusCount"/>
     </StatusBar>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"  Margin="0,0,0,0">
-      <ComboBox x:Name="fontFamily" Height="20" FontSize="11" Width="120" SelectionChanged="FontFamily_Changed" />
-      <ComboBox x:Name="fontSize" Height="20" FontSize="11" SelectionChanged="FontSize_Changed" />
-      <syncfusion:ColorPicker x:Name="colorPicker" Width="35" Height="12" BorderThickness="0" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
-        HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColor_Changed" />
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,1,0,0">
+      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="12" Width="120" SelectionChanged="FontFamilyChanged" />
+      <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="12" SelectionChanged="FontSizeChanged" />
+      <syncfusion:ColorPicker x:Name="colorPicker" Width="34" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
+        HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColorChanged" />
     </StackPanel>
   </Grid>
 </UserControl>

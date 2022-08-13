@@ -1,7 +1,6 @@
-﻿using Syncfusion.SfSkinManager;
+﻿using Syncfusion.Windows.Controls.Input;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,7 +23,7 @@ namespace EQLogParser
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static bool Running = false;
 
-    private List<string> PlayerAutoCompleteList = new List<string>();
+    private List<string> PlayerAutoCompleteList;
     private Paragraph MainParagraph;
     private readonly DispatcherTimer FilterTimer;
     private readonly DispatcherTimer RefreshTimer;
@@ -45,30 +44,13 @@ namespace EQLogParser
     public ChatViewer()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(colorPicker, new Theme("FluentDark", new string[] { "ColorPicker" }));
       fontSize.ItemsSource = FontSizeList;
-      fontFamily.ItemsSource = Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
-      startDate.Text = Properties.Resources.CHAT_START_DATE;
-      endDate.Text = Properties.Resources.CHAT_END_DATE;
-      textFilter.Text = Properties.Resources.CHAT_TEXT_FILTER;
-
-      var context = new AutoCompleteText() { Text = Properties.Resources.CHAT_TO_FILTER };
-      context.Items.AddRange(PlayerAutoCompleteList);
-      toFilter.DataContext = context;
-
-      context = new AutoCompleteText() { Text = Properties.Resources.CHAT_FROM_FILTER };
-      context.Items.AddRange(PlayerAutoCompleteList);
-      fromFilter.DataContext = context;
-
-      try
-      {
-        string fgColor = ConfigUtil.GetSetting("ChatFontFgColor");
-        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
-      }
-      catch (FormatException)
-      {
-        colorPicker.Color = Colors.White;
-      }
+      fontFamily.ItemsSource = fontFamily.ItemsSource = Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
+      textFilter.Text = EQLogParser.Resource.CHAT_TEXT_FILTER;
+      startDate.DateTime = new DateTime(1999, 3, 16);
+      endDate.DateTime = DateTime.Now;
+      toFilter.Text = EQLogParser.Resource.CHAT_TO_FILTER;
+      fromFilter.Text = EQLogParser.Resource.CHAT_FROM_FILTER;
 
       string family = ConfigUtil.GetSetting("ChatFontFamily");
       fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : chatBox.FontFamily;
@@ -82,6 +64,8 @@ namespace EQLogParser
       {
         fontSize.SelectedValue = chatBox.FontSize;
       }
+
+      UpdateCurrentTextColor();
 
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       FilterTimer.Tick += (sender, e) =>
@@ -135,11 +119,41 @@ namespace EQLogParser
       Ready = true;
       ChangeSearch();
 
-      ChatManager.EventsUpdatePlayer += ChatManager_EventsUpdatePlayer;
-      ChatManager.EventsNewChannels += ChatManager_EventsNewChannels;
+      ChatManager.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
+      ChatManager.EventsNewChannels += ChatManagerEventsNewChannels;
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
-    private void ChatManager_EventsNewChannels(object sender, List<string> e)
+    private void EventsThemeChanged(object sender, string e) => UpdateCurrentTextColor();
+    private void RefreshClick(object sender, RoutedEventArgs e) => ChangeSearch(true);
+    private void ChatManagerEventsUpdatePlayer(object sender, string player) => LoadPlayers(player);
+    private void ToFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(toFilter, EQLogParser.Resource.CHAT_TO_FILTER);
+    private void FromFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(fromFilter, EQLogParser.Resource.CHAT_FROM_FILTER);
+    private void TextFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(textFilter, EQLogParser.Resource.CHAT_TEXT_FILTER);
+    private void ToFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(toFilter, EQLogParser.Resource.CHAT_TO_FILTER, e);
+    private void FromFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(fromFilter, EQLogParser.Resource.CHAT_FROM_FILTER, e);
+    private void TextFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(textFilter, EQLogParser.Resource.CHAT_TEXT_FILTER, e);
+    private void ToFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(toFilter, EQLogParser.Resource.CHAT_TO_FILTER);
+    private void FromFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(fromFilter, EQLogParser.Resource.CHAT_FROM_FILTER);
+    private void TextFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(textFilter, EQLogParser.Resource.CHAT_TEXT_FILTER);
+
+    private void UpdateCurrentTextColor()
+    {
+      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
+
+      try
+      {
+        var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
+        var fgColor = ConfigUtil.GetSetting(colorSetting, TextFormatUtils.GetHexString(defaultColor));
+        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
+      }
+      catch (FormatException)
+      {
+        colorPicker.Color = defaultColor;
+      }
+    }
+
+    private void ChatManagerEventsNewChannels(object sender, List<string> e)
     {
       _ = Dispatcher.InvokeAsync(() =>
         {
@@ -149,8 +163,6 @@ namespace EQLogParser
           }
         }, DispatcherPriority.DataBind);
     }
-
-    private void ChatManager_EventsUpdatePlayer(object sender, string player) => LoadPlayers(player);
 
     private void DisplayPage(int count)
     {
@@ -225,7 +237,7 @@ namespace EQLogParser
 
                 if (!Connected)
                 {
-                  chatScroller.ScrollChanged += Chat_ScrollChanged;
+                  chatScroller.ScrollChanged += ChatScrollChanged;
                   Connected = true;
                 }
 
@@ -253,61 +265,53 @@ namespace EQLogParser
 
     private void LoadChannels(string playerAndServer)
     {
-      List<ComboBoxItemDetails> items = new List<ComboBoxItemDetails>
+      var items = new List<ComboBoxItemDetails>
       {
-        new ComboBoxItemDetails { Text = Properties.Resources.SELECT_ALL },
-        new ComboBoxItemDetails { Text = Properties.Resources.UNSELECT_ALL }
+        new ComboBoxItemDetails { Text = EQLogParser.Resource.SELECT_ALL },
+        new ComboBoxItemDetails { Text = EQLogParser.Resource.UNSELECT_ALL }
       };
 
-      int selectedCount = 0;
+      int count = 0;
       ChatManager.GetChannels(playerAndServer).ForEach(chan =>
       {
-        selectedCount += chan.IsChecked ? 1 : 0;
+        count += chan.IsChecked ? 1 : 0;
         items.Add(chan);
       });
 
       channels.ItemsSource = items;
-
-      if (items.Count > 0)
-      {
-        items[0].SelectedText = selectedCount + " Channels Selected";
-        channels.SelectedItem = items[0];
-      }
+      UIElementUtil.SetComboBoxTitle(channels, count, EQLogParser.Resource.CHANNELS_SELECTED, true);
     }
 
     private void LoadPlayers(string updatedPlayer = null)
     {
-      _ = Dispatcher.InvokeAsync(() =>
+      if (updatedPlayer == null || (updatedPlayer != null && !players.Items.Contains(updatedPlayer)))
+      {
+        var playerList = ChatManager.GetArchivedPlayers();
+        if (playerList.Count > 0)
         {
-          if (updatedPlayer == null || (updatedPlayer != null && !players.Items.Contains(updatedPlayer)))
+          if (players.ItemsSource == null)
           {
-            var playerList = ChatManager.GetArchivedPlayers();
-            if (playerList.Count > 0)
-            {
-              if (players.ItemsSource == null)
-              {
-                players.Items.Clear();
-              }
-
-              players.ItemsSource = playerList;
-
-              string player = ConfigUtil.GetSetting("ChatSelectedPlayer");
-              if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
-              {
-                player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
-              }
-
-              players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
-            }
+            players.Items.Clear();
           }
-          else
+
+          players.ItemsSource = playerList;
+
+          string player = ConfigUtil.GetSetting("ChatSelectedPlayer");
+          if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
           {
-            if (!RefreshTimer.IsEnabled)
-            {
-              RefreshTimer.Start();
-            }
+            player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
           }
-        }, DispatcherPriority.DataBind);
+
+          players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
+        }
+      }
+      else
+      {
+        if (!RefreshTimer.IsEnabled)
+        {
+          RefreshTimer.Start();
+        }
+      }
     }
 
     private List<string> GetSelectedChannels(out bool changed)
@@ -335,17 +339,17 @@ namespace EQLogParser
       return selected;
     }
 
-    private void ChangeSearch(bool refresh = false)
+    private void ChangeSearch(bool force = false)
     {
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         var channelList = GetSelectedChannels(out bool changed);
-        string text = (textFilter.Text.Length != 0 && textFilter.Text != Properties.Resources.CHAT_TEXT_FILTER) ? textFilter.Text : null;
-        string to = (toFilter.Text.Length != 0 && toFilter.Text != Properties.Resources.CHAT_TO_FILTER) ? toFilter.Text : null;
-        string from = (fromFilter.Text.Length != 0 && fromFilter.Text != Properties.Resources.CHAT_FROM_FILTER) ? fromFilter.Text : null;
+        string text = (textFilter.Text.Length != 0 && textFilter.Text != EQLogParser.Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;
+        string to = (toFilter.Text.Length != 0 && toFilter.Text != EQLogParser.Resource.CHAT_TO_FILTER) ? toFilter.Text : null;
+        string from = (fromFilter.Text.Length != 0 && fromFilter.Text != EQLogParser.Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
         double startDateValue = GetStartDate();
         double endDateValue = GetEndDate();
-        if (refresh || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
+        if (force || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
           LastStartDate != startDateValue || LastEndDate != endDateValue)
         {
           CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
@@ -360,7 +364,7 @@ namespace EQLogParser
           LastStartDate = startDateValue;
           LastEndDate = endDateValue;
 
-          chatScroller.ScrollChanged -= Chat_ScrollChanged;
+          chatScroller.ScrollChanged -= ChatScrollChanged;
           Connected = false;
 
           if (changed)
@@ -374,7 +378,7 @@ namespace EQLogParser
       }
     }
 
-    private void Chat_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    private void ChatScrollChanged(object sender, ScrollChangedEventArgs e)
     {
       if (e.VerticalChange < 0 && e.VerticalOffset / e.ExtentHeight <= 0.10)
       {
@@ -389,7 +393,7 @@ namespace EQLogParser
       }
     }
 
-    private void Chat_KeyDown(object sender, KeyEventArgs e)
+    private void ChatKeyDown(object sender, KeyEventArgs e)
     {
       if (e.Key == Key.PageDown)
       {
@@ -403,7 +407,7 @@ namespace EQLogParser
       }
     }
 
-    private void Player_Changed(object sender, SelectionChangedEventArgs e)
+    private void PlayerChanged(object sender, SelectionChangedEventArgs e)
     {
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
@@ -418,7 +422,7 @@ namespace EQLogParser
       }
     }
 
-    private void Channel_PreviewMouseDown(object sender, EventArgs e)
+    private void ChannelPreviewMouseDown(object sender, EventArgs e)
     {
       var item = sender as ComboBoxItem;
       if (item.Content is ComboBoxItemDetails details)
@@ -482,7 +486,7 @@ namespace EQLogParser
       }
     }
 
-    private void Channels_DropDownClosed(object sender, EventArgs e)
+    private void ChannelsDropDownClosed(object sender, EventArgs e)
     {
       if (channels.Items.Count > 0)
       {
@@ -496,14 +500,7 @@ namespace EQLogParser
           }
         }
 
-        if (!(channels.SelectedItem is ComboBoxItemDetails selected))
-        {
-          selected = channels.Items[2] as ComboBoxItemDetails;
-        }
-
-        selected.SelectedText = string.Format(CultureInfo.CurrentCulture, "{0} {1}", count, Properties.Resources.CHANNELS_SELECTED);
-        channels.SelectedIndex = -1;
-        channels.SelectedItem = selected;
+        UIElementUtil.SetComboBoxTitle(channels, count, EQLogParser.Resource.CHANNELS_SELECTED, true);
       }
 
       if (Ready)
@@ -512,13 +509,14 @@ namespace EQLogParser
       }
     }
 
-    private void FontFgColor_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private void FontFgColorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
       chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
-      ConfigUtil.SetSetting("ChatFontFgColor", TextFormatUtils.GetHexString(colorPicker.Color));
+      var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
+      ConfigUtil.SetSetting(colorSetting, TextFormatUtils.GetHexString(colorPicker.Color));
     }
 
-    private void FontSize_Changed(object sender, SelectionChangedEventArgs e)
+    private void FontSizeChanged(object sender, SelectionChangedEventArgs e)
     {
       if (fontSize.SelectedItem != null)
       {
@@ -527,7 +525,7 @@ namespace EQLogParser
       }
     }
 
-    private void FontFamily_Changed(object sender, SelectionChangedEventArgs e)
+    private void FontFamilyChanged(object sender, SelectionChangedEventArgs e)
     {
       if (fontFamily.SelectedItem != null)
       {
@@ -537,69 +535,41 @@ namespace EQLogParser
       }
     }
 
-    private void Filter_KeyDown(TextBox filter, string text, KeyEventArgs e)
+    private void FilterKeyDown(TextBox filter, string text, KeyEventArgs e)
     {
       if (e.Key == Key.Escape)
       {
-        if (filter.DataContext is AutoCompleteText context && context.Items.Count > 0)
+        if (filter is SfTextBoxExt filterExt)
         {
-          context.Items.Clear();
-          filter.DataContext = null;
-          filter.DataContext = context;
+          filterExt.AutoCompleteSource = null;
         }
 
         filter.Text = text;
         filter.FontStyle = FontStyles.Italic;
         chatBox.Focus();
       }
+      else if (filter is SfTextBoxExt filterExt)
+      {
+        filterExt.AutoCompleteSource = PlayerAutoCompleteList;
+      }
     }
 
-    private void ToFilter_KeyDown(object sender, KeyEventArgs e)
-    {
-      Filter_KeyDown(toFilter, Properties.Resources.CHAT_TO_FILTER, e);
-    }
-    private void FromFilter_KeyDown(object sender, KeyEventArgs e)
-    {
-      Filter_KeyDown(fromFilter, Properties.Resources.CHAT_FROM_FILTER, e);
-    }
-
-    private void TextFilter_KeyDown(object sender, KeyEventArgs e)
-    {
-      Filter_KeyDown(textFilter, Properties.Resources.CHAT_TEXT_FILTER, e);
-    }
-
-    private void Filter_GotFocus(TextBox filter, string text)
+    private void FilterGotFocus(TextBox filter, string text)
     {
       if (filter.Text == text)
       {
-        if (filter.DataContext is AutoCompleteText context)
-        {
-          context.Items.Clear();
-          context.Items.AddRange(PlayerAutoCompleteList);
-          filter.DataContext = null;
-          filter.DataContext = context;
-        }
-
         filter.Text = "";
         filter.FontStyle = FontStyles.Normal;
       }
     }
 
-    private void ToFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(toFilter, Properties.Resources.CHAT_TO_FILTER);
-
-    private void FromFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(fromFilter, Properties.Resources.CHAT_FROM_FILTER);
-
-    private void TextFilter_GotFocus(object sender, RoutedEventArgs e) => Filter_GotFocus(textFilter, Properties.Resources.CHAT_TEXT_FILTER);
-
-    private static void Filter_LostFocus(TextBox filter, string text)
+    private static void FilterLostFocus(TextBox filter, string text)
     {
       if (filter.Text.Length == 0)
       {
-        if (filter.DataContext is AutoCompleteText context && context.Items.Count > 0)
+        if (filter is SfTextBoxExt filterExt)
         {
-          context.Items.Clear();
-          filter.DataContext = null;
-          filter.DataContext = context;
+          filterExt.AutoCompleteSource = null;
         }
 
         filter.Text = text;
@@ -607,13 +577,13 @@ namespace EQLogParser
       }
     }
 
-    private void Filter_TextChanged(object sender, TextChangedEventArgs e)
+    private void FilterTextChanged(object sender, TextChangedEventArgs e)
     {
       FilterTimer?.Stop();
       FilterTimer?.Start();
     }
 
-    private void Chat_MouseWheel(object sender, MouseWheelEventArgs e)
+    private void ChatMouseWheel(object sender, MouseWheelEventArgs e)
     {
       if ((Keyboard.Modifiers & ModifierKeys.Control) > 0)
       {
@@ -628,23 +598,15 @@ namespace EQLogParser
       }
     }
 
-    private void Calendar_SelectedDatesChanged(object s, SelectionChangedEventArgs e)
-    {
-      if (calendarPopup.PlacementTarget is TextBox target)
-      {
-        target.Text = calendar.SelectedDate?.ToShortDateString();
-        target.FontStyle = FontStyles.Normal;
-        calendarPopup.IsOpen = false;
-      }
-    }
+    private void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ChangeSearch();
 
     private double GetEndDate()
     {
       double result = 0;
 
-      if (DateTime.TryParse(endDate.Text, out DateTime value))
+      if (endDate.DateTime != null)
       {
-        result = value.Ticks / TimeSpan.FromSeconds(1).Ticks;
+        result = endDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks;
       }
 
       return result;
@@ -654,87 +616,13 @@ namespace EQLogParser
     {
       double result = 0;
 
-      if (DateTime.TryParse(startDate.Text, out DateTime value))
+      if (startDate.DateTime != null)
       {
-        result = value.Ticks / TimeSpan.FromSeconds(1).Ticks;
+        result = startDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks;
       }
 
       return result;
     }
-
-    private void DateTimeMouseClick(TextBox box, MouseButtonEventArgs e)
-    {
-      if (calendarPopup.IsOpen && calendarPopup.PlacementTarget == box)
-      {
-        calendarPopup.IsOpen = false;
-      }
-      else if (e.ClickCount == 1 && e.ChangedButton == MouseButton.Left)
-      {
-        calendarPopup.PlacementTarget = null;
-
-        if (DateTime.TryParse(box.Text, out DateTime result))
-        {
-          calendar.SelectedDates.Clear();
-          calendar.SelectedDates.Add(result);
-          calendar.DisplayDate = result;
-        }
-
-        calendarPopup.PlacementTarget = box;
-        calendarPopup.IsOpen = true;
-      }
-    }
-
-    private void DateChooser_KeyDown(object sender, KeyEventArgs e)
-    {
-      if (e.Key == Key.Escape)
-      {
-        ResetDateText(sender);
-        chatBox.Focus();
-      }
-      else if (e.Key == Key.Enter)
-      {
-        chatBox.Focus();
-      }
-    }
-
-    private void DateChooser_GotFocus(object sender, RoutedEventArgs e)
-    {
-      if (sender is TextBox box && box.Text.Contains("Date"))
-      {
-        box.Text = "";
-      }
-    }
-
-    private void DateChooser_LostFocus(object sender, RoutedEventArgs e)
-    {
-      var text = (sender as TextBox)?.Text;
-      if (!DateTime.TryParse(text, out _))
-      {
-        ResetDateText(sender);
-      }
-    }
-
-    private void ResetDateText(object sender)
-    {
-      if (startDate == sender)
-      {
-        startDate.Text = Properties.Resources.CHAT_START_DATE;
-        startDate.FontStyle = FontStyles.Italic;
-      }
-      else if (endDate == sender)
-      {
-        endDate.Text = Properties.Resources.CHAT_END_DATE;
-        endDate.FontStyle = FontStyles.Italic;
-      }
-    }
-
-    private void ToFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(toFilter, Properties.Resources.CHAT_TO_FILTER);
-    private void FromFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(fromFilter, Properties.Resources.CHAT_FROM_FILTER);
-    private void TextFilter_LostFocus(object sender, RoutedEventArgs e) => Filter_LostFocus(textFilter, Properties.Resources.CHAT_TEXT_FILTER);
-    private void StartDate_MouseClick(object sender, MouseButtonEventArgs e) => DateTimeMouseClick(startDate, e);
-    private void EndDate_MouseClick(object sender, MouseButtonEventArgs e) => DateTimeMouseClick(endDate, e);
-    private void Refresh_MouseClick(object sender, MouseButtonEventArgs e) => ChangeSearch(true);
-
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
@@ -743,13 +631,9 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
-        ChatManager.EventsUpdatePlayer -= ChatManager_EventsUpdatePlayer;
-        ChatManager.EventsNewChannels -= ChatManager_EventsNewChannels;
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        ChatManager.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
+        ChatManager.EventsNewChannels -= ChatManagerEventsNewChannels;
 
         RefreshTimer?.Stop();
         FilterTimer?.Stop();

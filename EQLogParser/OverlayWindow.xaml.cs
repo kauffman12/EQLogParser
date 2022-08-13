@@ -1,5 +1,4 @@
 ﻿using FontAwesome5;
-using Syncfusion.SfSkinManager;
 using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Generic;
@@ -50,7 +49,7 @@ namespace EQLogParser
     private Dictionary<int, double> PrevList = null;
     private bool IsHideOverlayOtherPlayersEnabled = false;
     private bool IsShowOverlayCritRateEnabled = false;
-    private string SelectedClass = Properties.Resources.ANY_CLASS;
+    private string SelectedClass = EQLogParser.Resource.ANY_CLASS;
     private int CurrentMaxRows = 5;
     private int CurrentFontSize = 13;
 
@@ -111,7 +110,7 @@ namespace EQLogParser
         WindowStyle = WindowStyle.SingleBorderWindow;
         SetVisible(true);
         var list = PlayerManager.Instance.GetClassList();
-        list.Insert(0, Properties.Resources.ANY_CLASS);
+        list.Insert(0, EQLogParser.Resource.ANY_CLASS);
         classesList.ItemsSource = list;
         classesList.SelectedItem = SelectedClass;
         maxRowsSelection.SelectedItem = maxRowsSelection.Items[CurrentMaxRows - 5];
@@ -195,7 +194,7 @@ namespace EQLogParser
       if (!configure)
       {
         var settingsButton = OverlayUtil.CreateButton("Change Settings", "\xE713", CurrentFontSize - 1);
-        settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(Dispatcher, true, false);
+        settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(true, false);
         settingsButton.Margin = new Thickness(4, 0, 0, 0);
 
         var copyButton = OverlayUtil.CreateButton("Copy Parse", "\xE8C8", CurrentFontSize - 1);
@@ -208,7 +207,7 @@ namespace EQLogParser
         };
 
         var refreshButton = OverlayUtil.CreateButton("Cancel Current Parse", "\xE8BB", CurrentFontSize - 1);
-        refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay(Dispatcher);
+        refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay();
 
         ButtonPopup = new Popup();
         ButtonsPanel = OverlayUtil.CreateNameStackPanel();
@@ -585,15 +584,10 @@ namespace EQLogParser
       TitleDamagePanel.Children.Add(TitleDamageBlock);
       overlayCanvas.Children.Add(TitleDamagePanel);
 
-      Theme theme = null;
       if (!configure)
       {
         TitlePanel.SizeChanged += TitleResizing;
         TitleDamagePanel.SizeChanged += TitleResizing;
-      }
-      else
-      {
-        theme = new Theme("FluentDark", new string[] { "ColorPicker" });
       }
 
       for (int i = 0; i < CurrentMaxRows; i++)
@@ -630,7 +624,6 @@ namespace EQLogParser
             BorderThickness = new Thickness(0)
           };
           colorPicker.HeaderTemplate = Application.Current.Resources["ColorPickerMinHeaderTemplate"] as DataTemplate;
-          SfSkinManager.SetTheme(colorPicker, theme);
           colorPicker.ColorChanged += (DependencyObject d, DependencyPropertyChangedEventArgs e) =>
           {
             rectangle.Fill = OverlayUtil.CreateBrush(colorPicker.Color);
@@ -771,7 +764,7 @@ namespace EQLogParser
         });
       }
 
-      OverlayUtil.OpenOverlay(Dispatcher, false, true);
+      OverlayUtil.OpenOverlay(false, true);
     }
 
     private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)

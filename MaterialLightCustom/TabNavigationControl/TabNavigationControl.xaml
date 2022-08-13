@@ -1,0 +1,223 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.Wpf"
+    
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Button.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <local:BooleanToOpacityConverter x:Key="BooleanToOpacityConvert" />
+
+    <Style x:Key="SyncfusionTabNavigationButtonStyle" BasedOn="{StaticResource WPFRoundedButtonStyle}" TargetType="{x:Type Button}" >
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+    </Style>
+    
+    <Style x:Key="SyncfusionTabStripButtonStyle" TargetType="{x:Type Button}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid Cursor="Hand">
+                        <Ellipse
+                            x:Name="Ellipse"
+                            Width="10"
+                            Height="10"
+                            Fill="{StaticResource ContentBackground}"
+                            Stroke="{StaticResource ContentBackgroundAlt5}"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter  TargetName="Ellipse" Property="Height" Value="15" />
+                            <Setter  TargetName="Ellipse" Property="Width" Value="15" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Ellipse" Property="Fill" Value="{StaticResource ContentBackgroundAlt4}" />
+                            <Setter TargetName="Ellipse" Property="Stroke" Value="{StaticResource ContentBackgroundAlt5}" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:TabNavigationItem}}}" Value="True">
+                            <Setter TargetName="Ellipse" Property="Fill" Value="{StaticResource ContentBackgroundAlt5}" />
+                            <Setter TargetName="Ellipse" Property="Stroke" Value="{StaticResource ContentBackgroundAlt5}" />
+                        </DataTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Ellipse" Property="Fill" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="Ellipse" Property="Stroke" Value="{StaticResource SecondaryHoverBackground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource CircleKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SyncfusionTabNavigationItemStyle" TargetType="local:TabNavigationItem">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:TabNavigationItem">
+                    <Grid>
+                        <Button
+                            Margin="3"
+                            Background="Transparent"
+                            Command="{Binding Path=SelectCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                            Style="{StaticResource SyncfusionTabStripButtonStyle}"
+                            Visibility="{Binding Path=TabStripVisibility, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:TabNavigationControl}}}" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="IsTabStop" Value="True" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionTabNavigationItemStyle}" TargetType="local:TabNavigationItem" />
+
+    <Style x:Key="SyncfusionTabNavigationControlStyle" TargetType="local:TabNavigationControl">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness1}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:TabNavigationControl">
+                    <Grid FocusVisualStyle="{x:Null}">
+                        <Border
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            FocusVisualStyle="{x:Null}">
+                            <Grid x:Name="Root" FocusVisualStyle="{x:Null}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Border
+                                    Grid.Row="0"
+                                    Height="32"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    Visibility="{TemplateBinding HeaderVisibility}">
+                                    <ContentPresenter x:Name="header"
+                                            Grid.Row="0"
+                                            Margin="12,3,3,3"
+                                            VerticalAlignment="Center"
+                                            Content="{Binding Path=SelectedTabItem.Header, RelativeSource={RelativeSource TemplatedParent}}"
+                                            TextElement.Foreground="{StaticResource ContentForeground}"
+                                            TextElement.FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                            TextElement.FontSize="{StaticResource MaterialLightCustom.SubHeaderTextStyle}"
+                                            TextElement.FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}">
+                                        <ContentPresenter.Resources>
+                                            <Style BasedOn="{x:Null}" TargetType="TextBlock" />
+                                        </ContentPresenter.Resources>
+                                    </ContentPresenter>
+                                </Border>
+                                <ItemsPresenter
+                                    Grid.Row="0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    IsHitTestVisible="{TemplateBinding IsTabStripVisible}"
+                                    Opacity="{Binding Path=IsTabStripVisible, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToOpacityConvert}}" />
+                                <ContentControl
+                                    x:Name="PART_OldContent"
+                                    Grid.Row="1"
+                                    Margin="14,12,14,12"
+                                    IsTabStop="False" />
+                                <ContentControl
+                                    x:Name="PART_SelectedContent"
+                                    Grid.Row="1"
+                                    Margin="14,12,14,12"
+                                    HorizontalContentAlignment="Stretch"
+                                    VerticalContentAlignment="Stretch"
+                                    Content="{Binding Path=SelectedTabItem.Content, RelativeSource={RelativeSource TemplatedParent}}"
+                                    ContentTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource TemplatedParent}}"
+                                    IsTabStop="False" />
+                                <ContentControl
+                                    x:Name="PART_FrontOldContent"
+                                    Grid.Row="1"
+                                    Margin="14,12,14,12"
+                                    IsHitTestVisible="False"
+                                    IsTabStop="False" />
+                            </Grid>
+                        </Border>
+                        <Button
+                            x:Name="PART_LeftSidButton"
+                            Grid.Row="1"
+                            Margin="-12,0,0,0"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Command="{Binding Path=PreviousCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                            Style="{StaticResource SyncfusionTabNavigationButtonStyle}"
+                            Visibility="{TemplateBinding NavigationButtonVisibility}">
+                            <Path
+                                Width="5"
+                                Height="8"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Data="M5.9849989,0 L7.4009988,1.4120026 2.8239995,6.0010083 7.4009988,10.590015 5.9849989,12.002017 0,6.0010083 z"
+                                Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                Stretch="Fill"
+                                StrokeThickness="0" />
+                        </Button>
+                        <Button
+                             x:Name="PART_RightSidButton"
+                            Grid.Row="1"
+                            Margin="0,0,-12,0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Command="{Binding Path=NextCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                            Style="{StaticResource SyncfusionTabNavigationButtonStyle}"
+                            Visibility="{TemplateBinding NavigationButtonVisibility}">
+                            <Path
+                                Width="5"
+                                Height="8"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Data="M1.4160154,0 L7.4009999,6.0010001 1.4160154,12.002 0,10.590014 4.5770258,6.0010001 0,1.4120161 z"
+                                Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                Stretch="Fill"
+                                StrokeThickness="0" />
+                        </Button>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="PART_LeftSidButton" Property="Margin" Value="-15,0,0,0" />
+                            <Setter TargetName="PART_RightSidButton" Property="Margin" Value="0,0,-15,0" />
+                            <Setter TargetName="PART_LeftSidButton" Property="MinWidth" Value="{StaticResource TouchMode.MinWidth}" />
+                            <Setter TargetName="PART_RightSidButton" Property="MinWidth" Value="{StaticResource TouchMode.MinWidth}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="header" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Horizontal" Visibility="{Binding Path=TabStripVisibility, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:TabNavigationControl}}}" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionTabNavigationControlStyle}" TargetType="local:TabNavigationControl" />
+
+</ResourceDictionary>

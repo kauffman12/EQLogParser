@@ -13,7 +13,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for ParsePreview.xaml
   /// </summary>
-  public partial class ParsePreview : UserControl, IDisposable
+  public partial class ParsePreview : UserControl
   {
     private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
     private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
@@ -34,9 +34,10 @@ namespace EQLogParser
       playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
       playerParseTextDoTime.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowTime", true);
 
-      DamageStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-      HealingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
-      TankingStatsManager.Instance.EventsGenerationStatus += Instance_EventsGenerationStatus;
+      // this window is either hidden or visible and doesn't need to implement dispose
+      DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
 
       TitleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       TitleTimer.Tick += (sender, e) =>
@@ -49,7 +50,7 @@ namespace EQLogParser
         }
       };
 
-      customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+      customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
       customParseTitle.FontStyle = FontStyles.Italic;
       parseList.Focus();
       initialized = true;
@@ -82,6 +83,28 @@ namespace EQLogParser
       TriggerParseUpdate(type, copy);
     }
 
+    internal void UpdateParse(PlayerStatsSelectionChangedEventArgs data, ISummaryBuilder builder, bool hasTopParse, string label, string topLabel)
+    {
+      // change the update order based on whats displayed
+      if (parseList.SelectedItem?.ToString() == topLabel)
+      {
+        UpdateParse(label, data.Selected);
+        if (hasTopParse)
+        {
+          AddParse(topLabel, builder, data.CurrentStats, data.Selected);
+        }
+      }
+      else
+      {
+        if (hasTopParse)
+        {
+          AddParse(topLabel, builder, data.CurrentStats, data.Selected);
+        }
+
+        UpdateParse(label, data.Selected);
+      }
+    }
+
     internal void UpdateParse(string type, List<PlayerStats> selected)
     {
       if (Parses.ContainsKey(type))
@@ -96,12 +119,9 @@ namespace EQLogParser
       }
     }
 
-    private void CopyToEQButtonClick(object sender = null, RoutedEventArgs e = null)
-    {
-      CopyToEQClick(parseList.SelectedItem?.ToString());
-    }
+    private void CopyToEQButtonClick(object sender = null, RoutedEventArgs e = null) => CopyToEQClick(parseList.SelectedItem?.ToString());
 
-    private void Instance_EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    private void EventsGenerationStatus(object sender, StatsGenerationEvent e)
     {
       switch (e.State)
       {
@@ -149,40 +169,33 @@ namespace EQLogParser
 
     private void PlayerParseTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
-      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == Properties.Resources.SHARE_DPS_SELECTED)
+      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == EQLogParser.Resource.SHARE_DPS_SELECTED)
       {
-        copyToEQButton.IsEnabled = false;
-        copyToEQButton.Foreground = MainWindow.LIGHTER_BRUSH;
-        sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_SELECTED;
-        sharePlayerParseLabel.Foreground = MainWindow.BRIGHT_TEXT_BRUSH;
+        sharePlayerParseLabel.Text = EQLogParser.Resource.SHARE_DPS_SELECTED;
+        sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
         sharePlayerParseWarningLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
       }
       else if (playerParseTextBox.Text.Length > 509)
       {
-        copyToEQButton.IsEnabled = false;
-        copyToEQButton.Foreground = MainWindow.LIGHTER_BRUSH;
-        sharePlayerParseLabel.Text = Properties.Resources.SHARE_DPS_TOO_BIG;
-        sharePlayerParseLabel.Foreground = MainWindow.WARNING_BRUSH;
-        sharePlayerParseWarningLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0}/{1}", playerParseTextBox.Text.Length, 509);
-        sharePlayerParseWarningLabel.Foreground = MainWindow.WARNING_BRUSH;
+        sharePlayerParseLabel.Text = EQLogParser.Resource.SHARE_DPS_TOO_BIG;
+        sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "EQWarnForegroundBrush");
+        sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
+        sharePlayerParseWarningLabel.SetResourceReference(TextBlock.ForegroundProperty, "EQWarnForegroundBrush");
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
-      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Properties.Resources.SHARE_DPS_SELECTED)
+      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != EQLogParser.Resource.SHARE_DPS_SELECTED)
       {
-        copyToEQButton.IsEnabled = true;
-        copyToEQButton.Foreground = MainWindow.BRIGHT_TEXT_BRUSH;
-
         if (parseList.SelectedItem != null && Parses.TryGetValue(parseList.SelectedItem as string, out ParseData data))
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
           string players = count == 1 ? "Player" : "Players";
-          sharePlayerParseLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0} {1} Selected", count, players);
+          sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
         }
 
-        sharePlayerParseLabel.Foreground = MainWindow.BRIGHT_TEXT_BRUSH;
+        sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
         sharePlayerParseWarningLabel.Text = playerParseTextBox.Text.Length + " / " + 509;
-        sharePlayerParseWarningLabel.Foreground = MainWindow.GOOD_BRUSH;
+        sharePlayerParseWarningLabel.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
     }
@@ -224,7 +237,7 @@ namespace EQLogParser
 
     private void CustomTitleGotFocus(object sender, RoutedEventArgs e)
     {
-      if (customParseTitle.Text == Properties.Resources.CUSTOM_PARSE_TITLE)
+      if (customParseTitle.Text == EQLogParser.Resource.CUSTOM_PARSE_TITLE)
       {
         customParseTitle.Text = "";
         customParseTitle.FontStyle = FontStyles.Normal;
@@ -235,7 +248,7 @@ namespace EQLogParser
     {
       if (customParseTitle.Text.Length == 0)
       {
-        customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+        customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
         customParseTitle.FontStyle = FontStyles.Italic;
       }
     }
@@ -244,7 +257,7 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape)
       {
-        customParseTitle.Text = Properties.Resources.CUSTOM_PARSE_TITLE;
+        customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
         customParseTitle.FontStyle = FontStyles.Italic;
         parseList.Focus();
       }
@@ -255,34 +268,5 @@ namespace EQLogParser
       TitleTimer.Stop();
       TitleTimer.Start();
     }
-
-    #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
-        TankingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-        HealingStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-        DamageStatsManager.Instance.EventsGenerationStatus -= Instance_EventsGenerationStatus;
-        disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }

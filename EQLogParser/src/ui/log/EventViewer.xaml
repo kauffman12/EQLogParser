@@ -4,47 +4,104 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <local:DateTimeConverter x:Key="DateTimeConverter" />
+      <Style TargetType="syncfusion:GridRowHeaderCell">
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+              <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                <Grid>
+                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                </Grid>
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="RefreshMouseClick">
-        <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Redo" ToolTip="Refresh Results" Foreground="#FF4F9FE2"/>
-      </Button>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <CheckBox x:Name="showEnterZone" IsChecked="True" Margin="4,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Entered Area</CheckBox>
-      <CheckBox x:Name="showMezBreaks" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Mez Breaks</CheckBox>
-      <CheckBox x:Name="showKillShots" IsChecked="True" Margin="2,0,4,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Kill Shots</CheckBox>
-      <CheckBox x:Name="showPlayerKillsPlayer" IsChecked="True" Margin="2,0,8,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Player Killing</CheckBox>
-      <CheckBox x:Name="showPlayerSlain" IsChecked="True" Margin="2,0,4,0" VerticalAlignment="Center" IsEnabled="False" VerticalContentAlignment="Center" Checked="OptionsChange" Unchecked="OptionsChange">Player Slain</CheckBox>
-      <Rectangle VerticalAlignment="Stretch" Width="2" Margin="2" Stroke="#111111" />
-      <ComboBox x:Name="eventFilterModifier" Margin="4,0,0,0" Height="24" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange" Background="#101010" Foreground="#EEEEEE">
+      <ComboBox x:Name="eventFilterModifier" Margin="0,0,0,2" SelectedIndex="0" Width="84" DropDownClosed="FilterOptionChange">
         <ComboBoxItem>Includes</ComboBoxItem>
         <ComboBoxItem>Excludes</ComboBoxItem>
         <ComboBoxItem>Equals</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="eventFilter" Margin="0,0,4,0" Height="24" VerticalContentAlignment="Center" Background="#101010" Foreground="#EEEEEE" FontStyle="Italic" Width="190" LostFocus="Filter_LostFocus" GotFocus="Filter_GotFocus" PreviewKeyDown="Filter_KeyDown" TextChanged="Filter_TextChanged" BorderBrush="#FF707070"/>
+      <TextBox x:Name="eventFilter" Margin="0,0,8,2"  FontStyle="Italic" Width="170" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" />
+      <ComboBox x:Name="selectedOptions" Width="145" Margin="0,0,8,2" 
+                DropDownClosed="SelectOptions" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="50" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Single">
-      <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Time, Converter={StaticResource DateTimeConverter}}" ClipboardContentBinding="{x:Null}" Header="Time" IsReadOnly="True" CanUserReorder="True" MinWidth="92" Width="92" />
-        <DataGridTextColumn Binding="{Binding Actor}" ClipboardContentBinding="{x:Null}" Header="Actor" IsReadOnly="True" CanUserReorder="True" Width="165"/>
-        <DataGridTextColumn Binding="{Binding Event}" ClipboardContentBinding="{x:Null}" Header="Event" IsReadOnly="True" CanUserReorder="True" Width="115"/>
-        <DataGridTextColumn Binding="{Binding Target}" ClipboardContentBinding="{x:Null}" Header="Target" IsReadOnly="True" CanUserReorder="True" Width="220*"/>
-      </DataGrid.Columns>
-    </datagrid:ThemedDataGrid>
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="Auto"
+                           FrozenColumnCount="1"
+                           Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
+                           HeaderRowHeight="26"
+                           IsReadOnly="True"
+                           ItemsSourceChanged="ItemsSourceChanged"
+                           RowHeaderWidth="30"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True">
+      <syncfusion:SfDataGrid.SortColumnDescriptions>
+        <syncfusion:SortColumnDescription ColumnName="Time" SortDirection="Descending" />
+      </syncfusion:SfDataGrid.SortColumnDescriptions>
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource DateTimeConverter}}" 
+                                   Width="100" TextAlignment="Center" HeaderText="Time" />
+        <syncfusion:GridTextColumn MappingName="Actor" HeaderText="Actor" Width="150"/>
+        <syncfusion:GridTextColumn MappingName="Event" HeaderText="Event" Width="120" />
+        <syncfusion:GridTextColumn MappingName="Target" HeaderText="Target" Width="450" />
+      </syncfusion:SfDataGrid.Columns>
+      <syncfusion:SfDataGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+          <Separator />
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </ContextMenu>
+      </syncfusion:SfDataGrid.ContextMenu>      
+    </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>
 

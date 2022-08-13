@@ -1,0 +1,512 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Syncfusion.Windows.Controls.Layout;assembly=Syncfusion.SfAccordion.WPF"
+    
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style x:Key="SyncfusionLayoutTransformerStyle" TargetType="local:LayoutTransformer">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:LayoutTransformer">
+                    <Grid x:Name="TransformRoot" Background="{TemplateBinding Background}">
+                        <ContentPresenter
+                            x:Name="Presenter"
+                            Margin="12,0,0,0"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}">
+                            <ContentPresenter.Resources>
+                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionExpandableContentControlStyle" TargetType="local:ExpandableContentControl">
+        <Setter Property="IsEnabled" Value="true" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness}" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:ExpandableContentControl">
+                    <ContentPresenter
+                        x:Name="ContentSite"
+                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                        Content="{TemplateBinding Content}"
+                        ContentTemplate="{TemplateBinding ContentTemplate}"
+                        IsEnabled="True">
+                        <ContentPresenter.Resources>
+                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionAccordionButtonStyle" TargetType="{x:Type local:AccordionButton}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="IsTabStop" Value="True" />
+		<Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:AccordionButton">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Grid
+                                x:Name="buttonGrid"
+                                MinHeight="{TemplateBinding MinHeight}"
+                                Margin="{TemplateBinding Padding}"
+                                VerticalAlignment="Center"
+                                Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="cd0" Width="*" />
+                                <ColumnDefinition x:Name="cd1" Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition x:Name="rd0" Height="*" />
+                                <RowDefinition x:Name="rd1" Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid
+                                    x:Name="icon"
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Width="19"
+                                    Height="19"
+                                    Margin="5,0,5,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform />
+                                        <SkewTransform />
+                                        <RotateTransform Angle="0" />
+                                        <TranslateTransform />
+                                    </TransformGroup>
+                                </Grid.RenderTransform>
+                                <Path
+                                        x:Name="arrow"
+                                        Width="6"
+                                        Height="10"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Stroke="{StaticResource IconColor}"
+                                       StrokeThickness="{StaticResource MaterialLightCustom.StrokeThickness1}" 
+                                       RenderTransformOrigin="0.5,0.5"
+                                       Data="M6.5 1L1 6.5L6.5 12"
+                                       Stretch="Uniform">
+                                    <Path.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform />
+                                            <SkewTransform />
+                                            <RotateTransform />
+                                            <TranslateTransform />
+                                        </TransformGroup>
+                                    </Path.RenderTransform>
+                                </Path>
+                            </Grid>
+                            <local:LayoutTransformer
+                                    x:Name="header"
+                                    Grid.Row="0"
+                                    Grid.RowSpan="1"
+                                    Grid.Column="0"
+                                    Height="{TemplateBinding Height}"
+                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    FontFamily="{TemplateBinding FontFamily}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    FontStretch="{TemplateBinding FontStretch}"
+                                    FontStyle="{TemplateBinding FontStyle}"
+                                    FontWeight="{TemplateBinding FontWeight}"
+                                    Style="{StaticResource SyncfusionLayoutTransformerStyle}" />
+                        </Grid>
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ExpandDirectionStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0" />
+                                </VisualStateGroup.Transitions>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ExpansionStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Collapsed">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="icon"
+                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                                            To="180"
+                                            Duration="00:00:00.3" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Expanded">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="icon"
+                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)"
+                                            To="270"
+                                            Duration="00:00:00.3" />
+                                        <DoubleAnimationUsingKeyFrames
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="buttonGrid"
+                                            Storyboard.TargetProperty="(UIElement.Opacity)"
+                                            Duration="00:00:00.0010000">
+                                            <SplineDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="00:00:00" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Checked" />
+                                <VisualState x:Name="Unchecked" />
+                            </VisualStateGroup>
+
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused" />
+                                <VisualState x:Name="Unfocused" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="Margin" TargetName="arrow" Value="0,5,0,0"/>
+                            <Setter Property="Width" TargetName="arrow" Value="12"/>
+                            <Setter Property="Height" TargetName="arrow" Value="10"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="buttonGrid" Property="Background" Value="Transparent" />
+                            <Setter TargetName="header" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter TargetName="arrow" Property="Stroke" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="buttonGrid" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="header" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="arrow" Property="Stroke" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="buttonGrid" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="header" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="arrow" Property="Stroke" Value="{StaticResource ContentForeground}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="buttonGrid" Property="Background" Value="Transparent" />
+                            <Setter TargetName="header" Property="Foreground" Value="{StaticResource PrimaryColorForeground}" />
+                            <Setter TargetName="arrow" Property="Stroke" Value="{StaticResource IconColor}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                           <Setter TargetName="buttonGrid" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="header" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="arrow" Property="Stroke" Value="{StaticResource ContentForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SyncfusionSfAccordionStyle" TargetType="{x:Type local:SfAccordion}">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="AccentBrush" Value="{StaticResource ContentBackground}" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness0100}" />
+        <!--  Accordion expects a stackpanel to layout its children.  -->
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel VerticalAlignment="Top" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:SfAccordion}">
+                    <Grid x:Name="Root">
+                        <Border
+                            x:Name="Border"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer
+                                x:Name="PART_ScrollViewer"
+                                Background="{x:Null}"
+                                BorderBrush="Transparent"
+                                HorizontalScrollBarVisibility="Disabled"
+                                IsTabStop="False"
+                                VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter x:Name="PART_ItemsPresenter" />
+                            </ScrollViewer>
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <!--  common states  -->
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="Pressed" />
+                                <VisualState x:Name="MouseOver" />
+                                <VisualState x:Name="Disabled" />
+                            </VisualStateGroup>
+                            <!--  focus states  -->
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                        <ColorAnimation
+                                            Storyboard.TargetName="Border"
+                                            Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource BorderAlt.Color}"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfAccordionStyle}" TargetType="{x:Type local:SfAccordion}" />
+
+    <Style x:Key="SyncfusionSfAccordionItemStyle" TargetType="{x:Type local:SfAccordionItem}">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.SubHeaderTextStyle}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness1011}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="ExpandableContentControlStyle" Value="{StaticResource SyncfusionExpandableContentControlStyle}" />
+        <Setter Property="AccordionButtonStyle" Value="{StaticResource SyncfusionAccordionButtonStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:SfAccordionItem}">
+                    <Border
+                        x:Name="border"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Margin="0,0,0,1">
+                        <Grid
+                            Margin="{TemplateBinding Padding}"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition x:Name="rd0" Height="Auto" />
+                                <RowDefinition x:Name="rd1" Height="*" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="cd0" Width="*" />
+                                <ColumnDefinition x:Name="cd1" Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <local:AccordionButton
+                                x:Name="ExpanderButton"
+                                Grid.Row="0"
+                                MinHeight="32"
+                                HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                AccentBrush="{Binding AccentBrush, RelativeSource={RelativeSource TemplatedParent}}"
+                                Content="{TemplateBinding Header}"
+                                ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                FontFamily="{TemplateBinding FontFamily}"
+                                FontSize="{TemplateBinding FontSize}"
+                                FontStretch="{TemplateBinding FontStretch}"
+                                FontStyle="{TemplateBinding FontStyle}"
+                                FontWeight="{TemplateBinding FontWeight}"
+                                Foreground="{TemplateBinding Foreground}"
+                                IsChecked="{TemplateBinding IsSelected}"
+                                IsTabStop="True"
+                                Style="{TemplateBinding AccordionButtonStyle}" />
+                            <local:ExpandableContentControl
+                                x:Name="ExpandSite"
+                                Grid.Row="1"
+                                Margin="12,0,0,0"
+                                HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                FontFamily="{TemplateBinding FontFamily}"
+                                FontSize="{TemplateBinding FontSize}"
+                                FontStretch="{TemplateBinding FontStretch}"
+                                FontStyle="{TemplateBinding FontStyle}"
+                                FontWeight="{TemplateBinding FontWeight}"
+                                Foreground="{TemplateBinding Foreground}"
+                                IsTabStop="False"
+                                Percentage="0"
+                                Style="{TemplateBinding ExpandableContentControlStyle}" />
+                        </Grid>
+                        <VisualStateManager.VisualStateGroups>
+                            <!--  CommonState  -->
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="Pressed" />
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ColorAnimation
+                                            Storyboard.TargetName="border"
+                                            Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource BorderAlt.Color}"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled" />
+                            </VisualStateGroup>
+                            <!--  FocusStates  -->
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused" >
+                                    <Storyboard>
+                                        <ColorAnimation
+                                            Storyboard.TargetName="border"
+                                            Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource ContentBackgroundHover.Color}"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused" />
+                            </VisualStateGroup>
+                            <!--  ExpansionStates  -->
+                            <VisualStateGroup x:Name="ExpansionStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Collapsed">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="ExpandSite"
+                                            Storyboard.TargetProperty="(local:ExpandableContentControl.Percentage)"
+                                            Duration="00:00:01">
+                                            <SplineDoubleKeyFrame
+                                                KeySpline="0.2,0,0,1"
+                                                KeyTime="00:00:0.3"
+                                                Value="0" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Expanded">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="ExpandSite"
+                                            Storyboard.TargetProperty="(local:ExpandableContentControl.Percentage)"
+                                            Duration="00:00:01">
+                                            <SplineDoubleKeyFrame
+                                                KeySpline="0.2,0,0,1"
+                                                KeyTime="00:00:0.3"
+                                                Value="1" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <ColorAnimation
+                                            Storyboard.TargetName="border"
+                                            Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource BorderAlt.Color}"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <!--  ExpansionStates  -->
+                            <VisualStateGroup x:Name="LockedStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Locked">
+                                    <Storyboard>
+                                        <BooleanAnimationUsingKeyFrames
+                                            Storyboard.TargetName="ExpanderButton"
+                                            Storyboard.TargetProperty="IsEnabled"
+                                            Duration="0">
+                                            <DiscreteBooleanKeyFrame KeyTime="0" Value="False" />
+                                        </BooleanAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unlocked">
+                                    <Storyboard>
+                                        <BooleanAnimationUsingKeyFrames
+                                            Storyboard.TargetName="ExpanderButton"
+                                            Storyboard.TargetProperty="IsEnabled"
+                                            Duration="0">
+                                            <DiscreteBooleanKeyFrame KeyTime="0" Value="True" />
+                                        </BooleanAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="ExpandSite" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="ExpandSite" Property="Background" Value="Transparent" />
+                            <Setter TargetName="ExpandSite" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfAccordionItemStyle}" TargetType="{x:Type local:SfAccordionItem}" />
+</ResourceDictionary>

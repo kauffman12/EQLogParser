@@ -3,509 +3,100 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-             xmlns:themes="http://schemas.actiprosoftware.com/winfx/xaml/themes"
-             xmlns:local="clr-namespace:EQLogParser"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-    <!-- Overriding Actipro DarkMetro Colors -->
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemForegroundHoverBrushKey}" Color="#c2c2c0" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.AutoHideTabItemBorderHoverBrushKey}" Color="#101010" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTitleBarBackgroundActiveBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarBackgroundActiveBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderPressedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderHoverBrushKey}" Color="Transparent" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundNormalBrushKey}" Color="#101010" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonForegroundDefaultedBrushKey}" Color="#c2c2c0" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBackgroundDisabledBrushKey}" Color="#2d2d30" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ButtonBorderDefaultedBrushKey}" Color="Transparent" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedFocusedBrushKey}" Color="#004885" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedHoverBrushKey}" Color="#004885" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBackgroundSelectedNormalBrushKey}" Color="#004885" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ListItemBorderSelectedFocusedBrushKey}" Color="#004885" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.BackstageHeaderSeparatorBorderNormalBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBackgroundActiveFocusedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBorderActiveFocusedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBackgroundHoverBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabItemBorderHoverBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.TabbedMdiContainerTabControlBackgroundActiveFocusedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolBarButtonBorderCheckedHoverBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolTipBackgroundNormalBrushKey}" Color="#c2c2c0" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolTipForegroundNormalBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundSelectedBrushKey}" Color="#c2c2c0" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.ToolWindowContainerTabItemForegroundHoverBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBorderActivePressedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowTitleBarButtonBackgroundActivePressedBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.WindowBorderActiveBrushKey}" Color="#202020" />
-    <SolidColorBrush x:Key="{x:Static themes:AssetResourceKeys.GroupBoxForegroundNormalBrushKey}" Color="#c2c2c0" />
-    
-    <!-- General Element Styles -->
-    <Style TargetType="TextBox">
-      <Setter Property="Background">
-        <Setter.Value>
-          <SolidColorBrush Color="#101010"/>
-        </Setter.Value>
-      </Setter>
-      <Setter Property="Foreground">
-        <Setter.Value>
-          <SolidColorBrush Color="#EEE"/>
-        </Setter.Value>
-      </Setter>
-      <Setter Property="local:TextBoxBehavior.TripleClickSelectAll" Value="True" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="TextBox">
-            <Border BorderThickness="{TemplateBinding Border.BorderThickness}" BorderBrush="#FF707070" Background="{TemplateBinding Panel.Background}"
-                  Name="border" SnapsToDevicePixels="True">
-              <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" Name="PART_ContentHost" Focusable="False" />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="UIElement.IsMouseOver" Value="True">
-                <Setter Property="Border.BorderBrush" TargetName="border" Value="#1e95ed" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
+    <Style x:Key="EQIconStyle" TargetType="fa:ImageAwesome">
+      <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
+      <Setter Property="Height" Value="12"/>
+      <Setter Property="Width" Value="12" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
     </Style>
 
-    <!--Style for the days of a month.-->
-    <Color x:Key="GlyphMouseOver">sc#1, 0.004391443, 0.002428215, 0.242281124</Color>
-    <Style TargetType="CalendarDayButton" x:Key="CalendarDayButtonStyle">
-      <Setter Property="MinWidth" Value="5" />
-      <Setter Property="MinHeight" Value="5" />
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="CalendarDayButton">
-            <Grid>
-              <VisualStateManager.VisualStateGroups>
-                <VisualStateGroup Name="CommonStates">
-                  <VisualStateGroup.Transitions>
-                    <VisualTransition GeneratedDuration="0:0:0.1" />
-                  </VisualStateGroup.Transitions>
-                  <VisualState Name="Normal" />
-                  <VisualState Name="MouseOver">
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="HighlightBackground" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0" />
-                    </Storyboard>
-                  </VisualState>
-                  <VisualState Name="Pressed">
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="HighlightBackground" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0" />
-                    </Storyboard>
-                  </VisualState>
-                  <VisualState Name="Disabled">
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="HighlightBackground" Storyboard.TargetProperty="Opacity" To="0" Duration="0" />
-                      <DoubleAnimation Storyboard.TargetName="NormalText" Storyboard.TargetProperty="Opacity" To=".35" Duration="0" />
-                    </Storyboard>
-                  </VisualState>
-                </VisualStateGroup>
-                <VisualStateGroup Name="SelectionStates">
-                  <VisualStateGroup.Transitions>
-                    <VisualTransition GeneratedDuration="0" />
-                  </VisualStateGroup.Transitions>
-                  <VisualState Name="Unselected" />
-                  <VisualState Name="Selected">
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="SelectedBackground" Storyboard.TargetProperty="Opacity" To=".75" Duration="0" />
-                    </Storyboard>
-                  </VisualState>
-                </VisualStateGroup>
-                <VisualStateGroup Name="CalendarButtonFocusStates">
-                  <VisualStateGroup.Transitions>
-                    <VisualTransition GeneratedDuration="0" />
-                  </VisualStateGroup.Transitions>
-                  <VisualState Name="CalendarButtonFocused">
-                    <Storyboard>
-                      <ObjectAnimationUsingKeyFrames Storyboard.TargetName="DayButtonFocusVisual" Storyboard.TargetProperty="Visibility" Duration="0">
-                        <DiscreteObjectKeyFrame KeyTime="0">
-                          <DiscreteObjectKeyFrame.Value>
-                            <Visibility>Visible</Visibility>
-                          </DiscreteObjectKeyFrame.Value>
-                        </DiscreteObjectKeyFrame>
-                      </ObjectAnimationUsingKeyFrames>
-                    </Storyboard>
-                  </VisualState>
-                  <VisualState Name="CalendarButtonUnfocused">
-                    <Storyboard>
-                      <ObjectAnimationUsingKeyFrames Storyboard.TargetName="DayButtonFocusVisual" Storyboard.TargetProperty="Visibility" Duration="0">
-                        <DiscreteObjectKeyFrame KeyTime="0">
-                          <DiscreteObjectKeyFrame.Value>
-                            <Visibility>Collapsed</Visibility>
-                          </DiscreteObjectKeyFrame.Value>
-                        </DiscreteObjectKeyFrame>
-                      </ObjectAnimationUsingKeyFrames>
-                    </Storyboard>
-                  </VisualState>
-                </VisualStateGroup>
-                <VisualStateGroup Name="ActiveStates">
-                  <VisualStateGroup.Transitions>
-                    <VisualTransition GeneratedDuration="0" />
-                  </VisualStateGroup.Transitions>
-                  <VisualState Name="Active" />
-                  <VisualState Name="Inactive">
-                    <Storyboard>
-                      <ColorAnimation Duration="0" Storyboard.TargetName="NormalText" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)" To="#c2c2c2" />
-                    </Storyboard>
-                  </VisualState>
-                </VisualStateGroup>
-                <VisualStateGroup Name="DayStates">
-                  <VisualStateGroup.Transitions>
-                    <VisualTransition GeneratedDuration="0" />
-                  </VisualStateGroup.Transitions>
-                  <VisualState Name="RegularDay" />
-                  <VisualState Name="Today">
-                    <Storyboard>
-                      <DoubleAnimation Storyboard.TargetName="TodayBackground" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
-                      <ColorAnimation Duration="0" Storyboard.TargetName="NormalText" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)" To="#1e95ed" />
-                    </Storyboard>
-                  </VisualState>
-                </VisualStateGroup>
-                <VisualStateGroup Name="BlackoutDayStates">
-                  <VisualStateGroup.Transitions>
-                    <VisualTransition GeneratedDuration="0" />
-                  </VisualStateGroup.Transitions>
-                  <VisualState Name="NormalDay" />
-                  <VisualState Name="BlackoutDay">
-                    <Storyboard>
-                      <DoubleAnimation Duration="0" Storyboard.TargetName="Blackout" Storyboard.TargetProperty="Opacity" To=".2" />
-                    </Storyboard>
-                  </VisualState>
-                </VisualStateGroup>
-              </VisualStateManager.VisualStateGroups>
-              <Rectangle x:Name="TodayBackground" RadiusX="1" RadiusY="1" Opacity="0">
-                <Rectangle.Fill>
-                  <SolidColorBrush Color="{DynamicResource SelectedBackgroundColor}" />
-                </Rectangle.Fill>
-              </Rectangle>
-              <Rectangle x:Name="SelectedBackground" RadiusX="1" RadiusY="1" Opacity="0">
-                <Rectangle.Fill>
-                  <SolidColorBrush Color="#888" />
-                </Rectangle.Fill>
-              </Rectangle>
-              <Border Background="{TemplateBinding Background}"
-                  BorderThickness="{TemplateBinding BorderThickness}"
-                  BorderBrush="{TemplateBinding BorderBrush}" />
-              <Rectangle x:Name="HighlightBackground" RadiusX="1" RadiusY="1" Opacity="0">
-                <Rectangle.Fill>
-                  <SolidColorBrush Color="#888" />
-                </Rectangle.Fill>
-              </Rectangle>
-              <ContentPresenter x:Name="NormalText" HorizontalAlignment="{TemplateBinding HorizontalAlignment}" VerticalAlignment="{TemplateBinding VerticalAlignment}" Margin="5,1,5,1">
-                <TextElement.Foreground>
-                  <SolidColorBrush Color="#ffffff" />
-                </TextElement.Foreground>
-              </ContentPresenter>
-              <Path x:Name="Blackout" Opacity="0" Margin="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" RenderTransformOrigin="0.5,0.5" Fill="#FF000000" Stretch="Fill"
-                  Data="M8.1772461,11.029181 L10.433105,
-                  11.029181 L11.700684,12.801641 L12.973633,
-                  11.029181 L15.191895,11.029181 L12.844727,
-                  13.999395 L15.21875,17.060919 L12.962891,
-                  17.060919 L11.673828,15.256231 L10.352539,
-                  17.060919 L8.1396484,17.060919 L10.519043,
-                  14.042364 z" />
-              <Rectangle x:Name="DayButtonFocusVisual" Visibility="Collapsed" IsHitTestVisible="false" RadiusX="1" RadiusY="1">
-                <Rectangle.Stroke>
-                  <SolidColorBrush Color="{DynamicResource SelectedBackgroundColor}" />
-                </Rectangle.Stroke>
-              </Rectangle>
-            </Grid>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <!--Button to go to the previous month or year.-->
-    <ControlTemplate x:Key="PreviousButtonTemplate" TargetType="{x:Type Button}">
-      <Grid Cursor="Hand">
-        <VisualStateManager.VisualStateGroups>
-          <VisualStateGroup x:Name="CommonStates">
-            <VisualState x:Name="Normal" />
-            <VisualState x:Name="MouseOver" />
-            <VisualState x:Name="Disabled"/>
-          </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
-        <Grid  Background="Transparent">
-          <Path x:Name="path" Margin="14,-6,0,0" Stretch="Fill" HorizontalAlignment="Left" Height="10" VerticalAlignment="Center" Width="6" Data="M288.75,232.25 L288.75,240.625 L283,236.625 z">
-            <Path.Fill>
-              <SolidColorBrush Color="#c2c2c2" />
-            </Path.Fill>
-          </Path>
-        </Grid>
-      </Grid>
-    </ControlTemplate>
-    <!--Button to go to the next month or year.-->
-    <ControlTemplate x:Key="NextButtonTemplate" TargetType="{x:Type Button}">
-      <Grid Cursor="Hand">
-        <VisualStateManager.VisualStateGroups>
-          <VisualStateGroup x:Name="CommonStates">
-            <VisualState x:Name="Normal" />
-            <VisualState x:Name="MouseOver"/>
-            <VisualState x:Name="Disabled"/>
-          </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
-        <!--<Rectangle Fill="#11E5EBF1" Opacity="1" Stretch="Fill"/>-->
-        <Grid Background="Transparent">
-          <Path x:Name="path" Data="M282.875,231.875 L282.875,240.375 L288.625,236 z" HorizontalAlignment="Right" Height="10" Margin="0,-6,14,0" Stretch="Fill" VerticalAlignment="Center" Width="6">
-            <Path.Fill>
-              <SolidColorBrush Color="#c2c2c2" />
-            </Path.Fill>
-          </Path>
-        </Grid>
-      </Grid>
-    </ControlTemplate>
-    <Style x:Key="CalendarItemStyle" TargetType="{x:Type CalendarItem}">
-      <Setter Property="Margin" Value="0,0,0,0" />
-      <Setter Property="Padding" Value="0,0,0,0" />
-       <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="{x:Type CalendarItem}">
-            <ControlTemplate.Resources>
-              <DataTemplate x:Key="{x:Static CalendarItem.DayTitleTemplateResourceKey}">
-                <TextBlock Foreground="white" FontWeight="Bold" FontSize="11" FontFamily="Verdana" Margin="0,6,0,6" Text="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              </DataTemplate>
-            </ControlTemplate.Resources>
-            <Grid x:Name="PART_Root">
-              <Grid.Resources>
-                <SolidColorBrush x:Key="DisabledColor" Color="#A5FFFFFF" />
-              </Grid.Resources>
-              <VisualStateManager.VisualStateGroups>
-                <VisualStateGroup x:Name="CommonStates">
-                  <VisualState x:Name="Normal" />
-                  <VisualState x:Name="Disabled" />
-                </VisualStateGroup>
-              </VisualStateManager.VisualStateGroups>
-              <Border BorderBrush="#101010" BorderThickness="2" Background="{TemplateBinding Background}" CornerRadius="1">
-                <Border BorderBrush="#2d2d30" BorderThickness="2" CornerRadius="1">
-                  <Grid>
-                    <Grid.Resources>
-                    </Grid.Resources>
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="Auto" />
-                      <ColumnDefinition Width="Auto" />
-                      <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                      <RowDefinition Height="Auto" />
-                      <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Button x:Name="PART_PreviousButton" Template="{StaticResource PreviousButtonTemplate}" Focusable="False" HorizontalAlignment="Left" Grid.Column="0"
-                        Grid.Row="0" Height="20" Width="28" />
-                    <Button x:Name="PART_HeaderButton" IsHitTestVisible="False" BorderThickness="0" FontWeight="Bold" Focusable="False" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="1"
-                        Grid.Row="0"  />
-                    <Button x:Name="PART_NextButton" Focusable="False" HorizontalAlignment="Right" Grid.Column="2" Grid.Row="0" Template="{StaticResource NextButtonTemplate}"
-                        Height="20" Width="28" />
-                    <Grid x:Name="PART_MonthView" Visibility="Visible" Grid.ColumnSpan="3" Grid.Row="1" Margin="6,-1,6,6" HorizontalAlignment="Center">
-                      <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                      </Grid.ColumnDefinitions>
-                      <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                      </Grid.RowDefinitions>
-                    </Grid>
-                    </Grid>
-                </Border>
-              </Border>
-              <Rectangle x:Name="PART_DisabledVisual" Fill="{StaticResource DisabledColor}" Opacity="0" RadiusY="2" RadiusX="2" Stretch="Fill" Stroke="{StaticResource DisabledColor}" StrokeThickness="1" Visibility="Collapsed" />
-            </Grid>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <Style TargetType="{x:Type Calendar}">
-      <Setter Property="CalendarDayButtonStyle" Value="{StaticResource CalendarDayButtonStyle}" />
-      <Setter Property="CalendarItemStyle" Value="{StaticResource CalendarItemStyle}" />
-      <Setter Property="Foreground" Value="#c2c2c2" />
-      <Setter Property="Background">
-        <Setter.Value>
-          <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-            <!--The first two gradient stops specifies the background for the calendar's heading and navigation buttons.-->
-            <GradientStop Color="{DynamicResource HeaderTopColor}" Offset="0" />
-            <GradientStop Color="{DynamicResource ControlMediumColor}" Offset="0.16" />
-
-            <!--The next gradient stop specifies the background for the calendar area.-->
-            <GradientStop Color="{DynamicResource ControlLightColor}" Offset="0.16" />
-          </LinearGradientBrush>
-        </Setter.Value>
-      </Setter>
-      <Setter Property="BorderBrush">
-        <Setter.Value>
-          <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
-            <GradientStop Color="{DynamicResource BorderLightColor}" Offset="0" />
-            <GradientStop Color="{DynamicResource BorderDarkColor}" Offset="1" />
-          </LinearGradientBrush>
-        </Setter.Value>
-      </Setter>
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="{x:Type Calendar}">
-            <StackPanel x:Name="PART_Root" HorizontalAlignment="Center">
-              <CalendarItem x:Name="PART_CalendarItem" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}"
-                Style="{TemplateBinding CalendarItemStyle}" />
-            </StackPanel>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
+    <Style x:Key="EQTitleStyle" TargetType="Label">
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Margin" Value="0" />
     </Style>
 
-    <!-- General -->
-    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Static themes:SharedResourceKeys.MenuItemStyleKey}}">
-      <Setter Property="ToolTipService.InitialShowDelay" Value="1500"/>
-      <Setter Property="ToolTipService.ShowDuration" Value="2500"/>
-    </Style>
-
-    <!-- LogRow Templates for check columns -->
-    <DataTemplate x:Key="NoDataTemplate">
-    </DataTemplate>
-    <DataTemplate x:Key="QuantityTemplate">
-      <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center"></TextBlock>
-    </DataTemplate>
-    <DataTemplate x:Key="CheckTemplate">
-      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Check" Foreground="#73b15d" />
-    </DataTemplate>
     <DataTemplate x:Key="CurrencyTemplate">
       <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
     </DataTemplate>
-    <DataTemplate x:Key="CountTemplate">
-      <TextBlock Text="{Binding Count}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    <DataTemplate x:Key="QuantityTemplate">
+      <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center" VerticalAlignment="Center"></TextBlock>
     </DataTemplate>
-    <DataTemplate x:Key="CritCountTemplate">
-      <TextBlock Text="{Binding CritCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    
+    <DataTemplate x:Key="TemplateToolTip">
+      <TextBlock FontSize="12" Text="{Binding TooltipText}" />
     </DataTemplate>
-    <DataTemplate x:Key="LuckyCountTemplate">
-      <TextBlock Text="{Binding LuckyCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+
+    <DataTemplate x:Key="HeaderImprovedTauntToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Improved Taunts can not Fail" />
     </DataTemplate>
-    <DataTemplate x:Key="TwincastCountTemplate">
-      <TextBlock Text="{Binding TwincastCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    <DataTemplate x:Key="HeaderFailedTauntToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Failed Taunts" />
+    </DataTemplate>    
+    <DataTemplate x:Key="HeaderSpecialTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="6 = Staunch, 7 = Intensity, D = Dragon Glyph, G = Destruction Glyph, M = Mana Burn, L = Life Burn, S = Arcane Secrets" />
     </DataTemplate>
-    <DataTemplate x:Key="RampageCountTemplate">
-      <TextBlock Text="{Binding RampageCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    <DataTemplate x:Key="HeaderSpellCountsTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Cast Count (# Interrupted)" />
+    </DataTemplate>    
+    <DataTemplate x:Key="HeaderTotalTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Total (raid total)" />
     </DataTemplate>
-    <DataTemplate x:Key="RiposteCountTemplate">
-      <TextBlock Text="{Binding RiposteCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    <DataTemplate x:Key="HeaderOverHealTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Amount of Healing in Excess of what could be Healed" />
     </DataTemplate>
-    <DataTemplate x:Key="StrikethroughCountTemplate">
-      <TextBlock Text="{Binding StrikethroughCount}" Foreground="#73b15d" FontWeight="Bold" HorizontalAlignment="Center"/>
+    <DataTemplate x:Key="HeaderDPSTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Damage/Second based on Player Time" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderSDPSTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Scaled Damage/Second based on Total Time (raid time)" />
+    </DataTemplate>    
+    <DataTemplate x:Key="HeaderHPSTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Healing/Second based on Player Time" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderSHPSTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Scaled Healing/Second based on Total Time (raid time)" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderMeleeAccRateTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Misses" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderMeleeHitRateTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderMeleeAttemptsTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Melee Attempts to Hit the Player" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderMeleeUndefendedTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Melee Hits minus Strikethrough " />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderOverHealPercentTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Healing in Excess of what could be Healed" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderRampageTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Melee hits received which were from Rampage" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderAvgNonTwincastTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Average Damage for all Hits that were not a Twincast" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderAvgNonTwincastCritTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Average Crit Damage for all Hits that were not a Twincast" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderAvgNonTwincastLuckyTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Average Lucky Damage for all Hits that were not a Twincast" />
     </DataTemplate>
 
     <!-- Syncfusion ColorPicker -->
     <DataTemplate x:Key="ColorPickerMinHeaderTemplate">
-      <StackPanel Orientation="Horizontal">
-        <Border Width="14" Height="14" Margin="0, -2, 0 ,0" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
+      <StackPanel Orientation="Horizontal" Margin="0">
+        <Border Width="11" Height="11" Margin="0,0,0,3" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
       </StackPanel>
     </DataTemplate>
-
-    <!-- DataGrid Row/Column Colors and Alignment -->
-    <Style x:Key="DetailsDataGridRowSyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowStyleKey}}">
-      <Setter Property="Background" Value="#3a543f" />
-      <Style.Triggers>
-        <Trigger Property="IsMouseOver" Value="True">
-          <Setter Property="Background" Value="#3a543f"/>
-        </Trigger>
-      </Style.Triggers>
-    </Style>
-    <Style x:Key="RightAlignGridRowHeaderStyle" TargetType="{x:Type DataGridRowHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridRowHeaderStyleKey}}">
-      <Setter Property="HorizontalContentAlignment" Value="Right" />
-      <Setter Property="TextBlock.TextAlignment" Value="Right" />
-      <Setter Property="HorizontalAlignment" Value="Right" />
-    </Style>
-    <Style x:Key="BrightCenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
-      <Setter Property="HorizontalContentAlignment"  Value="Center"/>
-      <Setter Property="Foreground" Value="White" />
-      <Style.Triggers>
-        <Trigger Property="IsMouseOver" Value="True">
-          <Setter Property="Foreground" Value="White" />
-        </Trigger>
-      </Style.Triggers>
-    </Style>
-    <Style x:Key="CenterGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridColumnHeaderStyleKey}}">
-      <Setter Property="HorizontalContentAlignment"  Value="Center"/>
-    </Style>
-    <!-- Also SpellGridDataCellStyle is used by the spell damage stats viewer -->
-    <Style x:Key="SpellGridDataCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Right" />
-    </Style>
-    <Style x:Key="RightAlignGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Right" />
-      <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=DataContext.TooltipText}" />
-    </Style>
-    <Style x:Key="RightAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Right" />
-      <Setter Property="Foreground" Value="Black" />
-    </Style>
-    <Style x:Key="CenterAlignGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Center" />
-    </Style>
-    <Style x:Key="LeftAlignSubGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="TextBlock.TextAlignment" Value="Left" />
-      <Setter Property="Foreground" Value="Black" />
-    </Style>
-    <Style x:Key="TooltipCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Static themes:DataGridResourceKeys.DataGridCellStyleKey}}">
-      <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=DataContext.TooltipText}" />
-    </Style>
-    
-    <!-- Tooltips -->
-    <Style x:Key="AvgNonTwincastColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Average Damage for all Hits that were not a Twincast" />
-    </Style>
-    <Style x:Key="AvgNonTwincastCritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Average Crit Damage for all Hits that were not a Twincast" />
-    </Style>
-    <Style x:Key="AvgNonTwincastLuckyColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Average Lucky Damage for all Hits that were not a Twincast" />
-    </Style>    
-    <Style x:Key="CritColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Based on Crippling Blow, Critical, Deadly Strike, and Finishing Blow" />
-    </Style>
-    <Style x:Key="OverHealColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Amount of Healing in Excess of what could be Healed" />
-    </Style>
-    <Style x:Key="OverHealPercentColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Healing in Excess of what could be Healed" />
-    </Style>    
-    <Style x:Key="TotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Total (raid total)" />
-    </Style>
-    <Style x:Key="PlayerTotalColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Player's Total" />
-    </Style>
-    <Style x:Key="DPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Damage Per Second based on Player Time" />
-    </Style>
-    <Style x:Key="HPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Healing Per Second based on Player Time" />
-    </Style>
-    <Style x:Key="SDPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Scaled Damage Per Second based on Total Time (raid time)" />
-    </Style>
-    <Style x:Key="MeleeAccRateColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Hits that were not Misses" />
-    </Style>    
-    <Style x:Key="MeleeHitRateColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
-    </Style>
-    <Style x:Key="SHPSColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Scaled Healing Per Second based on Total Time (raid time)" />
-    </Style>
-    <Style x:Key="RampageColumnStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource CenterGridHeaderStyle}">
-      <Setter Property="ToolTip" Value="Percent of Melee hits received which were from Rampage" />
-    </Style>
-
+   
     <!-- Window/Chrome Styles -->
     <Style x:Key="OverlayStyle" TargetType="{x:Type Window}">
       <Setter Property="WindowChrome.WindowChrome">

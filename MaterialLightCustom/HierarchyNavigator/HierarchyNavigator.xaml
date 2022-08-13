@@ -1,0 +1,964 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+    
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:tools_controls="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ProgressBar.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Separator.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!--  Styles  -->
+    
+    <!--  HierarchyNavigatorHistoryListBox  -->
+    <Style x:Key="SyncfusionHierarchyNavigatorHistoryListBoxStyle" TargetType="{x:Type tools_controls:HierarchyNavigatorHistoryListBox}">
+        <Setter Property="VirtualizingStackPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:HierarchyNavigatorHistoryListBox}">
+                    <Grid x:Name="PART_Root" Opacity="{TemplateBinding Opacity}">
+                        <ScrollViewer
+                            x:Name="PART_HistoryScrollViewer"
+                            VerticalScrollBarVisibility="Auto">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionHierarchyNavigatorHistoryListBoxStyle}" TargetType="{x:Type tools_controls:HierarchyNavigatorHistoryListBox}" />
+
+    <!--  HierarchyNavigatorHistoryControl  -->
+    <Style x:Key="SyncfusionHierarchyNavigatorHistoryControlStyle" TargetType="{x:Type tools_controls:HierarchyNavigatorHistoryControl}">
+        <Setter Property="Background" Value="{StaticResource PopupBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:HierarchyNavigatorHistoryControl}">
+                    <Border
+                            Opacity="{TemplateBinding Opacity}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                            CornerRadius="0">
+                        <ContentControl
+                                Margin="8,2,2,2"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                Foreground="{TemplateBinding Foreground}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="true">
+                            <Setter Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionHierarchyNavigatorHistoryControlStyle}" TargetType="{x:Type tools_controls:HierarchyNavigatorHistoryControl}" />
+
+    <!--  HierarchyNavigatorDropDownItem  -->
+    <Style x:Key="SyncfusionHierarchyNavigatorDropDownItemStyle" TargetType="{x:Type tools_controls:HierarchyNavigatorDropDownItem}">
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Background" Value="{StaticResource PopupBackground}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:HierarchyNavigatorDropDownItem}">
+                    <Border x:Name="dropdownItemBorder"
+                            MinHeight="26"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Opacity="{TemplateBinding Opacity}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Path
+                                    Width="12"
+                                    Height="9.6"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Data="M1.6409912,0 L6.321991,0 8,2 14.358978,2.0040283 C14.826996,2.0040283 15.218994,2.1619873 15.531006,2.4749756 15.842987,2.7880249 16,3.1950073 16,3.690979 L16,12.314026 C16,12.785034 15.842987,13.177002 15.531006,13.491028 15.218994,13.804016 14.826996,13.974976 14.358978,14 L1.6409912,13.997986 C1.1719971,13.973022 0.78100586,13.802002 0.46798706,13.489014 0.15600586,13.174988 0,12.78302 0,12.312012 L0,1.6870117 C0,1.2160034 0.15600586,0.82397461 0.46798706,0.51000977 0.78100586,0.19702148 1.1719971,0.026977539 1.6409912,0 z"
+                                    Fill="{StaticResource IconColor}"
+                                    Stretch="Fill" />
+
+                            <ContentControl
+                                    Grid.Column="1"
+                                    Margin="3,0,2,0"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    FontFamily="{TemplateBinding FontFamily}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    FontWeight="{TemplateBinding FontWeight}"
+                                    Foreground="{TemplateBinding Foreground}" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </Trigger>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" TargetName="dropdownItemBorder" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionHierarchyNavigatorDropDownItemStyle}" TargetType="{x:Type tools_controls:HierarchyNavigatorDropDownItem}" />
+
+    <Style x:Key="SyncfusionHierarchyDropDownButtonStyle" TargetType="{x:Type ToggleButton}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <ContentPresenter
+                        Margin="{TemplateBinding Padding}"
+                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                        RecognizesAccessKey="True"
+                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SyncfusionHierarchySeparatorStyle" BasedOn="{StaticResource WPFSeparatorStyle}" TargetType="{x:Type Separator}">
+        <Setter Property="Background" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Margin" Value="1,5,1,5" />
+    </Style>
+
+    <!--  HierarchyNavigatorBarContent  --> 
+    <Style x:Key="SyncfusionHierarchyNavigatorBarContentStyle" TargetType="{x:Type tools_controls:HierarchyNavigatorBarContent}">
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}"/>
+        <Setter Property="VirtualizingStackPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:HierarchyNavigatorBarContent}">
+                    <Grid
+                        x:Name="PART_Root"
+                        Background="{TemplateBinding Background}"
+                        Opacity="{TemplateBinding Opacity}">
+                        <Border
+                            x:Name="PART_OuterBorder"
+                            Padding="5,0,0,0"
+                            BorderThickness="1,0,1,0"
+                            SnapsToDevicePixels="True">
+                            <Grid x:Name="PART_LayoutRoot" SnapsToDevicePixels="True">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="0" />
+                                </Grid.RowDefinitions>
+                                <Line
+                                    x:Name="PART_FirstLine"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="0"
+                                    Margin="-1"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Stretch"
+                                    Fill="{TemplateBinding Background}"
+                                    Opacity="0"
+                                    SnapsToDevicePixels="True"
+                                    Stretch="UniformToFill"
+                                    Stroke="{TemplateBinding BorderBrush}"
+                                    StrokeThickness="0"
+                                    Visibility="Collapsed"
+                                    Y2="1" />
+                                <ContentControl
+                                    x:Name="PART_ContentControl"
+                                    Focusable="False"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    Content="{TemplateBinding Header}"
+                                    ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                    Foreground="{TemplateBinding Foreground}" />
+
+                                <ToggleButton
+                                    x:Name="PART_NavigationButton"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    Width="20"
+                                    Margin="-1,0,-1,0"
+                                    VerticalAlignment="Stretch"
+                                    BorderThickness="1,0,1,0"
+                                    SnapsToDevicePixels="True"
+                                    Style="{StaticResource SyncfusionHierarchyDropDownButtonStyle}"
+                                    Visibility="{TemplateBinding NextButtonVisibility}">
+                                    <Grid>
+                                        <Border
+                                            x:Name="PART_MouseOverNavigationButton"
+                                            Width="20"
+                                            Margin="0,-1,0,-1"
+                                            VerticalAlignment="Stretch"
+                                            Background="Transparent"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="0"
+                                            SnapsToDevicePixels="True"
+                                            Visibility="{TemplateBinding NextButtonVisibility}">
+                                            <Path
+                                                x:Name="PART_path"
+                                                Width="5"
+                                                Height="7.5"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Data="M1.4160154,0 L7.4009999,6.0010001 1.4160154,12.002 0,10.590014 4.5770258,6.0010001 0,1.4120161 z"
+                                                Fill="{StaticResource IconColor}"
+                                                RenderTransformOrigin="0.5,0.5"
+                                                Stretch="Fill"
+                                                Stroke="{StaticResource IconColor}"
+                                                StrokeThickness="0">
+                                                <Path.RenderTransform>
+                                                    <TransformGroup>
+                                                        <ScaleTransform />
+                                                        <SkewTransform />
+                                                        <RotateTransform />
+                                                        <TranslateTransform />
+                                                    </TransformGroup>
+                                                </Path.RenderTransform>
+                                            </Path>
+                                        </Border>
+                                        <Line
+                                            x:Name="PART_LeftLine"
+                                            Margin="-1"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Stretch"
+                                            Fill="{TemplateBinding Background}"
+                                            Opacity="0"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="UniformToFill"
+                                            Stroke="{TemplateBinding BorderBrush}"
+                                            StrokeThickness="0.5"
+                                            Visibility="Collapsed"
+                                            Y2="1" />
+                                    </Grid>
+                                </ToggleButton>
+                                <Line
+                                    x:Name="PART_RightLine"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    Margin="-1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Stretch"
+                                    Fill="{TemplateBinding Background}"
+                                    Opacity="0"
+                                    Stretch="UniformToFill"
+                                    Stroke="{TemplateBinding BorderBrush}"
+                                    StrokeThickness="0.5"
+                                    Visibility="Collapsed"
+                                    Y2="1" />
+                                <Popup
+                                    x:Name="PART_HierarchyNavigatorDropDownPopup"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    AllowsTransparency="True"
+                                    IsOpen="{TemplateBinding IsPopupOpen}"
+                                    Placement="Right"
+                                    StaysOpen="True"
+                                    VerticalOffset="{TemplateBinding ActualHeight}">
+                                    <Border
+                                        x:Name="PART_PopUpBorder"
+                                        MinWidth="220"
+                                        Background="{StaticResource PopupBackground}"
+                                        BorderBrush="{StaticResource BorderAlt}"
+                                        
+                                        BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                        Effect="{StaticResource Default.ShadowDepth2}"
+                                        Opacity="{TemplateBinding Opacity}">
+                                        <Border.Margin>
+                                            <Thickness>8,1,8,8</Thickness>
+                                        </Border.Margin>
+                                        <Border.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="0" ScaleY="0" />
+                                                <SkewTransform />
+                                                <RotateTransform />
+                                                <TranslateTransform />
+                                            </TransformGroup>
+                                        </Border.RenderTransform>
+                                        <Grid x:Name="PART_Container">
+                                            <Rectangle
+                                                x:Name="PART_LeftBar"
+                                                Width="28"
+                                                HorizontalAlignment="Left"
+                                                Fill="{StaticResource BorderAlt}"
+                                                RadiusX="2"
+                                                RadiusY="2" />
+                                            <Rectangle
+                                                x:Name="PART_ItemSeparatorFill"
+                                                Width="2"
+                                                Margin="27,0,0,0"
+                                                HorizontalAlignment="Left"
+                                                Stroke="{StaticResource BorderAlt}"
+                                                StrokeThickness="0.5" />
+                                            <ScrollViewer
+                                                x:Name="PART_ScrollViewerRoot"
+                                                MaxHeight="212"
+                                                Padding="0"
+                                                BorderThickness="0"
+                                                HorizontalScrollBarVisibility="Auto"
+                                                VerticalScrollBarVisibility="Auto">
+                                                <ItemsPresenter x:Name="PART_ItemsPresenter" />
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="Open">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondarySelectionBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource BorderAlt}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ContentControl" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource ContentForeground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_path" Storyboard.TargetProperty="Fill">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_path" Storyboard.TargetProperty="Stroke">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Close">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="PART_PopUpBorder"
+                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
+                                            <SplineDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <DoubleAnimationUsingKeyFrames
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="PART_PopUpBorder"
+                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                                            <SplineDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource BorderAlt}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ContentControl" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource ContentForeground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_path" Storyboard.TargetProperty="Fill">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_path" Storyboard.TargetProperty="Stroke">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="NavigationButtonMouseOver">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource BorderAlt}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ContentControl" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource ContentForeground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_path" Storyboard.TargetProperty="Fill">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_path" Storyboard.TargetProperty="Stroke">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="PART_path"
+                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)">
+                                            <SplineDoubleKeyFrame KeyTime="00:00:00" Value="0" />
+                                            <SplineDoubleKeyFrame KeyTime="00:00:00.3000000" Value="90" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondarySelectionBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource BorderAlt}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ContentControl" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource ContentForeground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_path" Storyboard.TargetProperty="Fill">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_path" Storyboard.TargetProperty="Stroke">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Released" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionHierarchyNavigatorBarContentStyle}" TargetType="{x:Type tools_controls:HierarchyNavigatorBarContent}" />
+
+    <!--  HierarchyNavigatorItem  -->
+    <Style x:Key="SyncfusionHierarchyNavigatorItemStyle" TargetType="{x:Type tools_controls:HierarchyNavigatorItem}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:HierarchyNavigatorItem}">
+                    <Grid x:Name="PART_Root" Background="{TemplateBinding Background}">
+                        <Border
+                            x:Name="PART_ContentRoot"
+                            Margin="2,0"
+                            Background="Transparent"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            >
+                            <ContentControl
+                                x:Name="PART_ContentControl"
+                                Margin="2,0"
+                                HorizontalAlignment="Center"
+                                HorizontalContentAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                FontSize="{StaticResource MaterialLightCustom.BodyTextStyle}"
+                                Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="PART_ContentRoot"
+                                            Storyboard.TargetProperty="(Border.BorderThickness)">
+                                            <DiscreteObjectKeyFrame KeyTime="00:00:00">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Thickness>0</Thickness>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ContentRoot" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames
+                                            BeginTime="00:00:00"
+                                            Storyboard.TargetName="PART_ContentRoot"
+                                            Storyboard.TargetProperty="(Border.BorderThickness)">
+                                            <DiscreteObjectKeyFrame KeyTime="00:00:00">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Thickness>1</Thickness>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionHierarchyNavigatorItemStyle}" TargetType="{x:Type tools_controls:HierarchyNavigatorItem}" />
+
+    <ItemsPanelTemplate x:Key="SyncfusionHierarchyNavigatorItemsPanel">
+        <StackPanel Orientation="Horizontal" />
+    </ItemsPanelTemplate>
+
+    <!--  HierarchyNavigatorItemsControl  -->
+    <Style x:Key="SyncfusionHierarchyNavigatorItemsControlStyle" TargetType="{x:Type tools_controls:HierarchyNavigatorItemsControl}">
+        <Setter Property="ItemsPanel" Value="{StaticResource SyncfusionHierarchyNavigatorItemsPanel}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:HierarchyNavigatorItemsControl}">
+                    <Grid x:Name="PART_Root" SnapsToDevicePixels="True">
+                        <ScrollViewer
+                            x:Name="PART_ScrollViewerRoot"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                            HorizontalScrollBarVisibility="Hidden"
+                            Opacity="{TemplateBinding Opacity}"
+                            SnapsToDevicePixels="True"
+                            VerticalScrollBarVisibility="Hidden">
+                            <Border
+                                x:Name="PART_ContentRoot"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                SnapsToDevicePixels="True">
+                                <Grid
+                                    x:Name="PART_MouseOverGrid"
+                                    SnapsToDevicePixels="True">
+                                    <Border
+                                        x:Name="PART_MouseOverBorder"
+                                        Margin="1,0,0,0"
+                                        Background="{TemplateBinding Background}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="{TemplateBinding CornerRadius}"
+                                        Opacity="0"
+                                        SnapsToDevicePixels="True" />
+                                    <Grid x:Name="PART_ItemContainer">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <TextBox
+                                            x:Name="PART_BreadCrumbEditor"
+                                            Padding="2,0,2,0"
+                                            VerticalContentAlignment="Center"
+                                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                            SnapsToDevicePixels="True"
+                                            Text="{TemplateBinding BreadCrumb}"
+                                            Visibility="Collapsed" />
+                                        <Border
+                                            x:Name="PART_EditorBorder"
+                                            Background="{TemplateBinding Background}"
+                                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                            CornerRadius="{TemplateBinding CornerRadius}"
+                                            SnapsToDevicePixels="True" />
+                                        <Grid
+                                            HorizontalAlignment="Left"
+                                            Background="{TemplateBinding Background}">
+                                            <ItemsPresenter x:Name="PART_BreadCrumb" />
+                                        </Grid>
+                                        <ToggleButton
+                                            x:Name="PART_HistoryButton"
+                                            Grid.Column="1"
+                                            Width="24"
+                                            ClickMode="Press"
+                                            SnapsToDevicePixels="True"
+                                            Style="{StaticResource SyncfusionHierarchyDropDownButtonStyle}"
+                                            Visibility="{TemplateBinding ShowDropDownButton}">
+                                            <Grid>
+                                                <Border
+                                                    x:Name="PART_MouseOverHistoryButton"
+                                                    Grid.Column="1"
+                                                    Margin="-1"
+                                                    Background="{StaticResource SecondaryHoverBackground}"
+                                                    BorderBrush="{StaticResource SecondaryHoverBackground}"
+                                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1000}"
+                                                    Opacity="0"
+                                                    SnapsToDevicePixels="True" />
+                                                <Path
+                                                    x:Name="PART_path"
+                                                    Width="8"
+                                                    Height="4"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Data="M0,0 L7.0000002,0 3.5,3.9999999 z"
+                                                    Fill="{StaticResource IconColor}"
+                                                    RenderTransformOrigin="0.5,0.5"
+                                                    Stretch="Fill"
+                                                    Stroke="{StaticResource IconColor}"
+                                                    StrokeThickness="0" />
+                                            </Grid>
+                                        </ToggleButton>
+                                        <Separator
+                                            Grid.Column="2"
+                                            Width="2"
+                                            Height="{TemplateBinding Height}"
+                                            Style="{StaticResource SyncfusionHierarchySeparatorStyle}" />
+                                        <Button
+                                            x:Name="PART_RefreshButton"
+                                            Grid.Column="3"
+                                            Width="24"
+                                            SnapsToDevicePixels="True"
+                                            Style="{StaticResource WPFGlyphButtonStyle}"
+                                            Padding="1,0,1,0"
+                                            Visibility="{TemplateBinding ShowRefreshButton}">
+                                            <Path
+                                                x:Name="Path"
+                                                Width="10.847"
+                                                Height="12"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Data="M0,0 L2.5258486,2.5258486 2.6362815,2.4419162 C3.895468,1.5119526 5.4223828,1.0000005 7.0180058,1.0000005 11.115001,1.0000005 14.446997,4.3640003 14.446997,8.5 14.446997,12.636001 11.115001,16 7.0180058,16 3.9590101,16 1.1700137,14.063001 0.078015089,11.178 L1.9490128,10.47 C2.7470117,12.582001 4.7860088,14 7.0180058,14 10.011003,14 12.446999,11.533 12.446999,8.5 12.446999,5.4670005 10.011003,3.0000005 7.0180058,3.0000005 5.9561949,3.0000005 4.9348664,3.3122318 4.0653734,3.8838441 L3.957144,3.957144 6,6 0,6 z"
+                                                Fill="{StaticResource IconColor}"
+                                                Stretch="Fill"
+                                                StrokeThickness="0" />
+                                        </Button>
+
+                                        <Popup
+                                            x:Name="PART_HistoryPopup"
+                                            Grid.Row="1"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            AllowsTransparency="True"
+                                            IsOpen="False"
+                                            Opacity="{TemplateBinding Opacity}"
+                                            StaysOpen="False">
+                                            <Border
+                                                x:Name="PART_HierarchyNavigatorHistoryListBoxBorder"
+                                                MinHeight="40"
+                                                MaxHeight="315"
+                                                Background="{StaticResource PopupBackground}"
+                                                BorderBrush="{StaticResource BorderAlt}"
+                                                
+                                                BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                                Effect="{StaticResource Default.ShadowDepth2}">
+                                                <Border.Margin>
+                                                    <Thickness>8,1,8,8</Thickness>
+                                                </Border.Margin>
+                                                <Grid>
+                                                    <tools_controls:HierarchyNavigatorHistoryListBox x:Name="PART_HierarchyNavigatorHistoryListBox" />
+                                                </Grid>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </ScrollViewer>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_BreadCrumb"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_EditorBorder"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_BreadCrumbEditor"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_MouseOverHistoryButton" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_MouseOverHistoryButton" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PART_MouseOverBorder"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_MouseOverHistoryButton" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondarySelectionBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_MouseOverHistoryButton" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondarySelectionBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="HistoryButtonMouseOver">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PART_MouseOverHistoryButton"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="1"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="HistoryButtonMouseNormal">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PART_MouseOverHistoryButton"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="RefreshButtonMouseOver">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RefreshButton" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RefreshButton" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Path" Storyboard.TargetProperty="Fill">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Path" Storyboard.TargetProperty="Stroke">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="RefreshButtonPressed">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RefreshButton" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondarySelectionBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RefreshButton" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondarySelectionBackground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Path" Storyboard.TargetProperty="Fill">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Path" Storyboard.TargetProperty="Stroke">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconColor}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="RefreshButtonNormal">
+                                    <Storyboard />
+                                </VisualState>
+                                <VisualState x:Name="ShowEditor">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_BreadCrumb"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_EditorBorder"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_BreadCrumbEditor"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PART_MouseOverHistoryButton"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="1"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="ShowEditorNormal">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_BreadCrumb"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_EditorBorder"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames
+                                            Storyboard.TargetName="PART_BreadCrumbEditor"
+                                            Storyboard.TargetProperty="Visibility"
+                                            Duration="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="PART_MouseOverHistoryButton"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="1"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionHierarchyNavigatorItemsControlStyle}" TargetType="{x:Type tools_controls:HierarchyNavigatorItemsControl}" />
+
+    <!--  HierarchyNavigator  -->
+    <Style x:Key="SyncfusionHierarchyNavigatorStyle" TargetType="{x:Type tools_controls:HierarchyNavigator}">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt}" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness1}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tools_controls:HierarchyNavigator}">
+                    <Grid x:Name="PART_Root" SnapsToDevicePixels="True">
+                        <tools_controls:HierarchyNavigatorItemsControl
+                            x:Name="PART_HierarchyNavigatorItemsControl"
+                            MinHeight="{TemplateBinding MinHeight}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            ItemContainerStyle="{StaticResource SyncfusionHierarchyNavigatorBarContentStyle}"
+                            Opacity="{TemplateBinding Opacity}" />
+                        <Grid
+                            x:Name="PART_ProgressBar"
+                            Margin="1,1"
+                            Opacity="0"
+                            RenderTransformOrigin="0,0.5">
+                            <Grid.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform ScaleX="0" />
+                                    <SkewTransform />
+                                    <RotateTransform />
+                                    <TranslateTransform />
+                                </TransformGroup>
+                            </Grid.RenderTransform>
+                            <Rectangle Fill="{StaticResource PrimaryDark}" />
+                        </Grid>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="NormalProgress">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_ProgressBar" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                                            <SplineDoubleKeyFrame KeyTime="0" Value="0" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_ProgressBar" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                            <SplineDoubleKeyFrame KeyTime="0" Value="0" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="ShowProgress">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_ProgressBar" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                                            <SplineDoubleKeyFrame KeyTime="0" Value="0" />
+                                            <SplineDoubleKeyFrame KeyTime="0:0:0.5" Value="1" />
+                                            <SplineDoubleKeyFrame KeyTime="0:0:0.6" Value="1" />
+                                            <SplineDoubleKeyFrame KeyTime="0:0:0.7" Value="0" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_ProgressBar" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                            <SplineDoubleKeyFrame KeyTime="0" Value="0.8" />
+                                            <SplineDoubleKeyFrame KeyTime="0:0:0.5" Value="0.8" />
+                                            <SplineDoubleKeyFrame KeyTime="0:0:0.6" Value="0" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="34" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionHierarchyNavigatorStyle}" TargetType="{x:Type tools_controls:HierarchyNavigator}" />
+
+</ResourceDictionary>

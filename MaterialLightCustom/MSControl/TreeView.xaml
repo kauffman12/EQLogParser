@@ -1,0 +1,163 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    
+                    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphTreeExpander.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+    
+    <Style x:Key="WPFTreeViewStyle" TargetType="{x:Type TreeView}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness}"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialLightCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialLightCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialLightCustom.FontWeightNormal}"/>
+        <Setter Property="Padding" Value="1"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.PanningMode" Value="Both"/>
+        <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TreeView}">
+                    <Border x:Name="border" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            SnapsToDevicePixels="true">
+                        <ScrollViewer x:Name="scrollviewer" 
+                                      Background="{TemplateBinding Background}" 
+                                      Padding="{TemplateBinding Padding}"                   
+                                      CanContentScroll="false" 
+                                      Focusable="false" 
+                                      HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                                      VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
+                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ItemsPresenter/>
+                        </ScrollViewer>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource WPFTreeViewStyle}" TargetType="{x:Type TreeView}"/>
+
+    <Style x:Key="TreeViewItemFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WPFTreeViewItemStyle" TargetType="{x:Type TreeViewItem}">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource TreeViewItemFocusVisual}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness}"/>
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="Padding" Value="2"/>
+        <Setter Property="HorizontalContentAlignment" Value="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
+        <Setter Property="VerticalContentAlignment" Value="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
+        <Setter Property="MinHeight" Value="{StaticResource MaterialLightCustom.MinHeight1}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TreeViewItem}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition MinWidth="19" Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <ToggleButton x:Name="Expander" 
+                                      ClickMode="Press" 
+                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}" 
+                                      Style="{StaticResource WPFGlyphTreeExpanderToggleStyle}"/>
+                        <Border x:Name="border" 
+                                Grid.Column="1"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                Background="{TemplateBinding Background}"  
+                                Padding="{TemplateBinding Padding}"
+                                CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}"
+                                SnapsToDevicePixels="true"
+                            >
+                            <ContentPresenter x:Name="PART_Header" 
+                                              ContentSource="Header" 
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Border>
+                        <ItemsPresenter x:Name="ItemsHost" 
+                                        Grid.ColumnSpan="2" 
+                                        Grid.Column="1" 
+                                        Grid.Row="1"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="false">
+                            <Setter Property="Visibility" TargetName="ItemsHost" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="HasItems" Value="false">
+                            <Setter Property="Visibility" TargetName="Expander" Value="Hidden"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" SourceName="PART_Header" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{StaticResource ContentBackgroundHover}"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="true">
+                            <Setter Property="Background" TargetName="border" Value="{StaticResource ContentBackgroundSelection}"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="true"/>
+                                <Condition Property="IsSelectionActive" Value="false"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" TargetName="border" Value="{StaticResource ContentBackgroundAlt3}"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource ContentBackgroundAlt3}"/>
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                        </MultiTrigger>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="Height" TargetName="border" Value="30"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Background" TargetName="border" Value="Transparent"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource WPFTreeViewItemStyle}" TargetType="{x:Type TreeViewItem}"/>
+</ResourceDictionary>

@@ -1,0 +1,310 @@
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Microsoft_Windows_Aero="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
+    xmlns:converters="clr-namespace:Syncfusion.UI.Xaml.ProgressBar.Converters;assembly=Syncfusion.SfProgressBar.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:stepprogressbar="clr-namespace:Syncfusion.UI.Xaml.ProgressBar;assembly=Syncfusion.SfProgressBar.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom" />
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/TextBlock.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <converters:IsLastItemConverter x:Key="IsLastItemConverter" />
+    <converters:TextSpacingConverter x:Key="TextSpacingConverter" />
+
+    <DataTemplate x:Key="InactiveCircleTemplate">
+        <Grid>
+            <Ellipse
+                Width="24"
+                Height="24"
+                Fill="{StaticResource ContentBackgroundAlt3}"
+                Stroke="{StaticResource PrimaryBackgroundOpacity3}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="IndeterminateCircleTemplate">
+        <Grid>
+            <Ellipse
+                Width="24"
+                Height="24"
+                Fill="{StaticResource PrimaryBackground}"
+                Stroke="{StaticResource PrimaryBackground}" />
+            <Path
+                Width="12"
+                Height="12"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Data="M8,0 C12.411011,0 16,3.5890198 16,8 16,12.411011 12.411011,16 8,16 3.5889893,16 0,12.411011 0,8 0,3.5890198 3.5889893,0 8,0 z"
+                Fill="{StaticResource PrimaryForeground}"
+                Stretch="Fill"
+                Stroke="{StaticResource PrimaryForeground}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ActiveCircleTemplate">
+        <Grid>
+            <Ellipse
+                Width="24"
+                Height="24"
+                Fill="{StaticResource PrimaryBackground}"
+                Stroke="{StaticResource PrimaryBackground}" />
+            <Path
+                Width="13"
+                Height="9"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Data="M15.288992,0 L15.997,0.70702839 5.7260096,11.000999 0,5.8859658 0.66601563,5.1399964 5.6870084,9.6239898 z"
+                Fill="{StaticResource PrimaryForeground}"
+                Stretch="Fill"
+                Stroke="{StaticResource PrimaryForeground}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="InactiveRectangleTemplate">
+        <Grid>
+            <Rectangle
+                Width="24"
+                Height="24"
+                Fill="{StaticResource ContentBackgroundAlt3}"
+                Stroke="{StaticResource PrimaryBackgroundOpacity3}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="IndeterminateRectangleTemplate">
+        <Grid>
+            <Rectangle
+                Width="24"
+                Height="24"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Fill="{StaticResource PrimaryBackground}"
+                Stroke="{StaticResource PrimaryBackground}" />
+            <Path
+                Width="12"
+                Height="12"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Data="M8,0 C12.411011,0 16,3.5890198 16,8 16,12.411011 12.411011,16 8,16 3.5889893,16 0,12.411011 0,8 0,3.5890198 3.5889893,0 8,0 z"
+                Fill="{StaticResource PrimaryForeground}"
+                Stretch="Fill"
+                Stroke="{StaticResource PrimaryForeground}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ActiveRectangleTemplate">
+        <Grid>
+            <Rectangle
+                Width="24"
+                Height="24"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Fill="{StaticResource PrimaryBackground}"
+                Stroke="{StaticResource PrimaryBackground}" />
+            <Path
+                Width="13"
+                Height="9"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Data="M15.288992,0 L15.997,0.70702839 5.7260096,11.000999 0,5.8859658 0.66601563,5.1399964 5.6870084,9.6239898 z"
+                Fill="{StaticResource PrimaryForeground}"
+                Stretch="Fill"
+                Stroke="{StaticResource PrimaryForeground}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="TextBlockTemplate">
+        <Grid>
+            <TextBlock
+                Style="{StaticResource WPFTextBlockStyle}"
+                Text="{Binding}"
+                TextWrapping="Wrap" />
+        </Grid>
+    </DataTemplate>
+
+    <stepprogressbar:CircleMarkerStyleTemplate
+        x:Key="SyncfusionCircleMarkerStyleTemplate"
+        CompletedMarkerTemplate="{StaticResource ActiveCircleTemplate}"
+        InProgressMarkerTemplate="{StaticResource IndeterminateCircleTemplate}"
+        NotStartedMarkerTemplate="{StaticResource InactiveCircleTemplate}" />
+    <stepprogressbar:RectangleMarkerStyleTemplate
+        x:Key="SyncfusionRectangleMarkerStyleTemplate"
+        CompletedMarkerTemplate="{StaticResource ActiveRectangleTemplate}"
+        InProgressMarkerTemplate="{StaticResource IndeterminateRectangleTemplate}"
+        NotStartedMarkerTemplate="{StaticResource InactiveRectangleTemplate}" />
+
+    <ControlTemplate x:Key="SyncfusionHorizontalStepViewItemControlTemplate" TargetType="{x:Type stepprogressbar:StepViewItem}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid>
+                <ContentPresenter
+                    Name="SecondaryContentPresenter"
+                    Margin="{Binding RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource TextSpacingConverter}, Path=TextSpacing, ConverterParameter=HorizontalSecondaryContent}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Content="{Binding}"
+                    ContentTemplate="{TemplateBinding SecondaryContentTemplate}">
+                    <ContentPresenter.Resources>
+                        <Style BasedOn="{StaticResource WPFTextBlockStyle}" TargetType="TextBlock" />
+                    </ContentPresenter.Resources>
+                </ContentPresenter>
+            </Grid>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ContentPresenter
+                    Name="MarkerContentPresenter"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Panel.ZIndex="2"
+                    Content="{Binding}"
+                    ContentTemplate="{TemplateBinding MarkerTemplate}" />
+                <stepprogressbar:SfLinearProgressBar
+                    x:Name="LinearProgressBar"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Width="{TemplateBinding ItemSpacing}"
+                    Height="{TemplateBinding ConnectorThickness}"
+                    MinWidth="1"
+                    MinHeight="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Panel.ZIndex="1"
+                    ClipToBounds="True"
+                    Maximum="100"
+                    Minimum="0"
+                    Progress="{TemplateBinding ProgressValue}"
+                    ProgressColor="{TemplateBinding ActiveConnectorColor}"
+                    TrackColor="{TemplateBinding ConnectorColor}" />
+            </Grid>
+            <ContentPresenter
+                x:Name="PrimaryContentPresenter"
+                Grid.Row="2"
+                Grid.Column="0"
+                Margin="{Binding RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource TextSpacingConverter}, Path=TextSpacing, ConverterParameter=Horizontal}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Content="{TemplateBinding Content}"
+                ContentTemplate="{TemplateBinding ContentTemplate}">
+                <ContentPresenter.Resources>
+                    <Style BasedOn="{StaticResource WPFTextBlockStyle}" TargetType="TextBlock" />
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Grid>
+    </ControlTemplate>
+    <ControlTemplate x:Key="SyncfusionVerticalStepViewItemControlTemplate" TargetType="{x:Type stepprogressbar:StepViewItem}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid>
+                <ContentPresenter
+                    Name="SecondaryContentPresenter"
+                    Margin="{Binding RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource TextSpacingConverter}, Path=TextSpacing, ConverterParameter=VerticalSecondaryContent}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Content="{Binding}"
+                    ContentTemplate="{TemplateBinding SecondaryContentTemplate}">
+                    <ContentPresenter.Resources>
+                        <Style BasedOn="{StaticResource WPFTextBlockStyle}" TargetType="TextBlock" />
+                    </ContentPresenter.Resources>
+                </ContentPresenter>
+            </Grid>
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ContentPresenter
+                    Name="MarkerContentPresenter"
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Panel.ZIndex="2"
+                    Content="{Binding}"
+                    ContentTemplate="{TemplateBinding MarkerTemplate}" />
+                <stepprogressbar:SfLinearProgressBar
+                    x:Name="LinearProgressBar"
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Width="{TemplateBinding ItemSpacing}"
+                    Height="{TemplateBinding ConnectorThickness}"
+                    MinWidth="1"
+                    MinHeight="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Panel.ZIndex="1"
+                    Maximum="100"
+                    Minimum="0"
+                    Progress="{TemplateBinding ProgressValue}"
+                    ProgressColor="{TemplateBinding ActiveConnectorColor}"
+                    TrackColor="{TemplateBinding ConnectorColor}">
+                    <stepprogressbar:SfLinearProgressBar.LayoutTransform>
+                        <RotateTransform Angle="90" />
+                    </stepprogressbar:SfLinearProgressBar.LayoutTransform>
+                </stepprogressbar:SfLinearProgressBar>
+            </Grid>
+            <ContentPresenter
+                x:Name="PrimaryContentPresenter"
+                Grid.Row="0"
+                Grid.Column="2"
+                Margin="{Binding RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource TextSpacingConverter}, Path=TextSpacing, ConverterParameter=Vertical}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Content="{TemplateBinding Content}"
+                ContentTemplate="{TemplateBinding ContentTemplate}">
+                <ContentPresenter.Resources>
+                    <Style BasedOn="{StaticResource WPFTextBlockStyle}" TargetType="TextBlock" />
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Converter={StaticResource IsLastItemConverter}}" Value="True">
+                <Setter TargetName="LinearProgressBar" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style x:Key="SyncfusionStepViewItemStyle" TargetType="{x:Type stepprogressbar:StepViewItem}">
+        <Setter Property="Template" Value="{StaticResource SyncfusionHorizontalStepViewItemControlTemplate}" />
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Vertical">
+                <Setter Property="Template" Value="{StaticResource SyncfusionVerticalStepViewItemControlTemplate}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionStepViewItemStyle}" TargetType="{x:Type stepprogressbar:StepViewItem}" />
+
+    <Style
+        x:Key="SyncfusionSfStepProgressBarStyle"
+        x:Name="DefaultStepperName"
+        TargetType="{x:Type stepprogressbar:SfStepProgressBar}">
+        <Setter Property="ActiveConnectorColor" Value="{StaticResource PrimaryBackground}" />
+        <Setter Property="ConnectorColor" Value="{StaticResource PrimaryBackgroundOpacity3}" />
+        <Setter Property="MarkerTemplateSelector" Value="{StaticResource SyncfusionCircleMarkerStyleTemplate}" />
+        <Style.Triggers>
+            <Trigger Property="MarkerShapeType" Value="Square">
+                <Setter Property="MarkerTemplateSelector" Value="{StaticResource SyncfusionRectangleMarkerStyleTemplate}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfStepProgressBarStyle}" TargetType="{x:Type stepprogressbar:SfStepProgressBar}" />
+
+</ResourceDictionary>

@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:winLossSparkline="clr-namespace:Syncfusion.UI.Xaml.Charts;assembly=Syncfusion.SfChart.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style x:Key="SyncfusionSfWinLossSparklineStyle"
+           TargetType="winLossSparkline:SfWinLossSparkline">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"></Setter>
+        <Setter Property="Background" Value="Transparent"></Setter>
+        <Setter Property="BorderThickness" Value="0"></Setter>
+        <Setter Property="Interior" Value="{StaticResource Series3}"></Setter>
+        <Setter Property="RangeBandBrush" Value="{StaticResource Series10}"></Setter>
+        <Setter Property="NegativePointBrush" Value="{StaticResource Series5}"></Setter>
+    </Style>
+
+    <Style TargetType="winLossSparkline:SfWinLossSparkline"
+           BasedOn="{StaticResource SyncfusionSfWinLossSparklineStyle}" />
+
+</ResourceDictionary>

@@ -1,10 +1,15 @@
-﻿using System;
+﻿using Syncfusion.Data;
+using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
+using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -13,12 +18,79 @@ namespace EQLogParser
   class DataGridUtil
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static int StartRow = 0;
 
-    internal static void CopyCsvFromTable(DataGrid dataGrid, string title)
+    internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
+    {
+      var style = new Style(typeof(GridCell));
+      style.Setters.Add(new Setter(GridCell.ForegroundProperty, new Binding(name) { Converter = converter }));
+      style.BasedOn = Application.Current.Resources["SyncfusionGridCellStyle"] as Style;
+      return style;
+    }
+
+    internal static void SortColumnsChanged(object sender, GridSortColumnsChangedEventArgs e, IReadOnlyCollection<string> descending)
+    {
+      // Here, we have updated the column's items in view based on SortDescriptions. 
+      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+      {
+        if (sender is SfDataGrid)
+        {
+          var sortcolumn = ((SfDataGrid)sender).View.SortDescriptions.FirstOrDefault(x => x.PropertyName == e.AddedItems[0].ColumnName);
+          ((SfDataGrid)sender).View.SortDescriptions.Remove(sortcolumn);
+
+          SortDescription sortDescription;
+          if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
+          {
+            sortDescription = new SortDescription(sortcolumn.PropertyName, ListSortDirection.Descending);
+          }
+          else
+          {
+            sortDescription = new SortDescription(sortcolumn.PropertyName, ListSortDirection.Ascending);
+          }
+
+          ((SfDataGrid)sender).View.SortDescriptions.Add(sortDescription);
+        }
+        else if (sender is SfTreeGrid)
+        {
+          var sortcolumn = ((SfTreeGrid)sender).View.SortDescriptions.FirstOrDefault(x => x.ColumnName == e.AddedItems[0].ColumnName);
+          ((SfTreeGrid)sender).View.SortDescriptions.Remove(sortcolumn);
+
+          SortColumnDescription sortDescription;
+          if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
+          {
+            sortDescription = new SortColumnDescription { ColumnName = sortcolumn.ColumnName, SortDirection = ListSortDirection.Descending };
+          }
+          else
+          {
+            sortDescription = new SortColumnDescription { ColumnName = sortcolumn.ColumnName, SortDirection = ListSortDirection.Ascending };
+          }
+
+          ((SfTreeGrid)sender).View.SortDescriptions.Add(sortDescription);
+        }
+      }
+    }
+
+    internal static void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e, IReadOnlyCollection<string> descending)
+    {
+      // Initially, we can change the SortDirection of particular column based on columnchanged action. 
+      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+      {
+        if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
+        {
+          e.AddedItems[0].SortDirection = ListSortDirection.Descending;
+        }
+        else
+        {
+          e.AddedItems[0].SortDirection = ListSortDirection.Ascending;
+        }
+      }
+    }
+
+    internal static void CopyCsvFromTable(SfGridBase gridBase, string title)
     {
       try
       {
-        var export = BuildExportData(dataGrid);
+        var export = BuildExportData(gridBase);
         string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, title);
         Clipboard.SetDataObject(result);
       }
@@ -33,44 +105,59 @@ namespace EQLogParser
       }
     }
 
-    internal static Tuple<List<string>, List<List<object>>> BuildExportData(DataGrid dataGrid)
+    internal static Tuple<List<string>, List<List<object>>> BuildExportData(SfGridBase gridBase)
     {
       var headers = new List<string>();
       var headerKeys = new List<string>();
       var data = new List<List<object>>();
+      IPropertyAccessProvider props = null;
+      List<object> records = null;
 
-      for (int i = 0; i < dataGrid.Columns.Count; i++)
+      if (gridBase is SfDataGrid)
       {
-        if (dataGrid.Columns[i] is DataGridBoundColumn bound && bound.Visibility == Visibility.Visible)
+        var dataGrid = gridBase as SfDataGrid;
+        props = dataGrid.View.GetPropertyAccessProvider();
+        for (int i = 0; i < dataGrid.Columns.Count; i++)
         {
-          headers.Add(bound.Header as string);
-          headerKeys.Add(((System.Windows.Data.Binding)bound.Binding).Path.Path);
+          if (!dataGrid.Columns[i].IsHidden && dataGrid.Columns[i].ValueBinding is Binding binding)
+          {
+            headers.Add(dataGrid.Columns[i].HeaderText);
+            headerKeys.Add(binding.Path.Path);
+          }
         }
+
+        records = dataGrid.View.Records.Select(record => record.Data).ToList();
+      }
+      else if (gridBase is SfTreeGrid)
+      {
+        var treeGrid = gridBase as SfTreeGrid;
+        props = treeGrid.View.GetPropertyAccessProvider();
+        for (int i = 0; i < treeGrid.Columns.Count; i++)
+        {
+          if (!treeGrid.Columns[i].IsHidden && treeGrid.Columns[i].ValueBinding is Binding binding)
+          {
+            headers.Add(treeGrid.Columns[i].HeaderText);
+            headerKeys.Add(binding.Path.Path);
+          }
+        }
+
+        records = treeGrid.View.Nodes.Select(node => node.Item).ToList();
       }
 
-      foreach (var item in dataGrid.Items)
+      // Rank data is in the row header column not a regular column
+      if (records.Count > 0 && records[0] is PlayerStats)
+      {
+        headers.Insert(0, "Rank");
+        headerKeys.Insert(0, "Rank");
+      }
+
+      foreach (ref var record in records.ToArray().AsSpan())
       {
         var row = new List<object>();
         foreach (var key in headerKeys)
         {
-          // spell casts and counts use dictionaries
-          if (item is IDictionary<string, object> dict)
-          {
-            if (dict.ContainsKey(key))
-            {
-              row.Add(dict[key]);
-            }
-          }
           // regular object with properties
-          else
-          {
-            var property = item.GetType().GetProperty(key);
-            if (property != null)
-            {
-              var value = property.GetValue(item, null);
-              row.Add(value ?? "");
-            }
-          }
+          row.Add(props.GetFormattedValue(record, key) ?? "");
         }
 
         data.Add(row);
@@ -79,50 +166,57 @@ namespace EQLogParser
       return new Tuple<List<string>, List<List<object>>>(headers, data);
     }
 
-    internal static void CreateImage(DataGrid dataGrid, Label titleLabel)
+    internal static void CreateImage(SfGridBase gridBase, Label titleLabel)
     {
-      try
+      gridBase.SelectedItems.Clear();
+      gridBase.IsHitTestVisible = false;
+      Task.Delay(100).ContinueWith((t) => gridBase.Dispatcher.InvokeAsync(() =>
       {
-        const int margin = 2;
-
-        var details = GetRowDetails(dataGrid);
-        var totalRowHeight = details.Item1 * details.Item2 + details.Item1 + 2; // add extra for header row and a little for the bottom border
-        var totalColumnWidth = dataGrid.Columns.ToList().Sum(column => column.ActualWidth) + dataGrid.RowHeaderActualWidth;
-        var realTableHeight = dataGrid.ActualHeight < totalRowHeight ? dataGrid.ActualHeight : totalRowHeight;
-        var realColumnWidth = dataGrid.ActualWidth < totalColumnWidth ? dataGrid.ActualWidth : totalColumnWidth;
-
-        var dpiScale = VisualTreeHelper.GetDpi(dataGrid);
-        RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleLabel.ActualHeight + margin), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
-
-        DrawingVisual dv = new DrawingVisual();
-        using (DrawingContext ctx = dv.RenderOpen())
+        try
         {
-          var brush = new VisualBrush(titleLabel);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(4, margin / 2), new Size(titleLabel.ActualWidth, titleLabel.ActualHeight)));
+          var realTableHeight = gridBase.ActualHeight + gridBase.HeaderRowHeight + 1;
+          var realColumnWidth = gridBase.ActualWidth;
+          var titlePadding = titleLabel.Padding.Top + titleLabel.Padding.Bottom;
+          var titleHeight = titleLabel.ActualHeight - titlePadding - 4;
+          var titleWidth = titleLabel.DesiredSize.Width;
 
-          brush = new VisualBrush(dataGrid);
-          ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleLabel.ActualHeight + margin), new Size(dataGrid.ActualWidth, dataGrid.ActualHeight + SystemParameters.HorizontalScrollBarHeight)));
+          var dpiScale = VisualTreeHelper.GetDpi(gridBase);
+          RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleHeight),
+            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+
+          DrawingVisual dv = new DrawingVisual();
+          using (DrawingContext ctx = dv.RenderOpen())
+          {
+            var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
+            ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(realColumnWidth, titleHeight + titlePadding)));
+
+            var brush = new VisualBrush(titleLabel);
+            ctx.DrawRectangle(brush, null, new Rect(new Point(4, titlePadding / 2), new Size(titleWidth, titleHeight)));
+
+            brush = new VisualBrush(gridBase);
+            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight + titlePadding), new Size(realColumnWidth, gridBase.ActualHeight +
+              SystemParameters.HorizontalScrollBarHeight)));
+          }
+
+          rtb.Render(dv);
+          Clipboard.SetImage(rtb);
         }
-
-        rtb.Render(dv);
-        Clipboard.SetImage(rtb);
-        dataGrid.Items.Refresh();
-      }
-      catch (Exception ex)
-      {
-        LOG.Error("Could not Copy Image", ex);
-      }
-      finally
-      {
-        dataGrid.IsEnabled = true;
-      }
+        catch (Exception ex)
+        {
+          LOG.Error("Could not Copy Image", ex);
+        }
+        finally
+        {
+          gridBase.IsHitTestVisible = true;
+        }
+      }));
     }
 
     internal static void SelectAll(FrameworkElement sender)
     {
       if (sender?.Parent is ContextMenu menu)
       {
-        (menu.PlacementTarget as DataGrid)?.SelectAll();
+        (menu.PlacementTarget as SfDataGrid)?.SelectAll();
       }
     }
 
@@ -130,7 +224,92 @@ namespace EQLogParser
     {
       if (sender?.Parent is ContextMenu menu)
       {
-        (menu.PlacementTarget as DataGrid)?.UnselectAll();
+        (menu.PlacementTarget as SfDataGrid)?.SelectedItems.Clear();
+      }
+    }
+
+    internal static void CallSelectionChanged(dynamic obj)
+    {
+      while (obj != null)
+      {
+        var type = obj.GetType();
+
+        if (type == typeof(ContentControl))
+        {
+          break;
+        }
+
+        if (type.GetDeclaredMethod("DataGridSelectionChanged") != null)
+        {
+          obj.DataGridSelectionChanged();
+          break;
+        }
+
+        obj = obj.Parent;
+      }
+    }
+
+    internal static void EnableMouseSelection(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+      dynamic elem = e.OriginalSource;
+      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row && row > -1)
+      {
+        StartRow = row;
+        // Left click happened, current item is selected, now listen for mouse movement and release of left button
+        treeGrid.PreviewMouseLeftButtonUp += PreviewMouseLeftButtonUp;
+        treeGrid.PreviewMouseMove += MouseMove;
+      }
+    }
+
+    private static void PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+      if (sender is SfTreeGrid treeGrid)
+      {
+        // remove listeners if left button released
+        treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
+        treeGrid.PreviewMouseMove -= MouseMove;
+      }
+    }
+
+    private static void MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+      dynamic elem = e.OriginalSource;
+      if (sender is SfTreeGrid treeGrid)
+      {
+        if (e.LeftButton == System.Windows.Input.MouseButtonState.Released)
+        {
+          // remove listeners if left button released
+          treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
+          treeGrid.PreviewMouseMove -= MouseMove;
+        }
+        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row && row > -1)
+        {
+          if (treeGrid.CurrentItem != stats)
+          {
+            if (!treeGrid.SelectionController.SelectedRows.Contains(row))
+            {
+              treeGrid.SelectRows(StartRow, row);
+            }
+            else
+            {
+              treeGrid.SelectionController.ClearSelections(false);
+              int direction = 0;
+              if (StartRow < row)
+              {
+                direction = -1;
+              }
+              else if (StartRow > row)
+              {
+                direction = 1;
+              }
+
+              treeGrid.SelectRows(StartRow, row + direction);
+            }
+
+            treeGrid.CurrentItem = stats;
+            CallSelectionChanged(treeGrid.Parent);
+          }
+        }
       }
     }
 
@@ -152,188 +331,183 @@ namespace EQLogParser
       ConfigUtil.RemoveSetting("TankingBreakdownColumnsDisplayIndex");
       ConfigUtil.Save();
       _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.",
-        Properties.Resources.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
+        EQLogParser.Resource.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    internal static Dictionary<string, bool> LoadColumns(ComboBox columns, DataGrid dataGrid, int start = 0)
+    internal static void LoadColumns(ComboBox columnCombo, dynamic gridBase)
     {
-      var columnNames = dataGrid.Columns.Select(col => col.Header as string).ToHashSet();
-      var indexesCache = new Dictionary<string, int>();
-      var indexString = ConfigUtil.GetSetting((columns.Tag as string) + "DisplayIndex");
-      if (!string.IsNullOrEmpty(indexString))
+      HashSet<string> visible = null;
+      string visibleSetting = ConfigUtil.GetSetting(columnCombo.Tag.ToString());
+
+      if (!string.IsNullOrEmpty(visibleSetting))
       {
-        int index = start;
-        foreach (var col in indexString.Split(','))
+        visible = new HashSet<string>(visibleSetting.Split(','));
+      }
+
+      dynamic columns = null;
+      dynamic updated = null;
+      if (gridBase is SfDataGrid)
+      {
+        columns = ((SfDataGrid)gridBase).Columns;
+        updated = new Columns();
+      }
+      else if (gridBase is SfTreeGrid)
+      {
+        columns = ((SfTreeGrid)gridBase).Columns;
+        updated = new TreeGridColumns();
+      }
+
+      var oldFormat = false;
+      var found = new Dictionary<string, bool>();
+      var displayOrder = ConfigUtil.GetSetting((columnCombo.Tag as string) + "DisplayIndex");
+
+      if (displayOrder != null)
+      {
+        foreach (var item in displayOrder.Split(',').ToList())
         {
-          if (!string.IsNullOrEmpty(col))
+          var name = item;
+
+          // Eventually (remove this)
+          oldFormat = oldFormat || name.Contains(" ");
+
+          // changed column names
+          if (name == "% Luck")
           {
-            var split = col.Split('|');
-            if (split != null && split.Length >= 1 && !string.IsNullOrEmpty(split[0]))
+            name = "% Lucky";
+          }
+
+          for (int i = 0; i < columns.Count; i++)
+          {
+            // handle old version that saved column display names
+            // Eventually (remove the HeaderText check)
+            if (columns[i].MappingName == name || columns[i].HeaderText == name)
             {
-              // ignore the saved index
-              if (columnNames.Contains(split[0]))
-              {
-                indexesCache[split[0]] = index++;
-              }
+              found[columns[i].MappingName] = true;
+              updated.Add(columns[i]);
+              columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
+              break;
             }
           }
         }
       }
 
-      var cache = new Dictionary<string, bool>();
-      string columnSetting = ConfigUtil.GetSetting(columns.Tag as string);
-      if (!string.IsNullOrEmpty(columnSetting))
+      // check for new columns that didn't exist when preferences were saved
+      for (int i = 0; i < columns.Count; i++)
       {
-        foreach (var selected in columnSetting.Split(','))
+        if (!found.ContainsKey(columns[i].MappingName))
         {
-          cache[selected] = true;
+          updated.Add(columns[i]);
+          columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
+        }
+
+        // if old format make sure Name is visible
+        // Eventually (remove this)
+        if (oldFormat && columns[i].MappingName == "Name")
+        {
+          columns[i].IsHidden = false;
         }
       }
+
+      columns = SetColumns(columnCombo, gridBase, updated);
 
       int selectedCount = 0;
-      List<ComboBoxItemDetails> list = new List<ComboBoxItemDetails>();
-      for (int i = 0; i < dataGrid.Columns.Count; i++)
+      var list = new List<ComboBoxItemDetails>();
+      for (int i = 0; i < columns.Count; i++)
       {
-        var column = dataGrid.Columns[i];
-        var header = column.Header as string;
-        if (!string.IsNullOrEmpty(header))
+        list.Add(new ComboBoxItemDetails
         {
-          if (header != "Name")
-          {
-            var visible = (cache.Count == 0 && column.Visibility == Visibility.Visible) || cache.ContainsKey(header);
-            column.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
-            selectedCount += visible ? 1 : 0;
-            list.Add(new ComboBoxItemDetails { Text = column.Header as string, IsChecked = visible });
-
-            if (indexesCache.ContainsKey(header) && column.DisplayIndex != indexesCache[header])
-            {
-              column.DisplayIndex = indexesCache[header];
-            }
-          }
-        }
+          Text = columns[i].HeaderText,
+          IsChecked = !columns[i].IsHidden,
+          Value = columns[i].MappingName
+        });
+        selectedCount += columns[i].IsHidden ? 0 : 1;
       }
 
-      columns.ItemsSource = list;
-      SetSelectedColumnsTitle(columns, selectedCount);
-      return cache;
+      columnCombo.ItemsSource = list;
+      UIElementUtil.SetComboBoxTitle(columnCombo, selectedCount, EQLogParser.Resource.COLUMNS_SELECTED);
     }
 
-    internal static Dictionary<string, bool> ShowColumns(ComboBox columns, DataGrid dataGrid, List<DataGrid> children = null)
+    private static dynamic SetColumns(ComboBox columnCombo, SfDataGrid dataGrid, dynamic updated)
     {
-      Dictionary<string, bool> cache = new Dictionary<string, bool>();
-      if (columns.Items.Count > 0)
+      dataGrid.Columns = updated;
+
+      // save column order if it changes
+      dataGrid.QueryColumnDragging += (object sender, QueryColumnDraggingEventArgs e) =>
       {
-        for (int i = 0; i < columns.Items.Count; i++)
+        if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfDataGrid dataGrid)
         {
-          var checkedItem = columns.Items[i] as ComboBoxItemDetails;
+          var columns = dataGrid.Columns.ToList().Select(column => column.MappingName).ToList();
+          ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+        }
+      };
+
+      return dataGrid.Columns;
+    }
+
+    private static dynamic SetColumns(ComboBox columnCombo, SfTreeGrid treeGrid, dynamic updated)
+    {
+      treeGrid.Columns = updated;
+
+      // save column order if it changes
+      treeGrid.ColumnDragging += (object sender, TreeGridColumnDraggingEventArgs e) =>
+      {
+        if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfTreeGrid treeGrid)
+        {
+          var columns = treeGrid.Columns.ToList().Select(column => column.MappingName).ToList();
+          ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+        }
+      };
+
+      return treeGrid.Columns;
+    }
+
+    private static bool IsColumnVisible(HashSet<string> visible, dynamic columns, int i)
+    {
+      var show = true;
+      if (visible != null)
+      {
+        show = visible.Contains(columns[i].MappingName) || visible.Contains(columns[i].HeaderText);
+      }
+      return show;
+    }
+
+    internal static void SetHiddenColumns(ComboBox columnCombo, dynamic gridBase)
+    {
+      var visible = new HashSet<string>();
+
+      if (columnCombo.Items.Count > 0)
+      {
+        for (int i = 0; i < columnCombo.Items.Count; i++)
+        {
+          var checkedItem = columnCombo.Items[i] as ComboBoxItemDetails;
           if (checkedItem.IsChecked)
           {
-            cache[checkedItem.Text] = true;
+            visible.Add(checkedItem.Value);
           }
         }
 
-        SetSelectedColumnsTitle(columns, cache.Count);
+        UIElementUtil.SetComboBoxTitle(columnCombo, visible.Count, EQLogParser.Resource.COLUMNS_SELECTED);
 
-        for (int i = 0; i < dataGrid.Columns.Count; i++)
+        dynamic columns = null;
+        if (gridBase is SfDataGrid)
         {
-          string header = dataGrid.Columns[i].Header as string;
-          if (!string.IsNullOrEmpty(header) && header != "Name")
-          {
-            if (cache.ContainsKey(header))
-            {
-              if (dataGrid.Columns[i].Visibility != Visibility.Visible)
-              {
-                dataGrid.Columns[i].Visibility = Visibility.Visible;
-              }
-
-              if (children != null)
-              {
-                children.ForEach(child =>
-                {
-                  if (child.Columns[i].Visibility != Visibility.Visible)
-                  {
-                    child.Columns[i].Visibility = Visibility.Visible;
-                  }
-                });
-              }
-            }
-            else
-            {
-              if (dataGrid.Columns[i].Visibility != Visibility.Hidden)
-              {
-                dataGrid.Columns[i].Visibility = Visibility.Hidden;
-              }
-
-              if (children != null)
-              {
-                children.ForEach(child =>
-                {
-                  if (child.Columns[i].Visibility != Visibility.Hidden)
-                  {
-                    child.Columns[i].Visibility = Visibility.Hidden;
-                  }
-                });
-              }
-            }
-          }
+          columns = ((SfDataGrid)gridBase).Columns;
+        }
+        else if (gridBase is SfTreeGrid)
+        {
+          columns = ((SfTreeGrid)gridBase).Columns;
         }
 
-        if (!string.IsNullOrEmpty(columns.Tag as string))
+        for (int i = 0; i < columns.Count; i++)
         {
-          ConfigUtil.SetSetting(columns.Tag as string, string.Join(",", cache.Keys));
+          columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
+        }
+
+        if (!string.IsNullOrEmpty(columnCombo.Tag.ToString()))
+        {
+          ConfigUtil.SetSetting(columnCombo.Tag.ToString(), string.Join(",", visible));
         }
       }
-
-      return cache;
-    }
-
-    internal static void SaveColumnIndexes(ComboBox columns, DataGrid dataGrid)
-    {
-      var columnIndexes = new List<string>();
-      foreach (var column in dataGrid.Columns.OrderBy(column => column.DisplayIndex))
-      {
-        string header = column.Header as string;
-        if (!string.IsNullOrEmpty(header))
-        {
-          columnIndexes.Add(header);
-        }
-      }
-
-      ConfigUtil.SetSetting(columns.Tag + "DisplayIndex", string.Join(",", columnIndexes));
-    }
-
-    private static void SetSelectedColumnsTitle(ComboBox columns, int count)
-    {
-      if (!(columns.SelectedItem is ComboBoxItemDetails selected))
-      {
-        selected = columns.Items[0] as ComboBoxItemDetails;
-      }
-
-      string countString = columns.Items.Count == count ? "All" : count.ToString(CultureInfo.CurrentCulture);
-      selected.SelectedText = countString + " " + Properties.Resources.COLUMNS_SELECTED;
-      columns.SelectedIndex = -1;
-      columns.SelectedItem = selected;
-    }
-
-    internal static Tuple<double, int> GetRowDetails(DataGrid dataGrid)
-    {
-      double height = 0;
-      int count = 0;
-      for (int i = 0; i < dataGrid.Items.Count; i++)
-      {
-        var row = dataGrid.ItemContainerGenerator.ContainerFromIndex(i);
-        if (row != null && row is DataGridRow gRow)
-        {
-          height = gRow.ActualHeight;
-          count++;
-        }
-        else if (count > 0)
-        {
-          break;
-        }
-      }
-
-      return new Tuple<double, int>(height, count);
     }
   }
 }

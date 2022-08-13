@@ -1,145 +1,107 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Dynamic;
-using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for SpellCastTable.xaml
   /// </summary>
-  public partial class SpellCastTable : UserControl
+  public partial class SpellCastTable : CastTable
   {
-    private readonly object LockObject = new object();
-    private readonly ObservableCollection<IDictionary<string, object>> Records = new ObservableCollection<IDictionary<string, object>>();
-    private readonly List<string> CastTypes = new List<string>() { "Cast And Received", "Cast Spells", "Received Spells" };
-    private readonly List<string> SpellTypes = new List<string>() { "Any Type", "Beneficial", "Detrimental" };
-    private readonly Dictionary<string, byte> UniqueNames = new Dictionary<string, byte>();
-    private readonly PlayerStats RaidStats;
-    private bool Running = false;
-    private int CurrentCastType = 0;
-    private int CurrentSpellType = 0;
-    private bool CurrentShowSelfOnly = false;
+    private readonly Dictionary<string, bool> UniqueNames = new Dictionary<string, bool>();
+    private PlayerStats RaidStats;
 
-    internal SpellCastTable(string title, List<PlayerStats> selectedStats, CombinedStats currentStats)
+    public SpellCastTable()
     {
       InitializeComponent();
-      titleLabel.Content = title;
-      selectedStats?.ForEach(stats => UniqueNames[stats.OrigName] = 1);
+      InitCastTable(dataGrid, titleLabel, selectedCastTypes, selectedSpellRestrictions);
+    }
+
+    internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
+    {
+      titleLabel.Content = currentStats?.ShortTitle ?? "";
+      selectedStats?.ForEach(stats => UniqueNames[stats.OrigName] = true);
       RaidStats = currentStats?.RaidStats;
-
-      dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(Records);
-      BindingOperations.EnableCollectionSynchronization(Records, LockObject);
-
-      castTypes.ItemsSource = CastTypes;
-      castTypes.SelectedIndex = 0;
-      spellTypes.ItemsSource = SpellTypes;
-      spellTypes.SelectedIndex = 0;
       Display();
     }
 
     internal void Display()
     {
-      lock (LockObject)
+      foreach (var name in UniqueNames.Keys)
       {
-        if (Running == false)
+        var column = new GridTextColumn
         {
-          Running = true;
-          showSelfOnly.IsEnabled = castTypes.IsEnabled = spellTypes.IsEnabled = false;
+          HeaderText = name,
+          MappingName = name,
+          CellStyle = DataGridUtil.CreateHighlightForegroundStyle(name, new ReceivedSpellColorConverter())
+        };
 
-          Task.Delay(50).ContinueWith(task =>
-          {
-            Dispatcher.InvokeAsync(() =>
-            {
-              foreach (var name in UniqueNames.Keys)
-              {
-                var column = new DataGridTextColumn()
-                {
-                  Header = name,
-                  Width = DataGridLength.Auto,
-                  Binding = new Binding(name)
-                };
-
-                var columnStyle = new Style(typeof(TextBlock));
-                columnStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding(name) { Converter = new ReceivedSpellColorConverter() }));
-                column.ElementStyle = columnStyle;
-                dataGrid.Columns.Add(column);
-              }
-            });
-
-            var allSpells = new HashSet<TimedAction>();
-            var startTime = SpellCountBuilder.QuerySpellBlocks(RaidStats, allSpells);
-            var playerSpells = new Dictionary<string, List<string>>();
-            var helper = new DictionaryListHelper<string, string>();
-            int max = 0;
-
-            double lastTime = double.NaN;
-            foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
-            {
-              if (!double.IsNaN(lastTime) && action.BeginTime != lastTime)
-              {
-                AddRow(playerSpells, max, lastTime, startTime);
-                playerSpells.Clear();
-                max = 0;
-              }
-
-              int size = 0;
-              if ((CurrentCastType == 0 || CurrentCastType == 1) && action is SpellCast)
-              {
-                if (action is SpellCast cast && !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, out _))
-                {
-                  size = helper.AddToList(playerSpells, cast.Caster, cast.Spell);
-                }
-              }
-              else if ((CurrentCastType == 0 || CurrentCastType == 2) && action is ReceivedSpell)
-              {
-                SpellData replaced = null;
-                if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, out replaced))
-                {
-                  if (replaced != null)
-                  {
-                    size = helper.AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
-                  }
-                }
-              }
-
-              max = Math.Max(max, size);
-              lastTime = action.BeginTime;
-            }
-
-            if (playerSpells.Count > 0 && max > 0)
-            {
-              AddRow(playerSpells, max, lastTime, startTime);
-            }
-
-            Dispatcher.InvokeAsync(() =>
-            {
-              // only enable for current player
-              showSelfOnly.IsEnabled = UniqueNames.ContainsKey(ConfigUtil.PlayerName);
-              castTypes.IsEnabled = spellTypes.IsEnabled = true;
-
-              lock (LockObject)
-              {
-                Running = false;
-              }
-            });
-          }, TaskScheduler.Default);
-        }
+        dataGrid.Columns.Add(column);
       }
+
+      var allSpells = new HashSet<TimedAction>();
+      var startTime = SpellCountBuilder.QuerySpellBlocks(RaidStats, allSpells);
+      var playerSpells = new Dictionary<string, List<string>>();
+      int max = 0;
+
+      double lastTime = double.NaN;
+      var list = new List<IDictionary<string, object>>();
+      foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
+      {
+        if (!double.IsNaN(lastTime) && action.BeginTime != lastTime)
+        {
+          AddRow(list, playerSpells, max, lastTime, startTime);
+          playerSpells.Clear();
+          max = 0;
+        }
+
+        int size = 0;
+        if (action is SpellCast cast && !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, false, out _))
+        {
+          size = AddToList(playerSpells, cast.Caster, cast.Spell);
+        }
+
+        SpellData replaced = null;
+        if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, true, out replaced) && replaced != null)
+        {
+          size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
+        }
+
+        max = Math.Max(max, size);
+        lastTime = action.BeginTime;
+      }
+
+      if (playerSpells.Count > 0 && max > 0)
+      {
+        AddRow(list, playerSpells, max, lastTime, startTime);
+      }
+
+      dataGrid.ItemsSource = list;
     }
 
-    private bool IsValid(ReceivedSpell spell, Dictionary<string, byte> uniqueNames, string player, out SpellData replaced)
+    private int AddToList(Dictionary<string, List<string>> dict, string key, string value)
+    {
+      if (dict.TryGetValue(key, out List<string> list))
+      {
+        list.Add(value);
+      }
+      else
+      {
+        dict[key] = new List<string> { value };
+      }
+
+      return dict[key].Count;
+    }
+
+    private bool IsValid(ReceivedSpell spell, Dictionary<string, bool> unique, string player, bool received, out SpellData replaced)
     {
       bool valid = false;
       replaced = spell.SpellData;
 
-      if (!string.IsNullOrEmpty(player) && uniqueNames.ContainsKey(player))
+      if (!string.IsNullOrEmpty(player) && unique.ContainsKey(player))
       {
         SpellData spellData = spell.SpellData ?? null;
 
@@ -150,15 +112,14 @@ namespace EQLogParser
 
         if (spellData != null)
         {
-          valid = spellData.Proc == 0 && (CurrentShowSelfOnly || (spell is SpellCast || !string.IsNullOrEmpty(spellData.LandsOnOther)));
-          valid = valid && (CurrentSpellType == 0 || CurrentSpellType == 1 && spellData.IsBeneficial || CurrentSpellType == 2 && !spellData.IsBeneficial);
+          valid = PassFilters(spellData, received);
         }
       }
 
       return valid;
     }
 
-    private void AddRow(Dictionary<string, List<string>> playerSpells, int max, double beginTime, double startTime)
+    private void AddRow(List<IDictionary<string, object>> list, Dictionary<string, List<string>> playerSpells, int max, double beginTime, double startTime)
     {
       for (int i = 0; i < max; i++)
       {
@@ -178,66 +139,22 @@ namespace EQLogParser
           }
         }
 
-        lock (LockObject)
-        {
-          Records.Add(row);
-        }
+        list.Add(row);
       }
     }
 
-    private void CopyCsvClick(object sender, RoutedEventArgs e)
+    private void CastTypesChanged(object sender, EventArgs e)
     {
-      DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    }
-
-    private void CreateImageClick(object sender, RoutedEventArgs e)
-    {
-      // lame workaround to toggle scrollbar to fix UI
-      dataGrid.IsEnabled = false;
-      dataGrid.SelectedItem = null;
-      dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
-      dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
-
-      Task.Delay(50).ContinueWith((bleh) =>
+      if (dataGrid?.View != null && selectedCastTypes?.Items != null)
       {
-        Dispatcher.InvokeAsync(() =>
-        {
-          dataGrid.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-          dataGrid.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
-          dataGrid.Items.Refresh();
-          Task.Delay(50).ContinueWith((bleh2) => Dispatcher.InvokeAsync(() => DataGridUtil.CreateImage(dataGrid, titleLabel)), TaskScheduler.Default);
-        });
-      }, TaskScheduler.Default);
-    }
-
-    private void OptionsChanged()
-    {
-      if (Records.Count > 0)
-      {
-        Records.Clear();
-
         for (int i = dataGrid.Columns.Count - 1; i > 1; i--)
         {
           dataGrid.Columns.RemoveAt(i);
         }
 
-        CurrentCastType = castTypes.SelectedIndex;
-        CurrentSpellType = spellTypes.SelectedIndex;
-        CurrentShowSelfOnly = showSelfOnly.IsChecked.Value;
+        UpdateSelectedCastTypes(selectedCastTypes);
+        UpdateSelectedRestrictions(selectedSpellRestrictions);
         Display();
-      }
-    }
-
-    private void Options_SelectionChanged(object sender, SelectionChangedEventArgs e) => OptionsChanged();
-
-    private void CheckedOptionsChanged(object sender, RoutedEventArgs e) => OptionsChanged();
-
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      // set header count
-      if (e.Row != null)
-      {
-        e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
       }
     }
   }

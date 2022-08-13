@@ -1,34 +1,30 @@
-﻿using ActiproSoftware.Windows.Controls.Docking;
-using ActiproSoftware.Windows.Themes;
-using FontAwesome5;
+﻿using FontAwesome5;
 using log4net;
 using log4net.Core;
+using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.Windows.Shared;
+using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  public partial class MainWindow : Window, IDisposable
+  public partial class MainWindow : ChromelessWindow, IDisposable
   {
-    // binding property
-    public ObservableCollection<SortableName> VerifiedPlayersProperty { get; } = new ObservableCollection<SortableName>();
-
     internal event EventHandler<bool> EventsLogLoadingComplete;
+    internal event EventHandler<string> EventsThemeChanged;
 
     // global settings
     internal static string CurrentLogFile;
@@ -40,12 +36,8 @@ namespace EQLogParser
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static bool IsIgnoreCharmPetsEnabled = false;
-
-    internal static readonly SolidColorBrush WARNING_BRUSH = new SolidColorBrush(Color.FromRgb(241, 109, 29));
-    internal static readonly SolidColorBrush BRIGHT_TEXT_BRUSH = new SolidColorBrush(Colors.White);
-    internal static readonly SolidColorBrush LIGHTER_BRUSH = new SolidColorBrush(Color.FromRgb(90, 90, 90));
-    internal static readonly SolidColorBrush LOADING_BRUSH = new SolidColorBrush(Colors.Orange);
-    internal static readonly SolidColorBrush GOOD_BRUSH = new SolidColorBrush(Colors.LightGreen);
+    internal static readonly int ACTION_INDEX = 27;
+    internal static string CurrentTheme = "MaterialDark";
 
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -54,10 +46,7 @@ namespace EQLogParser
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
-
-    private const string VERSION = "v1.9.17";
-    private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
-    private const string PETS_LIST_TITLE = "Verified Pets ({0})";
+    private const string VERSION = "v2.0.0";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -70,132 +59,64 @@ namespace EQLogParser
     private static DateTime StartLoadTime;
     private static LogOption CurrentLogOption;
 
-    private readonly ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
-    private readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
     private readonly DispatcherTimer ComputeStatsTimer;
-
     private ChatManager PlayerChatManager = null;
     private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
-    private readonly Dictionary<string, DockingWindow> IconToWindow;
-    private DocumentWindow ChatWindow = null;
-    private DocumentWindow DamageWindow = null;
-    private DocumentWindow HealingWindow = null;
-    private DocumentWindow TankingWindow = null;
-    private DocumentWindow DamageChartWindow = null;
-    private DocumentWindow HealingChartWindow = null;
-    private DocumentWindow TankingChartWindow = null;
-    private DocumentWindow EventWindow = null;
-    private DocumentWindow LootWindow = null;
-    private DocumentWindow SpellResistsWindow = null;
-    private DocumentWindow SpellDamageWindow = null;
+    private DocumentTabControl ChartTab = null;
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
+    private bool DoneLoading = false;
 
     public MainWindow()
     {
       try
       {
+        // DPI and sizing
         var dpi = VisualTreeHelper.GetDpi(this);
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-        Width = resolution.Width * 0.85 / dpi.DpiScaleX;
-        Height = resolution.Height * 0.75 / dpi.DpiScaleY;
+        var defaultHeight = resolution.Height * 0.75 / dpi.DpiScaleY;
+        var defaultWidth = resolution.Width * 0.85 / dpi.DpiScaleX;
+        Height = ConfigUtil.GetSettingAsDouble("WindowHeight", defaultHeight);
+        Width = ConfigUtil.GetSettingAsDouble("WindowWidth", defaultWidth);
+
+        var top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
+        var left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
+        if (top < 0 && left < 0)
+        {
+          top = 0;
+          left = 0;
+        }
+
+        Top = top;
+        Left = left;
+
+        switch (ConfigUtil.GetSetting("WindowState", "Normal"))
+        {
+          case "Maximized":
+            WindowState = WindowState.Maximized;
+            break;
+          default:
+            WindowState = WindowState.Normal;
+            break;
+        }
+
+        // load theme
+        CurrentTheme = ConfigUtil.GetSetting("CurrentTheme") ?? CurrentTheme;
+        MainActions.LoadTheme(this, CurrentTheme);
+
         InitializeComponent();
 
         // update titles
         versionText.Text = VERSION;
 
-        // used for setting menu icons based on open windows
-        IconToWindow = new Dictionary<string, DockingWindow>()
-        {
-          { npcIcon.Name, npcWindow }, { verifiedPlayersIcon.Name, verifiedPlayersWindow },
-          { verifiedPetsIcon.Name, verifiedPetsWindow }, { petMappingIcon.Name, petMappingWindow },
-          { playerParseIcon.Name, playerParseTextWindow }
-        };
+        MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
+        MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, verifiedPlayersWindow, petMappingWindow);
+        MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
 
-        // Clear/Reset
-        DataManager.Instance.EventsClearedActiveData += Instance_EventsClearedActiveData;
-
-        // verified pets table
-        verifiedPetsGrid.ItemsSource = VerifiedPetsView;
-        PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
-        {
-          Helpers.InsertNameIntoSortedList(name, VerifiedPetsView);
-          verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
-        });
-
-        // pet -> players
-        petMappingGrid.ItemsSource = PetPlayersView;
-        PlayerManager.Instance.EventsNewPetMapping += (sender, mapping) =>
-        {
-          Dispatcher.InvokeAsync(() =>
-          {
-            var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
-            if (existing != null && existing.Owner != mapping.Owner)
-            {
-              PetPlayersView.Remove(existing);
-            }
-
-            Helpers.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
-            petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
-          });
-
-          CheckComputeStats();
-        };
-
-        PlayerManager.Instance.EventsRemoveVerifiedPet += (sender, name) => Dispatcher.InvokeAsync(() =>
-        {
-          var found = VerifiedPetsView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-          if (found != null)
-          {
-            VerifiedPetsView.Remove(found);
-            verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
-
-            var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-              PetPlayersView.Remove(existing);
-              petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
-            }
-            CheckComputeStats();
-          }
-        });
-
-        // verified player table
-        verifiedPlayersGrid.ItemsSource = VerifiedPlayersProperty;
-        PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
-        {
-          Helpers.InsertNameIntoSortedList(name, VerifiedPlayersProperty);
-          verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
-        });
-
-        PlayerManager.Instance.EventsRemoveVerifiedPlayer += (sender, name) => Dispatcher.InvokeAsync(() =>
-        {
-          var found = VerifiedPlayersProperty.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-          if (found != null)
-          {
-            VerifiedPlayersProperty.Remove(found);
-            verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
-
-            var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-              PetPlayersView.Remove(existing);
-              petMappingWindow.Title = "Pet Owners (" + PetPlayersView.Count + ")";
-            }
-            CheckComputeStats();
-          }
-        });
-
-        (npcWindow.Content as FightTable).EventsSelectionChange += (sender, data) => ComputeStats();
-        DamageStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, DamageChartWindow, data);
-        HealingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, HealingChartWindow, data);
-        TankingStatsManager.Instance.EventsUpdateDataPoint += (sender, data) => Helpers.HandleChartUpdate(Dispatcher, TankingChartWindow, data);
-
-        // Setup themes
-        ThemeManager.BeginUpdate();
-        ThemeManager.AreNativeThemesEnabled = true;
-        SystemThemeCatalogRegistrar.Register();
-        ThemeManager.CurrentTheme = ThemeNames.Dark;
+        (npcWindow.Content as FightTable).EventsSelectionChange += (_, __) => ComputeStats();
+        DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
+        HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
+        TankingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
 
         UpdateDeleteChatMenu();
 
@@ -234,18 +155,6 @@ namespace EQLogParser
         // Damage Overlay
         enableDamageOverlayIcon.Visibility = OverlayUtil.LoadSettings() ? Visibility.Visible : Visibility.Hidden;
 
-        // Show Tanking Summary at startup
-        ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
-        // Show Tanking Summary at startup
-        ConfigUtil.IfSet("ShowTankingChartAtStartup", OpenTankingChart);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowHealingChartAtStartup", OpenHealingChart);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowDamageChartAtStartup", OpenDamageChart);
         LOG.Info("Initialized Components");
 
         if (ConfigUtil.IfSet("AutoMonitor"))
@@ -269,6 +178,8 @@ namespace EQLogParser
           ComputeStatsTimer.Stop();
         };
 
+        DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
+
         if (ConfigUtil.IfSet("Debug"))
         {
           LOG.Info("Debug Enabled. Saving Unprocessed Lines to " + ConfigUtil.LogsDir);
@@ -282,21 +193,39 @@ namespace EQLogParser
         LOG.Error(e);
         throw;
       }
-      finally
-      {
-        ThemeManager.EndUpdate();
-      }
     }
 
-    internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
-
     internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
-
+    internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
+    private void TabGroupCreated(object sender, TabGroupEventArgs e) => ChartTab = e.CurrentTabGroup;
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
+    }
+
+    private void DockSiteLoaded(object sender, RoutedEventArgs e)
+    {
+      if (!DoneLoading)
+      {
+        // Show Tanking Summary at startup
+        ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
+        DoneLoading = true;
+      }
+    }
+
+    private void HandleChartUpdate(string key, DataPointEvent e)
+    {
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      if (opened.ContainsKey(key))
+      {
+        (opened[key].Content as LineChart)?.HandleUpdateEvent(e);
+      }
     }
 
     private void UpdateDeleteChatMenu()
@@ -328,7 +257,7 @@ namespace EQLogParser
       deleteChat.IsEnabled = deleteChat.Items.Count > 0;
     }
 
-    private void CheckComputeStats()
+    internal void CheckComputeStats()
     {
       if (ComputeStatsTimer != null)
       {
@@ -337,64 +266,46 @@ namespace EQLogParser
       }
     }
 
-    private void Instance_EventsClearedActiveData(object _, bool _2)
-    {
-      (DamageWindow?.Content as DamageSummary)?.Clear();
-      (HealingWindow?.Content as HealingSummary)?.Clear();
-      (TankingWindow?.Content as TankingSummary)?.Clear();
-      (DamageChartWindow?.Content as LineChart)?.Clear();
-      (HealingChartWindow?.Content as LineChart)?.Clear();
-      (TankingChartWindow?.Content as LineChart)?.Clear();
-    }
-
     private void ComputeStats()
     {
       var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id);
-      string name = filtered?.FirstOrDefault()?.Name;
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
 
-      var damageOptions = new GenerateStatsOptions { Name = name, RequestChartData = DamageChartWindow?.IsOpen == true };
+      var damageOptions = new GenerateStatsOptions();
       damageOptions.Npcs.AddRange(filtered);
-      if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
-      {
-        damageOptions.RequestSummaryData = true;
-      }
-
-      var healingOptions = new GenerateStatsOptions { Name = name, RequestChartData = HealingChartWindow?.IsOpen == true };
-      healingOptions.Npcs.AddRange(filtered);
-      if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
-      {
-        healingOptions.RequestSummaryData = true;
-      }
-
-      var tankingOptions = new GenerateStatsOptions { Name = name, RequestChartData = TankingChartWindow?.IsOpen == true };
-      tankingOptions.Npcs.AddRange(filtered);
-      if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
-      {
-        tankingOptions.RequestSummaryData = true;
-        tankingOptions.DamageType = tankingSummary.DamageType;
-      }
-
       Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
+
+      var healingOptions = new GenerateStatsOptions();
+      healingOptions.Npcs.AddRange(filtered);
       Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingOptions));
+
+      var tankingOptions = new GenerateStatsOptions();
+      tankingOptions.Npcs.AddRange(filtered);
+      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl control) && control != null)
+      {
+        tankingOptions.DamageType = ((TankingSummary)control.Content).DamageType;
+      }
       Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingOptions));
     }
 
     private void MenuItemExportHTMLClick(object sender, RoutedEventArgs e)
     {
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
       var tables = new Dictionary<string, SummaryTable>();
-      if (DamageWindow?.Content is DamageSummary damageSummary && DamageWindow?.IsOpen == true)
+
+      if (opened.TryGetValue(damageSummaryIcon.Tag as string, out ContentControl control))
       {
-        tables.Add(DamageWindow.Title, damageSummary);
+        tables.Add(DockingManager.GetHeader(control) as string, (DamageSummary)control.Content);
       }
 
-      if (HealingWindow?.Content is HealingSummary healingSummary && HealingWindow?.IsOpen == true)
+      if (opened.TryGetValue(healingSummaryIcon.Tag as string, out ContentControl control2))
       {
-        tables.Add(HealingWindow.Title, healingSummary);
+        tables.Add(DockingManager.GetHeader(control2) as string, (HealingSummary)control2.Content);
       }
 
-      if (TankingWindow?.Content is TankingSummary tankingSummary && TankingWindow?.IsOpen == true)
+      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl control3))
       {
-        tables.Add(TankingWindow.Title, tankingSummary);
+        tables.Add(DockingManager.GetHeader(control3) as string, (TankingSummary)control3.Content);
       }
 
       if (tables.Count > 0)
@@ -403,7 +314,8 @@ namespace EQLogParser
       }
       else
       {
-        _ = MessageBox.Show("Nothing to Save. Display a Summary View and Try Again.", Properties.Resources.FILEMENU_EXPORT_SUMMARY, MessageBoxButton.OK, MessageBoxImage.Exclamation);
+        _ = MessageBox.Show("Nothing to Save. Display a Summary View and Try Again.", EQLogParser.Resource.FILEMENU_EXPORT_SUMMARY,
+          MessageBoxButton.OK, MessageBoxImage.Exclamation);
       }
     }
 
@@ -433,20 +345,20 @@ namespace EQLogParser
       IsAoEHealingEnabled = !IsAoEHealingEnabled;
       ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
-
-      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
-      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(options, true));
+      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(true));
     }
 
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
     {
       ConfigUtil.SetSetting("AutoMonitor", (enableAutoMonitorIcon.Visibility == Visibility.Hidden).ToString(CultureInfo.CurrentCulture));
       enableAutoMonitorIcon.Visibility = enableAutoMonitorIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+
+      MainActions.LoadTheme(this, "MaterialLight");
     }
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
     {
-      var enabled = OverlayUtil.ToggleOverlay(Dispatcher);
+      var enabled = OverlayUtil.ToggleOverlay();
       enableDamageOverlayIcon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
     }
 
@@ -488,11 +400,33 @@ namespace EQLogParser
       MessageBox.Show("Restart EQLogParser when changing the Ignore Charm Pets setting for it to take effect.");
     }
 
+    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e)
+    {
+      if (CurrentTheme != "MaterialDark")
+      {
+        CurrentTheme = "MaterialDark";
+        MainActions.LoadTheme(this, CurrentTheme);
+        ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
+        EventsThemeChanged?.Invoke(this, CurrentTheme);
+      }
+    }
+
+    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e)
+    {
+      if (CurrentTheme != "MaterialLight")
+      {
+        CurrentTheme = "MaterialLight";
+        MainActions.LoadTheme(this, CurrentTheme);
+        ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
+        EventsThemeChanged?.Invoke(this, CurrentTheme);
+      }
+    }
+
     private void UpdateDamageOption(ImageAwesome icon, bool enabled, string option)
     {
       ConfigUtil.SetSetting(option, enabled.ToString(CultureInfo.CurrentCulture));
       icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
-      var options = new GenerateStatsOptions() { RequestChartData = true, RequestSummaryData = true };
+      var options = new GenerateStatsOptions();
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
     }
 
@@ -525,18 +459,23 @@ namespace EQLogParser
       }
       else if (e.Source == chatMenuItem)
       {
-        ChatWindow = Helpers.OpenWindow(dockSite, ChatWindow, typeof(ChatViewer), "chatWindow", "Chat Archive");
-        IconToWindow[chatIcon.Name] = ChatWindow;
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(ChatViewer), chatIcon.Tag as string, "Chat Archive");
       }
       else if (e.Source == eventMenuItem)
       {
-        EventWindow = Helpers.OpenWindow(dockSite, EventWindow, typeof(EventViewer), "eventWindow", "Special Events");
-        IconToWindow[eventIcon.Name] = EventWindow;
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(EventViewer), eventIcon.Tag as string, "Misc Events");
+      }
+      else if (e.Source == randomsMenuItem)
+      {
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(RandomViewer), randomsIcon.Tag as string, "Random Rolls");
       }
       else if (e.Source == playerLootMenuItem)
       {
-        LootWindow = Helpers.OpenWindow(dockSite, LootWindow, typeof(LootViewer), "lootWindow", "Looted Items");
-        IconToWindow[playerLootIcon.Name] = LootWindow;
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(LootViewer), playerLootIcon.Tag as string, "Looted Items");
       }
       else if (e.Source == eqLogMenuItem)
       {
@@ -552,117 +491,90 @@ namespace EQLogParser
           found += 1;
         }
 
-        Helpers.OpenWindow(dockSite, null, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
+        Helpers.OpenWindow(dockSite, null, out _, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
       }
       else if (e.Source == spellResistsMenuItem)
       {
-        SpellResistsWindow = Helpers.OpenWindow(dockSite, SpellResistsWindow, typeof(NpcStatsViewer), "spellResistsWindow", "Spell Resists");
-        IconToWindow[spellResistsIcon.Name] = SpellResistsWindow;
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(NpcStatsViewer), spellResistsIcon.Tag as string, "Spell Resists");
       }
       else if (e.Source == spellDamageStatsMenuItem)
       {
-        SpellDamageWindow = Helpers.OpenWindow(dockSite, SpellDamageWindow, typeof(SpellDamageStatsViewer), "spellDamageWindow", "Spell Damage");
-        IconToWindow[npcSpellDamageIcon.Name] = SpellDamageWindow;
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(SpellDamageStatsViewer), npcSpellDamageIcon.Tag as string, "Spell Damage");
       }
-      else
+      else if (e.Source == tauntStatsMenuItem)
       {
-        if ((sender as MenuItem)?.Icon is ImageAwesome icon && IconToWindow.ContainsKey(icon.Name))
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(TauntStatsViewer), tauntStatsIcon.Tag as string, "Taunt Usage");
+      }
+      else if ((sender as MenuItem)?.Icon is ImageAwesome icon && icon.Tag is string name)
+      {
+        // any other core windows that just get hidden
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        if (opened.TryGetValue(name, out ContentControl control) && control.Tag.ToString() == "Hide")
         {
-          Helpers.OpenWindow(IconToWindow[icon.Name]);
+          var state = (DockingManager.GetState(control) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
+          DockingManager.SetState(control, state);
         }
       }
-    }
-
-    private bool OpenLineChart(DocumentWindow window, DocumentWindow other1, DocumentWindow other2, FrameworkElement icon, string title,
-      List<string> choices, bool includePets, out DocumentWindow newWindow)
-    {
-      bool updated = false;
-      newWindow = window;
-
-      if (newWindow?.IsOpen == true)
-      {
-        newWindow.Close();
-        newWindow = null;
-      }
-      else
-      {
-        updated = true;
-        var chart = new LineChart(choices, includePets);
-        newWindow = new DocumentWindow(dockSite, title, title, null, chart);
-        IconToWindow[icon.Name] = newWindow;
-
-        Helpers.OpenWindow(newWindow);
-        newWindow.CanFloat = true;
-        newWindow.CanClose = true;
-
-        if (other1?.IsOpen == true || other2?.IsOpen == true)
-        {
-          newWindow.MoveToNextContainer();
-        }
-        else
-        {
-          newWindow.MoveToNewHorizontalContainer();
-        }
-      }
-
-      return updated;
     }
 
     private void OpenDamageChart()
     {
-      if (OpenLineChart(DamageChartWindow, HealingChartWindow, TankingChartWindow, damageChartIcon, "Damage Chart", DAMAGE_CHOICES, true, out DamageChartWindow))
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      if (Helpers.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "Damage Chart", ChartTab, true))
       {
-        var summary = DamageWindow?.Content as DamageSummary;
-        var options = new GenerateStatsOptions() { RequestChartData = true };
-        DamageStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
+        List<PlayerStats> selected = null;
+        if (opened.TryGetValue(damageSummaryIcon.Tag as string, out ContentControl window) && window.Content is DamageSummary summary)
+        {
+          selected = summary?.GetSelectedStats();
+        }
+
+        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
       }
     }
 
     private void OpenHealingChart()
     {
-      if (OpenLineChart(HealingChartWindow, DamageChartWindow, TankingChartWindow, healingChartIcon, "Healing Chart", HEALING_CHOICES, false, out HealingChartWindow))
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      if (Helpers.OpenChart(opened, dockSite, healingChartIcon.Tag as string, HEALING_CHOICES, "Healing Chart", ChartTab, false))
       {
-        var summary = HealingWindow?.Content as HealingSummary;
-        var options = new GenerateStatsOptions() { RequestChartData = true };
-        HealingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
+        List<PlayerStats> selected = null;
+        if (opened.TryGetValue(healingSummaryIcon.Tag as string, out ContentControl window) && window.Content is HealingSummary summary)
+        {
+          selected = summary?.GetSelectedStats();
+        }
+
+        HealingStatsManager.Instance.FireChartEvent("UPDATE", selected);
       }
     }
 
     private void OpenTankingChart()
     {
-      if (OpenLineChart(TankingChartWindow, DamageChartWindow, HealingChartWindow, tankingChartIcon, "Tanking Chart", TANKING_CHOICES, false, out TankingChartWindow))
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      if (Helpers.OpenChart(opened, dockSite, tankingChartIcon.Tag as string, TANKING_CHOICES, "Tanking Chart", ChartTab, false))
       {
-        var summary = TankingWindow?.Content as TankingSummary;
-        var options = new GenerateStatsOptions() { RequestChartData = true };
-        TankingStatsManager.Instance.FireChartEvent(options, "UPDATE", summary?.GetSelectedStats(), summary?.GetFilter());
+        List<PlayerStats> selected = null;
+        if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl window) && window.Content is TankingSummary summary)
+        {
+          selected = summary?.GetSelectedStats();
+        }
+
+        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
       }
     }
 
     private void OpenDamageSummary()
     {
-      if (DamageWindow?.IsOpen == true)
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      if (Helpers.OpenWindow(dockSite, opened, out ContentControl control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "Damage Summary"))
       {
-        DamageWindow.Close();
-      }
-      else
-      {
-        var damageSummary = new DamageSummary();
-        damageSummary.EventsSelectionChange += DamageSummary_SelectionChanged;
-        DamageWindow = new DocumentWindow(dockSite, "damageSummary", "Damage Summary", null, damageSummary);
-        IconToWindow[damageSummaryIcon.Name] = DamageWindow;
-
-        Helpers.OpenWindow(DamageWindow);
-        if (HealingWindow?.IsOpen == true || TankingWindow?.IsOpen == true)
-        {
-          DamageWindow.MoveToPreviousContainer();
-        }
-
-        Helpers.RepositionCharts(DamageWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
-
+        (control.Content as DamageSummary).EventsSelectionChange += DamageSummary_SelectionChanged;
         if (DamageStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var damageOptions = new GenerateStatsOptions() { RequestSummaryData = true };
+          var damageOptions = new GenerateStatsOptions();
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
         }
       }
@@ -670,59 +582,28 @@ namespace EQLogParser
 
     private void OpenHealingSummary()
     {
-      if (HealingWindow?.IsOpen == true)
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      if (Helpers.OpenWindow(dockSite, opened, out ContentControl control, typeof(HealingSummary), healingSummaryIcon.Tag as string, "Healing Summary"))
       {
-        HealingWindow.Close();
-      }
-      else
-      {
-        var healingSummary = new HealingSummary();
-        healingSummary.EventsSelectionChange += HealingSummary_SelectionChanged;
-        HealingWindow = new DocumentWindow(dockSite, "healingSummary", "Healing Summary", null, healingSummary);
-        IconToWindow[healingSummaryIcon.Name] = HealingWindow;
-
-        Helpers.OpenWindow(HealingWindow);
-        if (DamageWindow?.IsOpen == true || TankingWindow?.IsOpen == true)
-        {
-          HealingWindow.MoveToPreviousContainer();
-        }
-
-        Helpers.RepositionCharts(HealingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow);
-
+        (control.Content as HealingSummary).EventsSelectionChange += HealingSummary_SelectionChanged;
         if (HealingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var healingOptions = new GenerateStatsOptions() { RequestSummaryData = true };
-          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(healingOptions));
+          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
         }
       }
     }
 
     private void OpenTankingSummary()
     {
-      if (TankingWindow?.IsOpen == true)
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      if (Helpers.OpenWindow(dockSite, opened, out ContentControl control, typeof(TankingSummary), tankingSummaryIcon.Tag as string, "Tanking Summary"))
       {
-        TankingWindow.Close();
-      }
-      else
-      {
-        var tankingSummary = new TankingSummary();
-        tankingSummary.EventsSelectionChange += TankingSummary_SelectionChanged;
-        TankingWindow = new DocumentWindow(dockSite, "tankingSummary", "Tanking Summary", null, tankingSummary);
-        IconToWindow[tankingSummaryIcon.Name] = TankingWindow;
-
-        Helpers.OpenWindow(TankingWindow);
-        if (DamageWindow?.IsOpen == true || HealingWindow?.IsOpen == true)
-        {
-          TankingWindow.MoveToPreviousContainer();
-        }
-
-        Helpers.RepositionCharts(TankingWindow, DamageChartWindow, TankingChartWindow, HealingChartWindow); ;
-
+        (control.Content as TankingSummary).EventsSelectionChange += TankingSummary_SelectionChanged;
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions() { RequestSummaryData = true, DamageType = tankingSummary.DamageType };
+          var tankingOptions = new GenerateStatsOptions { DamageType = (control.Content as TankingSummary).DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
@@ -730,59 +611,25 @@ namespace EQLogParser
 
     private void DamageSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var options = new GenerateStatsOptions() { RequestChartData = true };
-      DamageStatsManager.Instance.FireChartEvent(options, "SELECT", data.Selected);
-      (playerParseTextWindow.Content as ParsePreview)?.UpdateParse(Labels.DAMAGEPARSE, data.Selected);
+      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
+      var preview = playerParseTextWindow.Content as ParsePreview;
+      preview?.UpdateParse(Labels.DAMAGEPARSE, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      var options = new GenerateStatsOptions() { RequestChartData = true };
-      HealingStatsManager.Instance.FireChartEvent(options, "SELECT", data.Selected);
-
+      HealingStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
+      bool addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
-
-      // change the update order based on whats displayed
-      if (preview.parseList.SelectedItem?.ToString() == Labels.TOPHEALSPARSE)
-      {
-        preview?.UpdateParse(Labels.HEALPARSE, data.Selected);
-        if (data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0)
-        {
-          preview?.AddParse(Labels.TOPHEALSPARSE, HealingStatsManager.Instance, data.CurrentStats, data.Selected);
-        }
-      }
-      else
-      {
-        if (data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0)
-        {
-          preview?.AddParse(Labels.TOPHEALSPARSE, HealingStatsManager.Instance, data.CurrentStats, data.Selected);
-        }
-        preview?.UpdateParse(Labels.HEALPARSE, data.Selected);
-      }
+      preview.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEALPARSE, Labels.TOPHEALSPARSE);
     }
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
-      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { RequestChartData = true }, "SELECT", data.Selected);
+      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
+      bool addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
       var preview = playerParseTextWindow.Content as ParsePreview;
-
-      // change the update order based on whats displayed
-      if (preview.parseList.SelectedItem?.ToString() == Labels.RECEIVEDHEALPARSE)
-      {
-        preview?.UpdateParse(Labels.TANKPARSE, data.Selected);
-        if (data.Selected?.Count == 1 && data.Selected[0].SubStats2?.ContainsKey("receivedHealing") == true)
-        {
-          preview?.AddParse(Labels.RECEIVEDHEALPARSE, TankingStatsManager.Instance, data.CurrentStats, data.Selected);
-        }
-      }
-      else
-      {
-        if (data.Selected?.Count == 1 && data.Selected[0].SubStats2?.ContainsKey("receivedHealing") == true)
-        {
-          preview?.AddParse(Labels.RECEIVEDHEALPARSE, TankingStatsManager.Instance, data.CurrentStats, data.Selected);
-        }
-        preview?.UpdateParse(Labels.TANKPARSE, data.Selected);
-      }
+      preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANKPARSE, Labels.RECEIVEDHEALPARSE);
     }
 
     private void MenuItemSelectLogFileClick(object sender, RoutedEventArgs e)
@@ -817,7 +664,7 @@ namespace EQLogParser
             statusText.Text = string.Format(CultureInfo.CurrentCulture, "Processing... {0}% in {1} seconds", procPercent, seconds);
           }
 
-          statusText.Foreground = LOADING_BRUSH;
+          statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
 
           if (((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
             && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) ||
@@ -825,36 +672,29 @@ namespace EQLogParser
           {
             if (filePercent >= 100 || CurrentLogOption == LogOption.MONITOR)
             {
-              statusText.Foreground = GOOD_BRUSH;
+              statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
               statusText.Text = "Monitoring Active";
             }
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
-            OverlayUtil.OpenIfEnabled(Dispatcher);
+            OverlayUtil.OpenIfEnabled();
             LOG.Info("Finished Loading Log File in " + seconds.ToString(CultureInfo.CurrentCulture) + " seconds.");
-            EventsLogLoadingComplete?.Invoke(this, true);
+            Task.Delay(1000).ContinueWith(task => Dispatcher.InvokeAsync(() => EventsLogLoadingComplete?.Invoke(this, true)));
           }
           else
           {
-            _ = Task.Delay(500).ContinueWith(task => UpdateLoadingProgress(), TaskScheduler.Default);
+            Task.Delay(500).ContinueWith(task => UpdateLoadingProgress(), TaskScheduler.Default);
           }
         }
       });
     }
 
-    private void PetMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void PetMappingDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
     {
-      if (sender is ComboBox comboBox && comboBox.DataContext is PetMapping mapping && comboBox.SelectedItem is SortableName selected)
+      if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is PetMapping mapping)
       {
-        if (selected.Name != mapping.Owner)
-        {
-          PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selected.Name);
-          petMappingGrid.CommitEdit();
-        }
-        else
-        {
-          LOG.Error("Error adding pet=" + selected.Name + " to owner=" + mapping.Owner + ". The player name and pet name can not be the same.");
-        }
+        dataGrid.SelectionController.CurrentCellManager.EndEdit();
+        PlayerManager.Instance.AddPetToPlayer(mapping.Pet, mapping.Owner);
       }
     }
 
@@ -885,12 +725,11 @@ namespace EQLogParser
           theFile = dialog.FileName;
         }
 
-
         if (success)
         {
-          if (!npcWindow.IsOpen)
+          if (DockingManager.GetState(npcWindow) == DockState.Hidden)
           {
-            Helpers.OpenWindow(IconToWindow[npcIcon.Name]);
+            DockingManager.SetState(npcWindow, DockState.Dock);
           }
 
           StopProcessing();
@@ -928,12 +767,7 @@ namespace EQLogParser
           var changed = ConfigUtil.ServerName != server;
           if (changed)
           {
-            PetPlayersView.Clear();
-            VerifiedPetsView.Clear();
-            VerifiedPlayersProperty.Clear();
-            VerifiedPlayersProperty.Add(new SortableName { Name = Labels.UNASSIGNED });
-            verifiedPetsWindow.Title = string.Format(CultureInfo.CurrentCulture, PETS_LIST_TITLE, VerifiedPetsView.Count);
-            verifiedPlayersWindow.Title = string.Format(CultureInfo.CurrentCulture, PLAYER_LIST_TITLE, VerifiedPlayersProperty.Count);
+            MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow);
 
             // save before switching
             if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
@@ -952,9 +786,8 @@ namespace EQLogParser
 
           DataManager.Instance.Clear();
           PlayerChatManager = new ChatManager();
-
           CurrentLogFile = theFile;
-          NpcDamageManager.ResetTime();
+          NpcDamageManager.Reset();
           EQLogReader = new LogReader(theFile, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
           UpdateLoadingProgress();
@@ -985,7 +818,7 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(line) && line.Length > 30)
       {
-        var lineData = new LineData { Action = line.Substring(LineParsing.ActionIndex), LineNumber = LineCount, BeginTime = dateTime };
+        var lineData = new LineData { Action = line.Substring(ACTION_INDEX), LineNumber = LineCount, BeginTime = dateTime };
 
         // avoid having other things parse chat by accident
         if (ChatLineParser.Process(lineData, line) is ChatType chatType)
@@ -1012,19 +845,36 @@ namespace EQLogParser
       MiscProcessor?.Stop();
     }
 
-    private void WindowIcon_Loaded(object sender, RoutedEventArgs e)
+    private void WindowIconLoaded(object sender, RoutedEventArgs e)
     {
-      if (sender is FrameworkElement icon && IconToWindow.ContainsKey(icon.Name))
+      if (sender is FrameworkElement icon)
       {
-        icon.Visibility = IconToWindow[icon.Name]?.IsOpen == true ? Visibility.Visible : Visibility.Hidden;
+        if (icon.Tag is string name)
+        {
+          var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+          if (opened.TryGetValue(name, out ContentControl control))
+          {
+            icon.Visibility = DockingManager.GetState(control) != DockState.Hidden ? Visibility.Visible : Visibility.Hidden;
+          }
+          else
+          {
+            icon.Visibility = Visibility.Hidden;
+          }
+        }
+        else if (icon == themeDarkIcon)
+        {
+          icon.Visibility = CurrentTheme == "MaterialDark" ? Visibility.Visible : Visibility.Hidden;
+        }
+        else if (icon == themeLightIcon)
+        {
+          icon.Visibility = CurrentTheme == "MaterialLight" ? Visibility.Visible : Visibility.Hidden;
+        }
       }
     }
 
-    private void NPCWindow_KeyDown(object sender, KeyEventArgs e) => (npcWindow?.Content as FightTable).FightSearchBoxKeyDown(sender, e);
-
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is DataGridCell cell && cell.DataContext is SortableName sortable)
+      if (sender is ImageAwesome image && image.DataContext is SortableName sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPet(sortable.Name);
       }
@@ -1032,7 +882,7 @@ namespace EQLogParser
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is DataGridCell cell && cell.DataContext is SortableName sortable)
+      if (sender is ImageAwesome image && image.DataContext is SortableName sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPlayer(sortable.Name);
       }
@@ -1066,81 +916,62 @@ namespace EQLogParser
       }
     }
 
-    public void WindowSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-      BorderThickness = (WindowState == WindowState.Maximized) ? new Thickness(6) : new Thickness(0);
-    }
-
     private void WindowClosed(object sender, EventArgs e)
     {
-      ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", (DamageWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowHealingSummaryAtStartup", (HealingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowTankingSummaryAtStartup", (TankingWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowDamageChartAtStartup", (DamageChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowHealingChartAtStartup", (HealingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
-      ConfigUtil.SetSetting("ShowTankingChartAtStartup", (TankingChartWindow?.IsOpen == true).ToString(CultureInfo.CurrentCulture));
+      var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", opened.ContainsKey(damageSummaryIcon.Tag as string).ToString());
+      ConfigUtil.SetSetting("ShowHealingSummaryAtStartup", opened.ContainsKey(healingSummaryIcon.Tag as string).ToString());
+      ConfigUtil.SetSetting("ShowTankingSummaryAtStartup", opened.ContainsKey(tankingSummaryIcon.Tag as string).ToString());
+      ConfigUtil.SetSetting("WindowState", WindowState.ToString());
+
+      if (WindowState != WindowState.Maximized)
+      {
+        ConfigUtil.SetSetting("WindowLeft", Left.ToString());
+        ConfigUtil.SetSetting("WindowTop", Top.ToString());
+        ConfigUtil.SetSetting("WindowHeight", Height.ToString());
+        ConfigUtil.SetSetting("WindowWidth", Width.ToString());
+      }
 
       StopProcessing();
       OverlayUtil.CloseOverlay();
-      //taskBarIcon?.Dispose();
       PlayerChatManager?.Dispose();
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
       Application.Current.Shutdown();
     }
 
-    private void Maximize_Click(object sender, RoutedEventArgs e)
-    {
-      WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-    }
-
-    private void Maximize_DoubleClick(object sender, MouseButtonEventArgs e)
-    {
-      if (e.ClickCount == 2)
-      {
-        Maximize_Click(sender, e);
-      }
-    }
-
-    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-
-    private void Close_MouseClick(object sender, RoutedEventArgs e) => Close();
-
     // This is where closing summary tables and line charts will get disposed
-    private void DockSite_WindowUnreg(object sender, DockingWindowEventArgs e)
+    private void CloseTab(ContentControl window)
     {
-      var content = e.Window.Content;
+      var content = window.Content;
       if (content is EQLogViewer)
       {
-        int last = e.Window.Title.LastIndexOf(" ");
+        string title = DockingManager.GetHeader(window) as string;
+        int last = title.LastIndexOf(" ");
         if (last > -1)
         {
-          string value = e.Window.Title.Substring(last, e.Window.Title.Length - last);
+          string value = title.Substring(last, title.Length - last);
           if (int.TryParse(value, out int result) && result > 0 && LogWindows.Count >= result)
           {
             LogWindows[result - 1] = false;
           }
         }
+
+        (window.Content as IDisposable)?.Dispose();
       }
-      (content as IDisposable)?.Dispose();
+      else
+      {
+        Helpers.CloseWindow(dockSite, window);
+      }
     }
+
+    private void dockSite_CloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
+
+    private void dockSite_WindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
 
     private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
+
     private void WindowClose(object sender, EventArgs e) => Close();
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-    [DllImportAttribute("user32.dll")]
-    internal static extern bool ReleaseCapture();
-
-    //Attach this to the MouseDown event of your drag control to move the window in place of the title bar
-    private void WindowDrag(object sender, MouseButtonEventArgs e) // MouseDown
-    {
-      ReleaseCapture();
-      SendMessage(new WindowInteropHelper(this).Handle,
-          0xA1, (IntPtr)0x2, (IntPtr)0);
-    }
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
@@ -1149,13 +980,10 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-          //taskBarIcon?.Dispose();
-          PlayerChatManager?.Dispose();
-        }
-
+        PlayerChatManager?.Dispose();
+        petMappingGrid?.Dispose();
+        verifiedPetsGrid?.Dispose();
+        verifiedPlayersGrid?.Dispose();
         disposedValue = true;
       }
     }

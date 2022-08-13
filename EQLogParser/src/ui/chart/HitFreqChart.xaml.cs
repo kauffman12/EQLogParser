@@ -1,10 +1,8 @@
-﻿using Syncfusion.SfSkinManager;
-using Syncfusion.UI.Xaml.Charts;
+﻿using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -20,15 +18,14 @@ namespace EQLogParser
     private const string CRIT_HITTYPE = "Critical";
     private const string NON_CRIT_HITTYPE = "Non-Critical";
     private Dictionary<string, List<HitFreqChartData>> PlayerData = null;
-    private readonly List<string> MinFreqs = new List<string>() { "Any Freq", "Freq > 1", "Freq > 2", "Freq > 3", "Freq > 4" };
+    private readonly List<string> MinFreqs = new List<string>()
+    { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
     private int PageSize = 9;
-    private static bool Updating = false;
     private List<ColumnData> Columns = new List<ColumnData>();
 
-    internal HitFreqChart()
+    public HitFreqChart()
     {
       InitializeComponent();
-      SfSkinManager.SetTheme(sfChart, new Theme("FluentDark"));
       minFreqList.ItemsSource = MinFreqs;
       minFreqList.SelectedIndex = 0;
     }
@@ -61,83 +58,69 @@ namespace EQLogParser
       }
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CopyImage(Dispatcher, sfChart);
+    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CreateImage(Dispatcher, sfChart);
 
     private void UserSelectionChanged()
     {
-      if (!Updating)
+      try
       {
-        Updating = true;
-
-        Task.Delay(20).ContinueWith(task =>
+        if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type &&
+        critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
         {
-          Dispatcher.InvokeAsync(() =>
+          var data = PlayerData[player];
+          int minFreq = minFreqList.SelectedIndex > -1 ? minFreqList.SelectedIndex : 0;
+          HitFreqChartData first = data.Find(d => d.HitType == type);
+          Columns.Clear();
+
+          if (critType == CRIT_HITTYPE)
           {
-            try
+            for (int i = 0; i < first.CritYValues.Count; i++)
             {
-              if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type &&
-              critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
+              if (first.CritYValues[i] > minFreq)
               {
-                var data = PlayerData[player];
-                int minFreq = GetMinFreq();
-                HitFreqChartData first = data.Find(d => d.HitType == type);
-                Columns.Clear();
-
-                if (critType == CRIT_HITTYPE)
+                var diff = (i > 0) ? (first.CritXValues[i] - first.CritXValues[i - 1]) : 0;
+                var diffString = (diff == 0) ? "" : "+" + diff;
+                Columns.Add(new ColumnData
                 {
-                  for (int i = 0; i < first.CritYValues.Count; i++)
-                  {
-                    if (first.CritYValues[i] > minFreq)
-                    {
-                      var diff = (i > 0) ? (first.CritXValues[i] - first.CritXValues[i - 1]) : 0;
-                      var diffString = (diff == 0) ? "" : "+" + diff;
-                      Columns.Add(new ColumnData
-                      {
-                        Diff = diff,
-                        Y = first.CritYValues[i],
-                        XLongValue = first.CritXValues[i],
-                        X = first.CritXValues[i] + "\n" + diffString
-                      });
-                    }
-                  }
-                }
-                else
-                {
-                  for (int i = 0; i < first.NonCritYValues.Count; i++)
-                  {
-                    if (first.NonCritYValues[i] > minFreq)
-                    {
-                      var diff = (i > 0) ? (first.NonCritXValues[i] - first.NonCritXValues[i - 1]) : 0;
-                      var diffString = (diff == 0) ? "" : "+" + diff;
-                      Columns.Add(new ColumnData
-                      {
-                        Diff = diff,
-                        Y = first.NonCritYValues[i],
-                        XLongValue = first.NonCritXValues[i],
-                        X = first.NonCritXValues[i] + "\n" + diffString
-                      });
-                    }
-                  }
-                }
+                  Diff = diff,
+                  Y = first.CritYValues[i],
+                  XLongValue = first.CritXValues[i],
+                  X = first.CritXValues[i] + "\n" + diffString
+                });
               }
+            }
+          }
+          else
+          {
+            for (int i = 0; i < first.NonCritYValues.Count; i++)
+            {
+              if (first.NonCritYValues[i] > minFreq)
+              {
+                var diff = (i > 0) ? (first.NonCritXValues[i] - first.NonCritXValues[i - 1]) : 0;
+                var diffString = (diff == 0) ? "" : "+" + diff;
+                Columns.Add(new ColumnData
+                {
+                  Diff = diff,
+                  Y = first.NonCritYValues[i],
+                  XLongValue = first.NonCritXValues[i],
+                  X = first.NonCritXValues[i] + "\n" + diffString
+                });
+              }
+            }
+          }
+        }
 
-              pageSlider.Value = 0;
-              UpdatePageSize();
-              DisplayPage();
-              Updating = false;
-            }
-            catch (ArgumentNullException ex)
-            {
-              Updating = false;
-              LOG.Error(ex);
-            }
-            catch (InvalidOperationException ioe)
-            {
-              Updating = false;
-              LOG.Error(ioe);
-            }
-          });
-        }, TaskScheduler.Default);
+        pageSlider.Value = 0;
+        UpdatePageSize();
+        DisplayPage();
+      }
+      catch (ArgumentNullException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (InvalidOperationException ioe)
+      {
+        LOG.Error(ioe);
       }
     }
 
@@ -160,7 +143,7 @@ namespace EQLogParser
           ShowMarker = false,
           LabelPosition = AdornmentsLabelPosition.Outer,
           FontSize = 20,
-          Foreground = MainWindow.BRIGHT_TEXT_BRUSH,
+          Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
           Background = new SolidColorBrush(Colors.Transparent)
         };
         series.AdornmentsInfo = adornment;
@@ -189,31 +172,6 @@ namespace EQLogParser
           pageSlider.Focus();
         }
       }
-    }
-
-    private int GetMinFreq()
-    {
-      int result = 1;
-      string selected = minFreqList.SelectedItem as string;
-      switch (selected)
-      {
-        case "Any Freq":
-          result = 0;
-          break;
-        case "Freq > 1":
-          result = 1;
-          break;
-        case "Freq > 2":
-          result = 2;
-          break;
-        case "Freq > 3":
-          result = 3;
-          break;
-        case "Freq > 4":
-          result = 4;
-          break;
-      }
-      return result;
     }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
@@ -326,17 +284,24 @@ namespace EQLogParser
       void AddStats(PlayerStats stats)
       {
         results[stats.Name] = new List<HitFreqChartData>();
-        foreach (string type in stats.SubStats.Keys)
+        foreach (ref var subStat in stats.SubStats.ToArray().AsSpan())
         {
-          HitFreqChartData chartData = new HitFreqChartData { HitType = stats.SubStats[type].Name };
+          HitFreqChartData chartData = new HitFreqChartData { HitType = subStat.Name };
 
           // add crits
-          chartData.CritXValues.AddRange(stats.SubStats[type].CritFreqValues.Keys.OrderBy(key => key));
-          chartData.CritXValues.ForEach(damage => chartData.CritYValues.Add(stats.SubStats[type].CritFreqValues[damage]));
+          chartData.CritXValues.AddRange(subStat.CritFreqValues.Keys.OrderBy(key => key));
+          foreach (ref var damage in chartData.CritXValues.ToArray().AsSpan())
+          {
+            chartData.CritYValues.Add(subStat.CritFreqValues[damage]);
+          }
 
           // add non crits
-          chartData.NonCritXValues.AddRange(stats.SubStats[type].NonCritFreqValues.Keys.OrderBy(key => key));
-          chartData.NonCritXValues.ForEach(damage => chartData.NonCritYValues.Add(stats.SubStats[type].NonCritFreqValues[damage]));
+          chartData.NonCritXValues.AddRange(subStat.NonCritFreqValues.Keys.OrderBy(key => key));
+          foreach (ref var damage in chartData.NonCritXValues.ToArray().AsSpan())
+          {
+            chartData.NonCritYValues.Add(subStat.NonCritFreqValues[damage]);
+          }
+
           results[stats.Name].Add(chartData);
         }
       }

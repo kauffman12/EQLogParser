@@ -1,0 +1,200 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    
+                    xmlns:syncfusion="clr-namespace:Syncfusion.Windows.Controls.PivotGrid;assembly=Syncfusion.PivotAnalysis.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Button.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ComboBox.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/FlatButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Menu.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ListBox.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Window.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/ChromelessWindow/ChromelessWindow.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphButton.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <syncfusion:FilterConverter x:Key="ExcelFilterConverter" />
+
+    <Style x:Key="SyncfusionPivotGridMenuItemStyle" 
+           BasedOn="{StaticResource WPFMenuItemStyle}" 
+           TargetType="{x:Type MenuItem}"/>
+
+    <Style x:Key="SyncfusionPivotGridContextMenuStyle" 
+           BasedOn="{StaticResource WPFContextMenuStyle}" 
+           TargetType="{x:Type ContextMenu}">
+        <Setter Property="Padding" 
+                Value="0"/>
+        <Setter Property="BorderThickness" 
+                Value="{StaticResource MaterialLightCustom.BorderThickness}" />
+        <Setter Property="Background" 
+                Value="{StaticResource PopupBackground}"/>
+    </Style>
+
+    <Style x:Key="SyncfusionPivotGridListBoxStyle" 
+           BasedOn="{StaticResource WPFListBoxStyle}" 
+           TargetType="{x:Type ListBox}">
+        <Setter Property="Background"
+                Value="{StaticResource ContentBackground}"/>
+    </Style>
+
+    <Style x:Key="SyncfusionPivotGridListBoxItemStyle" 
+           TargetType="{x:Type ListBoxItem}" 
+           BasedOn="{StaticResource WPFListBoxItemStyle}">
+        <Setter Property="Padding" 
+                Value="3,2,2,1"/>
+        <Setter Property="Margin" 
+                Value="2"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="VerticalContentAlignment" 
+                        Value="Center" />
+    </Style>
+
+    <Style x:Key="SyncfusionPivotGridPrimaryButtonStyle" 
+           TargetType="{x:Type Button}" 
+           BasedOn="{StaticResource WPFFlatPrimaryButtonStyle}">
+        <Setter Property="FontFamily" 
+                Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+    </Style>
+
+    <Style x:Key="SyncfusionPivotGridSecondaryButtonStyle" 
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource WPFFlatButtonStyle}">
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+    </Style>
+
+    <ControlTemplate x:Key="SyncfusionPivotGridRemoveButtonTemplate" 
+                     TargetType="{x:Type Button}">
+        <Grid x:Name="grid" 
+              Background="{StaticResource ContentBackgroundAlt3}">
+            <Path Data="M10.586002,0 L12.000003,1.4140021 7.413983,5.9987224 12,10.583006 10.586,11.997005 5.9997823,7.4125217 1.4140045,11.997 3.0398377E-06,10.582997 4.5855133,5.9987873 0,1.4150074 1.414,0.0010076167 5.9997136,4.5849875 z"
+                  Fill="{StaticResource IconColor}"
+                  Height="10.781" 
+                  Canvas.Left="0" 
+                  Stretch="Fill"
+                  Canvas.Top="0" 
+                  Width="8.328"/>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" 
+                     Value="True">
+                <Setter TargetName="grid" 
+                        Property="Background" 
+                        Value="{StaticResource SecondaryHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsFocused" 
+                     Value="True">
+                <Setter Property="Background" 
+                        TargetName="grid" 
+                        Value="{StaticResource SecondaryHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter TargetName="grid" 
+                        Property="Height"                         
+                        Value="30" />
+                <Setter TargetName="grid" 
+                        Property="Margin"                         
+                        Value="0,1,1,0" />                
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <ControlTemplate x:Key="SyncfusionPivotGridFormulaButtonTemplate" 
+                     TargetType="{x:Type Button}">
+        <Grid x:Name="grid" 
+              Background="{StaticResource ContentBackgroundAlt3}">
+            <Path Data="M204.0879,113C202.5899,113.009,201.3449,113.85,201.0619,114.965C200.9579,115.243,200.9119,115.421,200.9119,115.421C200.9119,115.421,200.8539,115.649,200.8489,115.671L200.4679,117.451L199.2219,117.451L199.2219,118.342L200.3779,118.342L199.0199,125.032C199.0199,125.032,198.5159,127.383,197.7479,127.866C197.3229,128.134,196.8089,128.173,196.6509,128.135C197.1029,128.076,197.4439,127.7,197.4439,127.244C197.4449,127.222,197.4429,127.142,197.4369,127.118C197.3789,126.715,197.0519,126.398,196.6439,126.358C196.6299,126.355,196.6169,126.354,196.6049,126.354L196.5559,126.354C196.0649,126.354,195.6669,126.753,195.6669,127.244C195.6669,127.272,195.6679,127.299,195.6709,127.326C195.6679,127.363,195.6669,127.401,195.6669,127.44C195.6669,127.673,195.7039,127.886,195.7779,128.077L195.8079,128.135C195.8079,128.135,196.1089,129,197.4579,129C198.8059,129,199.4599,128.148,199.9469,127.205C200.2369,126.646,200.4489,125.805,200.5739,125.216L200.6869,124.625C200.6979,124.565,200.7009,124.532,200.7009,124.532L201.8889,118.342L204.5559,118.342L204.5559,117.451L202.1419,117.451L202.2099,117.122L202.3649,116.296C202.4329,115.946,202.5119,115.644,202.6039,115.387C202.6949,115.13,202.8079,114.917,202.9419,114.748C203.0769,114.58,203.2369,114.457,203.4239,114.377C203.6099,114.297,203.8349,114.258,204.0979,114.258C204.2379,114.258,204.3649,114.271,204.4819,114.294C204.5509,114.31,204.6139,114.323,204.6719,114.34C204.5979,114.47,204.5559,114.62,204.5559,114.78C204.5559,115.272,204.9539,115.671,205.4439,115.671C205.8519,115.671,206.1949,115.397,206.2999,115.023C206.3229,114.975,206.3339,114.896,206.3339,114.78C206.3339,114.082,205.8829,113.478,205.2239,113.186C205.1579,113.153,205.0849,113.126,205.0029,113.103C204.7939,113.036,204.5689,113,204.3339,113C204.3019,113,204.2719,113.001,204.2439,113.002C204.1929,113.001,204.1419,113,204.0879,113"
+                  Fill="{StaticResource IconColor}" 
+                  Height="12"
+                  Canvas.Left="26.404"
+                  Stretch="Fill" 
+                  Canvas.Top="0.547" 
+                  Width="7.66"/>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" 
+                     Value="True">
+                <Setter TargetName="grid"
+                        Property="Background"
+                        Value="{StaticResource SecondaryHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsFocused" 
+                     Value="True">
+                <Setter Property="Background" 
+                        TargetName="grid" 
+                        Value="{StaticResource SecondaryHoverBackground}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style x:Key="SyncfusionPivotGridCloseButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource WPFGlyphButtonStyle}">
+        <Setter Property="Content">
+            <Setter.Value>
+                <Grid>
+                    <Path Stretch="Fill"
+                              Fill="{StaticResource IconColor}"
+                              Data="F1 M 156.386,156.917L 158.779,156.917L 166.74,164.876L 164.386,164.876L 156.386,156.917 Z "
+                              Height="10" 
+                              Width="10"/>
+                    <Path Stretch="Fill" 
+                              Fill="{StaticResource IconColor}"
+                              Data="F1 M 166.374,156.917L 164.151,156.917L 156.753,164.876L 158.939,164.876L 166.374,156.917 Z "
+                              Height="10" 
+                              Width="10"/>
+                </Grid>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionPivotCalculatorStyle" 
+           TargetType="{x:Type syncfusion:PivotCalculator}">
+        <Setter Property="Height" Value="162" />
+        <Setter Property="Width" Value="160" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:PivotCalculator}">
+                    <Border x:Name="Bd"
+                            Padding="2"
+                            Effect="{StaticResource Default.ShadowDepth3}"
+                            Background="{StaticResource PopupBackground}"
+                            BorderBrush="{StaticResource BorderAlt}"
+                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}">
+                        <Border.Margin>
+                            8,0,8,8
+                        </Border.Margin>
+                        <ContentPresenter Content="{TemplateBinding Content}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionPivotGridDeleteButtonStyle" 
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource WPFGlyphButtonStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="border">
+                        <Path x:Name="deletePath"
+                              Stretch="Fill" 
+                              Fill="{StaticResource IconColor}" 
+                              Height="10" 
+                              Width="10"
+                              Data="M10.586002,0 L12.000003,1.4140021 7.413983,5.9987224 12,10.583006 10.586,11.997005 5.9997823,7.4125217 1.4140045,11.997 3.0398377E-06,10.582997 4.5855133,5.9987873 0,1.4150074 1.414,0.0010076167 5.9997136,4.5849875 z"
+                              VerticalAlignment="Center" 
+                              HorizontalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

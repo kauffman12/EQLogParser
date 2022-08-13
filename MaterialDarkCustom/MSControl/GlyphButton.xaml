@@ -1,0 +1,334 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <SolidColorBrush x:Key="WindowButton.MouseOver.Background" Color="Red"/>
+    <SolidColorBrush x:Key="WindowButton.MouseOver.Foreground" Color="White"/>
+    
+    <ControlTemplate x:Key="WPFGlyphButtonTemplate" TargetType="{x:Type Button}">
+        <Border x:Name="border"                             
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                            SnapsToDevicePixels="true">
+            <ContentPresenter x:Name="contentPresenter" 
+                                          Focusable="False"
+                                          Margin="{TemplateBinding Padding}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                          RecognizesAccessKey="True">
+                <ContentPresenter.Resources>
+                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+            </Trigger>
+            <Trigger Property="IsDefaulted" Value="true">
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource SecondarySelectionBackground}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondarySelectionBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="false">
+                <Setter Property="Background" TargetName="border" Value="Transparent"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <ControlTemplate x:Key="WPFGlyphWindowButtonTemplate" TargetType="{x:Type Button}">
+        <Border x:Name="border"                             
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="true">
+            <ContentPresenter x:Name="contentPresenter" 
+                                          Focusable="False"
+                                          Margin="{TemplateBinding Padding}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                          RecognizesAccessKey="True">
+                <ContentPresenter.Resources>
+                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+            </Trigger>
+            <Trigger Property="IsDefaulted" Value="true">
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource SecondarySelectionBackground}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondarySelectionBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="false">
+                <Setter Property="Background" TargetName="border" Value="Transparent"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+    
+    <ControlTemplate x:Key="WPFGlyphWindowCloseButtonTemplate" TargetType="{x:Type Button}">
+        <Border x:Name="border"                             
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="true">
+            <ContentPresenter x:Name="contentPresenter" 
+                                          Focusable="False"
+                                          Margin="{TemplateBinding Padding}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                          RecognizesAccessKey="True">
+                <ContentPresenter.Resources>
+                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+            </Trigger>
+            <Trigger Property="IsDefaulted" Value="true">
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource WindowButton.MouseOver.Background}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource WindowButton.MouseOver.Background}"/>
+                <Setter Property="Foreground" Value="{StaticResource WindowButton.MouseOver.Foreground}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" TargetName="border" Value="{StaticResource WindowButton.MouseOver.Background}"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource WindowButton.MouseOver.Background}"/>
+                <Setter Property="Foreground" Value="{StaticResource WindowButton.MouseOver.Foreground}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="false">
+                <Setter Property="Background" TargetName="border" Value="Transparent"/>
+                <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <ControlTemplate x:Key="WPFGlyphFlatButtonTemplate" TargetType="{x:Type Button}">
+        <Border x:Name="border"                             
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="true">
+            <ContentPresenter x:Name="contentPresenter" 
+                                          Focusable="False"
+                                          Margin="{TemplateBinding Padding}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                          RecognizesAccessKey="True">
+                <ContentPresenter.Resources>
+                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+            </Trigger>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="false">
+                <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style x:Key="WPFGlyphButtonStyle"
+           TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle"
+                Value="{x:Null}"/>
+        <Setter Property="Background" 
+                Value="Transparent"/>
+        <Setter Property="BorderThickness" 
+                Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
+        <Setter Property="BorderBrush"
+                Value="Transparent"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource IconColor}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+        <Setter Property="HorizontalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="VerticalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource WPFGlyphButtonTemplate}"/>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="WPFGlyphFlatButtonStyle"
+           TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" 
+                Value="{x:Null}"/>
+        <Setter Property="Background" 
+                Value="Transparent"/>
+        <Setter Property="BorderThickness" 
+                Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
+        <Setter Property="BorderBrush"
+                Value="Transparent"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource IconColor}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+        <Setter Property="HorizontalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="VerticalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource WPFGlyphFlatButtonTemplate}"/>
+    </Style>
+
+    <Style x:Key="WPFRoundedGlyphButtonStyle"
+           TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" 
+                Value="{x:Null}"/>
+        <Setter Property="Background" 
+                Value="Transparent"/>
+        <Setter Property="BorderThickness" 
+                 Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
+        <Setter Property="BorderBrush"
+                Value="Transparent"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource IconColor}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+        <Setter Property="HorizontalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="VerticalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid>
+                        <Ellipse
+                                x:Name="ellipse"
+                                Fill="{TemplateBinding Background}"
+                                Stroke="{TemplateBinding BorderBrush}"
+                                StrokeThickness="{TemplateBinding BorderThickness}"/>
+                        <ContentPresenter x:Name="contentPresenter" 
+                                              Focusable="False"
+                                              Margin="{TemplateBinding Padding}" 
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                              RecognizesAccessKey="True">
+                            <ContentPresenter.Resources>
+                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="IsDefaulted" Value="true">
+                            <Setter Property="Stroke" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter Property="Fill" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Stroke" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Fill" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Stroke" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Fill" TargetName="ellipse" Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter Property="Stroke" TargetName="ellipse" Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Fill" TargetName="ellipse" Value="Transparent"/>
+                            <Setter Property="Stroke" TargetName="ellipse" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource CircleKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    
+</ResourceDictionary>

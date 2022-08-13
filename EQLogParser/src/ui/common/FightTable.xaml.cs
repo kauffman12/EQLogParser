@@ -1,17 +1,16 @@
-﻿using ActiproSoftware.Windows.Controls.Docking;
+﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.ScrollAxis;
+using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -24,22 +23,15 @@ namespace EQLogParser
     // events
     public event EventHandler<IList> EventsSelectionChange;
 
-    // brushes
-    private static readonly SolidColorBrush BREAK_TIME_BRUSH = new SolidColorBrush(Color.FromRgb(150, 65, 13));
-    private static readonly SolidColorBrush NORMAL_BRUSH = new SolidColorBrush(Color.FromRgb(35, 35, 37));
-    private static readonly SolidColorBrush SEARCH_BRUSH = new SolidColorBrush(Color.FromRgb(58, 84, 63));
-
     // time before creating new group
     public const int GroupTimeout = 120;
 
     // NPC Search
     private static int CurrentFightSearchIndex = 0;
     private static int CurrentFightSearchDirection = 1;
-    private static DataGridRow CurrentSearchRow = null;
+    private static Fight CurrentSearchEntry = null;
     private static bool NeedSelectionChange = false;
 
-    private readonly ListCollectionView View;
-    private readonly ListCollectionView NonTankingView;
     private readonly ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
     private readonly ObservableCollection<Fight> NonTankingFights = new ObservableCollection<Fight>();
     private bool CurrentShowBreaks;
@@ -61,25 +53,17 @@ namespace EQLogParser
 
       // fight search box
       fightSearchBox.FontStyle = FontStyles.Italic;
-      fightSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
+      fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
 
-      fightMenuItemClear.IsEnabled = fightMenuItemSelectAll.IsEnabled = fightMenuItemUnselectAll.IsEnabled =
-      fightMenuItemSelectFight.IsEnabled = fightMenuItemUnselectFight.IsEnabled = fightMenuItemSetPet.IsEnabled = fightMenuItemSetPlayer.IsEnabled = false;
+      menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled =
+        menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = false;
 
-      View = (ListCollectionView)CollectionViewSource.GetDefaultView(Fights);
-      NonTankingView = (ListCollectionView)CollectionViewSource.GetDefaultView(NonTankingFights);
-      fightDataGrid.Sorting += CustomSorting;
-
-      var filter = new Predicate<object>(item => !(CurrentShowBreaks == false && ((Fight)item).IsInactivity));
-      View.Filter = filter;
-      NonTankingView.Filter = filter;
-
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 800) };
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 700) };
       SelectionTimer.Tick += (sender, e) =>
       {
         if (!rightClickMenu.IsOpen)
         {
-          EventsSelectionChange(this, fightDataGrid.SelectedItems);
+          EventsSelectionChange(this, dataGrid.SelectedItems);
         }
         else
         {
@@ -92,7 +76,11 @@ namespace EQLogParser
       SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SearchTextTimer.Tick += (sender, e) =>
       {
-        HandleSearchTextChanged();
+        if (fightSearchBox.Text.Length > 0)
+        {
+          SearchForNPC();
+        }
+
         SearchTextTimer.Stop();
       };
 
@@ -102,23 +90,46 @@ namespace EQLogParser
 
       // read show hp setting
       fightShowHitPoints.IsChecked = ConfigUtil.IfSet("NpcShowHitPoints");
-      fightDataGrid.Columns[1].Visibility = fightShowHitPoints.IsChecked.Value ? Visibility.Visible : Visibility.Hidden;
+      dataGrid.Columns[1].IsHidden = !fightShowHitPoints.IsChecked.Value;
 
       // read show breaks and spells setting
       fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
       fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", null, true);
-      fightDataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
+      dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? Fights : NonTankingFights;
+
+      // default these columns to descending
+      string[] desc = new string[] { "SortId" };
+      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
-      DataManager.Instance.EventsRemovedFight += Instance_EventsRemovedFight;
-      DataManager.Instance.EventsNewFight += Instance_EventsNewFight;
-      DataManager.Instance.EventsUpdateFight += Instance_EventsUpdateFight;
-      DataManager.Instance.EventsNewNonTankingFight += Instance_EventsNewNonTankingFight;
+      DataManager.Instance.EventsRemovedFight += EventsRemovedFight;
+      DataManager.Instance.EventsNewFight += EventsNewFight;
+      DataManager.Instance.EventsUpdateFight += EventsUpdateFight;
+      DataManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
-    internal IEnumerable<Fight> GetSelectedFights() => fightDataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
-    internal bool HasSelected() => fightDataGrid.SelectedItems.Cast<Fight>().FirstOrDefault(item => !item.IsInactivity) != null;
+    internal IEnumerable<Fight> GetSelectedFights() => dataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
     internal IEnumerable<Fight> GetFights() => Fights.Where(item => !item.IsInactivity);
+
+    private void EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
+    private void EventsRemovedFight(object sender, string name) => RemoveFight(name);
+    private void EventsNewFight(object sender, Fight fight) => AddFight(fight);
+    private void EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      // just toggle row style to get it to refresh
+      var style = dataGrid.RowStyle;
+      dataGrid.RowStyle = null;
+      dataGrid.RowStyle = style;
+    }
+
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
+    {
+      dataGrid.View.Filter = new Predicate<object>(item => !(CurrentShowBreaks == false && ((Fight)item).IsInactivity));
+    }
 
     private static void RemoveFight(ObservableCollection<Fight> fights, string name)
     {
@@ -135,19 +146,8 @@ namespace EQLogParser
     {
       if (NeedSelectionChange)
       {
-        EventsSelectionChange(this, fightDataGrid.SelectedItems);
+        EventsSelectionChange(this, dataGrid.SelectedItems);
         NeedSelectionChange = false;
-      }
-    }
-
-    private void UpdateCurrentItem(object sender, MouseButtonEventArgs e)
-    {
-      var gridPoint = e.GetPosition(fightDataGrid);
-      var vis = VisualTreeHelper.HitTest(fightDataGrid, gridPoint);
-
-      if (vis != null && vis.VisualHit is FrameworkElement elem && elem.DataContext != null)
-      {
-        fightDataGrid.CurrentItem = elem.DataContext;
       }
     }
 
@@ -210,19 +210,7 @@ namespace EQLogParser
           if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GroupTimeout)
           {
             CurrentGroup++;
-
-            var seconds = fight.BeginTime - lastWithTankingTime;
-            Fight divider = new Fight
-            {
-              LastTime = fight.BeginTime,
-              BeginTime = lastWithTankingTime,
-              IsInactivity = true,
-              BeginTimeString = Fight.BREAKTIME,
-              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
-            };
-
-            divider.SortId = CurrentSortId++;
-            Fights.Add(divider);
+            AddDivider(fight, Fights, lastWithTankingTime);
           }
 
           fight.GroupId = CurrentGroup;
@@ -231,15 +219,7 @@ namespace EQLogParser
           lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
         });
 
-        if (fightDataGrid.ItemsSource == View)
-        {
-          NeedRefresh = false;
-        }
-
-        if ((Parent as ToolWindow).IsOpen && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
-        {
-          fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
-        }
+        NewRowsAdded(Fights);
       }
 
       if (processNonTankingList != null)
@@ -262,20 +242,7 @@ namespace EQLogParser
           if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GroupTimeout)
           {
             CurrentNonTankingGroup++;
-
-            // only set processed for non tanking since its a special case
-            var seconds = fight.BeginTime - lastNonTankingTime;
-            Fight divider = new Fight
-            {
-              LastTime = fight.BeginTime,
-              BeginTime = lastNonTankingTime,
-              IsInactivity = true,
-              BeginTimeString = Fight.BREAKTIME,
-              Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds)
-            };
-
-            divider.SortId = CurrentSortId++;
-            NonTankingFights.Add(divider);
+            AddDivider(fight, NonTankingFights, lastNonTankingTime);
           }
 
           fight.NonTankingGroupId = CurrentNonTankingGroup;
@@ -284,45 +251,44 @@ namespace EQLogParser
           lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
         });
 
-        if (fightDataGrid.ItemsSource == NonTankingView)
-        {
-          NeedRefresh = false;
-        }
-
-        if ((Parent as ToolWindow).IsOpen && fightDataGrid.Items.Count > 0 && !fightDataGrid.IsMouseOver)
-        {
-          fightDataGrid.ScrollIntoView(fightDataGrid.Items[fightDataGrid.Items.Count - 1]);
-        }
+        NewRowsAdded(NonTankingFights);
       }
 
-      if (NeedRefresh && (processList == null && fightDataGrid.ItemsSource == View || processNonTankingList == null && fightDataGrid.ItemsSource == NonTankingView) &&
+      if (NeedRefresh && (processList == null && dataGrid.ItemsSource == Fights || processNonTankingList == null && dataGrid.ItemsSource == NonTankingFights) &&
         (Keyboard.GetKeyStates(Key.LeftShift) & KeyStates.Down) == 0 && (Keyboard.GetKeyStates(Key.LeftCtrl) & KeyStates.Down) == 0)
       {
-        (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+        dataGrid.View.RefreshFilter();
         NeedRefresh = false;
       }
     }
 
-    private void CustomSorting(object sender, DataGridSortingEventArgs e)
+    private void AddDivider(Fight fight, ObservableCollection<Fight> list, double lastTime)
     {
-      if (e.Column.Header != null && fightDataGrid.ItemsSource != null)
+      var seconds = fight.BeginTime - lastTime;
+      Fight divider = new Fight
       {
-        var direction = e.Column.SortDirection ?? ListSortDirection.Ascending;
+        LastTime = fight.BeginTime,
+        BeginTime = lastTime,
+        IsInactivity = true,
+        BeginTimeString = Fight.BREAKTIME,
+        Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds),
+        TooltipText = "No Data During This Time"
+      };
 
-        if (fightDataGrid.ItemsSource is ListCollectionView view)
-        {
-          if (e.Column.Header.ToString() == "Initial Hit Time")
-          {
-            e.Handled = true;
-            view.CustomSort = new FightTimeSorter(direction);
-            e.Column.SortDirection = direction == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
-            fightDataGrid.Items.Refresh();
-          }
-          else
-          {
-            view.CustomSort = null;
-          }
-        }
+      divider.SortId = CurrentSortId++;
+      list.Add(divider);
+    }
+
+    private void NewRowsAdded(ObservableCollection<Fight> list)
+    {
+      if (dataGrid.ItemsSource == list)
+      {
+        NeedRefresh = false;
+      }
+
+      if (DockingManager.GetState(Parent as ContentControl) != DockState.Hidden && !dataGrid.IsMouseOver && dataGrid.View.Records.Count > 1)
+      {
+        Dispatcher.InvokeAsync(() => dataGrid.ScrollInView(new RowColumnIndex(dataGrid.View.Records.Count, 0)));
       }
     }
 
@@ -336,19 +302,19 @@ namespace EQLogParser
     }
 
     private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
-    private void SelectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.SelectAll(sender as FrameworkElement);
-    private void UnselectAllClick(object sender, RoutedEventArgs e) => DataGridUtil.UnselectAll(sender as FrameworkElement);
+    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void SetPetClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
+      var callingDataGrid = menu.PlacementTarget as SfDataGrid;
       if (callingDataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
       {
+        var name = npc.Name;
         Task.Delay(120).ContinueWith(_ =>
         {
-          PlayerManager.Instance.AddVerifiedPet(npc.Name);
-          PlayerManager.Instance.AddPetToPlayer(npc.Name, Labels.UNASSIGNED);
+          PlayerManager.Instance.AddVerifiedPet(name);
+          PlayerManager.Instance.AddPetToPlayer(name, Labels.UNASSIGNED);
         }, TaskScheduler.Default);
       }
     }
@@ -356,116 +322,87 @@ namespace EQLogParser
     private void SetPlayerClick(object sender, RoutedEventArgs e)
     {
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
+      var callingDataGrid = menu.PlacementTarget as SfDataGrid;
       if (callingDataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
       {
-        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(npc.Name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
+        var name = npc.Name;
+        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
       }
     }
 
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
+    internal void DataGridSelectionChanged()
     {
-      // set header count
-      e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
-
-      if (e.Row.Item is Fight npc && npc.BeginTimeString == Fight.BREAKTIME)
-      {
-        if (e.Row.Background != BREAK_TIME_BRUSH)
-        {
-          e.Row.Background = BREAK_TIME_BRUSH;
-        }
-      }
-      else if (e.Row.Background != NORMAL_BRUSH)
-      {
-        e.Row.Background = NORMAL_BRUSH;
-      }
-
-      if (fightMenuItemSelectFight.IsEnabled == false)
-      {
-        fightMenuItemSelectFight.IsEnabled = fightMenuItemUnselectFight.IsEnabled = true;
-      }
-    }
-
-    private void SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
+      NeedSelectionChange = false;
       // adds a delay where a drag-select doesn't keep sending events
       SelectionTimer.Stop();
       SelectionTimer.Start();
 
-      DataGrid callingDataGrid = sender as DataGrid;
-      fightMenuItemSelectAll.IsEnabled = (callingDataGrid.SelectedItems.Count < callingDataGrid.Items.Count) && callingDataGrid.Items.Count > 0;
-      fightMenuItemUnselectAll.IsEnabled = callingDataGrid.SelectedItems.Count > 0 && callingDataGrid.Items.Count > 0;
-      fightMenuItemClear.IsEnabled = callingDataGrid.Items.Count > 0;
+      var items = dataGrid.View.Records;
+      menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = items.Count > 0;
 
-      var selected = callingDataGrid.SelectedItem as Fight;
-      fightMenuItemSetPet.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && !selected.IsInactivity;
-      fightMenuItemSetPlayer.IsEnabled = callingDataGrid.SelectedItems.Count == 1 && !selected.IsInactivity &&
-        PlayerManager.Instance.IsPossiblePlayerName((callingDataGrid.SelectedItem as Fight)?.Name);
+      var selected = dataGrid.SelectedItem as Fight;
+      menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && !selected.IsInactivity;
+      menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && !selected.IsInactivity &&
+        PlayerManager.IsPossiblePlayerName((dataGrid.SelectedItem as Fight)?.Name);
     }
 
     private void SelectGroupClick(object sender, RoutedEventArgs e)
     {
       NeedSelectionChange = false;
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      GetFightGroup().ForEach(fight =>
+      SfDataGrid callingDataGrid = menu.PlacementTarget as SfDataGrid;
+      foreach (var fight in GetFightGroup())
       {
-        Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Add(fight), DispatcherPriority.Normal);
-      });
+        if (!callingDataGrid.SelectedItems.Contains(fight))
+        {
+          callingDataGrid.SelectedItems.Add(fight);
+        }
+      }
     }
 
     private void UnselectGroupClick(object sender, RoutedEventArgs e)
     {
       NeedSelectionChange = false;
       ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      DataGrid callingDataGrid = menu.PlacementTarget as DataGrid;
-      GetFightGroup().ForEach(fight =>
+      SfDataGrid callingDataGrid = menu.PlacementTarget as SfDataGrid;
+      foreach (var fight in GetFightGroup())
       {
-        Dispatcher.InvokeAsync(() => callingDataGrid.SelectedItems.Remove(fight), DispatcherPriority.Normal);
-      });
+        callingDataGrid.SelectedItems.Remove(fight);
+      }
     }
 
     private void ShowBreakChange(object sender, RoutedEventArgs e)
     {
-      if (fightDataGrid?.ItemsSource is ICollectionView view)
+      if (dataGrid?.ItemsSource is ObservableCollection<Fight> list)
       {
         CurrentShowBreaks = fightShowBreaks.IsChecked.Value;
         ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
-        view.Refresh();
+        dataGrid.View.RefreshFilter();
       }
     }
 
     private void ShowTankingChange(object sender, RoutedEventArgs e)
     {
-      if (fightDataGrid?.ItemsSource is ICollectionView)
+      if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
       {
-        fightDataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? View : NonTankingView;
+        dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? Fights : NonTankingFights;
         ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
-        (fightDataGrid.ItemsSource as ICollectionView).Refresh();
+        dataGrid.View.RefreshFilter();
       }
     }
 
     private void ShowHitPointsChange(object sender, RoutedEventArgs e)
     {
-      if (fightDataGrid != null)
+      if (dataGrid != null)
       {
-        var show = fightDataGrid.Columns[1].Visibility == Visibility.Hidden;
-        fightDataGrid.Columns[1].Visibility = show ? Visibility.Visible : Visibility.Hidden;
-        ConfigUtil.SetSetting("NpcShowHitPoints", show.ToString(CultureInfo.CurrentCulture));
-      }
-    }
-
-    private void HandleSearchTextChanged()
-    {
-      if (fightSearchBox.Text.Length > 0)
-      {
-        SearchForNPC();
+        dataGrid.Columns[1].IsHidden = !dataGrid.Columns[1].IsHidden;
+        ConfigUtil.SetSetting("NpcShowHitPoints", (!dataGrid.Columns[1].IsHidden).ToString(CultureInfo.CurrentCulture));
       }
     }
 
     private void FightSearchBoxGotFocus(object sender, RoutedEventArgs e)
     {
-      if (fightSearchBox.Text == Properties.Resources.NPC_SEARCH_TEXT)
+      if (fightSearchBox.Text == EQLogParser.Resource.NPC_SEARCH_TEXT)
       {
         fightSearchBox.Text = "";
         fightSearchBox.FontStyle = FontStyles.Normal;
@@ -476,25 +413,24 @@ namespace EQLogParser
     {
       if (fightSearchBox.Text.Length == 0)
       {
-        fightSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
+        fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
         fightSearchBox.FontStyle = FontStyles.Italic;
       }
     }
 
-    // internal for workaround with event being lost
     internal void FightSearchBoxKeyDown(object sender, KeyEventArgs e)
     {
       if (fightSearchBox.IsFocused)
       {
         if (e.Key == Key.Escape)
         {
-          fightSearchBox.Text = Properties.Resources.NPC_SEARCH_TEXT;
+          fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
           fightSearchBox.FontStyle = FontStyles.Italic;
-          if (CurrentSearchRow != null)
+          if (CurrentSearchEntry != null)
           {
-            CurrentSearchRow.Background = null;
+            CurrentSearchEntry.IsSearchResult = false;
           }
-          fightDataGrid.Focus();
+          dataGrid.Focus();
         }
         else if (e.Key == Key.Enter)
         {
@@ -503,31 +439,32 @@ namespace EQLogParser
       }
     }
 
-    private List<Fight> GetFightGroup()
+    private IEnumerable<Fight> GetFightGroup()
     {
-      List<Fight> fightGroup = new List<Fight>();
-      if (fightDataGrid.CurrentItem is Fight npc && !npc.IsInactivity)
+      if (dataGrid.CurrentItem is Fight npc && !npc.IsInactivity)
       {
-        if (fightDataGrid.ItemsSource == View)
+        if (dataGrid.ItemsSource == Fights)
         {
-          Fights.Where(fight => fight.GroupId == npc.GroupId).ToList().ForEach(fight => fightGroup.Add(fight));
+          return Fights.Where(fight => fight.GroupId == npc.GroupId);
         }
-        else if (fightDataGrid.ItemsSource == NonTankingView)
+        else if (dataGrid.ItemsSource == NonTankingFights)
         {
-          NonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId).ToList().ForEach(fight => fightGroup.Add(fight));
+          return NonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId);
         }
       }
-      return fightGroup;
+
+      return new List<Fight>();
     }
 
     private void SearchForNPC(bool backwards = false)
     {
-      if (CurrentSearchRow != null)
+      if (CurrentSearchEntry != null)
       {
-        CurrentSearchRow.Background = null;
+        CurrentSearchEntry.IsSearchResult = false;
       }
 
-      if (fightSearchBox.Text.Length > 0 && fightDataGrid.Items.Count > 0)
+      var records = dataGrid.View.Records;
+      if (fightSearchBox.Text.Length > 0 && records.Count > 0)
       {
         int checksNeeded;
         int direction;
@@ -541,11 +478,11 @@ namespace EQLogParser
 
           if (CurrentFightSearchIndex < 0)
           {
-            CurrentFightSearchIndex = fightDataGrid.Items.Count - 1;
+            CurrentFightSearchIndex = records.Count - 1;
           }
 
           // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
-          checksNeeded = CurrentFightSearchIndex == (fightDataGrid.Items.Count - 1) ? 1 : 2;
+          checksNeeded = CurrentFightSearchIndex == (records.Count - 1) ? 1 : 2;
         }
         else
         {
@@ -555,7 +492,7 @@ namespace EQLogParser
             CurrentFightSearchIndex += 2;
           }
 
-          if (CurrentFightSearchIndex >= fightDataGrid.Items.Count)
+          if (CurrentFightSearchIndex >= records.Count)
           {
             CurrentFightSearchIndex = 0;
           }
@@ -568,22 +505,21 @@ namespace EQLogParser
 
         while (checksNeeded-- > 0)
         {
-          for (int i = CurrentFightSearchIndex; i < fightDataGrid.Items.Count && i >= 0; i += (1 * direction))
+          for (int i = CurrentFightSearchIndex; i < records.Count && i >= 0; i += 1 * direction)
           {
-            if (fightDataGrid.Items[i] is Fight npc && npc.Name != null && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
+            if (records.GetItemAt(i) is Fight npc && npc.Name != null && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
             {
-              fightDataGrid.ScrollIntoView(npc);
-              var row = fightDataGrid.ItemContainerGenerator.ContainerFromItem(npc) as DataGridRow;
-              row.Background = SEARCH_BRUSH;
-              CurrentSearchRow = row;
+              npc.IsSearchResult = true;
+              CurrentSearchEntry = npc;
               CurrentFightSearchIndex = i + (1 * direction);
+              Dispatcher.InvokeAsync(() => dataGrid.ScrollInView(new RowColumnIndex(dataGrid.ResolveToRowIndex(i), 0)));
               return;
             }
           }
 
           if (checksNeeded == 1)
           {
-            CurrentFightSearchIndex = (direction == 1) ? CurrentFightSearchIndex = 0 : CurrentFightSearchIndex = fightDataGrid.Items.Count - 1;
+            CurrentFightSearchIndex = (direction == 1) ? CurrentFightSearchIndex = 0 : CurrentFightSearchIndex = records.Count - 1;
           }
         }
       }
@@ -607,36 +543,7 @@ namespace EQLogParser
       FightsToProcess.Clear();
       CurrentGroup = 1;
       CurrentNonTankingGroup = 1;
-      CurrentSearchRow = null;
-    }
-
-    private void Instance_EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
-    private void Instance_EventsRemovedFight(object sender, string name) => RemoveFight(name);
-    private void Instance_EventsNewFight(object sender, Fight fight) => AddFight(fight);
-    private void Instance_EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
-  }
-
-  public class FightTimeSorter : IComparer
-  {
-    private int direction = 1;
-    public FightTimeSorter(ListSortDirection dir)
-    {
-      if (dir == ListSortDirection.Descending)
-      {
-        direction = -1;
-      }
-    }
-    public int Compare(object x, object y)
-    {
-      int result = 0;
-
-      if (x is Fight a && y is Fight b)
-      {
-        result = (a.SortId > b.SortId) ? -1 : 1;
-        result *= direction;
-      }
-
-      return result;
+      CurrentSearchEntry = null;
     }
   }
 }

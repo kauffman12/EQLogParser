@@ -1,0 +1,363 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv11="clr-namespace:Syncfusion.Windows.Tools;assembly=Syncfusion.Tools.WPF"
+    xmlns:local="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF"
+    
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <conv11:IsSymbolFontConverter x:Key="IsSymbolFontConverter" />
+    <conv11:MergeCollectionsConverter x:Key="MergeCollectionsConverter" />
+    <conv11:FontToRecordConverter x:Key="FontToRecordConverter" />
+
+    <!--  DataTemplate for FontFamilyRecord  -->
+    <DataTemplate x:Key="FontFamilyRecordTemplate" DataType="{x:Type local:FontFamilyRecord}">
+        <Border Name="border" Height="24">
+            <DockPanel ClipToBounds="True">
+                <TextBlock
+                    Name="tb"
+                    Margin="2"
+                    VerticalAlignment="Center"
+                    FontFamily="{Binding Path=Family}"
+                    FontSize="{Binding Path=FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}"
+                    Text="{Binding Path=Name}" />
+                <TextBlock
+                    Name="tbName"
+                    Margin="2"
+                   
+                    FontFamily="{StaticResource {x:Static SystemFonts.MessageFontFamilyKey}}"
+                     VerticalAlignment="Center"
+                    FontSize="{Binding Path=FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}" />
+                <TextBlock
+                    Name="tbPurpose"
+                    Margin="2"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    DockPanel.Dock="Right"
+                    FontFamily="{StaticResource {x:Static SystemFonts.MessageFontFamilyKey}}"
+                    FontSize="{Binding Path=FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}"
+                    Opacity="0"
+                    Text="{Binding Path=Purpose}" />
+            </DockPanel>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding ElementName=tb, Path=FontFamily, Converter={StaticResource IsSymbolFontConverter}}" Value="true">
+                <Setter TargetName="tbName" Property="Text" Value="{Binding Path=Name}" />
+                <Setter TargetName="tb" Property="HorizontalAlignment" Value="Right" />
+                <Setter TargetName="tb" Property="DockPanel.Dock" Value="Right" />
+                <Setter TargetName="tb" Property="Text" Value="abcde123" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Path=Type}" Value="Theme" />
+                    <Condition Binding="{Binding ElementName=tb, Path=FontFamily, Converter={StaticResource IsSymbolFontConverter}}" Value="true" />
+                </MultiDataTrigger.Conditions>
+                <Setter TargetName="tb" Property="Opacity" Value="0" />
+                <Setter TargetName="tb" Property="Text" Value="" />
+                <Setter TargetName="tbPurpose" Property="Opacity" Value="1" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Path=Type}" Value="Theme" />
+                    <Condition Binding="{Binding ElementName=tb, Path=FontFamily, Converter={StaticResource IsSymbolFontConverter}}" Value="false" />
+                </MultiDataTrigger.Conditions>
+                <Setter TargetName="tbPurpose" Property="Opacity" Value="1" />
+            </MultiDataTrigger>
+            <DataTrigger Binding="{Binding Path=DisplayFontNamesInSystemFont, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}" Value="True">
+                <Setter TargetName="tb" Property="FontFamily" Value="{StaticResource {x:Static SystemFonts.MessageFontFamilyKey}}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="TouchFontFamilyRecordTemplate" DataType="{x:Type local:FontFamilyRecord}">
+        <Border Name="border" MinHeight="{StaticResource TouchMode.MinHeight}">
+            <DockPanel ClipToBounds="True">
+                <TextBlock
+                    Name="tb"
+                    Margin="2"
+                    VerticalAlignment="Center"
+                    FontFamily="{Binding Path=Family}"
+                    FontSize="{Binding Path=FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}"
+                    Text="{Binding Path=Name}" />
+                <TextBlock
+                    Name="tbName"
+                    Margin="2"
+                    VerticalAlignment="Center"
+                    FontFamily="{StaticResource {x:Static SystemFonts.MessageFontFamilyKey}}"
+                    FontSize="{Binding Path=FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}" />
+                <TextBlock
+                    Name="tbPurpose"
+                    Margin="2"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    DockPanel.Dock="Right"
+                    FontFamily="{StaticResource {x:Static SystemFonts.MessageFontFamilyKey}}"
+                    FontSize="{Binding Path=FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}"
+                    Opacity="0"
+                    Text="{Binding Path=Purpose}" />
+            </DockPanel>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding ElementName=tb, Path=FontFamily, Converter={StaticResource IsSymbolFontConverter}}" Value="true">
+                <Setter TargetName="tbName" Property="Text" Value="{Binding Path=Name}" />
+                <Setter TargetName="tb" Property="HorizontalAlignment" Value="Right" />
+                <Setter TargetName="tb" Property="DockPanel.Dock" Value="Right" />
+                <Setter TargetName="tb" Property="Text" Value="abcde123" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Path=Type}" Value="Theme" />
+                    <Condition Binding="{Binding ElementName=tb, Path=FontFamily, Converter={StaticResource IsSymbolFontConverter}}" Value="true" />
+                </MultiDataTrigger.Conditions>
+                <Setter TargetName="tb" Property="Opacity" Value="0" />
+                <Setter TargetName="tb" Property="Text" Value="" />
+                <Setter TargetName="tbPurpose" Property="Opacity" Value="1" />
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Path=Type}" Value="Theme" />
+                    <Condition Binding="{Binding ElementName=tb, Path=FontFamily, Converter={StaticResource IsSymbolFontConverter}}" Value="false" />
+                </MultiDataTrigger.Conditions>
+                <Setter TargetName="tbPurpose" Property="Opacity" Value="1" />
+            </MultiDataTrigger>
+            <DataTrigger Binding="{Binding Path=DisplayFontNamesInSystemFont, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}" Value="True">
+                <Setter TargetName="tb" Property="FontFamily" Value="{StaticResource {x:Static SystemFonts.MessageFontFamilyKey}}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!--  FontListBox template  -->
+    <Style x:Key="SyncfusionFontListBoxStyle" TargetType="{x:Type local:FontListBox}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:FontListBox}">
+                    <Border
+                        Name="FontListBoxBorder"
+                        Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}"
+                        BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource TemplatedParent}}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}">
+                            <local:FontListBoxInternal>
+                                <local:FontListBoxInternal.ItemsSource>
+                                    <MultiBinding Converter="{StaticResource MergeCollectionsConverter}">
+                                        <Binding
+                                            Path="ThemeFonts"
+                                            RelativeSource="{RelativeSource AncestorType={x:Type local:FontListBox}}"
+                                            UpdateSourceTrigger="PropertyChanged" />
+                                        <Binding
+                                            Path="RecentlyUsedFonts"
+                                            RelativeSource="{RelativeSource AncestorType={x:Type local:FontListBox}}"
+                                            UpdateSourceTrigger="PropertyChanged" />
+                                        <Binding
+                                            Path="AllFonts"
+                                            RelativeSource="{RelativeSource AncestorType={x:Type local:FontListBox}}"
+                                            UpdateSourceTrigger="PropertyChanged" />
+                                    </MultiBinding>
+                                </local:FontListBoxInternal.ItemsSource>
+
+                                <local:FontListBoxInternal.SelectedItem>
+                                    <Binding
+                                        Converter="{StaticResource FontToRecordConverter}"
+                                        Mode="TwoWay"
+                                        Path="SelectedFontFamily"
+                                        RelativeSource="{RelativeSource AncestorType={x:Type local:FontListBox}}" />
+                                </local:FontListBoxInternal.SelectedItem>
+
+                                <local:FontListBoxInternal.FocusedItem>
+                                    <Binding
+                                        Converter="{StaticResource FontToRecordConverter}"
+                                        Mode="TwoWay"
+                                        Path="FocusedFontFamily"
+                                        RelativeSource="{RelativeSource AncestorType={x:Type local:FontListBox}}" />
+                                </local:FontListBoxInternal.FocusedItem>
+
+                                <local:FontListBoxInternal.HasFocus>
+                                    <Binding
+                                        Mode="TwoWay"
+                                        Path="HasFocus"
+                                        RelativeSource="{RelativeSource AncestorType={x:Type local:FontListBox}}" />
+                                </local:FontListBoxInternal.HasFocus>
+
+                                <local:FontListBoxInternal.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <local:InternalPanel x:Name="iternalPanel" GroupHeaderStyle="{Binding Path=GroupHeaderStyle, Mode=TwoWay, RelativeSource={RelativeSource AncestorType={x:Type local:FontListBox}}}" />
+                                    </ItemsPanelTemplate>
+                                </local:FontListBoxInternal.ItemsPanel>
+
+                                <local:FontListBoxInternal.ItemTemplate>
+                                    <Binding
+                                        Mode="TwoWay"
+                                        Path="ItemTemplate"
+                                        RelativeSource="{RelativeSource AncestorType={x:Type local:FontListBox}}" />
+                                </local:FontListBoxInternal.ItemTemplate>
+
+                                <local:FontListBoxInternal.ItemContainerStyle>
+                                    <Binding
+                                        Mode="TwoWay"
+                                        Path="ItemContainerStyle"
+                                        RelativeSource="{RelativeSource AncestorType={x:Type local:FontListBox}}" />
+                                </local:FontListBoxInternal.ItemContainerStyle>
+                            </local:FontListBoxInternal>
+                        </ScrollViewer>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionFontListBoxStyle}" TargetType="{x:Type local:FontListBox}"/>
+
+    <!--  FontListBoxInternalItem template  -->
+    <Style x:Key="SyncfusionFontListBoxInternalItemStyle"  TargetType="{x:Type local:FontListBoxInternalItem}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="ContentTemplate" Value="{StaticResource FontFamilyRecordTemplate}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:FontListBoxInternalItem}">
+                    <Grid x:Name="FontListBoxInternalItemGrid">
+                        <Border
+                            Name="FontListBoxInternalItemBorder"
+                            Margin="{TemplateBinding Margin}"
+                            Background="{TemplateBinding Background}"                           
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            TextBlock.Foreground="{TemplateBinding Foreground}"
+                            >
+                            <ContentPresenter
+                                MinWidth="0"
+                                ContentSource="Content"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}" />
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="CornerRadius" Value="0" />
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="Margin" Value="0,-1,0,0" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="False"/>
+                                <Condition Property="HasFocus" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="TextBlock.Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="BorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+                        </MultiTrigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="BorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="true">
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="BorderBrush" Value="{StaticResource ContentBackgroundSelection}" />
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="BorderThickness" Value="1" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="true" />
+                                <Condition Property="Selector.IsSelectionActive" Value="false" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="Background" Value="{StaticResource ContentBackgroundAlt}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter TargetName="FontListBoxInternalItemBorder" Property="BorderBrush" Value="{StaticResource ContentBackgroundAlt}" />
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter  TargetName="FontListBoxInternalItemBorder" Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
+                            <Setter  TargetName="FontListBoxInternalItemBorder" Property="BorderBrush" Value="{StaticResource ContentBackgroundDisabled}" />
+                            <Setter  TargetName="FontListBoxInternalItemBorder" Property="TextBlock.Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                <Setter Property="ContentTemplate" Value="{StaticResource TouchFontFamilyRecordTemplate}" />
+            </Trigger>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionFontListBoxInternalItemStyle}" TargetType="{x:Type local:FontListBoxInternalItem}"/>
+
+    <Style x:Key="SyncfusionGroupHeaderStyle" TargetType="{x:Type local:GroupHeader}">
+        <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt2}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
+        <Setter Property="Height" Value="20" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.SubTitleTextStyle}" />
+        <Setter Property="FontFamily" Value="{StaticResource {x:Static SystemFonts.MessageFontFamilyKey}}" />
+        <Setter Property="FontStyle" Value="Normal" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightMedium}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:GroupHeader}">
+                    <Border
+                        x:Name="HeaderBorder"
+                        Width="{TemplateBinding Width}"
+                        Height="{TemplateBinding Height}"
+                        Background="{TemplateBinding Background}"
+                         BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}">
+                        <TextBlock
+                            x:Name="HeaderTextBlock"
+                            HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                            FlowDirection="{TemplateBinding FlowDirection}"
+                            FontFamily="{TemplateBinding FontFamily}"
+                            FontSize="{TemplateBinding FontSize}"
+                            FontStyle="{TemplateBinding FontStyle}"
+                            FontWeight="{TemplateBinding FontWeight}"
+                            Foreground="{TemplateBinding Foreground}"
+                            Text="{TemplateBinding Text}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="false">
+                <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt2}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionGroupHeaderStyle}" TargetType="{x:Type local:GroupHeader}"/>
+</ResourceDictionary>

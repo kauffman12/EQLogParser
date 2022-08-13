@@ -1,0 +1,2095 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+                    xmlns:tools="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Shared.WPF"
+                    xmlns:syncfusion="clr-namespace:Syncfusion.Windows.Controls.PivotGrid;assembly=Syncfusion.PivotAnalysis.Wpf">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialLightCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialLightCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphToggleButton.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphDropdownExpander.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Button.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/CheckBox.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Menu.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ListBox.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/FlatButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/GlyphButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Window.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Label.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/TextBox.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/TextBlock.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Separator.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/ScrollViewer.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/ChromelessWindow/ChromelessWindow.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/PivotGridControl/PivotGridResources.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <syncfusion:ToggleButtonCheckConverter x:Key="CheckConverter"/>
+    <syncfusion:ComboBoxSelectionConverter x:Key="ComboBoxSelectionConverter"/>
+    <syncfusion:TextBoxVisibilityConverter x:Key="TextboxVisibilityconverter"/>    
+    <syncfusion:SortDirectionConverter x:Key="SortDirectionConverter"/>
+    <syncfusion:ValueFilterConverter x:Key="ValueFilterConverter"/>
+    <syncfusion:FilterCheckBoxVisibilityConverter x:Key="FilterCheckBoxVisibilityConverter"/>
+    <syncfusion:InverseBooleanConverter x:Key="BooleanConverter"/>
+    <syncfusion:FilterConverter x:Key="ExcelFilterConverter" />
+    <syncfusion:SortingPathConverter x:Key="SortPathConverter" />
+    <syncfusion:ImageConverter x:Key="ImgConverter"/>
+    <syncfusion:FilterPathVisibilityConverter x:Key="filterPathVisibilityConverter" />
+
+    <DataTemplate x:Key="pivotTooltipTemplate">
+        <Border Name="Border"
+                Background="{StaticResource ContentBackgroundAlt3}"
+                BorderBrush="{StaticResource ContentBackgroundAlt3}"
+                BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                CornerRadius="{StaticResource MaterialLightCustom.CornerRadius2}" >
+            <TextBlock Text="{Binding Path=Tag}" 
+                       Foreground="{StaticResource ContentForeground}"
+                       Padding="2" />
+        </Border>
+    </DataTemplate>
+
+    <ItemsPanelTemplate x:Key="SyncfusionPivotGridFilterItemsPanelTemplate">
+        <StackPanel Orientation="Horizontal" 
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                    ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                    ScrollViewer.CanContentScroll="False" />
+    </ItemsPanelTemplate>
+
+    <ItemsPanelTemplate x:Key="SyncfusionPivotGridComputationItemsPanelTemplate">
+        <syncfusion:PivotComputationInfoPanel 
+                    Orientation="Horizontal" 
+                    ScrollViewer.HorizontalScrollBarVisibility="Hidden" 
+                    ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                    ScrollViewer.CanContentScroll="False"/>
+    </ItemsPanelTemplate>
+
+    <ItemsPanelTemplate x:Key="SyncfusionPivotGridColumnItemsPanelTemplate">
+        <StackPanel Orientation="Horizontal" 
+                    ScrollViewer.VerticalScrollBarVisibility="Disabled" 
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                    ScrollViewer.CanContentScroll="False"/>
+    </ItemsPanelTemplate>
+
+    <ItemsPanelTemplate x:Key="SyncfusionPivotGridRowItemsPanelTemplate">
+        <StackPanel Orientation="Horizontal" 
+                    VerticalAlignment="Bottom" 
+                    ScrollViewer.VerticalScrollBarVisibility="Disabled" 
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                    ScrollViewer.CanContentScroll="False"/>
+    </ItemsPanelTemplate>
+
+    <syncfusion:PivotGridCellStyle x:Key="SyncfusionPivotGridColumnHeaderStyle"
+                                   Background="{StaticResource ContentBackgroundAlt}"
+                                   Foreground="{StaticResource ContentForeground}"
+                                   FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}" 
+                                   FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                   BorderThickness="1"
+                                   />
+
+    <syncfusion:PivotGridCellStyle x:Key="SyncfusionPivotGridRowHeaderStyle" 
+                                   Background="{StaticResource ContentBackgroundAlt}"
+                                   Foreground="{StaticResource ContentForeground}"
+                                   FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                   FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                   BorderThickness="1"
+                                   />
+
+    <syncfusion:PivotGridCellStyle x:Key="SyncfusionPivotGridSummaryHeaderStyle" 
+                                   Background="{StaticResource ContentBackgroundAlt}"
+                                   Foreground="{StaticResource ContentForeground}"
+                                   FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                   FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                   FontSize="{StaticResource MaterialLightCustom.SubTitleTextStyle}"
+                                   BorderThickness="1"
+                                   />
+
+    <syncfusion:PivotGridCellStyle x:Key="SyncfusionPivotGridSummaryRowHeaderStyle" 
+                                   Background="{StaticResource ContentBackgroundAlt}"
+                                   Foreground="{StaticResource ContentForeground}"
+                                   FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                   FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                   FontSize="{StaticResource MaterialLightCustom.SubTitleTextStyle}"
+                                   BorderThickness="1"
+                                   />
+
+    <syncfusion:PivotGridCellStyle x:Key="SyncfusionPivotGridSummaryColumnHeaderStyle" 
+                                   Background="{StaticResource ContentBackgroundAlt}"
+                                   FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                   FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                   Foreground="{StaticResource ContentForeground}"
+                                   FontSize="{StaticResource MaterialLightCustom.SubTitleTextStyle}"
+                                   BorderThickness="1"
+                                   />
+
+    <syncfusion:PivotGridCellStyle x:Key="SyncfusionPivotGridSummaryCellStyle"
+                                   Background="{StaticResource ContentBackgroundAlt}"
+                                   Foreground="{StaticResource ContentForeground}"
+                                   FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                   FontWeight="{StaticResource MaterialLightCustom.FontWeightNormal}"
+                                   BorderThickness="1"
+                                  />
+
+    <syncfusion:PivotGridCellStyle x:Key="SyncfusionPivotGridValueCellStyle"
+                                   Background="{StaticResource ContentBackground}"
+                                   Foreground="{StaticResource ContentForeground}"
+                                   FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                   BorderThickness="1"
+                                   />
+
+    <Style x:Key="ExpanderStyle"
+           TargetType="{x:Type ToggleButton}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="OverridesDefaultStyle" Value="true"/>
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.ThemeBorderThicknessVariant1}"/>
+        <Setter Property="IsTabStop" Value="false"/>
+        <Setter Property="Focusable" Value="false"/>
+        <Setter Property="ClickMode" Value="Press"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource ToggleButtonFocusVisual}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <Border Name="border"  
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}">
+                        <ContentPresenter x:Name="contentPresenter" Margin="{TemplateBinding Padding}" 
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True" 
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ContentPresenter.Resources>
+                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                            </ContentPresenter.Resources>
+                            <ContentPresenter.Content>
+                                <Path Name="Arrow"   
+                                  Margin="1"
+                                  Data="M 0 0 L 3.5 4 L 7 0 Z" 
+                                  Fill="{TemplateBinding Foreground}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  RenderTransformOrigin="0.5,0.5">
+                                    <Path.RenderTransform>
+                                        <RotateTransform Angle="270" />
+                                    </Path.RenderTransform>
+                                </Path>
+                            </ContentPresenter.Content>
+                        </ContentPresenter>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="shared:SkinStorage.EnableTouch" Value="true">
+                            <Setter Property="MinHeight" Value="{StaticResource Default.TouchMinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="RenderTransformOrigin" Value="2.5,2.5"/>
+                            <Setter Property="RenderTransform" TargetName="Arrow">
+                                <Setter.Value>
+                                    <RotateTransform Angle="0"  />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionPivotExpanderCellStyle"
+           TargetType="{x:Type syncfusion:PivotExpanderCell}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:PivotExpanderCell}">
+                    <StackPanel x:Name="PART_StackPanel"
+                                Orientation="Horizontal" 
+                                Margin="0,4,0,0">
+                        <Expander x:Name="PART_Expander" 
+                                  Focusable="False" 
+                                  VerticalAlignment="Top"
+                                  HorizontalAlignment="Left"
+                                  Margin="2,1,0,0"
+                                  IsExpanded="{Binding Path=IsExpanded, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Expander.Style>
+                                <Style TargetType="{x:Type Expander}">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="{x:Type Expander}">
+                                                <Border SnapsToDevicePixels="true" 
+                                                        Background="{TemplateBinding Background}" 
+                                                        BorderBrush="{TemplateBinding BorderBrush}" 
+                                                        BorderThickness="{TemplateBinding BorderThickness}" 
+                                                        CornerRadius="3">
+                                                    <ToggleButton x:Name="HeaderSite" 
+                                                                  Margin="0" 
+                                                                  MinHeight="0" 
+                                                                  MinWidth="0" 
+                                                                  Foreground="{StaticResource ContentForeground}"
+                                                                  Style="{Binding Path=ExpanderStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type syncfusion:PivotGridControl}}}" 
+                                                                  Content="{TemplateBinding Header}" 
+                                                                  IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Expander.Style>
+                        </Expander>
+                        <TextBlock x:Name="PART_ValueTextBlock"
+                                   Margin="2,-1,0,0"  
+                                   VerticalAlignment="Top"  
+                                   Text="{Binding Path=Text, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Foreground="{StaticResource ContentForeground}"
+                                   FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                   FontSize="{StaticResource MaterialLightCustom.SubTitleTextStyle}"
+                                   FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}" />
+                        <StackPanel.ContextMenu>
+                            <ContextMenu x:Name="PART_ExpanderContextMenu" />
+                        </StackPanel.ContextMenu>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" 
+                                           Value="True"/>
+                                <Condition Property="IsHyperlinkCell" 
+                                           Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_ValueTextBlock" 
+                                    Property="TextDecorations"  
+                                    Value="Underline"/>
+                            <Setter TargetName="PART_ValueTextBlock" 
+                                    Property="Foreground" 
+                                    Value="Red"/>
+                            <Setter TargetName="PART_ValueTextBlock" 
+                                    Property="Cursor"  
+                                    Value="Hand"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsHyperlinkCell"
+                                           Value="True"/>
+                                <Condition Property="IsEnabledOnMouseOver" 
+                                           Value="False"/>
+                                <Condition Property="IsMouseOver"
+                                           Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_ValueTextBlock" 
+                                    Property="TextDecorations"  
+                                    Value="Underline"/>
+                            <Setter TargetName="PART_ValueTextBlock" 
+                                    Property="Foreground" 
+                                    Value="Blue"/>
+                            <Setter TargetName="PART_ValueTextBlock" 
+                                    Property="Cursor" 
+                                    Value="Hand"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPivotExpanderCellStyle}" TargetType="{x:Type syncfusion:PivotExpanderCell}" />
+
+    <Style x:Key="SyncfusionHeaderFilterButtonStyle" 
+           BasedOn="{StaticResource WPFGlyphButtonStyle}"
+           TargetType="{x:Type syncfusion:FilterButton}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:FilterButton}">
+                    <Grid>
+                        <Path x:Name="FilterPath"
+                                Height="13"                               
+                                Width="16"
+                                Stretch="Fill"
+                                Fill="{StaticResource IconColor}" 
+                                Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Converter={StaticResource ValueFilterConverter},ConverterParameter=Material}"
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionPivotSortHeaderCellStyle" 
+           TargetType="{x:Type syncfusion:PivotSortHeaderCell}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="syncfusion:PivotSortHeaderCell">
+                    <Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="13"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock x:Name="PART_CellValueTextBlock" 
+                                       VerticalAlignment="Top" 
+                                       Margin="5,2.5,3,0" 
+                                       Text="{Binding Path=Text, RelativeSource={RelativeSource TemplatedParent}}" 
+                                       Foreground="{StaticResource ContentForeground}"
+                                       FontFamily="{StaticResource MaterialLightCustom.ThemeFontFamily}"
+                                       FontSize="{StaticResource MaterialLightCustom.SubTitleTextStyle}"
+                                       FontWeight="{StaticResource MaterialLightCustom.FontWeightMedium}"
+                                       TextWrapping="Wrap" 
+                                       ToolTipService.ToolTip="{Binding Path=Text,ElementName=PART_CellValueTextBlock}" ToolTipService.IsEnabled="{Binding Path=ToolTipEnabled,Converter={StaticResource BooleanConverter},RelativeSource={RelativeSource TemplatedParent}}"  
+                                       TextTrimming="WordEllipsis" />
+
+                            <syncfusion:FilterButton x:Name="PART_btnFilter" 
+                                                     Grid.Column="1"
+                                                     Command="syncfusion:PivotGridCommands.ShowCalculationFilter" 
+                                                     HorizontalAlignment="Right" 
+                                                     Style="{StaticResource SyncfusionHeaderFilterButtonStyle}"
+                                                     VerticalAlignment="Center"/>
+
+                            <Path x:Name="colSortPath"
+                                  Grid.Column="2" 
+                                  Margin="1,8,5,0" 
+                                  VerticalAlignment="Top" 
+                                  Height="6"
+                                  Width="7" 
+                                  Stretch="Fill" 
+                                  Fill="{StaticResource IconColor}" 
+                                  Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Converter={StaticResource SortDirectionConverter}, ConverterParameter=Material}"
+                                  HorizontalAlignment="Right" />
+
+                            <Grid.ContextMenu>
+                                <ContextMenu x:Name="Part_SortHeaderContext" 
+                                             Style="{StaticResource WPFContextMenuStyle}" 
+                                             Background="{StaticResource PopupBackground}"
+                                             BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}">
+                                    <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName= ContextMenu_AllowFiltering}"
+                                              Tag="Allow Filtering"  
+                                              Command="syncfusion:PivotGridCommands.AllowValueFiltering" 
+                                              Style="{StaticResource WPFMenuItemStyle}"/>
+                                    <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName= ContextMenu_AllowSorting}"
+                                              Tag="Allow Sorting"
+                                              Command="syncfusion:PivotGridCommands.AllowValueSort"
+                                              Style="{StaticResource WPFMenuItemStyle}"/>
+                                    <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName= ContextMenu_HideColumn}"
+                                              Tag="Hide Column"  
+                                              Command="syncfusion:PivotGridCommands.HideValueColumn" 
+                                              Style="{StaticResource WPFMenuItemStyle}"/>
+                                    <Separator/>
+                                    <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName= ContextMenu_ClearFilters}"
+                                              Tag="Clear Filters" 
+                                              Command="syncfusion:PivotGridCommands.ClearValueFilters"
+                                              Style="{StaticResource WPFMenuItemStyle}"/>
+                                    <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName= ContextMenu_ClearSorts}"
+                                              Tag="Clear Sorts" 
+                                              Command="syncfusion:PivotGridCommands.ClearValueSorts" 
+                                              Style="{StaticResource WPFMenuItemStyle}"/>
+                                    <Separator/>
+                                    <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName= ContextMenu_ShowPivotValueChooser}"
+                                              Tag="Show Pivot Value Chooser" 
+                                              Command="syncfusion:PivotGridCommands.ShowPivotValueChooser" 
+                                              Style="{StaticResource WPFMenuItemStyle}"/>
+                                </ContextMenu>
+                            </Grid.ContextMenu>
+                        </Grid>
+
+                        <syncfusion:ColumnFilterPopup x:Name="PART_ColumnFilterPopup" 
+                                                      Width="200" 
+                                                      Height="215" 
+                                                      MinWidth="200"
+                                                      MinHeight="215" 
+                                                      Placement="Bottom" 
+                                                      StaysOpen="False"
+                                                      PopupAnimation="Fade"
+                                                      AllowsTransparency="True">
+                            <Border x:Name="PART_FilterPopupBorder"
+                                    BorderBrush="{StaticResource BorderAlt}" 
+                                    Background="{StaticResource PopupBackground}" 
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                    Effect="{StaticResource Default.ShadowDepth3}">
+                                <Border.Margin>
+                                    8,0,8,8
+                                </Border.Margin>
+                                <Grid Background="{StaticResource PopupBackground}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition x:Name="PART_AllCheckBoxRowDefinition" Height="30"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition x:Name="PART_OKCancelButtonRowDefinition" Height="30"/>
+                                        <RowDefinition Height="12" />
+                                    </Grid.RowDefinitions>
+                                    <ListBox Grid.Row="0"
+                                             Style="{StaticResource WPFListBoxStyle}"
+                                             BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                             BorderBrush="{StaticResource BorderAlt}"
+                                             Background="Transparent"
+                                             Margin="4,2,4,0">
+                                        <CheckBox x:Name="PART_AllCheckBox" 
+                                                  Style="{StaticResource WPFCheckBoxStyle}"
+                                                  Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=FilterPopUp_All}"
+                                                  IsChecked="True" 
+                                                  Foreground="{StaticResource ContentForeground}"/>
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="{x:Type ListBoxItem}" 
+                                                   BasedOn="{StaticResource WPFListBoxItemStyle}">
+                                                <Setter Property="Padding" 
+                                                        Value="3,2,2,1"/>
+                                                <Setter Property="Margin"
+                                                        Value="2"/>
+                                                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                                                <Setter Property="VerticalContentAlignment" Value="Center" />
+                                                <Style.Triggers>
+                                                    <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                                                        <Setter Property="Padding" 
+                                                                    Value="3,0,2,0" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                    <ListBox x:Name="PART_FilterPopupListBox"
+                                             Grid.Row="1"
+                                             Style="{StaticResource WPFListBoxStyle}"
+                                             BorderThickness="0,1,0,1"
+                                             BorderBrush="{StaticResource BorderAlt}"
+                                             Background="Transparent"
+                                             ItemsSource="{Binding Path=FilterListBoxItems, RelativeSource={RelativeSource TemplatedParent}}" 
+                                             Margin="4,0">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox Name="ChBox" 
+                                                          Style="{StaticResource WPFCheckBoxStyle}"
+                                                          Content="{Binding Text}" 
+                                                          IsChecked="{Binding IsChecked}"
+                                                          Foreground="{StaticResource ContentForeground}"/>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="{x:Type ListBoxItem}" 
+                                                   BasedOn="{StaticResource WPFListBoxItemStyle}">
+                                                <Setter Property="Visibility"
+                                                        Value="{Binding Path=IsChecked, Converter={StaticResource FilterCheckBoxVisibilityConverter}}" />
+                                                <Setter Property="Padding" 
+                                                        Value="3,2,2,1"/>
+                                                <Setter Property="Margin"
+                                                        Value="2"/>
+                                                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                                                <Setter Property="VerticalContentAlignment" Value="Center" />
+                                                <Style.Triggers>
+                                                    <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                                                        <Setter Property="Padding" 
+                                                                    Value="3,0,2,0" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                    <StackPanel Grid.Row="2" 
+                                                Orientation="Horizontal" 
+                                                HorizontalAlignment="Right" 
+                                                VerticalAlignment="Center"
+                                                Margin="0,3,4,3">
+                                        <Button x:Name="PART_btnOK"
+                                                Style="{StaticResource WPFFlatPrimaryButtonStyle}"
+                                                Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=OkButton}"
+                                                MinWidth="36"
+                                                MinHeight="20" 
+                                                Height="20" 
+                                                Width="70"
+                                                HorizontalAlignment="Center"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center" />
+                                        <Button x:Name="PART_btnCancel"
+                                                Style="{StaticResource WPFFlatButtonStyle}"
+                                                Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=CancelButton}"  
+                                                MinWidth="36"
+                                                MinHeight="20" 
+                                                Height="20" 
+                                                Width="70"
+                                                Margin="7,0,0,0"
+                                                HorizontalAlignment="Center"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center" />
+                                    </StackPanel>
+                                    <Border Name="ResizeBorder" 
+                                            Grid.Row="3" 
+                                            BorderBrush="{StaticResource BorderAlt}" 
+                                            Background="{StaticResource PopupBackground}" 
+                                            BorderThickness="0.3" 
+                                            CornerRadius="1">
+                                        <Thumb Name="PART_thumbRightCorner" 
+                                               Width="10" 
+                                               VerticalAlignment="Stretch"
+                                               HorizontalAlignment="Right"
+                                               HorizontalContentAlignment="Right" 
+                                               Cursor="SizeNWSE">
+                                            <Thumb.Template>
+                                                <ControlTemplate>
+                                                    <Grid>
+                                                        <ResizeGrip HorizontalAlignment="Right" 
+                                                                    VerticalAlignment="Stretch" />
+                                                    </Grid>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </syncfusion:ColumnFilterPopup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="PART_btnOK" 
+                                        Property="MinHeight" 
+                                        Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_btnCancel" 
+                                        Property="MinHeight" 
+                                        Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_AllCheckBoxRowDefinition" 
+                                        Property="Height" 
+                                        Value="42" />
+                            <Setter TargetName="PART_OKCancelButtonRowDefinition" 
+                                        Property="Height" 
+                                        Value="42" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPivotSortHeaderCellStyle}" TargetType="{x:Type syncfusion:PivotSortHeaderCell}" />
+
+    <Style x:Key="SyncfusionPivotGridHyperlinkCellStyle" 
+            TargetType="{x:Type syncfusion:PivotGridHyperlinkCell}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:PivotGridHyperlinkCell}">
+                    <TextBlock x:Name="PART_CellValueTextBlock"
+                               Margin="5,0,5,0"
+                               Text="{Binding Path=FormattedText}"
+							   VerticalAlignment="Center"
+                               Foreground="{Binding Path=Foreground, RelativeSource={RelativeSource TemplatedParent}}"
+                               FontFamily="{Binding Path=FontFamily, RelativeSource={RelativeSource TemplatedParent}}"
+                               FontSize="{Binding Path=FontSize, RelativeSource={RelativeSource TemplatedParent}}"
+                               FontWeight="{Binding Path=FontWeight, RelativeSource={RelativeSource TemplatedParent}}" />
+                    <ControlTemplate.Triggers>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsEnabledOnMouseOver" 
+                                           Value="False"/>
+                                <Condition Property="IsMouseOver" 
+                                           Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_CellValueTextBlock" 
+                                    Property="TextDecorations"  
+                                    Value="Underline"/>
+                            <Setter TargetName="PART_CellValueTextBlock"
+                                    Property="Foreground"  
+                                    Value="Blue"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver"
+                                           Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_CellValueTextBlock"
+                                    Property="TextDecorations" 
+                                    Value="Underline"/>
+                            <Setter TargetName="PART_CellValueTextBlock"
+                                    Property="Foreground"  
+                                    Value="Red"/>
+                            <Setter TargetName="PART_CellValueTextBlock"
+                                    Property="Cursor" 
+                                    Value="Hand"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPivotGridHyperlinkCellStyle}" TargetType="{x:Type syncfusion:PivotGridHyperlinkCell}" />
+
+    <Style x:Key="GroupingBarToggleButtonStyle" TargetType="{x:Type ToggleButton}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <Border x:Name="brdItem" 
+                            Margin="1,4"
+                            Padding="0,0,3,0"
+                            Background="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingBarItemBackground}" 
+                            BorderBrush="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingBarItemBorderBrush}" 
+                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}">
+                        <Grid HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="10"/>
+                                <ColumnDefinition Width="auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="PART_contentTxt" 
+                                       Grid.Column="0" 
+                                       TextTrimming="WordEllipsis"
+                                       Foreground="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type syncfusion:PivotGridControl}},
+                                                    Path=GroupingBarItemForeground}"    
+                                       VerticalAlignment="Center"
+                                       Text="{Binding FieldCaption}" 
+                                       Margin="3,0,0,0" >
+                                <ToolTipService.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock Text="{Binding FieldCaption}" 
+                                                   Margin="2,0"/>
+                                    </ToolTip>
+                                </ToolTipService.ToolTip>
+                            </TextBlock>
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                              Grid.Column="1"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger SourceName="PART_contentTxt" 
+                                 Property="IsMouseOver" 
+                                 Value="True">
+                            <Setter Property="Cursor" 
+                                    Value="Hand"/>
+                        </Trigger>
+                        <Trigger SourceName="brdItem" 
+                                 Property="IsMouseOver"
+                                 Value="True">
+                            <Setter TargetName="brdItem" 
+                                    Property="Background" 
+                                    Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingButtonHoverBackgroundBrush}"/>
+                            <Setter TargetName="brdItem" 
+                                    Property="BorderBrush" 
+                                    Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingButtonHoverBorderBrush}"/>
+                            <Setter TargetName="PART_contentTxt" 
+                                    Property="Foreground" 
+                                    Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingButtonHoverForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" 
+                                 Value="True">
+                            <Setter TargetName="brdItem"
+                                    Property="Background"
+                                    Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingButtonCheckedBackground}"/>
+                            <Setter TargetName="brdItem" 
+                                    Property="BorderBrush" 
+                                    Value="{StaticResource ContentBackgroundAlt5}"/>
+                            <Setter TargetName="PART_contentTxt"
+                                    Property="Foreground"
+                                    Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingButtonCheckedForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsFocused" 
+                                 Value="True">
+                            <Setter TargetName="brdItem"
+                                    Property="Background"
+                                    Value="{StaticResource ContentBackgroundAlt4}"/>
+                            <Setter TargetName="brdItem" 
+                                    Property="BorderBrush" 
+                                    Value="{StaticResource ContentBackgroundAlt4}"/>
+                            <Setter TargetName="PART_contentTxt"
+                                    Property="Foreground"
+                                    Value="{StaticResource ContentForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" 
+                                 Value="False">
+                            <Setter TargetName="brdItem"
+                                    Property="Background"
+                                    Value="{StaticResource ContentBackgroundAlt3}"/>
+                            <Setter TargetName="brdItem" 
+                                    Property="BorderBrush" 
+                                    Value="{StaticResource ContentBackgroundAlt3}"/>
+                            <Setter TargetName="PART_contentTxt"
+                                    Property="Foreground"
+                                    Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" 
+                                 Value="True">
+                            <Setter Property="Cursor" 
+                                    Value="Hand"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="PivotGroupingItemContainerStyle" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource WPFListBoxItemStyle}">
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                    <ContentPresenter/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="FilterButtonStyle"
+           BasedOn="{StaticResource WPFGlyphButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid x:Name="gridPath">
+                        <Path x:Name="path"
+                                Fill="{StaticResource IconColor}" 
+                                Height="10" 
+                                Width="10" 
+                                Data="{Binding Converter={StaticResource ImgConverter}, ConverterParameter=Material}"
+                                Visibility="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingBar.AllowMultiFunctionalSortFilter,Converter={StaticResource filterPathVisibilityConverter}, ConverterParameter=Path}"
+                                Stretch="Uniform" 
+                                VerticalAlignment="Center" />
+                        <Path x:Name="excelPath"
+                                Fill="{StaticResource IconColor}" 
+                                Height="10" 
+                                Width="10" 
+                                Data="{Binding Converter={StaticResource ExcelFilterConverter}, ConverterParameter=Material}"
+                                Visibility="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingBar.AllowMultiFunctionalSortFilter, Converter={StaticResource filterPathVisibilityConverter}, ConverterParameter=ExcelPath}"
+                                Stretch="Uniform"
+                                VerticalAlignment="Center" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <ContextMenu x:Key="SyncfusionPivotGridGroupingBarContextMenu" 
+                 Style="{StaticResource WPFContextMenuStyle}">
+        <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextMenu_ReloadData}"
+                  Command="syncfusion:PivotGridCommands.ReloadData" 
+                  Style="{StaticResource WPFMenuItemStyle}">
+            <MenuItem.Icon>
+                <Path x:Name="Reload"
+                      Data="M14,8 L15.999999,8 C15.999999,12.411003 12.410995,16 8,16 6.1114364,16 4.3292215,15.345842 2.9191647,14.183757 L2.8635542,14.136446 1.0000001,16 1.0000001,11 6,11 4.2856131,12.714387 4.3345137,12.753428 C5.3681693,13.552539 6.6481242,14 8,14 11.308998,14 14,11.308998 14,8 z M7.9999981,0 C9.8459349,0 11.600649,0.63146877 13.000931,1.7533774 L13.135431,1.8645654 14.999996,0 14.999996,5.0000002 9.9999962,5.0000002 11.713318,3.2866783 11.606168,3.2034502 C10.580926,2.4319563 9.3216848,2 7.9999981,2 4.6909988,2 1.9999996,4.6910002 1.9999996,8.0000002 L0,8.0000002 C2.3841858E-07,3.5890002 3.5889993,0 7.9999981,0 z" 
+                      Fill="{StaticResource IconColor}"
+                      HorizontalAlignment="Left"
+                      Height="14" 
+                      Margin="1"
+                      Stretch="Fill" 
+                      VerticalAlignment="Top" 
+                      Width="14"/>
+            </MenuItem.Icon>
+        </MenuItem>
+
+        <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextMenu_ShowFieldList}" 
+                  Command="syncfusion:PivotGridCommands.ShowFieldList"
+                  Style="{StaticResource WPFMenuItemStyle}">
+            <MenuItem.Icon>
+                <Path x:Name="Field_List"
+                      Data="M3.5,4.999002 L10.5,4.999002 10.5,6.999002 3.5,6.999002 z M12,3.999002 L2,3.999002 2,14 12.001007,14 z M2,0 L12,0 C13.104004,0 14,0.89599609 14,2 L14,14 C14,15.103996 13.104004,16 12,16 L2,16 C0.89599609,16 0,15.103996 0,14 L0,2 C0,0.89599609 0.89599609,0 2,0 z" 
+                      Fill="{StaticResource IconColor}"
+                      HorizontalAlignment="Left" 
+                      Height="16" 
+                      Margin="1" 
+                      Stretch="Fill" 
+                      VerticalAlignment="Top" 
+                      Width="14" />
+            </MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextMenu_CalculatedField}"
+                  Command="syncfusion:PivotGridCommands.CalculatedField" 
+                  Style="{StaticResource WPFMenuItemStyle}"/>
+    </ContextMenu>
+
+    <ContextMenu x:Key="SyncfusionPivotGridGroupingBarItemContextMenu" 
+                 Style="{StaticResource WPFContextMenuStyle}">
+        <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextMenu_ReloadData}" 
+                  Command="syncfusion:PivotGridCommands.ReloadData" 
+                  Style="{StaticResource WPFMenuItemStyle}">
+            <MenuItem.Icon>
+                <Path Data="M14,8 L15.999999,8 C15.999999,12.411003 12.410995,16 8,16 6.1114364,16 4.3292215,15.345842 2.9191647,14.183757 L2.8635542,14.136446 1.0000001,16 1.0000001,11 6,11 4.2856131,12.714387 4.3345137,12.753428 C5.3681693,13.552539 6.6481242,14 8,14 11.308998,14 14,11.308998 14,8 z M7.9999981,0 C9.8459349,0 11.600649,0.63146877 13.000931,1.7533774 L13.135431,1.8645654 14.999996,0 14.999996,5.0000002 9.9999962,5.0000002 11.713318,3.2866783 11.606168,3.2034502 C10.580926,2.4319563 9.3216848,2 7.9999981,2 4.6909988,2 1.9999996,4.6910002 1.9999996,8.0000002 L0,8.0000002 C2.3841858E-07,3.5890002 3.5889993,0 7.9999981,0 z" 
+                      Fill="{StaticResource IconColor}"
+                      HorizontalAlignment="Left"
+                      Height="14" 
+                      Margin="1"
+                      Stretch="Fill" 
+                      VerticalAlignment="Top" 
+                      Width="14"/>
+            </MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextMenu_Order}"
+                  Style="{StaticResource WPFMenuItemStyle}">
+            <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextSubMenu_Beginning}"
+                      Style="{StaticResource WPFMenuItemStyle}"
+                      CommandParameter="Move to Beginning" 
+                      Command="syncfusion:PivotGridCommands.Order"/>
+            <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextSubMenu_Left}"
+                      Style="{StaticResource WPFMenuItemStyle}"
+                      CommandParameter="Move to Left" 
+                      Command="syncfusion:PivotGridCommands.Order"/>
+            <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextSubMenu_Right}"
+                      Style="{StaticResource WPFMenuItemStyle}"
+                      CommandParameter="Move to Right" 
+                      Command="syncfusion:PivotGridCommands.Order"/>
+            <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextSubMenu_End}"
+                      Style="{StaticResource WPFMenuItemStyle}"
+                      CommandParameter="Move to End" 
+                      Command="syncfusion:PivotGridCommands.Order"/>
+            <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextSubMenu_Ascending}"
+                      Style="{StaticResource WPFMenuItemStyle}"
+                      CommandParameter="Smallest to largest" 
+                      Command="syncfusion:PivotGridCommands.Order"/>
+            <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextSubMenu_Descending}"
+                      Style="{StaticResource WPFMenuItemStyle}"
+                      CommandParameter="Largest to smallest" 
+                      Command="syncfusion:PivotGridCommands.Order"/>
+        </MenuItem>
+        <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextMenu_ShowFieldList}"
+                  Style="{StaticResource WPFMenuItemStyle}"
+                  Command="syncfusion:PivotGridCommands.ShowFieldList">
+            <MenuItem.Icon>
+                <Path Data="M3.5,4.999002 L10.5,4.999002 10.5,6.999002 3.5,6.999002 z M12,3.999002 L2,3.999002 2,14 12.001007,14 z M2,0 L12,0 C13.104004,0 14,0.89599609 14,2 L14,14 C14,15.103996 13.104004,16 12,16 L2,16 C0.89599609,16 0,15.103996 0,14 L0,2 C0,0.89599609 0.89599609,0 2,0 z" 
+                      Fill="{StaticResource IconColor}"
+                      HorizontalAlignment="Left" 
+                      Height="16" 
+                      Margin="1" 
+                      Stretch="Fill" 
+                      VerticalAlignment="Top" 
+                      Width="14" />
+            </MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_ContextMenu_CalculatedField}"
+                  Style="{StaticResource WPFMenuItemStyle}"
+                  Command="syncfusion:PivotGridCommands.CalculatedField"/>
+    </ContextMenu>
+
+    <DataTemplate x:Key="PivotFilterItemTemplate">
+        <ToggleButton x:Name="toggleButtonItem" 
+                      Style="{StaticResource GroupingBarToggleButtonStyle}" 
+                      Tag="{Binding}" 
+                      Margin="1,0,0,0" >
+            <ToggleButton.Content>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="20"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="btnFilter"
+                            Width="20" 
+                            Height="20"
+                            Margin="5,0,0,0"
+                            Style="{StaticResource FilterButtonStyle}" 
+                            Tag="{Binding}" 
+                            Command="syncfusion:PivotGridCommands.ShowFilter"/>
+                    <Button x:Name="btnDelete"
+                            Grid.Column="1" 
+                            Width="20" 
+                            Height="20"
+                            Tag="{Binding}" 
+                            Style="{StaticResource SyncfusionPivotGridDeleteButtonStyle}"
+                            Command="syncfusion:PivotGridCommands.DeleteItem"/>
+                </Grid>
+            </ToggleButton.Content>
+        </ToggleButton>
+    </DataTemplate>
+
+    <DataTemplate x:Key="PivotCalculationTemplate">
+        <ToggleButton x:Name="toggleButtonItem"
+                      Style="{StaticResource GroupingBarToggleButtonStyle}"
+                      Tag="{Binding}" 
+                      Margin="1,0,0,0" 
+                      ContextMenu="{StaticResource SyncfusionPivotGridGroupingBarItemContextMenu}">
+            <ToggleButton.Content>
+                <Button x:Name="btnDelete"
+                        Width="16" 
+                        Height="16" 
+                        Tag="{Binding}" 
+                        Style="{StaticResource SyncfusionPivotGridDeleteButtonStyle}"  
+                        Command="syncfusion:PivotGridCommands.DeleteItem"/>
+            </ToggleButton.Content>
+        </ToggleButton>
+    </DataTemplate>
+
+    <DataTemplate x:Key="PivotColumnItemTemplate">
+        <ToggleButton x:Name="toggleButtonItem" 
+                      Style="{StaticResource GroupingBarToggleButtonStyle}" 
+                      IsChecked="{Binding Converter={StaticResource CheckConverter}, Mode=OneWay}"                     
+                      Command="syncfusion:PivotGridCommands.SortPivotItem" 
+                      VerticalAlignment="Top"
+                      Tag="{Binding}"
+                      ContextMenu="{StaticResource SyncfusionPivotGridGroupingBarItemContextMenu}">
+            <ToggleButton.Content>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="20"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="btnFilter" 
+                            Width="20" 
+                            Height="20"
+                            Margin="5,0,0,0"
+                            Style="{StaticResource FilterButtonStyle}" 
+                            Tag="{Binding}" 
+                            Command="syncfusion:PivotGridCommands.ShowFilter"/>
+                    <Path x:Name="sortPath" 
+                            Grid.Column="1" 
+                            Height="10"
+                            Width="10"
+                            Margin="4,0,0,0"
+                            Stretch="Fill"   
+                            Data="{Binding IsChecked, ElementName=toggleButtonItem, Converter={StaticResource SortPathConverter}}"
+                            VerticalAlignment="Center"  
+                            HorizontalAlignment="Center"
+                            Fill="{StaticResource IconColor}"
+                            Visibility="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingBar.AllowSorting,Converter={StaticResource FilterCheckBoxVisibilityConverter}, ConverterParameter=Material}"
+                            />
+                    <Button x:Name="btnDelete" 
+                            Grid.Column="2" 
+                            Width="20" 
+                            Height="20" 
+                            Tag="{Binding}" 
+                            Style="{StaticResource SyncfusionPivotGridDeleteButtonStyle}"  
+                            Command="syncfusion:PivotGridCommands.DeleteItem"/>
+                </Grid>
+            </ToggleButton.Content>
+        </ToggleButton>
+    </DataTemplate>
+
+    <DataTemplate x:Key="PivotRowItemTemplate">
+        <ToggleButton x:Name="toggleButtonItem" 
+                      Style="{StaticResource GroupingBarToggleButtonStyle}" 
+                      VerticalAlignment="Bottom"  
+                      IsChecked="{Binding Converter={StaticResource CheckConverter},Mode=OneWay}"  
+                      Command="syncfusion:PivotGridCommands.SortPivotItem" 
+                      Margin="0,0,1,0"
+                      Tag="{Binding}"
+                      ContextMenu="{StaticResource SyncfusionPivotGridGroupingBarItemContextMenu}">
+            <ToggleButton.Content>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="btnFilter"
+                            Width="18" 
+                            Height="18"
+                            Style="{StaticResource FilterButtonStyle}"
+                            Tag="{Binding}" 
+                            Command="syncfusion:PivotGridCommands.ShowFilter"/>
+                    <Path x:Name="sortPath"
+                            Grid.Column="1" 
+                            Stretch="Fill" 
+                            Height="10"
+                            Width="10"
+                            Data="{Binding IsChecked, ElementName=toggleButtonItem, Converter={StaticResource SortPathConverter}}"
+                            VerticalAlignment="Center" 
+                            HorizontalAlignment="Center"
+                            Fill="{StaticResource IconColor}"
+                            Visibility="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingBar.AllowSorting,Converter={StaticResource FilterCheckBoxVisibilityConverter}, ConverterParameter=Material}" />
+                    <Button x:Name="btnDelete" 
+                            Grid.Column="2" 
+                            Width="18" 
+                            Height="18"
+                            Tag="{Binding}" 
+                            Style="{StaticResource SyncfusionPivotGridDeleteButtonStyle}"
+                            Command="syncfusion:PivotGridCommands.DeleteItem"/>
+                </Grid>
+            </ToggleButton.Content>
+        </ToggleButton>
+    </DataTemplate>
+
+    <Style x:Key="ExcelLikePopupMenuItemStyle" 
+           TargetType="{x:Type MenuItem}">
+        <Setter Property="Background"
+                Value="{StaticResource PopupBackground}"/>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="Foreground" 
+                Value="{StaticResource ContentForeground}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type MenuItem}" >
+                    <Border x:Name="templateRoot" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            SnapsToDevicePixels="True">
+                        <Grid VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="0.8*"/>
+                                <ColumnDefinition Width="0.3*"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter x:Name="Icon"
+                                              Margin="4,3,4,2"
+                                              Content="{TemplateBinding Icon}"
+                                              ContentSource="Icon"                                              
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                              HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center" 
+                                              Height="28" 
+                                              Width="23" />
+                            <ContentPresenter x:Name="contentPresenter"
+                                              Grid.Column="1"
+                                              VerticalAlignment="Center" 
+                                              ContentTemplate="{TemplateBinding HeaderTemplate}" 
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              Content="{TemplateBinding Header}"  
+                                              ContentStringFormat="{TemplateBinding HeaderStringFormat}" 
+                                              ContentSource="Header" 
+                                              Margin="0"
+                                              RecognizesAccessKey="True" 
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            </ContentPresenter>
+                            <Path x:Name="PART_MenuExpander" 
+                                  Grid.Column="3" 
+                                  Visibility="Collapsed"
+                                  HorizontalAlignment="Center" 
+                                  Fill="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type syncfusion:PivotGridControl}},
+                                            Path=GroupingBarItemForeground}"   
+                                  VerticalAlignment="Center" 
+                                  Data="M 0 0 L 0 7 L 4 3.5 Z"/>
+
+                            <Popup x:Name="PART_Popup" 
+                                   AllowsTransparency="True" 
+                                   VerticalOffset="-3"
+                                   HorizontalOffset="-13"
+                                   Focusable="False" 
+                                   Margin="0" 
+                                   PopupAnimation="{DynamicResource {x:Static SystemParameters.MenuPopupAnimationKey}}"
+                                   Placement="Right">
+                                <Border x:Name="SubMenuBorder" 
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                        Background="{TemplateBinding Background}"
+                                        Effect="{StaticResource Default.ShadowDepth3}">
+                                    <Border.Margin>
+                                        8,0,8,8
+                                    </Border.Margin>
+                                    <ScrollViewer x:Name="SubMenuScrollViewer"
+                                                  Style="{DynamicResource {ComponentResourceKey ResourceId=MenuScrollViewer, TypeInTargetAssembly={x:Type FrameworkElement}}}">
+                                        <Grid Background="{TemplateBinding Background}">
+                                            <ItemsPresenter x:Name="ItemsPresenter"
+                                                            KeyboardNavigation.DirectionalNavigation="Cycle"
+                                                            Grid.IsSharedSizeScope="True" 
+                                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                                            KeyboardNavigation.TabNavigation="Cycle"/>
+                                        </Grid>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" 
+                                    Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="IsSuspendingPopupAnimation" 
+                                 Value="True">
+                            <Setter Property="PopupAnimation"
+                                    TargetName="PART_Popup" 
+                                    Value="None"/>
+                        </Trigger>
+                        <Trigger Property="HasItems"
+                                 Value="True">
+                            <Setter TargetName="PART_MenuExpander" 
+                                    Property="Visibility"
+                                    Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" 
+                                 Value="True" >
+                            <Setter Property="IsOpen" 
+                                    TargetName="PART_Popup" 
+                                    Value="True"/>
+                            <Setter Property="Background" 
+                                    TargetName="templateRoot" 
+                                    Value="{StaticResource ContentBackgroundHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin"
+                                 Value="True">
+                            <Setter Property="IsOpen" 
+                                    TargetName="PART_Popup" 
+                                    Value="True"/>
+                            <Setter Property="Background" 
+                                    TargetName="templateRoot" 
+                                    Value="{StaticResource ContentBackgroundHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsHighlighted" Value="true">
+                            <Setter TargetName="templateRoot"
+                                    Property="Background"
+                                    Value="{StaticResource ContentBackgroundHover}"/>
+                            <Setter TargetName="templateRoot"
+                                    Property="BorderBrush"
+                                    Value="{StaticResource ContentBackgroundHover}"/>
+                            <Setter TargetName="PART_MenuExpander"
+                                    Property="Fill"
+                                    Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource HoverForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="true">
+                            <Setter TargetName="templateRoot"
+                                    Property="BorderBrush"
+                                    Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter TargetName="templateRoot"
+                                    Property="Background"
+                                    Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter TargetName="PART_MenuExpander"
+                                    Property="Fill"
+                                    Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" 
+                                    Value="{StaticResource SecondaryForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsSubmenuOpen" Value="true">
+                            <Setter Property="IsOpen" 
+                                    TargetName="PART_Popup" 
+                                    Value="True"/>
+                            <Setter TargetName="templateRoot"
+                                    Property="BorderBrush"
+                                    Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter TargetName="templateRoot" 
+                                    Property="Background" 
+                                    Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter TargetName="PART_MenuExpander"
+                                    Property="Fill"
+                                    Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" 
+                                    Value="{StaticResource SecondaryForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" 
+                                 Value="False">
+                            <Setter TargetName="templateRoot"
+                                    Property="Background"
+                                    Value="{StaticResource ContentBackgroundDisabled}"/>
+                            <Setter TargetName="templateRoot"
+                                    Property="BorderBrush"
+                                    Value="{StaticResource ContentBackgroundDisabled}"/>
+                            <Setter TargetName="PART_MenuExpander"
+                                    Property="Fill"
+                                    Value="{StaticResource IconDisabledColor}"/>
+                            <Setter TargetName="contentPresenter"
+                                    Property="TextElement.Foreground"
+                                    Value="{StaticResource DisabledForeground}"/>
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionPivotGridRowGroupBarStyle" 
+           TargetType="{x:Type syncfusion:PivotGridRowGroupBar}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:PivotGridRowGroupBar}">
+                    <syncfusion:PivotGroupingItemsControl 
+                                x:Name="PART_RowList"         
+                                AllowDrop="True"        
+                                Background="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingBar.Background}"
+                                BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                ItemsPanel="{StaticResource SyncfusionPivotGridRowItemsPanelTemplate}"
+                                ItemTemplate="{StaticResource PivotRowItemTemplate}"
+                                ItemContainerStyle="{StaticResource PivotGroupingItemContainerStyle}"                       
+                                Margin="-1"
+                                ScrollViewer.VerticalScrollBarVisibility="Disabled" 
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                ScrollViewer.CanContentScroll="False"
+                                ContextMenu="{StaticResource SyncfusionPivotGridGroupingBarContextMenu}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPivotGridRowGroupBarStyle}"
+           TargetType="{x:Type syncfusion:PivotGridRowGroupBar}"/>
+
+    <Style x:Key="SyncfusionPivotGridGroupingBarStyle" 
+           TargetType="{x:Type syncfusion:PivotGridGroupingBar}" >
+        <Setter Property="Background" 
+                Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}}, Path = GroupingBarBackground}"/>
+        <Setter Property="ItemsBackground" 
+                Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}}, Path = GroupingBarItemBackground}"/>
+        <Setter Property="ItemsBorderBrush"
+                Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}}, Path = GroupingBarItemBorderBrush}"/>
+        <Setter Property="FieldListBorderBrush"
+                Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}}, Path = FieldListBorderBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:PivotGridGroupingBar}">
+                    <Grid Name="PART_GroupingGrid" 
+                          Background="{TemplateBinding Background}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35px"/>
+                            <RowDefinition Height="35px"/>
+                            <RowDefinition Height="35px"/>
+                        </Grid.RowDefinitions>
+
+                        <syncfusion:PivotGroupingItemsControl
+                                    x:Name="PART_FilterList"                              
+                                    Grid.Column="0" 
+                                    Grid.Row="0"
+                                    AllowDrop="True"
+                                    Background="{TemplateBinding Background}"
+                                    BorderThickness="{StaticResource MaterialLightCustom.BorderThickness0001}"
+                                    BorderBrush="{Binding Path=GridOuterBorderBrush,RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Mode=TwoWay}"
+                                    ItemsPanel="{StaticResource SyncfusionPivotGridFilterItemsPanelTemplate}"
+                                    ItemTemplate="{StaticResource PivotFilterItemTemplate}"
+                                    ItemContainerStyle="{StaticResource PivotGroupingItemContainerStyle}" />
+
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="ComputationInfoWidth"/>
+                                <ColumnDefinition x:Name="ComputationButtonWidth"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <syncfusion:PivotGroupingItemsControl 
+                                        x:Name="PART_ComputationInfoList"                                 
+                                        Grid.Column="0" 
+                                        AllowDrop="True"
+                                        BorderThickness="{StaticResource MaterialLightCustom.BorderThickness0001}" 
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{Binding Path=GridOuterBorderBrush,RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Mode=TwoWay}"
+                                        ItemsPanel="{StaticResource SyncfusionPivotGridComputationItemsPanelTemplate}"
+                                        ItemTemplate="{StaticResource PivotCalculationTemplate}"
+                                        ItemContainerStyle="{StaticResource PivotGroupingItemContainerStyle}"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Hidden" 
+                                        ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                        Margin="0" />
+
+                            <Button x:Name="Button_ComputationArea" 
+                                    Grid.Column="1"
+                                    Height="23" 
+                                    Margin="4,2,4,0"
+                                    Visibility="Hidden" 
+                                    ToolTip="Click the Button 'Show Fields' to View Computation List"
+                                    Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=ShowFieldsButton}" />
+
+                            <syncfusion:PivotGroupingItemsControl 
+                                        x:Name="PART_ColumnList"
+                                        Grid.Column="3" 
+                                        AllowDrop="True"
+                                        BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1000}"
+                                        BorderBrush="{Binding Path=GridOuterBorderBrush,RelativeSource={RelativeSource FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Mode=TwoWay}"
+                                        ItemsPanel="{StaticResource SyncfusionPivotGridColumnItemsPanelTemplate}"
+                                        ItemTemplate="{StaticResource PivotColumnItemTemplate}"
+                                        ItemContainerStyle="{StaticResource PivotGroupingItemContainerStyle}"                       
+                                        Background="{TemplateBinding Background}"
+                                        Margin="0" />
+
+                            <syncfusion:MultiFunctionalSortFilterPopup x:Name="PART_MultiFunctionalSortFilterPopup" 
+                                                                       Width="200"
+                                                                       Height="380" 
+                                                                       MinWidth="200" 
+                                                                       MinHeight="210" 
+                                                                       Placement="Bottom" 
+                                                                       StaysOpen="False"
+                                                                       KeyboardNavigation.DirectionalNavigation="Cycle" 
+                                                                       KeyboardNavigation.TabNavigation="Cycle" 
+                                                                       PopupAnimation="Fade" 
+                                                                       AllowsTransparency="True">
+                                <Border BorderBrush="{StaticResource BorderAlt}" 
+                                        Background="{StaticResource PopupBackground}"
+                                        BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                        Effect="{StaticResource Default.ShadowDepth3}">
+                                    <Border.Margin>
+                                        8,0,8,8
+                                    </Border.Margin>
+                                    <Grid x:Name="PopupGrid" 
+                                          Focusable="True"
+                                          Background="{StaticResource PopupBackground}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="1"/>
+                                            <RowDefinition x:Name="PARTExcel_SearchBoxRowDefinition" 
+                                                           Height="30"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="1"/>
+                                            <RowDefinition x:Name="PARTExcel_btnOKCancelRowDefinition" 
+                                                           Height="35"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Menu x:Name="PART_SortFilterMenu"                                             
+                                              Grid.Row="0" 
+                                              BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                              TabIndex="0">
+
+                                            <MenuItem Name="PART_SortAscending"
+                                                      TabIndex="0"
+                                                      Height="28"
+                                                      Width="200"
+                                                      Margin="0,0,2,0"
+                                                      Command="syncfusion:PivotGridCommands.SortPivotItem"
+                                                      CommandParameter="Ascending"
+                                                      Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_SortAscending}" 
+                                                      Tag="{Binding}"                                                                                                                                                         
+                                                      Style="{StaticResource ExcelLikePopupMenuItemStyle}"        
+                                                      Foreground="{StaticResource ContentForeground}"
+                                                      IsCheckable="False">
+                                                <MenuItem.Icon>
+                                                    <Border Name="SortAscendingBorder"
+                                                            BorderBrush="Transparent"
+                                                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                                            CornerRadius="1">
+                                                        <Grid x:Name="Sort_A_to_Z"
+                                                              Width="18"
+                                                              Height="18"
+                                                              Margin="0,4,0,0"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Top">
+                                                            <Path Width="8.35"
+                                                                  Height="8.026"
+                                                                  HorizontalAlignment="Left"
+                                                                  VerticalAlignment="Top"
+                                                                  Data="F1 M 4.84775,5.78772L 2.07043,5.78772L 1.73962,6.55334C 1.63162,6.80792 1.57816,7.01886 1.57816,7.18481C 1.57816,7.40564 1.66666,7.5676 1.84509,7.67258C 1.94934,7.73425 2.20578,7.78058 2.616,7.81125L 2.616,8.026L 0,8.026L 0,7.81125C 0.282684,7.76886 0.514404,7.65161 0.696686,7.46094C 0.877777,7.2695 1.10159,6.87427 1.36856,6.27472L 4.18106,0L 4.29175,0L 7.12778,6.44855C 7.39856,7.05988 7.61987,7.44403 7.79443,7.60284C 7.9259,7.72272 8.11081,7.7923 8.35031,7.81125L 8.35031,8.026L 4.54697,8.026L 4.54697,7.81125L 4.70322,7.81125C 5.00925,7.81125 5.22269,7.76886 5.34644,7.68365C 5.4324,7.62244 5.474,7.5332 5.474,7.41736C 5.474,7.34763 5.46362,7.276 5.44016,7.20245C 5.4324,7.16785 5.37375,7.02283 5.26575,6.76746L 4.84775,5.78772 Z M 4.65109,5.3587L 3.47922,2.65045L 2.27347,5.3587L 4.65109,5.3587 Z "
+                                                                  Fill="{StaticResource IconColor}"
+                                                                  Stretch="Fill" />
+                                                            <Path Width="7.521"
+                                                                  Height="7.863"
+                                                                  HorizontalAlignment="Left"
+                                                                  VerticalAlignment="Bottom"
+                                                                  Data="F1 M 7.15628,9.884L 2.53391,17.3065L 4.03137,17.3065C 4.7384,17.3065 5.23325,17.2623 5.51575,17.1731C 5.97534,17.0339 6.37122,16.778 6.70456,16.405C 7.03653,16.0319 7.26697,15.5319 7.39456,14.9056L 7.61987,14.9056L 7.30081,17.7474L 0.0990906,17.7474L 4.72668,10.3131L 3.56125,10.3131C 3.10815,10.3131 2.81125,10.3268 2.668,10.3535C 2.39722,10.4043 2.14334,10.5032 1.90506,10.6523C 1.668,10.8014 1.47012,10.9994 1.31387,11.2467C 1.15762,11.4941 1.03391,11.8072 0.945343,12.1862L 0.73056,12.1862L 0.945343,9.884L 7.15628,9.884 Z "
+                                                                  Fill="{StaticResource IconColor}"
+                                                                  Stretch="Fill" />
+                                                            <Path Width="10.036"
+                                                                  Height="18"
+                                                                  HorizontalAlignment="Right"
+                                                                  VerticalAlignment="Top"
+                                                                  Data="M4.0410149,0 L5.9969907,0 5.9969907,15.196013 8.8930061,12.299996 10.03601,13.439998 5.0239922,18.450996 5.0174115,18.444404 5.009824,18.452011 0,13.440192 1.1351867,12.303006 4.0410149,15.208251 z"
+                                                                  Fill="{StaticResource IconColor}"
+                                                                  Stretch="Fill" />
+                                                        </Grid>
+                                                    </Border>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Name="PART_SortDescending"
+                                                      TabIndex="1"
+                                                      Height="28"
+                                                      Width="200"
+                                                      Margin="0,0,2,0" 
+                                                      Command="syncfusion:PivotGridCommands.SortPivotItem"
+                                                      CommandParameter="Descending"
+                                                      Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_SortDescending}" 
+                                                      Tag="{Binding}"                                                      
+                                                      Style="{StaticResource ExcelLikePopupMenuItemStyle}"   
+                                                      Foreground="{StaticResource ContentForeground}"
+                                                      IsCheckable="False">
+                                                <MenuItem.Icon>
+                                                    <Border Name="SortDescendingBorder"
+                                                            BorderBrush="Transparent"
+                                                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                                            CornerRadius="1">
+                                                        <Grid x:Name="Sort_Z_to_A"
+                                                              Width="18"
+                                                              Height="18"  
+                                                              Margin="0,4,0,0"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Top">
+                                                            <Path Width="10.036"
+                                                                  Height="18"
+                                                                  HorizontalAlignment="Right"
+                                                                  VerticalAlignment="Top"                                                                 
+                                                                  Data="M4.0419773,0 L5.9979837,0 5.9979837,15.195082 8.8931761,12.299996 10.035993,13.439998 5.0247957,18.450996 5.0174028,18.443595 5.009003,18.452011 0,13.440192 1.1360006,12.303006 4.0419773,15.208875 z"
+                                                                  Fill="{StaticResource IconColor}"
+                                                                  Stretch="Fill" />
+                                                            <Path Width="7.521"
+                                                                  Height="7.863"                                                               
+                                                                  HorizontalAlignment="Left"
+                                                                  VerticalAlignment="Top"
+                                                                  Data="F1 M 7.15628,0L 2.53384,7.42252L 4.03131,7.42252C 4.73828,7.42252 5.23306,7.37827 5.51563,7.28906C 5.97534,7.14975 6.37109,6.89383 6.70441,6.52097C 7.03653,6.14786 7.26691,5.64786 7.39453,5.02145L 7.61987,5.02145L 7.30081,7.86331L 0.098938,7.86331L 4.7265,0.429077L 3.56119,0.429077C 3.10815,0.429077 2.81119,0.44278 2.668,0.469452C 2.39722,0.520264 2.14319,0.619171 1.90494,0.76828C 1.668,0.917358 1.47012,1.11536 1.31387,1.36267C 1.15759,1.61014 1.03384,1.92322 0.945343,2.30212L 0.73053,2.30212L 0.945343,0L 7.15628,0 Z "
+                                                                  Fill="{StaticResource IconColor}"
+                                                                  Stretch="Fill" />
+                                                            <Path Width="8.35"
+                                                                  Height="8.026"                                                                 
+                                                                  HorizontalAlignment="Left"
+                                                                  VerticalAlignment="Bottom"
+                                                                  Data="F1 M 4.84772,15.3464L 2.07037,15.3464L 1.73962,16.112C 1.63159,16.3665 1.57813,16.5774 1.57813,16.7436C 1.57813,16.9642 1.66666,17.1264 1.84509,17.2312C 1.94922,17.2931 2.20572,17.3392 2.61588,17.3699L 2.61588,17.5847L 0,17.5847L 0,17.3699C 0.282532,17.3274 0.514404,17.2102 0.696655,17.0196C 0.877594,16.8281 1.10159,16.4329 1.36853,15.8333L 4.18106,9.55862L 4.29175,9.55862L 7.12759,16.0072C 7.39856,16.6185 7.61987,17.0027 7.79425,17.1615C 7.92584,17.2813 8.11066,17.351 8.35025,17.3699L 8.35025,17.5847L 4.54694,17.5847L 4.54694,17.3699L 4.70319,17.3699C 5.00919,17.3699 5.22266,17.3274 5.34637,17.2423C 5.43228,17.1811 5.474,17.0918 5.474,16.976C 5.474,16.9063 5.46362,16.8347 5.44012,16.7611C 5.43228,16.7267 5.37372,16.5815 5.26563,16.3263L 4.84772,15.3464 Z M 4.65106,14.9174L 3.47919,12.2091L 2.27347,14.9174L 4.65106,14.9174 Z "
+                                                                  Fill="{StaticResource IconColor}"
+                                                                  Stretch="Fill" />
+
+                                                        </Grid>
+                                                    </Border>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Name="PART_MoreSortOptions" 
+                                                      TabIndex="2" 
+                                                      Margin="0,0,2,0"
+                                                      Width="200"
+                                                      Height="28" 
+                                                      Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_MoreSortOptions}"                                                        
+                                                      Style="{StaticResource ExcelLikePopupMenuItemStyle}"    
+                                                      Foreground="{StaticResource ContentForeground}"
+                                                      HorizontalContentAlignment="Center" IsCheckable="False">
+                                                <MenuItem.Icon>
+                                                    <Border Name="MoreSortOptionsBorder"
+                                                            BorderBrush="Transparent"
+                                                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                                            CornerRadius="1">
+                                                        <Grid x:Name="MoreSortOptions"
+                                                              Width="18"
+                                                              Height="18"
+                                                              Margin="1"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Top">
+                                                        </Grid>
+                                                    </Border>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+
+                                            <Separator Width="220" />
+
+                                            <MenuItem x:Name="PART_MenuItem" 
+                                                      TabIndex="3"
+                                                      Height="28"
+                                                      Width="200"
+                                                      Margin="0,0,2,0"
+                                                      Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_ClearFilters}"                                                          
+                                                      Style="{StaticResource ExcelLikePopupMenuItemStyle}"   
+                                                      IsEnabled="{Binding EnableFilter}"
+                                                      StaysOpenOnClick="True"
+                                                      CommandParameter ="Clear Filters"
+                                                      Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" >
+                                                <MenuItem.Icon>
+                                                    <Grid Height="16" Width="16" Margin="2">
+                                                        <Path Data="M0.33299977,11.255001L37.041462,11.255001C37.024662,11.5465 36.998562,11.833101 36.998562,12.127001 36.998562,16.835509 39.218578,21.028417 42.66,23.739322L32.947735,35.025546 32.947735,63.215999 21.340952,56.585582 21.340952,34.473741z M1.2878267,4.0470002L39.629997,4.0470002C38.814808,5.2892774,38.189812,6.6619451,37.776917,8.1230001L1.2878267,8.1230001C0.57567823,8.1229997,2.9802322E-08,7.5472746,0,6.8362782L0,5.3361609C2.9802322E-08,4.622725,0.57567823,4.0469999,1.2878267,4.0470002z M49.429409,3.7740004L46.442997,6.7597783 50.784157,11.100458 46.442997,15.441261 49.42902,18.426001 53.769852,14.085821 58.110516,18.426001 61.096996,15.440762 56.756023,11.100098 61.096996,6.7597783 58.111217,3.7740004 53.770287,8.1145711z M53.78915,0C59.935287,0 64.920998,5.0389932 64.920998,11.25525 64.920998,17.469967 59.935287,22.509999 53.78915,22.509999 47.643211,22.509999 42.66,17.469967 42.66,11.25525 42.66,5.0389932 47.643211,0 53.78915,0z"
+                                                              Fill="{StaticResource IconColor}" 
+                                                              Stretch="Fill" />
+                                                    </Grid>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+
+                                            <MenuItem x:Name="PART_AdvanceFilter" 
+                                                      TabIndex="4"                                                          
+                                                      Height="28"
+                                                      Width="196"
+                                                      Margin="0,0,2,0"
+                                                      Style="{StaticResource ExcelLikePopupMenuItemStyle}"   
+                                                      Foreground="{StaticResource ContentForeground}"
+                                                      Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_LabelFilters}">
+                                                <MenuItem.Icon>
+                                                    <Border Name="LabelFilterBorder"
+                                                            BorderBrush="Transparent"
+                                                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                                            CornerRadius="1">
+                                                        <Grid x:Name="LabelFilter"
+                                                              Width="18"
+                                                              Height="18"
+                                                              Margin="1"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Top">
+                                                        </Grid>
+                                                    </Border>
+                                                </MenuItem.Icon>
+                                                <MenuItem x:Name="PART_MenuItemLabel"
+                                                          Height="28"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_ClearFilters}" 
+                                                          CommandParameter="Label Clear Filter"
+                                                          IsEnabled="{Binding EnableFilter}"
+                                                          StaysOpenOnClick="True"
+                                                          Style="{StaticResource ExcelLikePopupMenuItemStyle}"  
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem">
+                                                    <MenuItem.Icon>
+                                                        <Grid Height="16" Width="16" Margin="2">
+                                                            <Path Data="M0.33299977,11.255001L37.041462,11.255001C37.024662,11.5465 36.998562,11.833101 36.998562,12.127001 36.998562,16.835509 39.218578,21.028417 42.66,23.739322L32.947735,35.025546 32.947735,63.215999 21.340952,56.585582 21.340952,34.473741z M1.2878267,4.0470002L39.629997,4.0470002C38.814808,5.2892774,38.189812,6.6619451,37.776917,8.1230001L1.2878267,8.1230001C0.57567823,8.1229997,2.9802322E-08,7.5472746,0,6.8362782L0,5.3361609C2.9802322E-08,4.622725,0.57567823,4.0469999,1.2878267,4.0470002z M49.429409,3.7740004L46.442997,6.7597783 50.784157,11.100458 46.442997,15.441261 49.42902,18.426001 53.769852,14.085821 58.110516,18.426001 61.096996,15.440762 56.756023,11.100098 61.096996,6.7597783 58.111217,3.7740004 53.770287,8.1145711z M53.78915,0C59.935287,0 64.920998,5.0389932 64.920998,11.25525 64.920998,17.469967 59.935287,22.509999 53.78915,22.509999 47.643211,22.509999 42.66,17.469967 42.66,11.25525 42.66,5.0389932 47.643211,0 53.78915,0z"
+                                                                  Fill="{StaticResource IconColor}" 
+                                                                  Stretch="Fill" />
+                                                        </Grid>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator/>
+                                                <MenuItem Name="Equals" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}" 
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_Equals}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_Equals}"
+                                                          />
+                                                <MenuItem Name="NotEquals" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_NotEquals}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_NotEquals}"
+                                                          />
+                                                <Separator/>
+                                                <MenuItem Name="GreaterThan" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_GreaterThan}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_GreaterThan}"
+                                                          />
+                                                <MenuItem Name="GreaterThanOrEqual"
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_GreaterThanOrEqual}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_GreaterThanOrEqual}"
+                                                          />
+                                                <MenuItem Name="LessThan" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_LessThan}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_LessThan}"
+                                                          />
+                                                <MenuItem Name="LessThanOrEqual" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_LessThanOrEqual}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_LessThanOrEqual}"
+                                                           />
+                                                <Separator/>
+                                                <MenuItem Name="BeginsWith"
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_BeginsWith}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_BeginsWith}"
+                                                           />
+                                                <MenuItem Name="DoesnotBeginsWith"
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_DoesnotBeginsWith}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_DoesnotBeginsWith}"
+                                                           />
+                                                <MenuItem Name="EndsWith" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_EndsWith}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_EndsWith}"
+                                                           />
+                                                <MenuItem Name="DoesnotEndsWith" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_DoesnotEndsWith}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_DoesnotEndsWith}"
+                                                           />
+                                                <Separator/>
+                                                <MenuItem Name="contains" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_Contains}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_Contains}"
+                                                           />
+                                                <MenuItem Name="doesnotcontains" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_DoesNotContains}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_DoesNotContains}"
+                                                           />
+                                                <Separator/>
+                                                <MenuItem Name="between" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_Between}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_Between}"
+                                                         />
+                                                <MenuItem Name="notbetween" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          CommandParameter="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ComboBox_NotBetween}"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_NotBetween}"
+                                                          />
+                                            </MenuItem>
+
+                                            <MenuItem x:Name="PART_ValueFilter"
+                                                      TabIndex="5"                                                   
+                                                      Height="28"
+                                                      Width="196"      
+                                                      Margin="0,0,2,0"
+                                                      Style="{StaticResource ExcelLikePopupMenuItemStyle}"  
+                                                      Foreground="{StaticResource ContentForeground}"
+                                                      Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_ValueFilters}">
+                                                <MenuItem.Icon>
+                                                    <Border Name="ValueFilterBorder"
+                                                            BorderBrush="Transparent"
+                                                            BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                                            CornerRadius="1">
+                                                        <Grid x:Name="ValueFilter"
+                                                              Width="18"
+                                                              Height="18"
+                                                              Margin="1"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Top">
+                                                        </Grid>
+                                                    </Border>
+                                                </MenuItem.Icon>
+                                                <MenuItem x:Name="PART_MenuItemClearFilter"
+                                                          Height="28"
+                                                          Style="{StaticResource ExcelLikePopupMenuItemStyle}"
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="Value Clear Filters" 
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_ClearFilters}">
+                                                    <MenuItem.Icon>
+                                                        <Grid Height="16" Width="16" Margin="2">
+                                                            <Path Data="M0.33299977,11.255001L37.041462,11.255001C37.024662,11.5465 36.998562,11.833101 36.998562,12.127001 36.998562,16.835509 39.218578,21.028417 42.66,23.739322L32.947735,35.025546 32.947735,63.215999 21.340952,56.585582 21.340952,34.473741z M1.2878267,4.0470002L39.629997,4.0470002C38.814808,5.2892774,38.189812,6.6619451,37.776917,8.1230001L1.2878267,8.1230001C0.57567823,8.1229997,2.9802322E-08,7.5472746,0,6.8362782L0,5.3361609C2.9802322E-08,4.622725,0.57567823,4.0469999,1.2878267,4.0470002z M49.429409,3.7740004L46.442997,6.7597783 50.784157,11.100458 46.442997,15.441261 49.42902,18.426001 53.769852,14.085821 58.110516,18.426001 61.096996,15.440762 56.756023,11.100098 61.096996,6.7597783 58.111217,3.7740004 53.770287,8.1145711z M53.78915,0C59.935287,0 64.920998,5.0389932 64.920998,11.25525 64.920998,17.469967 59.935287,22.509999 53.78915,22.509999 47.643211,22.509999 42.66,17.469967 42.66,11.25525 42.66,5.0389932 47.643211,0 53.78915,0z"
+                                                                  Fill="{StaticResource IconColor}" 
+                                                                  Stretch="Fill" />
+                                                        </Grid>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator Name="SubMenuSeparator3" />
+                                                <MenuItem Name="ValueEquals" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="equals"                                                       
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_Equals}" />
+                                                <MenuItem Name="ValueNotEquals"
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}" 
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="does not equals"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_NotEquals}" 
+                                                           />
+                                                <Separator Name="SubMenuSeparator" />
+                                                <MenuItem Name="ValueGreaterThan" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}" 
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="is greater than"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_GreaterThan}" 
+                                                           />
+                                                <MenuItem Name="ValueGreaterThanOrEqualTo" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}" 
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="is greater than or equal to"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_GreaterThanOrEqual}"
+                                                           />
+                                                <MenuItem Name="ValueLessThan" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}" 
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="is less than"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_LessThan}" 
+                                                           />
+                                                <MenuItem Name="ValueLessThanOrEqualTo"
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}" 
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="is less than or equal to"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_LessThanOrEqual}" 
+                                                           />
+                                                <Separator Name="SubMenuSeparator1" />
+                                                <MenuItem Name="ValueBetween"
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}" 
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="between"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_Between}" 
+                                                           />
+                                                <MenuItem Name="ValueNotBetween" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}" 
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem"
+                                                          CommandParameter="not between"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Filter_ContextMenu_NotBetween}" 
+                                                           />
+                                                <Separator  Name="SubMenuSeparator2" />
+                                                <MenuItem Name="ValueTop10" 
+                                                          Height="28"
+                                                          Foreground="{StaticResource ContentForeground}"
+                                                          Command="syncfusion:PivotGridCommands.ValueFilterMenuItem" 
+                                                          CommandParameter="top 10"
+                                                          Header="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=Top10}"
+                                                           />
+                                            </MenuItem>
+
+                                        </Menu>
+                                        <Separator Grid.Row="1" 
+                                                   Margin="0"/>
+                                        <shared:MaskedTextBox Name="PARTExcel_SearchBox"
+                                                                  Background="Transparent"
+                                                                  BorderThickness="{StaticResource MaterialLightCustom.BorderThickness0001}"
+                                                                  Grid.Row="2" 
+                                                                  TabIndex="6"
+                                                                  Margin="10,2" 
+                                                                  Height="25" 
+                                                                  WatermarkText="Search" 
+                                                                  Focusable="False"/>
+
+                                        <ListBox x:Name="PARTExcel_FilterPopupListBox"
+                                                 Grid.Row="3" 
+                                                 TabIndex="7"
+                                                 Margin="4,2" 
+                                                 ItemsSource="{Binding Path=FilterList, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=syncfusion:MultiFunctionalSortFilterPopup}}" 
+                                                 BorderBrush="Transparent"
+                                                 Background="Transparent">
+                                            <ListBox.Resources>
+                                                <DataTemplate x:Key="stringTemplate"
+                                                              DataType="sys:String">
+                                                    <TextBlock Text="{Binding}" />
+                                                </DataTemplate>
+                                            </ListBox.Resources>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox Content="{Binding Key}" 
+                                                              ContentTemplate="{StaticResource stringTemplate}"
+                                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              Foreground="{StaticResource ContentForeground}" />
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="{x:Type ListBoxItem}"
+                                                       BasedOn="{StaticResource WPFListBoxItemStyle}">
+                                                    <Setter Property="Padding" 
+                                                            Value="3,2,2,1"/>
+                                                    <Setter Property="Margin"
+                                                            Value="5,2"/>
+                                                    <Setter Property="OverridesDefaultStyle" Value="True"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                                                            <Setter Property="Padding" 
+                                                                    Value="3,0,2,0" />
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                        </ListBox>
+
+                                        <Separator Grid.Row="4"
+                                                   Margin="0"/>
+                                        
+                                        <Grid Grid.Row="5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition/>
+                                                <ColumnDefinition Width="1"/>
+                                                <ColumnDefinition />
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="PARTExcel_btnOK" 
+                                                    Grid.Column="1"
+                                                    Margin="3" 
+                                                    Height="25"
+                                                    Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=OkButton}"
+                                                    Style="{StaticResource WPFFlatPrimaryButtonStyle}"
+                                                    MinWidth="50" 
+                                                    MinHeight="23"/>
+                                            <Button x:Name="PARTExcel_btnCancel" 
+                                                    Grid.Column="3" 
+                                                    Style="{StaticResource WPFFlatButtonStyle}"
+                                                    Margin="3" 
+                                                    Height="25"
+                                                    Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=CancelButton}" 
+                                                    MinWidth="50" 
+                                                    MinHeight="23"/>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </syncfusion:MultiFunctionalSortFilterPopup>
+
+                            <syncfusion:FilterPopup x:Name="PART_FilterPopup"
+                                                    Width="200" 
+                                                    Height="220" 
+                                                    Placement="Bottom" 
+                                                    StaysOpen="False" 
+                                                    AllowsTransparency="True"
+                                                    KeyboardNavigation.DirectionalNavigation="Cycle"
+                                                    KeyboardNavigation.TabNavigation="Cycle" >
+                                <Border BorderBrush="{StaticResource BorderAlt}" 
+                                        Background="{StaticResource PopupBackground}" 
+                                        BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                        Effect="{StaticResource Default.ShadowDepth3}">
+                                    <Border.Margin>
+                                        8,0,8,8
+                                    </Border.Margin>
+                                    <Grid Background="{StaticResource PopupBackground}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition x:Name="PARTFilterPopup_SearchBoxRowDefinition"
+                                                           Height="30"/>
+                                            <RowDefinition Height="1"/> 
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="1"/>
+                                            <RowDefinition x:Name="PARTFilterPopup_btnOKCancelRowDefinition"
+                                                           Height="35"/>
+                                        </Grid.RowDefinitions>
+                                        <shared:MaskedTextBox Name="PART_SearchBox"  
+                                                                  Background="Transparent"
+                                                                  BorderThickness="{StaticResource MaterialLightCustom.BorderThickness0001}"
+                                                                  Margin="10,2"
+                                                                  Grid.Row="0" 
+                                                                  WatermarkText="Search" 
+                                                                  Height="25" />
+                                        <Separator Grid.Row="1" Margin="0"/>
+                                        <ListBox x:Name="PART_FilterPopupListBox"
+                                                 Grid.Row="2"
+                                                 ItemsSource="{Binding Path=FilterList, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=syncfusion:FilterPopup}}"  
+                                                 Margin="5"
+                                                 BorderThickness="0,1,0,1"
+                                                 BorderBrush="Transparent"
+                                                 Background="Transparent"
+                                                 >
+                                            <ListBox.Resources>
+                                                <DataTemplate x:Key="stringTemplate"
+                                                              DataType="sys:String">
+                                                    <TextBlock Text="{Binding}" />
+                                                </DataTemplate>
+                                            </ListBox.Resources>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox Content="{Binding Key}" 
+                                                              ContentTemplate="{StaticResource stringTemplate}" 
+                                                              IsChecked="{Binding IsSelected, Mode=TwoWay}" 
+                                                              Foreground="{StaticResource ContentForeground}" />
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="{x:Type ListBoxItem}" 
+                                                       BasedOn="{StaticResource WPFListBoxItemStyle}">
+                                                    <Setter Property="Padding" 
+                                                            Value="3,2,2,1"/>
+                                                    <Setter Property="Margin" 
+                                                            Value="5,2"/>
+                                                    <Setter Property="OverridesDefaultStyle" Value="True"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                                                            <Setter Property="Padding" 
+                                                                    Value="3,0,2,0" />
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+
+                                        </ListBox>
+                                        <Separator Grid.Row="3" Margin="0"/>
+                                        <Grid Grid.Row="4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition/>
+                                                <ColumnDefinition Width="1"/>
+                                                <ColumnDefinition />
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="PART_btnOK" 
+                                                    Grid.Column="1"
+                                                    Margin="5" 
+                                                    Height="25"
+                                                    Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=OkButton}"
+                                                    Style="{StaticResource WPFFlatPrimaryButtonStyle}"
+                                                    MinWidth="50" 
+                                                    MinHeight="23"/>
+                                            <Button x:Name="PART_btnCancel" 
+                                                    Grid.Column="3"
+                                                    Margin="5" 
+                                                    Height="25"
+                                                    Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=CancelButton}"
+                                                    Style="{StaticResource WPFFlatButtonStyle}"
+                                                    MinWidth="50" 
+                                                    MinHeight="23"/>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </syncfusion:FilterPopup>
+
+                        </Grid>
+                        <Grid Grid.Row="2">
+                            <syncfusion:PivotGroupingItemsControl 
+                                        x:Name="PART_RowList"         
+                                        AllowDrop="True"        
+                                        Background="{TemplateBinding Background}"
+                                        BorderThickness="{StaticResource MaterialLightCustom.BorderThickness}"
+                                        BorderBrush="{StaticResource BorderAlt}"
+                                        ItemsPanel="{StaticResource SyncfusionPivotGridRowItemsPanelTemplate}"
+                                        ItemTemplate="{StaticResource PivotRowItemTemplate}"
+                                        ItemContainerStyle="{StaticResource PivotGroupingItemContainerStyle}"
+                                        ScrollViewer.VerticalScrollBarVisibility="Disabled" 
+                                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                        ScrollViewer.CanContentScroll="False" 
+                                        ContextMenu="{StaticResource SyncfusionPivotGridGroupingBarContextMenu}"/>
+                        </Grid>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter TargetName="PARTExcel_SearchBoxRowDefinition" 
+                                        Property="MinHeight" 
+                                        Value="36" />
+                            <Setter TargetName="PARTExcel_btnOKCancelRowDefinition" 
+                                        Property="MinHeight" 
+                                        Value="40" />
+                            <Setter TargetName="PARTExcel_SearchBox" 
+                                        Property="MinHeight" 
+                                        Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PARTExcel_btnOK" 
+                                        Property="MinHeight" 
+                                        Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PARTExcel_btnCancel" 
+                                        Property="MinHeight" 
+                                        Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PARTFilterPopup_SearchBoxRowDefinition" 
+                                        Property="MinHeight" 
+                                        Value="36" />
+                            <Setter TargetName="PARTFilterPopup_btnOKCancelRowDefinition" 
+                                        Property="MinHeight" 
+                                        Value="40" />
+                            <Setter TargetName="PART_SearchBox" 
+                                        Property="MinHeight" 
+                                        Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_btnOK" 
+                                        Property="MinHeight" 
+                                        Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter TargetName="PART_btnCancel" 
+                                        Property="MinHeight" 
+                                        Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="HasGroupItems" SourceName="PART_FilterList" Value="false">
+                            <Setter TargetName="PART_FilterList" 
+                                    Property="ItemTemplate" 
+                                    Value="{x:Null}" />
+                        </Trigger>
+                        <Trigger Property="HasGroupItems" SourceName="PART_FilterList" Value="true">
+                            <Setter TargetName="PART_FilterList" 
+                                    Property="ItemTemplate" 
+                                    Value="{StaticResource PivotFilterItemTemplate}" />
+                        </Trigger>
+                        <Trigger Property="HasGroupItems" SourceName="PART_RowList" Value="false">
+                            <Setter TargetName="PART_RowList" 
+                                    Property="ItemTemplate" 
+                                    Value="{x:Null}" />
+                        </Trigger>
+                        <Trigger Property="HasGroupItems" SourceName="PART_RowList" Value="true">
+                            <Setter TargetName="PART_RowList" 
+                                    Property="ItemTemplate" 
+                                    Value="{StaticResource PivotRowItemTemplate}" />
+                        </Trigger>
+                        <Trigger Property="HasGroupItems" SourceName="PART_ColumnList" Value="false">
+                            <Setter TargetName="PART_ColumnList" 
+                                    Property="ItemTemplate" 
+                                    Value="{x:Null}" />
+                        </Trigger>
+                        <Trigger Property="HasGroupItems" SourceName="PART_ColumnList" Value="true">
+                            <Setter TargetName="PART_ColumnList"     
+                                    Property="ItemTemplate" 
+                                    Value="{StaticResource PivotColumnItemTemplate}" />
+                        </Trigger>
+                        <Trigger Property="HasGroupItems" SourceName="PART_ComputationInfoList" Value="false">
+                            <Setter TargetName="PART_ComputationInfoList" 
+                                    Property="ItemTemplate" 
+                                    Value="{x:Null}" />
+                        </Trigger>
+                        <Trigger Property="HasGroupItems" SourceName="PART_ComputationInfoList" Value="true">
+                            <Setter TargetName="PART_ComputationInfoList" 
+                                    Property="ItemTemplate" 
+                                    Value="{StaticResource PivotCalculationTemplate}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPivotGridGroupingBarStyle}" TargetType="{x:Type syncfusion:PivotGridGroupingBar}"/>
+
+    <Style x:Key="SyncfusionPivotGridControlStyle" 
+           TargetType="{x:Type syncfusion:PivotGridControl}">
+        <Setter Property="Background"
+                Value="{StaticResource ContentBackground}"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialLightCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialLightCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialLightCustom.FontWeightNormal}"/>
+        <Setter Property="ColumnHeaderCellStyle"
+                Value="{StaticResource SyncfusionPivotGridColumnHeaderStyle}"/>
+        <Setter Property="RowHeaderCellStyle" 
+                Value="{StaticResource SyncfusionPivotGridRowHeaderStyle}"/>
+        <Setter Property="SummaryHeaderStyle"
+                Value="{StaticResource SyncfusionPivotGridSummaryHeaderStyle}"/>
+        <Setter Property="SummaryRowHeaderStyle"
+                Value="{StaticResource SyncfusionPivotGridSummaryRowHeaderStyle}"/>
+        <Setter Property="SummaryColumnHeaderStyle"
+                Value="{StaticResource SyncfusionPivotGridSummaryColumnHeaderStyle}"/>
+        <Setter Property="SummaryCellStyle" 
+                Value="{StaticResource SyncfusionPivotGridSummaryCellStyle}"/>
+        <Setter Property="ValueCellStyle"
+                Value="{StaticResource SyncfusionPivotGridValueCellStyle}"/>
+        <Setter Property="GridLineStroke"
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="BorderThickness" 
+                Value="{StaticResource MaterialLightCustom.BorderThickness1}" />
+        <Setter Property="ExpanderStyle"
+                Value="{StaticResource ExpanderStyle}"/>
+        <Setter Property="GroupingButtonHoverBackgroundBrush"
+                Value="{StaticResource ContentBackgroundAlt4}"/>
+        <Setter Property="GroupingButtonHoverBorderBrush"
+                Value="{StaticResource ContentBackgroundAlt4}"/>
+        <Setter Property="GroupingButtonCheckedForeground" 
+                Value="{StaticResource ContentForegroundAlt}"/>
+        <Setter Property="GroupingButtonCheckedBackground"
+                Value="{StaticResource ContentBackgroundAlt5}"/>
+        <Setter Property="GroupingButtonHoverForeground"
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="GroupingBarBackground" 
+                Value="{StaticResource ContentBackgroundAlt2}"/>
+        <Setter Property="GroupingBarItemBackground"
+                Value="{StaticResource ContentBackgroundAlt3}"/>
+        <Setter Property="GroupingBarItemBorderBrush"
+                Value="{StaticResource ContentBackgroundAlt3}"/>
+        <Setter Property="FieldListBorderBrush" 
+                Value="{StaticResource ContentBackgroundAlt3}"/>
+        <Setter Property="GroupingBarItemForeground"
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="GridOuterBorderBrush" 
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="CurrentCellBorder" 
+                Value="{StaticResource BorderDark}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type syncfusion:PivotGridControl}">
+                    <tools:BusyIndicator x:Name="PART_BusyIndicator" 
+                                              IsEnabled="True" 
+                                              HorizontalContentAlignment="Center"
+                                              VerticalContentAlignment="Center" 
+                                              IsBusy="False"
+                                              CloseButtonVisibility="Collapsed"
+                                              CancelButtonVisibility="Collapsed"
+                                              IsIndeterminate="True"
+                                              OverlayOpacity="0.5">
+                        <tools:BusyIndicator.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Height="0" 
+                                            Width="0"/>
+                            </DataTemplate>
+                        </tools:BusyIndicator.HeaderTemplate>
+                        <tools:BusyIndicator.LoadingDescription>
+                            <TextBlock Width="230" 
+                                       Height="35" 
+                                       TextAlignment="Left"
+                                       Text="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=PivotGrid_BusyIndicator_Loading}"
+                                       TextWrapping="Wrap"/>
+                        </tools:BusyIndicator.LoadingDescription>
+                        <Border x:Name="PART_GridOuterBorder" 
+                                BorderThickness="{StaticResource MaterialLightCustom.BorderThickness1}"
+                                BorderBrush="{Binding Path=GridOuterBorderBrush,RelativeSource={RelativeSource Mode=TemplatedParent},Mode=TwoWay}">
+							<Border.Resources>
+                                <SolidColorBrush x:Key="MoveColumnHeaderCellBorder" Color="{StaticResource PrimaryBackground.Color}"/>
+                            </Border.Resources>
+                            <Grid Margin="0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition x:Name="PART_GroupingBarRowDefinition"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <syncfusion:PivotGridGroupingBar x:Name="PART_PivotGridGroupingBar" 
+                                                                 Grid.Row="0"
+                                                                 ContextMenu="{StaticResource SyncfusionPivotGridGroupingBarContextMenu}"/>
+                                <ScrollViewer x:Name="PART_GridScrollViewer"
+                                              Grid.Row="1"
+                                              Background="{TemplateBinding Background}"
+                                              BorderBrush="{TemplateBinding BorderBrush}"                        
+                                              HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Auto"
+                                              CanContentScroll="True" />
+                            </Grid>
+                        </Border>
+                    </tools:BusyIndicator>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionPivotGridControlStyle}" 
+           TargetType="{x:Type syncfusion:PivotGridControl}"/>
+
+    <Style x:Key="SyncfusionAnimatedGridStyle" 
+           TargetType="{x:Type syncfusion:AnimatedGrid}">
+        <Setter Property="InnerBrush" 
+                Value="{StaticResource IconColor}"/>
+        <Setter Property="OuterBrush" 
+                Value="{StaticResource IconColor}"/>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionAnimatedGridStyle}" 
+           TargetType="{x:Type syncfusion:AnimatedGrid}" />
+
+</ResourceDictionary>

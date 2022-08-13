@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace EQLogParser
 {
@@ -12,11 +11,31 @@ namespace EQLogParser
     private static readonly Dictionary<string, bool> ValidCombo = new Dictionary<string, bool>();
     private const int RECENTSPELLTIME = 300;
 
-    public NpcDamageManager() => DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
+    public NpcDamageManager()
+    {
+      DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
+      DamageLineParser.EventsNewTaunt += HandleNewTaunt;
+    }
 
-    ~NpcDamageManager() => DamageLineParser.EventsDamageProcessed -= HandleDamageProcessed;
+    internal void Reset()
+    {
+      LastFightProcessTime = double.NaN;
+      CurrentNpcID = 1;
+      RecentSpellCache.Clear();
+      ValidCombo.Clear();
+    }
 
-    internal void ResetTime() => LastFightProcessTime = double.NaN;
+    private void HandleNewTaunt(object sender, TauntEvent e)
+    {
+      Fight fight = DataManager.Instance.GetFight(e.Record.Npc);
+
+      if (fight == null)
+      {
+        fight = Create(e.Record.Npc, e.BeginTime);
+      }
+
+      Helpers.AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
+    }
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
@@ -137,7 +156,7 @@ namespace EQLogParser
         LastFightProcessTime = processed.BeginTime;
 
         var ttl = fight.LastTime - fight.BeginTime + 1;
-        fight.TooltipText = string.Format(CultureInfo.CurrentCulture, "#Hits To Players: {0}, #Hits From Players: {1}, Time Alive: {2}s", fight.TankHits, fight.DamageHits, ttl);
+        fight.TooltipText = string.Format("#Hits To Players: {0}, #Hits From Players: {1}, Time Alive: {2}s", fight.TankHits, fight.DamageHits, ttl);
 
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
       }
@@ -193,12 +212,12 @@ namespace EQLogParser
 
         if (isDefenderNpc && !isAttackerNpc)
         {
-          valid = isAttackerPlayer || PlayerManager.Instance.IsPossiblePlayerName(record.Attacker);
+          valid = isAttackerPlayer || PlayerManager.IsPossiblePlayerName(record.Attacker);
           npcDefender = true;
         }
         else if (!isDefenderNpc && isAttackerNpc)
         {
-          valid = isDefenderPlayer || PlayerManager.Instance.IsPossiblePlayerName(record.Defender);
+          valid = isDefenderPlayer || PlayerManager.IsPossiblePlayerName(record.Defender);
           npcDefender = false;
         }
         else if (!isDefenderNpc && !isAttackerNpc)
@@ -226,7 +245,7 @@ namespace EQLogParser
           }
           else
           {
-            npcDefender = PlayerManager.Instance.IsPossiblePlayerName(record.Attacker) || !PlayerManager.Instance.IsPossiblePlayerName(record.Defender);
+            npcDefender = PlayerManager.IsPossiblePlayerName(record.Attacker) || !PlayerManager.IsPossiblePlayerName(record.Defender);
             valid = true;
           }
         }

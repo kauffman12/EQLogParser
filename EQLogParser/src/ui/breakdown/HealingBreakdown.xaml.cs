@@ -1,11 +1,4 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Controls;
-using System.Windows.Threading;
+﻿using System.Collections.Generic;
 
 namespace EQLogParser
 {
@@ -14,90 +7,43 @@ namespace EQLogParser
   /// </summary>
   public partial class HealBreakdown : BreakdownTable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static bool Running = false;
     private bool CurrentShowSpellsChoice = true;
     private List<PlayerStats> PlayerStats = null;
 
     private readonly List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
+    private readonly List<string> ReceivedChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healer" };
 
-    internal HealBreakdown(CombinedStats currentStats)
+    public HealBreakdown()
     {
       InitializeComponent();
-      InitBreakdownTable(dataGrid, selectedColumns);
+      InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
+    }
+
+    internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats, bool received = false)
+    {
       titleLabel.Content = currentStats?.ShortTitle;
-      choicesList.ItemsSource = ChoicesList;
+      PlayerStats = selectedStats;
+      choicesList.ItemsSource = received ? ReceivedChoicesList : ChoicesList;
       choicesList.SelectedIndex = 0;
+      Display();
     }
 
-    internal void Show(List<PlayerStats> selectedStats)
+    private void Display()
     {
-      if (selectedStats != null)
+      if (CurrentShowSpellsChoice)
       {
-        PlayerStats = selectedStats;
-        Display();
+        dataGrid.ChildPropertyName = "SubStats";
       }
+      else
+      {
+        dataGrid.ChildPropertyName = "SubStats2";
+      }
+
+      dataGrid.ItemsSource = null;
+      dataGrid.ItemsSource = PlayerStats;
     }
 
-    internal override void Display(List<PlayerStats> _ = null)
-    {
-      if (Running == false && PlayerStats != null)
-      {
-        Running = true;
-        choicesList.IsEnabled = false;
-
-        Task.Delay(10).ContinueWith(task =>
-        {
-          try
-          {
-            if (PlayerStats != null)
-            {
-              ObservableCollection<PlayerSubStats> list = new ObservableCollection<PlayerSubStats>();
-
-              foreach (var playerStat in PlayerStats.AsParallel().OrderByDescending(stats => GetSortValue(stats)))
-              {
-                list.Add(playerStat);
-
-                if (CurrentShowSpellsChoice)
-                {
-                  SortSubStats(playerStat.SubStats.Values.ToList()).ForEach(subStat => list.Add(subStat));
-                }
-                else
-                {
-                  SortSubStats(playerStat.SubStats2.Values.ToList()).ForEach(subStat => list.Add(subStat));
-                }
-              }
-
-              Dispatcher.InvokeAsync(() => dataGrid.ItemsSource = list);
-
-              if (CurrentColumn != null)
-              {
-                Dispatcher.InvokeAsync(() => CurrentColumn.SortDirection = CurrentSortDirection);
-              }
-            }
-          }
-          catch (ArgumentNullException ane)
-          {
-            LOG.Error(ane);
-          }
-          catch (NullReferenceException nre)
-          {
-            LOG.Error(nre);
-          }
-          catch (ArgumentOutOfRangeException aro)
-          {
-            LOG.Error(aro);
-          }
-          finally
-          {
-            Dispatcher.InvokeAsync(() => choicesList.IsEnabled = true);
-            Running = false;
-          }
-        }, TaskScheduler.Default);
-      }
-    }
-
-    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
       if (PlayerStats != null)
       {

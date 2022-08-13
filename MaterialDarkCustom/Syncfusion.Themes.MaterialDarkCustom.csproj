@@ -1,0 +1,748 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Syncfusion.Themes.MaterialDarkCustom.WPF</RootNamespace>
+    <AssemblyName>Syncfusion.Themes.MaterialDarkCustom.WPF</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <EnableDefaultEmbeddedResourceItems>False</EnableDefaultEmbeddedResourceItems>
+    <EnableDefaultItems>false</EnableDefaultItems>
+	<ProjectGuid>{8df8c0e0-12b0-42da-b928-7d4d5b51639a}</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;NETCORE;NET50;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>
+    </DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;NETCORE;NET50;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>
+    </DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release-Xml|AnyCPU'">
+    <OutputPath>bin\Release-Xml\</OutputPath>
+    <DefineConstants>TRACE;NETCORE;NET50;</DefineConstants>
+    <DocumentationFile>..\bin\Release-Xml\Syncfusion.Themes.MaterialDarkCustom.WPF.XML</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug-Xml|AnyCPU'">
+    <OutputPath>bin\Debug-Xml\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;NETCORE;NET50;</DefineConstants>
+    <DocumentationFile>..\bin\Debug-Xml\Syncfusion.Themes.MaterialDarkCustom.WPF.XML</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+	<PropertyGroup>
+		<SignAssembly>true</SignAssembly>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<AssemblyOriginatorKeyFile>ThemeStudio.snk</AssemblyOriginatorKeyFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="ThemeStudio.snk" />
+	</ItemGroup>
+   <ItemGroup>
+		<PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.Shared.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfGrid.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfInput.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.PivotTable.Wpf" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfChart.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfDiagram.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfSmithChart.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfSunburstChart.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfBulletGraph.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.Tools.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfColorPalette.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfTextInputLayout.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfRadialMenu.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfBusyIndicator.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfHubTile.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfAccordion.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfTreeView.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfNavigationDrawer.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfTreeNavigator.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfRichTextRibbon.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.Edit.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfSpreadsheet.WPF" Version="20.2.0.36" />
+		<PackageReference Include="Syncfusion.SfImageEditor.WPF" Version="20.2.0.36" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="MaterialDarkCustomSkinHelper.cs" />
+	<!-- Fluent Control Reference -->
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <AppDesigner Include="Properties\" />
+  </ItemGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <ItemGroup>
+	<Page Include="SfDataGrid\SfDataGrid.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="ChromelessWindow\ChromelessWindow.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ToolTip.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GlyphButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\FlatButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\FlatPrimaryButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="DoubleTextBox\DoubleTextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="PercentTextBox\PercentTextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="CurrencyTextBox\CurrencyTextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="UpDown\UpDown.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GlyphRepeatButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MaskedTextBox\MaskedTextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="ComboBoxAdv\ComboBoxAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Button.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\TextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GlyphDropdownExpander.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GlyphEditableDropdownExpander.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="TimeSpanEdit\TimeSpanEdit.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ListBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\DatePicker.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Calendar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="GridPrintPreviewControl\GridPrintPreviewControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ComboBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Slider.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\RepeatButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\TextBlock.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ScrollViewer.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfTreeGrid\SfTreeGrid.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfDataPager\SfDataPager.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="PivotGridControl\PivotGridControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GlyphToggleButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Menu.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Separator.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Window.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Label.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\CheckBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="PivotGridControl\PivotGridResources.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="PivotGridControl\PivotSchemaDesigner.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfChart\SfChart.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfChart\ChartArea.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfChart\ChartAxis.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfChart\ChartToolBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfChart\SfChartCommon.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfChart\Resizer.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfChart3D\SfChart3D.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="PrintPreviewControl\PrintPreviewControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GroupBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\PrimaryButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="PrintPreview\PrintPreview.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Expander.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GridSplitter.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ToggleButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ListView.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfSmithChart\SfSmithChart.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfSunburstChart\SfSunburstChart.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfBulletGraph\SfBulletGraph.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfDateTimeRangeNavigator\SfDateTimeRangeNavigator.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfAreaSparkline\SfAreaSparkline.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfLineSparkline\SfLineSparkline.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfColumnSparkline\SfColumnSparkline.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfWinLossSparkline\SfWinLossSparkline.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="PropertyGrid\PropertyGrid.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GlyphPrimaryToggleButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="ColorPicker\ColorPicker.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="ColorEdit\ColorEdit.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="IntegerTextBox\IntegerTextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfMaskedEdit\SfMaskedEdit.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfBadge\SfBadge.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfColorPalette\SfColorPalette.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="ColorPickerPalette\ColorPickerPalette.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfCalculator\SfCalculator.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Clock\Clock.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfDomainUpDown\SfDomainUpDown.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfDatePicker\SfDatePicker.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfDateSelector\SfDateSelector.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfTextBoxExt\SfTextBoxExt.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfTimePicker\SfTimePicker.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfTimeSelector\SfTimeSelector.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfTextInputLayout\SfTextInputLayout.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRadialSlider\SfRadialSlider.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRangeSlider\SfRangeSlider.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRating\SfRating.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="PinnableListBox\PinnableListBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="CalendarEdit\CalendarEdit.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="ButtonAdv\ButtonAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="DropDownButtonAdv\DropDownButtonAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SplitButtonAdv\SplitButtonAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfMultiColumnDropDownControl\SfMultiColumnDropDownControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="CheckListBox\CheckListBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="FontListBox\FontListBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="FontListComboBox\FontListComboBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfBusyIndicator\SfBusyIndicator.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfLinearProgressBar\SfLinearProgressBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfCircularProgressBar\SfCircularProgressBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfStepProgressBar\SfStepProgressBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfHubTile\SfHubTile.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfPulsingTile\SfPulsingTile.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="BusyIndicator\BusyIndicator.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ProgressBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="NotifyIcon\NotifyIcon.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="DockingManager\DockingManager.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="DocumentContainer\DocumentContainer.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="TabControlExt\TabControlExt.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Gallery\Gallery.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="TabSplitter\TabSplitter.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfGridSplitter\SfGridSplitter.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="HierarchyNavigator\HierarchyNavigator.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfAccordion\SfAccordion.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfTreeView\SfTreeView.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="TaskBar\TaskBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="ToolBarAdv\ToolBarAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\RadioButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\FlatToggleButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="ToolBarAdv\ToolBarResources.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfNavigationDrawer\SfNavigationDrawer.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfNavigationDrawer\PrimarySfNavigationDrawer.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="TreeViewAdv\TreeViewAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\GlyphTreeExpander.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="TabNavigationControl\TabNavigationControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MenuAdv\MenuAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfTreeNavigator\SfTreeNavigator.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="GroupBar\GroupBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="TileViewControl\TileViewControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="CardView\CardView.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\SfRichTextBoxAdv.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\SfRichTextRibbon.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\TabControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\ContextMenu.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\Dialogs.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\FormatDialogs.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\MiniToolBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\SfRichTextBoxCommon.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\StyleDialogs.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfRichTextBoxAdv\TableDialogs.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="EditControl\EditControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\StatusBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Ribbon\Ribbon.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Ribbon\QATCustomizationDialog.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\TreeView.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfSpreadsheet\SfSpreadsheet.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfSpreadsheet\SfSpreadsheetRibbon.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfSpreadsheet\SfSpreadsheetIcons.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfSpreadsheet\SpreadsheetFilterControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Hyperlink.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\PasswordBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="AutoComplete\AutoComplete.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ResizeGrip.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ToolBar.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="DateTimeEdit\DateTimeEdit.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\RichTextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\DataGrid.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfImageEditor\SfImageEditor.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Common\Common.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Common\Brushes.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+
+</Project>

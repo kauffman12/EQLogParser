@@ -2,14 +2,12 @@
 Everquest Log Parser for Live/TLP servers.
 
 Latest Release:
-https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-1.8.80.msi
+https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-2.0.0.msi
 
-This software depends on a Docking UI control from Actipro so it needs a license to build
-and run without having an Actipro splash screen. However, I am currently replacing
-Actipro with an equivlent from Syncfusion. Licenses for Syncfusion can be obtained
-for free if you meet requirements. 
+For Developers:
+Syncfusion components require a license. Apply for a community license and you should be able to get one for free.
 
-The Releases folder has recent builds including a version 1.9. build that's a work in-progress. The msi installer has been signed with a real cert. It still will display Unknown Publisher messages in windows but if you do the following you can avoid those in the future.
+The Releases folder always has the most recent build. The msi installer has been signed with a certificate. It still will display Unknown Publisher messages in windows but if you do the following you can avoid those in the future.
 
 1. right-click the msi file and choose properties
 2. under the digital signatures tab select the one signature and click details

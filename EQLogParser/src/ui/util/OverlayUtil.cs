@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -17,7 +16,6 @@ namespace EQLogParser
     internal static readonly SolidColorBrush UPBRUSH = new SolidColorBrush(Colors.White);
     internal static readonly SolidColorBrush DOWNBRUSH = new SolidColorBrush(Colors.Red);
     internal static readonly SolidColorBrush TITLEBRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
-
     private static bool IsDamageOverlayEnabled = false;
     private static OverlayWindow Overlay = null;
 
@@ -30,48 +28,51 @@ namespace EQLogParser
 
     internal static bool LoadSettings() => IsDamageOverlayEnabled = ConfigUtil.IfSet("IsDamageOverlayEnabled");
 
-    internal static void OpenIfEnabled(Dispatcher dispatcher)
+    internal static void UpdateTheme() => MainActions.SetTheme(Overlay, "MaterialDark");
+
+    internal static void OpenIfEnabled()
     {
       if (IsDamageOverlayEnabled)
       {
-        OpenOverlay(dispatcher);
+        OpenOverlay();
       }
     }
 
-    internal static void OpenOverlay(Dispatcher dispatcher, bool configure = false, bool saveFirst = false)
+    internal static void OpenOverlay(bool configure = false, bool saveFirst = false)
     {
       if (saveFirst)
       {
         ConfigUtil.Save();
       }
 
-      dispatcher.InvokeAsync(() =>
+      Application.Current.Dispatcher.InvokeAsync(() =>
       {
         Overlay?.Close();
         Overlay = new OverlayWindow(configure);
+        UpdateTheme();
         Overlay.Show();
       });
     }
 
-    internal static void ResetOverlay(Dispatcher dispatcher)
+    internal static void ResetOverlay()
     {
       Overlay?.Close();
       DataManager.Instance.ResetOverlayFights();
 
       if (IsDamageOverlayEnabled)
       {
-        OpenOverlay(dispatcher);
+        OpenOverlay();
       }
     }
 
-    internal static bool ToggleOverlay(Dispatcher dispatcher)
+    internal static bool ToggleOverlay()
     {
       IsDamageOverlayEnabled = !IsDamageOverlayEnabled;
       ConfigUtil.SetSetting("IsDamageOverlayEnabled", IsDamageOverlayEnabled.ToString(CultureInfo.CurrentCulture));
 
       if (IsDamageOverlayEnabled)
       {
-        OpenOverlay(dispatcher, true, false);
+        OpenOverlay(true, false);
       }
       else
       {
@@ -128,7 +129,7 @@ namespace EQLogParser
       button.Padding = new Thickness(0, 0, 0, 0);
       button.FontFamily = new FontFamily("Segoe MDL2 Assets");
       button.VerticalAlignment = VerticalAlignment.Center;
-      button.Margin = new Thickness(2, 0, 0, 0);
+      button.Margin = new Thickness(2, 0, 2, 0);
       button.ToolTip = new ToolTip { Content = tooltip };
       button.Content = content;
       button.FontSize = size;
