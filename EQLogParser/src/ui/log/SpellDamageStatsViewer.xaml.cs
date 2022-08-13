@@ -23,7 +23,6 @@ namespace EQLogParser
     private string CurrentPlayer = null;
     private string CurrentSpell = null;
     private string CurrentType = null;
-    private const string NODATA = "No Spell Damage Data Found";
 
     public SpellDamageStatsViewer()
     {
@@ -141,10 +140,6 @@ namespace EQLogParser
       spellList.SelectedIndex = (Spells.IndexOf(selectedSpell) is int s && s > -1) ? s : 0;
       playerList.SelectedIndex = (Players.IndexOf(selectedPlayer) is int p && p > -1) ? p : 0;
       dataGrid.ItemsSource = list;
-
-      dataGrid.SortColumnDescriptions.Clear();
-      dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Avg", SortDirection = ListSortDirection.Descending });
-      titleLabel.Content = list.Count == 0 ? NODATA : "Spell Damage Stats for " + uniqueSpells.Count + " Unique Spells";
     }
 
     private void AddRow(List<IDictionary<string, object>> list, SpellDamageStats stats, string type)
@@ -177,13 +172,15 @@ namespace EQLogParser
           return pass;
         };
 
-        if (dataGrid.SelectedItems.Count > 0)
-        {
-          dataGrid.SelectedItems.Clear();
-        }
-
-        dataGrid.View.RefreshFilter();
+        UpdateTitle();
       }
+    }
+
+    private void UpdateTitle()
+    {
+      dataGrid?.View?.RefreshFilter();
+      int count = (dataGrid?.View != null) ? dataGrid.View.Records.Count : 0;
+      titleLabel.Content = count == 0 ? "No Spell Data Found" : count + " Spell Entries Found";
     }
 
     private void OptionsChanged(object sender, EventArgs e)
@@ -201,8 +198,7 @@ namespace EQLogParser
         }
         else
         {
-          dataGrid.SelectedItems.Clear();
-          dataGrid.View.RefreshFilter();
+          UpdateTitle();
         }
       }
     }

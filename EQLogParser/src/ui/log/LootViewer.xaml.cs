@@ -33,15 +33,21 @@ namespace EQLogParser
 
       optionsList.ItemsSource = Options;
       optionsList.SelectedIndex = 0;
-      dataGrid.ItemsSource = IndividualRecords;
 
       // default these columns to descending
       string[] desc = new string[] { "Quantity" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
+
       Load();
+      dataGrid.ItemsSource = IndividualRecords;
     }
+
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void RefreshClick(object sender, RoutedEventArgs e) => Load();
+    private void EventsLogLoadingComplete(object sender, bool e) => Load();
 
     private void Load()
     {
@@ -106,19 +112,13 @@ namespace EQLogParser
       itemsList.SelectedItem = CurrentSelectedItem;
       playersList.SelectedItem = CurrentSelectedPlayer;
 
-      // delay before view is available
-      Dispatcher.InvokeAsync(() => UpdateUI());
+      UpdateTitle();
     }
 
-    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
-    private void RefreshClick(object sender, RoutedEventArgs e) => Load();
-    private void EventsLogLoadingComplete(object sender, bool e) => Load();
-
-    private void UpdateUI()
+    private void UpdateTitle()
     {
-      dataGrid.View.RefreshFilter();
-      titleLabel.Content = dataGrid.View.Records.Count == 0 ? "No Loot Found" : dataGrid.View.Records.Count + " Loot Entries Found";
+      int count = dataGrid?.View != null ? dataGrid.View.Records.Count : 0;
+      titleLabel.Content = count == 0 ? "No Loot Found" : count + " Loot Entries Found";
     }
 
     private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -139,26 +139,33 @@ namespace EQLogParser
           dataGrid.ItemsSource = IndividualRecords;
           dataGrid.Columns[0].IsHidden = dataGrid.Columns[4].IsHidden = false;
         }
-
-        if (dataGrid.View.Filter == null)
+        else
         {
-          dataGrid.View.Filter = new Predicate<object>(obj =>
-          {
-            bool found = false;
-
-            if (obj is LootRow row)
-            {
-              found = (CurrentSelectedItem == ALLITEMS || row.IsCurrency && CurrentSelectedItem == ONLYCURR ||
-              !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) &&
-              (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
-            }
-
-            return found;
-          });
+          dataGrid.View.Refresh();
         }
 
-        UpdateUI();
+        UpdateTitle();
       }
+    }
+
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
+    {
+      dataGrid.View.Filter = new Predicate<object>(obj =>
+      {
+        bool found = false;
+
+        if (obj is LootRow row)
+        {
+          found = (CurrentSelectedItem == ALLITEMS || row.IsCurrency && CurrentSelectedItem == ONLYCURR ||
+          !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) &&
+          (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
+        }
+
+        return found;
+      });
+
+      dataGrid.View.RefreshFilter();
+      UpdateTitle();
     }
 
     private static LootRow CreateRow(LootRecord looted, double time = 0)

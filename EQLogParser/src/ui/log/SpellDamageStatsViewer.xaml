@@ -57,6 +57,9 @@
           </Setter>
         </Style>
       </syncfusion:SfDataGrid.Resources>
+      <syncfusion:SfDataGrid.SortColumnDescriptions>
+        <syncfusion:SortColumnDescription ColumnName="Avg" SortDirection="Descending" />
+      </syncfusion:SfDataGrid.SortColumnDescriptions>
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell" Width="250"/>
         <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster" Width="150"/>

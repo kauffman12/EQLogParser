@@ -465,7 +465,7 @@ namespace EQLogParser
       else if (e.Source == eventMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(EventViewer), eventIcon.Tag as string, "Special Events");
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(EventViewer), eventIcon.Tag as string, "Misc Events");
       }
       else if (e.Source == randomsMenuItem)
       {
