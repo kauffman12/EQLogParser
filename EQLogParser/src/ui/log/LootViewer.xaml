@@ -49,6 +49,7 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="26"
                            IsReadOnly="True"
+                           ItemsSourceChanged="ItemsSourceChanged"
                            RowHeaderWidth="30"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
