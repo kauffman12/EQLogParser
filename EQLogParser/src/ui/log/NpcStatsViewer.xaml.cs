@@ -106,7 +106,7 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
-      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Your Spell Resists against " + npcStatsRows.Count + " Unique NPCs";
+      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
 
       Tuple<double, string> GetRate(uint landed, uint notLanded)
       {
