@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Windows.Media;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace EQLogParser
 {
-  public static class LineParsing
-  {
-    public const int ActionIndex = 27;
-  }
-
   internal interface ISummaryBuilder
   {
     StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, bool showTotals,
@@ -18,10 +14,21 @@ namespace EQLogParser
 
   internal interface IAction { }
 
-  internal class ColorItem
+  internal class DataPoint
   {
-    public SolidColorBrush Brush { get; set; }
+    public long Avg { get; set; }
     public string Name { get; set; }
+    public string PlayerName { get; set; }
+    public int ModifiersMask { get; set; }
+    public long Total { get; set; }
+    public long RollingTotal { get; set; }
+    public uint RollingHits { get; set; }
+    public uint RollingCritHits { get; set; }
+    public long Vps { get; set; }
+    public double CritRate { get; set; }
+    public double BeginTime { get; set; }
+    public double CurrentTime { get; set; }
+    public DateTime DateTime { get; set; }
   }
 
   internal class ComboBoxItemDetails
@@ -29,6 +36,7 @@ namespace EQLogParser
     public string Text { get; set; }
     public string SelectedText { get; set; }
     public bool IsChecked { get; set; }
+    public string Value { get; set; }
   }
 
   internal class AutoCompleteText
@@ -83,17 +91,13 @@ namespace EQLogParser
     public string Action { get; set; }
     public RecordGroupCollection Iterator { get; set; }
     public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
-    public Predicate<object> Filter { get; set; }
   }
 
   internal class GenerateStatsOptions
   {
-    public string Name { get; set; }
     public List<Fight> Npcs { get; } = new List<Fight>();
-    public bool RequestChartData { get; set; }
-    public bool RequestSummaryData { get; set; }
-
     public long MaxSeconds { get; set; } = -1;
+    public long MinSeconds { get; set; } = -1;
     public int DamageType { get; set; }
   }
 
@@ -113,7 +117,7 @@ namespace EQLogParser
     public string Defender { get; set; }
   }
 
-  internal class RolledRecord : IAction
+  internal class RandomRecord : IAction
   {
     public string Player { get; set; }
     public int Rolled { get; set; }
@@ -154,6 +158,20 @@ namespace EQLogParser
     public bool IsCurrency { get; set; }
   }
 
+  internal class TauntRecord : IAction
+  {
+    public string Player { get; set; }
+    public string Npc { get; set; }
+    public bool Success { get; set; }
+    public bool IsImproved { get; set; }
+  }
+
+  internal class TauntEvent
+  {
+    public TauntRecord Record { get; set; }
+    public double BeginTime { get; set; }
+  }
+
   internal class DeathRecord : IAction
   {
     public string Killed { get; set; }
@@ -178,37 +196,9 @@ namespace EQLogParser
     public long LineNumber { get; set; }
   }
 
-  internal class HitLogRow : HitRecord
-  {
-    public string Actor { get; set; }
-    public string ActorClass { get; set; }
-    public string Acted { get; set; }
-    public uint Count { get; set; }
-    public uint CritCount { get; set; }
-    public uint LuckyCount { get; set; }
-    public uint TwincastCount { get; set; }
-    public uint RampageCount { get; set; }
-    public uint RiposteCount { get; set; }
-    public uint StrikethroughCount { get; set; }
-    public double Time { get; set; }
-    public bool IsPet { get; set; }
-    public bool IsGroupingEnabled { get; set; }
-    public string TimeSince { get; set; }
-  }
-
-  internal class EventRow
-  {
-    public double Time { get; set; }
-    public string Actor { get; set; }
-    public string Target { get; set; }
-    public string Event { get; set; }
-    public string TooltipText { get; set; }
-  }
-
   internal class LootRow : LootRecord
   {
     public double Time { get; set; }
-    public string TooltipText { get; set; }
   }
 
   internal class ActionBlock : TimedAction
@@ -261,15 +251,32 @@ namespace EQLogParser
     public Dictionary<long, int> NonCritFreqValues { get; } = new Dictionary<long, int>();
   }
 
-  internal class Fight : FullTimedAction
+  internal class Fight : FullTimedAction, INotifyPropertyChanged
   {
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string name = null)
+    {
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    private bool searchResult;
+    public bool IsSearchResult
+    {
+      get { return searchResult; }
+      set
+      {
+        searchResult = value;
+        OnPropertyChanged();
+      }
+    }
+
+    public const string BREAKTIME = "Break Time";
+
     public bool Dead { get; set; } = false;
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
     public double LastDamageTime { get; set; }
     public double LastTankingTime { get; set; }
-
-    public const string BREAKTIME = "Break Time";
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public int Id { get; set; }
@@ -289,6 +296,7 @@ namespace EQLogParser
     public Dictionary<string, TimeSegment> InitialTankSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> InitialTankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
+    public List<ActionBlock> TauntBlocks { get; } = new List<ActionBlock>();
     public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new Dictionary<string, SpellDamageStats>();
     public Dictionary<string, SpellDamageStats> DDDamage { get; } = new Dictionary<string, SpellDamageStats>();
   }
@@ -317,7 +325,6 @@ namespace EQLogParser
     public string Pet { get; set; }
   }
 
-  // keep public since reference from a property
   public class SortableName
   {
     public string Name { get; set; }
@@ -375,12 +382,6 @@ namespace EQLogParser
     public Dictionary<string, uint> MaxCastCounts { get; } = new Dictionary<string, uint>();
     public Dictionary<string, uint> MaxReceivedCounts { get; } = new Dictionary<string, uint>();
     public Dictionary<string, SpellData> UniqueSpells { get; } = new Dictionary<string, SpellData>();
-  }
-
-  internal class SpellCountsSerialized
-  {
-    public List<string> PlayerNames { get; } = new List<string>();
-    public SpellCountData TheSpellData { get; set; }
   }
 
   internal class OverlayPlayerTotal
@@ -442,17 +443,22 @@ namespace EQLogParser
     public float Percent { get; set; }
     public float PercentOfRaid { get; set; }
     public string Special { get; set; }
+    public uint MeleeUndefended { get; set; }
     public string ClassName { get; set; }
-    public string TooltipText { get; set; } // referenced by cell style and could start using
+    public string Key { get; set; }
     public TimeRange Ranges { get; } = new TimeRange();
   }
 
   internal class PlayerStats : PlayerSubStats
   {
-    public Dictionary<string, PlayerSubStats> SubStats { get; } = new Dictionary<string, PlayerSubStats>();
-    public Dictionary<string, PlayerSubStats> SubStats2 { get; } = new Dictionary<string, PlayerSubStats>();
+    public List<PlayerStats> Children { get; } = new List<PlayerStats>();
+    public List<PlayerSubStats> SubStats { get; } = new List<PlayerSubStats>();
+    public List<PlayerSubStats> SubStats2 { get; } = new List<PlayerSubStats>();
+    public PlayerStats MoreStats { get; set; }
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }
     public double MaxTime { get; set; }
+    public double MinTime { get; set; }
   }
+
 }

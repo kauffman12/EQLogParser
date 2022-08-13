@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -9,17 +10,14 @@ namespace EQLogParser
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      object result;
-
       if (value is string spellName && spellName.StartsWith("Received ", StringComparison.Ordinal))
       {
-        result = Brushes.LightGreen;
+        return Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
       }
       else
       {
-        result = Brushes.White;
+        return Application.Current.Resources["ContentForeground"] as SolidColorBrush;
       }
-      return result;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

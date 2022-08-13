@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -55,35 +54,22 @@ namespace EQLogParser
       };
     }
 
-    internal static PlayerSubStats CreatePlayerSubStats(Dictionary<string, PlayerSubStats> individualStats, string subType, string type)
+    internal static PlayerSubStats CreatePlayerSubStats(ICollection<PlayerSubStats> individualStats, string subType, string type)
     {
       var key = Helpers.CreateRecordKey(type, subType);
       PlayerSubStats stats = null;
 
       lock (individualStats)
       {
-        if (!individualStats.ContainsKey(key))
+        stats = individualStats.FirstOrDefault(stats => stats.Key == key);
+        if (stats == null)
         {
-          stats = CreatePlayerSubStats(subType, type);
-          individualStats[key] = stats;
-        }
-        else
-        {
-          stats = individualStats[key];
+          stats = new PlayerSubStats { ClassName = "", Name = string.Intern(subType), Type = string.Intern(type), Key = key };
+          individualStats.Add(stats);
         }
       }
 
       return stats;
-    }
-
-    internal static PlayerSubStats CreatePlayerSubStats(string name, string type)
-    {
-      return new PlayerSubStats()
-      {
-        ClassName = "",
-        Name = string.Intern(name),
-        Type = string.Intern(type)
-      };
     }
 
     internal static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
@@ -196,37 +182,35 @@ namespace EQLogParser
     }
 
     internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
-      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double maxTime = -1)
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double minTime = -1, double maxTime = -1)
     {
       if (playerTimeRanges.TryGetValue(stats.Name, out TimeRange range))
       {
-        var filteredRange = FilterMaxTime(range, maxTime);
+        var filteredRange = FilterTimeRange(range, minTime, maxTime);
         stats.TotalSeconds = filteredRange.GetTotal();
       }
 
-      UpdateSubStatsTimeRanges(stats, playerSubTimeRanges, maxTime);
+      UpdateSubStatsTimeRanges(stats, playerSubTimeRanges, minTime, maxTime);
     }
 
-    internal static void UpdateSubStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double maxTime = -1)
+    internal static void UpdateSubStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges,
+      double minTime = -1, double maxTime = -1)
     {
       if (playerSubTimeRanges.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> subRanges))
       {
-        foreach (ref var kv in stats.SubStats.ToArray().AsSpan())
-        {
-          if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
-          {
-            var filteredRange = FilterMaxTime(subRange, maxTime);
-            kv.Value.TotalSeconds = filteredRange.GetTotal();
-          }
-        }
+        UpdateSubStat(stats.SubStats, subRanges, minTime, maxTime);
+        UpdateSubStat(stats.SubStats2, subRanges, minTime, maxTime);
+      }
+    }
 
-        foreach (ref var kv in stats.SubStats2.ToArray().AsSpan())
+    private static void UpdateSubStat(List<PlayerSubStats> subStats, ConcurrentDictionary<string, TimeRange> subRanges, double minTime, double maxTime)
+    {
+      foreach (ref var subStat in subStats.ToArray().AsSpan())
+      {
+        if (subRanges.TryGetValue(subStat.Key, out TimeRange subRange))
         {
-          if (subRanges.TryGetValue(kv.Key, out TimeRange subRange))
-          {
-            var filteredRange = FilterMaxTime(subRange, maxTime);
-            kv.Value.TotalSeconds = filteredRange.GetTotal();
-          }
+          var filteredRange = FilterTimeRange(subRange, minTime, maxTime);
+          subStat.TotalSeconds = filteredRange.GetTotal();
         }
       }
     }
@@ -469,6 +453,8 @@ namespace EQLogParser
           stats.MeleeAccRate = (float)Math.Round((float)stats.MeleeHits / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks - stats.Invulnerable - stats.Absorbs) * 100, 2);
         }
 
+        stats.MeleeUndefended = stats.MeleeHits - stats.StrikethroughHits;
+
         if (stats.SpellHits > 0)
         {
           var tcMult = stats.Type == Labels.DD ? 2 : 1;
@@ -510,12 +496,16 @@ namespace EQLogParser
       // handle sub stats
       if (stats is PlayerStats playerStats)
       {
-        Parallel.ForEach(playerStats.SubStats.Values, subStats => UpdateCalculations(subStats, raidTotals, resistCounts, playerStats));
+
+        foreach (ref var subStat in playerStats.SubStats.ToArray().AsSpan())
+        {
+          UpdateCalculations(subStat, raidTotals, resistCounts, playerStats);
+        }
 
         // optional stats
-        if (playerStats.SubStats2.Count > 0)
+        foreach (ref var subStat2 in playerStats.SubStats2.ToArray().AsSpan())
         {
-          Parallel.ForEach(playerStats.SubStats2.Values, subStats => UpdateCalculations(subStats, raidTotals, resistCounts, playerStats));
+          UpdateCalculations(subStat2, raidTotals, resistCounts, playerStats);
         }
       }
     }
@@ -591,28 +581,44 @@ namespace EQLogParser
       return playerSpecials;
     }
 
-    internal static TimeRange FilterMaxTime(TimeRange range, double maxTime)
+    internal static TimeRange FilterTimeRange(TimeRange range, double minTime, double maxTime)
     {
       TimeRange result;
 
-      if (maxTime > -1)
+      if (maxTime > -1 || minTime > -1)
       {
         result = new TimeRange();
         range.TimeSegments.ForEach(segment =>
         {
-          if (segment.EndTime <= maxTime)
+          if ((minTime == -1 || segment.BeginTime >= minTime) && (maxTime == -1 || segment.EndTime <= maxTime))
           {
             result.Add(segment);
           }
-          else if (segment.BeginTime < maxTime)
+          else if ((minTime == -1 || segment.BeginTime >= minTime) && maxTime >= segment.BeginTime)
           {
             result.Add(new TimeSegment(segment.BeginTime, maxTime));
+          }
+          else if ((maxTime == -1 || segment.EndTime <= maxTime) && minTime <= segment.EndTime)
+          {
+            result.Add(new TimeSegment(minTime, segment.EndTime));
+          }
+          else if (segment.BeginTime < minTime && segment.EndTime > maxTime)
+          {
+            result.Add(new TimeSegment(minTime, maxTime));
           }
         });
       }
       else
       {
         result = range;
+      }
+
+      if (result.TimeSegments.Count == 0)
+      {
+        if (true)
+        {
+
+        }
       }
 
       return result;

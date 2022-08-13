@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="1.9.17" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.0" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -25,13 +25,14 @@
     <UI Id="WixUI_Advanced">
       <UIRef Id="WixUI_InstallDir" />
       <DialogRef Id="CheckDotNetDlg" />
+      <DialogRef Id="WhatsNewDlg" />
       <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
 
       <!-- Skip license dialog -->
       <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CheckDotNetDlg" Order="1">DOTNET6INSTALLED="0"</Publish>
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="1">DOTNET6INSTALLED="1"</Publish>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="WhatsNewDlg" Order="1">DOTNET6INSTALLED="1"</Publish>
       <Publish Dialog="SetupTypeDlg" Control="Back" Event="NewDialog" Value="CheckDotNetDlg">1</Publish>
-      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WhatsNewDlg" Order="3">1</Publish>
     </UI>
   </Product>
 
@@ -42,10 +43,10 @@
       <Custom Action="CAID1" Before="LaunchConditions" />
     </InstallUISequence>
     <UI>
-      <Dialog Id="CheckDotNetDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
+      <Dialog Id="CheckDotNetDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="no">
         <Control Id="Text1" Type="Text" X="40" Y="74" Width="280" Height="40" TabSkip="no" Text="Microsoft .Net 6.0 Desktop Runtime is now required. It may be downloaded from the link below. After it is installed, try EQLogParser again." />
         <Control Id="Link1" Type="Hyperlink" X="40" Y="116" Width="290" Height="40" Transparent="yes">
-          <Text><![CDATA[<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.6-windows-x64-installer">https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.6-windows-x64-installer</a>]]></Text>
+          <Text><![CDATA[<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.7-windows-x64-installer">https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.7-windows-x64-installer</a>]]></Text>
         </Control>     
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
           <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
@@ -64,6 +65,27 @@
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
       </Dialog>
+      <Dialog Id="WhatsNewDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="no">
+        <Control Id="WhatsNewText" Type="ScrollableText" X="5" Y="50" Width="358" Height="180" Sunken="yes" TabSkip="no">
+          <Text SourceFile="whatsnew.rtf" />
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Text="!(loc.WixUINext)">
+          <Publish Event="NewDialog" Value="InstallDirDlg">1</Publish>
+        </Control>
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+          <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
+         </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}Release Notes</Text>
+        </Control>
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="What's New in the latest version of EQLogParser." />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+      </Dialog>      
     </UI>
   </Fragment>
 	<Fragment>   
@@ -121,15 +143,6 @@
       <Component Win64="yes" Id="EQLogParser.runtimeconfig.json" Guid="1E4DF525-40F2-43E2-9481-AA5D8E84E07A">
         <File Id="EQLogParser.runtimeconfig.json" Name="EQLogParser.runtimeconfig.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.runtimeconfig.json" />
       </Component>      
-	    <Component Win64="yes" Id="ActiproSoftware.Docking.Wpf.dll" Guid="64f563f3-5c7e-45c8-a245-d04dd0ee8d0b">
-	      <File Id="ActiproSoftware.Docking.Wpf.dll" Name="ActiproSoftware.Docking.Wpf.dll" Source="$(var.EQLogParser.TargetDir)ActiproSoftware.Docking.Wpf.dll" />
-	    </Component>
-	    <Component Win64="yes" Id="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Guid="c5f0c023-dcaf-43bb-9794-aab9856437cb">
-	      <File Id="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Name="ActiproSoftware.DataGrid.Contrib.Wpf.dll" Source="$(var.EQLogParser.TargetDir)ActiproSoftware.DataGrid.Contrib.Wpf.dll" />
-	    </Component>
-	    <Component Win64="yes" Id="ActiproSoftware.Shared.Wpf.dll" Guid="3c8d2f9f-a96b-4dd8-b709-68e47832b14e">
-	      <File Id="ActiproSoftware.Shared.Wpf.dll" Name="ActiproSoftware.Shared.Wpf.dll" Source="$(var.EQLogParser.TargetDir)ActiproSoftware.Shared.Wpf.dll" />
-	    </Component>
       <Component Win64="yes" Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F">
         <File Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser.TargetDir)log4net.dll" />
       </Component>
@@ -139,42 +152,57 @@
 	    <Component Win64="yes" Id="FontAwesome5.Net.dll" Guid="57EB460B-BA13-4DA0-9036-DC113FE8635B">
 	      <File Id="FontAwesome5.Net.dll" Name="FontAwesome5.Net.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.Net.dll" />
 	    </Component>		  
-      <Component Win64="yes" Id="WPFTextBoxAutoComplete.dll" Guid="2AE4D9AC-7BB6-4239-88B0-37E94A1B6944">
-        <File Id="WPFTextBoxAutoComplete.dll" Name="WPFTextBoxAutoComplete.dll" Source="$(var.EQLogParser.TargetDir)WPFTextBoxAutoComplete.dll" />
-      </Component>
       <Component Win64="yes" Id="Newtonsoft.Json.dll" Guid="6D0CCBFE-C08A-492C-8583-800E5E35D846">
         <File Id="Newtonsoft.Json.dll" Name="Newtonsoft.Json.dll" Source="$(var.EQLogParser.TargetDir)Newtonsoft.Json.dll" />
       </Component>
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
       </Component>
-      <Component Win64="yes" Id="Syncfusion.Edit.WPF.dll" Guid="016CD15D-58FD-4DBE-8030-C2335976A080">
+      <Component Win64="yes" Id="Syncfusion.Data.WPF.dll" Guid="29B0F002-C736-4787-A07A-4AD3C895CBF7">
+        <File Id="Syncfusion.Data.WPF.dll" Name="Syncfusion.Data.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Data.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Edit.WPF.dll" Guid="5089E626-B2D8-4B55-97D2-2AF59AC148E6">
         <File Id="Syncfusion.Edit.WPF.dll" Name="Syncfusion.Edit.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Edit.WPF.dll" />
       </Component>
-      <Component Win64="yes" Id="Syncfusion.GridCommon.WPF.dll" Guid="FD6E7B0D-868C-4D6E-A211-057D973D622D">
+      <Component Win64="yes" Id="Syncfusion.GridCommon.WPF.dll" Guid="CBDF14C6-F0D5-420D-88FF-0DD509AB3A36">
         <File Id="Syncfusion.GridCommon.WPF.dll" Name="Syncfusion.GridCommon.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.GridCommon.WPF.dll" />
       </Component>
-      <Component Win64="yes" Id="Syncfusion.Licensing.dll" Guid="EFFABA69-9397-4C0B-B68B-151C2DED424F">
+      <Component Win64="yes" Id="Syncfusion.Licensing.dll" Guid="508A0992-C1FC-4DE4-8551-98B69669BE43">
         <File Id="Syncfusion.Licensing.dll" Name="Syncfusion.Licensing.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Licensing.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.SfChart.WPF.dll" Guid="EB9F99E6-52B6-4CB0-BB4A-C18AEA3182B3">
         <File Id="Syncfusion.SfChart.WPF.dll" Name="Syncfusion.SfChart.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfChart.WPF.dll" />
       </Component>
+      <Component Win64="yes" Id="Syncfusion.SfGrid.WPF.dll" Guid="BFA467E9-11A2-408B-9316-8DB5A4AA1F0A">
+        <File Id="Syncfusion.SfGrid.WPF.dll" Name="Syncfusion.SfGrid.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfGrid.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.SfInput.WPF.dll" Guid="478A6221-BB5D-410A-B421-2333CD771152">
+        <File Id="Syncfusion.SfInput.WPF.dll" Name="Syncfusion.SfInput.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfInput.WPF.dll" />
+      </Component>      
       <Component Win64="yes" Id="Syncfusion.SfSkinManager.WPF.dll" Guid="33F08F96-DA5F-471D-88F0-C4E7A5A50621">
         <File Id="Syncfusion.SfSkinManager.WPF.dll" Name="Syncfusion.SfSkinManager.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfSkinManager.WPF.dll" />
-      </Component>
-      <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="F4BA3FAD-F8AB-4E34-93E2-6290EB3D2221">
+      </Component>      
+      <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="197A0E8A-FAEC-41C1-BA86-F62C3B8E7947">
         <File Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
+      </Component>   
+      <Component Win64="yes" Id="Syncfusion.Themes.MaterialDark.WPF.dll" Guid="3993C944-FB4A-475B-B66A-AA6D15D6DCDD">
+        <File Id="Syncfusion.Themes.MaterialDark.WPF.dll" Name="Syncfusion.Themes.MaterialDark.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialDark.WPF.dll" />
       </Component>
-      <Component Win64="yes" Id="Syncfusion.Themes.FluentDark.WPF.dll" Guid="29DA2539-32C2-467B-B287-8220449773FD">
-        <File Id="Syncfusion.Themes.FluentDark.WPF.dll" Name="Syncfusion.Themes.FluentDark.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.FluentDark.WPF.dll" />
+      <Component Win64="yes" Id="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Guid="E3042628-C320-47CF-8069-6A85E7EA87FA">
+        <File Id="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Name="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialDarkCustom.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Themes.MaterialLight.WPF.dll" Guid="108AA0E6-409D-4C49-9FEF-84DF04858DB5">
+        <File Id="Syncfusion.Themes.MaterialLight.WPF.dll" Name="Syncfusion.Themes.MaterialLight.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialLight.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Themes.MaterialLightCustom.WPF.dll" Guid="41F69D17-F418-473D-BF74-0EF6AE87912F">
+        <File Id="Syncfusion.Themes.MaterialLightCustom.WPF.dll" Name="Syncfusion.Themes.MaterialLightCustom.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialLightCustom.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.Classic.dll" Guid="BDFC58AB-E906-42A5-B081-402299D84EE1">
         <File Id="Syncfusion.Tools.WPF.Classic.dll" Name="Syncfusion.Tools.WPF.Classic.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.Classic.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
         <File Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
-      </Component>
+      </Component>    
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">

@@ -1,0 +1,416 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Input="clr-namespace:Syncfusion.Windows.Controls.Input;assembly=Syncfusion.SfInput.WPF"
+    xmlns:Microsoft_Windows_Themes="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
+    xmlns:Sync_Resource="clr-namespace:Syncfusion.Windows.Controls.Input.Resources;assembly=Syncfusion.SfInput.WPF"
+    xmlns:converter="clr-namespace:Syncfusion.Windows.Converters;assembly=Syncfusion.SfInput.WPF"
+    xmlns:input_controls="clr-namespace:Syncfusion.Windows.Controls;assembly=Syncfusion.SfInput.WPF"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:Syncfusion.Windows.Controls;assembly=Syncfusion.Shared.WPF"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shared_Brushconverter="clr-namespace:Syncfusion.Windows.Converters;assembly=Syncfusion.Shared.WPF"
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:shared="clr-namespace:Syncfusion.Windows.Primitives;assembly=Syncfusion.SfInput.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    
+    mc:Ignorable="d">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Button.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/FlatButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/Button.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <BooleanToVisibilityConverter x:Key="BooleanVisibilityConverter" />
+
+    <converter:InverseBooleanToVisibilityConverter x:Key="InverseBooleanVisibilityConverter" />
+
+    <shared_Brushconverter:BrushToColorConverter x:Key="BrushConverter" />
+
+    <Sync_Resource:ResourceWrapper x:Key="ResourceWrapperKey" />
+
+    <Style x:Key="SyncfusionSfTimeSelectorTransitionContentControlStyle" TargetType="local:TransitionContentControl">
+        <Setter Property="Height" Value="50" />
+        <Setter Property="Margin" Value="10,0,0,0" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Transition">
+            <Setter.Value>
+                <local:FadeTransition />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionSfTimeSelectorLoopingSelectorItemStyle" TargetType="input_controls:LoopingSelectorItem">
+        <Setter Property="AlternativeBackground" Value="{StaticResource ContentBackgroundAlt}" />
+        <Setter Property="AlternativeBorderBrush" Value="{StaticResource ContentBackgroundAlt}" />
+        <Setter Property="AccentBrush" Value="{StaticResource PrimaryBackground}" />
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="None" />
+        <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="None" />
+        <Setter Property="Margin" Value="2"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border
+                        x:Name="root" 
+                        CornerRadius="{StaticResource MaterialLightCustom.ThemeCornerRadiusVariant1}" 
+                        SnapsToDevicePixels="True"
+                        Margin="{TemplateBinding Margin}" 
+                        BorderThickness="{TemplateBinding BorderThickness}" 
+                        BorderBrush="{StaticResource ContentBackgroundAlt}"
+                        Background="Transparent"
+                        Opacity="0">
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="Transform" />
+                        </Border.RenderTransform>
+                        <Grid x:Name="LoopingSelectorGrid" Margin="-1">
+                            <Rectangle
+                                x:Name="background" SnapsToDevicePixels="True"
+                                Fill="{Binding AccentBrush, Converter={StaticResource BrushConverter}, ConverterParameter=AccentBrushnull, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                Opacity="0" />
+                            <Rectangle
+                                x:Name="Part_Disabled" SnapsToDevicePixels="True"
+                                Width="{Binding ElementName=Part_Border, Path=ActualWidth}"
+                                Height="{Binding ElementName=Part_Border, Path=ActualHeight}"
+                                Fill="{StaticResource ContentBackgroundAlt3}"
+                                Opacity="0" />
+                            <Border SnapsToDevicePixels="True"
+                                x:Name="Part_Border" Background="{Binding AlternativeBackground, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                BorderThickness="0">
+                                <ContentControl
+                                    x:Name="contentPresenter"
+                                    Margin="1,0"
+                                    Content="{Binding}"
+                                    ContentTemplate="{Binding ItemTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                    ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                            </Border>
+                        </Grid>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="Expanded">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="root"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="1"
+                                            Duration="0" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="background"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="0"
+                                            Duration="0" />
+                                        <!--<ColorAnimation Storyboard.TargetName="Part_Border" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)" To="Transparent" Duration="0"/>-->
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Selected">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="root"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="1"
+                                            Duration="0" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="background"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="1"
+                                            Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Part_Border" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="root" Property="BorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="contentPresenter" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="contentPresenter" Property="Foreground" Value="{StaticResource LoopingSelectorItem.Pressed.Foreground}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="false"/>
+                                <Condition Property="Opacity" Value="1" SourceName="background" />
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" Value="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}" TargetName="Part_Border"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" TargetName="root"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="Opacity" Value="1" SourceName="background" />
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" Value="{StaticResource PrimaryDark}" TargetName="Part_Border"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryDark}" TargetName="root"/>
+                            <Setter TargetName="contentPresenter" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" TargetName="root"/>
+                            <Setter TargetName="contentPresenter" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionSfTimeSelectorLoopingSelectorStyle" TargetType="input_controls:LoopingSelector">
+        <Setter Property="ItemHeight" Value="80" />
+        <Setter Property="ItemWidth" Value="80" />
+        <Setter Property="Width" Value="80" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="IsManipulationEnabled" Value="True" />
+        <Setter Property="IsHitTestVisible" Value="True" />
+        <!--<Setter Property="ManipulationMode" Value="All"/>-->
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="ItemContainerStyle" Value="{StaticResource SyncfusionSfTimeSelectorLoopingSelectorItemStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border x:Name="LoopingSelectorBorder" Background="{TemplateBinding Background}">
+                        <Canvas x:Name="ItemsPanel">
+                            <Canvas.RenderTransform>
+                                <TransformGroup>
+                                    <TranslateTransform x:Name="CenteringTransform" />
+                                    <TranslateTransform x:Name="PanningTransform" />
+                                </TransformGroup>
+                            </Canvas.RenderTransform>
+                        </Canvas>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="DefaultHourCellTemplate">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock
+                FontSize="12"
+                Style="{x:Null}"
+                Text="{Binding HourNumber}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DefaultMinuteCellTemplate">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock
+                FontSize="12"
+                Style="{x:Null}"
+                Text="{Binding MinuteNumber}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DefaultSecondCellTemplate">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock
+                FontSize="12"
+                Style="{x:Null}"
+                Text="{Binding SecondNumber}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DefaultMeridiemCellTemplate">
+        <TextBlock
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            FontSize="12"
+            Style="{x:Null}"
+            Text="{Binding AmPmString}" />
+    </DataTemplate>
+
+    <Style x:Key="SyncfusionSfTimeSelectorStyle" TargetType="{x:Type Input:SfTimeSelector}">
+        <Setter Property="AccentBrush" Value="{StaticResource PrimaryBackground}" />
+        <Setter Property="SelectedForeground" Value="{StaticResource PrimaryForeground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{StaticResource Border}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialLightCustom.BodyTextStyle}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialLightCustom.ThemeFontFamily}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialLightCustom.FontWeightNormal}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialLightCustom.BorderThickness}" />
+        <Setter Property="Height" Value="300" />
+        <Setter Property="HeaderStyle" Value="{StaticResource SyncfusionSfTimeSelectorTransitionContentControlStyle}" />
+        <Setter Property="HourCellTemplate" Value="{StaticResource DefaultHourCellTemplate}" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="MeridiemCellTemplate" Value="{StaticResource DefaultMeridiemCellTemplate}" />
+        <Setter Property="MinuteCellTemplate" Value="{StaticResource DefaultMinuteCellTemplate}" />
+        <Setter Property="SecondCellTemplate" Value="{StaticResource DefaultSecondCellTemplate}" />
+        <Setter Property="ShowDoneButton" Value="True" />
+        <Setter Property="ShowCancelButton" Value="True" />
+        <Setter Property="SelectorStyle" Value="{StaticResource SyncfusionSfTimeSelectorLoopingSelectorStyle}" />
+        <Setter Property="SelectorItemHeight" Value="40" />
+        <Setter Property="SelectorItemWidth" Value="40" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Input:SfTimeSelector">
+                    <Border
+                        x:Name="TimeSelectorBorder"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="0"
+                        SnapsToDevicePixels="true">
+                        <Grid x:Name="PART_Root" Background="Transparent">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid
+                                x:Name="HeaderGrid"
+                                Grid.Row="0"
+                                VerticalAlignment="Top"
+                                Background="Transparent">
+                                <local:TransitionContentControl
+                                    x:Name="ContentControl"
+                                    Content="{Binding Header, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                    ContentTemplate="{Binding HeaderTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                    IsTabStop="False"
+                                    Style="{TemplateBinding HeaderStyle}" />
+                            </Grid>
+                            <Border
+                                x:Name="SelectorBorder"
+                                Grid.Row="1"
+                                Padding="3"
+                                HorizontalAlignment="Center"
+                                Background="Transparent">
+                                <Grid x:Name="SelectorGrid">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <input_controls:LoopingSelector
+                                        x:Name="PART_Hour"
+                                        Width="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Height="{Binding Height, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        HorizontalAlignment="Center"
+                                        AccentBrush="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        IsTabStop="False"
+                                        ItemHeight="{Binding SelectorItemHeight, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        ItemTemplate="{Binding HourCellTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        ItemTemplateSelector="{Binding HourCellTemplateSelector, RelativeSource={RelativeSource TemplatedParent}}"
+                                        ItemWidth="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        SelectedForeground="{Binding SelectedForeground, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Style="{Binding SelectorStyle, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                    <input_controls:LoopingSelector
+                                        x:Name="PART_Minute"
+                                        Grid.Column="1"
+                                        Width="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Height="{Binding Height, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        HorizontalAlignment="Center"
+                                        AccentBrush="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        IsTabStop="False"
+                                        ItemHeight="{Binding SelectorItemHeight, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        ItemTemplate="{Binding MinuteCellTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        ItemTemplateSelector="{Binding MinuteCellTemplateSelector, RelativeSource={RelativeSource TemplatedParent}}"
+                                        ItemWidth="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        SelectedForeground="{Binding SelectedForeground, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Style="{Binding SelectorStyle, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                    <input_controls:LoopingSelector
+                                        x:Name="PART_Second"
+                                        Grid.Column="2"
+                                        Width="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Height="{Binding Height, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        HorizontalAlignment="Center"
+                                        AccentBrush="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        IsTabStop="False"
+                                        ItemHeight="{Binding SelectorItemHeight, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        ItemTemplate="{Binding SecondCellTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        ItemTemplateSelector="{Binding SecondCellTemplateSelector, RelativeSource={RelativeSource TemplatedParent}}"
+                                        ItemWidth="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        SelectedForeground="{Binding SelectedForeground, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Style="{Binding SelectorStyle, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                    <input_controls:LoopingSelector
+                                        x:Name="PART_Meridiem"
+                                        Grid.Column="3"
+                                        Width="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Height="{Binding Height, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        HorizontalAlignment="Center"
+                                        AccentBrush="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        IsTabStop="False"
+                                        ItemHeight="{Binding SelectorItemHeight, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        ItemTemplate="{Binding MeridiemCellTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        ItemTemplateSelector="{Binding MeridiemCellTemplateSelector, RelativeSource={RelativeSource TemplatedParent}}"
+                                        ItemWidth="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        SelectedForeground="{Binding SelectedForeground, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Style="{Binding SelectorStyle, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                </Grid>
+                            </Border>
+                            <Border
+                                x:Name="FooterBorder"
+                                Grid.Row="2"
+                                BorderBrush="{StaticResource BorderAlt}"
+                                BorderThickness="0,1,0,0" >
+                                <Grid x:Name="FooterGrid">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="4" />
+                                        <RowDefinition x:Name="FooterButtonRowDefinition" Height="24" />
+                                        <RowDefinition Height="4" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="1" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                    x:Name="PART_SelectButton"
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="4,0"
+                                    Content="{Input:InputLocalizationResourceExtension ResourceName=OKText}"
+                                    Style="{StaticResource WPFFlatPrimaryButtonStyle}"
+                                    Visibility="{Binding ShowDoneButton, Converter={StaticResource BooleanVisibilityConverter}, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                    <Button
+                                    x:Name="PART_CancelButton"
+                                    Grid.Row="1"
+                                    Grid.Column="2"
+                                    Margin="4,0"
+                                    Content="{Input:InputLocalizationResourceExtension ResourceName=CancelText}"
+                                    Style="{StaticResource WPFFlatPrimaryButtonStyle}"
+                                    Visibility="{Binding ShowCancelButton, Converter={StaticResource BooleanVisibilityConverter}, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" TargetName="FooterButtonRowDefinition" Value="32"/>
+                        </Trigger>
+                        <Trigger Property="Header" Value="{x:Null}">
+                            <Setter TargetName="HeaderGrid" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="PART_Root" Property="Background" Value="{StaticResource ContentBackgroundAlt}" />
+                            <Setter TargetName="TimeSelectorBorder" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="ShowDoneButton" Value="False"/>
+                                <Condition Property="ShowCancelButton" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Collapsed" TargetName="FooterBorder"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource SyncfusionSfTimeSelectorStyle}" TargetType="{x:Type Input:SfTimeSelector}" />
+
+</ResourceDictionary>

@@ -4,36 +4,95 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:local="clr-namespace:EQLogParser"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
+    <Grid.Resources>
+      <Style TargetType="syncfusion:GridRowHeaderCell">
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+              <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                <Grid>
+                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                </Grid>
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+    </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="titleLabel" Margin="0,0,0,0" Foreground="#FF4F9FE2" Height="30" Background="{x:Null}" FontSize="15" FontWeight="Bold"/>
+      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button Margin="0,0,4,0" Height="24" Width="30" PreviewMouseLeftButtonUp="RefreshMouseClick">
-        <fa:ImageAwesome Height="14" Width="30" Margin="0,0,0,0" HorizontalAlignment="Center" Icon="Solid_Redo" ToolTip="Refresh Results" Foreground="#FF4F9FE2"/>
-      </Button>
+      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="dataGrid" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" AlternatingRowBackground="{x:Null}" RowHeaderWidth="30" Grid.Row="1" LoadingRow="LoadingRow" AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True" SelectionMode="Single">
-      <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding Name}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="True" Width="170"/>
-        <DataGridTextColumn Binding="{Binding LowestText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Chromatic Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding ColdText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Cold Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding CorruptionText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Corruption Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding DiseaseText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Disease Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding FireText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Fire Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding MagicText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Magic Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding PhysicalText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Physical Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding PoisonText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Poison Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding AverageText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Prismatic Resist %" IsReadOnly="True" CanUserReorder="True"/>
-        <DataGridTextColumn Binding="{Binding ReflectedText}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="Reflected %" IsReadOnly="True" CanUserReorder="True"/>
-      </DataGrid.Columns>
-    </datagrid:ThemedDataGrid>            
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="Auto"
+                           FrozenColumnCount="1"                           
+                           Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
+                           HeaderRowHeight="26"
+                           IsReadOnly="True"
+                           RowHeaderWidth="30"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True">
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
+        <syncfusion:GridTextColumn MappingName="Lowest" DisplayBinding="{Binding Path=LowestText}" TextAlignment="Right" HeaderText="Chromatic Resist %" />
+        <syncfusion:GridTextColumn MappingName="Cold" DisplayBinding="{Binding Path=ColdText}" TextAlignment="Right" HeaderText="Cold Resist %" />
+        <syncfusion:GridTextColumn MappingName="Corruption" DisplayBinding="{Binding Path=CorruptionText}" TextAlignment="Right" HeaderText="Corruption Resist %" />
+        <syncfusion:GridTextColumn MappingName="Disease" DisplayBinding="{Binding Path=DiseaseText}" TextAlignment="Right" HeaderText="Disease Resist %" />
+        <syncfusion:GridTextColumn MappingName="Fire" DisplayBinding="{Binding Path=FireText}" TextAlignment="Right" HeaderText="Fire Resist %" />
+        <syncfusion:GridTextColumn MappingName="Magic" DisplayBinding="{Binding Path=MagicText}" TextAlignment="Right" HeaderText="Magic Resist %" />
+        <syncfusion:GridTextColumn MappingName="Physical" DisplayBinding="{Binding Path=PhysicalText}" TextAlignment="Right" HeaderText="Physical Resist %" />
+        <syncfusion:GridTextColumn MappingName="Poison" DisplayBinding="{Binding Path=PoisonText}" TextAlignment="Right" HeaderText="Poison Resist %" />
+        <syncfusion:GridTextColumn MappingName="Average" DisplayBinding="{Binding Path=AverageText}" TextAlignment="Right" HeaderText="Prismatic Resist %" />
+        <syncfusion:GridTextColumn MappingName="Reflected" DisplayBinding="{Binding Path=ReflectedText}" TextAlignment="Right" HeaderText="Reflected %" />
+      </syncfusion:SfDataGrid.Columns>
+      <syncfusion:SfDataGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>          
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+          <Separator />
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </ContextMenu>
+      </syncfusion:SfDataGrid.ContextMenu>
+    </syncfusion:SfDataGrid>            
   </Grid>
 </UserControl>

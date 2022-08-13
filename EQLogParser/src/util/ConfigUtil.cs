@@ -63,6 +63,15 @@ namespace EQLogParser
       return result;
     }
 
+    internal static double GetSettingAsDouble(string key, double def = 0.0)
+    {
+      if (double.TryParse(GetSetting(key), out double result) == false)
+      {
+        result = def;
+      }
+      return result;
+    }
+
     internal static int GetSettingAsInteger(string key)
     {
       if (int.TryParse(GetSetting(key), out int result) == false)
@@ -72,11 +81,11 @@ namespace EQLogParser
       return result;
     }
 
-    internal static string GetSetting(string key)
+    internal static string GetSetting(string key, string def = null)
     {
       Init();
       ApplicationSettings.TryGetValue(key, out string setting);
-      return setting;
+      return setting ?? def;
     }
 
     internal static void RemoveSetting(string key)

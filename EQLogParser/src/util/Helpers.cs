@@ -1,10 +1,10 @@
-﻿using ActiproSoftware.Windows.Controls.Docking;
+﻿using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -14,8 +14,6 @@ namespace EQLogParser
   class Helpers
   {
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
-    private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
-    private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new SortablePetMappingComparer();
 
     public static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
     {
@@ -31,35 +29,43 @@ namespace EQLogParser
       }
     }
 
-    internal static void CopyImage(Dispatcher dispatcher, FrameworkElement content, FrameworkElement title = null)
+    internal static void CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
     {
       Task.Delay(100).ContinueWith((task) => dispatcher.InvokeAsync(() =>
       {
         var wasHidden = content.Visibility != Visibility.Visible;
         content.Visibility = Visibility.Visible;
 
-        var titleHeight = title?.ActualHeight ?? 0;
-        var titleWidth = title?.ActualWidth ?? 0;
-        var height = (int)content.ActualHeight + (int)titleHeight;
+        int titlePadding = 0;
+        int titleHeight = 0;
+        int titleWidth = 0;
+        if (titleLabel != null)
+        {
+          titlePadding = (int)titleLabel.Padding.Top + (int)titleLabel.Padding.Bottom;
+          titleHeight = (int)titleLabel.ActualHeight - titlePadding - 4;
+          titleWidth = (int)titleLabel.DesiredSize.Width;
+        }
+
+        var height = (int)content.ActualHeight + (int)titleHeight + (int)titlePadding;
         var width = (int)content.ActualWidth;
 
         var dpiScale = VisualTreeHelper.GetDpi(content);
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + 20, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())
         {
-          var grayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2d2d30"));
-          ctx.DrawRectangle(grayBrush, null, new Rect(new Point(0, 0), new Size(width, height)));
+          var brush = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
+          ctx.DrawRectangle(brush, null, new Rect(new Point(0, 0), new Size(width, height + 20)));
 
-          if (title != null)
+          if (titleLabel != null)
           {
-            var titleBrush = new VisualBrush(title);
-            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(0, 0), new Size(titleWidth, titleHeight)));
+            var titleBrush = new VisualBrush(titleLabel);
+            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(4, titlePadding / 2), new Size(titleWidth, titleHeight)));
           }
 
           var chartBrush = new VisualBrush(content);
-          ctx.DrawRectangle(chartBrush, null, new Rect(new Point(0, titleHeight), new Size(width, height - titleHeight)));
+          ctx.DrawRectangle(chartBrush, null, new Rect(new Point(0, titleHeight + titlePadding), new Size(width, height - titleHeight)));
         }
 
         rtb.Render(dv);
@@ -72,114 +78,108 @@ namespace EQLogParser
       }), TaskScheduler.Default);
     }
 
-    internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
+    internal static void LoadDictionary(string path)
     {
-      var entry = new SortableName() { Name = string.Intern(name) };
-      int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
-      if (index < 0)
+      var dict = new ResourceDictionary
       {
-        collection.Insert(~index, entry);
-      }
-      else
+        Source = new Uri(path, UriKind.RelativeOrAbsolute)
+      };
+
+      foreach (var key in dict.Keys)
       {
-        collection.Insert(index, entry);
+        Application.Current.Resources[key] = dict[key];
       }
     }
 
-    internal static void InsertPetMappingIntoSortedList(PetMapping mapping, ObservableCollection<PetMapping> collection)
+    internal static void CloseWindow(DockingManager dockSite, ContentControl window)
     {
-      int index = collection.ToList().BinarySearch(mapping, TheSortablePetMappingComparer);
-      if (index < 0)
+      if (window != null)
       {
-        collection.Insert(~index, mapping);
-      }
-      else
-      {
-        collection.Insert(index, mapping);
+        var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
+        if (state == DockState.Hidden && window?.Tag as string != "Hide")
+        {
+          if (dockSite.Children.Contains(window))
+          {
+            dockSite.Children.Remove(window);
+          }
+          else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
+          {
+            dockSite.DocContainer.Items.Remove(window);
+          }
+
+          (window.Content as IDisposable)?.Dispose();
+        }
+        else
+        {
+          DockingManager.SetState(window, state);
+        }
       }
     }
 
-    internal static DocumentWindow OpenWindow(DockSite dockSite, DocumentWindow window, Type type, string key, string title)
+    internal static bool OpenWindow(DockingManager dockSite, Dictionary<string, ContentControl> opened, out ContentControl window,
+      Type type = null, string key = "", string title = "")
     {
-      if (window?.IsOpen == true)
+      bool nowOpen = false;
+      window = null;
+
+      if (opened != null && opened.TryGetValue(key, out ContentControl control))
       {
-        window.Close();
-        window = null;
+        CloseWindow(dockSite, control);
       }
-      else
+      else if (type != null)
       {
         var instance = Activator.CreateInstance(type);
-        window = new DocumentWindow(dockSite, key, title, null, instance);
-        OpenWindow(window);
+        window = new ContentControl { Name = key };
+        DockingManager.SetHeader(window, title);
+        DockingManager.SetState(window, DockState.Document);
+        DockingManager.SetCanDock(window, false);
+        window.Content = instance;
+        dockSite.BeginInit();
+        dockSite.Children.Add(window);
+        dockSite.EndInit();
+        nowOpen = true;
       }
 
-      return window;
+      return nowOpen;
     }
 
-    internal static void OpenWindow(DockingWindow window)
+    internal static bool OpenChart(Dictionary<string, ContentControl> opened, DockingManager dockSite, string key, List<string> choices,
+      string title, DocumentTabControl tabControl, bool includePets)
     {
-      if (!window.IsOpen)
+      bool nowOpen = false;
+
+      if (opened != null && opened.TryGetValue(key, out ContentControl control))
       {
-        window.IsOpen = true;
-        if (!window.IsActive)
-        {
-          window.Activate();
-        }
+        CloseWindow(dockSite, control);
       }
       else
       {
-        window.Close();
-      }
-    }
+        var chart = new LineChart(choices, includePets);
+        var window = new ContentControl { Name = key };
+        DockingManager.SetHeader(window, title);
+        DockingManager.SetState(window, DockState.Document);
+        DockingManager.SetCanDock(window, false);
+        window.Content = chart;
 
-    internal static DocumentWindow OpenNewTab(DockSite dockSite, string id, string title, object content, double width = 0, double height = 0)
-    {
-      var window = new DocumentWindow(dockSite, id, title, null, content);
-
-      if (width != 0 && height != 0)
-      {
-        window.ContainerDockedSize = new Size(width, height);
-      }
-
-      OpenWindow(window);
-      window.MoveToLast();
-      return window;
-    }
-
-    internal static void HandleChartUpdate(Dispatcher dispatcher, DocumentWindow window, DataPointEvent e)
-    {
-      dispatcher.InvokeAsync(() =>
-      {
-        if (window?.IsOpen == true)
+        if (dockSite.DocContainer.Items.Count == 0)
         {
-          (window.Content as LineChart)?.HandleUpdateEvent(e);
+          dockSite.BeginInit();
+          dockSite.Children.Add(window);
+          dockSite.EndInit();
         }
-      });
-    }
-
-    internal static void RepositionCharts(DocumentWindow window, params DocumentWindow[] charts)
-    {
-      if (window.ParentContainer is TabbedMdiContainer tabControl)
-      {
-        bool moved = false;
-        foreach (var child in tabControl.Windows.Reverse().ToList())
+        else if (tabControl == null || tabControl.Items.Count == 0)
         {
-          if (charts.Contains(child))
-          {
-            if (child.IsOpen && !moved)
-            {
-              moved = true;
-              child.MoveToNewHorizontalContainer();
-            }
-            else if (child.IsOpen && moved)
-            {
-              child.MoveToNextContainer();
-            }
-
-            (child.Content as LineChart)?.FixSize();
-          }
+          dockSite.CreateHorizontalTabGroup(window);
         }
+        else
+        {
+          tabControl.Container.AddElementToTabGroup(tabControl, window);
+        }
+
+        nowOpen = true;
       }
+
+      return nowOpen;
     }
 
     internal static string CreateRecordKey(string type, string subType)
@@ -192,35 +192,6 @@ namespace EQLogParser
       }
 
       return key;
-    }
-
-    private class SortableNameComparer : IComparer<SortableName>
-    {
-      public int Compare(SortableName x, SortableName y) => string.CompareOrdinal(x?.Name, y?.Name);
-    }
-
-    private class SortablePetMappingComparer : IComparer<PetMapping>
-    {
-      public int Compare(PetMapping x, PetMapping y) => string.CompareOrdinal(x?.Owner, y?.Owner);
-    }
-  }
-
-  internal class DictionaryListHelper<T1, T2>
-  {
-    internal int AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
-    {
-      int size = 0;
-      lock (dict)
-      {
-        if (!dict.ContainsKey(key))
-        {
-          dict[key] = new List<T2>();
-        }
-
-        dict[key].Add(value);
-        size = dict[key].Count;
-      }
-      return size;
     }
   }
 

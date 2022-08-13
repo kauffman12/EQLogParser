@@ -5,70 +5,122 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
-             xmlns:datagrid="http://schemas.actiprosoftware.com/winfx/xaml/datagrid"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:sfgrid="clr-namespace:Syncfusion.UI.Xaml.Grid;assembly=Syncfusion.SfGrid.WPF"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
       <local:TotalFormatConverter x:Key="TotalFormatConverter" />
-    </Grid.Resources>      
+      <local:FightRowStyleConverter x:Key="FightRowStyleConverter" />
+
+      <!-- sfgrid namespace due to class naming conflict -->
+      <Style x:Key="FightRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
+        <Style.Triggers>
+          <DataTrigger Binding="{Binding IsSearchResult, UpdateSourceTrigger=PropertyChanged}" Value="True" >
+            <Setter Property="Background" Value="{DynamicResource EQSearchBackgroundBrush}"/>
+          </DataTrigger>
+        </Style.Triggers>
+        <Setter Property="Background" Value="{Binding Converter={StaticResource FightRowStyleConverter}}"/>
+        <Setter Property="RowHoverForeground" Value="{DynamicResource ContentForeground}"/>
+      </Style>
+      <Style TargetType="syncfusion:GridRowHeaderCell">
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+              <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                <Grid>
+                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                </Grid>
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+    </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30" />
+      <RowDefinition Height="32" />
       <RowDefinition Height="500*" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="fightSearchBox" Margin="4,0,8,0" VerticalContentAlignment="Center" Height="24" Width="130" GotFocus="FightSearchBoxGotFocus" LostFocus="FightSearchBoxLostFocus" TextChanged="FightSearchBoxTextChanged" BorderBrush="#FF707070" />
-      <CheckBox x:Name="fightShowHitPoints" IsChecked="True" Margin="0,0,6,0" ToolTip="Show Hit Points" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowHitPointsChange" Unchecked="ShowHitPointsChange">HP</CheckBox>
-      <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="2,0,6,0" ToolTip="Add Breaks for Inactivity" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
-      <CheckBox x:Name="fightShowTanking" IsChecked="True" Margin="2,0,6,0" ToolTip="Include Fights with only Tanking data" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="ShowTankingChange" Unchecked="ShowTankingChange">Tanking</CheckBox>
+      <TextBox x:Name="fightSearchBox" Margin="8,0,0,2" Width="130" GotFocus="FightSearchBoxGotFocus" LostFocus="FightSearchBoxLostFocus" TextChanged="FightSearchBoxTextChanged" PreviewKeyDown="FightSearchBoxKeyDown" />
+      <CheckBox x:Name="fightShowHitPoints" IsChecked="True" Margin="10,0,0,2" ToolTip="Show Hit Points" Checked="ShowHitPointsChange" Unchecked="ShowHitPointsChange">HP</CheckBox>
+      <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="8,0,0,2" ToolTip="Add Breaks for Inactivity" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
+      <CheckBox x:Name="fightShowTanking" IsChecked="True" Margin="8,0,0,2" ToolTip="Include Fights with only Tanking data" Checked="ShowTankingChange" Unchecked="ShowTankingChange">Tanking</CheckBox>
     </StackPanel>
-    <datagrid:ThemedDataGrid x:Name="fightDataGrid" Grid.Row="1" PreviewMouseDown="UpdateCurrentItem" RowHeaderStyle="{StaticResource RightAlignGridRowHeaderStyle}" RowHeaderWidth="40" Margin="0,-1,0,1" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LoadingRow" SelectionChanged="SelectionChanged" CanUserSortColumns="True" CanUserResizeRows="False">
-      <DataGrid.ContextMenu>
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="AutoWithLastColumnFill"
+                           Grid.Row="1"                  
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
+                           HeaderRowHeight="26"
+                           IsReadOnly="True"
+                           ItemsSourceChanged="ItemsSourceChanged"
+                           RowHeaderWidth="40"
+                           RowStyle="{DynamicResource FightRowStyle}"
+                           SelectionChanged="SelectionChanged"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True"                           
+                           SourceType="{x:Type local:Fight}">
+      <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
-          <MenuItem x:Name="fightMenuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPetIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Paw"  Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="fightMenuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayerClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPlayerIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_User" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="fightMenuItemSelectAll" IsEnabled="False" Header="Select All" Click="SelectAllClick">
+          <MenuItem x:Name="menuItemSetPet" IsEnabled="False" Header="Change NPC To Pet" Click="SetPetClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Solid_Square" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="setPetIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="fightMenuItemUnselectAll" IsEnabled="False" Header="Unselect All" Click="UnselectAllClick">
+          <MenuItem x:Name="menuItemSetPlayer" IsEnabled="False" Header="Change NPC To Player" Click="SetPlayerClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectAllIcon" Height="10" Width="10" HorizontalAlignment="Center" Icon="Regular_Square" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>          
-          <MenuItem x:Name="fightMenuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="selectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Clone" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome x:Name="setPlayerIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="fightMenuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="unselectFightIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Regular_Clone" Foreground="#FF4F9FE2" />
-            </MenuItem.Icon>
-          </MenuItem>          
           <Separator />
-          <MenuItem x:Name="fightMenuItemClear" IsEnabled="False" Header="Clear All" Click="ClearClick">
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="clearAllIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Times" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Unselect All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.UnselectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="menuItemSelectFight" IsEnabled="False" Header="Select Group" Click="SelectGroupClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="selectFightIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Clone" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="menuItemUnselectFight" IsEnabled="False" Header="Unselect Group" Click="UnselectGroupClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="unselectFightIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_Clone" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
+          <MenuItem x:Name="menuItemClear" IsEnabled="False" Header="Clear All" Click="ClearClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="clearAllIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
-      </DataGrid.ContextMenu>
-      <DataGrid.Columns>
-        <DataGridTextColumn Binding="{Binding BeginTimeString}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Initial Hit Time" IsReadOnly="True" CanUserReorder="False" MinWidth="100" Width="100" />
-        <DataGridTextColumn Binding="{Binding Total, Converter={StaticResource TotalFormatConverter}}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource RightAlignGridCellStyle}" ClipboardContentBinding="{x:Null}" Header="HP" IsReadOnly="True" CanUserReorder="False" MinWidth="45" Width="45" />
-        <DataGridTextColumn Binding="{Binding Name}" HeaderStyle="{StaticResource CenterGridHeaderStyle}" CellStyle="{StaticResource TooltipCellStyle}" ClipboardContentBinding="{x:Null}" Header="Name" IsReadOnly="True" CanUserReorder="False" MinWidth="20" Width="90*" />
-      </DataGrid.Columns>
-    </datagrid:ThemedDataGrid>
+      </syncfusion:SfDataGrid.ContextMenu>
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="SortId" SortMode="Value" DisplayBinding="{Binding BeginTimeString}" 
+                                   Width="110" TextAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Initial Hit Time" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Total, Converter={StaticResource TotalFormatConverter}}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" TextAlignment="Right" HeaderText="HP" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Name}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Name" />
+      </syncfusion:SfDataGrid.Columns>
+    </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

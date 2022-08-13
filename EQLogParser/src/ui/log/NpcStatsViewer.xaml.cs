@@ -1,11 +1,10 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -19,8 +18,11 @@ namespace EQLogParser
     public NpcStatsViewer()
     {
       InitializeComponent();
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += NpcStatsViewer_EventsLogLoadingComplete;
-      dataGrid.Sorting += CustomSorting;
+      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
+      // default these columns to descending
+      string[] desc = new string[] { "Lowest", "Cold", "Corruption", "Disease", "Magic", "Fire", "Physical", "Poison", "Average", "Reflected" };
+      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       Load();
     }
 
@@ -31,7 +33,7 @@ namespace EQLogParser
       {
         if (!PlayerManager.Instance.IsPetOrPlayerOrMerc(kv.Key) && !PlayerManager.Instance.IsPetOrPlayerOrMerc(TextFormatUtils.ToUpper(kv.Key)))
         {
-          var row = new NpcStatsRow { Name = TextFormatUtils.CapitalizeNpc(kv.Key) };
+          var row = new NpcStatsRow { Name = kv.Key };
           foreach (var resists in kv.Value)
           {
             var rate = GetRate(resists.Value.Landed, resists.Value.Resisted);
@@ -94,7 +96,7 @@ namespace EQLogParser
       {
         if (!npcStatsRows.TryGetValue(kv.Key, out NpcStatsRow updateRow))
         {
-          updateRow = new NpcStatsRow { Name = TextFormatUtils.CapitalizeNpc(kv.Key) };
+          updateRow = new NpcStatsRow { Name = kv.Key };
         }
 
         var rate = GetRate(kv.Value.Landed, kv.Value.Reflected);
@@ -104,7 +106,7 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
-      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Your Spell Resists against " + npcStatsRows.Count + " Unique NPCs";
+      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
 
       Tuple<double, string> GetRate(uint landed, uint notLanded)
       {
@@ -136,35 +138,10 @@ namespace EQLogParser
       }
     }
 
-    private void LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-      // set header count
-      if (e.Row != null)
-      {
-        e.Row.Header = (e.Row.GetIndex() + 1).ToString(CultureInfo.CurrentCulture);
-      }
-    }
-
-    private void CustomSorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e.Column.Header != null && e.Column.Header.ToString() != "Name" && dataGrid.ItemsSource != null)
-      {
-        e.Handled = true;
-        var direction = e.Column.SortDirection ?? ListSortDirection.Ascending;
-
-        string field = (e.Column.Header as string).Split(' ')[0];
-        if (dataGrid.ItemsSource is List<NpcStatsRow> data)
-        {
-          data.Sort(new NpcStatsRowComparer(field, direction == ListSortDirection.Ascending));
-          dataGrid.Items.Refresh();
-        }
-
-        e.Column.SortDirection = direction == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
-      }
-    }
-
-    private void NpcStatsViewer_EventsLogLoadingComplete(object sender, bool e) => Load();
-    private void RefreshMouseClick(object sender, MouseButtonEventArgs e) => Load();
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void RefreshClick(object sender, RoutedEventArgs e) => Load();
+    private void EventsLogLoadingComplete(object sender, bool e) => Load();
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
@@ -173,12 +150,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        if (disposing)
-        {
-          // TODO: dispose managed state (managed objects).
-        }
-
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= NpcStatsViewer_EventsLogLoadingComplete;
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
+        dataGrid.Dispose();
         disposedValue = true;
       }
     }
@@ -194,109 +167,38 @@ namespace EQLogParser
     #endregion
   }
 
-  public class NpcStatsRowComparer : IComparer<NpcStatsRow>
-  {
-    private readonly bool Ascending;
-    private readonly string Column;
-
-    public NpcStatsRowComparer(string column, bool ascending)
-    {
-      Ascending = ascending;
-      Column = column;
-    }
-
-    public int Compare(NpcStatsRow x, NpcStatsRow y)
-    {
-      int result = 0;
-
-      if (Column != null && x != null && y != null)
-      {
-        switch (Column)
-        {
-          case "Chromatic":
-            result = x.Lowest.CompareTo(y.Lowest);
-            result = result != 0 ? result : x.LowestTotal.CompareTo(y.LowestTotal);
-            break;
-          case "Cold":
-            result = x.Cold.CompareTo(y.Cold);
-            result = result != 0 ? result : x.ColdTotal.CompareTo(y.ColdTotal);
-            break;
-          case "Corruption":
-            result = x.Corruption.CompareTo(y.Corruption);
-            result = result != 0 ? result : x.CorruptionTotal.CompareTo(y.CorruptionTotal);
-            break;
-          case "Disease":
-            result = x.Disease.CompareTo(y.Disease);
-            result = result != 0 ? result : x.DiseaseTotal.CompareTo(y.DiseaseTotal);
-            break;
-          case "Fire":
-            result = x.Fire.CompareTo(y.Fire);
-            result = result != 0 ? result : x.FireTotal.CompareTo(y.FireTotal);
-            break;
-          case "Magic":
-            result = x.Magic.CompareTo(y.Magic);
-            result = result != 0 ? result : x.MagicTotal.CompareTo(y.MagicTotal);
-            break;
-          case "Physical":
-            result = x.Physical.CompareTo(y.Physical);
-            result = result != 0 ? result : x.PhysicalTotal.CompareTo(y.PhysicalTotal);
-            break;
-          case "Poison":
-            result = x.Poison.CompareTo(y.Poison);
-            result = result != 0 ? result : x.PoisonTotal.CompareTo(y.PoisonTotal);
-            break;
-          case "Prismatic":
-            result = x.Average.CompareTo(y.Average);
-            result = result != 0 ? result : x.AverageTotal.CompareTo(y.AverageTotal);
-            break;
-          case "Reflected":
-            result = x.Reflected.CompareTo(y.Reflected);
-            result = result != 0 ? result : x.ReflectedTotal.CompareTo(y.ReflectedTotal);
-            break;
-        }
-      }
-
-      if (Ascending)
-      {
-        result *= -1;
-      }
-
-      return result;
-    }
-  }
-
   public class NpcStatsRow
   {
     public string Name { get; set; }
-    public double Average { get; set; }
+    public double Average { get; set; } = -1.0;
     public string AverageText { get; set; } = "-";
     public uint AverageTotal { get; set; }
     public string TooltipText { get; set; }
-    public double Cold { get; set; }
+    public double Cold { get; set; } = -1.0;
     public string ColdText { get; set; } = "-";
     public uint ColdTotal { get; set; }
-    public double Corruption { get; set; }
+    public double Corruption { get; set; } = -1.0;
     public string CorruptionText { get; set; } = "-";
     public uint CorruptionTotal { get; set; }
-    public double Disease { get; set; }
+    public double Disease { get; set; } = -1.0;
     public string DiseaseText { get; set; } = "-";
     public uint DiseaseTotal { get; set; }
-    public double Fire { get; set; }
+    public double Fire { get; set; } = -1.0;
     public string FireText { get; set; } = "-";
     public uint FireTotal { get; set; }
-    public double Lowest { get; set; }
+    public double Lowest { get; set; } = -1.0;
     public string LowestText { get; set; } = "-";
     public uint LowestTotal { get; set; }
-    public double Magic { get; set; }
+    public double Magic { get; set; } = -1.0;
     public string MagicText { get; set; } = "-";
     public uint MagicTotal { get; set; }
-    public double Physical { get; set; }
+    public double Physical { get; set; } = -1.0;
     public string PhysicalText { get; set; } = "-";
     public uint PhysicalTotal { get; set; }
-    public double Poison { get; set; }
+    public double Poison { get; set; } = -1.0;
     public string PoisonText { get; set; } = "-";
     public uint PoisonTotal { get; set; }
-    public double Reflected { get; set; }
+    public double Reflected { get; set; } = -1.0;
     public string ReflectedText { get; set; } = "-";
     public uint ReflectedTotal { get; set; }
   }

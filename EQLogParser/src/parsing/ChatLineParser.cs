@@ -122,14 +122,14 @@
 
       // check if line starts with what looks like a player name followed by a space
       // ignore NPC like names entirely
-      int end1 = PlayerManager.Instance.FindPossiblePlayerName(action, out bool isCrossServer, 0, -1, ' ');
+      int end1 = PlayerManager.FindPossiblePlayerName(action, out bool isCrossServer, 0, -1, ' ');
 
       if (end1 > -1 && action.Length > (end1 + 5))
       {
         // "Kant -> Kazint:
         if (action.IndexOf("-> ", end1 + 1, 3) == (end1 + 1))
         {
-          int end2 = PlayerManager.Instance.FindPossiblePlayerName(action, out bool _, end1 + 4, -1, ':');
+          int end2 = PlayerManager.FindPossiblePlayerName(action, out bool _, end1 + 4, -1, ':');
           if (end2 > -1)
           {
             chatType = new ChatType { Channel = ChatChannels.Tell, TextStart = end1 + 1 };

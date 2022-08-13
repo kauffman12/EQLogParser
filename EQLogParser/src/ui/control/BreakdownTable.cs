@@ -1,111 +1,69 @@
-﻿using ActiproSoftware.Windows.Themes;
+﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
-  public abstract class BreakdownTable : UserControl
+  public abstract class BreakdownTable : UserControl, IDisposable
   {
     private protected string CurrentSortKey = "Total";
     private protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     private protected DataGridTextColumn CurrentColumn = null;
-    private DataGrid TheDataGrid;
-    private ComboBox TheSelectedColumns;
+    private SfTreeGrid TheDataGrid;
+    private ComboBox TheColumnsCombo;
+    internal Label TheTitle;
 
-    internal void InitBreakdownTable(DataGrid dataGrid, ComboBox columns)
+    internal void InitBreakdownTable(Label title, SfTreeGrid dataGrid, ComboBox columnsCombo)
     {
       TheDataGrid = dataGrid;
-      TheSelectedColumns = columns;
+      TheColumnsCombo = columnsCombo;
+      TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
+      TheTitle = title;
 
-      if (TheDataGrid != null)
-      {
-        TheDataGrid.Sorting += DataGrid_Sorting; // sort numbers descending
+      // default these columns to descending
+      string[] desc = new string[] { "Percent", "Total", "Extra", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg", "AvgCrit", "AvgLucky",
+      "ExtraRate", "CritRate", "LuckRate", "TwincastRate", "MeleeAccRate", "MeleeHitRate", "Absorbs", "Blocks", "Dodges", "Invulnerable",
+      "Misses", "Parries", "StrikethroughHits", "RiposteHits", "RampageRate", "TotalAss", "TotalFinishing", "TotalHead", "TotalRiposte",
+      "TotalSlay", "AvgNonTwincast", "AvgNonTwincastCrit", "AvgNonTwincastLucky", "TwincastHits", "Resists", "DoubleBowRate",
+      "FlurryRate", "ResistRate", "MeleeAttempts", "MeleeUndefended"};
+      TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
 
-        PropertyDescriptor orderPd = DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn));
-        foreach (var column in dataGrid.Columns)
-        {
-          orderPd.AddValueChanged(column, new EventHandler(ColumnDisplayIndexPropertyChanged));
-        }
-
-        if (TheSelectedColumns != null)
-        {
-          DataGridUtil.LoadColumns(TheSelectedColumns, TheDataGrid);
-        }
-      }
+      // workaround to avoid drag/drop failing when grid has no data
+      TheDataGrid.ItemsSource = new List<PlayerStats>();
     }
 
-    internal abstract void Display(List<PlayerStats> selectedStats = null);
+    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
+    internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
+    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
 
-    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.ShowColumns(TheSelectedColumns, TheDataGrid);
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
 
-    internal void ColumnDisplayIndexPropertyChanged(object sender, EventArgs e) => DataGridUtil.SaveColumnIndexes(TheSelectedColumns, TheDataGrid);
-
-    internal void CustomSorting(object sender, DataGridSortingEventArgs e)
+    protected virtual void Dispose(bool disposing)
     {
-      if (e?.Column is DataGridTextColumn column)
+      if (!disposedValue)
       {
-        // prevent the built-in sort from sorting
-        e.Handled = true;
-
-        if (column.Binding is Binding binding && binding.Path != null) // dont sort on percent total, its not useful
-        {
-          CurrentSortKey = binding.Path.Path;
-          CurrentColumn = column;
-
-          if (column.Header.ToString() != "Name" && column.SortDirection == null)
-          {
-            CurrentSortDirection = ListSortDirection.Descending;
-          }
-          else
-          {
-            CurrentSortDirection = (column.SortDirection != ListSortDirection.Ascending) ? ListSortDirection.Ascending : ListSortDirection.Descending;
-          }
-
-          Display();
-        }
+        TheDataGrid.Dispose();
+        disposedValue = true;
       }
     }
 
-    internal object GetSortValue(PlayerSubStats sub) => sub?.GetType().GetProperty(CurrentSortKey).GetValue(sub, null);
-
-    internal void LoadingRow(object sender, DataGridRowEventArgs e)
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
     {
-      if (e?.Row.DataContext is PlayerStats)
-      {
-        e.Row.Style = Application.Current.FindResource(DataGridResourceKeys.DataGridRowStyleKey) as Style;
-      }
-      else
-      {
-        e.Row.Style = Application.Current.Resources["DetailsDataGridRowSyle"] as Style;
-      }
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
     }
-
-    internal List<PlayerSubStats> SortSubStats(List<PlayerSubStats> subStats)
-    {
-      OrderedParallelQuery<PlayerSubStats> query;
-      if (CurrentSortDirection == ListSortDirection.Ascending)
-      {
-        query = subStats.AsParallel().OrderBy(subStat => GetSortValue(subStat));
-      }
-      else
-      {
-        query = subStats.AsParallel().OrderByDescending(subStat => GetSortValue(subStat));
-      }
-
-      return query.ToList();
-    }
-
-    private void DataGrid_Sorting(object sender, DataGridSortingEventArgs e)
-    {
-      if (e.Column.Header != null && e.Column.Header.ToString() != "Name")
-      {
-        e.Column.SortDirection = e.Column.SortDirection ?? ListSortDirection.Ascending;
-      }
-    }
+    #endregion
   }
 }
