@@ -1,5 +1,5 @@
 # EQLogParser
-Everquest Log Parser for Live/TLP servers.
+Everquest Log Parser for Live/TLP servers. This new version requires .Net 6.0 Desktop or newer to be installed. A link is provided during installation if it is not found.
 
 Latest Release:
 https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-2.0.0.msi
