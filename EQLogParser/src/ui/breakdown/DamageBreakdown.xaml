@@ -116,9 +116,9 @@
         <syncfusion:TreeGridTextColumn Width="60" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
         <syncfusion:TreeGridTextColumn Width="75" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
         <syncfusion:TreeGridTextColumn Width="55" MappingName="TwincastRate" DisplayBinding="{Binding Path=TwincastRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% TC" />
-        <syncfusion:TreeGridTextColumn Width="115" MappingName="DoubleBowRate" DisplayBinding="{Binding Path=TwincastRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Double Bow" />
-        <syncfusion:TreeGridTextColumn Width="80" MappingName="FlurryRate" DisplayBinding="{Binding Path=TwincastRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Flurry" />
-        <syncfusion:TreeGridTextColumn Width="80" MappingName="ResistRate" DisplayBinding="{Binding Path=TwincastRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Resist" />
+        <syncfusion:TreeGridTextColumn Width="115" MappingName="DoubleBowRate" DisplayBinding="{Binding Path=DoubleBowRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Double Bow" />
+        <syncfusion:TreeGridTextColumn Width="80" MappingName="FlurryRate" DisplayBinding="{Binding Path=FlurryRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Flurry" />
+        <syncfusion:TreeGridTextColumn Width="80" MappingName="ResistRate" DisplayBinding="{Binding Path=ResistRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Resist" />
       </syncfusion:SfTreeGrid.Columns>
     </syncfusion:SfTreeGrid>
   </Grid>
