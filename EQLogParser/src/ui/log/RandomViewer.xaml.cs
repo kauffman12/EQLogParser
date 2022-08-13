@@ -176,7 +176,7 @@ namespace EQLogParser
 
         if (section.RolledTwice.Count > 0)
         {
-          section.Player += ", Rolled Twice: " + string.Join(" + ", section.RolledTwice).Trim();
+          section.Player += ", Rolled Multiple: " + string.Join(" + ", section.RolledTwice).Trim();
         }
 
         var duration = DateUtil.ToDouble(DateTime.Now) - section.StartTime;

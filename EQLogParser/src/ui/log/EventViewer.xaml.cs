@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -35,7 +34,6 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(EventRows);
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
 
       var list = new List<ComboBoxItemDetails>();
@@ -55,11 +53,12 @@ namespace EQLogParser
         if (CurrentFilterText != eventFilter.Text)
         {
           CurrentFilterText = eventFilter.Text;
-          UpdateUI();
+          UpdateTitleAndRefresh();
         }
       };
 
       Load();
+      dataGrid.ItemsSource = EventRows;
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
@@ -117,17 +116,14 @@ namespace EQLogParser
 
       rows.Sort((a, b) => a.Time.CompareTo(b.Time));
       rows.ForEach(row => EventRows.Add(row));
-
-      Dispatcher.InvokeAsync(() => UpdateUI());
+      UpdateTitleAndRefresh();
     }
 
-    private void UpdateUI()
+    private void UpdateTitleAndRefresh()
     {
-      if (dataGrid?.View != null)
-      {
-        dataGrid.View.RefreshFilter();
-        titleLabel.Content = dataGrid.View.Records.Count == 0 ? "No Events Found" : dataGrid.View.Records.Count + " Events Found";
-      }
+      dataGrid?.View?.RefreshFilter();
+      int count = dataGrid?.View != null ? dataGrid.View.Records.Count : 0;
+      titleLabel.Content = count == 0 ? "No Events Found" : count + " Events Found";
     }
 
     private void ItemsSourceChanged(object sender, Syncfusion.UI.Xaml.Grid.GridItemsSourceChangedEventArgs e)
@@ -161,6 +157,8 @@ namespace EQLogParser
         }
         return result;
       });
+
+      UpdateTitleAndRefresh();
     }
 
     private void FilterOptionChange(object sender, EventArgs e)
@@ -168,7 +166,7 @@ namespace EQLogParser
       if (eventFilterModifier?.SelectedIndex > -1 && eventFilterModifier.SelectedIndex != CurrentFilterModifier)
       {
         CurrentFilterModifier = eventFilterModifier.SelectedIndex;
-        UpdateUI();
+        UpdateTitleAndRefresh();
       }
     }
 
@@ -205,7 +203,7 @@ namespace EQLogParser
         }
 
         UIElementUtil.SetComboBoxTitle(selectedOptions, count, EQLogParser.Resource.EVENT_TYPES_SELECTED);
-        UpdateUI();
+        UpdateTitleAndRefresh();
       }
     }
 
