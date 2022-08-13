@@ -18,33 +18,46 @@ namespace WixCustom
     public static ActionResult CheckDotNetVersion(Session session)
     {
       var minVersion = new Version(6, 0, 0);
-      var command = "/c dotnet --list-runtimes";// /c is important here
-      var output = string.Empty;
-      using (var p = new Process())
-      {
-        p.StartInfo = new ProcessStartInfo()
-        {
-          FileName = "cmd.exe",
-          Arguments = command,
-          UseShellExecute = false,
-          RedirectStandardError = true,
-          RedirectStandardOutput = true,
-          CreateNoWindow = true,
-        };
-        p.Start();
-        while (!p.StandardOutput.EndOfStream)
-        {
-          output += $"{p.StandardOutput.ReadLine()}{Environment.NewLine}";
-        }
-        p.WaitForExit();
+      var command = "/c \"" + session["ProgramFiles64Folder"] + "dotnet\\dotnet.exe\" --list-runtimes"; // /c is important here
+      session.Log("Running = " + command);
 
-        //throw new Exception($"{p.ExitCode}:{p.StandardError.ReadToEnd()}");
-        if (p.ExitCode != 0)
+      try
+      {
+        var output = string.Empty;
+        using (var p = new Process())
         {
-          session["DOTNET6INSTALLED"] = "0";
+          p.StartInfo = new ProcessStartInfo()
+          {
+            FileName = "cmd.exe",
+            Arguments = command,
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            CreateNoWindow = true,
+          };
+
+          p.Start();
+          while (!p.StandardOutput.EndOfStream)
+          {
+            output += $"{p.StandardOutput.ReadLine()}{Environment.NewLine}";
+          }
+
+          p.WaitForExit();
+
+          //throw new Exception($"{p.ExitCode}:{p.StandardError.ReadToEnd()}");
+          if (p.ExitCode != 0)
+          {
+            session["DOTNET6INSTALLED"] = "0";
+            return ActionResult.Success;
+          }
+
+          session["DOTNET6INSTALLED"] = (GetLatestVersionOfRuntime(runtimes[0], output) < minVersion) ? "0" : "1";
           return ActionResult.Success;
         }
-        session["DOTNET6INSTALLED"] = (GetLatestVersionOfRuntime(runtimes[0], output) < minVersion) ? "0" : "1";
+      }
+      catch (Exception e)
+      {
+        session["DOTNET6INSTALLED"] = "0";
         return ActionResult.Success;
       }
     }
