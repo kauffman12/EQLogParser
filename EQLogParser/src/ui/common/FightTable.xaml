@@ -12,16 +12,16 @@
   <Grid>
     <Grid.Resources>
       <local:TotalFormatConverter x:Key="TotalFormatConverter" />
-      <local:FightRowStyleConverter x:Key="FightRowStyleConverter" />
+      <local:ColorRowStyleConverter x:Key="ColorRowStyleConverter" />
 
       <!-- sfgrid namespace due to class naming conflict -->
-      <Style x:Key="FightRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
+      <Style x:Key="RowStyle" TargetType="sfgrid:VirtualizingCellsControl">
         <Style.Triggers>
           <DataTrigger Binding="{Binding IsSearchResult, UpdateSourceTrigger=PropertyChanged}" Value="True" >
             <Setter Property="Background" Value="{DynamicResource EQSearchBackgroundBrush}"/>
           </DataTrigger>
         </Style.Triggers>
-        <Setter Property="Background" Value="{Binding Converter={StaticResource FightRowStyleConverter}}"/>
+        <Setter Property="Background" Value="{Binding Converter={StaticResource ColorRowStyleConverter}}"/>
         <Setter Property="RowHoverForeground" Value="{DynamicResource ContentForeground}"/>
       </Style>
       <Style TargetType="syncfusion:GridRowHeaderCell">
@@ -60,7 +60,7 @@
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            RowHeaderWidth="40"
-                           RowStyle="{DynamicResource FightRowStyle}"
+                           RowStyle="{DynamicResource RowStyle}"
                            SelectionChanged="SelectionChanged"
                            SelectionMode="Extended"
                            ShowRowHeader="True"                           

@@ -6,7 +6,7 @@ using System.Windows.Media;
 
 namespace EQLogParser
 {
-  internal class FightRowStyleConverter : IValueConverter
+  internal class ColorRowStyleConverter : IValueConverter
   {
     object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
