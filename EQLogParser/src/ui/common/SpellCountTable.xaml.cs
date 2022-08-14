@@ -86,28 +86,34 @@ namespace EQLogParser
 
         dataGrid.Columns.Add(headerCol);
 
-        Dictionary<string, Dictionary<string, uint>> filteredPlayerMap = new Dictionary<string, Dictionary<string, uint>>();
-        Dictionary<string, uint> totalCountMap = new Dictionary<string, uint>();
-        Dictionary<string, uint> uniqueSpellsMap = new Dictionary<string, uint>();
+        var filteredPlayerMap = new Dictionary<string, Dictionary<string, uint>>();
+        var totalCountMap = new Dictionary<string, uint>();
+        var uniqueSpellsMap = new Dictionary<string, uint>();
 
         uint totalCasts = 0;
         PlayerList.ForEach(player =>
         {
           filteredPlayerMap[player] = new Dictionary<string, uint>();
 
-          foreach (ref var id in TheSpellCounts.PlayerCastCounts[player].Keys.ToArray().AsSpan())
+          if (TheSpellCounts.PlayerCastCounts.ContainsKey(player))
           {
-            if (PassFilters(TheSpellCounts.UniqueSpells[id], false))
+            foreach (ref var id in TheSpellCounts.PlayerCastCounts[player].Keys.ToArray().AsSpan())
             {
-              totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
+              if (PassFilters(TheSpellCounts.UniqueSpells[id], false))
+              {
+                totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
+              }
             }
           }
 
-          foreach (ref var id in TheSpellCounts.PlayerReceivedCounts[player].Keys.ToArray().AsSpan())
+          if (TheSpellCounts.PlayerReceivedCounts.ContainsKey(player))
           {
-            if (PassFilters(TheSpellCounts.UniqueSpells[id], true))
+            foreach (ref var id in TheSpellCounts.PlayerReceivedCounts[player].Keys.ToArray().AsSpan())
             {
-              totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
+              if (PassFilters(TheSpellCounts.UniqueSpells[id], true))
+              {
+                totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
+              }
             }
           }
         });
