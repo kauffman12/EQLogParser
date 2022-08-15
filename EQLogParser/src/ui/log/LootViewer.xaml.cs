@@ -35,7 +35,7 @@ namespace EQLogParser
       optionsList.SelectedIndex = 0;
 
       // default these columns to descending
-      string[] desc = new string[] { "Quantity" };
+      string[] desc = new string[] { "Quantity", "Time" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
@@ -112,6 +112,7 @@ namespace EQLogParser
       itemsList.SelectedItem = CurrentSelectedItem;
       playersList.SelectedItem = CurrentSelectedPlayer;
 
+      dataGrid?.View?.Refresh();
       UpdateTitle();
     }
 

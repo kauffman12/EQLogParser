@@ -114,7 +114,6 @@ namespace EQLogParser
         });
       });
 
-      rows.Sort((a, b) => a.Time.CompareTo(b.Time));
       rows.ForEach(row => EventRows.Add(row));
       UpdateTitleAndRefresh();
     }
