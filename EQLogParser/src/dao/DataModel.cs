@@ -449,6 +449,11 @@ namespace EQLogParser
     public TimeRange Ranges { get; } = new TimeRange();
   }
 
+  internal class SubStatsBreakdown : PlayerSubStats
+  {
+    public List<PlayerSubStats> Children { get; set; } = new List<PlayerSubStats>();
+  }
+
   internal class PlayerStats : PlayerSubStats
   {
     public List<PlayerStats> Children { get; } = new List<PlayerStats>();
