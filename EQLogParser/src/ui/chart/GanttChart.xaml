@@ -13,7 +13,7 @@
     </Grid.RowDefinitions>
     <StackPanel x:Name="titlePane" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel1" Style="{StaticResource EQTitleStyle}" Padding="5,5,0,5"/>
-      <Label x:Name="titleLabel2" Style="{StaticResource EQTitleStyle}" Foreground="{DynamicResource PrimaryLight}" Padding="0,5"/>
+      <Label x:Name="titleLabel2" Style="{StaticResource EQTitleStyle}" Foreground="{DynamicResource EQWarnForegroundBrush}" Padding="0,5"/>
       <Label x:Name="titleLabel3" Style="{StaticResource EQTitleStyle}" Padding="0,5,5,5"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
