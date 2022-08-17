@@ -18,13 +18,14 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static readonly List<string> BlockBrushes = new List<string>() { "EQMenuIconBrush", "PrimaryLight" };
+    private static readonly List<string> BlockBrushes = new List<string>() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
 
     private const int ROW_HEIGHT = 24;
     private const int LABELS_WIDTH = 180;
     private const ushort CASTER_ADPS = 1;
     private const ushort MELEE_ADPS = 2;
     private const ushort TANK_ADPS = 4;
+    private const ushort ANY_ADPS = CASTER_ADPS + MELEE_ADPS + TANK_ADPS;
 
     private readonly Dictionary<string, SpellRange> SpellRanges = new Dictionary<string, SpellRange>();
     private readonly List<Rectangle> Dividers = new List<Rectangle>();
@@ -77,12 +78,43 @@ namespace EQLogParser
           showCasterAdps.Visibility = Visibility.Hidden;
         }
 
+        var deathMap = new Dictionary<string, HashSet<double>>();
+        foreach (var block in DataManager.Instance.GetDeathsDuring(StartTime, EndTime))
+        {
+          foreach (var action in block.Actions)
+          {
+            if (action is DeathRecord death)
+            {
+              if (Selected.FindIndex(stats => stats.OrigName == death.Killed) > -1)
+              {
+                if (deathMap.TryGetValue(death.Killed, out HashSet<double> values))
+                {
+                  values.Add(block.BeginTime);
+                }
+                else
+                {
+                  deathMap[death.Killed] = new HashSet<double> { block.BeginTime };
+                }
+              }
+            }
+          }
+        }
+
         for (int i = 0; i < Selected.Count; i++)
         {
           var player = Selected[i].OrigName;
           var allSpells = new List<ActionBlock>();
           allSpells.AddRange(DataManager.Instance.GetCastsDuring(StartTime, EndTime));
           allSpells.AddRange(DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime));
+
+          if (deathMap.TryGetValue(Selected[i].OrigName, out HashSet<double> deathTimes))
+          {
+            var death = new SpellData { Adps = (byte) ANY_ADPS, Duration = 3, NameAbbrv = "Player Death", Name = "Player Death" };
+            foreach (var time in deathTimes)
+            {
+              UpdateSpellRange(death, time, BlockBrushes[i]);
+            }
+          }
 
           foreach (var block in allSpells.OrderBy(block => block.BeginTime).ThenBy(block => (block.Actions.Count > 0 && block.Actions[0] is ReceivedSpell) ? 1 : -1))
           {
@@ -101,7 +133,7 @@ namespace EQLogParser
                   }
                 }
 
-                UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i]);
+                UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i], deathTimes);
               }
               else if (action is ReceivedSpell received && received.Receiver == player)
               {
@@ -119,7 +151,7 @@ namespace EQLogParser
                     SelfOnly[spellData.NameAbbrv] = 1;
                   }
 
-                  UpdateSpellRange(spellData, block.BeginTime, BlockBrushes[i]);
+                  UpdateSpellRange(spellData, block.BeginTime, BlockBrushes[i], deathTimes);
                 }
               }
             }
@@ -154,13 +186,14 @@ namespace EQLogParser
       return (TankingMode && (data.Adps & TANK_ADPS) != 0) || (!TankingMode && ((data.Adps & CASTER_ADPS) != 0 || (data.Adps & MELEE_ADPS) != 0));
     }
 
-    private void UpdateSpellRange(SpellData spellData, double beginTime, string brush)
+    private void UpdateSpellRange(SpellData spellData, double beginTime, string brush, HashSet<double> deathTimes = null)
     {
       if (!SpellRanges.TryGetValue(spellData.NameAbbrv, out SpellRange spellRange))
       {
         spellRange = new SpellRange { Adps = spellData.Adps };
-        var duration = GetDuration(spellData, EndTime, beginTime);
-        spellRange.Ranges.Add(new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
+        var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
+        var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
+        spellRange.Ranges.Add(range);
         SpellRanges[spellData.NameAbbrv] = spellRange;
       }
       else
@@ -169,12 +202,13 @@ namespace EQLogParser
         var offsetSeconds = (int)(beginTime - StartTime);
         if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
         {
-          last.Duration = GetDuration(spellData, EndTime, beginTime) + (offsetSeconds - last.BeginSeconds);
+          last.Duration = GetDuration(spellData, EndTime, beginTime, deathTimes) + (offsetSeconds - last.BeginSeconds);
         }
         else
         {
-          var duration = GetDuration(spellData, EndTime, beginTime);
-          spellRange.Ranges.Add(new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration });
+          var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
+          var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
+          spellRange.Ranges.Add(range);
         }
       }
     }
@@ -318,6 +352,15 @@ namespace EQLogParser
       {
         AddDivider(content, finalHeight, more);
       }
+
+      if (SpellRanges.TryGetValue("Player Death", out SpellRange range))
+      {
+        range.Ranges.ForEach(instance =>
+        {
+          // add 1 to center it a bit
+          AddDivider(content, finalHeight, instance.BeginSeconds + 1, instance.BlockBrush);
+        });
+      }
     }
 
     private void AddGridRow(int hPos, string name)
@@ -380,20 +423,22 @@ namespace EQLogParser
       contentHeader.Children.Add(textBlock);
     }
 
-    private void AddDivider(Grid target, int hPos, double left)
+    private void AddDivider(Grid target, int hPos, double left, string blockBrush = null)
     {
       var rectangle = new Rectangle
       {
-        StrokeThickness = 0.3,
+        StrokeThickness = (blockBrush == null) ? 0.3 : 0.9,
         Height = hPos,
-        Width = 0.3,
+        Width = (blockBrush == null) ? 0.3 : 0.9,
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
         Margin = new Thickness(left, 0, 0, 0)
       };
 
       Dividers.Add(rectangle);
-      rectangle.SetResourceReference(Rectangle.StrokeProperty, "ContentForeground");
+
+      var brushName = (blockBrush == null) ? "ContentForeground" : blockBrush;
+      rectangle.SetResourceReference(Rectangle.StrokeProperty, brushName);
       target.Children.Add(rectangle);
     }
 
@@ -497,7 +542,7 @@ namespace EQLogParser
       return block;
     }
 
-    private int GetDuration(SpellData spell, double endTime, double currentTime)
+    private int GetDuration(SpellData spell, double endTime, double currentTime, HashSet<double> deathTimes = null)
     {
       int duration = spell.Duration > 0 ? spell.Duration : 6;
 
@@ -522,6 +567,17 @@ namespace EQLogParser
         {
           var guess = (spell.MaxHits / 5) * 18 / mod;
           duration = duration > guess ? guess : duration;
+        }
+      }
+
+      if (deathTimes != null && !spell.Name.StartsWith("Glyph of"))
+      {
+        foreach (var time in deathTimes)
+        {
+          if (time >= currentTime && time <= endTime)
+          {
+            endTime = time;
+          }
         }
       }
 
