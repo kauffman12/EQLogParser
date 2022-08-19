@@ -58,7 +58,7 @@ namespace EQLogParser
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled =
         menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = false;
 
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 700) };
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       SelectionTimer.Tick += (sender, e) =>
       {
         if (!rightClickMenu.IsOpen)
@@ -73,7 +73,7 @@ namespace EQLogParser
         SelectionTimer.Stop();
       };
 
-      SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
       SearchTextTimer.Tick += (sender, e) =>
       {
         if (fightSearchBox.Text.Length > 0)
@@ -84,7 +84,7 @@ namespace EQLogParser
         SearchTextTimer.Stop();
       };
 
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1250) };
       UpdateTimer.Tick += (sender, e) => ProcessFights();
       UpdateTimer.Start();
 

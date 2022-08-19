@@ -42,16 +42,29 @@ namespace EQLogParser
       DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
 
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1200) };
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       SelectionTimer.Tick += (sender, e) =>
       {
-        if (minTimeChooser.Value < maxTimeChooser.Value)
+        if (prog1.Visibility == Visibility.Visible)
         {
-          var damageOptions = new GenerateStatsOptions { MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
-          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
+          prog1.Visibility = Visibility.Hidden;
         }
+        else if (prog2.Visibility == Visibility.Visible)
+        {
+          prog2.Visibility = Visibility.Hidden;
+        }
+        else
+        {
+          prog3.Visibility = Visibility.Hidden;
 
-        SelectionTimer.Stop();
+          if (minTimeChooser.Value < maxTimeChooser.Value)
+          {
+            var damageOptions = new GenerateStatsOptions { MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
+            Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
+          }
+
+          SelectionTimer.Stop();
+        }
       };
     }
 
@@ -312,6 +325,10 @@ namespace EQLogParser
       {
         SelectionTimer.Stop();
         SelectionTimer.Start();
+
+        prog1.Visibility = Visibility.Visible;
+        prog2.Visibility = Visibility.Visible;
+        prog3.Visibility = Visibility.Visible;
       }
     }
 

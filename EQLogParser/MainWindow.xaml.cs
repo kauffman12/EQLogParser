@@ -106,6 +106,9 @@ namespace EQLogParser
 
         InitializeComponent();
 
+        // add tabs to the right
+        ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
+
         // update titles
         versionText.Text = VERSION;
 
@@ -209,12 +212,12 @@ namespace EQLogParser
     {
       if (!DoneLoading)
       {
-        // Show Tanking Summary at startup
-        ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
-        // Show Healing Summary at startup
-        ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
         // Show Healing Summary at startup
         ConfigUtil.IfSet("ShowDamageSummaryAtStartup", OpenDamageSummary, true);
+        // Show Healing Summary at startup
+        ConfigUtil.IfSet("ShowHealingSummaryAtStartup", OpenHealingSummary);
+        // Show Tanking Summary at startup
+        ConfigUtil.IfSet("ShowTankingSummaryAtStartup", OpenTankingSummary);
         DoneLoading = true;
       }
     }
