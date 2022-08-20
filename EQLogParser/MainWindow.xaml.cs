@@ -355,8 +355,6 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting("AutoMonitor", (enableAutoMonitorIcon.Visibility == Visibility.Hidden).ToString(CultureInfo.CurrentCulture));
       enableAutoMonitorIcon.Visibility = enableAutoMonitorIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
-
-      MainActions.LoadTheme(this, "MaterialLight");
     }
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)

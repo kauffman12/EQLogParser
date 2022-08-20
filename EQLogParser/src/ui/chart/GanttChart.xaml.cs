@@ -109,7 +109,7 @@ namespace EQLogParser
 
           if (deathMap.TryGetValue(Selected[i].OrigName, out HashSet<double> deathTimes))
           {
-            var death = new SpellData { Adps = (byte) ANY_ADPS, Duration = 3, NameAbbrv = "Player Death", Name = "Player Death" };
+            var death = new SpellData { Adps = (byte)ANY_ADPS, Duration = 3, NameAbbrv = "Player Death", Name = "Player Death" };
             foreach (var time in deathTimes)
             {
               UpdateSpellRange(death, time, BlockBrushes[i]);

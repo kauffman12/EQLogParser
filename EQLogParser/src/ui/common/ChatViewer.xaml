@@ -41,13 +41,16 @@
       <TextBox x:Name="textFilter" Margin="0,0,8,2" FontStyle="Italic" Width="170" LostFocus="TextFilterLostFocus" GotFocus="TextFilterGotFocus" PreviewKeyDown="TextFilterKeyDown" TextChanged="FilterTextChanged" />
       <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
-    <ScrollViewer x:Name="chatScroller" Grid.Row="1">
-      <RichTextBox x:Name="chatBox" FontSize="16" Margin="15" BorderThickness="0" ContextMenu="{x:Null}" IsInactiveSelectionHighlightEnabled="True"
-                   PreviewKeyDown="ChatKeyDown" IsReadOnly="True" PreviewMouseWheel="ChatMouseWheel">
-        <FlowDocument>
-        </FlowDocument>
-      </RichTextBox>
-    </ScrollViewer>
+    <syncfusion:EditControl x:Name="chatBox" Grid.Row="1" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
+      ShowOutlining="Hidden" DocumentLanguage="Text" TextChanged="ChatTextChanged" PreviewKeyDown="ChatPreviewKeyDown" PreviewMouseWheel="ChatMouseWheel" ScrollViewer.ScrollChanged="ChatScrollChanged" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <syncfusion:EditControl.ContextMenu>
+        <ContextMenu>
+          <MenuItem Command="Copy" />
+          <Separator />
+          <MenuItem Command="SelectAll" />
+        </ContextMenu>
+      </syncfusion:EditControl.ContextMenu>
+    </syncfusion:EditControl>
     <StatusBar Grid.Row="2" FontSize="11">
       <TextBlock x:Name="statusCount"/>
     </StatusBar>

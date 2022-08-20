@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -18,19 +17,13 @@ namespace EQLogParser
   /// </summary>
   public partial class ChatViewer : UserControl, IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
-    private static bool Running = false;
 
+    private const int PAGE_SIZE = 200;
     private List<string> PlayerAutoCompleteList;
-    private Paragraph MainParagraph;
     private readonly DispatcherTimer FilterTimer;
-    private readonly DispatcherTimer RefreshTimer;
     private ChatFilter CurrentChatFilter = null;
     private ChatIterator CurrentIterator = null;
-    private ChatType FirstChat = null;
-    private int CurrentLineCount = 0;
     private string LastChannelSelection = null;
     private string LastPlayerSelection = null;
     private string LastTextFilter = null;
@@ -38,7 +31,6 @@ namespace EQLogParser
     private string LastFromFilter = null;
     private double LastStartDate = 0;
     private double LastEndDate = 0;
-    private bool Connected = false;
     private readonly bool Ready = false;
 
     public ChatViewer()
@@ -74,54 +66,13 @@ namespace EQLogParser
         ChangeSearch();
       };
 
-      RefreshTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 1) };
-      RefreshTimer.Tick += (sender, e) =>
-      {
-        ChatIterator newIterator = new ChatIterator(players.SelectedValue as string, CurrentChatFilter);
-        var tempChat = FirstChat;
-        var tempFilter = CurrentChatFilter;
-
-        if (tempChat != null)
-        {
-          Task.Run(() =>
-          {
-            foreach (var chatType in newIterator.TakeWhile(chatType => chatType.Text != tempChat.Text).Reverse())
-            {
-              Dispatcher.Invoke(() =>
-              {
-                // make sure user didnt start new search
-                if (tempFilter == CurrentChatFilter && RefreshTimer.IsEnabled && tempFilter.PastLiveFilter(chatType))
-                {
-                  if (chatBox.Document.Blocks.Count == 0)
-                  {
-                    MainParagraph = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
-                    chatBox.Document.Blocks.Add(MainParagraph);
-                    MainParagraph.Inlines.Add(new Run());
-                  }
-
-                  var newItem = new Span(new Run(Environment.NewLine));
-                  newItem.Inlines.Add(new Run(chatType.Text));
-                  MainParagraph.Inlines.InsertAfter(MainParagraph.Inlines.LastInline, newItem);
-                  statusCount.Text = ++CurrentLineCount + " Lines";
-
-                  FirstChat = chatType;
-                }
-              }, DispatcherPriority.DataBind);
-            }
-
-            Dispatcher.Invoke(() => RefreshTimer.Stop());
-          });
-        }
-      };
-
       LoadPlayers();
 
       Ready = true;
-      ChangeSearch();
-
       ChatManager.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
       ChatManager.EventsNewChannels += ChatManagerEventsNewChannels;
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      Task.Delay(500).ContinueWith(task => Dispatcher.InvokeAsync(() => ChangeSearch()));
     }
 
     private void EventsThemeChanged(object sender, string e) => UpdateCurrentTextColor();
@@ -136,6 +87,9 @@ namespace EQLogParser
     private void ToFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(toFilter, EQLogParser.Resource.CHAT_TO_FILTER);
     private void FromFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(fromFilter, EQLogParser.Resource.CHAT_FROM_FILTER);
     private void TextFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(textFilter, EQLogParser.Resource.CHAT_TEXT_FILTER);
+    private void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ChangeSearch();
+    private double GetEndDate() => (endDate.DateTime != null) ? endDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks : 0;
+    private double GetStartDate() => (startDate.DateTime != null) ? startDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks : 0;
 
     private void UpdateCurrentTextColor()
     {
@@ -166,101 +120,22 @@ namespace EQLogParser
 
     private void DisplayPage(int count)
     {
-      if (!Running)
+      var chatList = CurrentIterator.Take(count).Select(chat => chat.Text).ToList();
+      chatList.Reverse();
+
+      if (chatList.Count > 0)
       {
-        Running = true;
-        Task.Delay(10).ContinueWith(task =>
+        string text = string.Join("\n", chatList);
+
+        if (!string.IsNullOrEmpty(chatBox.Text))
         {
-          var chatList = CurrentIterator.Take(count).ToList();
-          if (chatList.Count > 0)
-          {
-            Dispatcher.Invoke(() =>
-            {
-              try
-              {
-                bool needScroll = false;
-                if (chatBox.Document.Blocks.Count == 0)
-                {
-                  MainParagraph = new Paragraph { Margin = new Thickness(0, 0, 0, 0), Padding = new Thickness(4, 0, 0, 4) };
-                  chatBox.Document.Blocks.Add(MainParagraph);
-                  MainParagraph.Inlines.Add(new Run());
-                  needScroll = true;
-                }
+          text += "\n";
+        }
 
-                for (int i = 0; i < chatList.Count; i++)
-                {
-                  if (needScroll && i == 0)
-                  {
-                    FirstChat = chatList[i];
-                  }
-
-                  var text = chatList[i].Text;
-
-                  Span span = new Span();
-                  if (LastTextFilter != null && chatList[i].KeywordStart > -1)
-                  {
-                    var first = text.Substring(0, chatList[i].KeywordStart);
-                    var second = text.Substring(chatList[i].KeywordStart, LastTextFilter.Length);
-                    var last = text.Substring(chatList[i].KeywordStart + LastTextFilter.Length);
-
-                    if (first.Length > 0)
-                    {
-                      span.Inlines.Add(new Run(first));
-                    }
-
-                    span.Inlines.Add(new Run { Text = second, FontStyle = FontStyles.Italic, FontWeight = FontWeights.Bold });
-
-                    if (last.Length > 0)
-                    {
-                      span.Inlines.Add(new Run(last));
-                    }
-                  }
-                  else
-                  {
-                    span.Inlines.Add(new Run(text));
-                  }
-
-                  MainParagraph.Inlines.InsertAfter(MainParagraph.Inlines.FirstInline, span);
-
-                  if (i != 0)
-                  {
-                    span.Inlines.Add(Environment.NewLine);
-                  }
-
-                  CurrentLineCount++;
-                }
-
-                if (needScroll)
-                {
-                  chatScroller.ScrollToEnd();
-                }
-
-                if (!Connected)
-                {
-                  chatScroller.ScrollChanged += ChatScrollChanged;
-                  Connected = true;
-                }
-
-                statusCount.Text = CurrentLineCount + " Lines";
-              }
-              catch (Exception ex2)
-              {
-                LOG.Error(ex2);
-                throw;
-              }
-              finally
-              {
-                Running = false;
-              }
-
-            }, DispatcherPriority.Normal);
-          }
-          else
-          {
-            Running = false;
-          }
-        }, TaskScheduler.Default);
+        chatBox.Text = text + chatBox.Text;
       }
+
+      statusCount.Text = chatBox.Lines.Count + " Lines";
     }
 
     private void LoadChannels(string playerAndServer)
@@ -303,13 +178,6 @@ namespace EQLogParser
           }
 
           players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
-        }
-      }
-      else
-      {
-        if (!RefreshTimer.IsEnabled)
-        {
-          RefreshTimer.Start();
         }
       }
     }
@@ -355,8 +223,6 @@ namespace EQLogParser
           CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
           CurrentIterator?.Close();
           CurrentIterator = new ChatIterator(name, CurrentChatFilter);
-          CurrentLineCount = 0;
-          RefreshTimer.Stop();
           LastPlayerSelection = name;
           LastTextFilter = text;
           LastToFilter = to;
@@ -364,60 +230,67 @@ namespace EQLogParser
           LastStartDate = startDateValue;
           LastEndDate = endDateValue;
 
-          chatScroller.ScrollChanged -= ChatScrollChanged;
-          Connected = false;
-
           if (changed)
           {
             ChatManager.SaveSelectedChannels(name, channelList);
           }
 
-          chatBox.Document.Blocks.Clear();
-          DisplayPage(100);
+          chatBox.Text = "";
+          DisplayPage(PAGE_SIZE);
         }
       }
     }
 
     private void ChatScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-      if (e.VerticalChange < 0 && e.VerticalOffset / e.ExtentHeight <= 0.10)
+      if (e.OriginalSource is ScrollViewer viewer)
       {
-        int pageSize = (int)(100 * chatBox.ExtentHeight / 5000);
-        pageSize = pageSize > 250 ? 250 : pageSize;
-        DisplayPage(pageSize);
-      }
-
-      if (chatScroller.VerticalOffset >= 0 && e.ViewportHeightChange > 0)
-      {
-        chatScroller.ScrollToVerticalOffset(chatScroller.VerticalOffset + e.ViewportHeightChange);
-      }
-    }
-
-    private void ChatKeyDown(object sender, KeyEventArgs e)
-    {
-      if (e.Key == Key.PageDown)
-      {
-        var offset = Math.Min(chatScroller.ExtentHeight, chatScroller.VerticalOffset + chatScroller.ViewportHeight);
-        chatScroller.ScrollToVerticalOffset(offset);
-      }
-      else if (e.Key == Key.PageUp)
-      {
-        var offset = Math.Max(0, chatScroller.VerticalOffset - chatScroller.ViewportHeight);
-        chatScroller.ScrollToVerticalOffset(offset);
-      }
-    }
-
-    private void PlayerChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
-      {
-        LoadChannels(players.SelectedItem as string);
-        PlayerAutoCompleteList = ChatManager.GetPlayers(name);
-        ConfigUtil.SetSetting("ChatSelectedPlayer", name);
-
-        if (Ready)
+        if (e.VerticalChange < 0 && e.VerticalOffset < 800)
         {
-          ChangeSearch();
+          DisplayPage(PAGE_SIZE);
+        }
+        else if (e.VerticalChange == 0 && chatBox.Text != null && chatBox.Lines.Count > PAGE_SIZE && e.VerticalOffset < 800)
+        {
+          viewer.ScrollToVerticalOffset(4500);
+        }
+      }
+    }
+
+    private void ChatTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (chatBox.Text != null && chatBox.Lines.Count <= PAGE_SIZE)
+      {
+        Task.Delay(100).ContinueWith(task => Dispatcher.InvokeAsync(() => chatBox.GoToLine(chatBox.Lines.Count)));
+      }
+    }
+
+    private void ChatPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+      // ignore these keys that open the save/options window
+      if (e.Key == Key.O && (e.KeyboardDevice.Modifiers & ModifierKeys.Control) != 0)
+      {
+        e.Handled = true;
+      }
+
+      if (e.Key == Key.S && (e.KeyboardDevice.Modifiers & ModifierKeys.Control) != 0)
+      {
+        e.Handled = true;
+      }
+    }
+
+    private void ChatMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+      if ((Keyboard.Modifiers & ModifierKeys.Control) > 0)
+      {
+        if (e.Delta < 0 && fontSize.SelectedIndex > 0)
+        {
+          fontSize.SelectedIndex--;
+          e.Handled = true;
+        }
+        else if (e.Delta > 0 && fontSize.SelectedIndex < (fontSize.Items.Count - 1))
+        {
+          fontSize.SelectedIndex++;
+          e.Handled = true;
         }
       }
     }
@@ -583,45 +456,19 @@ namespace EQLogParser
       FilterTimer?.Start();
     }
 
-    private void ChatMouseWheel(object sender, MouseWheelEventArgs e)
+    private void PlayerChanged(object sender, SelectionChangedEventArgs e)
     {
-      if ((Keyboard.Modifiers & ModifierKeys.Control) > 0)
+      if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
-        if (e.Delta < 0 && fontSize.SelectedIndex > 0)
+        LoadChannels(players.SelectedItem as string);
+        PlayerAutoCompleteList = ChatManager.GetPlayers(name);
+        ConfigUtil.SetSetting("ChatSelectedPlayer", name);
+
+        if (Ready)
         {
-          fontSize.SelectedIndex--;
-        }
-        else if (e.Delta > 0 && fontSize.SelectedIndex < (fontSize.Items.Count - 1))
-        {
-          fontSize.SelectedIndex++;
+          ChangeSearch();
         }
       }
-    }
-
-    private void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ChangeSearch();
-
-    private double GetEndDate()
-    {
-      double result = 0;
-
-      if (endDate.DateTime != null)
-      {
-        result = endDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks;
-      }
-
-      return result;
-    }
-
-    private double GetStartDate()
-    {
-      double result = 0;
-
-      if (startDate.DateTime != null)
-      {
-        result = startDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks;
-      }
-
-      return result;
     }
 
     #region IDisposable Support
@@ -635,7 +482,7 @@ namespace EQLogParser
         ChatManager.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
         ChatManager.EventsNewChannels -= ChatManagerEventsNewChannels;
 
-        RefreshTimer?.Stop();
+        chatBox?.Dispose();
         FilterTimer?.Stop();
         disposedValue = true;
       }
