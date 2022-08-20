@@ -46,7 +46,7 @@ namespace EQLogParser
       UIElementUtil.SetComboBoxTitle(selectedOptions, list.Count, EQLogParser.Resource.EVENT_TYPES_SELECTED);
 
       eventFilter.Text = EQLogParser.Resource.EVENT_FILTER_TEXT;
-      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       FilterTimer.Tick += (sender, e) =>
       {
         FilterTimer.Stop();

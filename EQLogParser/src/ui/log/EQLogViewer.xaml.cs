@@ -59,7 +59,7 @@ namespace EQLogParser
       logBox.Focus();
 
       logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
-      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       FilterTimer.Tick += (sender, e) =>
       {
         UpdateUI();
