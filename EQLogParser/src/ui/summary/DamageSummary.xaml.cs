@@ -45,17 +45,17 @@ namespace EQLogParser
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SelectionTimer.Tick += (sender, e) =>
       {
-        if (prog1.Visibility == Visibility.Visible)
+        if (prog.Icon == FontAwesome5.EFontAwesomeIcon.Solid_HourglassStart)
         {
-          prog1.Visibility = Visibility.Hidden;
+          prog.Icon = FontAwesome5.EFontAwesomeIcon.Solid_HourglassHalf;
         }
-        else if (prog2.Visibility == Visibility.Visible)
+        else if (prog.Icon == FontAwesome5.EFontAwesomeIcon.Solid_HourglassHalf)
         {
-          prog2.Visibility = Visibility.Hidden;
+          prog.Icon = FontAwesome5.EFontAwesomeIcon.Solid_HourglassEnd;
         }
-        else if (prog3.Visibility == Visibility.Visible)
+        else if (prog.Icon == FontAwesome5.EFontAwesomeIcon.Solid_HourglassEnd)
         {
-          prog3.Visibility = Visibility.Hidden;
+          prog.Visibility = Visibility.Hidden;
 
           if (minTimeChooser.Value < maxTimeChooser.Value)
           {
@@ -227,6 +227,8 @@ namespace EQLogParser
         switch (e.State)
         {
           case "STARTED":
+            prog.Visibility = Visibility.Hidden;
+            SelectionTimer.Stop();
             title.Content = "Calculating DPS...";
             dataGrid.ItemsSource = null;
             break;
@@ -326,9 +328,8 @@ namespace EQLogParser
         SelectionTimer.Stop();
         SelectionTimer.Start();
 
-        prog1.Visibility = Visibility.Visible;
-        prog2.Visibility = Visibility.Visible;
-        prog3.Visibility = Visibility.Visible;
+        prog.Icon = FontAwesome5.EFontAwesomeIcon.Solid_HourglassStart;
+        prog.Visibility = Visibility.Visible;
       }
     }
 
