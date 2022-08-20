@@ -451,13 +451,13 @@ namespace EQLogParser
         if (e.Delta < 0 && fontSize.SelectedIndex > 0)
         {
           fontSize.SelectedIndex--;
+          e.Handled = true;
         }
         else if (e.Delta > 0 && fontSize.SelectedIndex < (fontSize.Items.Count - 1))
         {
           fontSize.SelectedIndex++;
+          e.Handled = true;
         }
-
-        e.Handled = true;
       }
     }
 
@@ -567,7 +567,7 @@ namespace EQLogParser
       FilterTimer?.Start();
     }
 
-    private void logBox_SelectedTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private void SelectedTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
       selectedContext.IsEnabled = !string.IsNullOrEmpty(logBox.SelectedText);
     }
