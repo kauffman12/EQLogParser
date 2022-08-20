@@ -89,16 +89,11 @@ namespace EQLogParser
     }
 
     private void SaveTimer_Tick(object sender, EventArgs e) => Save();
-
     internal bool IsCharmPet(string name) => !string.IsNullOrEmpty(name) && CharmPets.ContainsKey(name);
-
     internal bool IsDoTClass(string name) => !string.IsNullOrEmpty(name) && DoTClasses.ContainsKey(name);
-
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name)
       || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
-
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || TakenPetOrPlayerAction.ContainsKey(name));
-
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
 
     internal void AddPetOrPlayerAction(string name)
