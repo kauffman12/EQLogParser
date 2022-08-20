@@ -22,9 +22,7 @@
       <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <fa:ImageAwesome x:Name="prog1" Visibility="Hidden" Height="12" Width="8" Margin="0,0,4,0" HorizontalAlignment="Center" Icon="Solid_HourglassStart"  Foreground="{DynamicResource EQMenuIconBrush}" />
-      <fa:ImageAwesome x:Name="prog2" Visibility="Hidden" Height="12" Width="8" Margin="0,0,4,0" HorizontalAlignment="Center" Icon="Solid_HourglassHalf"  Foreground="{DynamicResource EQMenuIconBrush}" />
-      <fa:ImageAwesome x:Name="prog3" Visibility="Hidden" Height="12" Width="8" Margin="0,0,8,0" HorizontalAlignment="Center" Icon="Solid_HourglassEnd" Foreground="{DynamicResource EQMenuIconBrush}" />
+      <fa:ImageAwesome x:Name="prog" Visibility="Hidden" Height="14" Width="14" Margin="0,0,8,0" HorizontalAlignment="Center" Foreground="{DynamicResource EQMenuIconBrush}" />
       <syncfusion:UpDown x:Name="minTimeChooser" Margin="0,0,0,2" Width="60" ZeroColor="{DynamicResource ContentForeground}" TextAlignment="Right" 
                          Value="0" MaxValue="0" MinValue="0" ValueChanged="TimeChanged" ToolTip="Start Time (seconds)">
         <syncfusion:UpDown.NumberFormatInfo>
