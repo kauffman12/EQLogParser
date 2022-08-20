@@ -42,7 +42,7 @@ namespace EQLogParser
       DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
 
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SelectionTimer.Tick += (sender, e) =>
       {
         if (prog1.Visibility == Visibility.Visible)
@@ -53,7 +53,7 @@ namespace EQLogParser
         {
           prog2.Visibility = Visibility.Hidden;
         }
-        else
+        else if (prog3.Visibility == Visibility.Visible)
         {
           prog3.Visibility = Visibility.Hidden;
 
@@ -229,10 +229,6 @@ namespace EQLogParser
           case "STARTED":
             title.Content = "Calculating DPS...";
             dataGrid.ItemsSource = null;
-            maxTimeChooser.Value = 0;
-            maxTimeChooser.MaxValue = 0;
-            minTimeChooser.Value = 0;
-            minTimeChooser.MaxValue = 0;
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;
@@ -242,6 +238,8 @@ namespace EQLogParser
             if (CurrentStats == null)
             {
               title.Content = NODATA_TABLE_LABEL;
+              maxTimeChooser.MaxValue = 0;
+              minTimeChooser.MaxValue = 0;
             }
             else
             {
@@ -267,6 +265,8 @@ namespace EQLogParser
           case "NONPC":
           case "NODATA":
             CurrentStats = null;
+            maxTimeChooser.MaxValue = 0;
+            minTimeChooser.MaxValue = 0;
             title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
             UpdateDataGridMenuItems();
             break;
