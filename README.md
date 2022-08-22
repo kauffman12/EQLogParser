@@ -13,6 +13,10 @@ Minimum Requirements:
 .Net 6.0 is provided by Microsoft but is not included with Windows. It can be downloaded from here:</br>
 https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.7-windows-x64-installer
 
+If Everquest is in windowed mode but the Overlay gets hidden when you switch to the game. Make sure Overlap with Taskbar is turned off:</br>
+
+![Parser](./examples/eqsetting.png)
+
 Note for Developers:</br>
 Syncfusion components used by this application require a license. If you apply for a community license you should be able to get one for free.
 
