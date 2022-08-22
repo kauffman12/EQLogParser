@@ -34,7 +34,7 @@ namespace EQLogParser
     private readonly Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
     private readonly List<string> CountTypes = new List<string>() { "Counts", "Percentages", "Counts/Minute" };
     private readonly List<string> MinFreqs = new List<string>() { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
-    private readonly HashSet<string> SortDescs = new HashSet<string>();
+    private readonly HashSet<string> SortDescs = new HashSet<string>() { "totalColumn" };
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
 
@@ -118,10 +118,10 @@ namespace EQLogParser
           }
         });
 
-        List<string> sortedPlayers = totalCountMap.Keys.OrderByDescending(key => totalCountMap[key]).ToList();
-        List<string> sortedSpellList = uniqueSpellsMap.Keys.OrderByDescending(key => uniqueSpellsMap[key]).ToList();
+        var sortedPlayers = totalCountMap.Keys.OrderByDescending(key => totalCountMap[key]).ToList();
+        var sortedSpellList = uniqueSpellsMap.Keys.OrderByDescending(key => uniqueSpellsMap[key]).ToList();
 
-        int colCount = 0;
+        var colCount = 0;
         foreach (string name in sortedPlayers)
         {
           double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
@@ -140,12 +140,14 @@ namespace EQLogParser
               break;
           }
 
-          string header = string.Format("{0} = {1}", name, amount.ToString(CultureInfo.CurrentCulture));
+          var header = string.Format("{0} = {1}", name, amount.ToString());
 
           var playerCol = new GridTextColumn
           {
             HeaderText = header,
             MappingName = name,
+            SortMode = Syncfusion.Data.DataReflectionMode.Value,
+            DisplayBinding = new Binding(name + "Text"),
             TextAlignment = TextAlignment.Right,
             ShowHeaderToolTip = true,
             HeaderToolTipTemplate = Application.Current.Resources["HeaderSpellCountsTemplateToolTip"] as DataTemplate
@@ -176,11 +178,12 @@ namespace EQLogParser
         {
           HeaderText = totalHeader,
           MappingName = "totalColumn",
+          SortMode = Syncfusion.Data.DataReflectionMode.Value,
+          DisplayBinding = new Binding("totalColumnText"),
           TextAlignment = TextAlignment.Right
         };
 
         dataGrid.Columns.Add(totalCol);
-        SortDescs.Add(totalHeader);
 
         int existingIndex = 0;
         foreach (var spell in sortedSpellList)
@@ -197,21 +200,22 @@ namespace EQLogParser
                 switch (CurrentCountType)
                 {
                   case 0:
-                    AddPlayerRow(sortedPlayers[i], spell, filteredPlayerMap[sortedPlayers[i]][spell].ToString(CultureInfo.CurrentCulture), row);
+                    AddPlayerRow(sortedPlayers[i], spell, filteredPlayerMap[sortedPlayers[i]][spell], row);
                     break;
                   case 1:
                     var percent = totalCountMap[sortedPlayers[i]] > 0 ? Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2) : 0.0;
-                    AddPlayerRow(sortedPlayers[i], spell, percent.ToString(CultureInfo.CurrentCulture), row);
+                    AddPlayerRow(sortedPlayers[i], spell, percent, row);
                     break;
                   case 2:
                     var rate = Time > 0 ? Math.Round(filteredPlayerMap[sortedPlayers[i]][spell] / Time * 60, 2) : 0.0;
-                    AddPlayerRow(sortedPlayers[i], spell, rate.ToString(CultureInfo.CurrentCulture), row);
+                    AddPlayerRow(sortedPlayers[i], spell, rate, row);
                     break;
                 }
               }
               else
               {
-                row[sortedPlayers[i]] = CurrentCountType == 0 ? "0" : "0.0";
+                row[sortedPlayers[i] + "Text"] = CurrentCountType == 0 ? "0" : "0.0";
+                row[sortedPlayers[i]] = 0.0;
               }
             }
           }
@@ -219,15 +223,17 @@ namespace EQLogParser
           switch (CurrentCountType)
           {
             case 0:
-              row["totalColumn"] = uniqueSpellsMap[spell].ToString(CultureInfo.CurrentCulture);
+              row["totalColumn"] = uniqueSpellsMap[spell];
               break;
             case 1:
-              row["totalColumn"] = Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2).ToString(CultureInfo.CurrentCulture);
+              row["totalColumn"] = Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
               break;
             case 2:
-              row["totalColumn"] = Time > 0 ? Math.Round(uniqueSpellsMap[spell] / Time * 60, 2).ToString(CultureInfo.CurrentCulture) : "0.0";
+              row["totalColumn"] = Time > 0 ? Math.Round(uniqueSpellsMap[spell] / Time * 60, 2) : 0.0;
               break;
           }
+
+          row["totalColumnText"] = row["totalColumn"].ToString();
 
           if (SpellRows.Count <= existingIndex)
           {
@@ -249,15 +255,18 @@ namespace EQLogParser
     private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UIElementUtil.CheckHideTitlePanel(titlePanel, settingsPanel);
     private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateOptions(true);
 
-    private void AddPlayerRow(string player, string spell, string value, IDictionary<string, object> row)
+    private void AddPlayerRow(string player, string spell, double value, IDictionary<string, object> row)
     {
-      string count = value.ToString(CultureInfo.CurrentCulture);
+      double count = value;
+      string countText = value.ToString();
       if (TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) &&
         TheSpellCounts.PlayerInterruptedCounts[player].TryGetValue(spell, out uint interrupts) && interrupts > 0)
       {
-        count = count + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
+        countText = countText + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
+        count += interrupts;
       }
 
+      row[player + "Text"] = countText;
       row[player] = count;
     }
 
