@@ -18,6 +18,7 @@ namespace EQLogParser
     internal event EventHandler<string> EventsNewVerifiedPlayer;
     internal event EventHandler<string> EventsRemoveVerifiedPet;
     internal event EventHandler<string> EventsRemoveVerifiedPlayer;
+    internal event EventHandler<string> EventsUpdatePlayerClass;
 
     internal static PlayerManager Instance = new PlayerManager();
 
@@ -53,6 +54,8 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> Mercs = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> CharmPets = new ConcurrentDictionary<string, byte>();
+    private readonly List<string> SortedClassList = new List<string>();
+    private readonly List<string> SortedClassListWithNull = new List<string>();
     private static readonly object LockObject = new object();
     private bool PetMappingUpdated = false;
     private bool PlayersUpdated = false;
@@ -69,6 +72,11 @@ namespace EQLogParser
         ClassNames[(SpellClass)item] = name;
         ClassesByName[name] = (SpellClass)item;
       }
+
+      SortedClassList.AddRange(ClassNames.Values);
+      SortedClassList.Sort();
+      SortedClassListWithNull.AddRange(SortedClassList);
+      SortedClassListWithNull.Insert(0, "");
 
       DoTClasses[ClassNames[SpellClass.BRD]] = 1;
       DoTClasses[ClassNames[SpellClass.BST]] = 1;
@@ -95,6 +103,8 @@ namespace EQLogParser
       || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || TakenPetOrPlayerAction.ContainsKey(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
+    internal List<string> GetClassList(bool withNull = false) => withNull ? SortedClassListWithNull : SortedClassList;
+    internal bool IsMerc(string name) => Mercs.TryGetValue(TextFormatUtils.ToUpper(name), out _);
 
     internal void AddPetOrPlayerAction(string name)
     {
@@ -136,11 +146,6 @@ namespace EQLogParser
         name = string.Intern(name);
         Mercs[TextFormatUtils.ToUpper(name)] = 1;
       }
-    }
-
-    internal bool IsMerc(string name)
-    {
-      return Mercs.TryGetValue(TextFormatUtils.ToUpper(name), out _);
     }
 
     internal void AddVerifiedPet(string name)
@@ -212,13 +217,6 @@ namespace EQLogParser
         TakenPetOrPlayerAction.TryRemove(name, out _);
         VerifiedPets.TryRemove(name, out _);
       }
-    }
-
-    internal List<string> GetClassList()
-    {
-      var list = ClassNames.Values.ToList();
-      list.Sort();
-      return list;
     }
 
     internal string GetPlayerClass(string name)
@@ -302,6 +300,18 @@ namespace EQLogParser
       }
 
       return spellClass;
+    }
+
+    internal string GetPlayerClassReason(string name)
+    {
+      string result = "";
+
+      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+      {
+        result = counter.Reason;
+      }
+
+      return result;
     }
 
     internal string GetPlayerFromPet(string pet)
@@ -445,7 +455,11 @@ namespace EQLogParser
             }
 
             AddVerifiedPlayer(name, parsed);
-            SetPlayerClass(name, className);
+
+            if (className != null)
+            {
+              SetPlayerClass(name, className);
+            }
           }
         });
 
@@ -484,7 +498,7 @@ namespace EQLogParser
         lock (VerifiedPlayers)
         {
           var list = new List<string>();
-          DateTime now = DateTime.Now;
+          var now = DateTime.Now;
           foreach (var keypair in VerifiedPlayers)
           {
             if (!string.IsNullOrEmpty(keypair.Key) && IsPossiblePlayerName(keypair.Key))
@@ -512,9 +526,13 @@ namespace EQLogParser
 
     internal void SetPlayerClass(string player, string className)
     {
-      if (!string.IsNullOrEmpty(className) && ClassesByName.ContainsKey(className))
+      if (ClassesByName.TryGetValue(className, out SpellClass value))
       {
-        SetPlayerClass(player, ClassesByName[className]);
+        SetPlayerClass(player, value);
+      }
+      else
+      {
+        PlayerToClass.TryRemove(player, out _);
       }
     }
 
@@ -534,8 +552,10 @@ namespace EQLogParser
         if (!theClass.Equals(counter.CurrentClass) || counter.CurrentMax != long.MaxValue)
         {
           counter.CurrentClass = theClass;
+          counter.Reason = "Class chosen manually or from unique player action.";
           counter.ClassCounts[theClass] = long.MaxValue;
           counter.CurrentMax = long.MaxValue;
+          EventsUpdatePlayerClass?.Invoke(player, ClassNames[theClass]);
           LOG.Debug("Assigning " + player + " as " + theClass.ToString() + " from class specific action");
         }
       }
@@ -574,12 +594,11 @@ namespace EQLogParser
             counter.CurrentMax = newValue;
             if (!theClass.Equals(counter.CurrentClass))
             {
-              if (LOG.IsDebugEnabled)
-              {
-                LOG.Warn("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
-              }
+              counter.CurrentClass = theClass;
+              counter.Reason = "Class chosen based on " + cast.Spell + ".";
+              EventsUpdatePlayerClass?.Invoke(cast.Caster, ClassNames[theClass]);
+              LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
             }
-            counter.CurrentClass = theClass;
           }
         }
       }
@@ -653,6 +672,7 @@ namespace EQLogParser
       internal long CurrentMax { get; set; }
       internal SpellClass CurrentClass { get; set; }
       internal Dictionary<SpellClass, long> ClassCounts { get; set; }
+      internal string Reason { get; set; } = "";
     }
   }
 }
