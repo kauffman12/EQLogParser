@@ -4,6 +4,7 @@ using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Dynamic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,8 +16,8 @@ namespace EQLogParser
   {
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
     private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
-    private static readonly ObservableCollection<SortableName> VerifiedPlayersView = new ObservableCollection<SortableName>();
-    private static readonly ObservableCollection<SortableName> VerifiedPetsView = new ObservableCollection<SortableName>();
+    private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new ObservableCollection<dynamic>();
+    private static readonly ObservableCollection<dynamic> VerifiedPetsView = new ObservableCollection<dynamic>();
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new SortablePetMappingComparer();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
@@ -81,7 +82,10 @@ namespace EQLogParser
       PetPlayersView.Clear();
       VerifiedPetsView.Clear();
       VerifiedPlayersView.Clear();
-      VerifiedPlayersView.Add(new SortableName { Name = Labels.UNASSIGNED });
+
+      var entry = new ExpandoObject() as dynamic;
+      entry.Name = Labels.UNASSIGNED;
+      VerifiedPlayersView.Add(entry);
       DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
       DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
     }
@@ -111,14 +115,22 @@ namespace EQLogParser
       return opened;
     }
 
-    internal static void InsertNameIntoSortedList(string name, ObservableCollection<SortableName> collection)
+    internal static dynamic InsertNameIntoSortedList(string name, ObservableCollection<object> collection)
     {
-      var entry = new SortableName() { Name = string.Intern(name) };
+      var entry = new ExpandoObject() as dynamic;
+      entry.Name = name;
+
       int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
       if (index < 0)
       {
         collection.Insert(~index, entry);
       }
+      else
+      {
+        entry = collection[index];
+      }
+
+      return entry;
     }
 
     internal static void InitPetOwners(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
@@ -151,17 +163,31 @@ namespace EQLogParser
       };
     }
 
-    internal static void InitVerifiedPlayers(MainWindow main, SfDataGrid playersGrid, ContentControl playersWindow, ContentControl petMappingWindow)
+    internal static void InitVerifiedPlayers(MainWindow main, SfDataGrid playersGrid, GridComboBoxColumn classList,
+      ContentControl playersWindow, ContentControl petMappingWindow)
     {
       // verified player table
       playersGrid.ItemsSource = VerifiedPlayersView;
+      classList.ItemsSource = PlayerManager.Instance.GetClassList(true);
       PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) =>
       {
         main.Dispatcher.InvokeAsync(() =>
         {
-          InsertNameIntoSortedList(name, VerifiedPlayersView);
+          var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
+          entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
           DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
         });
+      };
+
+      PlayerManager.Instance.EventsUpdatePlayerClass += (name, playerClass) =>
+      {
+        var entry = new ExpandoObject() as dynamic;
+        entry.Name = name;
+        int index = VerifiedPlayersView.ToList().BinarySearch(entry, TheSortableNameComparer);
+        if (index >= 0)
+        {
+          VerifiedPlayersView[index].PlayerClass = playerClass;
+        }
       };
 
       PlayerManager.Instance.EventsRemoveVerifiedPlayer += (sender, name) =>
@@ -235,12 +261,18 @@ namespace EQLogParser
 
     private class SortablePetMappingComparer : IComparer<PetMapping>
     {
-      public int Compare(PetMapping x, PetMapping y) => string.CompareOrdinal(x?.Owner, y?.Owner);
+      public int Compare(PetMapping x, PetMapping y)
+      {
+        return string.CompareOrdinal(x?.Owner, y?.Owner);
+      }
     }
 
-    private class SortableNameComparer : IComparer<SortableName>
+    private class SortableNameComparer : IComparer<object>
     {
-      public int Compare(SortableName x, SortableName y) => string.CompareOrdinal(x?.Name, y?.Name);
+      public int Compare(object x, object y)
+      {
+        return string.CompareOrdinal(((dynamic) x)?.Name, ((dynamic) y)?.Name);
+      }
     }
   }
 }

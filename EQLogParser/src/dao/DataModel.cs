@@ -325,11 +325,6 @@ namespace EQLogParser
     public string Pet { get; set; }
   }
 
-  public class SortableName
-  {
-    public string Name { get; set; }
-  }
-
   internal class SpecialSpell : TimedAction
   {
     public string Code { get; set; }

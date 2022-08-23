@@ -7,6 +7,7 @@ using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -46,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
-    private const string VERSION = "v2.0.4";
+    private const string VERSION = "v2.0.5";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -113,7 +114,7 @@ namespace EQLogParser
         versionText.Text = VERSION;
 
         MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
-        MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, verifiedPlayersWindow, petMappingWindow);
+        MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
         MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
 
         (npcWindow.Content as FightTable).EventsSelectionChange += (_, __) => ComputeStats();
@@ -690,6 +691,15 @@ namespace EQLogParser
       });
     }
 
+    private void PlayerClassDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
+    {
+      if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is ExpandoObject obj)
+      {
+        dataGrid.SelectionController.CurrentCellManager.EndEdit();
+        PlayerManager.Instance.SetPlayerClass(((dynamic)obj)?.Name, ((dynamic)obj)?.PlayerClass);
+      }
+    }
+
     private void PetMappingDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
     {
       if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is PetMapping mapping)
@@ -873,19 +883,30 @@ namespace EQLogParser
       }
     }
 
+    private void PlayerCellToolTipOpening(object sender, GridCellToolTipOpeningEventArgs e)
+    {
+      if (e.Record is ExpandoObject)
+      {
+        var data = e.Record as dynamic;
+        e.ToolTip.Content = PlayerManager.Instance.GetPlayerClassReason(data.Name);
+      }
+
+      e.ToolTip.FontSize = 13;
+    }
+
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is ImageAwesome image && image.DataContext is SortableName sortable)
+      if (sender is ImageAwesome image && image.DataContext is ExpandoObject sortable)
       {
-        PlayerManager.Instance.RemoveVerifiedPet(sortable.Name);
+        PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable)?.Name);
       }
     }
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is ImageAwesome image && image.DataContext is SortableName sortable)
+      if (sender is ImageAwesome image && image.DataContext is ExpandoObject sortable)
       {
-        PlayerManager.Instance.RemoveVerifiedPlayer(sortable.Name);
+        PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable)?.Name);
       }
     }
 
