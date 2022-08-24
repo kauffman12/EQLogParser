@@ -24,6 +24,7 @@ namespace EQLogParser
     private readonly DispatcherTimer FilterTimer;
     private ChatFilter CurrentChatFilter = null;
     private ChatIterator CurrentIterator = null;
+    private IInputElement LastFocused = null;
     private string LastChannelSelection = null;
     private string LastPlayerSelection = null;
     private string LastTextFilter = null;
@@ -236,6 +237,7 @@ namespace EQLogParser
           }
 
           chatBox.Text = "";
+          LastFocused = Keyboard.FocusedElement;
           DisplayPage(PAGE_SIZE);
         }
       }
@@ -260,7 +262,11 @@ namespace EQLogParser
     {
       if (chatBox.Text != null && chatBox.Lines.Count <= PAGE_SIZE)
       {
-        Task.Delay(100).ContinueWith(task => Dispatcher.InvokeAsync(() => chatBox.GoToLine(chatBox.Lines.Count)));
+        Task.Delay(100).ContinueWith(task => Dispatcher.InvokeAsync(() =>
+        {
+          chatBox.GoToLine(chatBox.Lines.Count);
+          LastFocused?.Focus();
+        }));
       }
     }
 
