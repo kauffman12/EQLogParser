@@ -180,19 +180,6 @@ namespace EQLogParser
       UpdateDataGridMenuItems();
     }
 
-    internal void SetPetClick(object sender, RoutedEventArgs e)
-    {
-      ContextMenu menu = (sender as FrameworkElement)?.Parent as ContextMenu;
-      if (menu?.PlacementTarget is SfGridBase gridBase && gridBase.SelectedItem is PlayerStats stats)
-      {
-        Task.Delay(100).ContinueWith(_ =>
-        {
-          PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
-          PlayerManager.Instance.AddPetToPlayer(stats.OrigName, Labels.UNASSIGNED);
-        }, TaskScheduler.Default);
-      }
-    }
-
     internal void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
       Dispatcher.InvokeAsync(() =>

@@ -105,8 +105,8 @@ namespace EQLogParser
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetAsPet.IsEnabled = !PlayerManager.Instance.IsVerifiedPet(playerStats.OrigName) &&
-              !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
+            menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.UNK && playerStats.OrigName != Labels.RS && 
+            !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
           }
 
@@ -123,8 +123,7 @@ namespace EQLogParser
              menuItemShowDefensiveTimeline.IsEnabled = false;
         }
 
-        menuItemSetAsPet.Header = string.Format("Set {0} as Pet", selectedName);
-
+        menuItemSetAsPet.Header = string.Format("Set {0} as Pet to", selectedName);
       });
     }
 
@@ -142,6 +141,29 @@ namespace EQLogParser
       {
         dataGrid.SelectedItems.Clear();
         dataGrid.View?.RefreshFilter();
+      }
+    }
+
+    private void CreatePetOwnerMenu()
+    {
+      menuItemPetOptions.Children.Clear();
+      if (CurrentStats != null)
+      {
+        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerManager.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
+        {
+          MenuItem item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
+          item.Click += new RoutedEventHandler(AssignOwnerClick);
+          menuItemPetOptions.Children.Add(item);
+        }
+      }
+    }
+
+    private void AssignOwnerClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem item)
+      {
+        PlayerManager.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
+        PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
       }
     }
 
@@ -239,12 +261,14 @@ namespace EQLogParser
                 title.Content += " (Not Including AE Healing)";
               }
 
+              CreatePetOwnerMenu();
               UpdateDataGridMenuItems();
               break;
             case "NONPC":
             case "NODATA":
               CurrentStats = null;
               title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
+              CreatePetOwnerMenu();
               UpdateDataGridMenuItems();
               break;
           }

@@ -97,10 +97,13 @@
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Set Unknown As Pet" Click="SetPetClick">
+          <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Assign Unknown as Pet to" >
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="setPetIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
             </MenuItem.Icon>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="200" Margin="0" Padding="0">
+              <StackPanel x:Name="menuItemPetOptions" Margin="0" />
+            </ScrollViewer>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemShowDefensiveTimeline" IsEnabled="False" Header="Defensive Timeline" Click="DataGridDefensiveTimelineClick">
