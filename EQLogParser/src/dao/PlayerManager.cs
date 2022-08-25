@@ -118,11 +118,6 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(pet) && !string.IsNullOrEmpty(player))
       {
-        if (!IsPossiblePlayerName(pet) && (pet.StartsWith("A ", StringComparison.Ordinal) || pet.StartsWith("An ", StringComparison.Ordinal)))
-        {
-          pet = pet.ToLower(CultureInfo.CurrentCulture);
-        }
-
         if (!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player)
         {
           if (!IsVerifiedPlayer(pet))
@@ -163,11 +158,6 @@ namespace EQLogParser
 
         if (!IsPossiblePlayerName(name))
         {
-          if (name.StartsWith("A ", StringComparison.Ordinal) || name.StartsWith("An ", StringComparison.Ordinal))
-          {
-            name = name.ToLower(CultureInfo.CurrentCulture);
-          }
-
           if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) &&
             !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) && !MainWindow.IsIgnoreCharmPetsEnabled)
           {
@@ -485,7 +475,7 @@ namespace EQLogParser
       {
         lock (PetToPlayer)
         {
-          var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Value) &&
+          var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Key) &&
             keypair.Value != Labels.UNASSIGNED);
           ConfigUtil.SavePetMapping(filtered);
         }

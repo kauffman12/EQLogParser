@@ -38,7 +38,7 @@ namespace EQLogParser
       var oldestTime = 0d;
       var fights = DataManager.Instance.GetOverlayFights();
       Fight oldestFight = null;
-      bool baneEnabled = MainWindow.IsBaneDamageEnabled;
+      var baneEnabled = MainWindow.IsBaneDamageEnabled;
 
       // clear out anything pending in the queue
       DamageLineParser.CheckSlainQueue(DateUtil.ToDouble(DateTime.Now.AddSeconds(-3)));
