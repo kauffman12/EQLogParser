@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
-    private const string VERSION = "v2.0.5";
+    private const string VERSION = "v2.0.6";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -175,7 +175,7 @@ namespace EQLogParser
           enableAutoMonitorIcon.Visibility = Visibility.Hidden;
         }
 
-        ComputeStatsTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 800) };
+        ComputeStatsTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
         ComputeStatsTimer.Tick += (sender, e) =>
         {
           ComputeStats();
