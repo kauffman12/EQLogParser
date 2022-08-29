@@ -133,7 +133,7 @@ namespace EQLogParser
           using (var f = File.OpenRead(MainWindow.CurrentLogFile))
           {
             f.Seek(Math.Max(0, pos - CONTEXT), SeekOrigin.Begin);
-            StreamReader s = GetStreamReader(f);
+            StreamReader s = Helpers.GetStreamReader(f);
             var list = new List<string>();
 
             if (!s.EndOfStream)
@@ -218,7 +218,7 @@ namespace EQLogParser
           {
             using (var f = File.OpenRead(MainWindow.CurrentLogFile))
             {
-              StreamReader s = GetStreamReader(f, logTimeIndex);
+              StreamReader s = Helpers.GetStreamReader(f, logTimeIndex);
               var list = new List<string>();
               int lastPercent = -1;
 
@@ -226,7 +226,7 @@ namespace EQLogParser
               {
                 string line = s.ReadLine();
 
-                if (TimeCheck(line, logTimeIndex))
+                if (Helpers.TimeCheck(line, logTimeIndex))
                 {
                   bool match = true;
                   int firstIndex = -2;
@@ -319,74 +319,6 @@ namespace EQLogParser
       }
     }
 
-    private StreamReader GetStreamReader(FileStream f, int logTimeIndex = -1)
-    {
-      StreamReader s;
-      if (!f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
-      {
-        if (f.Length > 100000000 && logTimeIndex > -1)
-        {
-          SetStartingPosition(f, logTimeIndex);
-        }
-
-        s = new StreamReader(f);
-      }
-      else
-      {
-        var gs = new GZipStream(f, CompressionMode.Decompress);
-        s = new StreamReader(gs, System.Text.Encoding.UTF8, true, 4096);
-      }
-
-      return s;
-    }
-
-    private void SetStartingPosition(FileStream f, int index, long left = 0, long right = 0, long good = 0, int count = 0)
-    {
-      if (count <= 5)
-      {
-        if (f.Position == 0)
-        {
-          right = f.Length;
-          f.Seek(f.Length / 2, SeekOrigin.Begin);
-        }
-
-        try
-        {
-          var s = new StreamReader(f);
-          s.ReadLine();
-          var check = TimeCheck(s.ReadLine(), index);
-          s.DiscardBufferedData();
-
-          long pos = 0;
-          if (check)
-          {
-            pos = left + (f.Position - left) / 2;
-            right = f.Position;
-          }
-          else
-          {
-            pos = right - (right - f.Position) / 2;
-            good = left = f.Position;
-          }
-
-          f.Seek(pos, SeekOrigin.Begin);
-          SetStartingPosition(f, index, left, right, good, count + 1);
-        }
-        catch (IOException ioe)
-        {
-          LOG.Error("Problem searching log file", ioe);
-        }
-        catch (OutOfMemoryException ome)
-        {
-          LOG.Debug("Out of memory", ome);
-        }
-      }
-      else if (f.Position != good)
-      {
-        f.Seek(good, SeekOrigin.Begin);
-      }
-    }
-
     private void UpdateStatusCount(int count)
     {
       statusCount.Text = count + " Lines";
@@ -394,40 +326,6 @@ namespace EQLogParser
       {
         statusCount.Text += " (Maximum Reached)";
       }
-    }
-
-    private static bool TimeCheck(string line, int index)
-    {
-      bool pass = true;
-
-      if (!string.IsNullOrEmpty(line) && line.Length > 24 && index >= 0 && index < 5)
-      {
-        var logTime = DateUtil.ParseDate(line);
-        var currentTime = DateUtil.ToDouble(DateTime.Now);
-        switch (index)
-        {
-          case 0:
-            pass = (currentTime - logTime) < (60 * 60);
-            break;
-          case 1:
-            pass = (currentTime - logTime) < (60 * 60) * 8;
-            break;
-          case 2:
-            pass = (currentTime - logTime) < (60 * 60) * 24;
-            break;
-          case 3:
-            pass = (currentTime - logTime) < (60 * 60) * 24 * 7;
-            break;
-          case 4:
-            pass = (currentTime - logTime) < (60 * 60) * 24 * 14;
-            break;
-          case 5:
-            pass = (currentTime - logTime) < (60 * 60) * 24 * 30;
-            break;
-        }
-      }
-
-      return pass;
     }
 
     private void LogPreviewKeyDown(object sender, KeyEventArgs e)
