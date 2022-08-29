@@ -169,7 +169,7 @@
     <value>Can Not Save Summary Data</value>
   </data>
   <data name="FILEMENU_SAVE_FIGHTS" xml:space="preserve">
-    <value>Can Not Save Selected Fights</value>
+    <value>Save Selected Fights</value>
   </data>
   <data name="LINES_FILTERED" xml:space="preserve">
     <value>Lines (Filtered)</value>

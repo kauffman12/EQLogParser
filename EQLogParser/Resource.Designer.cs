@@ -214,7 +214,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Can Not Save Selected Fights.
+        ///   Looks up a localized string similar to Save Selected Fights.
         /// </summary>
         internal static string FILEMENU_SAVE_FIGHTS {
             get {
