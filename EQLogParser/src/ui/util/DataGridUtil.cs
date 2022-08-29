@@ -330,8 +330,7 @@ namespace EQLogParser
       ConfigUtil.RemoveSetting("ReceivedHealingBreakdownColumnsDisplayIndex");
       ConfigUtil.RemoveSetting("TankingBreakdownColumnsDisplayIndex");
       ConfigUtil.Save();
-      _ = MessageBox.Show("Column Settings Restored. Close and Re-Open any Summary or Breakdown table to see the change take effect.",
-        EQLogParser.Resource.RESTORE_TABLE_COLUMNS, MessageBoxButton.OK, MessageBoxImage.Information);
+      new MessageWindow("Need to Re-Open Summary/Breakdown Windows.", EQLogParser.Resource.RESTORE_TABLE_COLUMNS).ShowDialog();
     }
 
     internal static void LoadColumns(ComboBox columnCombo, dynamic gridBase)

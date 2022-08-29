@@ -295,6 +295,9 @@ namespace EQLogParser
           break;
         case Labels.HOT:
         case Labels.HEAL:
+          stats.SpellHits++;
+          stats.Hits += 1;
+          break;
         case Labels.DS:
         case Labels.RS:
           stats.Hits += 1;
@@ -396,6 +399,7 @@ namespace EQLogParser
         stats.DPS = (long)Math.Round(stats.Total / stats.TotalSeconds, 2);
         stats.SDPS = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
         stats.Avg = (long)Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
+        stats.Potential = stats.Total + stats.Extra;
 
         if ((stats.CritHits - stats.LuckyHits) is uint nonLucky && nonLucky > 0)
         {
