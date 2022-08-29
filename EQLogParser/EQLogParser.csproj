@@ -60,7 +60,7 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>EQLogParser.ico</ApplicationIcon>
+    <ApplicationIcon>src\ui\main\EQLogParser.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <OutputPath>bin\x64\Debug\</OutputPath>
@@ -142,7 +142,7 @@
     <Resource Include="icons\Clr.png" />
     <Resource Include="icons\Ber.png" />
     <Resource Include="icons\Wiz.png" />
-    <Resource Include="EQLogParser.ico" />
+    <Resource Include="src\ui\main\EQLogParser.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include="data\**">
@@ -166,6 +166,7 @@
     </PackageReference>
     <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.2.0.40" />
     <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.2.0.40" />
+    <PackageReference Include="Syncfusion.Shared.Base" Version="20.2.0.45" />
     <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="20.2.0.40" />
     <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="20.2.0.40" />
     <PackageReference Include="Syncfusion.Tools.WPF" Version="20.2.0.40" />

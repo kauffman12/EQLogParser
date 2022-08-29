@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-             StartupUri="MainWindow.xaml">
+             StartupUri="src\ui\main\MainWindow.xaml">
   <Application.Resources>
     <Style x:Key="EQIconStyle" TargetType="fa:ImageAwesome">
       <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
@@ -50,6 +50,9 @@
     <DataTemplate x:Key="HeaderOverHealTemplateToolTip">
       <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Amount of Healing in Excess of what could be Healed" />
     </DataTemplate>
+    <DataTemplate x:Key="PotentialHealTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Amount of Healing which could have been applied. (Healed + Over Healed)" />
+    </DataTemplate>    
     <DataTemplate x:Key="HeaderDPSTemplateToolTip">
       <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Damage/Second based on Player Time" />
     </DataTemplate>

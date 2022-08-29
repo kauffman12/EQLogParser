@@ -32,5 +32,8 @@
     <Page Update="src\ui\log\TauntStatsViewer.xaml">
       <SubType>Designer</SubType>
     </Page>
+    <Page Update="src\ui\main\MessageWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
 </Project>

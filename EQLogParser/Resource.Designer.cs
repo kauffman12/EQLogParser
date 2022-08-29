@@ -133,6 +133,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Clear Chat Archive.
+        /// </summary>
+        internal static string CLEAR_CHAT {
+            get {
+                return ResourceManager.GetString("CLEAR_CHAT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Cleric.
         /// </summary>
         internal static string CLR {
@@ -205,6 +214,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Can Not Save Selected Fights.
+        /// </summary>
+        internal static string FILEMENU_SAVE_FIGHTS {
+            get {
+                return ResourceManager.GetString("FILEMENU_SAVE_FIGHTS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Lines (Filtered).
         /// </summary>
         internal static string LINES_FILTERED {
@@ -273,6 +291,15 @@ namespace EQLogParser {
         internal static string PAL {
             get {
                 return ResourceManager.GetString("PAL", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Restart Required.
+        /// </summary>
+        internal static string RESTART_NEEDED {
+            get {
+                return ResourceManager.GetString("RESTART_NEEDED", resourceCulture);
             }
         }
         

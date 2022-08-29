@@ -32,9 +32,13 @@ namespace EQLogParser
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };
 
+    internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
+    internal static string GetHexString(Color c) => "#" + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2");
+    internal static string ToUpper(string name) => string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0]) + (name.Length > 1 ? name.Substring(1) : ""));
+
     internal static string BuildCsv(List<string> header, List<List<object>> data, string title = null)
     {
-      StringBuilder sb = new StringBuilder();
+      var sb = new StringBuilder();
 
       if (title != null)
       {
@@ -61,7 +65,7 @@ namespace EQLogParser
 
     internal static string BuildBBCodeTable(List<string> header, List<List<object>> data, string title = null)
     {
-      StringBuilder sb = new StringBuilder();
+      var sb = new StringBuilder();
 
       if (title != null)
       {
@@ -134,8 +138,8 @@ namespace EQLogParser
     {
       try
       {
-        SaveFileDialog saveFileDialog = new SaveFileDialog();
-        string filter = "EQLogParser Summary (*.html)|*.html";
+        var saveFileDialog = new SaveFileDialog();
+        var filter = "EQLogParser Summary (*.html)|*.html";
         saveFileDialog.Filter = filter;
 
         var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " " + tables.Values.First().GetTargetTitle();
@@ -239,13 +243,6 @@ namespace EQLogParser
       }
 
       return roman.ToString();
-    }
-
-    internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
-    internal static string GetHexString(Color c) => "#" + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2");
-    internal static string ToUpper(string name)
-    {
-      return string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0], CultureInfo.CurrentCulture) + (name.Length > 1 ? name.Substring(1) : ""));
     }
   }
 }

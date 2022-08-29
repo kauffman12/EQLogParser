@@ -47,7 +47,7 @@ namespace EQLogParser
     private static readonly List<string> DAMAGE_CHOICES = new List<string>() { "DPS", "Damage", "Av Hit", "% Crit" };
     private static readonly List<string> HEALING_CHOICES = new List<string>() { "HPS", "Healing", "Av Heal", "% Crit" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() { "DPS", "Damaged", "Av Hit" };
-    private const string VERSION = "v2.0.6";
+    private const string VERSION = "v2.0.7";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -242,8 +242,10 @@ namespace EQLogParser
 
         item.Click += (object sender, RoutedEventArgs e) =>
         {
-          if (MessageBox.Show("Clear all chat for " + player + ", are you sure?", "Clear Chat Archive", MessageBoxButton.YesNo) == MessageBoxResult.Yes
-            && ChatManager.DeleteArchivedPlayer(player))
+          var msgDialog = new MessageWindow("Clear Chat Archive for " + player + "?", EQLogParser.Resource.CLEAR_CHAT, true);
+          msgDialog.ShowDialog();
+
+          if (msgDialog.IsYesClicked && ChatManager.DeleteArchivedPlayer(player))
           {
             if (PlayerChatManager != null && PlayerChatManager.GetCurrentPlayer().Equals(player, StringComparison.Ordinal))
             {
@@ -318,8 +320,20 @@ namespace EQLogParser
       }
       else
       {
-        _ = MessageBox.Show("Nothing to Save. Display a Summary View and Try Again.", EQLogParser.Resource.FILEMENU_EXPORT_SUMMARY,
-          MessageBoxButton.OK, MessageBoxImage.Exclamation);
+        new MessageWindow("No Summary Views are Open. Nothing to Save.", EQLogParser.Resource.FILEMENU_EXPORT_SUMMARY).ShowDialog();
+      }
+    }
+
+    private void MenuItemExportFightsClick(object sender, RoutedEventArgs e)
+    {
+      var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id).ToList();
+      if (filtered.Count > 0)
+      {
+
+      }
+      else
+      {
+        new MessageWindow("No Fights Selected. Nothing to Save.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
       }
     }
 
@@ -399,7 +413,7 @@ namespace EQLogParser
       IsIgnoreCharmPetsEnabled = !IsIgnoreCharmPetsEnabled;
       ConfigUtil.SetSetting("IgnoreCharmPets", IsIgnoreCharmPetsEnabled.ToString(CultureInfo.CurrentCulture));
       ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
-      MessageBox.Show("Restart EQLogParser when changing the Ignore Charm Pets setting for it to take effect.");
+      new MessageWindow("Charm Setting Requires Restart of EQLogParser.", EQLogParser.Resource.RESTART_NEEDED).ShowDialog();
     }
 
     private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e)

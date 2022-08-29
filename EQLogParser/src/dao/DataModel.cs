@@ -416,6 +416,7 @@ namespace EQLogParser
     public long DPS { get; set; }
     public long SDPS { get; set; }
     public long Extra { get; set; }
+    public long Potential { get; set; }
     public int Resists { get; set; }
     public long Avg { get; set; }
     public long AvgCrit { get; set; }
