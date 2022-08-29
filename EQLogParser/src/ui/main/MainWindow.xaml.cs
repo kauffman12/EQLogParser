@@ -316,7 +316,7 @@ namespace EQLogParser
 
       if (tables.Count > 0)
       {
-        TextFormatUtils.ExportAsHTML(tables);
+        MainActions.ExportAsHTML(tables);
       }
       else
       {
@@ -327,9 +327,14 @@ namespace EQLogParser
     private void MenuItemExportFightsClick(object sender, RoutedEventArgs e)
     {
       var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id).ToList();
-      if (filtered.Count > 0)
-      {
 
+      if (string.IsNullOrEmpty(CurrentLogFile))
+      {
+        new MessageWindow("No Log File Opened. Nothing to Save.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+      }
+      else if (filtered.Count > 0)
+      {
+        MainActions.ExportFights(filtered);
       }
       else
       {
@@ -413,7 +418,7 @@ namespace EQLogParser
       IsIgnoreCharmPetsEnabled = !IsIgnoreCharmPetsEnabled;
       ConfigUtil.SetSetting("IgnoreCharmPets", IsIgnoreCharmPetsEnabled.ToString(CultureInfo.CurrentCulture));
       ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
-      new MessageWindow("Charm Setting Requires Restart of EQLogParser.", EQLogParser.Resource.RESTART_NEEDED).ShowDialog();
+      new MessageWindow("Setting Needs Restart of EQLogParser.", EQLogParser.Resource.RESTART_NEEDED).ShowDialog();
     }
 
     private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e)
