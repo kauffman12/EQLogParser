@@ -23,7 +23,6 @@ namespace EQLogParser
     private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new Dictionary<string, Dictionary<string, byte>>();
 
     private string CurrentChoice = "";
-    private int CurrentConfig;
     private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected = null;
 
@@ -31,7 +30,6 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      CurrentConfig = 0;
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
       CurrentChoice = choicesList.SelectedValue as string;
@@ -256,22 +254,34 @@ namespace EQLogParser
       var collection = new ChartSeriesCollection();
 
       string yPath = "Avg";
-      switch (CurrentConfig)
+      switch (CurrentChoice)
       {
-        case 0:
+        case "Aggregate DPS":
+        case "Aggregate HPS":
           yPath = "ValuePerSecond";
           break;
-        case 1:
+        case "Aggregate Damage":
+        case "Aggregate Damaged":
+        case "Aggregate Healing":
           yPath = "Total";
           break;
-        case 2:
+        case "Aggregate Av Hit":
+        case "Aggregate Av Heal":
           yPath = "Avg";
           break;
-        case 3:
-          yPath = "HitsPerSecond";
-          break;
-        case 4:
+        case "Aggregate Crit Rate":
           yPath = "CritRate";
+          break;
+        case "DPS":
+        case "HPS":
+          yPath = "TotalPerSecond";
+          break;
+        case "# Crits":
+          yPath = "CritsPerSecond";
+          break;
+        case "# Heals":
+        case "# Hits":
+          yPath = "HitsPerSecond";
           break;
       }
 
@@ -324,7 +334,6 @@ namespace EQLogParser
       if (PlayerPetValues.Count > 0)
       {
         CurrentChoice = choicesList.SelectedValue as string;
-        CurrentConfig = choicesList.SelectedIndex;
         CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
         Plot(LastSelected);
       }
@@ -346,25 +355,35 @@ namespace EQLogParser
               foreach (ref var chartData in dataPoints.ToArray().AsSpan())
               {
                 double chartValue = 0;
-                if (CurrentConfig == 0)
+                switch (CurrentChoice)
                 {
-                  chartValue = chartData.ValuePerSecond;
-                }
-                else if (CurrentConfig == 1)
-                {
-                  chartValue = chartData.Total;
-                }
-                else if (CurrentConfig == 2)
-                {
-                  chartValue = chartData.Avg;
-                }
-                else if (CurrentConfig == 3)
-                {
-                  chartValue = chartData.HitsPerSecond;
-                }
-                else if (CurrentConfig == 4)
-                {
-                  chartValue = chartData.CritRate;
+                  case "Aggregate DPS":
+                  case "Aggregate HPS":
+                    chartValue = chartData.ValuePerSecond;
+                    break;
+                  case "Aggregate Damage":
+                  case "Aggregate Damaged":
+                  case "Aggregate Healing":
+                    chartValue = chartData.Total;
+                    break;
+                  case "Aggregate Av Hit":
+                  case "Aggregate Av Heal":
+                    chartValue = chartData.Avg;
+                    break;
+                  case "Aggregate Crit Rate":
+                    chartValue = chartData.CritRate;
+                    break;
+                  case "DPS":
+                  case "HPS":
+                    chartValue = chartData.TotalPerSecond;
+                    break;
+                  case "# Crits":
+                    chartValue = chartData.CritsPerSecond;
+                    break;
+                  case "# Heals":
+                  case "# Hits":
+                    chartValue = chartData.HitsPerSecond;
+                    break;
                 }
 
                 data.Add(new List<object> { chartData.CurrentTime, Math.Round(chartValue, 2), chartData.Name });
@@ -391,7 +410,9 @@ namespace EQLogParser
 
       if (diff > DataManager.FIGHTTIMEOUT)
       {
+        aggregate.CritsPerSecond = 0;
         aggregate.HitsPerSecond = 0;
+        aggregate.TotalPerSecond = 0;
         aggregate.RollingTotal = 0;
         aggregate.RollingCritHits = 0;
         aggregate.RollingHits = 0;
@@ -403,29 +424,28 @@ namespace EQLogParser
         Insert(aggregate, theValues);
       }
 
-      aggregate.HitsPerSecond += 1;
-      aggregate.Total += dataPoint.Total;
-      aggregate.RollingTotal += dataPoint.Total;
-      aggregate.RollingHits += 1;
-      aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
-      aggregate.BeginTime = firstTime;
-      aggregate.CurrentTime = dataPoint.CurrentTime;
-      aggregate.DateTime = DateUtil.FromDouble(dataPoint.CurrentTime);
-
       if (diff >= 1)
       {
-        if (diff > 1)
-        {
-          aggregate.HitsPerSecond = (long) (aggregate.HitsPerSecond / diff);
-        }
-
+        aggregate.CurrentTime = dataPoint.CurrentTime;
+        aggregate.DateTime = DateUtil.FromDouble(dataPoint.CurrentTime);
         Insert(aggregate, theValues);
+        aggregate.CritsPerSecond = 0;
         aggregate.HitsPerSecond = 0;
+        aggregate.TotalPerSecond = 0;
       }
       else
       {
         needAccounting[aggregate.Name] = aggregate;
       }
+
+      aggregate.CritsPerSecond += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.HitsPerSecond += 1;
+      aggregate.TotalPerSecond += dataPoint.Total;
+      aggregate.Total += dataPoint.Total;
+      aggregate.RollingTotal += dataPoint.Total;
+      aggregate.RollingHits += 1;
+      aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.BeginTime = firstTime;
     }
 
     private static void UpdateRemaining(Dictionary<string, List<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
@@ -444,7 +464,9 @@ namespace EQLogParser
             remaining.RollingTotal = 0;
             remaining.RollingHits = 0;
             remaining.RollingCritHits = 0;
+            remaining.CritsPerSecond = 0;
             remaining.HitsPerSecond = 0;
+            remaining.TotalPerSecond = 0;
           }
 
           remaining.CurrentTime = lastTime;
@@ -465,7 +487,9 @@ namespace EQLogParser
         CurrentTime = aggregate.CurrentTime,
         DateTime = DateUtil.FromDouble(aggregate.CurrentTime),
         Total = aggregate.Total,
-        HitsPerSecond = aggregate.HitsPerSecond
+        CritsPerSecond = aggregate.CritsPerSecond,
+        HitsPerSecond = aggregate.HitsPerSecond,
+        TotalPerSecond = aggregate.TotalPerSecond
       };
 
       var totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
