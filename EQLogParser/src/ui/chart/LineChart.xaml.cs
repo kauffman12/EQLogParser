@@ -21,6 +21,8 @@ namespace EQLogParser
     private readonly Dictionary<string, List<DataPoint>> PetValues = new Dictionary<string, List<DataPoint>>();
     private readonly Dictionary<string, List<DataPoint>> RaidValues = new Dictionary<string, List<DataPoint>>();
     private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new Dictionary<string, Dictionary<string, byte>>();
+    private readonly static Dictionary<string, bool> MissTypes = new Dictionary<string, bool>()
+    { { Labels.ABSORB, true }, { Labels.BLOCK, true } , { Labels.DODGE, true }, { Labels.PARRY, true }, { Labels.INVULNERABLE, true }, { Labels.MISS, true } };
 
     private string CurrentChoice = "";
     private string CurrentPetOrPlayerOption;
@@ -81,7 +83,7 @@ namespace EQLogParser
     private void UpdateTimes(string name, DataPoint dataPoint, Dictionary<string, double> diffs, Dictionary<string, double> firstTimes,
       Dictionary<string, double> lastTimes)
     {
-      double diff = lastTimes.TryGetValue(name, out double lastTime) ? dataPoint.CurrentTime - lastTime : 1;
+      double diff = lastTimes.TryGetValue(name, out double lastTime) ? dataPoint.CurrentTime - lastTime : 0;
       diffs[name] = diff;
 
       if (!firstTimes.TryGetValue(name, out double _) || diff > DataManager.FIGHTTIMEOUT)
@@ -106,9 +108,11 @@ namespace EQLogParser
 
       foreach (var dataPoint in recordIterator)
       {
-        UpdateTimes(dataPoint.Name, dataPoint, diffs, firstTimes, lastTimes);
-
         var raidName = "Raid";
+        var playerName = dataPoint.PlayerName ?? dataPoint.Name;
+        var totalName = playerName + " +Pets";
+
+        UpdateTimes(dataPoint.Name, dataPoint, diffs, firstTimes, lastTimes);
         UpdateTimes(raidName, dataPoint, diffs, firstTimes, lastTimes);
 
         if (!raidData.TryGetValue(raidName, out DataPoint raidAggregate))
@@ -119,9 +123,7 @@ namespace EQLogParser
 
         Aggregate(RaidValues, needRaidAccounting, dataPoint, raidAggregate, firstTimes, lastTimes, diffs);
 
-        var playerName = dataPoint.PlayerName ?? dataPoint.Name;
         var petName = dataPoint.PlayerName == null ? null : dataPoint.Name;
-        var totalName = playerName + " +Pets";
         UpdateTimes(totalName, dataPoint, diffs, firstTimes, lastTimes);
         if (!totalPlayerData.TryGetValue(totalName, out DataPoint totalAggregate))
         {
@@ -276,11 +278,14 @@ namespace EQLogParser
         case "HPS":
           yPath = "TotalPerSecond";
           break;
+        case "# Attempts":
+          yPath = "AttemptsPerSecond";
+          break;
         case "# Crits":
           yPath = "CritsPerSecond";
           break;
-        case "# Heals":
         case "# Hits":
+        case "# Heals":
           yPath = "HitsPerSecond";
           break;
       }
@@ -377,11 +382,14 @@ namespace EQLogParser
                   case "HPS":
                     chartValue = chartData.TotalPerSecond;
                     break;
+                  case "# Attempts":
+                    chartValue = chartData.AttemptsPerSecond;
+                    break;
                   case "# Crits":
                     chartValue = chartData.CritsPerSecond;
                     break;
-                  case "# Heals":
                   case "# Hits":
+                  case "# Heals":
                     chartValue = chartData.HitsPerSecond;
                     break;
                 }
@@ -411,6 +419,7 @@ namespace EQLogParser
       if (diff > DataManager.FIGHTTIMEOUT)
       {
         aggregate.CritsPerSecond = 0;
+        aggregate.AttemptsPerSecond = 0;
         aggregate.HitsPerSecond = 0;
         aggregate.TotalPerSecond = 0;
         aggregate.RollingTotal = 0;
@@ -426,10 +435,10 @@ namespace EQLogParser
 
       if (diff >= 1)
       {
-        aggregate.CurrentTime = dataPoint.CurrentTime;
         aggregate.DateTime = DateUtil.FromDouble(dataPoint.CurrentTime);
         Insert(aggregate, theValues);
         aggregate.CritsPerSecond = 0;
+        aggregate.AttemptsPerSecond = 0;
         aggregate.HitsPerSecond = 0;
         aggregate.TotalPerSecond = 0;
       }
@@ -438,8 +447,10 @@ namespace EQLogParser
         needAccounting[aggregate.Name] = aggregate;
       }
 
+      aggregate.CurrentTime = dataPoint.CurrentTime;
       aggregate.CritsPerSecond += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
-      aggregate.HitsPerSecond += 1;
+      aggregate.AttemptsPerSecond += 1;
+      aggregate.HitsPerSecond += (MissTypes.ContainsKey(dataPoint.Type) ? 0 : 1);
       aggregate.TotalPerSecond += dataPoint.Total;
       aggregate.Total += dataPoint.Total;
       aggregate.RollingTotal += dataPoint.Total;
@@ -465,6 +476,7 @@ namespace EQLogParser
             remaining.RollingHits = 0;
             remaining.RollingCritHits = 0;
             remaining.CritsPerSecond = 0;
+            remaining.AttemptsPerSecond = 0;
             remaining.HitsPerSecond = 0;
             remaining.TotalPerSecond = 0;
           }
@@ -488,6 +500,7 @@ namespace EQLogParser
         DateTime = DateUtil.FromDouble(aggregate.CurrentTime),
         Total = aggregate.Total,
         CritsPerSecond = aggregate.CritsPerSecond,
+        AttemptsPerSecond = aggregate.AttemptsPerSecond,
         HitsPerSecond = aggregate.HitsPerSecond,
         TotalPerSecond = aggregate.TotalPerSecond
       };
