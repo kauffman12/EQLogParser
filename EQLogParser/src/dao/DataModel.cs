@@ -24,8 +24,10 @@ namespace EQLogParser
     public long RollingTotal { get; set; }
     public uint RollingHits { get; set; }
     public uint RollingCritHits { get; set; }
-    public long HitsPerSecond { get; set; }
-    public long ValuePerSecond { get; set; }
+    public double CritsPerSecond { get; set; }
+    public double HitsPerSecond { get; set; }
+    public double TotalPerSecond { get; set; }
+    public double ValuePerSecond { get; set; }
     public double CritRate { get; set; }
     public double BeginTime { get; set; }
     public double CurrentTime { get; set; }

@@ -53,9 +53,9 @@
         </syncfusion:DateTimeAxis>
       </syncfusion:SfChart.PrimaryAxis>
       <syncfusion:SfChart.SecondaryAxis>
-        <syncfusion:NumericalAxis>
+        <syncfusion:NumericalAxis LabelFormat="###,###,###">
           <syncfusion:NumericalAxis.LabelStyle>
-            <syncfusion:LabelStyle FontSize="12"/>
+            <syncfusion:LabelStyle FontSize="12" />
           </syncfusion:NumericalAxis.LabelStyle>
         </syncfusion:NumericalAxis>
       </syncfusion:SfChart.SecondaryAxis>
