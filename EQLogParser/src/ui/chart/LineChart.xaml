@@ -46,7 +46,7 @@
         <syncfusion:ChartZoomPanBehavior EnableMouseWheelZooming="True" EnablePanning="True" ResetOnDoubleTap="True" />
       </syncfusion:SfChart.Behaviors>
       <syncfusion:SfChart.PrimaryAxis>
-        <syncfusion:DateTimeAxis LabelFormat="hh:mm:ss">
+        <syncfusion:DateTimeAxis LabelFormat="HH:mm:ss">
           <syncfusion:DateTimeAxis.LabelStyle>
             <syncfusion:LabelStyle FontSize="12"/>
           </syncfusion:DateTimeAxis.LabelStyle>

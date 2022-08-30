@@ -30,7 +30,8 @@ namespace EQLogParser
           origName = pname;
         }
 
-        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = record.Attacker, PlayerName = origName, CurrentTime = wrapper.BeginTime };
+        dataPoint = new DataPoint { Type = record.Type, Total = record.Total, ModifiersMask = record.ModifiersMask, 
+          Name = record.Attacker, PlayerName = origName, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;
@@ -54,7 +55,8 @@ namespace EQLogParser
 
       if (wrapper?.Record is HealRecord record)
       {
-        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = record.Healer, CurrentTime = wrapper.BeginTime };
+        dataPoint = new DataPoint { Type = record.Type, Total = record.Total, ModifiersMask = record.ModifiersMask,
+          Name = record.Healer, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;
@@ -85,7 +87,8 @@ namespace EQLogParser
 
       if (wrapper?.Record is DamageRecord record)
       {
-        dataPoint = new DataPoint() { Total = record.Total, ModifiersMask = record.ModifiersMask, Name = record.Defender, CurrentTime = wrapper.BeginTime };
+        dataPoint = new DataPoint {Type = record.Type, Total = record.Total, ModifiersMask = record.ModifiersMask,
+          Name = record.Defender, CurrentTime = wrapper.BeginTime };
       }
 
       return dataPoint;
