@@ -21,10 +21,12 @@ namespace EQLogParser
     public string PlayerName { get; set; }
     public int ModifiersMask { get; set; }
     public long Total { get; set; }
+    public string Type { get; set; }
     public long RollingTotal { get; set; }
     public uint RollingHits { get; set; }
     public uint RollingCritHits { get; set; }
     public double CritsPerSecond { get; set; }
+    public double AttemptsPerSecond { get; set; }
     public double HitsPerSecond { get; set; }
     public double TotalPerSecond { get; set; }
     public double ValuePerSecond { get; set; }
