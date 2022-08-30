@@ -137,7 +137,7 @@ namespace EQLogParser
         {
           if (!playerData.TryGetValue(dataPoint.Name, out DataPoint aggregate))
           {
-            aggregate = new DataPoint() { Name = dataPoint.Name };
+            aggregate = new DataPoint() { Name = dataPoint.Name, PlayerName = dataPoint.Name };
             playerData[dataPoint.Name] = aggregate;
           }
 
@@ -162,6 +162,7 @@ namespace EQLogParser
 
         lastTimes[dataPoint.Name] = dataPoint.CurrentTime;
         lastTimes[raidName] = dataPoint.CurrentTime;
+        lastTimes[totalName] = dataPoint.CurrentTime;
       }
 
       UpdateRemaining(RaidValues, needRaidAccounting, firstTimes, lastTimes);
@@ -258,7 +259,7 @@ namespace EQLogParser
       switch (CurrentConfig)
       {
         case 0:
-          yPath = "Vps";
+          yPath = "ValuePerSecond";
           break;
         case 1:
           yPath = "Total";
@@ -267,6 +268,9 @@ namespace EQLogParser
           yPath = "Avg";
           break;
         case 3:
+          yPath = "HitsPerSecond";
+          break;
+        case 4:
           yPath = "CritRate";
           break;
       }
@@ -332,9 +336,9 @@ namespace EQLogParser
       {
         try
         {
-          List<string> header = new List<string> { "Seconds", choicesList.SelectedValue as string, "Name" };
-
           var data = new List<List<object>>();
+          var header = new List<string> { "Seconds", choicesList.SelectedValue as string, "Name" };
+
           foreach (var series in sfLineChart.Series)
           {
             if (series.ItemsSource is List<DataPoint> dataPoints)
@@ -342,21 +346,25 @@ namespace EQLogParser
               foreach (ref var chartData in dataPoints.ToArray().AsSpan())
               {
                 double chartValue = 0;
-                if (CurrentConfig == 2)
+                if (CurrentConfig == 0)
                 {
-                  chartValue = chartData.Avg;
-                }
-                else if (CurrentConfig == 3)
-                {
-                  chartValue = chartData.CritRate;
+                  chartValue = chartData.ValuePerSecond;
                 }
                 else if (CurrentConfig == 1)
                 {
                   chartValue = chartData.Total;
                 }
-                else if (CurrentConfig == 0)
+                else if (CurrentConfig == 2)
                 {
-                  chartValue = chartData.Vps;
+                  chartValue = chartData.Avg;
+                }
+                else if (CurrentConfig == 3)
+                {
+                  chartValue = chartData.HitsPerSecond;
+                }
+                else if (CurrentConfig == 4)
+                {
+                  chartValue = chartData.CritRate;
                 }
 
                 data.Add(new List<object> { chartData.CurrentTime, Math.Round(chartValue, 2), chartData.Name });
@@ -383,6 +391,7 @@ namespace EQLogParser
 
       if (diff > DataManager.FIGHTTIMEOUT)
       {
+        aggregate.HitsPerSecond = 0;
         aggregate.RollingTotal = 0;
         aggregate.RollingCritHits = 0;
         aggregate.RollingHits = 0;
@@ -394,6 +403,7 @@ namespace EQLogParser
         Insert(aggregate, theValues);
       }
 
+      aggregate.HitsPerSecond += 1;
       aggregate.Total += dataPoint.Total;
       aggregate.RollingTotal += dataPoint.Total;
       aggregate.RollingHits += 1;
@@ -404,7 +414,13 @@ namespace EQLogParser
 
       if (diff >= 1)
       {
+        if (diff > 1)
+        {
+          aggregate.HitsPerSecond = (long) (aggregate.HitsPerSecond / diff);
+        }
+
         Insert(aggregate, theValues);
+        aggregate.HitsPerSecond = 0;
       }
       else
       {
@@ -428,6 +444,7 @@ namespace EQLogParser
             remaining.RollingTotal = 0;
             remaining.RollingHits = 0;
             remaining.RollingCritHits = 0;
+            remaining.HitsPerSecond = 0;
           }
 
           remaining.CurrentTime = lastTime;
@@ -447,11 +464,12 @@ namespace EQLogParser
         PlayerName = aggregate.PlayerName,
         CurrentTime = aggregate.CurrentTime,
         DateTime = DateUtil.FromDouble(aggregate.CurrentTime),
-        Total = aggregate.Total
+        Total = aggregate.Total,
+        HitsPerSecond = aggregate.HitsPerSecond
       };
 
       var totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
-      newEntry.Vps = (long)Math.Round(aggregate.RollingTotal / totalSeconds, 2);
+      newEntry.ValuePerSecond = (long)Math.Round(aggregate.RollingTotal / totalSeconds, 2);
 
       if (aggregate.RollingHits > 0)
       {
