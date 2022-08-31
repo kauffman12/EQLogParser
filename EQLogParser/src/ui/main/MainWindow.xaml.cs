@@ -50,7 +50,7 @@ namespace EQLogParser
     { "Aggregate HPS", "Aggregate Av Heal", "Aggregate Healing", "Aggregate Crit Rate", "HPS", "# Crits", "# Heals" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() 
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
-    private const string VERSION = "v2.0.10";
+    private const string VERSION = "v2.0.11";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;

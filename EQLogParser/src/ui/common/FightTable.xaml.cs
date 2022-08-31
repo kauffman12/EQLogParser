@@ -117,6 +117,8 @@ namespace EQLogParser
     private void EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void EventsNewFight(object sender, Fight fight) => AddFight(fight);
     private void EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
+    private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
+    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void EventsThemeChanged(object sender, string e)
     {
@@ -148,6 +150,46 @@ namespace EQLogParser
       {
         EventsSelectionChange(this, dataGrid.SelectedItems);
         NeedSelectionChange = false;
+      }
+    }
+
+    private void RightClickOpening(object sender, ContextMenuEventArgs e)
+    {
+      var source = e.OriginalSource as dynamic;
+      if (source.DataContext is Fight fight)
+      {
+        dataGrid.CurrentItem = fight;
+      }
+    }
+
+    private void RemoveFight(string name)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        RemoveFight(Fights, name);
+        RemoveFight(NonTankingFights, name);
+      }, DispatcherPriority.DataBind);
+    }
+
+    private void SetPetClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
+      {
+        var name = npc.Name;
+        Task.Delay(120).ContinueWith(_ =>
+        {
+          PlayerManager.Instance.AddVerifiedPet(name);
+          PlayerManager.Instance.AddPetToPlayer(name, Labels.UNASSIGNED);
+        }, TaskScheduler.Default);
+      }
+    }
+
+    private void SetPlayerClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
+      {
+        var name = npc.Name;
+        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
       }
     }
 
@@ -292,44 +334,6 @@ namespace EQLogParser
       }
     }
 
-    private void RemoveFight(string name)
-    {
-      Dispatcher.InvokeAsync(() =>
-      {
-        RemoveFight(Fights, name);
-        RemoveFight(NonTankingFights, name);
-      }, DispatcherPriority.DataBind);
-    }
-
-    private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
-    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
-
-    private void SetPetClick(object sender, RoutedEventArgs e)
-    {
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      var callingDataGrid = menu.PlacementTarget as SfDataGrid;
-      if (callingDataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
-      {
-        var name = npc.Name;
-        Task.Delay(120).ContinueWith(_ =>
-        {
-          PlayerManager.Instance.AddVerifiedPet(name);
-          PlayerManager.Instance.AddPetToPlayer(name, Labels.UNASSIGNED);
-        }, TaskScheduler.Default);
-      }
-    }
-
-    private void SetPlayerClick(object sender, RoutedEventArgs e)
-    {
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      var callingDataGrid = menu.PlacementTarget as SfDataGrid;
-      if (callingDataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
-      {
-        var name = npc.Name;
-        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
-      }
-    }
-
     internal void DataGridSelectionChanged()
     {
       NeedSelectionChange = false;
@@ -349,13 +353,11 @@ namespace EQLogParser
     private void SelectGroupClick(object sender, RoutedEventArgs e)
     {
       NeedSelectionChange = false;
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      SfDataGrid callingDataGrid = menu.PlacementTarget as SfDataGrid;
       foreach (var fight in GetFightGroup())
       {
-        if (!callingDataGrid.SelectedItems.Contains(fight))
+        if (!dataGrid.SelectedItems.Contains(fight))
         {
-          callingDataGrid.SelectedItems.Add(fight);
+          dataGrid.SelectedItems.Add(fight);
         }
       }
     }
@@ -363,11 +365,9 @@ namespace EQLogParser
     private void UnselectGroupClick(object sender, RoutedEventArgs e)
     {
       NeedSelectionChange = false;
-      ContextMenu menu = (sender as FrameworkElement).Parent as ContextMenu;
-      SfDataGrid callingDataGrid = menu.PlacementTarget as SfDataGrid;
       foreach (var fight in GetFightGroup())
       {
-        callingDataGrid.SelectedItems.Remove(fight);
+        dataGrid.SelectedItems.Remove(fight);
       }
     }
 
