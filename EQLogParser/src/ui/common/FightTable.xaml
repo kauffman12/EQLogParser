@@ -53,7 +53,9 @@
                            AllowSorting="True"
                            AutoGenerateColumns="False"
                            ColumnSizer="AutoWithLastColumnFill"
-                           Grid.Row="1"                  
+                           ContextMenuClosing="RightClickClosed"
+                           ContextMenuOpening="RightClickOpening"
+                           Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="26"
@@ -66,7 +68,7 @@
                            ShowRowHeader="True"                           
                            SourceType="{x:Type local:Fight}">
       <syncfusion:SfDataGrid.ContextMenu>
-        <ContextMenu x:Name="rightClickMenu" Closed="RightClickClosed">
+        <ContextMenu x:Name="rightClickMenu">
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
