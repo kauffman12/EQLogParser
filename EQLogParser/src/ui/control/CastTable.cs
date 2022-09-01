@@ -1,4 +1,5 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,11 +51,11 @@ namespace EQLogParser
     protected void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitleLabel.Content.ToString());
     protected void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitleLabel);
 
-    protected void UpdateSelectedCastTypes(ComboBox selected)
+    protected bool UpdateSelectedCastTypes(ComboBox selected)
     {
-      CurrentShowAnySpellType = false;
-
+      bool changed = false;
       int count = 0;
+      CurrentShowAnySpellType = false;
       foreach (var item in selected.Items.Cast<ComboBoxItemDetails>())
       {
         if (item.IsChecked)
@@ -66,25 +67,47 @@ namespace EQLogParser
         switch (item.Text)
         {
           case BENEFICIAL_SPELLS_TYPE:
+            if (CurrentShowBeneficialSpells != item.IsChecked)
+            {
+              changed = true;
+            }
+
             CurrentShowBeneficialSpells = item.IsChecked;
             break;
           case CAST_SPELLS_TYPE:
+            if (CurrentShowCastSpells != item.IsChecked)
+            {
+              changed = true;
+            }
+
             CurrentShowCastSpells = item.IsChecked;
             break;
           case DET_SPELLS_TYPE:
+            if (CurrentShowDetSpells != item.IsChecked)
+            {
+              changed = true;
+            }
+
             CurrentShowDetSpells = item.IsChecked;
             break;
           case RECEIVED_SPELLS_TYPE:
+            if (CurrentShowReceivedSpells != item.IsChecked)
+            {
+              changed = true;
+            }
+
             CurrentShowReceivedSpells = item.IsChecked;
             break;
         }
       }
 
       UIElementUtil.SetComboBoxTitle(selected, count, EQLogParser.Resource.SPELL_TYPES_SELECTED);
+      return changed;
     }
 
-    protected void UpdateSelectedRestrictions(ComboBox selected)
+    protected bool UpdateSelectedRestrictions(ComboBox selected)
     {
+      bool changed = false;
       int count = 0;
       foreach (var item in selected.Items.Cast<ComboBoxItemDetails>())
       {
@@ -96,15 +119,26 @@ namespace EQLogParser
         switch (item.Text)
         {
           case PROC_SPELLS_TYPE:
+            if (CurrentShowProcs != !item.IsChecked)
+            {
+              changed = true;
+            }
+
             CurrentShowProcs = !item.IsChecked;
             break;
           case SELF_SPELLS_TYPE:
+            if (CurrentShowSelfOnly != !item.IsChecked)
+            {
+              changed = true;
+            }
+
             CurrentShowSelfOnly = !item.IsChecked;
             break;
         }
       }
 
       UpdateRestrictionsTitle(selected);
+      return changed;
     }
 
     internal bool PassFilters(SpellData spellData, bool received)

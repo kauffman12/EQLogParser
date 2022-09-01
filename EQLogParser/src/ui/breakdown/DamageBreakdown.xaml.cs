@@ -1,6 +1,7 @@
 ﻿using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace EQLogParser
@@ -10,8 +11,8 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageBreakdown : BreakdownTable
   {
-    private List<PlayerStats> PlayerStats = new List<PlayerStats>();
     private PlayerStats RaidStats;
+    private string Title;
     private bool CurrentShowPets = true;
     private readonly Dictionary<string, PlayerSubStats> GroupedDD = new Dictionary<string, PlayerSubStats>();
     private readonly Dictionary<string, PlayerSubStats> GroupedDoT = new Dictionary<string, PlayerSubStats>();
@@ -21,43 +22,57 @@ namespace EQLogParser
     public DamageBreakdown()
     {
       InitializeComponent();
+      dataGrid.IsEnabled = false;
+      UIElementUtil.SetEnabled(controlPanel.Children, false);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
-      titleLabel.Content = currentStats?.ShortTitle;
+      Title = currentStats?.ShortTitle;
       RaidStats = currentStats.RaidStats;
       var childStats = currentStats.Children;
+      var list = new List<PlayerStats>();
+      var pets = showPets.IsEnabled;
 
-      foreach (ref var stats in selectedStats.ToArray().AsSpan())
+      Task.Delay(100).ContinueWith(task =>
       {
-        if (!showPets.IsEnabled && !(PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name)))
+        foreach (ref var stats in selectedStats.ToArray().AsSpan())
         {
-          showPets.IsEnabled = true;
-        }
-
-        if (childStats.ContainsKey(stats.Name))
-        {
-          foreach (ref var childStat in childStats[stats.Name].ToArray().AsSpan())
+          if (!pets && !(PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name)))
           {
-            // Damage Summary is a Tree which can have child and parent selected so check that we haven't
-            // already added the entry
-            if (!PlayerStats.Contains(childStat))
+            pets = true;
+          }
+
+          if (childStats.ContainsKey(stats.Name))
+          {
+            foreach (ref var childStat in childStats[stats.Name].ToArray().AsSpan())
             {
-              PlayerStats.Add(childStat);
-              BuildGroups(childStat, childStat.SubStats);
+              // Damage Summary is a Tree which can have child and parent selected so check that we haven't
+              // already added the entry
+              if (!list.Contains(childStat))
+              {
+                list.Add(childStat);
+                BuildGroups(childStat, childStat.SubStats);
+              }
             }
           }
+          else if (!list.Contains(stats))
+          {
+            list.Add(stats);
+            BuildGroups(stats, stats.SubStats);
+          }
         }
-        else if (!PlayerStats.Contains(stats))
-        {
-          PlayerStats.Add(stats);
-          BuildGroups(stats, stats.SubStats);
-        }
-      }
 
-      dataGrid.ItemsSource = PlayerStats;
+        Dispatcher.InvokeAsync(() =>
+        {
+          titleLabel.Content = Title;
+          showPets.IsEnabled = pets;
+          dataGrid.ItemsSource = list;
+          dataGrid.IsEnabled = true;
+          UIElementUtil.SetEnabled(controlPanel.Children, true);
+        });
+      });
     }
 
     private void BuildGroups(PlayerStats playerStats, List<PlayerSubStats> all)

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -9,6 +10,7 @@ namespace EQLogParser
   {
     private bool CurrentShowSpellsChoice = true;
     private List<PlayerStats> PlayerStats = null;
+    private string Title;
 
     private readonly List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
     private readonly List<string> ReceivedChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healer" };
@@ -16,12 +18,14 @@ namespace EQLogParser
     public HealBreakdown()
     {
       InitializeComponent();
+      dataGrid.IsEnabled = false;
+      UIElementUtil.SetEnabled(controlPanel.Children, false);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats, bool received = false)
     {
-      titleLabel.Content = currentStats?.ShortTitle;
+      Title = currentStats?.ShortTitle;
       PlayerStats = selectedStats;
       choicesList.ItemsSource = received ? ReceivedChoicesList : ChoicesList;
       choicesList.SelectedIndex = 0;
@@ -30,17 +34,26 @@ namespace EQLogParser
 
     private void Display()
     {
-      if (CurrentShowSpellsChoice)
+      Task.Delay(100).ContinueWith(task =>
       {
-        dataGrid.ChildPropertyName = "SubStats";
-      }
-      else
-      {
-        dataGrid.ChildPropertyName = "SubStats2";
-      }
+        Dispatcher.InvokeAsync(() =>
+        {
+          if (CurrentShowSpellsChoice)
+          {
+            dataGrid.ChildPropertyName = "SubStats";
+          }
+          else
+          {
+            dataGrid.ChildPropertyName = "SubStats2";
+          }
 
-      dataGrid.ItemsSource = null;
-      dataGrid.ItemsSource = PlayerStats;
+          titleLabel.Content = Title;
+          dataGrid.IsEnabled = true;
+          UIElementUtil.SetEnabled(controlPanel.Children, true);
+          dataGrid.ItemsSource = null;
+          dataGrid.ItemsSource = PlayerStats;
+        });
+      });
     }
 
     private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -48,6 +61,10 @@ namespace EQLogParser
       if (PlayerStats != null)
       {
         CurrentShowSpellsChoice = choicesList.SelectedIndex == 0;
+        titleLabel.Content = "Loading...";
+        dataGrid.ItemsSource = null;
+        dataGrid.IsEnabled = false;
+        UIElementUtil.SetEnabled(controlPanel.Children, false);
         Display();
       }
     }
