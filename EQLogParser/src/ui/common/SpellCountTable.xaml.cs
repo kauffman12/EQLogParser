@@ -13,6 +13,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -29,7 +30,6 @@ namespace EQLogParser
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
     private double Time;
-    private readonly ObservableCollection<IDictionary<string, object>> SpellRows = new ObservableCollection<IDictionary<string, object>>();
     private readonly DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
     private readonly Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
     private readonly List<string> CountTypes = new List<string>() { "Counts", "Percentages", "Counts/Minute" };
@@ -37,10 +37,13 @@ namespace EQLogParser
     private readonly HashSet<string> SortDescs = new HashSet<string>() { "totalColumn" };
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
+    private string Title;
 
     public SpellCountTable()
     {
       InitializeComponent();
+      dataGrid.IsEnabled = false;
+      UIElementUtil.SetEnabled(controlPanel.Children, false);
       countTypes.ItemsSource = CountTypes;
       countTypes.SelectedIndex = 0;
       minFreqList.ItemsSource = MinFreqs;
@@ -54,7 +57,7 @@ namespace EQLogParser
 
     internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
-      titleLabel.Content = currentStats?.ShortTitle ?? "";
+      Title = currentStats?.ShortTitle ?? "";
       Time = currentStats.RaidStats.TotalSeconds;
 
       var raidStats = currentStats?.RaidStats;
@@ -67,25 +70,20 @@ namespace EQLogParser
       }
     }
 
-    private void Display(bool clear = false)
+    private void Display()
     {
-      try
+      dataGrid.Columns.Clear();
+      var headerCol = new GridTextColumn
       {
-        if (clear)
-        {
-          SpellRows.Clear();
-        }
+        HeaderText = "",
+        MappingName = "Spell",
+        CellStyle = DataGridUtil.CreateHighlightForegroundStyle("Spell", new ReceivedSpellColorConverter())
+      };
 
-        dataGrid.Columns.Clear();
-        var headerCol = new GridTextColumn
-        {
-          HeaderText = "",
-          MappingName = "Spell",
-          CellStyle = DataGridUtil.CreateHighlightForegroundStyle("Spell", new ReceivedSpellColorConverter())
-        };
+      dataGrid.Columns.Add(headerCol);
 
-        dataGrid.Columns.Add(headerCol);
-
+      Task.Delay(100).ContinueWith(task =>
+      {
         var filteredPlayerMap = new Dictionary<string, Dictionary<string, uint>>();
         var totalCountMap = new Dictionary<string, uint>();
         var uniqueSpellsMap = new Dictionary<string, uint>();
@@ -142,18 +140,22 @@ namespace EQLogParser
 
           var header = string.Format("{0} = {1}", name, amount.ToString());
 
-          var playerCol = new GridTextColumn
+          Dispatcher.InvokeAsync(() =>
           {
-            HeaderText = header,
-            MappingName = name,
-            SortMode = Syncfusion.Data.DataReflectionMode.Value,
-            DisplayBinding = new Binding(name + "Text"),
-            TextAlignment = TextAlignment.Right,
-            ShowHeaderToolTip = true,
-            HeaderToolTipTemplate = Application.Current.Resources["HeaderSpellCountsTemplateToolTip"] as DataTemplate
-          };
+            var playerCol = new GridTextColumn
+            {
+              HeaderText = header,
+              MappingName = name,
+              SortMode = Syncfusion.Data.DataReflectionMode.Value,
+              DisplayBinding = new Binding(name + "Text"),
+              TextAlignment = TextAlignment.Right,
+              ShowHeaderToolTip = true,
+              HeaderToolTipTemplate = Application.Current.Resources["HeaderSpellCountsTemplateToolTip"] as DataTemplate
+            };
 
-          dataGrid.Columns.Add(playerCol);
+            dataGrid.Columns.Add(playerCol);
+          });
+
           colCount++;
           SortDescs.Add(name);
         }
@@ -174,21 +176,25 @@ namespace EQLogParser
 
         string totalHeader = string.Format("Total = {0}", headerAmount);
 
-        var totalCol = new GridTextColumn
+        Dispatcher.InvokeAsync(() =>
         {
-          HeaderText = totalHeader,
-          MappingName = "totalColumn",
-          SortMode = Syncfusion.Data.DataReflectionMode.Value,
-          DisplayBinding = new Binding("totalColumnText"),
-          TextAlignment = TextAlignment.Right
-        };
+          var totalCol = new GridTextColumn
+          {
+            HeaderText = totalHeader,
+            MappingName = "totalColumn",
+            SortMode = Syncfusion.Data.DataReflectionMode.Value,
+            DisplayBinding = new Binding("totalColumnText"),
+            TextAlignment = TextAlignment.Right
+          };
 
-        dataGrid.Columns.Add(totalCol);
+          dataGrid.Columns.Add(totalCol);
+        });
 
         int existingIndex = 0;
+        var list = new List<IDictionary<string, object>>();
         foreach (var spell in sortedSpellList)
         {
-          var row = (SpellRows.Count > existingIndex) ? SpellRows[existingIndex] : new ExpandoObject();
+          var row = (list.Count > existingIndex) ? list[existingIndex] : new ExpandoObject();
           row["Spell"] = spell;
 
           for (int i = 0; i < sortedPlayers.Count; i++)
@@ -235,24 +241,25 @@ namespace EQLogParser
 
           row["totalColumnText"] = row["totalColumn"].ToString();
 
-          if (SpellRows.Count <= existingIndex)
+          if (list.Count <= existingIndex)
           {
-            SpellRows.Add(row);
+            list.Add(row);
           }
 
           existingIndex++;
         }
 
-        dataGrid.ItemsSource = new ListCollectionView(SpellRows);
-      }
-      catch (Exception ex)
-      {
-        LOG.Error(ex);
-        throw;
-      }
+        Dispatcher.InvokeAsync(() =>
+        {
+          titleLabel.Content = Title;
+          dataGrid.ItemsSource = list;
+          dataGrid.IsEnabled = true;
+          UIElementUtil.SetEnabled(controlPanel.Children, true);
+        });
+      });
     }
 
-    private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UIElementUtil.CheckHideTitlePanel(titlePanel, settingsPanel);
+    private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UIElementUtil.CheckHideTitlePanel(titlePanel, controlPanel);
     private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateOptions(true);
 
     private void AddPlayerRow(string player, string spell, double value, IDictionary<string, object> row)
@@ -291,13 +298,17 @@ namespace EQLogParser
       return totalCasts;
     }
 
-    private void UpdateOptions(bool clear = false)
+    private void UpdateOptions(bool force = false)
     {
-      if (dataGrid?.View != null)
+      if (dataGrid?.View != null && (force || CurrentCountType != countTypes.SelectedIndex || CurrentMinFreqCount != minFreqList.SelectedIndex))
       {
         CurrentCountType = countTypes.SelectedIndex;
         CurrentMinFreqCount = minFreqList.SelectedIndex;
-        Display(clear);
+        titleLabel.Content = "Loading...";
+        dataGrid.ItemsSource = null;
+        dataGrid.IsEnabled = false;
+        UIElementUtil.SetEnabled(controlPanel.Children, false);
+        Display();
       }
     }
 
@@ -305,9 +316,14 @@ namespace EQLogParser
     {
       if (dataGrid?.View != null && selectedCastTypes?.Items != null)
       {
-        UpdateSelectedCastTypes(selectedCastTypes);
-        UpdateSelectedRestrictions(selectedSpellRestrictions);
-        Display(true);
+        if (UpdateSelectedCastTypes(selectedCastTypes) || UpdateSelectedRestrictions(selectedSpellRestrictions))
+        {
+          titleLabel.Content = "Loading...";
+          dataGrid.IsEnabled = false;
+          dataGrid.ItemsSource = null;
+          UIElementUtil.SetEnabled(controlPanel.Children, false);
+          Display();
+        }
       }
     }
 
@@ -477,20 +493,13 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        var modified = false;
-        while (dataGrid.SelectedItems.Count > 0)
+        foreach (var selected in dataGrid.SelectedItems)
         {
-          if (dataGrid.SelectedItem is IDictionary<string, object> spr)
+          if (selected is IDictionary<string, object> spr)
           {
             HiddenSpells[spr["Spell"] as string] = 1;
-            SpellRows.Remove(spr);
-            modified = true;
+            dataGrid.View.Remove(spr);
           }
-        }
-
-        if (modified)
-        {
-          UpdateOptions();
         }
       }, System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -502,8 +511,7 @@ namespace EQLogParser
         if (sender is ImageAwesome image && image.DataContext is IDictionary<string, object> spr)
         {
           HiddenSpells[spr["Spell"] as string] = 1;
-          SpellRows.Remove(spr);
-          UpdateOptions();
+          dataGrid.View.Remove(spr);
         }
       });
     }

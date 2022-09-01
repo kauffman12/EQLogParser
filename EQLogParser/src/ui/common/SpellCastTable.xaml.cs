@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -13,16 +14,19 @@ namespace EQLogParser
   {
     private readonly Dictionary<string, bool> UniqueNames = new Dictionary<string, bool>();
     private PlayerStats RaidStats;
+    private string Title;
 
     public SpellCastTable()
     {
       InitializeComponent();
+      dataGrid.IsEnabled = false;
+      UIElementUtil.SetEnabled(controlPanel.Children, false);
       InitCastTable(dataGrid, titleLabel, selectedCastTypes, selectedSpellRestrictions);
     }
 
     internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
-      titleLabel.Content = currentStats?.ShortTitle ?? "";
+      Title = currentStats?.ShortTitle ?? "";
       selectedStats?.ForEach(stats => UniqueNames[stats.OrigName] = true);
       RaidStats = currentStats?.RaidStats;
       Display();
@@ -30,56 +34,68 @@ namespace EQLogParser
 
     internal void Display()
     {
-      foreach (var name in UniqueNames.Keys)
+      Task.Delay(100).ContinueWith(task =>
       {
-        var column = new GridTextColumn
+        Dispatcher.InvokeAsync(() =>
         {
-          HeaderText = name,
-          MappingName = name,
-          CellStyle = DataGridUtil.CreateHighlightForegroundStyle(name, new ReceivedSpellColorConverter())
-        };
+          foreach (var name in UniqueNames.Keys)
+          {
+            var column = new GridTextColumn
+            {
+              HeaderText = name,
+              MappingName = name,
+              CellStyle = DataGridUtil.CreateHighlightForegroundStyle(name, new ReceivedSpellColorConverter())
+            };
 
-        dataGrid.Columns.Add(column);
-      }
+            dataGrid.Columns.Add(column);
+          }
+        });
 
-      var allSpells = new HashSet<TimedAction>();
-      var startTime = SpellCountBuilder.QuerySpellBlocks(RaidStats, allSpells);
-      var playerSpells = new Dictionary<string, List<string>>();
-      int max = 0;
+        var allSpells = new HashSet<TimedAction>();
+        var startTime = SpellCountBuilder.QuerySpellBlocks(RaidStats, allSpells);
+        var playerSpells = new Dictionary<string, List<string>>();
+        int max = 0;
 
-      double lastTime = double.NaN;
-      var list = new List<IDictionary<string, object>>();
-      foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
-      {
-        if (!double.IsNaN(lastTime) && action.BeginTime != lastTime)
+        double lastTime = double.NaN;
+        var list = new List<IDictionary<string, object>>();
+        foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
+        {
+          if (!double.IsNaN(lastTime) && action.BeginTime != lastTime)
+          {
+            AddRow(list, playerSpells, max, lastTime, startTime);
+            playerSpells.Clear();
+            max = 0;
+          }
+
+          int size = 0;
+          if (action is SpellCast cast && !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, false, out _))
+          {
+            size = AddToList(playerSpells, cast.Caster, cast.Spell);
+          }
+
+          SpellData replaced = null;
+          if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, true, out replaced) && replaced != null)
+          {
+            size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
+          }
+
+          max = Math.Max(max, size);
+          lastTime = action.BeginTime;
+        }
+
+        if (playerSpells.Count > 0 && max > 0)
         {
           AddRow(list, playerSpells, max, lastTime, startTime);
-          playerSpells.Clear();
-          max = 0;
         }
 
-        int size = 0;
-        if (action is SpellCast cast && !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, false, out _))
+        Dispatcher.InvokeAsync(() =>
         {
-          size = AddToList(playerSpells, cast.Caster, cast.Spell);
-        }
-
-        SpellData replaced = null;
-        if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, true, out replaced) && replaced != null)
-        {
-          size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
-        }
-
-        max = Math.Max(max, size);
-        lastTime = action.BeginTime;
-      }
-
-      if (playerSpells.Count > 0 && max > 0)
-      {
-        AddRow(list, playerSpells, max, lastTime, startTime);
-      }
-
-      dataGrid.ItemsSource = list;
+          titleLabel.Content = Title;
+          dataGrid.ItemsSource = list;
+          dataGrid.IsEnabled = true;
+          UIElementUtil.SetEnabled(controlPanel.Children, true);
+        });
+      });
     }
 
     private int AddToList(Dictionary<string, List<string>> dict, string key, string value)
@@ -147,14 +163,20 @@ namespace EQLogParser
     {
       if (dataGrid?.View != null && selectedCastTypes?.Items != null)
       {
-        for (int i = dataGrid.Columns.Count - 1; i > 1; i--)
+        if (UpdateSelectedCastTypes(selectedCastTypes) || UpdateSelectedRestrictions(selectedSpellRestrictions))
         {
-          dataGrid.Columns.RemoveAt(i);
-        }
+          titleLabel.Content = "Loading...";
+          dataGrid.IsEnabled = true;
+          UIElementUtil.SetEnabled(controlPanel.Children, true);
+          dataGrid.ItemsSource = null;
 
-        UpdateSelectedCastTypes(selectedCastTypes);
-        UpdateSelectedRestrictions(selectedSpellRestrictions);
-        Display();
+          for (int i = dataGrid.Columns.Count - 1; i > 1; i--)
+          {
+            dataGrid.Columns.RemoveAt(i);
+          }
+
+          Display();
+        }
       }
     }
   }

@@ -17,9 +17,9 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel x:Name="titlePanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0">
-      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" />
+      <Label x:Name="titleLabel" Content="Loading..." Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
-    <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+    <StackPanel x:Name="controlPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="0,0,0,2" x:Name="countTypes" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="minFreqList" SelectionChanged="OptionsChanged" />
       <ComboBox x:Name="selectedSpellRestrictions" Width="145" Margin="0,0,0,2" 
