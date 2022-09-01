@@ -34,6 +34,17 @@ namespace EQLogParser
       columns.SelectedItem = selected;
     }
 
+    internal static void SetEnabled(UIElementCollection collection, bool isEnabled)
+    {
+      foreach (var child in collection)
+      {
+        if (child is UIElement elem)
+        {
+          elem.IsEnabled = isEnabled;
+        }
+      }
+    }
+
     internal static void SetSize(FrameworkElement element, double height, double width)
     {
       if (!double.IsNaN(height) && element.Height != height)

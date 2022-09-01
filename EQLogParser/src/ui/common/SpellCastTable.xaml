@@ -31,9 +31,9 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0">
-      <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
+      <Label x:Name="titleLabel" Content="Loading..." Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
-    <StackPanel x:Name="settingsPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+    <StackPanel x:Name="controlPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox x:Name="selectedSpellRestrictions" Width="150" Margin="0,0,0,2" 
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <ComboBox x:Name="selectedCastTypes" Width="140" Margin="0,0,8,2" 
@@ -53,6 +53,9 @@
                            RowHeaderWidth="40"
                            ShowRowHeader="True"
                            SelectionMode="Extended">
+      <syncfusion:SfDataGrid.SortColumnDescriptions>
+        <syncfusion:SortColumnDescription ColumnName="Time" SortDirection="Ascending" />
+      </syncfusion:SfDataGrid.SortColumnDescriptions>      
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 

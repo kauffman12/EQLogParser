@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -10,13 +11,23 @@ namespace EQLogParser
     public TankingBreakdown()
     {
       InitializeComponent();
+      dataGrid.IsEnabled = false;
+      UIElementUtil.SetEnabled(controlPanel.Children, false);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
-      titleLabel.Content = currentStats?.ShortTitle;
-      dataGrid.ItemsSource = selectedStats;
+      Task.Delay(100).ContinueWith(task =>
+      {
+        Dispatcher.InvokeAsync(() =>
+        {
+          titleLabel.Content = currentStats?.ShortTitle;
+          dataGrid.ItemsSource = selectedStats;
+          dataGrid.IsEnabled = true;
+          UIElementUtil.SetEnabled(controlPanel.Children, true);
+        });
+      });
     }
   }
 }
