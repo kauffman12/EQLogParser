@@ -123,6 +123,14 @@ namespace EQLogParser
                 fight.DoTDamage[spellKey] = stats;
               }
             }
+            else if (processed.Record.Type == Labels.PROC)
+            {
+              if (!fight.ProcDamage.TryGetValue(spellKey, out stats))
+              {
+                stats = new SpellDamageStats { Caster = processed.Record.Attacker, Spell = processed.Record.SubType };
+                fight.ProcDamage[spellKey] = stats;
+              }
+            }
 
             if (stats != null)
             {

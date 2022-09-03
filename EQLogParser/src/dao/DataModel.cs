@@ -304,6 +304,7 @@ namespace EQLogParser
     public List<ActionBlock> TauntBlocks { get; } = new List<ActionBlock>();
     public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new Dictionary<string, SpellDamageStats>();
     public Dictionary<string, SpellDamageStats> DDDamage { get; } = new Dictionary<string, SpellDamageStats>();
+    public Dictionary<string, SpellDamageStats> ProcDamage { get; } = new Dictionary<string, SpellDamageStats>();
   }
 
   internal class FightTotalDamage

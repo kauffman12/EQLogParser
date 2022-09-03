@@ -141,6 +141,9 @@
   <data name="CHAT_TO_FILTER" xml:space="preserve">
     <value>To</value>
   </data>
+  <data name="CHECK_VERSION" xml:space="preserve">
+    <value>Checking For Updates</value>
+  </data>
   <data name="CLEAR_CHAT" xml:space="preserve">
     <value>Clear Chat Archive</value>
   </data>

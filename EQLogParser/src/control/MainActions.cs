@@ -1,23 +1,23 @@
-﻿using Microsoft.VisualBasic.Logging;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using Syncfusion.SfSkinManager;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Dynamic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Security;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Web.Services.Description;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Threading;
+using Windows.Storage;
 
 namespace EQLogParser
 {
@@ -31,6 +31,84 @@ namespace EQLogParser
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new SortablePetMappingComparer();
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+    internal static void CheckVersion(string version, TextBlock errorText)
+    {
+      var dispatcher = Application.Current.Dispatcher;
+      Task.Delay(2000).ContinueWith(task =>
+      {
+        try
+        {
+          var client = new HttpClient();
+          var request = client.GetStringAsync(@"https://github.com/kauffman12/EQLogParser/blob/master/README.md");
+          request.Wait();
+
+          var matches = new Regex(@"EQLogParser-(.*).msi""").Match(request.Result);
+          if (matches.Success && matches.Groups.Count > 1 && !version.Equals(matches.Groups[1].Value) &&
+            matches.Groups[1].Value is string updated && new Regex(@"\d.\d.\d").Match(updated).Success)
+          {
+            dispatcher.InvokeAsync(() =>
+            {
+              var msg = new MessageWindow("Version " + updated + " is Available. Download and Install?",
+                EQLogParser.Resource.CHECK_VERSION, true);
+              msg.ShowDialog();
+
+              if (msg.IsYesClicked)
+              {
+                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + updated + ".msi";
+
+                try
+                {
+                  using (var download = client.GetStreamAsync(url))
+                  {
+                    download.Wait();
+
+                    var path = System.Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
+                    if (!Directory.Exists(path))
+                    {
+                      new MessageWindow("Unable to Access Downloads Folder. Need to Download Manually.",
+                        EQLogParser.Resource.CHECK_VERSION).ShowDialog();
+                      return;
+                    }
+
+                    var fullPath = path + "\\EQLogParser-" + updated + ".msi";
+                    using (var fs = new FileStream(fullPath, FileMode.Create))
+                    {
+                      download.Result.CopyTo(fs);
+                    }
+
+                    if (File.Exists(fullPath))
+                    {
+                      var process = Process.Start("msiexec", "/i " + fullPath);
+                      if (!process.HasExited)
+                      {
+                        Task.Delay(1000).ContinueWith(task =>
+                        {
+                          dispatcher.InvokeAsync(() => Application.Current.MainWindow.Close());
+                        });
+                      }
+                    }
+                  }
+                }
+                catch (Exception ex2)
+                {
+                  new MessageWindow("Problem Install Updates. Check Error Log for Details.", EQLogParser.Resource.CHECK_VERSION).ShowDialog();
+                  LOG.Error("Error Installing Updates", ex2);
+                }
+              }
+            });
+          }
+        }
+        catch (Exception ex)
+        {
+          LOG.Error("Error Checking for Updates", ex);
+          Application.Current.Dispatcher.InvokeAsync(() =>
+          {
+            errorText.Text = "Update Check Failed. Firewall?";
+          });
+        }
+      });
+    }
 
     internal static void SetTheme(Window window, string theme)
     {
