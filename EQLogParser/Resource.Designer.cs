@@ -133,6 +133,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Checking For Updates.
+        /// </summary>
+        internal static string CHECK_VERSION {
+            get {
+                return ResourceManager.GetString("CHECK_VERSION", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Clear Chat Archive.
         /// </summary>
         internal static string CLEAR_CHAT {

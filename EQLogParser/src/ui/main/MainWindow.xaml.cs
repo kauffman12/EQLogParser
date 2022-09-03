@@ -50,7 +50,7 @@ namespace EQLogParser
     { "Aggregate HPS", "Aggregate Av Heal", "Aggregate Healing", "Aggregate Crit Rate", "HPS", "# Crits", "# Heals" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() 
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
-    private const string VERSION = "v2.0.11";
+    private const string VERSION = "2.0.12";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -114,7 +114,7 @@ namespace EQLogParser
         ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
 
         // update titles
-        versionText.Text = VERSION;
+        versionText.Text = "v" + VERSION;
 
         MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
@@ -163,6 +163,17 @@ namespace EQLogParser
         enableDamageOverlayIcon.Visibility = OverlayUtil.LoadSettings() ? Visibility.Visible : Visibility.Hidden;
 
         LOG.Info("Initialized Components");
+
+        if (ConfigUtil.IfSet("CheckUpdatesAtStartup"))
+        {
+          // check version
+          checkUpdatesIcon.Visibility = Visibility.Visible;
+          MainActions.CheckVersion(VERSION, errorText);
+        }
+        else
+        {
+          checkUpdatesIcon.Visibility = Visibility.Hidden;
+        }
 
         if (ConfigUtil.IfSet("AutoMonitor"))
         {
@@ -362,22 +373,28 @@ namespace EQLogParser
     private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
     {
       IsHideOnMinimizeEnabled = !IsHideOnMinimizeEnabled;
-      ConfigUtil.SetSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled.ToString());
       enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
     {
       IsAoEHealingEnabled = !IsAoEHealingEnabled;
-      ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString());
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
       Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(true));
     }
 
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
     {
-      ConfigUtil.SetSetting("AutoMonitor", (enableAutoMonitorIcon.Visibility == Visibility.Hidden).ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting("AutoMonitor", (enableAutoMonitorIcon.Visibility == Visibility.Hidden).ToString());
       enableAutoMonitorIcon.Visibility = enableAutoMonitorIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+    }
+
+    private void ToggleCheckUpdatesClick(object sender, RoutedEventArgs e)
+    {
+      ConfigUtil.SetSetting("CheckUpdatesAtStartup", (checkUpdatesIcon.Visibility == Visibility.Hidden).ToString());
+      checkUpdatesIcon.Visibility = checkUpdatesIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)

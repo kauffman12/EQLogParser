@@ -11,6 +11,8 @@
         Closed="WindowClosed"
         ResizeMode="CanResize"
         BorderThickness="2"
+        MinWidth="400"
+        MinHeight="250"
         TitleBarHeight="26"
         ShowTitle="False"
         TextOptions.TextFormattingMode="Display"
@@ -232,6 +234,11 @@
               <fa:ImageAwesome x:Name="enableAutoMonitorIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem x:Name="checkUpdates" Header="Check for Updates at Startup" Click="ToggleCheckUpdatesClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="checkUpdatesIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <MenuItem x:Name="hideOnMinimize" Header="_Hide Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
@@ -316,6 +323,7 @@
   </syncfusion:ChromelessWindow.LeftHeaderItemsSource>
   <syncfusion:ChromelessWindow.RightHeaderItemsSource>
     <listCollection:ArrayList>
+      <TextBlock x:Name="errorText" Margin="0,0,8,0" VerticalAlignment="Center" FontStyle="Italic" Foreground="{DynamicResource EQWarnForegroundBrush}"/>
       <TextBlock x:Name="versionText" VerticalAlignment="Center" Width="40" Margin="0,0,10,0" Foreground="{DynamicResource ContentForeground}" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
     </listCollection:ArrayList>
   </syncfusion:ChromelessWindow.RightHeaderItemsSource>
