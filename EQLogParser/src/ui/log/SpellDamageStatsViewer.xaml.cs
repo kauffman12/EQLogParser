@@ -32,6 +32,7 @@ namespace EQLogParser
       Types.Add("All Types");
       Types.Add(Labels.DD);
       Types.Add(Labels.DOT);
+      Types.Add(Labels.PROC);
       typeList.SelectedIndex = 0;
 
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LogLoadingComplete;
@@ -70,6 +71,7 @@ namespace EQLogParser
 
       var playerDDTotals = new Dictionary<string, SpellDamageStats>();
       var playerDoTTotals = new Dictionary<string, SpellDamageStats>();
+      var playerProcTotals = new Dictionary<string, SpellDamageStats>();
       var uniqueSpells = new Dictionary<string, byte>();
       var uniquePlayers = new Dictionary<string, byte>();
 
@@ -113,6 +115,24 @@ namespace EQLogParser
             dotStats.Count += kv.Value.Count;
           }
         }
+
+        foreach (var kv in fight.ProcDamage)
+        {
+          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
+          {
+            if (!playerProcTotals.TryGetValue(kv.Key, out SpellDamageStats procStats))
+            {
+              procStats = new SpellDamageStats { Caster = kv.Value.Caster, Spell = kv.Value.Spell };
+              playerProcTotals[kv.Key] = procStats;
+              uniqueSpells[kv.Value.Spell] = 1;
+              uniquePlayers[kv.Value.Caster] = 1;
+            }
+
+            procStats.Max = Math.Max(procStats.Max, kv.Value.Max);
+            procStats.Total += kv.Value.Total;
+            procStats.Count += kv.Value.Count;
+          }
+        }
       }
 
       var list = new List<IDictionary<string, object>>();
@@ -124,6 +144,11 @@ namespace EQLogParser
       foreach (ref var stats in playerDDTotals.Values.ToArray().AsSpan())
       {
         AddRow(list, stats, Labels.DD);
+      }
+
+      foreach (ref var stats in playerProcTotals.Values.ToArray().AsSpan())
+      {
+        AddRow(list, stats, Labels.PROC);
       }
 
       foreach (var key in uniqueSpells.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
