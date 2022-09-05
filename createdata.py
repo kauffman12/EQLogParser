@@ -401,10 +401,6 @@ if os.path.isfile(DBSpellsFile):
     if origDuration == 1950 and castTime == 0 and lockoutTime == 0 and recastTime == 0 and beneficial != 0:
       continue
 	  
-    # filter out obvious abilities that cant be from a player
-    #if blockable != 0 and dispellable != 0 and maxDuration < 1950 and adps > 0:
-    #  adps = 0	  
-    
     classMask = 0
     minLevel = 255
     for i in range(36, 36+16):
@@ -419,6 +415,7 @@ if os.path.isfile(DBSpellsFile):
     adps = getAdpsValueFromSkill(0, skill)
     damaging = 0
     bane = False
+    charm = False
     
     for slot in data[-1].split('$'):
       values = slot.split('|')
@@ -427,6 +424,9 @@ if os.path.isfile(DBSpellsFile):
         base1 = values[2]
         base2 = values[3]
         
+        if spa == 22:
+          charm = True
+
         if spa == 0 or spa == 79 or spa == 100:
           if int(base1) > 0:
             damaging = -1
@@ -481,6 +481,10 @@ if os.path.isfile(DBSpellsFile):
     if int(recourse) > 0:
       recourses[recourse] = id
       procs.append(recourse)
+
+    # filter some obvious non-player adps
+    if charm and adps != 0:
+      adps = 0
 
     abbrv = abbreviate(name)
     info['abbrv'] = abbrv
