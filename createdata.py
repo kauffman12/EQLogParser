@@ -19,8 +19,7 @@ ADPS_B1_MAX = { 182: 0 }
 BASE1_PROC_LIST = [ 85, 406, 419, 427, 429 ]
 BASE2_PROC_LIST = [ 339, 340, 360, 374, 383, 481 ]
 IGNORE = [ 'Test Shield', 'SKU', 'SummonTest', ' Test', 'test atk', 'PvPS', 'BetaTestSpell', 'AA_SPELL_PH', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
-IS_NOT_PROC = [ 'Bifold Focus', 'Boastful Bellow', 'Cloaked Blade', 'Divine Balance', 'Journeyman Boots', 'Frost Shock', 'Ice Shock', 'Geomantra', 'Lightning Shock', 'Twincast', 'Prophet\'s Gift of the Ruchu', 'Spirit of Vesagran' ] # also appended to later
-IS_PROC = [ 'Arcane Fusion', 'Antipathetic Strike', 'Banestrike', 'Blessed Guardian Effect', 'Blessed Guardian Heal', 'Blessing of Life', 'Blessing of the Faithful', 'Bite of the Asp', 'Boastful Conclusion', 'Call of Fire Strike', 'Cascade of Decay Rot', 'Cascading Theft of Defense', 'Cascading Theft of Life', 'Color Shock Stun', 'Cryomancy', 'Decapitation', 'Distracting Strike', 'Divine Surge of Battle', 'Envenomed Blade', 'Eye Gouge', 'Feral Swipe', 'Fists of Fury', 'Flurry of Daggers', 'Frenzied Volley', 'Gelid Claw', 'Gorilla Smash', 'Raven\'s Claw', 'Gut Punch Strike', 'Healing Light', 'Heavy Arrow', 'Hunter\'s Fury', 'Nature\'s Reprieve', 'Languid Bite', 'Phalanx of Fury', 'Phantasmic Reflex', 'Recourse of Life', 'Sanctified Blessing', 'Uncontained Frenzy', 'Lethality', 'Massive Strike', 'Mortal Coil', 'Overdrive Punch', 'Presence of Fear', 'Pyromancy', 'Reluctant Lifeshare', 'Resonant Kick', 'Resonant Strike', 'Soul Flay', 'Sincere Fury Strike', 'Spirit Strike', 'Steely Renewal', 'Strike of Ire', 'Strike Fury', 'Trigger', 'Thunderfoot', 'Theft of Essence', 'Touch of the Cursed' ]
+IS_PROC = [ 'Blessed Guardian Effect', 'Blessed Guardian Heal', 'Blessing of Life', 'Blessing of the Faithful', 'Bite of the Asp', 'Boastful Conclusion', 'Call of Fire Strike', 'Cascade of Decay Rot', 'Cascading Theft of Defense', 'Cascading Theft of Life', 'Color Shock Stun', 'Cryomancy', 'Decapitation', 'Distracting Strike', 'Divine Surge of Battle', 'Envenomed Blade', 'Eye Gouge', 'Feral Swipe', 'Fists of Fury', 'Flurry of Daggers', 'Frenzied Volley', 'Gelid Claw', 'Gut Punch Strike', 'Healing Light', 'Heavy Arrow', 'Hunter\'s Fury', 'Nature\'s Reprieve', 'Languid Bite', 'Phalanx of Fury', 'Phantasmic Reflex', 'Recourse of Life', 'Sanctified Blessing', 'Uncontained Frenzy', 'Lethality', 'Massive Strike', 'Mortal Coil', 'Overdrive Punch', 'Presence of Fear', 'Pyromancy', 'Reluctant Lifeshare', 'Resonant Kick', 'Resonant Strike', 'Soul Flay', 'Sincere Fury Strike', 'Spirit Strike', 'Steely Renewal', 'Strike of Ire', 'Strike Fury', 'Trigger', 'Thunderfoot', 'Theft of Essence', 'Touch of the Cursed' ]
 IS_TARGETRING = [ 'Issuance' ]
 
 RANKS = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Third', 'Fifth', 'Octave' ]
@@ -288,18 +287,6 @@ def getAdpsValueFromSkill(current, skill):
     updated = updated | current 
   return updated
   
-def inProcList(name):
-  for test in IS_PROC:
-    if test in name:
-      return True 
-  return False
-
-def inNotProcList(name):
-  for test in IS_NOT_PROC:
-    if name == test:
-      return True 
-  return False  
-
 def isTargetRing(name):
   for test in IS_TARGETRING:
     if name.startswith(test):
@@ -414,7 +401,6 @@ if os.path.isfile(DBSpellsFile):
 
     adps = getAdpsValueFromSkill(0, skill)
     damaging = 0
-    bane = False
     charm = False
     
     for slot in data[-1].split('$'):
@@ -433,7 +419,7 @@ if os.path.isfile(DBSpellsFile):
           else:
             damaging = 1
           if int(base1) <= -50000000:
-            bane = True
+            damaging = 2 # BANE
             
         if spa in BASE1_PROC_LIST:
           if (spa != 406 or (manaCost == 0 and castTime == 0)):
@@ -491,7 +477,6 @@ if os.path.isfile(DBSpellsFile):
     info['adps'] = adps
     info['castTime'] = castTime
     info['damaging'] = damaging
-    info['bane'] = bane
     info['id'] = id
     info['intId'] = intId
     info['beneficial'] = beneficial
@@ -527,19 +512,6 @@ if os.path.isfile(DBSpellsFile):
     # Overdrive Punch the proc and main spell have the same name. Just ignore the non-damaging versions
     if name != 'Overdrive Punch' or beneficial == 1:
       spells[id] = info
-
-  # update procs
-  for id in spells:
-    proc = 0
-    if spells[id]['bane'] == True:
-      proc = 2
-    elif (id in procSPAs and not inNotProcList(spells[id]['abbrv']) and spells[id]['level'] > 250): # extra check for regular spells picked up
-      proc = 1
-    elif spells[id]['level'] == 255 and not inNotProcList(spells[id]['abbrv']) and spells[id]['castTime'] == 0 and spells[id]['manaCost'] == 0 and spells[id]['combatSkill'] == 0 and spells[id]['rank'] < 1:
-      proc = 1
-    elif (inProcList(spells[id]['abbrv'])):
-      proc = 1
-    spells[id]['proc'] = proc
 
   for i in range(6):
     for id in spells:
@@ -596,16 +568,16 @@ if os.path.isfile(DBSpellsFile):
 
   output = open('output.txt', 'w')
   for key in sorted(final):
-    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s^%d' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['mgb'], final[key]['rank'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'], final[key]['proc'])
+    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['mgb'], final[key]['rank'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'])
     output.write(data)
     output.write('\n')
-  output.write('900001^Glyph of Destruction I^254^20^1^0^6^65407^0^0^0^0^3^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.^0')
+  output.write('900001^Glyph of Destruction I^254^20^1^0^6^65407^0^0^0^0^3^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
-  output.write('900002^Glyph of Destruction II^254^20^1^0^6^65407^0^0^0^0^3^0^2^^ is infused for destruction.^Your Glyph of Destruction fades away.^0')
+  output.write('900002^Glyph of Destruction II^254^20^1^0^6^65407^0^0^0^0^3^0^2^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
-  output.write('900003^Glyph of Destruction III^254^20^1^0^6^65407^0^0^0^0^3^0^3^^ is infused for destruction.^Your Glyph of Destruction fades away.^0')
+  output.write('900003^Glyph of Destruction III^254^20^1^0^6^65407^0^0^0^0^3^0^3^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
-  output.write('900004^Glyph of Destruction IV^254^20^1^0^6^65407^0^0^0^0^3^0^4^^ is infused for destruction.^Your Glyph of Destruction fades away.^0')
+  output.write('900004^Glyph of Destruction IV^254^20^1^0^6^65407^0^0^0^0^3^0^4^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
-  output.write('900005^Glyph of Destruction V^254^20^1^0^6^65407^0^0^0^0^3^0^5^^ is infused for destruction.^Your Glyph of Destruction fades away.^0')
+  output.write('900005^Glyph of Destruction V^254^20^1^0^6^65407^0^0^0^0^3^0^5^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
