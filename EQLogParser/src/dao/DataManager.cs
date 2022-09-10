@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.Data.Extensions;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -149,6 +150,9 @@ namespace EQLogParser
       // Old Spell cache (EQEMU)
       ConfigUtil.ReadList(@"data\oldspells.txt").ForEach(line => OldSpellNamesDB[line] = true);
 
+      var procCache = new Dictionary<string, bool>();
+      ConfigUtil.ReadList(@"data\procs.txt").Where(line => line.Length > 0 && line[0] != '#').ForEach(line => procCache[line] = true);
+
       ConfigUtil.ReadList(@"data\spells.txt").ForEach(line =>
       {
         try
@@ -156,6 +160,7 @@ namespace EQLogParser
           var spellData = ParseCustomSpellData(line);
           if (spellData != null)
           {
+            spellData.Proc = procCache.ContainsKey(spellData.Name) ? (byte)1 : (byte)0;
             spellList.Add(spellData);
             helper.AddToList(SpellsNameDB, spellData.Name, spellData);
 
@@ -718,8 +723,7 @@ namespace EQLogParser
             Rank = byte.Parse(data[14], CultureInfo.CurrentCulture),
             LandsOnYou = string.Intern(data[15]),
             LandsOnOther = string.Intern(data[16]),
-            WearOff = string.Intern(data[17]),
-            Proc = byte.Parse(data[18], CultureInfo.CurrentCulture)
+            WearOff = string.Intern(data[17])
           };
         }
       }

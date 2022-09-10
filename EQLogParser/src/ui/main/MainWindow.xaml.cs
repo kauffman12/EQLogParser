@@ -36,7 +36,6 @@ namespace EQLogParser
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled = false;
-    internal static bool IsIgnoreCharmPetsEnabled = false;
     internal static readonly int ACTION_INDEX = 27;
     internal static string CurrentTheme = "MaterialDark";
 
@@ -50,7 +49,7 @@ namespace EQLogParser
     { "Aggregate HPS", "Aggregate Av Heal", "Aggregate Healing", "Aggregate Crit Rate", "HPS", "# Crits", "# Heals" };
     private static readonly List<string> TANKING_CHOICES = new List<string>() 
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
-    private const string VERSION = "2.0.12";
+    private const string VERSION = "2.0.13";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -126,10 +125,6 @@ namespace EQLogParser
         TankingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
 
         UpdateDeleteChatMenu();
-
-        // Ignore Charm Pets
-        IsIgnoreCharmPetsEnabled = ConfigUtil.IfSet("IgnoreCharmPets");
-        ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // AoE healing
         IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
@@ -431,14 +426,6 @@ namespace EQLogParser
     {
       IsSlayUndeadDamageEnabled = !IsSlayUndeadDamageEnabled;
       UpdateDamageOption(enableSlayUndeadDamageIcon, IsSlayUndeadDamageEnabled, "IncludeSlayUndeadDamage");
-    }
-
-    private void ToggleIgnoreCharmPetsClick(object sender, RoutedEventArgs e)
-    {
-      IsIgnoreCharmPetsEnabled = !IsIgnoreCharmPetsEnabled;
-      ConfigUtil.SetSetting("IgnoreCharmPets", IsIgnoreCharmPetsEnabled.ToString(CultureInfo.CurrentCulture));
-      ignoreCharmPetsIcon.Visibility = IsIgnoreCharmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
-      new MessageWindow("Setting Needs Restart of EQLogParser.", EQLogParser.Resource.RESTART_NEEDED).ShowDialog();
     }
 
     private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e)
@@ -966,14 +953,23 @@ namespace EQLogParser
 
     private void WindowStateChanged(object sender, EventArgs e)
     {
-      if (WindowState != WindowState.Minimized)
+      if (WindowState == WindowState.Minimized)
       {
-        ShowInTaskbar = true;
+        if (IsHideOnMinimizeEnabled && Visibility != Visibility.Hidden)
+        {
+          Hide();
+        }
       }
-      else if (IsHideOnMinimizeEnabled)
+      else
       {
-        ShowInTaskbar = false;
-        Hide();
+        if (Visibility == Visibility.Hidden)
+        {
+          Show();
+        }
+
+        // workaround to bring window to front
+        Topmost = true;
+        Topmost = false;
       }
     }
 

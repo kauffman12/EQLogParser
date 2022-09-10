@@ -15,6 +15,7 @@
         MinHeight="250"
         TitleBarHeight="26"
         ShowTitle="False"
+        UseNativeChrome="True"
         TextOptions.TextFormattingMode="Display"
         WindowStartupLocation="Manual"
         StateChanged="WindowStateChanged">
@@ -242,11 +243,6 @@
           <MenuItem x:Name="hideOnMinimize" Header="_Hide Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="ignoreCharmPets" Header="Ignore _Charm Pets" Click="ToggleIgnoreCharmPetsClick" Height="24">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="ignoreCharmPetsIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">

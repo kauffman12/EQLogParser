@@ -226,6 +226,10 @@
           chatType = new ChatType { Channel = ChatChannels.Auction, SenderIsYou = false, TextStart = end1 + 11 };
           chatType.Sender = action.Substring(0, end1);
         }
+        else if (action.IndexOf(" says, 'My leader is ") is int charmPet && charmPet > -1)
+        {
+          CheckPetLeader(action, charmPet, beginTime);
+        }
 
         if (chatType != null && isCrossServer && chatType.Sender.Contains("."))
         {
