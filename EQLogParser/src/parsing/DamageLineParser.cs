@@ -770,18 +770,16 @@ namespace EQLogParser
           SpellData data = DataManager.Instance.GetSpellByAbbrv(spellName);
           if (data != null)
           {
-            switch (data.Proc)
+            if (data.Damaging == 2)
             {
-              case 1:
-                result = Labels.PROC;
-                break;
-              case 2:
-                result = Labels.BANE;
-                break;
+              result = Labels.BANE;
+            }
+            else if (data.Proc == 1)
+            {
+              result = Labels.PROC;
             }
           }
         }
-
         SpellTypeCache[key] = result;
       }
       return result;

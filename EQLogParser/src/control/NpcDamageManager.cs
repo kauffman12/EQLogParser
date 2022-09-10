@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Diagram;
+using System;
 using System.Collections.Generic;
 
 namespace EQLogParser
@@ -233,20 +234,7 @@ namespace EQLogParser
           if (isDefenderPlayer || isAttackerPlayer)
           {
             valid = isDefenderPlayer != isAttackerPlayer;
-            if (!valid)
-            {
-              if (PlayerManager.Instance.IsCharmPet(record.Attacker))
-              {
-                valid = true;
-                npcDefender = false;
-              }
-              else if (PlayerManager.Instance.IsCharmPet(record.Defender))
-              {
-                valid = true;
-                npcDefender = true;
-              }
-            }
-            else
+            if (valid)
             {
               npcDefender = !isDefenderPlayer;
             }
