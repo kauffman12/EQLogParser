@@ -53,7 +53,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, double> VerifiedPlayers = new ConcurrentDictionary<string, double>();
     private readonly ConcurrentDictionary<string, byte> Mercs = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> CharmPets = new ConcurrentDictionary<string, byte>();
     private readonly List<string> SortedClassList = new List<string>();
     private readonly List<string> SortedClassListWithNull = new List<string>();
     private static readonly object LockObject = new object();
@@ -97,7 +96,6 @@ namespace EQLogParser
     }
 
     private void SaveTimer_Tick(object sender, EventArgs e) => Save();
-    internal bool IsCharmPet(string name) => !string.IsNullOrEmpty(name) && CharmPets.ContainsKey(name);
     internal bool IsDoTClass(string name) => !string.IsNullOrEmpty(name) && DoTClasses.ContainsKey(name);
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name)
       || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
@@ -156,15 +154,7 @@ namespace EQLogParser
           }
         }
 
-        if (!IsPossiblePlayerName(name))
-        {
-          if (!name.EndsWith("`s pet", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("`s ward", StringComparison.OrdinalIgnoreCase) &&
-            !name.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) && !MainWindow.IsIgnoreCharmPetsEnabled)
-          {
-            CharmPets[name] = 1;
-          }
-        }
-        else if (!PetToPlayer.ContainsKey(name))
+        if (IsPossiblePlayerName(name) && !PetToPlayer.ContainsKey(name))
         {
           AddPetToPlayer(name, Labels.UNASSIGNED);
         }
