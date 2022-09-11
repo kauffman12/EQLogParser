@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -52,7 +54,7 @@ namespace EQLogParser
     private string SelectedClass = EQLogParser.Resource.ANY_CLASS;
     private int CurrentMaxRows = 5;
     private int CurrentFontSize = 13;
-
+    private CancellationTokenSource CancelToken = null;
     public OverlayWindow(bool configure = false)
     {
       InitializeComponent();
@@ -152,7 +154,7 @@ namespace EQLogParser
       int damageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
       foreach (var item in damageModeSelection.Items.Cast<ComboBoxItem>())
       {
-        if ((string)item.Tag == damageMode.ToString(CultureInfo.CurrentCulture))
+        if ((string)item.Tag == damageMode.ToString())
         {
           damageModeSelection.SelectedItem = item;
           CurrentDamageSelectionMode = damageMode;
@@ -334,13 +336,45 @@ namespace EQLogParser
 
           if (Stats == null)
           {
-            windowBrush.Opacity = 0.0;
-            ButtonPopup.IsOpen = false;
-            SetVisible(false);
-            Height = 0;
-            PrevList = null;
             UpdateTimer.Stop();
             DataManager.Instance.ResetOverlayFights();
+            PrevList = null;
+
+            if (CurrentDamageSelectionMode > 0)
+            {
+              windowBrush.Opacity = 0.0;
+              ButtonPopup.IsOpen = false;
+              SetVisible(false);
+              Height = 0;
+            }
+            else
+            {
+              if (CancelToken != null)
+              {
+                CancelToken.Cancel();
+                CancelToken = null;
+              }
+
+              CancelToken = new CancellationTokenSource();
+              Task.Delay(6000).ContinueWith(task =>
+              {
+                Dispatcher.BeginInvoke(() =>
+                {
+                  lock (StatsLock)
+                  {
+                    if (!UpdateTimer.IsEnabled && Height > 0)
+                    {
+                      windowBrush.Opacity = 0.0;
+                      ButtonPopup.IsOpen = false;
+                      SetVisible(false);
+                      Height = 0;
+                    }
+
+                    CancelToken = null;
+                  }
+                });
+              }, CancelToken.Token);
+            }
           }
           else if (Active)
           {

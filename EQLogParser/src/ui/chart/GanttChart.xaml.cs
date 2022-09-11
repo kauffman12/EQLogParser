@@ -21,7 +21,7 @@ namespace EQLogParser
     private static readonly List<string> BlockBrushes = new List<string>() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
 
     private const int ROW_HEIGHT = 24;
-    private const int LABELS_WIDTH = 180;
+    private const int LABELS_WIDTH = 190;
     private const ushort CASTER_ADPS = 1;
     private const ushort MELEE_ADPS = 2;
     private const ushort TANK_ADPS = 4;
@@ -73,7 +73,7 @@ namespace EQLogParser
 
         if (tanking)
         {
-          showSelfOnly.Visibility = Visibility.Hidden;
+          //showSelfOnly.Visibility = Visibility.Hidden;
           showMeleeAdps.Visibility = Visibility.Hidden;
           showCasterAdps.Visibility = Visibility.Hidden;
         }
@@ -125,12 +125,7 @@ namespace EQLogParser
               {
                 if (string.IsNullOrEmpty(cast.SpellData.LandsOnOther))
                 {
-                  SelfOnlyOverride[cast.SpellData.NameAbbrv] = 1;
-
-                  if (SelfOnly.ContainsKey(cast.SpellData.NameAbbrv))
-                  {
-                    SelfOnly.Remove(cast.SpellData.NameAbbrv);
-                  }
+                  SelfOnly[cast.SpellData.NameAbbrv] = 1;
                 }
 
                 UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i], deathTimes);
@@ -145,7 +140,7 @@ namespace EQLogParser
 
                 if (spellData != null && spellData.Adps > 0 && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
                 {
-                  if (string.IsNullOrEmpty(spellData.LandsOnOther) && !SelfOnlyOverride.ContainsKey(spellData.NameAbbrv))
+                  if (string.IsNullOrEmpty(spellData.LandsOnOther))
                   {
                     SelfOnly[spellData.NameAbbrv] = 1;
                   }
@@ -330,7 +325,7 @@ namespace EQLogParser
       foreach (var key in SpellRanges.Keys.OrderBy(key => key))
       {
         var spellRange = SpellRanges[key];
-        if ((CurrentShowSelfOnly || TankingMode || !SelfOnly.ContainsKey(key))
+        if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
           && (CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS)
           || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)
           || TankingMode && ((spellRange.Adps & TANK_ADPS) == TANK_ADPS)) && !Ignore.ContainsKey(key))
