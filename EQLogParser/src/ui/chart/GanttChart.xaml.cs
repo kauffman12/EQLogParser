@@ -138,7 +138,6 @@ namespace EQLogParser
               else if (action is ReceivedSpell received && received.Receiver == player)
               {
                 var spellData = received.SpellData;
-
                 if (spellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out SpellData replaced))
                 {
                   spellData = replaced;
