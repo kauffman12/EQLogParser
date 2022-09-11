@@ -12,17 +12,14 @@ ADPS_ALL_VALUE = ADPS_CASTER_VALUE + ADPS_MELEE_VALUE + ADPS_TANK_VALUE
 ADPS_CASTER = [ 15, 118, 124, 127, 132, 170, 212, 273, 286, 294, 302, 303, 339, 351, 358, 374, 375, 383, 399, 413, 461, 462, 501, 507 ]
 ADPS_MELEE = [ 2, 4, 5, 6, 11, 118, 119, 169, 171, 176, 177, 182, 184, 185, 186, 189, 198, 200, 216, 220, 225, 227, 250, 252, 258, 266,
 279, 280, 330, 339, 351, 364, 374, 383, 418, 427, 429, 433, 459, 471, 473, 482, 496, 498, 499, 503 ]
-ADPS_TANK = [ 55, 69, 114, 174, 175, 178, 197, 323, 393, 450, 451, 452, 505, 515, 516 ]
+ADPS_TANK = [ 55, 69, 114, 162, 168, 174, 175, 178, 197, 320, 323, 393, 405, 450, 451, 452, 505, 515, 516 ]
 ADPS_LIST = ADPS_CASTER + ADPS_MELEE + ADPS_TANK
 ADPS_B1_MIN = { 11: 100 }
 ADPS_B1_MAX = { 182: 0 }
-BASE1_PROC_LIST = [ 85, 406, 419, 427, 429 ]
-BASE2_PROC_LIST = [ 339, 340, 360, 374, 383, 481 ]
 IGNORE = [ 'Test Shield', 'SKU', 'SummonTest', ' Test', 'test atk', 'PvPS', 'BetaTestSpell', 'AA_SPELL_PH', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
-IS_PROC = [ 'Blessed Guardian Effect', 'Blessed Guardian Heal', 'Blessing of Life', 'Blessing of the Faithful', 'Bite of the Asp', 'Boastful Conclusion', 'Call of Fire Strike', 'Cascade of Decay Rot', 'Cascading Theft of Defense', 'Cascading Theft of Life', 'Color Shock Stun', 'Cryomancy', 'Decapitation', 'Distracting Strike', 'Divine Surge of Battle', 'Envenomed Blade', 'Eye Gouge', 'Feral Swipe', 'Fists of Fury', 'Flurry of Daggers', 'Frenzied Volley', 'Gelid Claw', 'Gut Punch Strike', 'Healing Light', 'Heavy Arrow', 'Hunter\'s Fury', 'Nature\'s Reprieve', 'Languid Bite', 'Phalanx of Fury', 'Phantasmic Reflex', 'Recourse of Life', 'Sanctified Blessing', 'Uncontained Frenzy', 'Lethality', 'Massive Strike', 'Mortal Coil', 'Overdrive Punch', 'Presence of Fear', 'Pyromancy', 'Reluctant Lifeshare', 'Resonant Kick', 'Resonant Strike', 'Soul Flay', 'Sincere Fury Strike', 'Spirit Strike', 'Steely Renewal', 'Strike of Ire', 'Strike Fury', 'Trigger', 'Thunderfoot', 'Theft of Essence', 'Touch of the Cursed' ]
 IS_TARGETRING = [ 'Issuance' ]
 
-RANKS = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Third', 'Fifth', 'Octave' ]
+RANKS = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Third', 'Fifth', 'Octave', 'Azia', 'Beza', 'Caza' ]
 ROMAN = [ (400, 'CD'), (100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'), (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I') ]
 
 ADPS_EXT_DUR = dict()
@@ -332,7 +329,6 @@ if os.path.isfile(DBSpellsFile):
   spa373s = dict()
   spa374s = dict()
   spa406s = dict()
-  procSPAs = dict()
 
   for line in open(DBSpellsFile, 'r'):
     procs = []
@@ -421,12 +417,6 @@ if os.path.isfile(DBSpellsFile):
           if int(base1) <= -50000000:
             damaging = 2 # BANE
             
-        if spa in BASE1_PROC_LIST:
-          if (spa != 406 or (manaCost == 0 and castTime == 0)):
-            procSPAs[base1] = spa
-        elif spa in BASE2_PROC_LIST:
-          if (spa != 374 and spa != 340) or (manaCost == 0 and castTime == 0):
-            procSPAs[base2] = spa
         if spa in ADPS_LIST:
           if spa in ADPS_B1_MIN:
             if int(base1) >= ADPS_B1_MIN[spa]:
