@@ -9,10 +9,9 @@ ADPS_CASTER_VALUE = 1
 ADPS_MELEE_VALUE = 2
 ADPS_TANK_VALUE = 4
 ADPS_ALL_VALUE = ADPS_CASTER_VALUE + ADPS_MELEE_VALUE + ADPS_TANK_VALUE
-ADPS_CASTER = [ 15, 118, 124, 127, 132, 170, 212, 273, 286, 294, 302, 303, 339, 351, 358, 374, 375, 383, 399, 413, 461, 462, 501, 507 ]
-ADPS_MELEE = [ 2, 4, 5, 6, 11, 118, 119, 169, 171, 176, 177, 182, 184, 185, 186, 189, 198, 200, 216, 220, 225, 227, 250, 252, 258, 266,
-279, 280, 330, 339, 351, 364, 374, 383, 418, 427, 429, 433, 459, 471, 473, 482, 496, 498, 499, 503 ]
-ADPS_TANK = [ 55, 69, 114, 162, 168, 174, 175, 178, 197, 320, 323, 393, 405, 450, 451, 452, 505, 515, 516 ]
+ADPS_CASTER = [ 8, 9, 15, 97, 118, 124, 127, 132, 170, 212, 273, 286, 294, 302, 303, 339, 351, 358, 374, 375, 383, 399, 413, 461, 462, 501, 507 ]
+ADPS_MELEE = [ 2, 4, 5, 11, 118, 119, 169, 171, 176, 177, 182, 184, 185, 186, 189, 190, 198, 200, 201, 216, 220, 225, 227, 250, 252, 258, 266, 276, 279, 280, 301, 330, 339, 351, 364, 374, 383, 418, 427, 429, 433, 459, 471, 473, 482, 496, 498, 499, 503 ]
+ADPS_TANK = [ 1, 6, 7, 55, 114, 120, 125, 161, 162, 163, 168, 174, 175, 178, 181, 188, 197, 213, 214, 214, 259, 320, 323, 393, 405, 450, 451, 452, 505, 515, 516 ]
 ADPS_LIST = ADPS_CASTER + ADPS_MELEE + ADPS_TANK
 ADPS_B1_MIN = { 11: 100 }
 ADPS_B1_MAX = { 182: 0 }
@@ -274,11 +273,11 @@ def getAdpsValueFromSpa(current, spa):
     updated = updated | current 
   return updated
 
-def getAdpsValueFromSkill(current, skill):
+def getAdpsValueFromSkill(current, skill, endurance):
   if current == ADPS_ALL_VALUE:
     return current
   updated = 0
-  if skill == 15:
+  if skill == 15 and endurance > 0:
     updated = updated + ADPS_TANK_VALUE
   if current > 0:
     updated = updated | current 
@@ -362,6 +361,7 @@ if os.path.isfile(DBSpellsFile):
     songWindow = int(data[84])
     reflectable = int(data[91])
     hateMod = int(data[92])
+    endurance = int(data[96])
     combatSkill = int(data[98])
     hateOver = int(data[99])
     maxHits = int(data[102])
@@ -395,7 +395,7 @@ if os.path.isfile(DBSpellsFile):
     if origDuration == 1950:
       classMask = 65535
 
-    adps = getAdpsValueFromSkill(0, skill)
+    adps = getAdpsValueFromSkill(0, skill, endurance)
     damaging = 0
     charm = False
     
