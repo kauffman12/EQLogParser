@@ -55,6 +55,7 @@ namespace EQLogParser
     private int CurrentMaxRows = 5;
     private int CurrentFontSize = 13;
     private CancellationTokenSource CancelToken = null;
+
     public OverlayWindow(bool configure = false)
     {
       InitializeComponent();
@@ -356,7 +357,7 @@ namespace EQLogParser
               }
 
               CancelToken = new CancellationTokenSource();
-              Task.Delay(6000).ContinueWith(task =>
+              Task.Delay(8000).ContinueWith(task =>
               {
                 Dispatcher.BeginInvoke(() =>
                 {

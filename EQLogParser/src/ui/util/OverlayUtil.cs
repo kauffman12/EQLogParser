@@ -40,18 +40,18 @@ namespace EQLogParser
 
     internal static void OpenOverlay(bool configure = false, bool saveFirst = false)
     {
-      if (saveFirst)
-      {
-        ConfigUtil.Save();
-      }
-
-      Application.Current.Dispatcher.InvokeAsync(() =>
+      Application.Current.Dispatcher.Invoke(() =>
       {
         Overlay?.Close();
         Overlay = new OverlayWindow(configure);
         UpdateTheme();
         Overlay.Show();
-      });
+      }, System.Windows.Threading.DispatcherPriority.Send);
+
+      if (saveFirst)
+      {
+        ConfigUtil.Save();
+      }
     }
 
     internal static void ResetOverlay()
