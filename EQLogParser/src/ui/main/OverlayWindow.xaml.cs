@@ -19,12 +19,12 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for OverlayWindow.xaml
   /// </summary>
-  public partial class OverlayWindow : Window
+  public partial class OverlayWindow : ChromelessWindow
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private static readonly object StatsLock = new object();
-    private static readonly Color TITLECOLOR = Color.FromRgb(30, 30, 30);
+    private static readonly Color TITLECOLOR = Color.FromRgb(25, 25, 25);
     private readonly List<ColorPicker> ColorPickerList = new List<ColorPicker>();
     private readonly List<StackPanel> NamePanels = new List<StackPanel>();
     private readonly List<Image> NameIconList = new List<Image>();
@@ -32,6 +32,7 @@ namespace EQLogParser
     private readonly List<StackPanel> DamagePanels = new List<StackPanel>();
     private readonly List<TextBlock> DamageBlockList = new List<TextBlock>();
     private readonly List<ImageAwesome> DamageRateList = new List<ImageAwesome>();
+    private readonly List<Rectangle> EmptyList = new List<Rectangle>();
     private readonly List<Rectangle> RectangleList = new List<Rectangle>();
     private readonly List<Color> ColorList = new List<Color>();
     private readonly DispatcherTimer UpdateTimer;
@@ -93,30 +94,35 @@ namespace EQLogParser
 
       if (!offsetSize)
       {
+        SetVisible(false);
+        BorderThickness = new Thickness(0);
+        ResizeBorderThickness = new Thickness(0);
         CreateRows();
-        Title = "Overlay";
+        TitleBarHeight = 0.0;
         MinHeight = 0;
         UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
         UpdateTimer.Tick += UpdateTimerTick;
         AllowsTransparency = true;
         Style = null;
         WindowStyle = WindowStyle.None;
-        SetVisible(false);
         ShowActivated = false;
       }
       else
       {
-        overlayCanvas.Background = new SolidColorBrush(Color.FromRgb(45, 45, 48));
+        BorderThickness = new Thickness(2);
+        ResizeBorderThickness = new Thickness(6);
+        overlayCanvas.Background = new SolidColorBrush(TITLECOLOR);
         CreateRows(true);
+        TitleBarHeight = 22.0;
         MinHeight = 130;
         AllowsTransparency = false;
         WindowStyle = WindowStyle.SingleBorderWindow;
-        SetVisible(true);
         var list = PlayerManager.Instance.GetClassList();
         list.Insert(0, EQLogParser.Resource.ANY_CLASS);
         classesList.ItemsSource = list;
         classesList.SelectedItem = SelectedClass;
         maxRowsSelection.SelectedItem = maxRowsSelection.Items[CurrentMaxRows - 5];
+        SetVisible(true);
         LoadTestData();
       }
 
@@ -208,9 +214,11 @@ namespace EQLogParser
             (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
           }
         };
+        copyButton.Margin = new Thickness(4, 0, 0, 0);
 
         var refreshButton = OverlayUtil.CreateButton("Cancel Current Parse", "\xE8BB", CurrentFontSize - 1);
         refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay();
+        refreshButton.Margin = new Thickness(4, 0, 0, 0);
 
         ButtonPopup = new Popup();
         ButtonsPanel = OverlayUtil.CreateNameStackPanel();
@@ -219,7 +227,7 @@ namespace EQLogParser
         ButtonsPanel.Children.Add(refreshButton);
         ButtonPopup.Child = ButtonsPanel;
         ButtonPopup.AllowsTransparency = true;
-        ButtonPopup.Opacity = 0.3;
+        ButtonPopup.Opacity = OverlayUtil.OPACITY;
         ButtonPopup.Placement = PlacementMode.Relative;
         ButtonPopup.PlacementTarget = this;
         ButtonPopup.VerticalOffset = -1;
@@ -344,6 +352,8 @@ namespace EQLogParser
             if (CurrentDamageSelectionMode > 0)
             {
               windowBrush.Opacity = 0.0;
+              borderBrush.Opacity = 0.0;
+              resizeBrush.Opacity = 0.0;
               ButtonPopup.IsOpen = false;
               SetVisible(false);
               Height = 0;
@@ -357,7 +367,7 @@ namespace EQLogParser
               }
 
               CancelToken = new CancellationTokenSource();
-              Task.Delay(8000).ContinueWith(task =>
+              Task.Delay(10000).ContinueWith(task =>
               {
                 Dispatcher.BeginInvoke(() =>
                 {
@@ -366,6 +376,8 @@ namespace EQLogParser
                     if (!UpdateTimer.IsEnabled && Height > 0)
                     {
                       windowBrush.Opacity = 0.0;
+                      borderBrush.Opacity = 0.0;
+                      resizeBrush.Opacity = 0.0;
                       ButtonPopup.IsOpen = false;
                       SetVisible(false);
                       Height = 0;
@@ -401,11 +413,14 @@ namespace EQLogParser
                 {
                   total = Stats.StatsList[i].Total;
                   RectangleList[i].Width = Width;
+                  EmptyList[i].Width = 0;
                 }
                 else
                 {
                   RectangleList[i].Visibility = Visibility.Hidden; // maybe it calculates width better
                   RectangleList[i].Width = Convert.ToDouble(Stats.StatsList[i].Total) / total * Width;
+                  EmptyList[i].Width = (Width - RectangleList[i].Width);
+                  EmptyList[i].SetValue(Canvas.LeftProperty, RectangleList[i].Width);
                 }
 
                 string playerName = ConfigUtil.PlayerName;
@@ -520,6 +535,8 @@ namespace EQLogParser
               TitlePanel.Visibility = Visibility.Visible;
               TitleDamagePanel.Visibility = Visibility.Visible;
               windowBrush.Opacity = OverlayUtil.OPACITY;
+              borderBrush.Opacity = OverlayUtil.OPACITY;
+              resizeBrush.Opacity = OverlayUtil.OPACITY;
               ButtonPopup.IsOpen = true;
             }
 
@@ -543,9 +560,11 @@ namespace EQLogParser
         DamagePanels[index].Height = CalculatedRowHeight;
         NamePanels[index].Height = CalculatedRowHeight;
         RectangleList[index].Height = CalculatedRowHeight;
+        EmptyList[index].Height = CalculatedRowHeight;
         DamagePanels[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
         NamePanels[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
         RectangleList[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
+        EmptyList[index].SetValue(Canvas.TopProperty, CalculatedRowHeight * (index + 1));
       }
 
       NamePanels[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
@@ -555,6 +574,7 @@ namespace EQLogParser
       DamageRateList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       DamageBlockList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
       RectangleList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+      EmptyList[index].Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SetVisible(bool visible)
@@ -572,29 +592,36 @@ namespace EQLogParser
     {
       double rowHeight = CalculatedRowHeight > 0 ? CalculatedRowHeight : height / (CurrentMaxRows + 1);
 
-      UIElementUtil.SetSize(TitleRectangle, rowHeight, width);
       UIElementUtil.SetSize(TitlePanel, rowHeight, double.NaN);
       UIElementUtil.SetSize(TitleDamagePanel, rowHeight, double.NaN);
-
       UIElementUtil.SetSize(configPanel, rowHeight, double.NaN);
       UIElementUtil.SetSize(savePanel, rowHeight, width);
 
       if (!Active)
       {
+        UIElementUtil.SetSize(TitleRectangle, rowHeight, width);
         for (int i = 0; i < CurrentMaxRows; i++)
         {
           // should only effect test data
           var percent = Convert.ToDouble(70 - 10 * i) / 100;
           percent = percent > 0.0 ? percent : 0.0;
           UIElementUtil.SetSize(RectangleList[i], rowHeight, width * percent);
+          UIElementUtil.SetSize(EmptyList[i], rowHeight, width - (width * percent));
+          EmptyList[i].SetValue(Canvas.LeftProperty, width * percent);
           UIElementUtil.SetSize(NamePanels[i], rowHeight, double.NaN);
           UIElementUtil.SetSize(DamagePanels[i], rowHeight, double.NaN);
 
           double pos = rowHeight * (i + 1);
           RectangleList[i].SetValue(Canvas.TopProperty, pos);
+          EmptyList[i].SetValue(Canvas.TopProperty, pos);
           NamePanels[i].SetValue(Canvas.TopProperty, pos);
           DamagePanels[i].SetValue(Canvas.TopProperty, pos);
         }
+      }
+      else
+      {
+        // when active title needs to be as long as normal rows
+        UIElementUtil.SetSize(TitleRectangle, rowHeight, Width);
       }
     }
 
@@ -605,7 +632,7 @@ namespace EQLogParser
       savePanel.SetValue(Panel.ZIndexProperty, 3);
       savePanel.SetValue(Canvas.BottomProperty, 1.0);
 
-      TitleRectangle = OverlayUtil.CreateRectangle(TITLECOLOR);
+      TitleRectangle = OverlayUtil.CreateRectangle(TITLECOLOR, OverlayUtil.DATA_OPACITY);
       overlayCanvas.Children.Add(TitleRectangle);
 
       TitlePanel = OverlayUtil.CreateNameStackPanel();
@@ -627,9 +654,12 @@ namespace EQLogParser
 
       for (int i = 0; i < CurrentMaxRows; i++)
       {
-        var rectangle = OverlayUtil.CreateRectangle(ColorList[i]);
+        var rectangle = OverlayUtil.CreateRectangle(ColorList[i], OverlayUtil.DATA_OPACITY);
         RectangleList.Add(rectangle);
         overlayCanvas.Children.Add(rectangle);
+        var empty = OverlayUtil.CreateRectangle(TITLECOLOR, OverlayUtil.OPACITY);
+        EmptyList.Add(empty);
+        overlayCanvas.Children.Add(empty);
 
         var nameStack = OverlayUtil.CreateNameStackPanel();
         NamePanels.Add(nameStack);
@@ -651,13 +681,15 @@ namespace EQLogParser
           var colorPicker = new ColorPicker
           {
             Width = 35,
-            Height = 12,
+            Height = 10,
             Color = ColorList[i],
             IsGradientPropertyEnabled = false,
             EnableSolidToGradientSwitch = false,
             Tag = string.Format(CultureInfo.CurrentCulture, "OverlayRankColor{0}", i + 1),
-            BorderThickness = new Thickness(0)
+            BorderThickness = new Thickness(0),
+            Background = new SolidColorBrush(Colors.Transparent)
           };
+
           colorPicker.HeaderTemplate = Application.Current.Resources["ColorPickerMinHeaderTemplate"] as DataTemplate;
           colorPicker.ColorChanged += (DependencyObject d, DependencyPropertyChangedEventArgs e) =>
           {
@@ -695,6 +727,11 @@ namespace EQLogParser
       {
         TitlePanel.MaxWidth = ActualWidth - TitleDamagePanel.ActualWidth - 24;
       }
+    }
+
+    private void ChromeMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+      e.Handled = true;
     }
 
     private void SetFont()
@@ -744,9 +781,11 @@ namespace EQLogParser
         overlayCanvas.Children.Remove(TitlePanel);
         overlayCanvas.Children.Remove(TitleDamagePanel);
         RectangleList.ForEach(rectangle => overlayCanvas.Children.Remove(rectangle));
+        EmptyList.ForEach(empty => overlayCanvas.Children.Remove(empty));
         NamePanels.ForEach(nameStack => overlayCanvas.Children.Remove(nameStack));
         DamagePanels.ForEach(damageStack => overlayCanvas.Children.Remove(damageStack));
         RectangleList.Clear();
+        EmptyList.Clear();
         NamePanels.Clear();
         DamagePanels.Clear();
         NameBlockList.Clear();
@@ -761,6 +800,8 @@ namespace EQLogParser
         Resize(overlayCanvas.ActualHeight, overlayCanvas.ActualWidth);
       }
     }
+
+    private void CancelClick(object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(false, true);
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {

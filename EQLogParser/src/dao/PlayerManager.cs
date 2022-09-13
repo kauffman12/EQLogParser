@@ -101,7 +101,7 @@ namespace EQLogParser
       || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || TakenPetOrPlayerAction.ContainsKey(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
-    internal List<string> GetClassList(bool withNull = false) => withNull ? SortedClassListWithNull : SortedClassList;
+    internal List<string> GetClassList(bool withNull = false) => withNull ? SortedClassListWithNull.ToList() : SortedClassList.ToList();
     internal bool IsMerc(string name) => Mercs.TryGetValue(TextFormatUtils.ToUpper(name), out _);
 
     internal void AddPetOrPlayerAction(string name)
