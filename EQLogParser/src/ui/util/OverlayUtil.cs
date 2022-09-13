@@ -3,15 +3,14 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 
 namespace EQLogParser
 {
   class OverlayUtil
   {
-    internal const double OPACITY = 0.40;
-    internal const double DATA_OPACITY = 0.70;
+    internal const double OPACITY = 0.55;
+    internal const double DATA_OPACITY = 0.8;
     internal static readonly SolidColorBrush TEXTBRUSH = new SolidColorBrush(Colors.White);
     internal static readonly SolidColorBrush UPBRUSH = new SolidColorBrush(Colors.White);
     internal static readonly SolidColorBrush DOWNBRUSH = new SolidColorBrush(Colors.Red);
@@ -114,15 +113,14 @@ namespace EQLogParser
         EndPoint = new Point(0.5, 1)
       };
 
-      brush.GradientStops.Add(new GradientStop(ChangeColorBrightness(color, 0.15f), 0.0));
       brush.GradientStops.Add(new GradientStop(color, 0.5));
-      brush.GradientStops.Add(new GradientStop(ChangeColorBrightness(color, -0.4f), 0.75));
+      brush.GradientStops.Add(new GradientStop(ChangeColorBrightness(color, -0.5f), 1.0));
       return brush;
     }
 
     internal static Button CreateButton(string tooltip, string content, double size)
     {
-      var button = new Button() { Background = null, BorderBrush = null, IsEnabled = true };
+      var button = new Button { Background = null, BorderBrush = null, IsEnabled = true };
       button.SetValue(Panel.ZIndexProperty, 3);
       button.Foreground = TEXTBRUSH;
       button.VerticalAlignment = VerticalAlignment.Top;
@@ -140,10 +138,7 @@ namespace EQLogParser
     {
       var textBlock = new TextBlock { Foreground = TEXTBRUSH };
       textBlock.SetValue(Panel.ZIndexProperty, 3);
-      textBlock.UseLayoutRounding = true;
-      textBlock.Effect = new DropShadowEffect { ShadowDepth = 2, BlurRadius = 2, Opacity = 0.6 };
       textBlock.FontFamily = new FontFamily("Lucidia Console");
-      textBlock.Margin = new Thickness(0);
       textBlock.VerticalAlignment = VerticalAlignment.Center;
       return textBlock;
     }
@@ -179,12 +174,11 @@ namespace EQLogParser
       return stack;
     }
 
-    internal static Rectangle CreateRectangle(Color color)
+    internal static Rectangle CreateRectangle(Color color, double opacity)
     {
       var rectangle = new Rectangle();
       rectangle.SetValue(Panel.ZIndexProperty, 1);
-      rectangle.Effect = new BlurEffect { Radius = 5, RenderingBias = 0 };
-      rectangle.Opacity = DATA_OPACITY;
+      rectangle.Opacity = opacity;
       rectangle.Fill = CreateBrush(color);
       return rectangle;
     }
