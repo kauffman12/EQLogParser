@@ -163,6 +163,11 @@ namespace EQLogParser
           window.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
         }
       }
+
+      // common
+      Application.Current.Resources["OverlayActiveBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF191919") };
+      Application.Current.Resources["OverlayConfigBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
+      Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["OverlayActiveBrush"];
     }
 
     internal static void Clear(ContentControl petsWindow, ContentControl playersWindow)
