@@ -23,6 +23,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private const int MINDELAY = 10000;
     private static readonly object StatsLock = new object();
     private static readonly Color TITLECOLOR = Color.FromRgb(25, 25, 25);
     private readonly List<ColorPicker> ColorPickerList = new List<ColorPicker>();
@@ -95,9 +96,8 @@ namespace EQLogParser
       if (!offsetSize)
       {
         SetVisible(false);
-        BorderThickness = new Thickness(0);
-        ResizeBorderThickness = new Thickness(0);
         CreateRows();
+        Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["OverlayActiveBrush"];
         TitleBarHeight = 0.0;
         MinHeight = 0;
         UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
@@ -109,10 +109,10 @@ namespace EQLogParser
       }
       else
       {
-        BorderThickness = new Thickness(2);
-        ResizeBorderThickness = new Thickness(6);
-        overlayCanvas.Background = new SolidColorBrush(TITLECOLOR);
+        //overlayCanvas.Background = new SolidColorBrush(TITLECOLOR);
+        overlayCanvas.SetResourceReference(Canvas.BackgroundProperty, "ContentBackground");
         CreateRows(true);
+        Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
         TitleBarHeight = 22.0;
         MinHeight = 130;
         AllowsTransparency = false;
@@ -367,7 +367,7 @@ namespace EQLogParser
               }
 
               CancelToken = new CancellationTokenSource();
-              Task.Delay(10000).ContinueWith(task =>
+              Task.Delay(MINDELAY).ContinueWith(task =>
               {
                 Dispatcher.BeginInvoke(() =>
                 {
@@ -632,7 +632,7 @@ namespace EQLogParser
       savePanel.SetValue(Panel.ZIndexProperty, 3);
       savePanel.SetValue(Canvas.BottomProperty, 1.0);
 
-      TitleRectangle = OverlayUtil.CreateRectangle(TITLECOLOR, OverlayUtil.DATA_OPACITY);
+      TitleRectangle = OverlayUtil.CreateRectangle("OverlayCurrentBrush", OverlayUtil.DATA_OPACITY);
       overlayCanvas.Children.Add(TitleRectangle);
 
       TitlePanel = OverlayUtil.CreateNameStackPanel();
@@ -657,7 +657,7 @@ namespace EQLogParser
         var rectangle = OverlayUtil.CreateRectangle(ColorList[i], OverlayUtil.DATA_OPACITY);
         RectangleList.Add(rectangle);
         overlayCanvas.Children.Add(rectangle);
-        var empty = OverlayUtil.CreateRectangle(TITLECOLOR, OverlayUtil.OPACITY);
+        var empty = OverlayUtil.CreateRectangle("OverlayCurrentBrush", OverlayUtil.OPACITY);
         EmptyList.Add(empty);
         overlayCanvas.Children.Add(empty);
 
@@ -681,7 +681,7 @@ namespace EQLogParser
           var colorPicker = new ColorPicker
           {
             Width = 35,
-            Height = 10,
+            Height = 12,
             Color = ColorList[i],
             IsGradientPropertyEnabled = false,
             EnableSolidToGradientSwitch = false,
