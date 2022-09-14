@@ -27,7 +27,7 @@ namespace EQLogParser
 
     internal static bool LoadSettings() => IsDamageOverlayEnabled = ConfigUtil.IfSet("IsDamageOverlayEnabled");
 
-    internal static void UpdateTheme() => MainActions.SetTheme(Overlay, "MaterialDark");
+    internal static void UpdateTheme(string theme) => MainActions.SetTheme(Overlay, theme);
 
     internal static void OpenIfEnabled()
     {
@@ -43,7 +43,7 @@ namespace EQLogParser
       {
         Overlay?.Close();
         Overlay = new OverlayWindow(configure);
-        UpdateTheme();
+        UpdateTheme(MainWindow.CurrentTheme);
         Overlay.Show();
       }, System.Windows.Threading.DispatcherPriority.Send);
 
@@ -172,6 +172,16 @@ namespace EQLogParser
       stack.SetValue(Panel.ZIndexProperty, 3);
       stack.SetValue(Canvas.LeftProperty, 4.0);
       return stack;
+    }
+
+    internal static Rectangle CreateRectangle(string colorResource, double opacity)
+    {
+      var rectangle = new Rectangle();
+      rectangle.SetValue(Panel.ZIndexProperty, 1);
+      rectangle.Opacity = opacity;
+      rectangle.SetResourceReference(Rectangle.FillProperty, colorResource);
+      //rectangle.Fill = CreateBrush(color);
+      return rectangle;
     }
 
     internal static Rectangle CreateRectangle(Color color, double opacity)
