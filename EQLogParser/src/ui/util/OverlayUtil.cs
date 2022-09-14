@@ -27,8 +27,6 @@ namespace EQLogParser
 
     internal static bool LoadSettings() => IsDamageOverlayEnabled = ConfigUtil.IfSet("IsDamageOverlayEnabled");
 
-    internal static void UpdateTheme(string theme) => MainActions.SetTheme(Overlay, theme);
-
     internal static void OpenIfEnabled()
     {
       if (IsDamageOverlayEnabled)
@@ -43,7 +41,6 @@ namespace EQLogParser
       {
         Overlay?.Close();
         Overlay = new OverlayWindow(configure);
-        UpdateTheme(MainWindow.CurrentTheme);
         Overlay.Show();
       }, System.Windows.Threading.DispatcherPriority.Send);
 
@@ -127,7 +124,7 @@ namespace EQLogParser
       button.Padding = new Thickness(0, 0, 0, 0);
       button.FontFamily = new FontFamily("Segoe MDL2 Assets");
       button.VerticalAlignment = VerticalAlignment.Center;
-      button.Margin = new Thickness(2, 0, 2, 0);
+      button.Margin = new Thickness(5, 3, 0, 0);
       button.ToolTip = new ToolTip { Content = tooltip };
       button.Content = content;
       button.FontSize = size;
