@@ -25,7 +25,6 @@ namespace EQLogParser
 
     private const int MINDELAY = 10000;
     private static readonly object StatsLock = new object();
-    private static readonly Color TITLECOLOR = Color.FromRgb(25, 25, 25);
     private readonly List<ColorPicker> ColorPickerList = new List<ColorPicker>();
     private readonly List<StackPanel> NamePanels = new List<StackPanel>();
     private readonly List<Image> NameIconList = new List<Image>();
@@ -57,11 +56,16 @@ namespace EQLogParser
     private int CurrentMaxRows = 5;
     private int CurrentFontSize = 13;
     private CancellationTokenSource CancelToken = null;
+    private MainWindow Main = null;
 
     public OverlayWindow(bool configure = false)
     {
       InitializeComponent();
       LoadColorSettings();
+
+      MainActions.SetTheme(this, MainWindow.CurrentTheme);
+      Main = Application.Current.MainWindow as MainWindow;
+      Main.EventsThemeChanged += EventsThemeChanged;
 
       string width = ConfigUtil.GetSetting("OverlayWidth");
       string height = ConfigUtil.GetSetting("OverlayHeight");
@@ -204,7 +208,6 @@ namespace EQLogParser
       {
         var settingsButton = OverlayUtil.CreateButton("Change Settings", "\xE713", CurrentFontSize - 1);
         settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(true, false);
-        settingsButton.Margin = new Thickness(4, 0, 0, 0);
 
         var copyButton = OverlayUtil.CreateButton("Copy Parse", "\xE8C8", CurrentFontSize - 1);
         copyButton.Click += (object sender, RoutedEventArgs e) =>
@@ -214,11 +217,9 @@ namespace EQLogParser
             (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
           }
         };
-        copyButton.Margin = new Thickness(4, 0, 0, 0);
 
         var refreshButton = OverlayUtil.CreateButton("Cancel Current Parse", "\xE8BB", CurrentFontSize - 1);
         refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay();
-        refreshButton.Margin = new Thickness(4, 0, 0, 0);
 
         ButtonPopup = new Popup();
         ButtonsPanel = OverlayUtil.CreateNameStackPanel();
@@ -249,6 +250,20 @@ namespace EQLogParser
         {
           UpdateTimer.Start();
         }
+      }
+    }
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      MainActions.SetTheme(this, MainWindow.CurrentTheme);
+
+      if (Active)
+      {
+        Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["OverlayActiveBrush"];
+      }
+      else
+      {
+        Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
       }
     }
 
@@ -845,6 +860,12 @@ namespace EQLogParser
 
     private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+      if (Main != null)
+      {
+        Main.EventsThemeChanged -= EventsThemeChanged;
+        Main = null;
+      }
+
       if (Active)
       {
         DataManager.Instance.EventsNewOverlayFight -= Instance_NewOverlayFight;
