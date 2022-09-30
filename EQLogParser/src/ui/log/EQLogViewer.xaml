@@ -22,7 +22,8 @@
       </ComboBox>
       <TextBox x:Name="logSearch2" Margin="0,0,0,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
       <ComboBox x:Name="logSearchTime" Margin="0,0,0,2" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" />
-      <fa:ImageAwesome x:Name="searchIcon" Margin="6,4,0,2" Height="16" Icon="Solid_Search" ToolTip="Search Log" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged" />
+      <CheckBox x:Name="useRegex" IsChecked="False" Margin="6,1,2,0" ToolTip="Allow regex to be used as search terms.">Regex</CheckBox>
+      <fa:ImageAwesome x:Name="searchIcon" Margin="6,4,0,2" Height="16" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged" />
       <Label x:Name="progress" Visibility="Hidden" FontStyle="Italic" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">

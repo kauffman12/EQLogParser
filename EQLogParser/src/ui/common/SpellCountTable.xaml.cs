@@ -1,13 +1,11 @@
 ﻿using FontAwesome5;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using Syncfusion.Data.Extensions;
 using Syncfusion.UI.Xaml.Grid;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Dynamic;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -35,6 +33,7 @@ namespace EQLogParser
     private readonly List<string> CountTypes = new List<string>() { "Counts", "Percentages", "Counts/Minute" };
     private readonly List<string> MinFreqs = new List<string>() { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
     private readonly HashSet<string> SortDescs = new HashSet<string>() { "totalColumn" };
+    private readonly TotalColumnComparer TotalColumnComparer = new TotalColumnComparer();
     private int CurrentCountType = 0;
     private int CurrentMinFreqCount = 0;
     private string Title;
@@ -92,14 +91,14 @@ namespace EQLogParser
         PlayerList.ForEach(player =>
         {
           filteredPlayerMap[player] = new Dictionary<string, uint>();
-
           if (TheSpellCounts.PlayerCastCounts.ContainsKey(player))
           {
             foreach (ref var id in TheSpellCounts.PlayerCastCounts[player].Keys.ToArray().AsSpan())
             {
               if (PassFilters(TheSpellCounts.UniqueSpells[id], false))
               {
-                totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
+                totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerCastCounts[player][id], TheSpellCounts.MaxCastCounts, 
+                  totalCountMap, uniqueSpellsMap, filteredPlayerMap, false, totalCasts);
               }
             }
           }
@@ -110,38 +109,21 @@ namespace EQLogParser
             {
               if (PassFilters(TheSpellCounts.UniqueSpells[id], true))
               {
-                totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts, totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
+                totalCasts = UpdateMaps(id, player, TheSpellCounts.PlayerReceivedCounts[player][id], TheSpellCounts.MaxReceivedCounts, 
+                  totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
               }
             }
           }
         });
 
-        var sortedPlayers = totalCountMap.Keys.OrderByDescending(key => totalCountMap[key]).ToList();
-        var sortedSpellList = uniqueSpellsMap.Keys.OrderByDescending(key => uniqueSpellsMap[key]).ToList();
-
-        var colCount = 0;
-        foreach (string name in sortedPlayers)
+        Dispatcher.InvokeAsync(() =>
         {
-          double total = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
-
-          double amount = 0.0;
-          switch (CurrentCountType)
+          var colCount = 0;
+          var playerColumns = new List<GridColumn>();
+          foreach (string name in totalCountMap.Keys)
           {
-            case 0:
-              amount = total;
-              break;
-            case 1:
-              amount = totalCasts > 0 ? Math.Round(total / totalCasts * 100, 2) : 0;
-              break;
-            case 2:
-              amount = Time > 0 ? Math.Round(total / Time * 60, 2) : 0;
-              break;
-          }
-
-          var header = string.Format("{0} = {1}", name, amount.ToString());
-
-          Dispatcher.InvokeAsync(() =>
-          {
+            double playerTotal = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
+            var header = GetHeaderValue(name, playerTotal, totalCasts);
             var playerCol = new GridTextColumn
             {
               HeaderText = header,
@@ -153,34 +135,16 @@ namespace EQLogParser
               HeaderToolTipTemplate = Application.Current.Resources["HeaderSpellCountsTemplateToolTip"] as DataTemplate
             };
 
-            dataGrid.Columns.Add(playerCol);
-          });
+            playerColumns.Add(playerCol);
+            colCount++;
+            SortDescs.Add(name);
+          }
 
-          colCount++;
-          SortDescs.Add(name);
-        }
+          playerColumns.OrderBy(col => col.HeaderText, TotalColumnComparer).ForEach(col => dataGrid.Columns.Add(col));
 
-        string headerAmount = "";
-        switch (CurrentCountType)
-        {
-          case 0:
-            headerAmount = totalCasts.ToString(CultureInfo.CurrentCulture);
-            break;
-          case 1:
-            headerAmount = "100";
-            break;
-          case 2:
-            headerAmount = Time > 0 ? Math.Round(totalCasts / Time * 60, 2).ToString(CultureInfo.CurrentCulture) : "0";
-            break;
-        }
-
-        string totalHeader = string.Format("Total = {0}", headerAmount);
-
-        Dispatcher.InvokeAsync(() =>
-        {
           var totalCol = new GridTextColumn
           {
-            HeaderText = totalHeader,
+            HeaderText = GetHeaderValue("Total", totalCasts, totalCasts),
             MappingName = "totalColumn",
             SortMode = Syncfusion.Data.DataReflectionMode.Value,
             DisplayBinding = new Binding("totalColumnText"),
@@ -191,55 +155,31 @@ namespace EQLogParser
         });
 
         int existingIndex = 0;
+        var playerNames = totalCountMap.Keys.ToList();
         var list = new List<IDictionary<string, object>>();
-        foreach (var spell in sortedSpellList)
+        foreach (var spell in uniqueSpellsMap.Keys.OrderByDescending(key => uniqueSpellsMap[key]))
         {
           var row = (list.Count > existingIndex) ? list[existingIndex] : new ExpandoObject();
           row["Spell"] = spell;
 
-          for (int i = 0; i < sortedPlayers.Count; i++)
+          for (int i = 0; i < playerNames.Count; i++)
           {
-            if (filteredPlayerMap.ContainsKey(sortedPlayers[i]))
+            if (filteredPlayerMap.ContainsKey(playerNames[i]))
             {
-              if (filteredPlayerMap[sortedPlayers[i]].ContainsKey(spell))
+              if (filteredPlayerMap[playerNames[i]].ContainsKey(spell))
               {
-                switch (CurrentCountType)
-                {
-                  case 0:
-                    AddPlayerRow(sortedPlayers[i], spell, filteredPlayerMap[sortedPlayers[i]][spell], row);
-                    break;
-                  case 1:
-                    var percent = totalCountMap[sortedPlayers[i]] > 0 ? Math.Round((double)filteredPlayerMap[sortedPlayers[i]][spell] / totalCountMap[sortedPlayers[i]] * 100, 2) : 0.0;
-                    AddPlayerRow(sortedPlayers[i], spell, percent, row);
-                    break;
-                  case 2:
-                    var rate = Time > 0 ? Math.Round(filteredPlayerMap[sortedPlayers[i]][spell] / Time * 60, 2) : 0.0;
-                    AddPlayerRow(sortedPlayers[i], spell, rate, row);
-                    break;
-                }
+                AddPlayerRow(playerNames[i], spell, filteredPlayerMap[playerNames[i]][spell], totalCountMap[playerNames[i]], row);
               }
               else
               {
-                row[sortedPlayers[i] + "Text"] = CurrentCountType == 0 ? "0" : "0.0";
-                row[sortedPlayers[i]] = 0.0;
+                row[playerNames[i] + "Text"] = CurrentCountType == 0 ? "0" : "0.0";
+                row[playerNames[i]] = 0;
               }
             }
           }
 
-          switch (CurrentCountType)
-          {
-            case 0:
-              row["totalColumn"] = uniqueSpellsMap[spell];
-              break;
-            case 1:
-              row["totalColumn"] = Math.Round((double)uniqueSpellsMap[spell] / totalCasts * 100, 2);
-              break;
-            case 2:
-              row["totalColumn"] = Time > 0 ? Math.Round(uniqueSpellsMap[spell] / Time * 60, 2) : 0.0;
-              break;
-          }
-
-          row["totalColumnText"] = row["totalColumn"].ToString();
+          row["totalColumn"] = uniqueSpellsMap[spell];
+          row["totalColumnText"] = GetFormattedValue(uniqueSpellsMap[spell], totalCasts);
 
           if (list.Count <= existingIndex)
           {
@@ -262,19 +202,17 @@ namespace EQLogParser
     private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UIElementUtil.CheckHideTitlePanel(titlePanel, controlPanel);
     private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateOptions(true);
 
-    private void AddPlayerRow(string player, string spell, double value, IDictionary<string, object> row)
+    private void AddPlayerRow(string player, string spell, double value, double playerTotal, IDictionary<string, object> row)
     {
-      double count = value;
-      string countText = value.ToString();
+      string countText = GetFormattedValue(value, playerTotal);
       if (TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) &&
         TheSpellCounts.PlayerInterruptedCounts[player].TryGetValue(spell, out uint interrupts) && interrupts > 0)
       {
         countText = countText + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
-        count += interrupts;
       }
 
       row[player + "Text"] = countText;
-      row[player] = count;
+      row[player] = value;
     }
 
     private uint UpdateMaps(string id, string player, uint playerCount, Dictionary<string, uint> maxCounts, Dictionary<string, uint> totalCountMap,
@@ -499,6 +437,7 @@ namespace EQLogParser
           {
             HiddenSpells[spr["Spell"] as string] = 1;
             dataGrid.View.Remove(spr);
+            UpdateCounts();
           }
         }
       }, System.Windows.Threading.DispatcherPriority.Background);
@@ -512,8 +451,78 @@ namespace EQLogParser
         {
           HiddenSpells[spr["Spell"] as string] = 1;
           dataGrid.View.Remove(spr);
+          UpdateCounts();
         }
       });
+    }
+
+    private void UpdateCounts()
+    {
+      var counts = new Dictionary<string, double>();
+
+      foreach (var record in dataGrid.View.Records)
+      {
+        var data = record.Data as dynamic;
+        foreach (var value in data)
+        {
+          if (PlayerList.Contains(value.Key))
+          {
+            counts.TryGetValue(value.Key, out double count);
+            counts[value.Key] = count + value.Value;
+          }
+        }
+      }
+
+      var total = counts.Values.Sum();
+      var playerColumns = new List<GridColumn>();
+      foreach (var col in dataGrid.Columns)
+      {
+        if (col.MappingName == "totalColumn")
+        {
+          col.HeaderText = GetHeaderValue("Total", total, total);
+        }
+        else if (counts.ContainsKey(col.MappingName))
+        {
+          col.HeaderText = GetHeaderValue(col.MappingName, counts[col.MappingName], total);
+          playerColumns.Add(col);
+        }
+      }
+
+      int colIndex = 1;
+      playerColumns.OrderBy(key => key.HeaderText, TotalColumnComparer).ForEach(col => dataGrid.Columns[colIndex++] = col);
+    }
+
+    private string GetHeaderValue(string name, double amount, double total)
+    {
+      double result = 0.0;
+      switch (CurrentCountType)
+      {
+        case 0:
+          result = amount;
+          break;
+        case 1:
+          result = total > 0 ? Math.Round(amount / total * 100, 2) : 0;
+          break;
+        case 2:
+          result = Time > 0 ? Math.Round(amount / Time * 60, 2) : 0;
+          break;
+      }
+
+      return string.Format("{0} = {1}", name, result.ToString());
+    }
+
+    private string GetFormattedValue(double value, double playerTotal)
+    {
+      if (CurrentCountType == 1)
+      {
+        return (playerTotal > 0 ? Math.Round(value / playerTotal * 100, 2) : 0.0).ToString();
+      }
+      else if (CurrentCountType == 2)
+      {
+        return (Time > 0 ? Math.Round(value / Time * 60, 2) : 0.0).ToString();
+      }
+
+      return value.ToString();
     }
   }
 
@@ -523,35 +532,25 @@ namespace EQLogParser
     public SpellCountData TheSpellData { get; set; }
   }
 
-  public class SpellCountComparer : IComparer
+  public class TotalColumnComparer : IComparer<string>
   {
-    private readonly bool Ascending;
-    private readonly string Column;
-
-    public SpellCountComparer(string column, bool ascending)
+    public int Compare(string x, string y)
     {
-      Ascending = ascending;
-      Column = column;
-    }
+      var xValues = x.Split(" = ");
+      var yValues = y.Split(" = ");
+      var xDouble = double.Parse(xValues[1]);
+      var yDouble = double.Parse(yValues[1]);
 
-    public int Compare(object x, object y)
-    {
-      int result = 0;
-
-      if (x is IDictionary<string, object> d1 && y is IDictionary<string, object> d2)
+      if (yDouble > xDouble)
       {
-        if (double.TryParse(d1[Column] as string, out double v1) && double.TryParse(d2[Column] as string, out double v2))
-        {
-          result = v1.CompareTo(v2);
-        }
+        return 1;
+      }
+      else if (yDouble < xDouble)
+      {
+        return -1;
       }
 
-      if (Ascending)
-      {
-        result *= -1;
-      }
-
-      return result;
+      return x.CompareTo(y);
     }
   }
 }
