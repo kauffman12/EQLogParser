@@ -3,13 +3,14 @@ using Syncfusion.Windows.Edit;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -210,6 +211,7 @@ namespace EQLogParser
         var logSearchText2 = logSearch2.Text;
         var modifierIndex = logSearchModifier.SelectedIndex;
         var logTimeIndex = logSearchTime.SelectedIndex;
+        var regexEnabled = useRegex.IsChecked.Value;
         LinePositions.Clear();
 
         Task.Delay(75).ContinueWith(task =>
@@ -218,28 +220,39 @@ namespace EQLogParser
           {
             using (var f = File.OpenRead(MainWindow.CurrentLogFile))
             {
-              StreamReader s = Helpers.GetStreamReader(f, logTimeIndex);
+              var s = Helpers.GetStreamReader(f, logTimeIndex);
               var list = new List<string>();
-              int lastPercent = -1;
+              var lastPercent = -1;
 
+              Regex searchRegex = null;
+              if (logSearchText != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
+              {
+                searchRegex = new Regex(logSearchText, RegexOptions.IgnoreCase);
+              }
+
+              Regex searchRegex2 = null;
+              if (logSearchText2 != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
+              {
+                searchRegex2 = new Regex(logSearchText2, RegexOptions.IgnoreCase);
+              }
+             
               while (!s.EndOfStream && Running)
               {
-                string line = s.ReadLine();
-
+                var line = s.ReadLine();
                 if (Helpers.TimeCheck(line, logTimeIndex))
                 {
-                  bool match = true;
-                  int firstIndex = -2;
-                  int secondIndex = -2;
+                  var match = true;
+                  var firstIndex = -2;
+                  var secondIndex = -2;
 
-                  if (logSearchText != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
+                  if (searchRegex != null)
                   {
-                    firstIndex = line.IndexOf(logSearchText, StringComparison.OrdinalIgnoreCase);
+                    firstIndex = DoSearch(line, logSearchText, searchRegex, regexEnabled);
                   }
 
-                  if (logSearchText2 != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
+                  if (searchRegex2 != null)
                   {
-                    secondIndex = line.IndexOf(logSearchText2, StringComparison.OrdinalIgnoreCase);
+                    secondIndex = DoSearch(line, logSearchText2, searchRegex2, regexEnabled);
                   }
 
                   // AND
@@ -316,6 +329,18 @@ namespace EQLogParser
       {
         searchIcon.IsEnabled = false;
         Running = false;
+      }
+    }
+
+    private int DoSearch(string line, string text, Regex searchRegex, bool regexEnabled)
+    {
+      if (regexEnabled)
+      {
+        return searchRegex.IsMatch(line) ? 1 : -1;
+      }
+      else
+      {
+        return line.IndexOf(text, StringComparison.OrdinalIgnoreCase);
       }
     }
 
