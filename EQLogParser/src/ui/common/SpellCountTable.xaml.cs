@@ -457,9 +457,8 @@ namespace EQLogParser
     }
 
     private void UpdateCounts()
-    {
-      var counts = new Dictionary<string, double>();
-
+    {    
+      var counts = PlayerList.ToDictionary(key => key, value => 0.0);
       foreach (var record in dataGrid.View.Records)
       {
         var data = record.Data as dynamic;
