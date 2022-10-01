@@ -174,10 +174,26 @@ namespace EQLogParser
       {
         try
         {
-          var realTableHeight = gridBase.ActualHeight + gridBase.HeaderRowHeight + 1;
-          var realColumnWidth = gridBase.ActualWidth;
+          //var realTableHeight = gridBase.ActualHeight + gridBase.HeaderRowHeight + 1;
+          //var realColumn   = gridBase.ActualWidth;
+          var realColumnWidth = 0.0;
+          var realTableHeight = gridBase.HeaderRowHeight + 1;
+          var rowHeaderWidth = gridBase.ShowRowHeader ? gridBase.RowHeaderWidth : 0.0;
+          if (gridBase is SfDataGrid dataGrid)
+          {
+            realTableHeight += Math.Min(gridBase.ActualHeight, (dataGrid.View.Records.Count + 1) * dataGrid.RowHeight);
+            var calcWidth = rowHeaderWidth + dataGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum();
+            realColumnWidth = Math.Min(gridBase.ActualWidth, calcWidth);
+          }
+          else if (gridBase is SfTreeGrid treeGrid)
+          {
+            realTableHeight += Math.Min(gridBase.ActualHeight, (treeGrid.View.Nodes.Count + 1) * treeGrid.RowHeight);
+            var calcWidth = rowHeaderWidth + treeGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum();
+            realColumnWidth = Math.Min(gridBase.ActualWidth, calcWidth);
+          }
+
           var titlePadding = titleLabel.Padding.Top + titleLabel.Padding.Bottom;
-          var titleHeight = titleLabel.ActualHeight - titlePadding - 4;
+          var titleHeight = titleLabel.FontSize;
           var titleWidth = titleLabel.DesiredSize.Width;
 
           var dpiScale = VisualTreeHelper.GetDpi(gridBase);
@@ -194,7 +210,7 @@ namespace EQLogParser
             ctx.DrawRectangle(brush, null, new Rect(new Point(4, titlePadding / 2), new Size(titleWidth, titleHeight)));
 
             brush = new VisualBrush(gridBase);
-            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight + titlePadding), new Size(realColumnWidth, gridBase.ActualHeight +
+            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight + titlePadding), new Size(gridBase.ActualWidth, gridBase.ActualHeight +
               SystemParameters.HorizontalScrollBarHeight)));
           }
 
