@@ -169,6 +169,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Copy Large Image.
+        /// </summary>
+        internal static string COPY_LARGE_IMAGE {
+            get {
+                return ResourceManager.GetString("COPY_LARGE_IMAGE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Custom Parse Title.
         /// </summary>
         internal static string CUSTOM_PARSE_TITLE {

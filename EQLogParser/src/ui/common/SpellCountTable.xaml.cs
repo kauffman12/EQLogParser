@@ -199,6 +199,7 @@ namespace EQLogParser
       });
     }
 
+    private void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel, true);
     private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UIElementUtil.CheckHideTitlePanel(titlePanel, controlPanel);
     private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateOptions(true);
 

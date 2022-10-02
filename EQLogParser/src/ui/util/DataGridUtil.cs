@@ -12,6 +12,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 
 namespace EQLogParser
 {
@@ -166,66 +167,111 @@ namespace EQLogParser
       return new Tuple<List<string>, List<List<object>>>(headers, data);
     }
 
-    internal static void CreateImage(SfGridBase gridBase, Label titleLabel)
+    internal static void CreateImage(SfGridBase gridBase, Label titleLabel, bool allData = false)
     {
-      gridBase.SelectedItems.Clear();
-      gridBase.IsHitTestVisible = false;
-      Task.Delay(100).ContinueWith((t) => gridBase.Dispatcher.InvokeAsync(() =>
+      Task.Delay(250).ContinueWith(t =>
       {
-        try
+        gridBase.Dispatcher.InvokeAsync(() =>
         {
-          //var realTableHeight = gridBase.ActualHeight + gridBase.HeaderRowHeight + 1;
-          //var realColumn   = gridBase.ActualWidth;
-          var realColumnWidth = 0.0;
-          var realTableHeight = gridBase.HeaderRowHeight + 1;
-          var rowHeaderWidth = gridBase.ShowRowHeader ? gridBase.RowHeaderWidth : 0.0;
-          if (gridBase is SfDataGrid dataGrid)
+          MessageWindow dialog = null;
+          var parent = gridBase.Parent as Panel;
+          var tableHeight = GetTableHeight(gridBase, allData);
+          var tableWidth = GetTableWidth(gridBase, allData);
+          var needHeightChange = tableHeight > gridBase.ActualHeight;
+          var needWidthChange = tableWidth > gridBase.ActualWidth;
+
+          gridBase.SelectedItems.Clear();
+          gridBase.IsHitTestVisible = false;
+
+          if (needHeightChange || needWidthChange)
           {
-            realTableHeight += Math.Min(gridBase.ActualHeight, (dataGrid.View.Records.Count + 1) * dataGrid.RowHeight);
-            var calcWidth = rowHeaderWidth + dataGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum();
-            realColumnWidth = Math.Min(gridBase.ActualWidth, calcWidth);
-          }
-          else if (gridBase is SfTreeGrid treeGrid)
-          {
-            realTableHeight += Math.Min(gridBase.ActualHeight, (treeGrid.View.Nodes.Count + 1) * treeGrid.RowHeight);
-            var calcWidth = rowHeaderWidth + treeGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum();
-            realColumnWidth = Math.Min(gridBase.ActualWidth, calcWidth);
-          }
+            dialog = new MessageWindow("Please Wait while Image is Processed.", EQLogParser.Resource.COPY_LARGE_IMAGE, false, true);
+            dialog.Show();
 
-          var titlePadding = titleLabel.Padding.Top + titleLabel.Padding.Bottom;
-          var titleHeight = titleLabel.FontSize;
-          var titleWidth = titleLabel.DesiredSize.Width;
+            gridBase.Dispatcher.InvokeAsync(() =>
+            {
+              if (needHeightChange)
+              {
+                parent.Height = tableHeight + 200; // be safe and make sure it has extra room to work with
+              }
 
-          var dpiScale = VisualTreeHelper.GetDpi(gridBase);
-          RenderTargetBitmap rtb = new RenderTargetBitmap((int)realColumnWidth, (int)(realTableHeight + titleHeight),
-            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
-
-          DrawingVisual dv = new DrawingVisual();
-          using (DrawingContext ctx = dv.RenderOpen())
-          {
-            var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
-            ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(realColumnWidth, titleHeight + titlePadding)));
-
-            var brush = new VisualBrush(titleLabel);
-            ctx.DrawRectangle(brush, null, new Rect(new Point(4, titlePadding / 2), new Size(titleWidth, titleHeight)));
-
-            brush = new VisualBrush(gridBase);
-            ctx.DrawRectangle(brush, null, new Rect(new Point(0, titleHeight + titlePadding), new Size(gridBase.ActualWidth, gridBase.ActualHeight +
-              SystemParameters.HorizontalScrollBarHeight)));
+              if (needWidthChange)
+              {
+                parent.Width = tableWidth + 200;
+              }
+            }, System.Windows.Threading.DispatcherPriority.Background);
           }
 
-          rtb.Render(dv);
-          Clipboard.SetImage(rtb);
-        }
-        catch (Exception ex)
-        {
-          LOG.Error("Could not Copy Image", ex);
-        }
-        finally
-        {
-          gridBase.IsHitTestVisible = true;
-        }
-      }));
+          gridBase.Dispatcher.InvokeAsync(() =>
+          {
+            try
+            {
+              titleLabel.Measure(titleLabel.RenderSize);
+              gridBase.Measure(gridBase.RenderSize);
+
+              // if table needed resize then recalculate values
+              if (!double.IsNaN(parent.Height) || !double.IsNaN(parent.Width))
+              {
+                tableHeight = GetTableHeight(gridBase, allData);
+                tableWidth = GetTableWidth(gridBase, allData);
+              }
+
+              var titleHeight = titleLabel.ActualHeight;
+              var titleWidth = titleLabel.DesiredSize.Width;
+              var dpiScale = VisualTreeHelper.GetDpi(gridBase);
+
+              // create title image
+              RenderTargetBitmap rtb = new RenderTargetBitmap((int)tableWidth, (int)titleHeight, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+              rtb.Render(titleLabel);
+              var titleImage = BitmapFrame.Create(rtb);
+
+              // create table image
+              rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+              rtb.Render(gridBase);
+              var tableImage = BitmapFrame.Create(rtb);
+
+              // add images together and fix missing background
+              rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight),
+                dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+
+              var dv = new DrawingVisual();
+              using (DrawingContext ctx = dv.RenderOpen())
+              {
+                var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
+                ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(titleImage.Width, titleImage.Height)));
+                ctx.DrawImage(titleImage, new Rect(new Point(0, 0), new Size(titleImage.Width, titleImage.Height)));
+                ctx.DrawImage(tableImage, new Rect(new Point(0, 0), new Size(tableImage.Width, tableImage.Height)));
+              }
+
+              rtb.Render(dv);
+              Clipboard.SetImage(BitmapFrame.Create(rtb));
+
+              if (!double.IsNaN(parent.Height))
+              {
+                parent.Height = double.NaN;
+              }
+
+              if (!double.IsNaN(parent.Width))
+              {
+                parent.Width = double.NaN;
+              }
+            }
+            catch (Exception ex)
+            {
+              LOG.Error("Could not Copy Image", ex);
+            }
+            finally
+            {
+              gridBase.IsHitTestVisible = true;
+
+              if (dialog != null)
+              {
+                dialog.Close();
+              }
+            }
+          }, System.Windows.Threading.DispatcherPriority.Background);
+        }, System.Windows.Threading.DispatcherPriority.Background);
+      }); 
     }
 
     internal static void SelectAll(FrameworkElement sender)
@@ -275,6 +321,41 @@ namespace EQLogParser
         treeGrid.PreviewMouseLeftButtonUp += PreviewMouseLeftButtonUp;
         treeGrid.PreviewMouseMove += MouseMove;
       }
+    }
+
+    private static double GetTableHeight(SfGridBase gridBase, bool allData)
+    {
+      var height = gridBase.HeaderRowHeight + 1;
+
+      if (gridBase is SfDataGrid dataGrid)
+      {
+        var count = Math.Min(1000, dataGrid.View.Records.Count);
+        height += count * dataGrid.RowHeight;
+      }
+      else if (gridBase is SfTreeGrid treeGrid)
+      {
+        var count = Math.Min(1000, treeGrid.View.Nodes.Count);
+        height += count * treeGrid.RowHeight;
+      }
+
+      return allData ? height : Math.Min(height, gridBase.ActualHeight);
+    }
+
+    private static double GetTableWidth(SfGridBase gridBase, bool allData)
+    {
+      var width = 0.0;
+      var rowHeaderWidth = gridBase.ShowRowHeader ? gridBase.RowHeaderWidth : 0.0;
+
+      if (gridBase is SfDataGrid dataGrid)
+      {
+        width += (rowHeaderWidth + dataGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum());
+      }
+      else if (gridBase is SfTreeGrid treeGrid)
+      {
+        width += (rowHeaderWidth + treeGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum());
+      }
+
+      return allData ? width : Math.Min(width, gridBase.ActualWidth);
     }
 
     private static void PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
