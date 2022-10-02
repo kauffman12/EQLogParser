@@ -49,7 +49,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>() 
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
 
-    private const string VERSION = "2.0.18";
+    private const string VERSION = "2.0.19";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;

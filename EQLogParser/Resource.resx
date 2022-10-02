@@ -153,6 +153,9 @@
   <data name="COLUMNS_SELECTED" xml:space="preserve">
     <value>Columns</value>
   </data>
+  <data name="COPY_LARGE_IMAGE" xml:space="preserve">
+    <value>Copy Large Image</value>
+  </data>
   <data name="CUSTOM_PARSE_TITLE" xml:space="preserve">
     <value>Custom Parse Title</value>
   </data>
