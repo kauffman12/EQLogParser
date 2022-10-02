@@ -79,7 +79,7 @@ namespace EQLogParser
 
                     if (File.Exists(fullPath))
                     {
-                      var process = Process.Start("msiexec", "/i " + fullPath);
+                      var process = Process.Start("msiexec", "/i \"" + fullPath + "\"");
                       if (!process.HasExited)
                       {
                         Task.Delay(1000).ContinueWith(task =>
