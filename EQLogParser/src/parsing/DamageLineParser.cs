@@ -304,7 +304,10 @@ namespace EQLogParser
             }
             // [Sun Apr 18 21:26:15 2021] Astralx crushes Sontalak for 126225 points of damage. (Strikethrough Critical)
             // [Sun Apr 18 20:20:32 2021] Susarrak the Crusader claws Villette for 27699 points of damage. (Strikethrough Wild Rampage)
-            else if (!string.IsNullOrEmpty(subType) && endDamage > -1 && pointsOfIndex == (endDamage - 2) && forIndex > -1 && hitType < forIndex)
+            //
+            // NOTE: The isIndex check is to ignore lines like below where someone probably died while their DoTs were going
+            // [Sun Apr 18 20:20:32 2021] Susarrak the Crusader was hit by non-melee for 27699 points of damage. (Strikethrough Wild Rampage)
+            else if (!string.IsNullOrEmpty(subType) && isIndex == -1 && endDamage > -1 && pointsOfIndex == (endDamage - 2) && forIndex > -1 && hitType < forIndex)
             {
               int hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
               string attacker = string.Join(" ", split, 0, hitType);
