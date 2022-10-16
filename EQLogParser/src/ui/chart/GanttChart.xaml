@@ -43,6 +43,11 @@
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
               </MenuItem.Icon>
             </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createLargeImageClick" Header="Large Image (All Data)" Click="CreateLargeImage">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
+              </MenuItem.Icon>
+            </MenuItem>            
           </MenuItem>
         </ContextMenu>
       </Grid.ContextMenu>

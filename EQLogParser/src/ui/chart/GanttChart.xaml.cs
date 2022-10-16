@@ -1,4 +1,6 @@
 ﻿using FontAwesome5;
+using Syncfusion.Data.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -31,7 +33,6 @@ namespace EQLogParser
     private readonly List<Rectangle> Dividers = new List<Rectangle>();
     private readonly List<TextBlock> Headers = new List<TextBlock>();
     private readonly Dictionary<string, byte> SelfOnly = new Dictionary<string, byte>();
-    private readonly Dictionary<string, byte> SelfOnlyOverride = new Dictionary<string, byte>();
     private readonly Dictionary<string, byte> Ignore = new Dictionary<string, byte>();
     private double StartTime;
     private double EndTime;
@@ -281,39 +282,93 @@ namespace EQLogParser
       }
     }
 
-    private void CreateImage(object sender, RoutedEventArgs e)
+    private void CreateImage(object sender, RoutedEventArgs e) => CreateImage(false);
+    private void CreateLargeImage(object sender, RoutedEventArgs e) => CreateImage(true);
+
+    private void CreateImage(bool everything = false)
     {
-      Task.Delay(50).ContinueWith((t) => Dispatcher.InvokeAsync(() =>
+      Task.Delay(250).ContinueWith(t =>
       {
-        var titlePadding = titleLabel1.Padding.Top + titleLabel1.Padding.Bottom;
-        var titleHeight = titleLabel1.DesiredSize.Height - titlePadding - 4;
-        var headerHeight = contentHeader.DesiredSize.Height;
-        var headerPadding = contentHeader.ActualHeight - headerHeight;
-        int height = (int)content.DesiredSize.Height + (int)contentHeader.ActualHeight + (int)titleHeight + (int)titlePadding;
-        int width = (int)contentLabels.ActualWidth + (int)content.ActualWidth;
-
-        var dpiScale = VisualTreeHelper.GetDpi(content);      // extra 26 for showing last row?
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + 28, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
-
-        DrawingVisual dv = new DrawingVisual();
-        using (DrawingContext ctx = dv.RenderOpen())
+        Dispatcher.InvokeAsync(() =>
         {
-          var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
-          var titleBrush = new VisualBrush(titlePane);
-          var headerBrush = new VisualBrush(contentHeader);
-          var labelsBrush = new VisualBrush(contentLabels);
-          var contentBrush = new VisualBrush(content);
-          ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(width, height + 28)));
-          ctx.DrawRectangle(titleBrush, null, new Rect(new Point(4, titlePadding / 2), new Size(titlePane.ActualWidth, titleHeight)));
-          ctx.DrawRectangle(headerBrush, null, new Rect(new Point(contentLabels.ActualWidth - 30, titleHeight + titlePadding + headerPadding / 2), new Size(contentHeader.DesiredSize.Width - contentLabels.ActualWidth + 30, headerHeight)));
-          ctx.DrawRectangle(labelsBrush, null, new Rect(new Point(0, headerHeight + headerPadding + titleHeight + titlePadding), new Size(contentLabels.ActualWidth, height - headerHeight - headerPadding)));
-          ctx.DrawRectangle(contentBrush, null, new Rect(new Point(contentLabels.ActualWidth, headerHeight + headerPadding + titleHeight + titlePadding), new Size(content.ActualWidth, height - headerHeight - headerPadding)));
-        }
+          titlePane.Measure(titlePane.RenderSize);
+          contentHeader.Measure(contentHeader.RenderSize);
+          contentLabels.Measure(contentLabels.RenderSize);
+          content.Measure(content.RenderSize);
 
-        rtb.Render(dv);
-        Clipboard.SetImage(rtb);
-      }
-      ), TaskScheduler.Default);
+          var dpiScale = VisualTreeHelper.GetDpi(titlePane);
+          var titleHeight = titlePane.ActualHeight;
+          var titleWidth = titlePane.DesiredSize.Width;
+
+          // create title image
+          var rtb = new RenderTargetBitmap((int)contentLabels.ActualWidth + (int)content.ActualWidth,
+            (int)titleHeight, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+          rtb.Render(titlePane);
+          var titleImage = BitmapFrame.Create(rtb);
+
+          // create content header image
+          rtb = new RenderTargetBitmap((int)contentHeader.ActualWidth, (int)contentHeader.ActualHeight,
+            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+          rtb.Render(contentHeader);
+          var headerImage = BitmapFrame.Create(rtb);
+
+          // create labels pane image
+          rtb = new RenderTargetBitmap((int)contentLabels.ActualWidth, (int)contentLabels.ActualHeight,
+            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+          rtb.Render(contentLabels);
+          var labelsImage = BitmapFrame.Create(rtb);
+
+          // create content pane image
+          rtb = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight,
+            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+          rtb.Render(content);
+          var contentImage = BitmapFrame.Create(rtb);
+
+          var width = (int)labelsImage.Width + (int)content.Children.ToList<FrameworkElement>().ToList().Max(x => x.Margin.Left) + 5;
+          if (!everything)
+          {
+            width = Math.Min(width, (int)labelsScroller.ActualWidth + (int)contentScroller.ActualWidth + 5);
+            if (contentScroller.ComputedVerticalScrollBarVisibility == Visibility.Visible)
+            {
+              width -= 12; // might be a Syncfusion property for this
+            }
+          }
+
+          var last = contentLabels.Children.ToList<FrameworkElement>().LastOrDefault();
+          var contentHeight = (last == null) ? 0 : (int)last.ActualHeight;
+
+          var height = (int)titleImage.Height + (int)headerImage.Height;
+          if (everything)
+          {
+            height += contentHeight;
+          }
+          else
+          {
+            height += Math.Min(contentHeight, (int)labelsScroller.ActualHeight) + 1;
+            if (contentScroller.ComputedHorizontalScrollBarVisibility == Visibility.Visible)
+            {
+              height -= 12; // might be a Syncfusion property for this
+            }
+          }
+
+          rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+
+          var dv = new DrawingVisual();
+          using (DrawingContext ctx = dv.RenderOpen())
+          {
+            // add images together and fix missing background
+            var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
+            ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(width, height)));
+            ctx.DrawImage(titleImage, new Rect(new Point(0, 0), new Size(titleImage.Width, titleImage.Height)));
+            ctx.DrawImage(headerImage, new Rect(new Point(0, titleImage.Height), new Size(headerImage.Width, headerImage.Height)));
+            ctx.DrawImage(labelsImage, new Rect(new Point(0, titleImage.Height + headerImage.Height), new Size(labelsImage.Width, labelsImage.Height)));
+            ctx.DrawImage(contentImage, new Rect(new Point(labelsImage.Width, titleImage.Height + headerImage.Height), new Size(contentImage.Width, contentImage.Height)));
+          }
+
+          rtb.Render(dv);
+          Clipboard.SetImage(BitmapFrame.Create(rtb));
+        }, System.Windows.Threading.DispatcherPriority.Background);
+      });
     }
 
     private void Display()

@@ -284,7 +284,7 @@ namespace EQLogParser
     public double LastTankingTime { get; set; }
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
-    public int Id { get; set; }
+    public long Id { get; set; }
     public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
     public uint SortId { get; set; }

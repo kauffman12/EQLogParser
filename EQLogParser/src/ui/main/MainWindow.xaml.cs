@@ -42,14 +42,14 @@ namespace EQLogParser
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private enum LogOption { OPEN, MONITOR };
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled);
-    private static readonly List<string> DAMAGE_CHOICES = new List<string>() 
+    private static readonly List<string> DAMAGE_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damage", "Aggregate Crit Rate", "DPS", "# Attempts", "# Crits", "# Hits" };
-    private static readonly List<string> HEALING_CHOICES = new List<string>() 
+    private static readonly List<string> HEALING_CHOICES = new List<string>()
     { "Aggregate HPS", "Aggregate Av Heal", "Aggregate Healing", "Aggregate Crit Rate", "HPS", "# Crits", "# Heals" };
-    private static readonly List<string> TANKING_CHOICES = new List<string>() 
+    private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
 
-    private const string VERSION = "2.0.20";
+    private const string VERSION = "2.0.21";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -705,9 +705,17 @@ namespace EQLogParser
             }
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
-            OverlayUtil.OpenIfEnabled();
-            LOG.Info("Finished Loading Log File in " + seconds.ToString(CultureInfo.CurrentCulture) + " seconds.");
-            Task.Delay(1000).ContinueWith(task => Dispatcher.InvokeAsync(() => EventsLogLoadingComplete?.Invoke(this, true)));
+            LOG.Info("Finished Loading Log File in " + seconds.ToString() + " seconds.");
+            Task.Delay(1500).ContinueWith(task => Dispatcher.InvokeAsync(() =>
+            {
+              EventsLogLoadingComplete?.Invoke(this, true);
+              Dispatcher.InvokeAsync(() =>
+              {
+                // delay opening overlay so group IDs get populated
+                DataManager.Instance.ResetOverlayFights(true);
+                OverlayUtil.OpenIfEnabled();
+              }, DispatcherPriority.Background);
+            }));
           }
           else
           {
