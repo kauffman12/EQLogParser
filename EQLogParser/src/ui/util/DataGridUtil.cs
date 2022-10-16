@@ -12,7 +12,6 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Media.Media3D;
 
 namespace EQLogParser
 {
@@ -271,7 +270,7 @@ namespace EQLogParser
             }
           }, System.Windows.Threading.DispatcherPriority.Background);
         }, System.Windows.Threading.DispatcherPriority.Background);
-      }); 
+      });
     }
 
     internal static void SelectAll(FrameworkElement sender)

@@ -828,16 +828,32 @@ namespace EQLogParser
       }
     }
 
-    internal void ResetOverlayFights()
+    internal void ResetOverlayFights(bool active = false)
     {
       lock (OverlayFights)
       {
-        foreach (ref var fight in OverlayFights.Values.ToArray().AsSpan())
+        var groupId = (active && ActiveFights.Count > 0) ? ActiveFights.Values.First().GroupId : -1;
+
+        // active is used after the log as been loaded. the overlay opening is displayed so that
+        // FightTable has time to populate the GroupIds. if for some reason not enough time has
+        // ellapsed then the IDs will still be 0 so ignore
+        if (groupId == 0)
         {
-          fight.PlayerTotals.Clear();
+          groupId = -1;
         }
 
-        OverlayFights.Clear();
+        var removeList = new List<long>();
+
+        foreach (ref var fight in OverlayFights.Values.ToArray().AsSpan())
+        {
+          if (groupId == -1 || fight.GroupId != groupId)
+          {
+            fight.PlayerTotals.Clear();
+            removeList.Add(fight.Id);
+          }
+        }
+
+        removeList.ForEach(id => OverlayFights.TryRemove(id, out _));
       }
     }
 
