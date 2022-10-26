@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:EQLogParser"             
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -13,17 +14,20 @@
       <RowDefinition Height="300*" />
       <RowDefinition Height="20" />
     </Grid.RowDefinitions>
+    <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
+    </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="logSearch" Margin="8,0,0,2" ToolTip="Minimum of 2 Characters" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <TextBox x:Name="logSearch" Margin="8,0,0,2" ToolTip="Minimum of 2 Characters" FontStyle="Italic" Width="175" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
       <ComboBox x:Name="logSearchModifier" Margin="0,0,0,2" SelectedIndex="0" Width="76" VerticalContentAlignment="Center">
         <ComboBoxItem>And</ComboBoxItem>
         <ComboBoxItem>Or</ComboBoxItem>
         <ComboBoxItem>Excluding</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logSearch2" Margin="0,0,0,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="190" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <TextBox x:Name="logSearch2" Margin="0,0,0,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="175" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
       <ComboBox x:Name="logSearchTime" Margin="0,0,0,2" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" />
       <CheckBox x:Name="useRegex" IsChecked="False" Margin="6,1,2,0" ToolTip="Allow regex to be used as search terms.">Regex</CheckBox>
-      <fa:ImageAwesome x:Name="searchIcon" Margin="6,4,0,2" Height="16" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged" />
+      <fa:ImageAwesome x:Name="searchIcon" Rotation="0" Margin="6,4,0,1" Height="18" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged" />
       <Label x:Name="progress" Visibility="Hidden" FontStyle="Italic" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
@@ -31,7 +35,8 @@
         <ComboBoxItem>Includes</ComboBoxItem>
         <ComboBoxItem>Excludes</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logFilter" Margin="0,0,8,2" FontStyle="Italic" Width="190" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
+      <TextBox x:Name="logFilter" Margin="0,0,0,2" FontStyle="Italic" Width="175" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
+      <ComboBox x:Name="lineTypes" Width="135" Margin="0,0,8,2" DropDownClosed="SelectLineTypes" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
     <syncfusion:TabControlExt x:Name="tabControl" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
       <syncfusion:TabItemExt x:Name="resultsTab" Background="{DynamicResource ContentBackgroundAlt2}" Header="Search Results" FontSize="14" CloseButtonState="Hidden" CanClose="False">
