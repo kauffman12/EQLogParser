@@ -241,6 +241,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Types.
+        /// </summary>
+        internal static string LINE_TYPES_SELECTED {
+            get {
+                return ResourceManager.GetString("LINE_TYPES_SELECTED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Lines (Filtered).
         /// </summary>
         internal static string LINES_FILTERED {

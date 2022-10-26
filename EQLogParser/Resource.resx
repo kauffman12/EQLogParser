@@ -180,6 +180,9 @@
   <data name="LINES_FILTERED" xml:space="preserve">
     <value>Lines (Filtered)</value>
   </data>
+  <data name="LINE_TYPES_SELECTED" xml:space="preserve">
+    <value>Types</value>
+  </data>
   <data name="LOG_FILTER_TEXT" xml:space="preserve">
     <value>Results Filter</value>
   </data>

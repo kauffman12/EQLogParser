@@ -32,6 +32,7 @@ namespace EQLogParser
     public const string DS = "Damage Shield";
     public const string RS = "Reverse DS";
     public const string BANE = "Bane Damage";
+    public const string OTHERDMG = "Other Damage";
     public const string PROC = "Proc";
     public const string HOT = "HoT Tick";
     public const string HEAL = "Direct Heal";

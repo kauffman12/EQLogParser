@@ -266,18 +266,18 @@
         }
       }
     }
+  }
 
-    internal static class ChatChannels
-    {
-      public const string Auction = "auction";
-      public const string Say = "say";
-      public const string Guild = "guild";
-      public const string Fellowship = "fellowship";
-      public const string Tell = "tell";
-      public const string Shout = "shout";
-      public const string Group = "group";
-      public const string Raid = "raid";
-      public const string Ooc = "ooc";
-    }
+  internal static class ChatChannels
+  {
+    public const string Auction = "auction";
+    public const string Say = "say";
+    public const string Guild = "guild";
+    public const string Fellowship = "fellowship";
+    public const string Tell = "tell";
+    public const string Shout = "shout";
+    public const string Group = "group";
+    public const string Raid = "raid";
+    public const string Ooc = "ooc";
   }
 }
