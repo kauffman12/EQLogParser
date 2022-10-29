@@ -246,7 +246,7 @@ namespace EQLogParser
           }
         };
 
-        if (DataManager.Instance.GetOverlayFights().Count > 0)
+        if (DataManager.Instance.HasOverlayFights())
         {
           UpdateTimer.Start();
         }
@@ -356,7 +356,7 @@ namespace EQLogParser
           // so this limits it to 1/2 the current time value
           ProcessDirection = ProcessDirection >= 3 ? 0 : ProcessDirection + 1;
 
-          Stats = DamageStatsManager.ComputeOverlayStats(CurrentDamageSelectionMode, CurrentMaxRows, SelectedClass);
+          Stats = DamageStatsManager.ComputeOverlayStats(Stats == null, CurrentDamageSelectionMode, CurrentMaxRows, SelectedClass);
 
           if (Stats == null)
           {

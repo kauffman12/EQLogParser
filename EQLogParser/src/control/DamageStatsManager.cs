@@ -26,144 +26,233 @@ namespace EQLogParser
     private List<Fight> Selected;
     private string Title;
 
-    internal static CombinedStats ComputeOverlayStats(int mode, int maxRows, string selectedClass)
+    private static long OverlayDeadTotalDamage;
+    private static Dictionary<string, string> OverlayPetOwners;
+    private static Dictionary<string, OverlayPlayerTotal> OverlayDeadPlayerTotals;
+    private static TimeRange OverlayTimeSegments;
+    private static string OverlayFightName;
+    private static double OverlayUpdateTime;
+    private static int OverlayDeadFightCount;
+
+    internal static CombinedStats ComputeOverlayStats(bool reset, int mode, int maxRows, string selectedClass)
     {
       CombinedStats combined = null;
 
-      var allDamage = 0L;
-      var allTime = new TimeRange();
+      if (reset)
+      {
+        OverlayDeadTotalDamage = 0;
+        OverlayUpdateTime = 0;
+        OverlayPetOwners = new Dictionary<string, string>();
+        OverlayDeadPlayerTotals = new Dictionary<string, OverlayPlayerTotal>();
+        OverlayTimeSegments = new TimeRange();
+        OverlayFightName = null;
+        OverlayDeadFightCount = 0;
+      }
+
+      var allDamage = OverlayDeadTotalDamage;
+      var allTime = OverlayTimeSegments.TimeSegments.Count > 0 ? new TimeRange(OverlayTimeSegments.TimeSegments) : new TimeRange();
       var playerTotals = new Dictionary<string, OverlayPlayerTotal>();
       var playerHasPet = new Dictionary<string, bool>();
-      var updateTime = 0d;
-      var oldestTime = 0d;
-      var fights = DataManager.Instance.GetOverlayFights();
+      var fightCount = OverlayDeadFightCount;
+      
+      // check incase pet mappings was updated while overlay is running
+      foreach (var keypair in OverlayPetOwners)
+      {
+        UpdateOverlayHasPet(keypair.Key, keypair.Value, playerHasPet, OverlayDeadPlayerTotals);
+      }
+
+      // copy values from dead fights
+      foreach (var keypair in OverlayDeadPlayerTotals)
+      {
+        playerTotals[keypair.Key] = new OverlayPlayerTotal
+        {
+          Damage = keypair.Value.Damage,
+          UpdateTime = keypair.Value.UpdateTime,
+          Name = keypair.Value.Name,
+          Range = new TimeRange(keypair.Value.Range.TimeSegments)
+        };
+      }
+
+      var oldestTime = OverlayUpdateTime;
       Fight oldestFight = null;
       var baneEnabled = MainWindow.IsBaneDamageEnabled;
 
       // clear out anything pending in the queue
       DamageLineParser.CheckSlainQueue(DateUtil.ToDouble(DateTime.Now.AddSeconds(-3)));
 
-      if (fights.Count > 0)
+      foreach (var fightinfo in DataManager.Instance.GetOverlayFights())
       {
-        oldestFight = fights[0];
-        foreach (ref Fight fight in fights.ToArray().AsSpan())
+        var fight = fightinfo.Value;
+        fightCount++;
+
+        if (!fight.Dead || mode > 0)
         {
-          if (!fight.Dead || mode > 0)
+          foreach (var keypair in fight.PlayerTotals)
           {
-            foreach (var keypair in fight.PlayerTotals)
+            var player = UpdateOverlayHasPet(keypair.Key, keypair.Value.PetOwner, playerHasPet, playerTotals);
+
+            // save current state and remove dead fight at the end
+            if (fight.Dead)
             {
-              var player = keypair.Key;
-              if (!string.IsNullOrEmpty(keypair.Value.PetOwner))
-              {
-                player = keypair.Value.PetOwner;
-                playerHasPet[player] = true;
-              }
-              else if (PlayerManager.Instance.GetPlayerFromPet(player) is string owner && owner != Labels.UNASSIGNED)
-              {
-                player = owner;
-                playerHasPet[player] = true;
-              }
+              OverlayDeadTotalDamage += keypair.Value.Damage;
+              OverlayTimeSegments.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
+            }
 
-              allDamage += keypair.Value.Damage;
-              allTime.Add(new TimeSegment(keypair.Value.BeginTime, fight.LastDamageTime));
+            // always update so +Pets can be added before fight is dead
+            OverlayPetOwners[player] = keypair.Value.PetOwner;
+            allDamage += keypair.Value.Damage;
+            allTime.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
 
-              if (updateTime == 0)
+            if (OverlayUpdateTime == 0)
+            {
+              OverlayUpdateTime = keypair.Value.UpdateTime;
+              oldestTime = keypair.Value.UpdateTime;
+              oldestFight = fight;
+            }
+            else
+            {
+              OverlayUpdateTime = Math.Max(OverlayUpdateTime, keypair.Value.UpdateTime);
+              if (oldestTime > keypair.Value.UpdateTime)
               {
-                updateTime = keypair.Value.UpdateTime;
                 oldestTime = keypair.Value.UpdateTime;
                 oldestFight = fight;
               }
-              else
-              {
-                updateTime = Math.Max(updateTime, keypair.Value.UpdateTime);
-                if (oldestTime > keypair.Value.UpdateTime)
-                {
-                  oldestTime = keypair.Value.UpdateTime;
-                  oldestFight = fight;
-                }
-              }
-
-              if (playerTotals.TryGetValue(player, out OverlayPlayerTotal total))
-              {
-                total.Damage += keypair.Value.Damage;
-                total.Range.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
-                total.UpdateTime = Math.Max(total.UpdateTime, keypair.Value.UpdateTime);
-              }
-              else
-              {
-                playerTotals[player] = new OverlayPlayerTotal
-                {
-                  Name = player,
-                  Damage = keypair.Value.Damage,
-                  Range = new TimeRange(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime)),
-                  UpdateTime = keypair.Value.UpdateTime
-                };
-              }
             }
+
+            if (fight.Dead)
+            {
+              UpdateOverlayPlayerTotals(player, OverlayDeadPlayerTotals, keypair.Value);
+            }
+
+            UpdateOverlayPlayerTotals(player, playerTotals, keypair.Value);
           }
         }
 
-        var timeout = mode == 0 ? DataManager.FIGHTTIMEOUT : mode;
-        var totalSeconds = allTime.GetTotal();
-        if (oldestFight != null && totalSeconds > 0 && allDamage > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(updateTime)).TotalSeconds <= timeout)
+        if (fight.Dead)
         {
-          int rank = 1;
-          var list = new List<PlayerStats>();
-          var totalDps = (long)Math.Round(allDamage / totalSeconds, 2);
-          int myIndex = -1;
-
-          foreach (var total in playerTotals.Values.OrderByDescending(total => total.Damage))
-          {
-            var time = total.Range.GetTotal();
-            if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MAXTIMEOUT)
-            {
-              PlayerStats playerStats = new PlayerStats()
-              {
-                Name = playerHasPet.ContainsKey(total.Name) ? total.Name + " +Pets" : total.Name,
-                Total = total.Damage,
-                DPS = (long)Math.Round(total.Damage / time, 2),
-                TotalSeconds = time,
-                Rank = (ushort)rank++,
-                ClassName = PlayerManager.Instance.GetPlayerClass(total.Name),
-                OrigName = total.Name
-              };
-
-              if (playerStats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal))
-              {
-                myIndex = list.Count;
-              }
-
-              if (myIndex == list.Count || selectedClass == EQLogParser.Resource.ANY_CLASS || selectedClass == playerStats.ClassName)
-              {
-                list.Add(playerStats);
-              }
-            }
-          }
-
-          if (myIndex > (maxRows - 1))
-          {
-            var me = list[myIndex];
-            list = list.Take(maxRows - 1).ToList();
-            list.Add(me);
-          }
-          else
-          {
-            list = list.Take(maxRows).ToList();
-          }
-
-          combined = new CombinedStats();
-          combined.StatsList.AddRange(list);
-          combined.RaidStats = new PlayerStats { Total = allDamage, DPS = totalDps, TotalSeconds = totalSeconds };
-          combined.TargetTitle = (fights.Count > 1 ? "C(" + fights.Count + "): " : "") + oldestFight.Name;
-
-          // these are here to support copy/paste of the parse
-          combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, combined.RaidStats.TotalSeconds);
-          combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(combined.RaidStats.Total),
-            " Damage ", StatsUtil.FormatTotals(combined.RaidStats.DPS));
+          DataManager.Instance.RemoveOverlayFight(fightinfo.Key);
+          OverlayDeadFightCount++;
         }
       }
 
+      if (OverlayFightName == null && oldestFight != null)
+      {
+        OverlayFightName = oldestFight.Name;
+      }
+
+      var timeout = mode == 0 ? DataManager.FIGHTTIMEOUT : mode;
+      var totalSeconds = allTime.GetTotal();
+      if (OverlayFightName != null && totalSeconds > 0 && allDamage > 0 && 
+        (DateTime.Now - DateTime.MinValue.AddSeconds(OverlayUpdateTime)).TotalSeconds <= timeout)
+      {
+        int rank = 1;
+        var list = new List<PlayerStats>();
+        var totalDps = (long)Math.Round(allDamage / totalSeconds, 2);
+        int myIndex = -1;
+
+        foreach (var total in playerTotals.Values.OrderByDescending(total => total.Damage))
+        {
+          var time = total.Range.GetTotal();
+          if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MAXTIMEOUT)
+          {
+            PlayerStats playerStats = new PlayerStats()
+            {
+              Name = playerHasPet.ContainsKey(total.Name) ? total.Name + " +Pets" : total.Name,
+              Total = total.Damage,
+              DPS = (long)Math.Round(total.Damage / time, 2),
+              TotalSeconds = time,
+              Rank = (ushort)rank++,
+              ClassName = PlayerManager.Instance.GetPlayerClass(total.Name),
+              OrigName = total.Name
+            };
+
+            if (playerStats.Name.StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal))
+            {
+              myIndex = list.Count;
+            }
+
+            if (myIndex == list.Count || selectedClass == EQLogParser.Resource.ANY_CLASS || selectedClass == playerStats.ClassName)
+            {
+              list.Add(playerStats);
+            }
+          }
+        }
+
+        if (myIndex > (maxRows - 1))
+        {
+          var me = list[myIndex];
+          list = list.Take(maxRows - 1).ToList();
+          list.Add(me);
+        }
+        else
+        {
+          list = list.Take(maxRows).ToList();
+        }
+
+        combined = new CombinedStats();
+        combined.StatsList.AddRange(list);
+        combined.RaidStats = new PlayerStats { Total = allDamage, DPS = totalDps, TotalSeconds = totalSeconds };
+        combined.TargetTitle = (fightCount > 1 ? "C(" + fightCount + "): " : "") + OverlayFightName;
+
+        // these are here to support copy/paste of the parse
+        combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, combined.RaidStats.TotalSeconds);
+        combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(combined.RaidStats.Total),
+          " Damage ", StatsUtil.FormatTotals(combined.RaidStats.DPS));
+      }
+
       return combined;
+    }
+
+    private static void UpdateOverlayPlayerTotals(string player, Dictionary<string, OverlayPlayerTotal> playerTotals, FightTotalDamage fightDmg)
+    {
+      if (playerTotals.TryGetValue(player, out OverlayPlayerTotal total))
+      {
+        total.Damage += fightDmg.Damage;
+        total.Range.Add(new TimeSegment(fightDmg.BeginTime, fightDmg.UpdateTime));
+        total.UpdateTime = Math.Max(total.UpdateTime, fightDmg.UpdateTime);
+      }
+      else
+      {
+        playerTotals[player] = new OverlayPlayerTotal
+        {
+          Name = player,
+          Damage = fightDmg.Damage,
+          Range = new TimeRange(new TimeSegment(fightDmg.BeginTime, fightDmg.UpdateTime)),
+          UpdateTime = fightDmg.UpdateTime
+        };
+      }
+    }
+
+    private static string UpdateOverlayHasPet(string player, string petOwner, Dictionary<string, bool> playerHasPet, Dictionary<string, OverlayPlayerTotal> totals)
+    {
+      if (!string.IsNullOrEmpty(petOwner))
+      {
+        playerHasPet[petOwner] = true;
+
+        if (totals.TryGetValue(player, out OverlayPlayerTotal value))
+        {
+          totals.Remove(player);
+          totals[petOwner] = value;
+          value.Name = petOwner;
+        }
+
+        player = petOwner;
+      }
+      else if (PlayerManager.Instance.GetPlayerFromPet(player) is string owner && owner != Labels.UNASSIGNED)
+      {
+        playerHasPet[owner] = true;
+
+        if (totals.TryGetValue(player, out OverlayPlayerTotal value))
+        {
+          totals.Remove(player);
+          totals[owner] = value;
+          value.Name = owner;
+        }
+
+        player = owner;
+      }
+
+      return player;
     }
 
     internal DamageStatsManager()
