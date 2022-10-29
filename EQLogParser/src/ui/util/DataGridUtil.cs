@@ -31,7 +31,8 @@ namespace EQLogParser
     internal static void SortColumnsChanged(object sender, GridSortColumnsChangedEventArgs e, IReadOnlyCollection<string> descending)
     {
       // Here, we have updated the column's items in view based on SortDescriptions. 
-      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add ||
+        e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Replace)
       {
         if (sender is SfDataGrid)
         {
@@ -73,7 +74,8 @@ namespace EQLogParser
     internal static void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e, IReadOnlyCollection<string> descending)
     {
       // Initially, we can change the SortDirection of particular column based on columnchanged action. 
-      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add ||
+        e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Replace)
       {
         if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
         {
