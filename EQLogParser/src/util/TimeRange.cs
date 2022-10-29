@@ -37,6 +37,11 @@ namespace EQLogParser
       TimeSegments.Add(segment);
     }
 
+    public TimeRange(List<TimeSegment> segments)
+    {
+      segments.ForEach(segment => Add(new TimeSegment(segment.BeginTime, segment.EndTime)));
+    }
+
     public void Add(TimeSegment segment)
     {
       if (segment != null && segment.BeginTime <= segment.EndTime)

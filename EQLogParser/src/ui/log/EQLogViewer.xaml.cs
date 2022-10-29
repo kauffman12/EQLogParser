@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,7 +27,7 @@ namespace EQLogParser
     private const string NOCAT = "Uncategorized";
     private const string OTHERCHAT = "Other Chat";
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
-    private static readonly List<string> Times = new List<string>() { "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Everything" };
+    private static readonly List<string> Times = new List<string>() { "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Selected Fights", "Everything" };
     private static bool Complete = true;
     private static bool Running = false;
     private readonly DispatcherTimer FilterTimer;
@@ -312,6 +313,7 @@ namespace EQLogParser
         var logTimeIndex = logSearchTime.SelectedIndex;
         var regexEnabled = useRegex.IsChecked.Value;
         LinePositions.Clear();
+        var fights = (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetSelectedFights().OrderBy(sel => sel.Id).ToList();
 
         Task.Delay(75).ContinueWith(task =>
         {
@@ -319,7 +321,43 @@ namespace EQLogParser
           {
             using (var f = File.OpenRead(MainWindow.CurrentLogFile))
             {
-              var s = Helpers.GetStreamReader(f, logTimeIndex);
+              double start = -1;
+              TimeRange ranges = null;
+              switch (logTimeIndex)
+              {
+                case 0:
+                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60;
+                  break;
+                case 1:
+                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 8;
+                  break;
+                case 2:
+                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 24;
+                  break;
+                case 3:
+                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 24 * 7;
+                  break;
+                case 4:
+                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 24 * 14;
+                  break;
+                case 5:
+                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 24 * 30;
+                  break;
+                case 6:
+                  if (fights.Count > 0)
+                  {
+                    start = fights[0].BeginTime - 15;
+                    ranges = new TimeRange();
+                    fights.ForEach(fight => ranges.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
+                  }
+                  else
+                  {
+                    start = 0;
+                  }
+                  break;
+              }
+
+              var s = Helpers.GetStreamReader(f, start);
               var list = new List<string>();
               var lastPercent = -1;
 
@@ -338,7 +376,7 @@ namespace EQLogParser
               while (!s.EndOfStream && Running)
               {
                 var line = s.ReadLine();
-                if (Helpers.TimeCheck(line, logTimeIndex))
+                if (Helpers.TimeCheck(line, start, ranges, out bool exceeds))
                 {
                   var match = true;
                   var firstIndex = -2;
@@ -385,6 +423,11 @@ namespace EQLogParser
                   {
                     progress.Content = "Searching (" + percent + "% Complete)";
                   }, DispatcherPriority.Background);
+                }
+
+                if (exceeds)
+                {
+                  break;
                 }
               }
 
