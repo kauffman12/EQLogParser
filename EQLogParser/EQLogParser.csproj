@@ -164,12 +164,12 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
     </PackageReference>
-    <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.2.0.40" />
-    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.2.0.40" />
-    <PackageReference Include="Syncfusion.Shared.Base" Version="20.2.0.45" />
-    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="20.2.0.40" />
-    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="20.2.0.40" />
-    <PackageReference Include="Syncfusion.Tools.WPF" Version="20.2.0.40" />
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.3.0.47" />
+    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.3.0.47" />
+    <PackageReference Include="Syncfusion.Shared.Base" Version="20.3.0.47" />
+    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="20.3.0.47" />
+    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="20.3.0.47" />
+    <PackageReference Include="Syncfusion.Tools.WPF" Version="20.3.0.47" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
   </ItemGroup>

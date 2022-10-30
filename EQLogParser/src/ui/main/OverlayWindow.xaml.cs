@@ -35,12 +35,12 @@ namespace EQLogParser
     private readonly List<Rectangle> EmptyList = new List<Rectangle>();
     private readonly List<Rectangle> RectangleList = new List<Rectangle>();
     private readonly List<Color> ColorList = new List<Color>();
-    private readonly DispatcherTimer UpdateTimer;
+    private DispatcherTimer UpdateTimer;
     private readonly double CalculatedRowHeight;
     private readonly int CurrentDamageSelectionMode;
     private readonly bool Active = false;
-    private readonly Popup ButtonPopup;
-    private readonly StackPanel ButtonsPanel;
+    private Popup ButtonPopup;
+    private StackPanel ButtonsPanel;
 
     private CombinedStats Stats = null;
     private int ProcessDirection = 0;
@@ -113,7 +113,6 @@ namespace EQLogParser
       }
       else
       {
-        //overlayCanvas.Background = new SolidColorBrush(TITLECOLOR);
         overlayCanvas.SetResourceReference(Canvas.BackgroundProperty, "ContentBackground");
         CreateRows(true);
         Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
@@ -378,6 +377,7 @@ namespace EQLogParser
               if (CancelToken != null)
               {
                 CancelToken.Cancel();
+                CancelToken.Dispose();
                 CancelToken = null;
               }
 
@@ -398,7 +398,12 @@ namespace EQLogParser
                       Height = 0;
                     }
 
-                    CancelToken = null;
+                    if (CancelToken != null)
+                    {
+                      CancelToken.Cancel();
+                      CancelToken.Dispose();
+                      CancelToken = null;
+                    }
                   }
                 });
               }, CancelToken.Token);
@@ -869,12 +874,18 @@ namespace EQLogParser
       if (Active)
       {
         DataManager.Instance.EventsNewOverlayFight -= Instance_NewOverlayFight;
-        ButtonPopup.IsOpen = false;
 
-        if (UpdateTimer?.IsEnabled == true)
+        if (UpdateTimer != null)
         {
           UpdateTimer.Stop();
+          UpdateTimer.Tick -= UpdateTimerTick;
+          UpdateTimer = null;
         }
+
+        ButtonPopup.IsOpen = false;
+        ButtonPopup = null;
+        TitlePanel.SizeChanged -= TitleResizing;
+        TitleDamagePanel.SizeChanged -= TitleResizing;
       }
     }
 
