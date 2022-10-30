@@ -177,7 +177,6 @@ namespace EQLogParser
       rectangle.SetValue(Panel.ZIndexProperty, 1);
       rectangle.Opacity = opacity;
       rectangle.SetResourceReference(Rectangle.FillProperty, colorResource);
-      //rectangle.Fill = CreateBrush(color);
       return rectangle;
     }
 
