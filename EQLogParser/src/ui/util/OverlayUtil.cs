@@ -23,9 +23,15 @@ namespace EQLogParser
 
     }
 
-    internal static void CloseOverlay() => Overlay?.Close();
-
     internal static bool LoadSettings() => IsDamageOverlayEnabled = ConfigUtil.IfSet("IsDamageOverlayEnabled");
+
+    internal static void CloseOverlay()
+    {
+      if (Overlay != null)
+      {
+        Overlay.Visibility = Visibility.Hidden;
+      }
+    }
 
     internal static void OpenIfEnabled()
     {
@@ -39,9 +45,24 @@ namespace EQLogParser
     {
       Application.Current.Dispatcher.Invoke(() =>
       {
-        Overlay?.Close();
-        Overlay = new OverlayWindow(configure);
-        Overlay.Show();
+        if (Overlay == null)
+        {
+          Overlay = new OverlayWindow(configure);
+          Overlay.Show();
+        }
+        else
+        {
+          if (configure)
+          {
+            Overlay.SetConfigure();
+          }
+          else
+          {
+            Overlay.SetActive();
+          }
+
+          Overlay.Visibility = Visibility.Visible;
+        }
       }, System.Windows.Threading.DispatcherPriority.Send);
 
       if (saveFirst)
@@ -52,13 +73,8 @@ namespace EQLogParser
 
     internal static void ResetOverlay()
     {
-      Overlay?.Close();
+      CloseOverlay();
       DataManager.Instance.ResetOverlayFights();
-
-      if (IsDamageOverlayEnabled)
-      {
-        OpenOverlay();
-      }
     }
 
     internal static bool ToggleOverlay()
