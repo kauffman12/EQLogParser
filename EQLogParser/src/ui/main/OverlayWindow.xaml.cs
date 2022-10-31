@@ -36,9 +36,9 @@ namespace EQLogParser
     private readonly List<Rectangle> RectangleList = new List<Rectangle>();
     private readonly List<Color> ColorList = new List<Color>();
     private DispatcherTimer UpdateTimer;
-    private readonly double CalculatedRowHeight;
-    private readonly int CurrentDamageSelectionMode;
-    private readonly bool Active = false;
+    private double CalculatedRowHeight;
+    private int CurrentDamageSelectionMode;
+    private bool Active = false;
     private Popup ButtonPopup;
     private StackPanel ButtonsPanel;
 
@@ -67,10 +67,9 @@ namespace EQLogParser
       Main = Application.Current.MainWindow as MainWindow;
       Main.EventsThemeChanged += EventsThemeChanged;
 
-      string width = ConfigUtil.GetSetting("OverlayWidth");
-      string height = ConfigUtil.GetSetting("OverlayHeight");
-      string top = ConfigUtil.GetSetting("OverlayTop");
-      string left = ConfigUtil.GetSetting("OverlayLeft");
+      AllowsTransparency = true;
+      Style = null;
+      WindowStyle = WindowStyle.None;
 
       // Hide other player names on overlay
       IsHideOverlayOtherPlayersEnabled = ConfigUtil.IfSet("HideOverlayOtherPlayers");
@@ -94,50 +93,126 @@ namespace EQLogParser
         SelectedClass = savedClass;
       }
 
-      var margin = SystemParameters.WindowNonClientFrameThickness;
-      bool offsetSize = configure || width == null || height == null || top == null || left == null;
+      var settingsButton = OverlayUtil.CreateButton("Change Settings", "\xE713", CurrentFontSize - 1);
+      settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(true, false);
 
-      if (!offsetSize)
+      var copyButton = OverlayUtil.CreateButton("Copy Parse", "\xE8C8", CurrentFontSize - 1);
+      copyButton.Click += (object sender, RoutedEventArgs e) =>
       {
-        SetVisible(false);
-        CreateRows();
-        Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["OverlayActiveBrush"];
-        TitleBarHeight = 0.0;
-        MinHeight = 0;
-        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-        UpdateTimer.Tick += UpdateTimerTick;
-        AllowsTransparency = true;
-        Style = null;
-        WindowStyle = WindowStyle.None;
-        ShowActivated = false;
+        lock (StatsLock)
+        {
+          (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
+        }
+      };
+
+      var refreshButton = OverlayUtil.CreateButton("Cancel Current Parse", "\xE8BB", CurrentFontSize - 1);
+      refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay();
+
+      ButtonPopup = new Popup();
+      ButtonPopup.Visibility = configure ? Visibility.Hidden : Visibility.Visible;
+      ButtonsPanel = OverlayUtil.CreateNameStackPanel();
+      ButtonsPanel.Children.Add(settingsButton);
+      ButtonsPanel.Children.Add(copyButton);
+      ButtonsPanel.Children.Add(refreshButton);
+      ButtonPopup.Child = ButtonsPanel;
+      ButtonPopup.AllowsTransparency = true;
+      ButtonPopup.Opacity = OverlayUtil.OPACITY;
+      ButtonPopup.Placement = PlacementMode.Relative;
+      ButtonPopup.PlacementTarget = this;
+      ButtonPopup.VerticalOffset = -1;
+
+      ButtonsPanel.SizeChanged += (object sender, SizeChangedEventArgs e) =>
+      {
+        if (TitlePanel.Margin.Left != e.NewSize.Width + 2)
+        {
+          TitlePanel.Margin = new Thickness(e.NewSize.Width + 2, TitlePanel.Margin.Top, 0, TitlePanel.Margin.Bottom);
+        }
+
+        if (ButtonsPanel != null && ButtonsPanel.ActualHeight != TitlePanel.ActualHeight)
+        {
+          ButtonsPanel.Height = TitlePanel.ActualHeight;
+        }
+      };
+
+      ReadSizes(out Thickness margin, out string width, out string height, out string top, out string left);
+      if (configure || width == null || height == null || top == null || left == null)
+      {
+        SetConfigure();
       }
       else
       {
-        overlayCanvas.SetResourceReference(Canvas.BackgroundProperty, "ContentBackground");
-        CreateRows(true);
-        Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
-        TitleBarHeight = 22.0;
-        MinHeight = 130;
-        AllowsTransparency = false;
-        WindowStyle = WindowStyle.SingleBorderWindow;
-        var list = PlayerManager.Instance.GetClassList();
-        list.Insert(0, EQLogParser.Resource.ANY_CLASS);
-        classesList.ItemsSource = list;
-        classesList.SelectedItem = SelectedClass;
-        maxRowsSelection.SelectedItem = maxRowsSelection.Items[CurrentMaxRows - 5];
-        SetVisible(true);
-        LoadTestData();
+        SetActive();
       }
+    }
+
+    public void SetActive()
+    {
+      SetVisible(false);
+      CreateRows();
+      Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["OverlayActiveBrush"];
+      TitleBarHeight = 0.0;
+      MinHeight = 0;
+
+      if (UpdateTimer == null)
+      {
+        UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+        UpdateTimer.Tick += UpdateTimerTick;
+      }
+
+      ShowActivated = false;
+      UpdateSettings(false);
+
+      DataManager.Instance.EventsNewOverlayFight += Instance_NewOverlayFight;
+      Active = true;
+
+      if (DataManager.Instance.HasOverlayFights())
+      {
+        UpdateTimer.Start();
+      }
+    }
+
+    public void SetConfigure()
+    {
+      overlayCanvas.SetResourceReference(Canvas.BackgroundProperty, "ContentBackground");
+      CreateRows(true);
+      Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
+      TitleBarHeight = 22.0;
+      MinHeight = 130;
+      var list = PlayerManager.Instance.GetClassList();
+      list.Insert(0, EQLogParser.Resource.ANY_CLASS);
+      classesList.ItemsSource = list;
+      classesList.SelectedItem = SelectedClass;
+      maxRowsSelection.SelectedItem = maxRowsSelection.Items[CurrentMaxRows - 5];
+      SetVisible(true);
+      LoadTestData();
+      UpdateSettings(true);
+
+      // remove when configuring
+      DataManager.Instance.EventsNewOverlayFight -= Instance_NewOverlayFight;
+    }
+
+    private void ReadSizes(out Thickness margin, out string width, out string height, out string top, out string left)
+    {
+      margin = SystemParameters.WindowNonClientFrameThickness;
+      width = ConfigUtil.GetSetting("OverlayWidth");
+      height = ConfigUtil.GetSetting("OverlayHeight");
+      top = ConfigUtil.GetSetting("OverlayTop");
+      left = ConfigUtil.GetSetting("OverlayLeft");
+    }
+
+    private void UpdateSettings(bool configure)
+    {
+      ReadSizes(out Thickness margin, out string width, out string height, out string top, out string left);
 
       if (width != null && double.TryParse(width, out double dvalue) && !double.IsNaN(dvalue))
       {
-        Width = offsetSize ? dvalue + margin.Left + margin.Right : dvalue;
+        Width = configure ? dvalue + margin.Left + margin.Right : dvalue;
       }
 
       if (height != null && double.TryParse(height, out dvalue) && !double.IsNaN(dvalue))
       {
-        Height = offsetSize ? dvalue + margin.Top + margin.Bottom : 0;
-        if (!offsetSize)
+        Height = configure ? dvalue + margin.Top + margin.Bottom : 0;
+        if (!configure)
         {
           CalculatedRowHeight = dvalue / (CurrentMaxRows + 1);
         }
@@ -154,7 +229,7 @@ namespace EQLogParser
 
       if (left != null && double.TryParse(left, out dvalue) && !double.IsNaN(dvalue))
       {
-        var test = offsetSize ? dvalue - margin.Left : dvalue;
+        var test = configure ? dvalue - margin.Left : dvalue;
         if (test >= SystemParameters.VirtualScreenLeft && test < SystemParameters.VirtualScreenWidth)
         {
           Left = test;
@@ -190,65 +265,6 @@ namespace EQLogParser
       if (!fontHasBeenSet)
       {
         SetFont();
-      }
-
-      if (!offsetSize)
-      {
-        DataManager.Instance.EventsNewOverlayFight += Instance_NewOverlayFight;
-        Active = true;
-      }
-      else
-      {
-        // remove when configuring
-        DataManager.Instance.EventsNewOverlayFight -= Instance_NewOverlayFight;
-      }
-
-      if (!configure)
-      {
-        var settingsButton = OverlayUtil.CreateButton("Change Settings", "\xE713", CurrentFontSize - 1);
-        settingsButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(true, false);
-
-        var copyButton = OverlayUtil.CreateButton("Copy Parse", "\xE8C8", CurrentFontSize - 1);
-        copyButton.Click += (object sender, RoutedEventArgs e) =>
-        {
-          lock (StatsLock)
-          {
-            (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
-          }
-        };
-
-        var refreshButton = OverlayUtil.CreateButton("Cancel Current Parse", "\xE8BB", CurrentFontSize - 1);
-        refreshButton.Click += (object sender, RoutedEventArgs e) => OverlayUtil.ResetOverlay();
-
-        ButtonPopup = new Popup();
-        ButtonsPanel = OverlayUtil.CreateNameStackPanel();
-        ButtonsPanel.Children.Add(settingsButton);
-        ButtonsPanel.Children.Add(copyButton);
-        ButtonsPanel.Children.Add(refreshButton);
-        ButtonPopup.Child = ButtonsPanel;
-        ButtonPopup.AllowsTransparency = true;
-        ButtonPopup.Opacity = OverlayUtil.OPACITY;
-        ButtonPopup.Placement = PlacementMode.Relative;
-        ButtonPopup.PlacementTarget = this;
-        ButtonPopup.VerticalOffset = -1;
-
-        ButtonsPanel.SizeChanged += (object sender, SizeChangedEventArgs e) =>
-        {
-          if (TitlePanel.Margin.Left != e.NewSize.Width + 2)
-          {
-            TitlePanel.Margin = new Thickness(e.NewSize.Width + 2, TitlePanel.Margin.Top, 0, TitlePanel.Margin.Bottom);
-          }
-
-          if (ButtonsPanel != null && ButtonsPanel.ActualHeight != TitlePanel.ActualHeight)
-          {
-            ButtonsPanel.Height = TitlePanel.ActualHeight;
-          }
-        };
-
-        if (DataManager.Instance.HasOverlayFights())
-        {
-          UpdateTimer.Start();
-        }
       }
     }
 
@@ -349,12 +365,16 @@ namespace EQLogParser
       {
         try
         {
+          if (Visibility != Visibility.Visible)
+          {
+            Visibility = Visibility.Visible;
+          }
+
           Topmost = true; // possible workaround
 
           // people wanted shorter delays for damage updates but I don't want the indicator to change constantly
           // so this limits it to 1/2 the current time value
           ProcessDirection = ProcessDirection >= 3 ? 0 : ProcessDirection + 1;
-
           Stats = DamageStatsManager.ComputeOverlayStats(Stats == null, CurrentDamageSelectionMode, CurrentMaxRows, SelectedClass);
 
           if (Stats == null)
@@ -388,7 +408,7 @@ namespace EQLogParser
                 {
                   lock (StatsLock)
                   {
-                    if (!UpdateTimer.IsEnabled && Height > 0)
+                    if (UpdateTimer != null && !UpdateTimer.IsEnabled && Height > 0)
                     {
                       windowBrush.Opacity = 0.0;
                       borderBrush.Opacity = 0.0;
