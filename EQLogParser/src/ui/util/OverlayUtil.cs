@@ -17,13 +17,20 @@ namespace EQLogParser
     internal static readonly SolidColorBrush TITLEBRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
     private static bool IsDamageOverlayEnabled = false;
     private static OverlayWindow Overlay = null;
+    private static OverlayConfigWindow OverlayConfig = null;
 
     private OverlayUtil()
     {
 
     }
 
-    internal static void CloseOverlay() => Overlay?.Close();
+    internal static void CloseOverlay()
+    {
+     if (Overlay != null)
+      {
+        Overlay.Pause();
+      }
+    }
 
     internal static bool LoadSettings() => IsDamageOverlayEnabled = ConfigUtil.IfSet("IsDamageOverlayEnabled");
 
@@ -39,25 +46,43 @@ namespace EQLogParser
     {
       Application.Current.Dispatcher.Invoke(() =>
       {
-        Overlay?.Close();
-        Overlay = new OverlayWindow(configure);
-        Overlay.Show();
+        if (configure)
+        {
+          CloseOverlay();
+
+          if (OverlayConfig != null)
+          {
+            OverlayConfig.Visibility = Visibility.Visible;
+          }
+          else
+          {
+            OverlayConfig = new OverlayConfigWindow();
+            OverlayConfig.Show();
+          }
+        }
+        else
+        {
+          if (OverlayConfig != null)
+          {
+            OverlayConfig.Visibility = Visibility.Hidden;
+          }
+
+          if (Overlay != null)
+          {
+            Overlay.Visibility = Visibility.Visible;
+            Overlay.Resume();
+          }
+          else
+          {
+            Overlay = new OverlayWindow();
+            Overlay.Show();
+          }
+        }
       }, System.Windows.Threading.DispatcherPriority.Send);
 
       if (saveFirst)
       {
         ConfigUtil.Save();
-      }
-    }
-
-    internal static void ResetOverlay()
-    {
-      Overlay?.Close();
-      DataManager.Instance.ResetOverlayFights();
-
-      if (IsDamageOverlayEnabled)
-      {
-        OpenOverlay();
       }
     }
 
@@ -128,6 +153,7 @@ namespace EQLogParser
       button.ToolTip = new ToolTip { Content = tooltip };
       button.Content = content;
       button.FontSize = size;
+      button.Focusable = false;
       return button;
     }
 
@@ -187,6 +213,17 @@ namespace EQLogParser
       rectangle.Opacity = opacity;
       rectangle.Fill = CreateBrush(color);
       return rectangle;
+    }
+
+    internal static void SetVisible(Canvas overlayCanvas, bool visible)
+    {
+      overlayCanvas.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+
+      foreach (var child in overlayCanvas.Children)
+      {
+        var element = child as FrameworkElement;
+        element.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+      }
     }
   }
 }
