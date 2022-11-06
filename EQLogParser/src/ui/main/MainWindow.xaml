@@ -245,11 +245,6 @@
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableAoEHealingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-            </MenuItem.Icon>
-          </MenuItem>
           <Separator />
           <MenuItem x:Name="damageOptions" Header="_Damage Settings" Height="24">
             <MenuItem.Icon>
@@ -280,6 +275,16 @@
                 <fa:ImageAwesome x:Name="enableSlayUndeadDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
+          </MenuItem>
+          <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableAoEHealingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="enableMapSendtoEQ" Header="Send To EQ With Ctrl+C" Click="ToggleMapSendToEQClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="themeOptions" Header="_Theme" Height="24">

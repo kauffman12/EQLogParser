@@ -86,6 +86,12 @@
               <fa:ImageAwesome x:Name="setPlayerIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
             </MenuItem.Icon>
           </MenuItem>
+          <Separator />          
+          <MenuItem x:Name="menuItemRefresh" IsEnabled="False" Header="Refresh" Click="RefreshClick" ToolTip="Refresh the Selected Fights">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="refreshIcon" />
+            </MenuItem.Icon>
+          </MenuItem>          
           <Separator />
           <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">

@@ -34,61 +34,51 @@ namespace EQLogParser
     private TextBlock TitleDamageBlock;
     private StackPanel TitleDamagePanel;
     private Rectangle TitleRectangle;
-    private bool IsHideOverlayOtherPlayersEnabled = false;
-    private bool IsShowOverlayCritRateEnabled = false;
-    private string SelectedClass = EQLogParser.Resource.ANY_CLASS;
-    private int CurrentMaxRows = 5;
-    private int CurrentFontSize = 13;
+    private int CurrentMaxRows;
     private MainWindow Main = null;
 
     public OverlayConfigWindow()
     {
       InitializeComponent();
-      LoadColorSettings();
 
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
+      Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
+
       Main = Application.Current.MainWindow as MainWindow;
       Main.EventsThemeChanged += EventsThemeChanged;
 
-      // Hide other player names on overlay
-      IsHideOverlayOtherPlayersEnabled = ConfigUtil.IfSet("HideOverlayOtherPlayers");
-      showNameSelection.SelectedIndex = IsHideOverlayOtherPlayersEnabled ? 1 : 0;
-
-      // Hide/Show crit rate
-      IsShowOverlayCritRateEnabled = ConfigUtil.IfSet("ShowOverlayCritRate");
-      showCritRateSelection.SelectedIndex = IsShowOverlayCritRateEnabled ? 1 : 0;
-
-      // Max Rows
-      string maxRows = ConfigUtil.GetSetting("MaxOverlayRows");
-      if (!string.IsNullOrEmpty(maxRows) && int.TryParse(maxRows, out int max) && max >= 5 && max <= 10)
-      {
-        CurrentMaxRows = max;
-      }
-
-      // selected class
-      string savedClass = ConfigUtil.GetSetting("SelectedOverlayClass");
-      if (!string.IsNullOrEmpty(savedClass) && PlayerManager.Instance.GetClassList().Contains(savedClass))
-      {
-        SelectedClass = savedClass;
-      }
-
+      configPanel.SetValue(Panel.ZIndexProperty, 3);
+      configPanel.SetValue(Canvas.RightProperty, 4.0);
+      savePanel.SetValue(Panel.ZIndexProperty, 3);
+      savePanel.SetValue(Canvas.BottomProperty, 1.0);
       overlayCanvas.SetResourceReference(Canvas.BackgroundProperty, "ContentBackground");
-      CreateRows();
-      Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
+
+      OverlayUtil.LoadSettings(ColorList, out bool hidePlayers, out bool showCritRate, out string selectedClass,
+        out int damageMode, out int fontSize, out CurrentMaxRows, out string width, out string height, out string top, out string left);
+
+      showNameSelection.SelectedIndex = hidePlayers ? 1 : 0;
+      showCritRateSelection.SelectedIndex = showCritRate ? 1 : 0;
+
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, EQLogParser.Resource.ANY_CLASS);
       classesList.ItemsSource = list;
-      classesList.SelectedItem = SelectedClass;
+      classesList.SelectedItem = selectedClass;
+
+      foreach (var item in damageModeSelection.Items.Cast<ComboBoxItem>())
+      {
+        if ((string)item.Tag == damageMode.ToString())
+        {
+          damageModeSelection.SelectedItem = item;
+        }
+      }
+
       maxRowsSelection.SelectedItem = maxRowsSelection.Items[CurrentMaxRows - 5];
+
+      CreateRows();
       OverlayUtil.SetVisible(overlayCanvas, true);
       LoadTestData();
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
-      string width = ConfigUtil.GetSetting("OverlayWidth");
-      string height = ConfigUtil.GetSetting("OverlayHeight");
-      string top = ConfigUtil.GetSetting("OverlayTop");
-      string left = ConfigUtil.GetSetting("OverlayLeft");
-
       if (width != null && double.TryParse(width, out double dvalue) && !double.IsNaN(dvalue))
       {
         Width = dvalue + margin.Left + margin.Right;
@@ -117,34 +107,20 @@ namespace EQLogParser
         }
       }
 
-      int damageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
-      foreach (var item in damageModeSelection.Items.Cast<ComboBoxItem>())
-      {
-        if ((string)item.Tag == damageMode.ToString())
-        {
-          damageModeSelection.SelectedItem = item;
-        }
-      }
-
-      string fontSize = ConfigUtil.GetSetting("OverlayFontSize");
       bool fontHasBeenSet = false;
-
-      if (fontSize != null && int.TryParse(fontSize, out CurrentFontSize) && CurrentFontSize >= 0 && CurrentFontSize <= 64)
+      foreach (var item in fontSizeSelection.Items)
       {
-        foreach (var item in fontSizeSelection.Items)
+        if ((item as ComboBoxItem).Tag as string == fontSize.ToString())
         {
-          if ((item as ComboBoxItem).Tag as string == fontSize)
-          {
-            fontSizeSelection.SelectedItem = item;
-            SetFont();
-            fontHasBeenSet = true;
-          }
+          fontSizeSelection.SelectedItem = item;
+          SetFont(fontSize);
+          fontHasBeenSet = true;
         }
       }
 
       if (!fontHasBeenSet)
       {
-        SetFont();
+        SetFont(fontSize);
       }
     }
 
@@ -152,37 +128,6 @@ namespace EQLogParser
     {
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
       Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
-    }
-
-    private void LoadColorSettings()
-    {
-      // load defaults
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#2e7d32"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#01579b"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#006064"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#673ab7"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
-      ColorList.Add((Color)ColorConverter.ConvertFromString("#37474f"));
-
-      for (int i = 0; i < ColorList.Count; i++)
-      {
-        try
-        {
-          string name = ConfigUtil.GetSetting(string.Format(CultureInfo.CurrentCulture, "OverlayRankColor{0}", i + 1));
-          if (!string.IsNullOrEmpty(name) && ColorConverter.ConvertFromString(name) is Color color)
-          {
-            ColorList[i] = color; // override
-          }
-        }
-        catch (FormatException ex)
-        {
-          LOG.Error("Invalid Overlay Color", ex);
-        }
-      }
     }
 
     private void LoadTestData()
@@ -220,7 +165,7 @@ namespace EQLogParser
       NameBlockList[CurrentMaxRows - 1].Text = CurrentMaxRows + ". ...";
       NameBlockList[CurrentMaxRows - 1].FontStyle = FontStyles.Italic;
       NameBlockList[CurrentMaxRows - 1].FontWeight = FontWeights.Light;
-      NameIconList[CurrentMaxRows - 1].Source = PlayerManager.WIZ_ICON;
+      NameIconList[CurrentMaxRows  - 1].Source = PlayerManager.WIZ_ICON;
     }
 
     private void Resize(double height, double width)
@@ -254,30 +199,18 @@ namespace EQLogParser
 
     private void CreateRows()
     {
-      configPanel.SetValue(Panel.ZIndexProperty, 3);
-      configPanel.SetValue(Canvas.RightProperty, 4.0);
-      savePanel.SetValue(Panel.ZIndexProperty, 3);
-      savePanel.SetValue(Canvas.BottomProperty, 1.0);
+      OverlayUtil.CreateTitleRow(OverlayUtil.TEXTBRUSH, overlayCanvas, out TitleRectangle, out TitlePanel, out TitleBlock,
+        out TitleDamagePanel, out TitleDamageBlock);
 
-      TitleRectangle = OverlayUtil.CreateRectangle("OverlayCurrentBrush", OverlayUtil.DATA_OPACITY);
-      overlayCanvas.Children.Add(TitleRectangle);
-
-      TitlePanel = OverlayUtil.CreateNameStackPanel();
-      TitleBlock = OverlayUtil.CreateTextBlock();
-      TitleBlock.Foreground = OverlayUtil.TEXTBRUSH;
-      TitlePanel.Children.Add(TitleBlock);
-      overlayCanvas.Children.Add(TitlePanel);
-
-      TitleDamagePanel = OverlayUtil.CreateDamageStackPanel();
-      TitleDamageBlock = OverlayUtil.CreateTextBlock();
-      TitleDamagePanel.Children.Add(TitleDamageBlock);
-      overlayCanvas.Children.Add(TitleDamagePanel);
+      TitlePanel.SizeChanged += TitleResizing;
+      TitleDamagePanel.SizeChanged += TitleResizing;
 
       for (int i = 0; i < CurrentMaxRows; i++)
       {
         var rectangle = OverlayUtil.CreateRectangle(ColorList[i], OverlayUtil.DATA_OPACITY);
         RectangleList.Add(rectangle);
         overlayCanvas.Children.Add(rectangle);
+
         var empty = OverlayUtil.CreateRectangle("OverlayCurrentBrush", OverlayUtil.OPACITY);
         EmptyList.Add(empty);
         overlayCanvas.Children.Add(empty);
@@ -326,9 +259,8 @@ namespace EQLogParser
 
     private void ChromeMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) => e.Handled = true;
 
-    private void SetFont()
+    private void SetFont(int size)
     {
-      int size = CurrentFontSize;
       TitleBlock.FontSize = size;
       TitleDamageBlock.FontSize = size;
 
@@ -351,16 +283,12 @@ namespace EQLogParser
     }
 
     private void PanelSizeChanged(object sender, SizeChangedEventArgs e) => Resize(e.NewSize.Height, e.NewSize.Width);
-    private void ShowNamesSelectionChanged(object sender, SelectionChangedEventArgs e) => IsHideOverlayOtherPlayersEnabled = showNameSelection.SelectedIndex == 1;
-    private void ShowCritRateSelectionChanged(object sender, SelectionChangedEventArgs e) => IsShowOverlayCritRateEnabled = showCritRateSelection.SelectedIndex == 1;
-    private void SelectPlayerClassChanged(object sender, SelectionChangedEventArgs e) => SelectedClass = classesList.SelectedValue.ToString();
 
     private void FontSizeSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Tag as string, out int size))
+      if (TitleBlock != null && int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Tag as string, out int fontSize))
       {
-        CurrentFontSize = size;
-        SetFont();
+        SetFont(fontSize);
       }
     }
 
@@ -372,6 +300,8 @@ namespace EQLogParser
         overlayCanvas.Children.Remove(TitleRectangle);
         overlayCanvas.Children.Remove(TitlePanel);
         overlayCanvas.Children.Remove(TitleDamagePanel);
+        TitlePanel.SizeChanged -= TitleResizing;
+        TitleDamagePanel.SizeChanged -= TitleResizing;
         RectangleList.ForEach(rectangle => overlayCanvas.Children.Remove(rectangle));
         EmptyList.ForEach(empty => overlayCanvas.Children.Remove(empty));
         NamePanels.ForEach(nameStack => overlayCanvas.Children.Remove(nameStack));
@@ -384,10 +314,13 @@ namespace EQLogParser
         NameIconList.Clear();
 
         CurrentMaxRows = maxRows;
-        ConfigUtil.SetSetting("MaxOverlayRows", CurrentMaxRows.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("MaxOverlayRows", CurrentMaxRows.ToString());
         CreateRows();
         OverlayUtil.SetVisible(overlayCanvas, true);
-        SetFont();
+
+        int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Tag as string, out int fontSize);
+        SetFont(fontSize);
+
         LoadTestData();
         Resize(overlayCanvas.ActualHeight, overlayCanvas.ActualWidth);
       }
@@ -399,32 +332,32 @@ namespace EQLogParser
     {
       if (!double.IsNaN(overlayCanvas.ActualHeight) && overlayCanvas.ActualHeight > 0)
       {
-        ConfigUtil.SetSetting("OverlayHeight", overlayCanvas.ActualHeight.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("OverlayHeight", overlayCanvas.ActualHeight.ToString());
       }
 
       if (!double.IsNaN(overlayCanvas.ActualWidth) && overlayCanvas.ActualWidth > 0)
       {
-        ConfigUtil.SetSetting("OverlayWidth", overlayCanvas.ActualWidth.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("OverlayWidth", overlayCanvas.ActualWidth.ToString());
       }
 
       var margin = SystemParameters.WindowNonClientFrameThickness;
       if (Top + margin.Top >= SystemParameters.VirtualScreenTop && (Left + margin.Left) >= SystemParameters.VirtualScreenLeft)
       {
-        ConfigUtil.SetSetting("OverlayTop", (Top + margin.Top).ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("OverlayLeft", (Left + margin.Left).ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("OverlayTop", (Top + margin.Top).ToString());
+        ConfigUtil.SetSetting("OverlayLeft", (Left + margin.Left).ToString());
       }
 
       if (TitleBlock != null)
       {
         if (int.TryParse((fontSizeSelection.SelectedValue as ComboBoxItem).Tag as string, out int size))
         {
-          ConfigUtil.SetSetting("OverlayFontSize", size.ToString(CultureInfo.CurrentCulture));
+          ConfigUtil.SetSetting("OverlayFontSize", size.ToString());
         }
 
         ConfigUtil.SetSetting("OverlayDamageMode", (string)(damageModeSelection.SelectedItem as ComboBoxItem).Tag);
-        ConfigUtil.SetSetting("HideOverlayOtherPlayers", IsHideOverlayOtherPlayersEnabled.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("ShowOverlayCritRate", IsShowOverlayCritRateEnabled.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("SelectedOverlayClass", SelectedClass);
+        ConfigUtil.SetSetting("HideOverlayOtherPlayers", (showNameSelection.SelectedIndex == 1).ToString());
+        ConfigUtil.SetSetting("ShowOverlayCritRate", (showCritRateSelection.SelectedIndex == 1).ToString());
+        ConfigUtil.SetSetting("SelectedOverlayClass", classesList.SelectedItem.ToString());
 
         ColorPickerList.ForEach(colorPicker =>
         {
@@ -442,6 +375,9 @@ namespace EQLogParser
         Main.EventsThemeChanged -= EventsThemeChanged;
         Main = null;
       }
+
+      TitlePanel.SizeChanged -= TitleResizing;
+      TitleDamagePanel.SizeChanged -= TitleResizing;
     }
   }
 }

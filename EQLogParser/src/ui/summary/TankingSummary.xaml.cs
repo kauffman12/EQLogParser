@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -56,6 +57,7 @@ namespace EQLogParser
       TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+      dataGrid.GridCopyContent += DataGridCopyContent;
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
@@ -164,6 +166,15 @@ namespace EQLogParser
       {
         PlayerManager.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
         PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
+      }
+    }
+
+    private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
+    {
+      if (MainWindow.IsMapSendToEQEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
+      {
+        e.Handled = true;
+        CopyToEQClick(sender, null);
       }
     }
 
@@ -346,6 +357,7 @@ namespace EQLogParser
         TankingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+        dataGrid.GridCopyContent -= DataGridCopyContent;
         CurrentStats = null;
         dataGrid.Dispose();
         disposedValue = true;

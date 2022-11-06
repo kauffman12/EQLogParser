@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -31,6 +32,7 @@ namespace EQLogParser
       InitSummaryTable(title, dataGrid, selectedColumns);
       HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+      dataGrid.GridCopyContent += DataGridCopyContent;
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
@@ -82,6 +84,15 @@ namespace EQLogParser
       {
         dataGrid.SelectedItems.Clear();
         dataGrid.View?.RefreshFilter();
+      }
+    }
+
+    private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
+    {
+      if (MainWindow.IsMapSendToEQEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
+      {
+        e.Handled = true;
+        CopyToEQClick(sender, null);
       }
     }
 
@@ -183,6 +194,7 @@ namespace EQLogParser
         HealingStatsManager.Instance.FireChartEvent("UPDATE");
         HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+        dataGrid.GridCopyContent -= DataGridCopyContent;
         CurrentStats = null;
         dataGrid.Dispose();
         disposedValue = true;

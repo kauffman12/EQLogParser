@@ -56,7 +56,7 @@ namespace EQLogParser
       fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
 
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled =
-        menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = false;
+        menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = menuItemRefresh.IsEnabled = false;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       SelectionTimer.Tick += (sender, e) =>
@@ -348,6 +348,12 @@ namespace EQLogParser
       menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && !selected.IsInactivity;
       menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && !selected.IsInactivity &&
         PlayerManager.IsPossiblePlayerName((dataGrid.SelectedItem as Fight)?.Name);
+      menuItemRefresh.IsEnabled = dataGrid.SelectedItems.Count > 0;
+    }
+
+    private void RefreshClick(object sender, RoutedEventArgs e)
+    {
+      EventsSelectionChange(this, dataGrid.SelectedItems);
     }
 
     private void SelectGroupClick(object sender, RoutedEventArgs e)
