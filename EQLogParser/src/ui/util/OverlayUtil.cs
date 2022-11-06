@@ -1,4 +1,6 @@
 ﻿using FontAwesome5;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,6 +11,8 @@ namespace EQLogParser
 {
   class OverlayUtil
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     internal const double OPACITY = 0.55;
     internal const double DATA_OPACITY = 0.8;
     internal static readonly SolidColorBrush TEXTBRUSH = new SolidColorBrush(Colors.White);
@@ -140,7 +144,7 @@ namespace EQLogParser
       return brush;
     }
 
-    internal static Button CreateButton(string tooltip, string content, double size)
+    internal static Button CreateButton(string tooltip, string content)
     {
       var button = new Button { Background = null, BorderBrush = null, IsEnabled = true };
       button.SetValue(Panel.ZIndexProperty, 3);
@@ -152,7 +156,6 @@ namespace EQLogParser
       button.Margin = new Thickness(5, 3, 0, 0);
       button.ToolTip = new ToolTip { Content = tooltip };
       button.Content = content;
-      button.FontSize = size;
       button.Focusable = false;
       return button;
     }
@@ -213,6 +216,95 @@ namespace EQLogParser
       rectangle.Opacity = opacity;
       rectangle.Fill = CreateBrush(color);
       return rectangle;
+    }
+
+    internal static void CreateTitleRow(Brush brush, Canvas canvas, out Rectangle rect, out StackPanel panel, out TextBlock block,
+      out StackPanel damagePanel, out TextBlock damageBlock)
+    {
+      rect = CreateRectangle("OverlayCurrentBrush", DATA_OPACITY);
+      canvas.Children.Add(rect);
+
+      panel = CreateNameStackPanel();
+      block = CreateTextBlock();
+      block.Foreground = brush;
+      panel.Children.Add(block);
+      canvas.Children.Add(panel);
+
+      damagePanel = CreateDamageStackPanel();
+      damageBlock = CreateTextBlock();
+      damagePanel.Children.Add(damageBlock);
+      canvas.Children.Add(damagePanel);
+    }
+
+    internal static void LoadSettings(List<Color> colors, out bool hideOthers, out bool showCritRate, out string selectedClass, out int damageMode,
+      out int fontSize, out int maxRows, out string width, out string height, out string top, out string left)
+    {
+      // dimensions
+      width = ConfigUtil.GetSetting("OverlayWidth");
+      height = ConfigUtil.GetSetting("OverlayHeight");
+      top = ConfigUtil.GetSetting("OverlayTop");
+      left = ConfigUtil.GetSetting("OverlayLeft");
+
+      // Hide other player names on overlay
+      hideOthers = ConfigUtil.IfSet("HideOverlayOtherPlayers");
+
+      // Hide/Show crit rate
+      showCritRate = ConfigUtil.IfSet("ShowOverlayCritRate");
+
+      // selected class
+      selectedClass = EQLogParser.Resource.ANY_CLASS;
+      var savedClass = ConfigUtil.GetSetting("SelectedOverlayClass");
+      if (!string.IsNullOrEmpty(savedClass) && PlayerManager.Instance.GetClassList().Contains(savedClass))
+      {
+        selectedClass = savedClass;
+      }
+
+      // fonts
+      var fontSizeString = ConfigUtil.GetSetting("OverlayFontSize");
+      fontSize = 13;
+      if (fontSizeString != null && int.TryParse(fontSizeString, out fontSize) && fontSize < 6 && fontSize > 25)
+      {
+        fontSize = 13;
+      }
+
+      // Max Rows
+      var maxRowsString = ConfigUtil.GetSetting("MaxOverlayRows");
+      maxRows = 5;
+      if (!string.IsNullOrEmpty(maxRowsString) && int.TryParse(maxRowsString, out int max) && max >= 5 && max <= 10)
+      {
+        maxRows = max;
+      }
+
+      // damage mode
+      damageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
+
+      // load defaults
+      colors.Add((Color)ColorConverter.ConvertFromString("#2e7d32"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#01579b"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#006064"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#673ab7"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+      colors.Add((Color)ColorConverter.ConvertFromString("#37474f"));
+
+      for (int i = 0; i < colors.Count; i++)
+      {
+        try
+        {
+          string name = ConfigUtil.GetSetting(string.Format("OverlayRankColor{0}", i + 1));
+          if (!string.IsNullOrEmpty(name) && ColorConverter.ConvertFromString(name) is Color color)
+          {
+            colors[i] = color; // override
+          }
+        }
+        catch (FormatException ex)
+        {
+          LOG.Error("Invalid Overlay Color", ex);
+        }
+      }
     }
 
     internal static void SetVisible(Canvas overlayCanvas, bool visible)
