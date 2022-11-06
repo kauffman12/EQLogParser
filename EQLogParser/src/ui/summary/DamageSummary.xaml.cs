@@ -1,4 +1,5 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using Microsoft.VisualBasic.Devices;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
+using Keyboard = System.Windows.Input.Keyboard;
 
 namespace EQLogParser
 {
@@ -41,6 +44,8 @@ namespace EQLogParser
       InitSummaryTable(title, dataGrid, selectedColumns);
       DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+
+      dataGrid.CopyContent += DataGridCopyContent;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SelectionTimer.Tick += (sender, e) =>
@@ -199,6 +204,15 @@ namespace EQLogParser
       }
 
       return list;
+    }
+
+    private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
+    {
+      if (MainWindow.IsMapSendToEQEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
+      {
+        e.Handled = true;
+        CopyToEQClick(sender, null);
+      }
     }
 
     private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
@@ -383,8 +397,9 @@ namespace EQLogParser
       {
         DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
         DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData; if (disposing)
-          CurrentStats = null;
+        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData; if (disposing) ;
+        dataGrid.CopyContent -= DataGridCopyContent;
+        CurrentStats = null;
         dataGrid.Dispose();
         disposedValue = true;
       }

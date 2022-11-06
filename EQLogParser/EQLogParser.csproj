@@ -158,7 +158,7 @@
       <Version>2.1.6</Version>
     </PackageReference>
     <PackageReference Include="log4net">
-      <Version>2.0.14</Version>
+      <Version>2.0.15</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json">
@@ -166,12 +166,11 @@
     </PackageReference>
     <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.3.0.47" />
-    <PackageReference Include="Syncfusion.Shared.Base" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.Tools.WPF" Version="20.3.0.47" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\..\..\..\..\..\Program Files %28x86%29\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.IO.Compression.dll" />

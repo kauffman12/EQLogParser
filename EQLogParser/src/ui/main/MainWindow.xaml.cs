@@ -36,6 +36,7 @@ namespace EQLogParser
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled = false;
+    internal static bool IsMapSendToEQEnabled = false;
     internal static readonly int ACTION_INDEX = 27;
     internal static string CurrentTheme = "MaterialDark";
 
@@ -49,7 +50,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
 
-    private const string VERSION = "2.0.26";
+    private const string VERSION = "2.0.27";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -153,6 +154,10 @@ namespace EQLogParser
         // Hide window when minimized
         IsHideOnMinimizeEnabled = ConfigUtil.IfSet("HideWindowOnMinimize");
         enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // Allow Ctrl+C for SendToEQ
+        IsMapSendToEQEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
+        enableMapSendToEQIcon.Visibility = IsMapSendToEQEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Damage Overlay
         enableDamageOverlayIcon.Visibility = OverlayUtil.LoadSettings() ? Visibility.Visible : Visibility.Hidden;
@@ -390,6 +395,13 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting("CheckUpdatesAtStartup", (checkUpdatesIcon.Visibility == Visibility.Hidden).ToString());
       checkUpdatesIcon.Visibility = checkUpdatesIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+    }
+
+    private void ToggleMapSendToEQClick(object sender, RoutedEventArgs e)
+    {
+      IsMapSendToEQEnabled = !IsMapSendToEQEnabled;
+      ConfigUtil.SetSetting("MapSendToEQAsCtrlC", (enableMapSendToEQIcon.Visibility == Visibility.Hidden).ToString());
+      enableMapSendToEQIcon.Visibility = enableMapSendToEQIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)

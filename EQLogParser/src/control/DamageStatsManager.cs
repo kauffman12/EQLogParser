@@ -142,8 +142,9 @@ namespace EQLogParser
 
       var timeout = mode == 0 ? DataManager.FIGHTTIMEOUT : mode;
       var totalSeconds = allTime.GetTotal();
-      if (OverlayFightName != null && totalSeconds > 0 && allDamage > 0 && 
-        (DateTime.Now - DateTime.MinValue.AddSeconds(OverlayUpdateTime)).TotalSeconds <= timeout)
+      var diff = (DateTime.Now - DateTime.MinValue.AddSeconds(OverlayUpdateTime)).TotalSeconds;
+      // added >= 0 check because this broke while testing when clocks moved an hour back in the fall
+      if (OverlayFightName != null && totalSeconds > 0 && allDamage > 0 && diff >= 0 && diff <= timeout)
       {
         int rank = 1;
         var list = new List<PlayerStats>();
