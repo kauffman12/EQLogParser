@@ -3588,9 +3588,6 @@ Syllable of Ice Caza IX
 Syllable of Ice Caza X
 Syllable of Ice Rk. 2
 Syllable of Ice Rk. 3
-Syllable of Invigoration
-Syllable of Invigoration Rk. II
-Syllable of Invigoration Rk. III
 Syllable of Magic
 Syllable of Magic II
 Syllable of Magic III
