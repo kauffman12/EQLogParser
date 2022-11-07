@@ -2,7 +2,7 @@
 Everquest Log Parser for Live/TLP servers with basic support for P99.
 
 Latest Release of EQLogParser:</br>
-https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-2.0.28.msi
+https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-2.0.29.msi
 
 ### IMPORTANT --- If after install the Log Search feature crashes and you're missing Syncfusion.Edit.WPF.dll and Syncfusion.GridCommon.WPF.dll from where you installed  EQLogParser.. try running the installer again and choosing Repair to fix the problem.
 
