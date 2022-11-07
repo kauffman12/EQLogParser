@@ -328,6 +328,7 @@ if os.path.isfile(DBSpellsFile):
   spa373s = dict()
   spa374s = dict()
   spa406s = dict()
+  byName = dict()
 
   for line in open(DBSpellsFile, 'r'):
     procs = []
@@ -394,6 +395,19 @@ if os.path.isfile(DBSpellsFile):
 
     if origDuration == 1950:
       classMask = 65535
+
+    if name in byName:
+      for spell in byName[name]:
+        if spell['name'] == name and spell['classMask'] != classMask:
+          if classMask == 0:
+            classMask = spell['classMask']
+          elif spell['classMask'] == 0 and classMask > 0:
+            spell['classMask'] = classMask
+          
+          if spell['classMask'] != classMask:
+            newMask = spell['classMask'] | classMask
+            spell['classMask'] = newMask
+            classMask = newMask
 
     adps = getAdpsValueFromSkill(0, skill, endurance)
     damaging = 0
@@ -502,6 +516,11 @@ if os.path.isfile(DBSpellsFile):
     # Overdrive Punch the proc and main spell have the same name. Just ignore the non-damaging versions
     if name != 'Overdrive Punch' or beneficial == 1:
       spells[id] = info
+
+    if name not in byName:
+      byName[name] = [info]
+    else:
+      byName[name].append(info)
 
   for i in range(6):
     for id in spells:
