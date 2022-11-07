@@ -278,7 +278,7 @@ namespace EQLogParser
               }
               break;
             default:
-              if (slainIndex == -1 && i > 0 && tryIndex != -1 && HitMap.TryGetValue(split[i], out string testSubType))
+              if (slainIndex == -1 && i > 0 && tryIndex == -1 && HitMap.TryGetValue(split[i], out string testSubType))
               {
                 // stop after hit type is found with out exception where the hit type is found again on the next index
                 // workaround for a Mephit named mep hit during beta
