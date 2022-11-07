@@ -278,17 +278,24 @@ namespace EQLogParser
               }
               break;
             default:
-              if (slainIndex == -1 && i > 0 && string.IsNullOrEmpty(subType) && HitMap.TryGetValue(split[i], out subType))
+              if (slainIndex == -1 && i > 0 && tryIndex != -1 && HitMap.TryGetValue(split[i], out string testSubType))
               {
-                hitType = i;
-                if (i < stop && HitAdditionalMap.ContainsKey(split[i]))
+                // stop after hit type is found with out exception where the hit type is found again on the next index
+                // workaround for a Mephit named mep hit during beta
+                if (string.IsNullOrEmpty(subType) || (hitType == (i - 1)))
                 {
-                  hitTypeAdd = i + i;
-                }
+                  hitType = i;
+                  if (i < stop && HitAdditionalMap.ContainsKey(split[i]))
+                  {
+                    hitTypeAdd = i + i;
+                  }
 
-                if (i > 2 && split[i - 1] == "to" && (split[i - 2] == "tries" || split[i - 2] == "try"))
-                {
-                  tryIndex = i - 2;
+                  if (i > 2 && split[i - 1] == "to" && (split[i - 2] == "tries" || split[i - 2] == "try"))
+                  {
+                    tryIndex = i - 2;
+                  }
+
+                  subType = testSubType;
                 }
               }
               break;
