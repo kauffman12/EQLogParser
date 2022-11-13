@@ -804,18 +804,21 @@ namespace EQLogParser
         HasOwner(attacker, out string attackerOwner);
         HasOwner(defender, out string defenderOwner);
 
-        record = new DamageRecord
+        if (attacker.Length <= 64 && defender.Length <= 64)
         {
-          Attacker = string.Intern(attacker),
-          Defender = string.Intern(defender),
-          Type = string.Intern(type),
-          SubType = string.Intern(subType),
-          Total = damage,
-          AttackerOwner = attackerOwner != null ? string.Intern(attackerOwner) : null,
-          DefenderOwner = defenderOwner != null ? string.Intern(defenderOwner) : null,
-          ModifiersMask = modifiersMask,
-          AttackerIsSpell = attackerIsSpell
-        };
+          record = new DamageRecord
+          {
+            Attacker = string.Intern(attacker),
+            Defender = string.Intern(defender),
+            Type = string.Intern(type),
+            SubType = string.Intern(subType),
+            Total = damage,
+            AttackerOwner = attackerOwner != null ? string.Intern(attackerOwner) : null,
+            DefenderOwner = defenderOwner != null ? string.Intern(defenderOwner) : null,
+            ModifiersMask = modifiersMask,
+            AttackerIsSpell = attackerIsSpell
+          };
+        }
       }
 
       return record;
