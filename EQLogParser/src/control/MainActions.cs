@@ -355,7 +355,7 @@ namespace EQLogParser
 
           try
           {
-            using (var os = File.Open(saveFileDialog.FileName, FileMode.Truncate))
+            using (var os = File.Open(saveFileDialog.FileName, FileMode.Create))
             {
               TimeRange range = new TimeRange();
               fights.ForEach(fight =>

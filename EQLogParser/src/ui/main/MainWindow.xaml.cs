@@ -50,7 +50,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
 
-    private const string VERSION = "2.0.30";
+    private const string VERSION = "2.0.31";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -873,6 +873,7 @@ namespace EQLogParser
       Interlocked.Exchange(ref FilePosition, position);
       Interlocked.Add(ref LineCount, 1);
 
+      string splitLine = null;
       if (!string.IsNullOrEmpty(line) && line.Length > 30)
       {
         var lineData = new LineData { Action = line.Substring(ACTION_INDEX), LineNumber = LineCount, BeginTime = dateTime };
@@ -883,13 +884,30 @@ namespace EQLogParser
           PlayerChatManager.Add(chatType);
         }
         // populates lineData.Action
-        else if (PreLineParser.NeedProcessing(lineData) && lineData.Action != null)
+        else
         {
-          CastProcessor.Add(lineData);
-          HealingProcessor.Add(lineData);
-          MiscProcessor.Add(lineData);
-          DamageProcessor.Add(lineData);
+          // only if it's not a chat line check if two lines are on the same line
+          int multiLine = line.IndexOf("[", ACTION_INDEX + 1);
+          if (multiLine > -1 && line.Length > (multiLine + ACTION_INDEX - 1) && line[multiLine + ACTION_INDEX - 2] == ']' &&
+            char.IsDigit(line[multiLine + ACTION_INDEX - 3]) && char.IsDigit(line[multiLine + ACTION_INDEX - 6]))
+          {
+            splitLine = line.Substring(multiLine);
+            lineData.Action = line.Substring(0, multiLine).Substring(ACTION_INDEX);
+          }
+
+          if (PreLineParser.NeedProcessing(lineData) && lineData.Action != null)
+          {
+            CastProcessor.Add(lineData);
+            HealingProcessor.Add(lineData);
+            MiscProcessor.Add(lineData);
+            DamageProcessor.Add(lineData);
+          }
         }
+      }
+
+      if (splitLine != null)
+      {
+        FileLoadingCallback(splitLine, position, dateTime);
       }
     }
 

@@ -212,7 +212,7 @@ namespace EQLogParser
             healer = Labels.UNK;
           }
 
-          if (!string.IsNullOrEmpty(healer) && heal != uint.MaxValue)
+          if (!string.IsNullOrEmpty(healer) && heal != uint.MaxValue && healer.Length <= 64)
           {
             record = new HealRecord()
             {
