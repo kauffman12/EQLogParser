@@ -105,8 +105,7 @@ namespace EQLogParser
 
     internal List<string[]> GetHeaders()
     {
-      var headers = new List<string[]>();
-      headers.Add(new string[] { "Rank", "Rank" });
+      var headers = new List<string[]> { new string[] { "Rank", "Rank" } };
 
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
