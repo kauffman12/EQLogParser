@@ -415,6 +415,8 @@ namespace EQLogParser
 
   internal class PlayerSubStats : Attempt
   {
+    public long BestSec { get; set; }
+    public long BestSecTemp { get; set; }
     public ushort Rank { get; set; }
     public string Name { get; set; }
     public string Type { get; set; }

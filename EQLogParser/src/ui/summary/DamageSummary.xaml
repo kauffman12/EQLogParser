@@ -164,7 +164,7 @@
         </ContextMenu>
       </syncfusion:SfTreeGrid.ContextMenu>
       <syncfusion:SfTreeGrid.Columns>
-        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" Width="135"/>
+        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" Width="135" />
         <syncfusion:TreeGridTextColumn Width="70" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:TreeGridNumericColumn Width="90" MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damage" />
         <syncfusion:TreeGridNumericColumn Width="70" MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
@@ -172,6 +172,7 @@
         <syncfusion:TreeGridNumericColumn Width="55" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:TreeGridNumericColumn Width="60" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
         <syncfusion:TreeGridNumericColumn Width="75" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:TreeGridNumericColumn Width="85" MappingName="BestSec" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderBestSecondTemplateToolTip}" TextAlignment="Right" HeaderText="Best Second" />
         <syncfusion:TreeGridNumericColumn Width="70" MappingName="BaneHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Bane" />
         <syncfusion:TreeGridNumericColumn Width="65" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
         <syncfusion:TreeGridNumericColumn Width="65" MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />

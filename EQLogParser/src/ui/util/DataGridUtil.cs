@@ -1,6 +1,9 @@
-﻿using Syncfusion.Data;
+﻿using Newtonsoft.Json.Linq;
+using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid.Utility;
 using Syncfusion.UI.Xaml.TreeGrid;
+using Syncfusion.UI.Xaml.TreeGrid.Helpers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -541,6 +544,7 @@ namespace EQLogParser
 
     private static dynamic SetColumns(ComboBox columnCombo, SfTreeGrid treeGrid, dynamic updated)
     {
+      SetTreeExpander(treeGrid, updated);
       treeGrid.Columns = updated;
 
       // save column order if it changes
@@ -548,6 +552,7 @@ namespace EQLogParser
       {
         if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfTreeGrid treeGrid)
         {
+          SetTreeExpander(treeGrid, treeGrid.Columns);
           var columns = treeGrid.Columns.ToList().Select(column => column.MappingName).ToList();
           ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
         }
@@ -564,6 +569,18 @@ namespace EQLogParser
         show = visible.Contains(columns[i].MappingName) || visible.Contains(columns[i].HeaderText);
       }
       return show;
+    }
+
+    internal static void SetTreeExpander(SfTreeGrid treeGrid, dynamic columns)
+    {
+      for (int i = 0; i < columns.Count; i++)
+      {
+        if (!columns[i].IsHidden)
+        {
+          treeGrid.ExpanderColumn = columns[i].MappingName;
+          break;
+        }
+      }
     }
 
     internal static void SetHiddenColumns(ComboBox columnCombo, dynamic gridBase)
@@ -583,19 +600,27 @@ namespace EQLogParser
 
         UIElementUtil.SetComboBoxTitle(columnCombo, visible.Count, EQLogParser.Resource.COLUMNS_SELECTED);
 
-        dynamic columns = null;
         if (gridBase is SfDataGrid)
         {
-          columns = ((SfDataGrid)gridBase).Columns;
+          var columns = ((SfDataGrid)gridBase).Columns;
+          for (int i = 0; i < columns.Count; i++)
+          {
+            columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
+          }
         }
-        else if (gridBase is SfTreeGrid)
+        else if (gridBase is SfTreeGrid treeGrid)
         {
-          columns = ((SfTreeGrid)gridBase).Columns;
-        }
-
-        for (int i = 0; i < columns.Count; i++)
-        {
-          columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
+          var expanderSet = false;
+          var columns = ((SfTreeGrid)gridBase).Columns;
+          for (int i = 0; i < columns.Count; i++)
+          {
+            columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
+            if (!expanderSet && !columns[i].IsHidden)
+            {
+              expanderSet = true;
+              treeGrid.ExpanderColumn = columns[i].MappingName;
+            }
+          }
         }
 
         if (!string.IsNullOrEmpty(columnCombo.Tag.ToString()))

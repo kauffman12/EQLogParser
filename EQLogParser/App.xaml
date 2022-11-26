@@ -41,6 +41,9 @@
     <DataTemplate x:Key="HeaderSpecialTemplateToolTip">
       <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="6 = Staunch, 7 = Intensity, D = Dragon Glyph, G = Destruction Glyph, M = Mana Burn, L = Life Burn, S = Arcane Secrets" />
     </DataTemplate>
+    <DataTemplate x:Key="HeaderBestSecondTemplateToolTip">
+      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Max Amount of Damage done in a single Second." />
+    </DataTemplate>
     <DataTemplate x:Key="HeaderSpellCountsTemplateToolTip">
       <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Cast Count (# Interrupted)" />
     </DataTemplate>    

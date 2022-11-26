@@ -462,6 +462,7 @@ namespace EQLogParser
               RaidTotals.TotalSeconds = RaidTotals.MaxTime;
             }
 
+            Dictionary<string, double> prevPlayerTimes = new Dictionary<string, double>();
             DamageGroups.ForEach(group =>
             {
               group.ForEach(block =>
@@ -470,9 +471,10 @@ namespace EQLogParser
                 {
                   if (action is DamageRecord record)
                   {
+                    var isValid = damageValidator.IsValid(record);
                     var stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
 
-                    if (record.Type == Labels.BANE && !damageValidator.IsValid(record))
+                    if (record.Type == Labels.BANE && !isValid)
                     {
                       stats.BaneHits++;
 
@@ -481,24 +483,28 @@ namespace EQLogParser
                         temp.BaneHits++;
                       }
                     }
-                    else if (damageValidator.IsValid(record))
+                    else if (isValid)
                     {
-                      RaidTotals.Total += record.Total;
                       bool isAttackerPet = PlayerManager.Instance.IsVerifiedPet(record.Attacker);
-                      StatsUtil.UpdateStats(stats, record, isAttackerPet);
+                      bool isNewFrame = checkNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
 
-                      if ((!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerPets.ContainsKey(record.Attacker)) || player == Labels.UNASSIGNED)
+                      RaidTotals.Total += record.Total;
+                      StatsUtil.UpdateStats(stats, record, isNewFrame, isAttackerPet);
+
+                      if ((!PetToPlayer.TryGetValue(record.Attacker, out string player) && !PlayerPets.ContainsKey(record.Attacker))
+                      || player == Labels.UNASSIGNED)
                       {
                         topLevelStats[record.Attacker] = stats;
                         stats.IsTopLevel = true;
                       }
                       else
                       {
-                        string origName = player ?? record.Attacker;
-                        string aggregateName = origName + " +Pets";
+                        var origName = player ?? record.Attacker;
+                        var aggregateName = origName + " +Pets";
+                        isNewFrame = checkNewFrame(prevPlayerTimes, aggregateName, block.BeginTime);
 
-                        PlayerStats aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
-                        StatsUtil.UpdateStats(aggregatePlayerStats, record, isAttackerPet);
+                        var aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
+                        StatsUtil.UpdateStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
                         topLevelStats[aggregateName] = aggregatePlayerStats;
 
                         if (!childrenStats.TryGetValue(aggregateName, out Dictionary<string, PlayerStats> children))
@@ -510,10 +516,9 @@ namespace EQLogParser
                         stats.IsTopLevel = false;
                       }
 
-                      PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
-
+                      var subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
                       uint critHits = subStats.CritHits;
-                      StatsUtil.UpdateStats(subStats, record, isAttackerPet);
+                      StatsUtil.UpdateStats(subStats, record, false, isAttackerPet);
 
                       // dont count misses/dodges or where no damage was done
                       if (record.Total > 0)
@@ -625,6 +630,24 @@ namespace EQLogParser
           }
         }
       }
+    }
+
+    private bool checkNewFrame(Dictionary<string, double> prevPlayerTimes, string name, double beginTime)
+    {
+      if (!prevPlayerTimes.TryGetValue(name, out double prevTime))
+      {
+        prevPlayerTimes[name] = beginTime;
+        prevTime = beginTime;
+      }
+
+      var newFrame = (beginTime > prevTime);
+
+      if (newFrame)
+      {
+        prevPlayerTimes[name] = beginTime;
+      }
+
+      return newFrame;
     }
 
     private void FireNewStatsEvent()

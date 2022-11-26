@@ -397,7 +397,7 @@ namespace EQLogParser
       {
         DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
         DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData; if (disposing) ;
+        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
         dataGrid.CopyContent -= DataGridCopyContent;
         CurrentStats = null;
         dataGrid.Dispose();
