@@ -350,10 +350,9 @@ namespace EQLogParser
                     ranges = new TimeRange();
                     fights.ForEach(fight => ranges.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
                   }
-                  else
-                  {
-                    start = 0;
-                  }
+                  break;
+                case 7:
+                  start = 0;
                   break;
               }
 

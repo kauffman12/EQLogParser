@@ -199,12 +199,12 @@ namespace EQLogParser
       return key;
     }
 
-    internal static StreamReader GetStreamReader(FileStream f, double start = -1)
+    internal static StreamReader GetStreamReader(FileStream f, double start = 0)
     {
       StreamReader s;
       if (!f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
       {
-        if (f.Length > 100000000 && start > -1)
+        if (f.Length > 100000000 && start > 0)
         {
           SetStartingPosition(f, start);
         }
@@ -300,7 +300,7 @@ namespace EQLogParser
         {
           if (range == null)
           {
-            pass = (start > 0) ? logTime >= start : false;
+            pass = (start > -1) ? logTime >= start : false;
           }
           else
           {
