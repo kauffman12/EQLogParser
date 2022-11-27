@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.ServiceModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -28,7 +27,7 @@ namespace EQLogParser
       }
       else
       {
-        var newSegment = new ActionBlock() { BeginTime = beginTime };
+        var newSegment = new ActionBlock { BeginTime = beginTime };
         newSegment.Actions.Add(action);
         blockList.Add(newSegment);
       }
