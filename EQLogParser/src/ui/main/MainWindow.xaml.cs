@@ -50,7 +50,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
 
-    private const string VERSION = "2.0.33";
+    private const string VERSION = "2.0.34";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -205,6 +205,9 @@ namespace EQLogParser
           ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
           ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
         }
+
+        // cleanup downloads
+        Dispatcher.InvokeAsync(() => MainActions.Cleanup());
       }
       catch (Exception e)
       {

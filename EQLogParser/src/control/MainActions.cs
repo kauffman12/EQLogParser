@@ -70,6 +70,12 @@ namespace EQLogParser
                       return;
                     }
 
+                    path = path + "\\AutoUpdateEQLogParser";
+                    if (!Directory.Exists(path))
+                    {
+                      Directory.CreateDirectory(path);
+                    }
+
                     var fullPath = path + "\\EQLogParser-" + updated + ".msi";
                     using (var fs = new FileStream(fullPath, FileMode.Create))
                     {
@@ -107,6 +113,35 @@ namespace EQLogParser
           });
         }
       });
+    }
+
+    internal static void Cleanup()
+    {
+      try
+      {
+        var path = System.Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
+        if (!Directory.Exists(path))
+        {
+          return;
+        }
+
+        path = path + "\\AutoUpdateEQLogParser";
+        if (Directory.Exists(path))
+        {
+          foreach (var file in Directory.GetFiles(path))
+          {
+             var test = Path.GetFileName(file).Trim();
+            if (test.StartsWith("EQLogParser") && test.EndsWith(".msi"))
+            {
+              File.Delete(file);
+            }
+          }
+        }
+      }
+      catch (Exception _)
+      {
+        // ignore
+      }
     }
 
     internal static void SetTheme(Window window, string theme)
