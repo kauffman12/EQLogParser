@@ -1,0 +1,345 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"  
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib"
+                    xmlns:skinmanager="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:scheduler="clr-namespace:Syncfusion.UI.Xaml.Scheduler;assembly=Syncfusion.SfScheduler.WPF">
+    <ResourceDictionary.MergedDictionaries>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <scheduler:TodayBorderSizeConverter x:Key="TodayBorderSizeConverter" FontSize="{StaticResource MaterialDarkCustom.HeaderTextStyle}" />
+
+    <Style x:Key="SyncfusionViewHeaderControlStyle" TargetType="scheduler:ViewHeaderControl">
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="scheduler:ViewHeaderControl">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}">
+                        <Border.BorderThickness>
+                            <Thickness>0,0,0,1</Thickness>
+                        </Border.BorderThickness>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border BorderBrush="{TemplateBinding BorderBrush}" >
+                                <Border.BorderThickness>
+                                    <Thickness>0,0,1,0</Thickness>
+                                </Border.BorderThickness>
+                            </Border>
+                            <ScrollViewer x:Name="PART_ViewHeaderScrollViewer" 
+                                          Grid.Column="1"
+                                  HorizontalScrollBarVisibility="Hidden" 
+                                  IsDeferredScrollingEnabled="False" 
+                                  VerticalScrollBarVisibility="Hidden">
+
+                                <ScrollViewer.Resources>
+                                    <Style TargetType="{x:Type ScrollBar}">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                                                    <Border Background="Transparent" />
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ScrollViewer.Resources>
+
+                                <Grid x:Name="PART_ViewHeaderGrid">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="auto"/>
+                                        <RowDefinition Height="auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <scheduler:ResourceHeaderPanel x:Name="PART_ResourcePanel" />
+
+                                    <scheduler:ViewHeaderRowPanel x:Name="PART_ViewHeaderRowPanel" />
+                                </Grid>
+
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionViewHeaderControlStyle}" TargetType="scheduler:ViewHeaderControl" />
+
+    <Style x:Key="SyncfusionViewHeaderBaseStyle" TargetType="scheduler:ViewHeaderBase">
+        <Style.Triggers>
+            <Trigger Property="IsToday" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource PrimaryColorForeground}"/>
+            </Trigger>
+        </Style.Triggers>
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
+        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="8,0,0,0"/>
+        <Setter Property="IsEnabled" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="scheduler:ViewHeaderBase">
+                    <Border  BorderThickness="{TemplateBinding BorderThickness}"
+                        BorderBrush="{TemplateBinding BorderBrush}">
+                        <ContentPresenter
+                            Content="{TemplateBinding DataContext}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+							Margin="{TemplateBinding Padding}"
+                            HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalAlignment}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionViewHeaderBaseStyle}" TargetType="scheduler:ViewHeaderBase" />
+
+    <DataTemplate x:Key="DayViewHeaderTemplate">
+        <Grid  Background="{Binding Background}" 
+               HorizontalAlignment="Stretch" 
+               VerticalAlignment="Stretch" >
+            <Grid HorizontalAlignment="Left" Margin="8,0,0,0" Background="Transparent" VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="{Binding Converter={StaticResource TodayBorderSizeConverter}}"  />
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="PART_DayText" 
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontFamily="{Binding FontFamily}"
+                       FontSize="{Binding FontSize}"
+                       FontStyle="{Binding FontStyle}"
+                       Foreground="{Binding Foreground}"
+                       Text="{Binding DayText}" />
+                <Border x:Name="PART_TodayHightlightBorder" Grid.Row="1">
+                    <Border.Style>
+                        <Style>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ElementName=PART_TodayHightlightBorder, Path=IsMouseOver}" Value="true">
+                                    <Setter Property="Border.Background" Value="{StaticResource ContentBackgroundHover}"/>
+                                    <Setter Property="TextBlock.Foreground" Value="{StaticResource HoverForeground}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                    <Setter Property="Border.Background" Value="{StaticResource PrimaryBackground}"/>
+                                </DataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding ElementName=PART_TodayHightlightBorder, Path=IsMouseOver}" Value="true"/>
+                                        <Condition Binding="{Binding IsToday}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <MultiDataTrigger.Setters>
+                                        <Setter Property="Border.Background" Value="{StaticResource PrimaryDark}"/>
+                                    </MultiDataTrigger.Setters>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                            <Setter Property="Border.Background" Value="Transparent"/>
+                            <Setter Property="Border.Visibility" Value="Visible"/>
+                            <Setter Property="Border.VerticalAlignment" Value="Center"/>
+                            <Setter Property="Border.HorizontalAlignment" Value="Center"/>
+                            <Setter Property="Border.Width" Value="{Binding Converter={StaticResource TodayBorderSizeConverter}}"/>
+                            <Setter Property="Border.Height" Value="{Binding Converter={StaticResource TodayBorderSizeConverter}}"/>
+                            <Setter Property="Border.CornerRadius" Value="{Binding Converter={StaticResource TodayBorderSizeConverter}}"/>
+                            <Setter Property="TextBlock.Foreground" Value="{StaticResource ContentForeground}"/>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock x:Name="PART_DateText" 
+                           Grid.Row="1"
+                           VerticalAlignment="Center" 
+                           HorizontalAlignment="Center" 
+                           TextAlignment="Left"
+                           FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                           FontSize="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
+                           FontStyle="{Binding FontStyle}"
+                           Text="{Binding DateText}" >
+                    </TextBlock>
+                </Border>
+            </Grid>
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                <Setter TargetName="PART_DateText" Property="Foreground" Value="{StaticResource PrimaryForeground}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                <Setter TargetName="PART_DayText" Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                <Setter TargetName="PART_DateText" Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DayViewHeaderFluentTemplate">
+        <Grid x:Name="PART_Grid" Background="{Binding Background}">
+            <Border x:Name="PART_TodayHightlightBorder" Margin="0,0,1,0" BorderBrush="{StaticResource PrimaryForeground}" BorderThickness="0,2,0,0" Visibility="Collapsed"/>
+            <Grid HorizontalAlignment="Left" Margin="{Binding Padding}" Background="Transparent"
+                          VerticalAlignment="{Binding VerticalContentAlignment}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="27"  />
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="PART_DayText"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"
+                       FontFamily="{Binding FontFamily}"
+                       FontSize="{Binding FontSize}"
+                       FontStyle="{Binding FontStyle}"
+                       Foreground="{Binding Foreground}"
+                       Text="{Binding DayText}" />
+                <TextBlock x:Name="PART_DateText"
+                       Grid.Row="1"
+                       VerticalAlignment="Top"
+                       TextAlignment="Left"
+                       Margin="8,0,0,0"
+                       FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                       FontSize="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
+                       Foreground="{StaticResource ContentForeground}"
+                       FontStyle="{Binding FontStyle}"
+                       Text="{Binding DateText}" >
+                    <TextBlock.Style>
+                        <Style>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ElementName=PART_DateText,Path=IsMouseOver}" Value="true">
+                                    <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
+                                    <Setter Property="TextBlock.Cursor" Value="Hand"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                <Setter TargetName="PART_DateText" Property="Foreground" Value="{StaticResource PrimaryForeground}"/>
+                <Setter TargetName="PART_TodayHightlightBorder" Property="Visibility" Value="Visible"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                <Setter TargetName="PART_DayText" Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                <Setter TargetName="PART_DateText" Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+            </DataTrigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="PART_Grid" Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
+                <Setter TargetName="PART_TodayHightlightBorder" Property="BorderBrush" Value="{StaticResource Border}"/>
+                <Setter TargetName="PART_TodayHightlightBorder" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding ElementName=PART_Grid, Path=IsMouseOver}" Value="true"/>
+                    <Condition Binding="{Binding IsToday}" Value="True"/>
+                </MultiDataTrigger.Conditions>
+                <MultiDataTrigger.Setters>
+                    <Setter TargetName="PART_Grid" Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
+                    <Setter TargetName="PART_TodayHightlightBorder" Property="BorderBrush" Value="{StaticResource PrimaryDark}"/>
+                </MultiDataTrigger.Setters>
+            </MultiDataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <Style x:Key="SyncfusionDayViewHeaderStyle" TargetType="scheduler:DayViewHeader" BasedOn="{StaticResource SyncfusionViewHeaderBaseStyle}">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="ContentTemplate" Value="{StaticResource DayViewHeaderTemplate}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="scheduler:DayViewHeader">
+                    <Border
+                        BorderBrush="{TemplateBinding BorderBrush}" 
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <Border.BorderThickness>
+                            <Thickness>0,0,1,0</Thickness>
+                        </Border.BorderThickness>
+                        <Grid>
+                            <ContentPresenter x:Name="PART_DayViewHeaderContentPresenter" 
+                                              Height="{TemplateBinding Height}"
+                                              Margin="{TemplateBinding Padding}"
+                                              Width="{TemplateBinding Width}"
+                                              DataContext="{TemplateBinding DataContext}"
+                                              Content="{TemplateBinding DataContext}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              VerticalAlignment="Stretch"
+                                              HorizontalAlignment="Stretch"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionDayViewHeaderStyle}" TargetType="scheduler:DayViewHeader"  />
+
+    <Style x:Key="SyncfusionTimelineViewHeaderStyle" TargetType="scheduler:TimelineViewHeader" BasedOn="{StaticResource SyncfusionViewHeaderBaseStyle}">
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{Binding Background}">
+                        <TextBlock x:Name="PART_DateText" 
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center" 
+                                   FontFamily="{Binding FontFamily}" 
+                                   FontSize="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
+                                   FontStyle="{Binding FontStyle}"
+                                   Foreground="{Binding Foreground}"
+                                   Text="{Binding DateText}" >
+                            <TextBlock.Style>
+                                <Style>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ElementName=PART_DateText, Path=IsMouseOver}" Value="true">
+                                            <Setter  Property="TextBlock.TextDecorations" Value="Underline"/>
+                                            <Setter  Property="TextBlock.Cursor" Value="Hand"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                            <Setter TargetName="PART_DateText"  Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsHitTestVisible}" Value="False">
+                            <Setter TargetName="PART_DateText"  Property="TextDecorations" Value="Strikethrough"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ViewType}" Value="TimelineMonth">
+                            <Setter TargetName="PART_DateText"  Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+                            <Setter TargetName="PART_DateText" Property="HorizontalAlignment" Value="Center"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionTimelineViewHeaderStyle}" TargetType="scheduler:TimelineViewHeader" />
+
+    <Style x:Key="SyncfusionMonthViewHeaderStyle" TargetType="scheduler:MonthViewHeader" BasedOn="{StaticResource SyncfusionViewHeaderBaseStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate >
+                    <Grid  Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <TextBlock HorizontalAlignment="Left" Padding="8,0,0,0"
+                        FontFamily="{Binding FontFamily}"
+                        FontSize="{Binding FontSize}"
+                        FontStyle="{Binding FontStyle}"
+                        Foreground="{Binding Foreground}"
+                        VerticalAlignment="Center"
+                        Text="{Binding DayText}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionMonthViewHeaderStyle}" TargetType="scheduler:MonthViewHeader" />
+
+</ResourceDictionary>

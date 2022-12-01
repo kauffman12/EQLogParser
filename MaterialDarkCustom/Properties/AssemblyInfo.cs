@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Resources;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 
@@ -31,11 +33,11 @@ using System.Windows;
 
 [assembly: ThemeInfo(
     ResourceDictionaryLocation.None, //where theme specific resource dictionaries are located
-                                     //(used if a resource is not found in the page, 
-                                     // or application resource dictionaries)
+    //(used if a resource is not found in the page, 
+    // or application resource dictionaries)
     ResourceDictionaryLocation.SourceAssembly //where the generic resource dictionary is located
-                                              //(used if a resource is not found in the page, 
-                                              // app, or any theme specific resource dictionaries)
+    //(used if a resource is not found in the page, 
+    // app, or any theme specific resource dictionaries)
 )]
 
 
@@ -50,22 +52,22 @@ using System.Windows;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 #if NET50
-[assembly: AssemblyVersion("20.1500.0.55")]
+[assembly: AssemblyVersion("20.3500.0.47")]
 #elif NETCORE
-[assembly: AssemblyVersion("20.1310.0.55")]
+[assembly: AssemblyVersion("20.3310.0.47")]
 #elif SyncfusionFramework4_6
-[assembly: AssemblyVersion("20.1460.0.55")]
+[assembly: AssemblyVersion("20.3460.0.47")]
 #elif SyncfusionFramework4_5_1
-[assembly: AssemblyVersion("20.1451.0.55")]
+[assembly: AssemblyVersion("20.3451.0.47")]
 #elif SyncfusionFramework4_5
-[assembly: AssemblyVersion("20.1450.0.55")]
+[assembly: AssemblyVersion("20.3450.0.47")]
 #elif SyncfusionFramework4_0
-[assembly: AssemblyVersion("20.1400.0.55")]
+[assembly: AssemblyVersion("20.3400.0.47")]
 #else
-[assembly: AssemblyVersion("20.1400.0.55")]
+[assembly: AssemblyVersion("20.3400.0.47")]
 #endif
 
 
 [assembly: AssemblyDelaySign(false)]
-[assembly: AssemblyFileVersion("20.1450.0.55")]
+[assembly: AssemblyFileVersion("20.3450.0.47")]
 

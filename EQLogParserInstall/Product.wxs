@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.34" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.35" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -193,9 +193,6 @@
       </Component>
       <Component Win64="yes" Id="Syncfusion.Themes.MaterialLight.WPF.dll" Guid="108AA0E6-409D-4C49-9FEF-84DF04858DB5">
         <File Id="Syncfusion.Themes.MaterialLight.WPF.dll" Name="Syncfusion.Themes.MaterialLight.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialLight.WPF.dll" />
-      </Component>
-      <Component Win64="yes" Id="Syncfusion.Themes.MaterialLightCustom.WPF.dll" Guid="41F69D17-F418-473D-BF74-0EF6AE87912F">
-        <File Id="Syncfusion.Themes.MaterialLightCustom.WPF.dll" Name="Syncfusion.Themes.MaterialLightCustom.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialLightCustom.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.Classic.dll" Guid="BDFC58AB-E906-42A5-B081-402299D84EE1">
         <File Id="Syncfusion.Tools.WPF.Classic.dll" Name="Syncfusion.Tools.WPF.Classic.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.Classic.dll" />

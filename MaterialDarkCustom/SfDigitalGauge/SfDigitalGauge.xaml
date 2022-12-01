@@ -1,0 +1,27 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:Syncfusion="clr-namespace:Syncfusion.UI.Xaml.Gauges;assembly=Syncfusion.SfGauge.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF">
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style x:Key="SyncfusionSfDigitalGaugeStyle"
+           TargetType="Syncfusion:SfDigitalGauge">
+        <Setter Property="Background"
+                Value="Transparent"></Setter>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}"></Setter>
+        <Setter Property="BorderThickness"
+                Value="0"></Setter>
+        <Setter Property="CharacterStroke"
+                Value="{StaticResource Series3}"></Setter>
+        <Setter Property="DimmedBrush"
+                Value="{StaticResource Series11}"></Setter>
+    </Style>
+
+    <Style TargetType="Syncfusion:SfDigitalGauge"
+           BasedOn="{StaticResource SyncfusionSfDigitalGaugeStyle}" />
+    
+</ResourceDictionary>

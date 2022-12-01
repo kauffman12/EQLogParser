@@ -137,7 +137,7 @@
                                 SnapsToDevicePixels="True">
                                 <Grid x:Name="ViewGrid">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="{Binding Path=PropertyNameColumnDefinition, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type propertygrid:PropertyGrid}}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="44" />
+                                        <ColumnDefinition Width="{Binding Path=PropertyNameColumnDefinition, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type propertygrid:PropertyGrid}}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                         <ColumnDefinition Width="3" />
                                         <ColumnDefinition Width="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ResizeColumn2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="44" />
                                     </Grid.ColumnDefinitions>

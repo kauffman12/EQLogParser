@@ -1,0 +1,78 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:linearGauge="clr-namespace:Syncfusion.UI.Xaml.Gauges;assembly=Syncfusion.SfGauge.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style x:Key="SyncfusionSfLinearGaugeStyle"
+           TargetType="linearGauge:SfLinearGauge">
+        <Setter Property="Background" Value="Transparent"></Setter>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"></Setter>
+        <Setter Property="BorderThickness" Value="0"></Setter>
+        <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"></Setter>
+        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"></Setter>
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.CaptionText}"></Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionLinearRangeStyle"
+           TargetType="linearGauge:LinearRange">
+        <Setter Property="RangeStroke" Value="{StaticResource Series3}"></Setter>
+        <Setter Property="IsTabStop" Value="False"/>
+    </Style>
+
+    <Style x:Key="SyncfusionLinearPointerStyle"
+           TargetType="linearGauge:LinearPointer">
+        <Setter Property="SymbolPointerStroke" Value="{StaticResource Series10}"></Setter>
+        <Setter Property="BarPointerStroke" Value="{StaticResource Series5}"></Setter>
+        <Setter Property="IsTabStop" Value="False"/>
+    </Style>
+
+    <Style x:Key="SyncfusionLinearScaleStyle"
+           TargetType="linearGauge:LinearScale">
+        <Setter Property="ScaleBarBorderBrush" Value="{StaticResource Series8}" />
+        <Setter Property="ScaleBarStroke" Value="{StaticResource Series8}" />
+        <Setter Property="LabelStroke" Value="{StaticResource ContentForeground}" />
+        <Setter Property="MajorTickStroke" Value="{StaticResource Border}" />
+        <Setter Property="MinorTickStroke" Value="{StaticResource Border}" />
+        <Setter Property="LabelSize" Value="{StaticResource MaterialDarkCustom.CaptionText}"></Setter>
+        <Setter Property="IsTabStop" Value="False"/>
+    </Style>
+
+    <Style x:Key="SyncfusionLinearScaleLabelStyle"
+           TargetType="linearGauge:LinearScaleLabel">
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="linearGauge:LinearScaleLabel">
+                    <ContentPresenter Content="{Binding LabelContent, RelativeSource={RelativeSource TemplatedParent}}">
+                        <ContentPresenter.Resources>
+                            <Style BasedOn="{x:Null}"
+                                   TargetType="{x:Type TextBlock}" />
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="linearGauge:SfLinearGauge"
+           BasedOn="{StaticResource SyncfusionSfLinearGaugeStyle}" />
+
+    <Style TargetType="linearGauge:LinearRange"
+           BasedOn="{StaticResource SyncfusionLinearRangeStyle}" />
+
+    <Style TargetType="linearGauge:LinearPointer"
+           BasedOn="{StaticResource SyncfusionLinearPointerStyle}" />
+
+    <Style TargetType="linearGauge:LinearScale"
+           BasedOn="{StaticResource SyncfusionLinearScaleStyle}" />
+
+    <Style TargetType="linearGauge:LinearScaleLabel"
+           BasedOn="{StaticResource SyncfusionLinearScaleLabelStyle}" />
+    
+</ResourceDictionary>
