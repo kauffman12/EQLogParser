@@ -1,0 +1,201 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"  
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib"
+                    xmlns:skinmanager="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:scheduler="clr-namespace:Syncfusion.UI.Xaml.Scheduler;assembly=Syncfusion.SfScheduler.WPF">
+    <ResourceDictionary.MergedDictionaries>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <SolidColorBrush x:Key="SfScheduler.AgendaView.TodayHighlight.Static.Background" Color="#F2F2F2"/>
+    <SolidColorBrush x:Key="SfScheduler.AgendaView.TodayHighlight.Static.Foreground" Color="#F2F2F2"/>
+
+    <scheduler:TimeFormatConverter x:Key="timeFormatConverter" />
+    <scheduler:TodayBorderSizeConverter x:Key="TodayBorderSizeConverter" FontSize="{StaticResource MaterialDarkCustom.HeaderTextStyle}" />
+
+    <PathGeometry x:Key="OccurrenceIcon">M13.332998,3.8970015 L15.999998,6.5640016 14.011192,6.5640016 13.998763,6.6953416 C13.850624,8.0406933 13.251793,9.3133421 12.267262,10.297188 9.9141897,12.650268 6.0860715,12.650268 3.7339988,10.297188 L4.8000317,9.2311521 C6.5650864,10.996212 9.4361749,10.996212 11.200229,9.2311521 11.905064,8.5263157 12.346754,7.6242282 12.482341,6.6656411 L12.495133,6.5640016 10.666998,6.5640016 z M7.9999189,0 C9.5450282,0 11.090012,0.58827019 12.266001,1.7648103 L11.200011,2.8308467 C9.4350293,1.0667863 6.5640583,1.0667863 4.7990766,2.8308467 4.0785213,3.55209 3.6344495,4.473599 3.5092549,5.4512309 L3.5040073,5.4980003 5.3329997,5.4980003 2.6669998,8.1650004 0,5.4980003 1.9874191,5.4980003 1.9918499,5.4431361 C2.1242676,4.0713655 2.7259102,2.7720321 3.7330875,1.7648103 4.9095755,0.58827019 6.4548097,0 7.9999189,0 z</PathGeometry>
+    <PathGeometry x:Key="ChangedOccurrenceIcon">M7.9999192,0 C9.5450284,0 11.090012,0.58826971 12.266001,1.7648098 L11.200011,2.8308461 C9.6280744,1.2597301 7.1788528,1.0878892 5.4150094,2.3153236 L5.3743703,2.3443701 11.686544,8.656544 11.782608,8.5168743 C12.151227,7.9569926 12.389125,7.3246689 12.48234,6.6656399 L12.495132,6.5639997 10.667,6.5639997 13.333,3.8969997 16,6.5639997 14.011191,6.5639997 13.998763,6.6953402 C13.8784,7.7884393 13.460509,8.8335431 12.779953,9.7147398 L12.764228,9.7342277 14,10.97 12.939,12.031 11.703289,10.795177 11.690159,10.805606 C9.3250544,12.635909 5.9023156,12.466436 3.7339994,10.297189 L4.800032,9.2311516 C6.3720334,10.803161 8.8213556,10.975099 10.584565,9.7469668 L10.625729,9.7175174 4.313171,3.404382 4.3111634,3.4070761 C3.8764154,4.0163516 3.6031511,4.7180063 3.5092549,5.45123 L3.5040073,5.4980001 5.3329998,5.4980001 2.6669998,8.1649995 0,5.4980001 1.9874194,5.4980001 1.9918504,5.4431353 C2.0994397,4.3285719 2.5167905,3.2618282 3.2097413,2.3607326 L3.2361002,2.3272126 2.0010006,1.092 3.0610005,0.031000137 4.2969177,1.2669175 4.310167,1.256393 C5.3924582,0.41879749 6.6962333,0 7.9999192,0 z</PathGeometry>
+
+    <DataTemplate x:Key="AgendaListItemTemplate">
+        <Border CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}" Background="{Binding AppointmentBackground}">
+            <Grid x:Name="PART_Grid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="PART_AgendaViewAppointmentSubjectTextBlock" Padding="5, 5, 0, 0"
+                    HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Text="{Binding Subject}"
+                FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
+                FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}" 
+                Foreground="{Binding Foreground}"
+                FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
+                <TextBlock x:Name="PART_AgendaViewAppointmentTimeTextBlock" Padding="5, 0, 0, 5"
+                    Grid.Row="1"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
+                    Foreground="{Binding Foreground}"
+                    FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}" 
+                     FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
+                    Text="{Binding Converter={StaticResource timeFormatConverter}}" />
+                <Path
+                Grid.Column="1"
+                    Grid.RowSpan="2"
+                    x:Name="PART_RecurrenceIcon"  
+                  Fill="#FFFFFFFF"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Center"
+                  Height="12.062"
+                  Width="16"
+                  Stretch="Fill"
+                  Margin="3">
+                </Path>
+            </Grid>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Path=IsRecursive}" Value="True">
+                <Setter TargetName="PART_RecurrenceIcon" Property="Data" Value="{StaticResource OccurrenceIcon}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=Type}" Value="ChangedOccurrence">
+                <Setter TargetName="PART_RecurrenceIcon" Property="Data" Value="{StaticResource ChangedOccurrenceIcon}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=Subject}" Value="{x:Static system:String.Empty}">
+                <Setter TargetName="PART_AgendaViewAppointmentSubjectTextBlock" Property="Text" Value="{scheduler:SchedulerLocalizationResourceExtension ResourceName=EmptyAppointmentSubject}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=AppointmentBackground}" Value="{x:Null}">
+                <Setter TargetName="PART_Grid" Property="Background" Value="{StaticResource PrimaryBackground}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=Foreground}" Value="{x:Null}">
+                <Setter TargetName="PART_AgendaViewAppointmentSubjectTextBlock" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
+                <Setter TargetName="PART_AgendaViewAppointmentTimeTextBlock" Property="Foreground" Value="{StaticResource PrimaryForeground}"/>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="SyncfusionMonthAgendaViewSelectedDateTemplate">
+        <Grid Margin="10, 0, 10, 0"
+                          HorizontalAlignment="Stretch" 
+                          VerticalAlignment="Center" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="{Binding Converter={StaticResource TodayBorderSizeConverter}}"  />
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="PART_DayText"
+                            HorizontalAlignment="Center"
+                            FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                            FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                            Foreground="{StaticResource ContentForeground}"
+                            Text="{Binding Converter={StaticResource timeFormatConverter}, ConverterParameter=Day}" />
+            <Border x:Name="PART_Border" Grid.Row="1" >
+                <Border.Style>
+                    <Style>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ElementName=PART_Border, Path=IsMouseOver}" Value="true">
+                                <Setter Property="Border.Background" Value="{StaticResource ContentBackgroundHover}"/>
+                                <Setter Property="TextBlock.Foreground" Value="{StaticResource HoverForeground}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Converter={StaticResource timeFormatConverter},ConverterParameter=Today}" Value="{x:Static system:DateTime.Today}">
+                                <Setter Property="Border.Background" Value="{StaticResource PrimaryBackground}" />
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding ElementName=PART_Border, Path=IsMouseOver}" Value="true"/>
+                                    <Condition Binding="{Binding Converter={StaticResource timeFormatConverter},ConverterParameter=Today}" Value="{x:Static system:DateTime.Today}"/>
+                                </MultiDataTrigger.Conditions>
+                                <MultiDataTrigger.Setters>
+                                    <Setter Property="Border.Background" Value="{StaticResource PrimaryDark}"/>
+                                </MultiDataTrigger.Setters>
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                        <Setter Property="Border.Background" Value="Transparent"/>
+                        <Setter Property="Border.Width" Value="{Binding Converter={StaticResource TodayBorderSizeConverter}}"/>
+                        <Setter Property="Border.Height" Value="{Binding Converter={StaticResource TodayBorderSizeConverter}}"/>
+                        <Setter Property="Border.CornerRadius" Value="{Binding Converter={StaticResource TodayBorderSizeConverter}}"/>
+                        <Setter Property="TextBlock.Foreground" Value="{StaticResource ContentForeground}"/>
+                    </Style>
+                </Border.Style>
+                <TextBlock x:Name="PART_DateText"
+                                   Grid.Row="1"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   TextAlignment="Center"
+                                   FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                   FontSize="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
+                                   Text="{Binding Converter={StaticResource timeFormatConverter}, ConverterParameter=Date}" />
+            </Border>
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Converter={StaticResource timeFormatConverter},ConverterParameter=Today}" Value="{x:Static system:DateTime.Today}">
+                <Setter TargetName="PART_DayText" Property="Foreground" Value="{StaticResource PrimaryColorForeground}" />
+                <Setter TargetName="PART_DateText" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <Style x:Key="SyncfusionMonthAgendaViewStyle" TargetType="scheduler:MonthAgendaView">
+        <Setter Property="Background" Value="{StaticResource ContentBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
+        <Setter Property="SnapsToDevicePixels" Value="true" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Hidden" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"  Value="Auto" />
+        <Setter Property="ScrollViewer.CanContentScroll" Value="true" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="ItemContainerStyle" >
+            <Setter.Value>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="BorderThickness" Value="0" />
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemTemplate" Value="{StaticResource AgendaListItemTemplate}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="scheduler:MonthAgendaView">
+                    <Border Name="Border" BorderThickness="1">
+
+                        <Grid Grid.Row="2" Background="{TemplateBinding Background}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter 
+                                    Visibility="Collapsed"
+                                    Width="50"
+                                    x:Name="PART_SelectedDateContentPresenter"
+                                    Margin="0,5,0,0"                                                                    
+                                    VerticalAlignment="Top"
+                                    HorizontalAlignment="Center"
+                                    ContentTemplate="{StaticResource SyncfusionMonthAgendaViewSelectedDateTemplate}">
+                            </ContentPresenter>
+                            <TextBlock
+                                Padding="20,10,0,0"
+                                Grid.Column="1"
+                                FontSize="15"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Foreground="{StaticResource ContentForeground}"
+                                x:Name="PART_NoEventsTextBlock"/>
+
+                            <ScrollViewer Grid.Column="1">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionMonthAgendaViewStyle}" TargetType="scheduler:MonthAgendaView" />
+
+</ResourceDictionary>
+    

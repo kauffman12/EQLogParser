@@ -198,7 +198,7 @@
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="true">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
-                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}"/>
+                            <Setter TargetName="Border" Property="Background" Value="Transparent"/>
                             <Setter TargetName="Border" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
                         </Trigger>
                         <MultiTrigger>
@@ -245,7 +245,7 @@
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
-                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}"/>
+                            <Setter TargetName="Border" Property="Background" Value="Transparent"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

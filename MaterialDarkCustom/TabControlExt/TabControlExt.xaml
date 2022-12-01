@@ -1374,13 +1374,9 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible" />
                         </MultiDataTrigger>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding Path=IsVisible, RelativeSource={RelativeSource Mode=Self}}" Value="True" />
-                                <Condition Binding="{Binding Path=(tools_controls:TabControlExt.Image), RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="{x:Null}" />
-                            </MultiDataTrigger.Conditions>
+                        <DataTrigger Binding="{Binding Path=(tools_controls:TabControlExt.Image), RelativeSource={RelativeSource Self}}" Value="{x:Null}">
                             <Setter TargetName="PART_Image" Property="UIElement.Visibility" Value="Collapsed" />
-                        </MultiDataTrigger>
+                        </DataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition  Binding="{Binding Path=IsVisible, RelativeSource={RelativeSource Self}}" Value="True" />

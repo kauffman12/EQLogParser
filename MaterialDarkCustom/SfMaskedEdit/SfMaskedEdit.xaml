@@ -87,7 +87,7 @@
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
-                            <Setter Property="Background" TargetName="Border" Value="{StaticResource ContentBackground}"/>
+                            <Setter Property="Background" TargetName="Border" Value="Transparent"/>
                         </Trigger>
                         <Trigger Property="IsReadOnly" Value="True">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
@@ -96,7 +96,7 @@
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="true">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
-                            <Setter Property="Background" TargetName="Border" Value="{StaticResource ContentBackground}"/>
+                            <Setter Property="Background" TargetName="Border" Value="Transparent"/>
                             <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">

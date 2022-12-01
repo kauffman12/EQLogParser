@@ -941,6 +941,8 @@
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type primitives:CalendarDayButton}">
@@ -971,8 +973,6 @@
                                  Width="24" Height="24">
                         </Border>
                         <ContentPresenter x:Name="NormalText"
-                                          TextElement.Foreground="{StaticResource ContentForeground}"
-                                          TextElement.FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           Margin="5,1,5,1"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
@@ -1326,6 +1326,10 @@
     <Style x:Key="SyncfusionCalendarItemStyle" TargetType="{x:Type primitives:CalendarItem}">
         <Setter Property="Margin" Value="0,3,0,3" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type primitives:CalendarItem}">
@@ -1335,10 +1339,6 @@
                                 Margin="0,6,0,6"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
-                                FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
-                                FontWeight="{StaticResource MaterialDarkCustom.FontWeightMedium}"
-                                Foreground="{StaticResource ContentForeground}"
                                 Text="{Binding}" />
                         </DataTemplate>
                     </ControlTemplate.Resources>
@@ -1432,6 +1432,10 @@
                                             </Style.Triggers>
                                         </Style>
                                         <Style x:Key="MaterialHeaderButtonStyle" TargetType="{x:Type Button}">
+                                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                                            <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+                                            <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.TitleTextStyle}"/>
+                                            <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
                                             <Setter Property="Template">
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="{x:Type Button}">
@@ -1441,11 +1445,7 @@
                                                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                                 Content="{TemplateBinding Content}"
-                                                                ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                TextElement.FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
-                                                                TextElement.FontSize="{StaticResource MaterialDarkCustom.TitleTextStyle}"
-                                                                TextElement.FontWeight="{StaticResource MaterialDarkCustom.FontWeightMedium}"
-                                                                TextElement.Foreground="{StaticResource ContentForeground}">
+                                                                ContentTemplate="{TemplateBinding ContentTemplate}">
                                                                 <ContentPresenter.Resources>
                                                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
                                                                 </ContentPresenter.Resources>
@@ -1611,9 +1611,6 @@
         <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
-        <Setter Property="CalendarItemStyle" Value="{StaticResource SyncfusionCalendarItemStyle}" />
-        <Setter Property="CalendarDayButtonStyle" Value="{StaticResource SyncfusionCalendarDayButtonStyle}" />
-        <Setter Property="CalendarButtonStyle" Value="{StaticResource SyncfusionCalendarButtonStyle}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Template">
             <Setter.Value>
@@ -1623,8 +1620,7 @@
                             x:Name="PART_CalendarItem"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            Style="{TemplateBinding CalendarItemStyle}" />
+                            BorderThickness="{TemplateBinding BorderThickness}"/>
                     </StackPanel>
                 </ControlTemplate>
             </Setter.Value>

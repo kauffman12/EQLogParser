@@ -150,7 +150,7 @@
                                 </Grid.Resources>
                                 <Button x:Name="PART_Button" Grid.Column="1" Focusable="False" HorizontalAlignment="Center" Padding="2" Style="{StaticResource WPFDatePickerButtonStyle}" Grid.Row="0" VerticalAlignment="Center">
                                 </Button>
-                                <DatePickerTextBox x:Name="PART_TextBox" Grid.Column="0" Focusable="{TemplateBinding Focusable}" Padding="2,0,0,0" Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" HorizontalContentAlignment="Stretch" Style="{StaticResource WPFDatePickerTextBoxStyle}" Grid.Row="0" VerticalContentAlignment="Stretch">
+                                <DatePickerTextBox x:Name="PART_TextBox" Grid.Column="0" Focusable="{TemplateBinding Focusable}" FontFamily="{TemplateBinding FontFamily}" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}" Padding="2,0,0,0" Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" HorizontalContentAlignment="Stretch" Style="{StaticResource WPFDatePickerTextBoxStyle}" Grid.Row="0" VerticalContentAlignment="Stretch">
                                 </DatePickerTextBox>
                                 <Grid x:Name="PART_DisabledVisual" Grid.ColumnSpan="2" Grid.Column="0" IsHitTestVisible="False" Opacity="0" Grid.Row="0">
                                     <Grid.ColumnDefinitions>

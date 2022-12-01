@@ -1,0 +1,203 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib"
+                    
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:treeMap="clr-namespace:Syncfusion.UI.Xaml.TreeMap;assembly=Syncfusion.SfTreeMap.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <treeMap:VisibilityConverter x:Key="VisibilityConv" />
+
+    <Style x:Key="SyncfusionSfTreeMapItemStyle"
+           TargetType="treeMap:TreeMapItem">
+        <Setter Property="BorderBrush"
+                Value="Transparent" />
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="IsTabStop" Value="False"/>
+    </Style>
+
+    <Style x:Key="SyncfusionSfTreeMapLegendStyle"
+           TargetType="treeMap:TreeMapLegend">
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.CaptionText}" />
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}" />
+        <Setter Property="IsTabStop" Value="False"/>
+    </Style>
+
+    <Style x:Key="SyncfusionSfTreeMapStyle"
+           TargetType="treeMap:SfTreeMap">
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}" />
+        <Setter Property="TreeMapResourceDictionary">
+            <Setter.Value>
+                <ResourceDictionary Source="SfTreeMap.xaml" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="LeafColorMapping">
+            <Setter.Value>
+                <treeMap:RangeBrushColorMapping>
+                    <treeMap:RangeBrushColorMapping.Brushes>
+                        <treeMap:RangeBrush From="0"
+                                            To="1"
+                                            LegendLabel="1 % Growth"
+                                            Color="{StaticResource Series1.Color}"/>
+                        <treeMap:RangeBrush From="0"
+                                            To="2"
+                                            LegendLabel="2 % Growth"
+                                            Color="{StaticResource Series3.Color}" />
+                        <treeMap:RangeBrush From="0"
+                                            To="3"
+                                            LegendLabel="3 % Growth"
+                                            Color="{StaticResource Series2.Color}" />
+                        <treeMap:RangeBrush From="0"
+                                            To="4"
+                                            LegendLabel="4 % Growth"
+                                            Color="{StaticResource Series4.Color}" />
+                    </treeMap:RangeBrushColorMapping.Brushes>
+                </treeMap:RangeBrushColorMapping>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness"
+                Value="0" />
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.CaptionText}" />
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="HighlightHoverBrush"
+                Value="{StaticResource Series9}" />
+        <Setter Property="HighlightBorderBrush"
+                Value="{StaticResource Series10}" />
+        <Setter Property="DrillDownSelectionStroke"
+                Value="{StaticResource Series11}" />
+        <Setter Property="DrillDownHeaderTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Border Background="{StaticResource ContentBackgroundAlt}">
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Margin="10 0">
+                            <Path x:Name="path"
+                                  Data="M197,153.5 L197,138 186.75,145.5 z"
+                                  Height="16"
+                                  Width="8"
+                                  Fill="{StaticResource IconColor}"
+                                  Stretch="Fill" />
+                            <TextBlock Text="{Binding}"
+                                       Margin="10 0"
+                                       FontSize="15"
+                                       FontWeight="Medium"
+                                       FontFamily="Segoe UI"
+                                       Foreground="{StaticResource ContentForeground}" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ToolTipTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Border IsHitTestVisible="False"
+                            Margin="-6,-4,-6,-4"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                            Background="{StaticResource TooltipBackground}"
+                            Width="122"
+                            BorderBrush="{StaticResource TooltipBackground}"
+                            BorderThickness="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}">
+                        <StackPanel HorizontalAlignment="Left"
+                                    Margin="6,4.5,6,4.5">
+                            <TextBlock Text="{Binding Label}"
+                                       Foreground="{StaticResource Black}"
+                                       FontWeight="Light"
+                                       FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Center"
+                                       Visibility="{Binding TreeMap.LeafLabelPath, Converter={StaticResource VisibilityConv}}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding TreeMap.WeightValuePath, Converter={StaticResource VisibilityConv}}">
+                                    <TextBlock Text="{Binding TreeMap.WeightValuePath}"
+                                               Foreground="{StaticResource Black}"
+                                               FontWeight="Normal"
+                                               FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                                    <TextBlock Text=" - "
+                                               Foreground="{StaticResource Black}"
+                                               FontWeight="Normal"
+                                               FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                                    <TextBlock Text="{Binding Weight}"
+                                               Foreground="{StaticResource Black}"
+                                               FontWeight="Normal"
+                                               FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding TreeMap.ColorValuePath, Converter={StaticResource VisibilityConv}}">
+                                    <TextBlock Text="{Binding TreeMap.ColorValuePath}"
+                                               Foreground="{StaticResource Black}"
+                                               FontWeight="Normal"
+                                               FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                                    <TextBlock Text=" - "
+                                               Foreground="{StaticResource Black}"
+                                               FontWeight="Normal"
+                                               FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                                    <TextBlock Text="{Binding ColorWeight}"
+                                               Foreground="{StaticResource Black}"
+                                               FontWeight="Normal"
+                                               FontSize="{StaticResource MaterialDarkCustom.CaptionText}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="FlatLevelDefaultHeaderTemplate">
+        <ContentPresenter>
+            <ContentPresenter.Resources>
+                <Style BasedOn="{x:Null}"
+                       TargetType="{x:Type TextBlock}" />
+            </ContentPresenter.Resources>
+            <ContentPresenter.Content>
+                <TextBlock Text="{Binding Header}"
+                           FontWeight="Medium"
+                           FontSize="12"
+                           Foreground="{StaticResource ContentForeground}"
+                           Margin="0,8,0,0"
+                           Padding="8,6,0,6"
+                           Background="{StaticResource ContentBackgroundAlt}"
+                           HorizontalAlignment="Stretch"
+                           VerticalAlignment="Center" />
+            </ContentPresenter.Content>
+        </ContentPresenter>
+    </DataTemplate>
+
+    <Style BasedOn="{StaticResource SyncfusionSfTreeMapItemStyle}"
+           TargetType="treeMap:TreeMapItem" />
+
+    <Style BasedOn="{StaticResource SyncfusionSfTreeMapLegendStyle}"
+           TargetType="treeMap:TreeMapLegend" />
+    
+    <Style BasedOn="{StaticResource SyncfusionSfTreeMapStyle}"
+           TargetType="treeMap:SfTreeMap" />
+    
+</ResourceDictionary>

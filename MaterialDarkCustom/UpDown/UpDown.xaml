@@ -146,7 +146,7 @@
                     <Grid>
                         <Border
                             x:Name="Border"
-                            Padding="{TemplateBinding Padding}"
+                            
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -263,7 +263,7 @@
                                     Grid.Column="1"
                                     Width="16"
                                     MinHeight="0"
-                                    Padding="{TemplateBinding Padding}"
+                                    
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     Background="Transparent"
                                     Command="shared:UpDown.m_upValue"
@@ -292,7 +292,7 @@
                                     Grid.Column="1"
                                     Width="16"
                                     MinHeight="0"
-                                    Padding="{TemplateBinding Padding}"
+                                    
                                     Background="Transparent"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     Command="shared:UpDown.m_downValue"

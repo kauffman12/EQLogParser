@@ -164,11 +164,15 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
     </PackageReference>
+    <PackageReference Include="Syncfusion.Edit.WPF" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.3.0.47" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="20.3.0.47" />
+    <PackageReference Include="Syncfusion.SfInput.WPF" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="20.3.0.47" />
     <PackageReference Include="Syncfusion.Tools.WPF" Version="20.3.0.47" />
+    <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="20.3.0.47" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.1" />
   </ItemGroup>
@@ -176,8 +180,7 @@
     <Analyzer Include="..\..\..\..\..\..\Program Files %28x86%29\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.IO.Compression.dll" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.csproj" />
-    <ProjectReference Include="..\MaterialLightCustom\Syncfusion.Themes.MaterialLightCustom.csproj" />
+    <ProjectReference Include="..\MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.WPF.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Resource.Designer.cs">

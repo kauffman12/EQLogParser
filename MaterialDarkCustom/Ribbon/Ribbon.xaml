@@ -408,7 +408,7 @@
                                 <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsDropDownOpen}" Value="True" />
                             </MultiDataTrigger.Conditions>
                             <Setter Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
-							<Setter TargetName="label" Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
                         </MultiDataTrigger>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter TargetName="IconContent" Property="FrameworkElement.MaxHeight" Value="38" />
@@ -869,7 +869,7 @@
                                 </Trigger>
 
                                 <Trigger Property="IsDropDownOpen" Value="True">
-								    <Setter TargetName="label" Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
                                     <Setter TargetName="PART_ToggleButton" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
                                     <Setter Property="ToolTipService.IsEnabled" Value="False" />
                                 </Trigger>
@@ -1814,7 +1814,7 @@
                                 </Trigger>
 
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="label" Property="Foreground" Value="{StaticResource SecondaryForeground}" />
+                                    <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
 
                                     <Setter TargetName="OuterBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
                                 </Trigger>
@@ -1824,7 +1824,7 @@
                                         <Condition SourceName="PART_ToggleButton" Property="IsMouseOver" Value="True" />
                                         <Condition Property="IsDropDownOpen" Value="False" />
                                     </MultiTrigger.Conditions>
-                                    <Setter TargetName="label" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                                    <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
                                     <Setter TargetName="PART_ToggleButton" Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
                                     <Setter TargetName="PART_ToggleButton" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
                                     <Setter TargetName="OuterBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
@@ -1841,7 +1841,7 @@
                                 </MultiTrigger>
 
                                 <Trigger Property="IsDropDownOpen" Value="True">
-								    <Setter TargetName="label" Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
+                                    <Setter TargetName="label" Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
                                     <Setter TargetName="label" Property="Foreground" Value="{StaticResource SecondaryForeground}" />
                                     <Setter TargetName="PART_ToggleButton" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
                                     <Setter TargetName="PART_ToggleButton" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
@@ -2796,7 +2796,7 @@
                                     ContentTemplateSelector="{TemplateBinding IconTemplateSelector}" 
                                     Name="IconContent" VerticalAlignment="Top" Margin="0,1,0,0" ContentTemplate="{TemplateBinding IconTemplate}" Content="{Binding }" Height="32" Width="32"/>
 
-                                            <tools:CustomItemsControl  x:Name="label" Foreground="{TemplateBinding Foreground}" ItemsSource="{Binding Path=Label, Mode=OneWay, Converter={StaticResource TextWrappingConverter}, RelativeSource={RelativeSource TemplatedParent}}" Path="{StaticResource SyncfusionDropDownPathIcon}">
+                                            <tools:CustomItemsControl x:Name="label" Foreground="{TemplateBinding Foreground}" ItemsSource="{Binding Path=Label, Mode=OneWay, Converter={StaticResource TextWrappingConverter}, RelativeSource={RelativeSource TemplatedParent}}" Path="{StaticResource SyncfusionDropDownPathIcon}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <tools:MultilinePanel />
@@ -2899,7 +2899,7 @@
 
                                 </Trigger>
                                 <Trigger Property="IsDropDownOpen" Value="True">
-								    <Setter TargetName="label" Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
                                     <Setter TargetName="PART_OuterBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
                                 </Trigger>
                                 <Trigger Property="ResizeDirection" Value="NoResize">
@@ -5064,17 +5064,6 @@
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="Margin" Value="0,-2,0,0" />
         <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
-        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
-        <Style.Triggers>
-
-            <DataTrigger Binding="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource AncestorType={x:Type tools:RibbonItemsControl}}}" Value="True">
-                <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
-            </DataTrigger>
-            <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
-            </Trigger>
-
-        </Style.Triggers>
     </Style>
     <Style BasedOn="{StaticResource SyncfusionLabelTextBlockStyle}" TargetType="{x:Type tools:LabelTextBlock}"/>
 
@@ -7732,7 +7721,7 @@
                                     Name="Image"
                                     Margin="6"
                                     VerticalAlignment="Center"
-									Visibility="{Binding ImageSource,Converter={StaticResource EmptyObjectToObjectConverter},RelativeSource={RelativeSource TemplatedParent}}">
+                                    Visibility="{Binding ImageSource,Converter={StaticResource EmptyObjectToObjectConverter},RelativeSource={RelativeSource TemplatedParent}}">
                                     <Image Source="{Binding Path=ImageSource, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" />
                                 </Border>
                                 <ContentPresenter

@@ -1,0 +1,205 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:syncfusion="clr-namespace:Syncfusion.UI.Xaml.Maps;assembly=Syncfusion.SfMaps.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <DataTemplate x:Key="ToolTipTemplate">
+        <Border>
+            <Grid>
+                <Polygon Fill="{StaticResource TooltipBackground}"
+                         Points="{Binding PolygonPoints}"
+                         Stroke="{StaticResource TooltipBackground}"
+                         StrokeThickness="{Binding StrokeThickness}" />
+                <Grid HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding Value}"
+                               FontSize="{Binding FontSize}"
+                               Foreground="{StaticResource White}"
+                               FontFamily="{Binding FontFamily}"
+                               FontStyle="{Binding FontStyle}"
+                               Padding="0"
+                               Margin="{Binding Margin}" />
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ToolTipDataTemplate">
+        <Border>
+            <Grid>
+                <Polygon Fill="{StaticResource TooltipBackground}"
+                         Points="{Binding PolygonPoints}"
+                         Stroke="{StaticResource TooltipBackground}"
+                         StrokeThickness="{Binding StrokeThickness}" />
+                <Grid HorizontalAlignment="Center">
+                    <ContentPresenter ContentTemplate="{Binding TooltipTemplate}"
+                                      Margin="{Binding Margin}">
+                    </ContentPresenter>
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <Style x:Key="SyncfusionSfMapStyle"
+           TargetType="syncfusion:SfMap">
+        <Setter Property="MapResourceDictionary">
+            <Setter.Value>
+                <ResourceDictionary Source="SfMap.xaml" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.CaptionText}" />
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness"
+                Value="0" />
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}" />
+    </Style>
+
+    <DataTemplate x:Key="DefaultAnnotationTemplate">
+        <Grid>
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center">
+                <ContentPresenter  Content="{Binding  Path=AnnotationSymbol}" />
+                <Grid Background="{Binding  Path=AnnotationLabelBackground}">
+                    <TextBlock x:Name="PART_SymbolTextBlock"
+                               VerticalAlignment="Center"
+                               Text="{Binding  Path=AnnotationLabel}"
+                               FontFamily="{Binding  Path=AnnotationLabelFontFamily}"
+                               FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
+                               Foreground="{StaticResource ContentForeground}"
+                               FontStyle="{Binding  Path=AnnotationLabelFontStyle}" />
+                </Grid>
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DefaultLabelTemplate">
+        <Border Background="Transparent">
+            <TextBlock FontStyle="{Binding Setting.MapItemFontStyle}"
+                       FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
+                       FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
+                       Text="{Binding MapItemValue}"
+                       Foreground="{StaticResource ContentForeground}" />
+        </Border>
+    </DataTemplate>
+
+    <Style x:Key="SyncfusionSfMapShapeFileLayerStyle"
+           TargetType="syncfusion:ShapeFileLayer">
+        <Setter Property="ShapeFill"
+                Value="{StaticResource Series9}" />
+        <Setter Property="ShapeStroke"
+                Value="{StaticResource Series10}" />
+        <Setter Property="CrossCursorStroke"
+                Value="{StaticResource Series10}" />
+        <Setter Property="MarkerIconFill"
+                Value="{StaticResource Series1}" />
+        <Setter Property="MarkerLabelFontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="MarkerLabelFontSize"
+                Value="{StaticResource MaterialDarkCustom.CaptionText}" />
+        <Setter Property="MarkerLabelFontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="MarkerLabelForeground"
+                Value="{StaticResource ContentForeground}" />
+        <Setter Property="ItemsTemplate" Value="{StaticResource DefaultLabelTemplate}" />
+        <Setter Property="AnnotationTemplate" Value="{StaticResource DefaultAnnotationTemplate}" />
+        <Setter Property="IsTabStop" Value="False"/>
+    </Style>
+
+    <Style x:Key="SyncfusionSfMapImageryLayerStyle"
+           TargetType="syncfusion:ImageryLayer">
+        <Setter Property="MarkerIconFill"
+                Value="{StaticResource Series1}" />
+        <Setter Property="MarkerLabelFontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
+        <Setter Property="MarkerLabelFontSize"
+                Value="{StaticResource MaterialDarkCustom.CaptionText}" />
+        <Setter Property="MarkerLabelFontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="MarkerLabelForeground"
+                Value="{StaticResource ContentForeground}" />
+        <Setter Property="IsTabStop" Value="False"/>
+    </Style>
+
+    <Style TargetType="syncfusion:ImageryLayer"
+           BasedOn="{StaticResource SyncfusionSfMapImageryLayerStyle}" />
+    
+    <Style TargetType="syncfusion:SfMap"
+           BasedOn="{StaticResource SyncfusionSfMapStyle}" />
+
+    <Style TargetType="syncfusion:ShapeFileLayer"
+           BasedOn="{StaticResource SyncfusionSfMapShapeFileLayerStyle}" />
+
+    <DataTemplate x:Key="DiamondBubbleType">
+        <Path Data="F1M1433.97,-17.992L1401.97,-49.992 1433.97,-81.992 1465.97,-49.992 1433.97,-17.992z"
+              Stretch="Fill"
+              Stroke="{StaticResource White}"
+              StrokeThickness="{Binding StrokeThickness}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="TriangleBubbleType">
+        <Path Data="F1M1719.66,218.12L1735.66,246.166 1751.66,274.21 1719.66,274.21 1687.66,274.21 1703.66,246.166 1719.66,218.12z"
+              Stretch="Fill"
+              Stroke="{StaticResource White}"
+              StrokeThickness="{Binding StrokeThickness}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="TrapezoidBubbleType">
+        <Path Data="F1 M 257.147,126.953L 543.657,126.953L 640.333,448.287L 160.333,448.287L 257.147,126.953 Z"
+              Stretch="Fill"
+              Stroke="{StaticResource White}"
+              StrokeThickness="{Binding StrokeThickness}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="StarBubbleType">
+        <Path Data="M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z"
+              Stretch="Fill"
+              Stroke="{StaticResource White}"
+              StrokeThickness="{Binding StrokeThickness}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="PinBubbleType">
+        <Path Data="F1M1525.83,266.24L1529.12,256.359 1539,246.478 1542.29,249.771 1552.17,246.478 1542.29,236.598 1545.59,233.304 1559.25,212.907 1539,226.718 1535.71,230.008 1540.88,235.189 1525.83,220.131 1522.53,230.008 1525.83,233.304 1515.95,243.181 1506.06,246.478 1525.83,266.24z"
+              Stretch="Fill"
+              RenderTransformOrigin="0.5,0.5"
+              Stroke="{StaticResource White}"
+              StrokeThickness="{Binding StrokeThickness}">
+            <Path.RenderTransform>
+                <RotateTransform Angle="180" />
+            </Path.RenderTransform>
+        </Path>
+    </DataTemplate>
+
+    <DataTemplate x:Key="PentagonBubbleType">
+        <Path Data="F1M1703.66,-21.7902L1687.66,-49.7902 1719.66,-77.7902 1751.66,-49.7902 1735.66,-21.7902 1703.66,-21.7902z"
+              Stretch="Fill"
+              Stroke="{StaticResource White}"
+              StrokeThickness="{Binding StrokeThickness}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="RectangleBubbleType">
+        <Rectangle Stretch="Fill"
+                   Stroke="{StaticResource White}"
+                   StrokeThickness="{Binding StrokeThickness}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="EllipseBubbleType">
+        <Ellipse Stretch="Fill"
+                 Stroke="{StaticResource White}"
+                 StrokeThickness="{Binding StrokeThickness}" />
+    </DataTemplate>
+
+</ResourceDictionary>

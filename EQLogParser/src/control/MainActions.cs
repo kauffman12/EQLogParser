@@ -1,5 +1,7 @@
 ﻿using Microsoft.Win32;
 using Syncfusion.SfSkinManager;
+using Syncfusion.Themes.MaterialDark.WPF;
+using Syncfusion.Themes.MaterialLight.WPF;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
@@ -130,7 +132,7 @@ namespace EQLogParser
         {
           foreach (var file in Directory.GetFiles(path))
           {
-             var test = Path.GetFileName(file).Trim();
+            var test = Path.GetFileName(file).Trim();
             if (test.StartsWith("EQLogParser") && test.EndsWith(".msi"))
             {
               File.Delete(file);
@@ -150,7 +152,7 @@ namespace EQLogParser
       {
         if (theme == "MaterialLight")
         {
-          SfSkinManager.SetTheme(window, new Theme("MaterialLightCustom;MaterialLight"));
+          SfSkinManager.SetTheme(window, new Theme("MaterialLight"));
         }
         else
         {
@@ -163,15 +165,18 @@ namespace EQLogParser
     {
       if (theme == "MaterialLight")
       {
+        var themeSettings = new MaterialLightThemeSettings();
+        themeSettings.PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434") };
+        SfSkinManager.RegisterThemeSettings("MaterialLight", themeSettings);
         Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
         Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf") };
         Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFa7baab") };
         Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFeaa6ac") };
         Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFb02021") };
-        SfSkinManager.SetTheme(window, new Theme("MaterialLightCustom;MaterialLight"));
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLightCustom.WPF;component/MSControl/CheckBox.xaml");
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLightCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLightCustom.WPF;component/Common/Brushes.xaml");
+        SfSkinManager.SetTheme(window, new Theme("MaterialLight"));
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/MSControl/CheckBox.xaml");
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
+        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/Common/Brushes.xaml");
         window.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
 
         if (!string.IsNullOrEmpty(window.statusText?.Text))

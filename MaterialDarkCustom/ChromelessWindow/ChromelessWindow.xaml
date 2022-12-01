@@ -18,7 +18,8 @@
 
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <local:CornerRadiusConverter x:Key="CRConvert" />
-
+	<local:IcoFileSizeSelectorConverter x:Key="IcoFileSizeSelector" />
+	
     <Style x:Key="SyncfusionChromlessWindowTitleBarStyle" TargetType="{x:Type local:TitleBar}">
         <Setter Property="Focusable" Value="False" />
     </Style>
@@ -142,7 +143,7 @@
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
                                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                                        Source="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:ChromelessWindow}}, Path=Icon}"
+                                        Source="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:ChromelessWindow}}, Path=Icon,Converter={StaticResource IcoFileSizeSelector},ConverterParameter=16}"
                                         Visibility="{Binding Path=ShowIcon, Converter={StaticResource BooleanToVisibilityConverter}, RelativeSource={RelativeSource TemplatedParent}}" />
                                 <ItemsControl
                                         x:Name="PART_LeftHeaderItems"
@@ -194,7 +195,7 @@
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
                                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                                        Source="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:ChromelessWindow}}, Path=Icon}"
+                                        Source="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:ChromelessWindow}}, Path=Icon,Converter={StaticResource IcoFileSizeSelector},ConverterParameter=16}"
                                         Visibility="{Binding Path=ShowIcon, Converter={StaticResource BooleanToVisibilityConverter}, RelativeSource={RelativeSource TemplatedParent}}" />
                                 <StackPanel
                                         x:Name="MinMaxCloseStackPanel"
