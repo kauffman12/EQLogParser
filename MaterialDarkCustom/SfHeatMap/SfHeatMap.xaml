@@ -1,0 +1,351 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"   
+                    xmlns:sfheatmap="clr-namespace:Syncfusion.UI.Xaml.HeatMap;assembly=Syncfusion.SfHeatMap.WPF"
+                    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ScrollViewer.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <sfheatmap:ColorMappingToBrushConverter x:Key="ColorMappingToBrushConverter"/>
+    <sfheatmap:NumberToColorConverter x:Key="NumberToColorConverter"/>
+    <sfheatmap:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter" />
+
+    <Thickness x:Key="SfHeatMap.HeatMapCell.BorderThickness">0,0,1,1</Thickness>
+
+    <Thickness x:Key="SfHeatMap.RowHeader.BorderThickness">1,0,1,1</Thickness>
+
+    <Thickness x:Key="SfHeatMap.ColumnHeader.BorderThickness">0,1,1,1</Thickness>
+
+    <Style TargetType="sfheatmap:SfHeatMap" x:Key="SyncfusionSfHeatMapStyle">
+        <Setter Property="HorizontalAlignment" 
+                Value="Stretch"/>
+        <Setter Property="VerticalAlignment" 
+                Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="VerticalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="Background"
+                Value="Black"/>
+        <Setter Property="BorderThickness"
+                Value="0"/>
+        <Setter Property="BorderBrush" 
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize" 
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/> 
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sfheatmap:SfHeatMap">
+                    <Border BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid>
+                            <sfheatmap:ScrollViewer x:Name="PART_ScrollViewer"
+                                                    HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                                    VerticalAlignment="{TemplateBinding VerticalAlignment}">
+                                <sfheatmap:RecordsPanel x:Name="PART_Panel"
+                                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                                </sfheatmap:RecordsPanel>
+                            </sfheatmap:ScrollViewer>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sfheatmap:SfHeatMap" BasedOn="{StaticResource SyncfusionSfHeatMapStyle}"/>
+
+    <Style TargetType="sfheatmap:HeatMapCell" x:Key="SyncfusionHeatMapCellStyle">
+        <Setter Property="HorizontalAlignment" 
+                Value="Stretch"/>
+        <Setter Property="VerticalAlignment" 
+                Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="VerticalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="Height"
+                Value="29"/>
+        <Setter Property="Width"
+                Value="95.5"/>
+        <Setter Property="GridLineThickness" 
+                Value="{StaticResource SfHeatMap.HeatMapCell.BorderThickness}"/>
+        <Setter Property="GridLineBrush"
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="Padding" 
+                Value="2"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sfheatmap:HeatMapCell">
+                    <Border BorderBrush="{TemplateBinding GridLineBrush}"
+                            BorderThickness="{TemplateBinding GridLineThickness}">
+                        <Border Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <ContentPresenter x:Name="PART_ContentPresenter"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  Visibility="{TemplateBinding ShowContent}"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}">
+                                    <ContentPresenter.Resources>
+                                        <Style TargetType="TextBlock" BasedOn="{x:Null}"/>
+                                    </ContentPresenter.Resources>
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sfheatmap:HeatMapCell" BasedOn="{StaticResource SyncfusionHeatMapCellStyle}"/>
+
+    <Style TargetType="sfheatmap:RowHeader" x:Key="SyncfusionRowHeaderStyle">
+        <Setter Property="HorizontalAlignment"
+                Value="Stretch"/>
+        <Setter Property="VerticalAlignment"
+                Value="Stretch"/>
+        <Setter Property="Height"
+                Value="29"/>
+        <Setter Property="Width"
+                Value="95.5"/>
+        <Setter Property="HorizontalContentAlignment"
+                Value="Right"/>
+        <Setter Property="VerticalContentAlignment"
+                Value="Center"/>
+        <Setter Property="GridLineThickness"
+                Value="{StaticResource SfHeatMap.RowHeader.BorderThickness}"/>
+        <Setter Property="Background" 
+                Value="{StaticResource ContentBackgroundAlt2}"/>
+        <Setter Property="GridLineBrush"
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="Padding" 
+                Value="2,2,5,2"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="Foreground" 
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="Opacity" 
+                Value="87"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sfheatmap:RowHeader">
+                    <Border BorderBrush="{TemplateBinding GridLineBrush}"
+                            BorderThickness="{TemplateBinding GridLineThickness}">
+                        <Border Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <ContentPresenter x:Name="PART_ContentPresenter"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                  Opacity="{TemplateBinding Opacity}">
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sfheatmap:RowHeader" BasedOn="{StaticResource SyncfusionRowHeaderStyle}"/>
+
+    <Style TargetType="sfheatmap:ColumnHeader" x:Key="SyncfusionColumnHeaderStyle">
+        <Setter Property="HorizontalAlignment" 
+                Value="Stretch"/>
+        <Setter Property="VerticalAlignment"
+                Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment"
+                Value="Center"/>
+        <Setter Property="VerticalContentAlignment"
+                Value="Center"/>
+        <Setter Property="TextBlock.TextAlignment"
+                Value="Center"/>
+        <Setter Property="Height"
+                Value="29"/>
+        <Setter Property="Width"
+                Value="95.5"/>
+        <Setter Property="Padding"
+                Value="2"/>
+        <Setter Property="GridLineThickness"
+                Value="{StaticResource SfHeatMap.ColumnHeader.BorderThickness}"/>
+        <Setter Property="Background"
+                Value="{StaticResource ContentBackgroundAlt2}"/>
+        <Setter Property="GridLineBrush" 
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="Foreground" 
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+        <Setter Property="Opacity"
+                Value="54"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sfheatmap:ColumnHeader">
+                    <Border BorderBrush="{TemplateBinding GridLineBrush}"
+                            BorderThickness="{TemplateBinding GridLineThickness}">
+                        <Border Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <ContentPresenter x:Name="PART_ContentPresenter"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                  Opacity="{TemplateBinding Opacity}">
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sfheatmap:ColumnHeader" BasedOn="{StaticResource SyncfusionColumnHeaderStyle}"/>
+
+    <Style TargetType="sfheatmap:SfHeatMapLegend" x:Key="SyncfusionSfHeatMapLegendStyle">
+        <Setter Property="HorizontalContentAlignment"
+                Value="Center"/>
+        <Setter Property="VerticalContentAlignment"
+                Value="Center"/>
+        <Setter Property="Margin"
+                Value="10"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sfheatmap:SfHeatMapLegend">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                            <sfheatmap:ListPanel Orientation="{TemplateBinding Orientation}"
+                                                 ColorMappingCollection="{TemplateBinding ColorMappingCollection}"
+                                                 Visibility="{Binding Path=LegendMode, RelativeSource={RelativeSource Mode=TemplatedParent}, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=List, Mode=TwoWay}" >
+                            </sfheatmap:ListPanel>
+                            <sfheatmap:ScalePanel LegendOrientation="{TemplateBinding Orientation}"
+                                                  ColorMappingCollection="{TemplateBinding ColorMappingCollection}"
+                                                  Visibility="{Binding Path=LegendMode, RelativeSource={RelativeSource Mode=TemplatedParent},Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Gradient}">
+                                <Rectangle x:Name="Part_Gradient"
+                                           MinWidth="10"
+                                           MinHeight="10"
+                                           Fill="{TemplateBinding GradientLegend}"/>
+                                <sfheatmap:ScalePanel.Resources>
+                                    <Style TargetType="Line">
+                                        <Setter Property="Stroke" Value="{StaticResource BorderAlt}"/>
+                                        <Setter Property="StrokeThickness" Value="{StaticResource MaterialDarkCustom.StrokeThickness1}"/>
+                                    </Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.CaptionText}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                                        <Setter Property="Opacity" Value="{StaticResource MaterialDarkCustom.StrokeThickness1}"/>
+                                    </Style>
+                                    
+                                </sfheatmap:ScalePanel.Resources>
+                            </sfheatmap:ScalePanel>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sfheatmap:SfHeatMapLegend" BasedOn="{StaticResource SyncfusionSfHeatMapLegendStyle}"/>
+
+    <Style TargetType="sfheatmap:ScrollViewer" x:Key="SyncfusionScrollViewerStyle">
+        <Setter Property="HorizontalContentAlignment" 
+                Value="Left"/>
+        <Setter Property="VerticalContentAlignment"
+                Value="Top"/>
+        <Setter Property="Padding" 
+                Value="0"/>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}"/>
+        <Setter Property="Background"
+                Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sfheatmap:ScrollViewer">
+                    <Border BorderBrush="{TemplateBinding BorderBrush}">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <sfheatmap:CustomContentPresenter x:Name="ScrollContentPresenter"
+                                                              Grid.RowSpan="1"
+                                                              Grid.ColumnSpan="1"
+                                                              Content="{TemplateBinding Content}"/>
+                            <ScrollBar x:Name="VerticalScrollBar"
+                                       Style="{StaticResource WPFScrollBarStyle}"
+                                       Grid.Column="1"
+                                       IsTabStop="False"
+                                       Minimum="{TemplateBinding MinimumY}"
+                                       Maximum="{TemplateBinding MaximumY}"
+                                       SmallChange="3"
+                                       Orientation="Vertical"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                       Value="{Binding Path=VerticalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       HorizontalAlignment="Right"
+                                       LargeChange="{TemplateBinding ViewportHeight}"/>
+                            <ScrollBar x:Name="HorizontalScrollBar"
+                                       Style="{StaticResource WPFScrollBarStyle}"
+                                       Grid.Row="1"
+                                       IsTabStop="False"
+                                       Minimum="{TemplateBinding MinimumX}"
+                                       Maximum="{TemplateBinding MaximumX}"
+                                       Orientation="Horizontal"
+                                       Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
+                                       Value="{Binding Path=HorizontalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                       ViewportSize="{TemplateBinding ViewportWidth}"
+                                       SmallChange="3"
+                                       LargeChange="{TemplateBinding ViewportWidth}"/>
+                            <Border x:Name="ScrollBarSeparator"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    BorderThickness="0,0,1,1" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sfheatmap:ScrollViewer" BasedOn="{StaticResource SyncfusionScrollViewerStyle}"/>
+
+</ResourceDictionary>

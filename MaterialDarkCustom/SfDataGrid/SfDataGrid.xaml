@@ -707,7 +707,17 @@
                             </VisualStateGroup>
 
                             <VisualStateGroup x:Name="IndicationStates">
-                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="Normal" >
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RowHeaderIndicatorGrid" Storyboard.TargetProperty="(UIElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="0">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Visibility>Collapsed</Visibility>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
                                 <VisualState x:Name="Error_CurrentRow">
                                     <Storyboard>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RowHeaderIndicator" Storyboard.TargetProperty="Data">
@@ -872,13 +882,14 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Path x:Name="PART_RowHeaderIndicator"
+                        <Grid x:Name="PART_RowHeaderIndicatorGrid" Background="Transparent">
+                            <Path x:Name="PART_RowHeaderIndicator"
                               Width="8.146"
                               Height="8.146"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"
                               Fill="{StaticResource IconColor}"
-                              Stretch="Fill">
+                              Stretch="Fill"/>
                             <ToolTipService.ToolTip>
 
                                 <ToolTip x:Name="PART_ToolTip"
@@ -887,7 +898,7 @@
                                          Tag="{TemplateBinding RowErrorMessage}"
                                          Template="{StaticResource SyncfusionDataGridValidationToolTipTemplate}" />
                             </ToolTipService.ToolTip>
-                        </Path>
+                        </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -1443,7 +1454,7 @@
                             </ContentPresenter>
                         </Border>
 
-                        <Border Margin="-1,-1,0,0"
+                        <Border Margin="-1,0,0,0"
                                 Background="Transparent"
                                 BorderBrush="{TemplateBinding CurrentCellBorderBrush}"
                                 BorderThickness="{TemplateBinding CurrentCellBorderThickness}"

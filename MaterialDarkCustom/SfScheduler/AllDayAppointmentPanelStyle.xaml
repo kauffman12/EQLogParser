@@ -1,0 +1,116 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"  
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib"
+					xmlns:skinmanager="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:scheduler="clr-namespace:Syncfusion.UI.Xaml.Scheduler;assembly=Syncfusion.SfScheduler.WPF">
+
+    <ResourceDictionary.MergedDictionaries>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style x:Key="SyncfusionAllDayExpanderButtonStyle" TargetType="ToggleButton" >
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Cursor" Value="Hand"/>
+            </Trigger>
+        </Style.Triggers>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border
+            x:Name="PART_Root"
+            Background="Transparent"
+            BorderBrush="{StaticResource BorderAlt}"
+            BorderThickness="0">
+                        <Path x:Name="PART_Expander" 
+                  Fill="{StaticResource ContentForeground}" 
+                  Stroke="Transparent"            
+                  Height="7.401"
+                  Width="12.002"   
+                  Stretch="Fill" 
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="PART_Expander" Property="Data" Value="M6.0010305,0 L12.001999,5.9840137 10.590014,7.3999998 6.0010305,2.8240075 1.4119857,7.3999998 0,5.9840137 z" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="False">
+                            <Setter TargetName="PART_Expander" Property="Data" Value="M1.4120439,0 L6.0010185,4.5759883 10.589016,0 12.001,1.4159849 6.0010185,7.4010001 0,1.4159849 z" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionAllDayExpanderButtonStyle}" TargetType="ToggleButton"/>
+
+    <Style x:Key="SyncfusionAllDayAppointmentViewControlStyle" TargetType="scheduler:AllDayAppointmentViewControl">
+        <Setter Property="Background" Value="{StaticResource ContentBackground}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="scheduler:AllDayAppointmentViewControl">
+                    <Border BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid
+                        Background="{TemplateBinding Background}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="0, 0, 1, 0" >
+                                <ToggleButton
+                                          x:Name="PART_ExpanderCell"
+                                          Style="{StaticResource SyncfusionAllDayExpanderButtonStyle}"
+                                          Width="15"
+                                          Height="10"
+                                          Margin="0,0,0,5"
+                                          VerticalAlignment="Bottom" 
+                                          IsChecked="{Binding RelativeSource={RelativeSource TemplatedParent},
+                                                     Path=IsExpanded,
+                                                     Mode=TwoWay,
+                                                     UpdateSourceTrigger=PropertyChanged}"
+                                          Visibility="{Binding RelativeSource={RelativeSource TemplatedParent},
+                                                     Path=ExpanderVisibility,
+                                                     Mode=TwoWay,
+                                                     UpdateSourceTrigger=PropertyChanged}" >
+
+                                </ToggleButton>
+                            </Border>
+                            <ScrollViewer
+                            x:Name="PART_ScrollViewer"  AllowDrop="True"
+                            Grid.Column="1" 
+                            HorizontalScrollBarVisibility="Hidden"
+                            IsDeferredScrollingEnabled="False"
+                            VerticalScrollBarVisibility="Hidden" >
+
+                                <ScrollViewer.Resources>
+                                    <Style TargetType="{x:Type ScrollBar}">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                                                    <Border Background="Transparent" />
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ScrollViewer.Resources>
+
+                                <scheduler:AllDayAppointmentPanel
+                                x:Name="PART_AllDayAppointmentPanel"
+                                Background="Transparent"  />
+                            </ScrollViewer>
+
+                        </Grid>
+                    </Border>
+
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionAllDayAppointmentViewControlStyle}" TargetType="scheduler:AllDayAppointmentViewControl"/>
+</ResourceDictionary>

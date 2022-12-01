@@ -488,6 +488,36 @@
                                 <tools_controls:RibbonBar 
                                     Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Clipboard}" 
                                     IsLauncherButtonVisible="False">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Clipboard"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M17,0 L21,0 21,7 20,7 20,1.0000001 17,1.0000001 z M0,0 L4,0 4,1.0000001 1.0000001,1.0000001 1.0000001,23 12,23 12,24 0,24 z"
+                                                      Fill="#FFED8733"
+                                                      Margin="0,4,6,2"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M1.0000002,0.99999994 L1.0000002,17 13,17 13,0.99999994 z M0,0 L14,0 14,18 0,18 z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Margin="13,12,0,0"
+                                                      Stretch="Fill" />
+                                                <Path Data="M16,0 L17,0 19,0 19,6 17,6 17,2 16,2 z M0,0 L2,0 3,0 3,2 2,2 2,20 11,20 11,22 0,22 z"
+                                                      Fill="#FFF8DB8F"
+                                                      Margin="1,5,7,3"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M10.999956,12.5 L22.999956,12.5 22.999956,28.5 10.999956,28.5 z M7.4999558,0 C9.1569382,0 10.499956,1.3439941 10.499956,3 L13.499956,3 13.499956,6.5 15,6.5 15,10.5 9.0000001,10.5 9.0000001,24.5 0,24.5 0,6.5 1.4999557,6.5 1.4999557,3 4.4999558,3 C4.4999558,1.3439941 5.8439499,0 7.4999558,0 z"
+                                                      Fill="Transparent"
+                                                      Margin="3,0.5,1,1"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M6.5,0.99999996 C5.1209717,0.99999996 4,2.1209716 4,3.5 L4,4 0.99999994,4 0.99999994,7 12,7 12,4 9,4 9,3.5 C9,2.1209716 7.8790283,0.99999996 6.5,0.99999996 z M6.5,0 C8.2600098,-4.4703484E-08 9.7209473,1.3060302 9.9649658,3 L13,3 13,8 0,8 0,3 3.0350342,3 C3.2790527,1.3060302 4.7399902,-4.4703484E-08 6.5,0 z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Height="8"
+                                                      Margin="4,0,10,0"
+                                                      Stretch="Fill"
+                                                      VerticalAlignment="Top" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton 
                                         Margin="5" 
                                         SizeForm="Large" 
@@ -617,6 +647,31 @@
                                                           Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Font}"
                                                           IsLargeButtonPanel="False" 
                                                           LauncherCommand="richtextboxadv:SfRichTextBoxAdv.ShowFontDialogCommand">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Font"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M0,0 L31,0 31,30 0,30 z"
+                                                      Fill="Transparent"
+                                                      Margin="0.5"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M1,1 L1,30 31,30 31,1 z M0,0 L32,0 32,31 0,31 z"
+                                                      Fill="{StaticResource BorderAlt}"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M0,0 L16,0 16,4 0,4 z"
+                                                      Fill="{StaticResource PrimaryDark}"
+                                                      Height="4"
+                                                      Margin="8,0,8,7.5"
+                                                      Stretch="Fill"
+                                                      VerticalAlignment="Bottom" />
+                                                <Path Data="M4.6490094,0.95899969 C4.6079938,1.086998 4.5699689,1.2149963 4.5329811,1.3429947 4.4980079,1.4909973 4.451987,1.6419983 4.3949801,1.7949982 L2.5329715,6.8809967 6.7870204,6.8809967 4.9330074,1.7789992 C4.8509762,1.5690002 4.7669913,1.2969971 4.6789781,0.95899969 z M4.0779621,0 L5.2099864,0 9.304001,11 8.3180343,11 7.2040149,8.0019989 2.1159772,8.0029984 1.0109914,11 0,11 z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Margin="11.344,7.5,11.352,12.5"
+                                                      Stretch="Fill" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:ButtonPanel Height="24" 
                                                                 SeparatorVisibility="Collapsed">
                                         <tools_controls:RibbonComboBox x:Name="PART_FontFamilyComboBox" 
@@ -1159,6 +1214,31 @@
                                                           Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Paragraph}" 
                                                           IsLargeButtonPanel="False" 
                                                           Width="246" LauncherCommand="richtextboxadv:SfRichTextBoxAdv.ShowParagraphDialogCommand">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Paragaraph"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M0,0 L31,0 31,30 0,30 z"
+                                                      Fill="Transparent"
+                                                      Margin="0.5"
+                                                      Stretch="Fill" />
+                                                <Path Data="M1,1 L1,30 31,30 31,1 z M0,0 L32,0 32,31 0,31 z"
+                                                      Fill="{StaticResource BorderAlt}"
+                                                      Stretch="Fill" />
+                                                <Path Data="F1M382.0527,85.3937L392.0527,85.3937z"
+                                                      Fill="Transparent"
+                                                      Height="0"
+                                                      Stretch="Fill"
+                                                      Margin="11,0,11,10"
+                                                      VerticalAlignment="Bottom"/>
+                                                <Path Data="M2.0000091,12.000998 L12.000009,12.000998 12.000009,13.000998 2.0000091,13.000998 z M0,8 L14,8 14,8.9999998 0,8.9999998 z M1.9999999,4.0010004 L12,4.0010004 12,5.0010004 1.9999999,5.0010004 z M0,0 L14,0 14,1.0010004 0,1.0010004 z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Margin="9,7.999,9,10"
+                                                      Stretch="Fill"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:ButtonPanel Height="24">
                                         <tools_controls:SplitButton x:Name="PART_BulletedListSplitButton" 
                                                                     ToolTipService.ShowOnDisabled="True" 
@@ -2232,6 +2312,45 @@
                                 </tools_controls:RibbonBar>
                                 <tools_controls:RibbonBar Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Styles}" 
                                                           LauncherCommand="richtextboxadv:SfRichTextBoxAdv.ShowStylesDialogCommand">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Styles"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M0,0 L31,0 31,30 0,30 z"
+                                                      Fill="Transparent"
+                                                      Margin="0.5"
+                                                      Stretch="Fill" />
+                                                <Path Data="M1,1 L1,30 31,30 31,1 z M0,0 L32,0 32,31 0,31 z"
+                                                      Fill="{StaticResource BorderAlt}"
+                                                      Stretch="Fill" />
+                                                <Path Data="F1M445.4941,79.5352L449.7481,79.5352L447.8941,74.4332C447.8121,74.2232,447.7281,73.9502,447.6401,73.6132L447.6101,73.6132C447.5691,73.7402,447.5311,73.8692,447.4941,73.9972C447.4591,74.1452,447.4131,74.2962,447.3561,74.4492z M441.9611,85.6542L447.0391,72.6542L448.1711,72.6542L452.2651,83.6542L451.2791,83.6542L450.1651,80.6562L445.0771,80.6572L442.9721,85.6542z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Stretch="Fill"
+                                                      Margin="7.908,8.26,13.788,9.74"/>
+                                                <Path Data="F1M444.7725,86.1543L446.7725,87.1543C446.7725,87.1543,448.7725,88.1543,450.7725,85.1543C450.7725,85.1543,449.7935,82.1333,448.7725,83.1543C447.2705,84.6563,444.7725,86.1543,444.7725,86.1543"
+                                                      Fill="{StaticResource PrimaryDark}"
+                                                      Height="4.371"
+                                                      Stretch="Fill"
+                                                      Margin="10.719,0,15.281,8.079"
+                                                      VerticalAlignment="Bottom"/>
+                                                <Path Data="F1M445.7891,86.1035L446.9961,86.7075C447.0571,86.7355,448.5631,87.4015,450.2181,85.0795C449.8881,84.1755,449.4161,83.4615,449.2091,83.4435C449.2101,83.4445,449.1801,83.4545,449.1261,83.5075C448.1031,84.5305,446.6621,85.5335,445.7891,86.1035 M447.6201,87.8175C446.9981,87.8175,446.5891,87.6215,446.5491,87.6015L443.7341,86.1945L444.5161,85.7255C444.5401,85.7105,446.9791,84.2405,448.4191,82.8005C448.8221,82.3975,449.2331,82.4215,449.4461,82.4715C450.4351,82.7095,451.0751,84.4665,451.2481,84.9995L451.3221,85.2305L451.1881,85.4315C449.8741,87.4035,448.5231,87.8175,447.6201,87.8175"
+                                                       Fill="{StaticResource PrimaryDark}"
+                                                      Height="5.373"
+                                                      Stretch="Fill"
+                                                      Margin="9.681,0,14.731,7.577"
+                                                      VerticalAlignment="Bottom"/>
+                                                <Path Data="F1M456.6387,77.0352L454.7727,78.1542L448.7727,83.1542L450.7727,85.1542L455.6527,80.2752C456.3827,79.5442,456.8807,78.6132,457.0827,77.6002L457.1277,77.3802C457.1837,77.1002,456.8817,76.8892,456.6387,77.0352"
+                                                      Fill="White"
+                                                      Stretch="Fill"
+                                                      Margin="14.72,12.594,8.918,10.239"/>
+                                                <Path Data="F1M449.5127,83.1875L450.7727,84.4475L455.2987,79.9215C455.9217,79.2975,456.3547,78.5215,456.5567,77.6665L455.0297,78.5835z M450.7727,85.8615L448.0327,83.1215L454.4517,77.7705L456.3807,76.6065C456.6587,76.4385,457.0147,76.4505,457.2837,76.6385C457.5507,76.8275,457.6827,77.1565,457.6177,77.4775L457.5737,77.7005C457.3517,78.8115,456.8097,79.8245,456.0057,80.6285z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Stretch="Fill"
+                                                      Margin="13.98,12.095,8.419,9.532"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonGallery HorizontalAlignment="Stretch"
                                                                   Name="PART_RibbonGallery"
                                                                   Width="470"
@@ -2300,6 +2419,29 @@
                                     </tools_controls:RibbonGallery>
                                 </tools_controls:RibbonBar>
                                 <tools_controls:RibbonBar Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Editing}" IsLauncherButtonVisible="False">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Editing"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M0,0 L30.999999,0 30.999999,30 0,30 z"
+                                                      Fill="Transparent"
+                                                      Margin="0.5"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M1.0000009,0.99999998 L1.0000009,30 31,30 31,0.99999998 z M0,0 L32,0 32,31 0,31 z"
+                                                      Fill="{StaticResource BorderAlt}"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M5,0 C7.7619934,0 10,2.239006 10,5 10,7.762001 7.7619934,10 5,10 2.2380066,10 0,7.762001 0,5 0,2.239006 2.2380066,0 5,0 z"
+                                                      Fill="Transparent"
+                                                      Margin="13.405,7.659,8.595,13.341"
+                                                      Stretch="Fill" />
+                                                <Path Data="M9.4999981,1 C7.0189982,1 4.9999981,3.0190001 4.9999981,5.5 4.9999981,7.9810001 7.0189982,10 9.4999981,10 11.980998,10 13.999998,7.9810001 13.999998,5.5 13.999998,3.0190001 11.980998,1 9.4999981,1 z M9.4999981,0 C12.531999,0 14.999998,2.4679999 14.999998,5.5 14.999998,8.5330001 12.531999,11 9.4999981,11 8.1734982,11 6.9549513,10.527801 6.003799,9.7425927 L5.9829665,9.7249732 0.70700072,14.999999 0,14.293005 5.2758742,9.0180636 5.2577291,8.9966145 C4.4723893,8.0455391 3.9999984,6.8269376 3.9999984,5.5 3.9999984,2.4679999 6.4679985,0 9.4999981,0 z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Margin="8.904,7.159,8.096,8.841"
+                                                      Stretch="Fill"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton x:Name="PART_RestrictEditingButton" ToolTipService.ShowOnDisabled="True" Label="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=ReadOnly}" IsSelected="{Binding IsReadOnly, Mode=TwoWay}" 
                                                                  IsToggle="True" 
                                                                  SizeForm="Large">
@@ -2405,6 +2547,26 @@
                             </tools_controls:RibbonTab>
                             <tools_controls:RibbonTab x:Name="PART_InsertTab" Caption="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Insert}">
                                 <tools_controls:RibbonBar Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Pages}" IsLauncherButtonVisible="False">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Pages"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M0,17.5 L20,17.5 20,27 0,27 z M0,0 L20,0 20,9.5 0,9.5 z" 
+                                                  Fill="Transparent" 
+                                                  Margin="4.5,0" 
+                                                  Stretch="Fill" />
+                                                <Path Data="M0,17 L21,17 21,27 20,27 20,18 1.0000002,18 1.0000002,27 0,27 z M0,0 L1.0000002,0 1.0000002,9 20,9 20,0 21,0 21,10 0,10 z"
+                                                  Fill="{StaticResource SecondaryForeground}"
+                                                  Margin="4,0" 
+                                                  Stretch="Fill" />
+                                                <Path Data="M25,4.3213367E-07 L29,4.3213367E-07 29,1.0000001 25,1.0000001 z M20,4.3213367E-07 L24,4.3213367E-07 24,1.0000001 20,1.0000001 z M15,0 L19,0 19,1.0000005 15,1.0000005 z M10,0 L14,0 14,1.0000005 10,1.0000005 z M5,0 L9,0 9,1.0000005 5,1.0000005 z M0,0 L4,0 4,1.0000005 0,1.0000005 z" 
+                                                  Fill="{StaticResource PrimaryDark}" 
+                                                  Margin="0,13" 
+                                                  Stretch="Fill"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton SizeForm="Large" 
                                                                  Width="70" 
                                                                  Margin="0 5 0 1"
@@ -2438,6 +2600,35 @@
                                     </tools_controls:RibbonButton>
                                 </tools_controls:RibbonBar>
                                 <tools_controls:RibbonBar Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Tables}" IsLauncherButtonVisible="False">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Table"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path
+                                    Margin="0.5,4.5,0.5,0.5"
+                                    Data="M0,0 L27,0 27,23 0,23 z"
+                                    Fill="Transparent"
+                                    Stretch="Fill" />
+                                                <Path
+                                    Height="4"
+                                    Margin="0.5,0.5,0.5,0"
+                                    VerticalAlignment="Top"
+                                    Data="M0,0 L27,0 27,4 0,4 z"
+                                    Fill="{StaticResource SecondarySelectionBackground}"
+                                    Stretch="Fill" />
+                                                <Path
+                                    Margin="1,5,1,1"
+                                    Data="M9,8 L9,14 17,14 17,8 z M8,0 L9,0 9,7 17,7 17,0 18,0 18,7 26,7 26,8 18,8 18,14 26,14 26,15 18,15 18,22 17,22 17,15 9,15 9,22 8,22 8,15 0,15 0,14 8,14&#xa;8,8 0,8 0,7 8,7 z"
+                                    Fill="{StaticResource SecondarySelectionBackground}"
+                                    Stretch="Fill" />
+                                                <Path
+                                    Data="M0.99999994,5.0000001 L0.99999994,27 27,27 27,5.0000001 z M0.99999994,1 L0.99999994,4.0000002 27,4.0000002 27,1 z M0,0 L28,0 28,4.0000002 28,5.0000001 28,28 0,28 0,5.0000001 0,4.0000002 z"
+                                    Fill="{StaticResource SecondaryForeground}"
+                                    Stretch="Fill" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:DropDownButton SizeForm="Large" 
                                                                    ToolTipService.ShowOnDisabled="True" 
                                                                    HorizontalAlignment="Center" 
@@ -2492,6 +2683,26 @@
                                     </tools_controls:DropDownButton>
                                 </tools_controls:RibbonBar>
                                 <tools_controls:RibbonBar IsLauncherButtonVisible="False" Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Illustrations}">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Picture"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M10.5,11.5 L28.5,11.5 28.5,22.5 10.5,22.5 z M0,0 L26,0 26,10 9,10 9,19 0,19 0,10 0,7 z" 
+                                                  Fill="Transparent"
+                                                  Margin="1,1,0.5,3.5"
+                                                  Stretch="Fill"/>
+                                                <Path Data="M22,4 C23.104,4 24,4.8959999 24,6 24,7.1040001 23.104,8 22,8 20.896,8 20,7.1040001 20,6 20,4.8959999 20.896,4 22,4 z M0,0 L28,0 28,11 27,11 27,0.99999994 0.99999994,0.99999994 0.99999994,12.292882 7.2919998,6.0000033 8.7069998,6.0000033 12.853,10.147001 12.146,10.854001 8.2919998,7.0000029 7.7069998,7.0000029 0.99999994,13.707 0.99999994,20 10,20 10,21 0,21 z"
+                                                  Fill="{StaticResource SecondaryForeground}"
+                                                  Margin="0,0,2,6"
+                                                  Stretch="Fill" />
+                                                <Path Data="M0.99999988,0.99999986 L0.99999988,11 18,11 18,0.99999986 z M0,0 L19,0 19,12 10,12 10,14 13,14 13,15 10,15 9,15 6,15 6,14 9,14 9,12 0,12 z"
+                                                  Fill="{StaticResource PrimaryDark}"
+                                                  Margin="11,12,0,0" 
+                                                  Stretch="Fill" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton SizeForm="Large" 
                                                                  ToolTipService.ShowOnDisabled="True" 
                                                                  HorizontalAlignment="Center"
@@ -2526,6 +2737,32 @@
                                     </tools_controls:RibbonButton>
                                 </tools_controls:RibbonBar>
                                 <tools_controls:RibbonBar IsLauncherButtonVisible="False" Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Links}">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Hyperlink"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path
+                                    Margin="1,1,0.5,0.5"
+                                    Data="M21.5,11.5 C25.365997,11.5 28.5,14.634003 28.5,18.5 28.5,22.365997 25.365997,25.5 21.5,25.5 17.634003,25.5 14.5,22.365997 14.5,18.5 14.5,14.634003 17.634003,11.5 21.5,11.5 z M0,0 L26,0 26,9.9999999 21,9.9999999 C16.582,10 13,13.582 13,18 L13,19 0,19 0,9.9999999 0,7 z"
+                                    Fill="Transparent"
+                                    Stretch="Fill" />
+                                                <Path
+                                    Margin="0,0,2,6"
+                                    Data="M22,4 C23.104,4 24,4.8959999 24,6 24,7.1040001 23.104,8 22,8 20.896,8 20,7.1040001 20,6 20,4.8959999 20.896,4 22,4 z M0,0 L28,0 28,12 27,12 27,0.99999994 0.99999994,0.99999994 0.99999994,12.292882 7.2919998,6.0000033 8.7069998,6.0000033 15.853,13.147 15.146,13.854 8.2919998,7.0000029 7.7069998,7.0000029 0.99999994,13.707 0.99999994,20 14,20 14,21 0,21 z"
+       
+                                    Fill="{StaticResource SecondaryForeground}"
+                                    Stretch="Fill" />
+                                                <Path
+                                    Width="15"
+                                    Margin="0,12,0,0"
+                                    HorizontalAlignment="Right"
+                                    Data="M10.814629,10 L10.794575,10.13237 C10.556345,11.582298 10.12235,12.799206 9.5530882,13.653631 L9.5415831,13.670445 9.6577339,13.63186 C11.3839,13.022631 12.77816,11.70384 13.488375,10.027625 L13.499682,10 z M5.2013478,10 L5.2242656,10.131828 C5.650125,12.498687 6.6127501,14 7.5,14 8.3872499,14 9.3498745,12.498687 9.7757339,10.131828 L9.7986526,10 z M1.5003178,10 L1.5116248,10.027625 C2.2218397,11.70384 3.6160996,13.022631 5.3422661,13.63186 L5.4584169,13.670445 5.4469123,13.653631 C4.8776503,12.799206 4.443655,11.582298 4.2054253,10.13237 L4.1853719,10 z M10.935374,6.0000001 L10.961154,6.326903 C10.986773,6.707496 11,7.0991249 11,7.5 11,7.9008751 10.986773,8.2925038 10.961154,8.6730969 L10.935374,9 13.824968,9 13.833257,8.9661188 C13.942335,8.4947901 14,8.0039999 14,7.5 14,6.9960001 13.942335,6.5052099 13.833257,6.0338813 L13.824968,6.0000001 z M5.0707765,6.0000001 L5.0589004,6.1207871 C5.0205779,6.5604062 5,7.0211251 5,7.5 5,7.9788749 5.0205779,8.4395938 5.0589004,8.8792129 L5.0707765,9 9.929224,9 9.9411001,8.8792129 C9.9794216,8.4395938 10,7.9788749 10,7.5 10,7.0211251 9.9794216,6.5604062 9.9411001,6.1207871 L9.929224,6.0000001 z M1.1750318,6.0000001 L1.1667435,6.0338813 C1.057665,6.5052099 1,6.9960001 0.99999994,7.5 1,8.0039999 1.057665,8.4947901 1.1667435,8.9661188 L1.1750318,9 4.0646257,9 4.038846,8.6730969 C4.0132275,8.2925038 4,7.9008751 4,7.5 4,7.0991249 4.0132275,6.707496 4.038846,6.326903 L4.0646257,6.0000001 z M9.5415831,1.3295546 L9.5530882,1.3463688 C10.12235,2.2007942 10.556345,3.4177017 10.794575,4.86763 L10.814629,4.9999999 13.499682,4.9999999 13.488375,4.972375 C12.77816,3.2961601 11.3839,1.9773691 9.6577339,1.36814 z M5.4584169,1.3295546 L5.3422661,1.36814 C3.6160996,1.9773691 2.2218397,3.2961601 1.5116248,4.972375 L1.5003178,4.9999999 4.1853719,4.9999999 4.2054253,4.86763 C4.443655,3.4177017 4.8776503,2.2007942 5.4469123,1.3463688 z M7.5,1 C6.6127501,1 5.650125,2.5013125 5.2242656,4.8681718 L5.2013478,4.9999999 9.7986526,4.9999999 9.7757339,4.8681718 C9.3498745,2.5013125 8.3872499,1 7.5,1 z M7.5,0 C10.73125,0 13.491308,2.0532227 14.544214,4.9237061 L14.571136,4.9999999 15,4.9999999 15,7.5 15,10 14.571136,10 14.544214,10.076294 C13.491308,12.946777 10.73125,15 7.5,15 4.2687502,15 1.5086914,12.946777 0.45578623,10.076294 L0.4288649,10 0,10 0,7.5 0,4.9999999 0.4288649,4.9999999 0.45578623,4.9237061 C1.5086914,2.0532227 4.2687502,0 7.5,0 z"
+                                    Fill="{StaticResource PrimaryDark}"
+                                    Stretch="Fill" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton ToolTipService.ShowOnDisabled="True" 
                                                                  HorizontalAlignment="Center" 
                                                                  Label="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Hyperlink}" 
@@ -2571,6 +2808,25 @@
                             </tools_controls:RibbonTab>
                             <tools_controls:RibbonTab x:Name="PART_ReviewTab" Caption="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Review}">
                                 <tools_controls:RibbonBar Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Proofing}" IsLauncherButtonVisible="False">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Spelling"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M4.8539929,7.6356661 L2.3540554,8.1430819 C1.7400641,8.2580798 1.2550707,8.6450713 1.0830731,9.1520598 0.99107456,9.4240539 0.97507477,9.6920478 1.0370741,9.9730418 1.1680722,10.563029 1.7840633,11.002019 2.4740539,11.002019 L2.4950538,11.002019 C4.4271517,10.975738 4.7980011,9.9113715 4.8520427,9.7031019 L4.8539929,9.695142 z M11.353998,4.9999943 C9.9749694,4.999994 8.8539977,6.3459871 8.8539976,7.999994 8.8539977,9.6539857 9.9749694,10.999994 11.353998,10.999994 12.732996,10.999994 13.853998,9.6539857 13.853998,7.999994 13.853998,6.3459871 12.732996,4.999994 11.353998,4.9999943 z M3.0612302,4.0035904 C3.8567271,4.0180509 4.6787422,4.2986355 5.3120146,5.0931493 5.6550097,5.5251397 5.847007,6.0871274 5.8520069,6.6751144 L5.8520069,6.9999998 5.8539932,6.9999998 5.8539932,12 4.8539929,12 4.8539929,11.311968 4.8136432,11.341949 C4.2925246,11.711011 3.5463514,11.987997 2.5090532,12.001997 L2.4740539,12.001997 C1.3070703,12.001997 0.295084,11.245014 0.061087608,10.190037 -0.040911198,9.730047 -0.014911652,9.2730572 0.13708639,8.8300669 0.42408228,7.9820857 1.2010717,7.3430998 2.1620584,7.1611037 L4.8500206,6.616116 C4.835021,6.2771232 4.7220228,5.9591302 4.5290253,5.7161357 3.3860412,4.2791672 1.3640695,5.4321418 1.2790704,5.481141 L0.77207756,4.6191599 C1.2921638,4.3126352 2.1596665,3.9872019 3.0612302,4.0035904 z M20.353984,3.9999928 L21.353984,3.9999928 C22.180984,3.9999928 22.853984,4.6729928 22.853984,5.4999932 L22.853984,5.9999931 21.853984,5.9999931 21.853984,5.4999932 C21.853984,5.2239928 21.628984,4.9999928 21.353984,4.9999933 L20.353984,4.9999933 C18.974985,4.9999928 17.853984,6.1219928 17.853984,7.4999931 L17.853984,8.4999926 C17.853984,9.8779929 18.974985,10.999993 20.353984,10.999993 L21.353984,10.999993 C21.628984,10.999993 21.853984,10.775993 21.853984,10.499993 L21.853984,9.9999926 22.853984,9.9999926 22.853984,10.499993 C22.853984,11.326993 22.180984,11.999993 21.353984,11.999993 L20.353984,11.999993 C18.423984,11.999993 16.853984,10.429993 16.853984,8.4999926 L16.853984,7.4999931 C16.853984,5.5699929 18.423984,3.9999928 20.353984,3.9999928 z M7.8539927,0 L8.8539929,0 8.8539929,5.2042032 8.8802388,5.1727465 C9.5139861,4.4484957 10.388986,3.9999941 11.353998,3.9999941 13.28399,3.999994 14.853998,5.7940004 14.853998,7.999994 14.853998,10.205988 13.28399,11.999994 11.353998,11.999994 10.388986,11.999994 9.5139861,11.551492 8.8802388,10.827242 L8.8539929,10.795785 8.8539929,12 7.8539927,12 z" 
+                                                  Fill="{StaticResource SecondaryForeground}"
+                                                  Height="12.002"
+                                                  Stretch="Fill"
+                                                  VerticalAlignment="Top"/>
+                                                <Path Data="M16.998,0 L17.705,0.70800753 6.5590147,11.853999 5.1889905,11.853999 0,6.7089974 0.70400926,5.999006 5.6010078,10.854 6.1450137,10.854 z"
+                                                  Fill="{StaticResource PrimaryDark}"
+                                                  Height="11.854" 
+                                                  Margin="2.002,0,3.147,0" 
+                                                  Stretch="Fill" 
+                                                  VerticalAlignment="Bottom" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton SizeForm="Large" Label="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Spelling}"
                                                                  IconType="VectorImage"
                                                                  Command="richtextboxadv:SfRichTextBoxAdv.ShowSpellingPaneCommand">
@@ -2600,6 +2856,28 @@
                                 <tools_controls:RibbonBar  
                                     Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Comments}" 
                                     IsLauncherButtonVisible="False">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Comment"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M7,0 L26,0 26,17.000003 8.7842407,17.000003 2.9999998,22.457756 2.9999998,16.989001 0,17.000003 0,6.0000009 2.9999998,6.0000009 2.9999998,12.000001 6,12.000001 6,5.0000004 13,5.0000004 13,2.0000004 7,2.0000004 z" 
+                                                  Fill="Transparent" 
+                                                  Margin="3,4,1,2.211" 
+                                                  Stretch="Fill" />
+                                                <Path Data="M8,0 L28,0 28,18.999995 9.7279968,18.999995 2.9999998,25.667 2.9999998,18.999995 0,18.999995 0,6.9999979 0.99999994,6.9999979 0.99999994,17.999995 4,17.999995 4,23.331993 9.5769958,17.999995 27,17.999995 27,0.99999991 8,0.99999991 z"
+                                                  Fill="{StaticResource SecondaryForeground}"
+                                                  Margin="2,3.001,0,0" 
+                                                  Stretch="Fill" />
+                                                <Path Data="M7,0 L8,0 8,7 15,7 15,8 8,8 8,15 7,15 7,8 0,8 0,7 7,7 z" 
+                                                  Fill="{StaticResource PrimaryDark}" 
+                                                  HorizontalAlignment="Left"
+                                                  Margin="0,0,0,13.668" 
+                                                  Stretch="Fill" 
+                                                  Width="15"/>
+                                                </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton SizeForm="Large" 
                                                                  ToolTipService.ShowOnDisabled="True" 
                                                                  Label="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=NewComment}" 
@@ -2761,6 +3039,34 @@
                             <tools_controls:RibbonTab x:Name="PART_ViewTab" Caption="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=View}">
                                 <tools_controls:RibbonBar Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Views}" 
                                                           IsLauncherButtonVisible="False">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_View"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M0,0 L31,0 31,30 0,30 z"
+                                                      Fill="White"
+                                                      Margin="0.5"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M1,1 L1,30 31,30 31,1 z M0,0 L32,0 32,31 0,31 z"
+                                                      Fill="#FFC8C6C4"
+                                                      Stretch="Fill"/>
+                                                <Path Data="M0,0 L11,0 11,15 0,15 z"
+                                                      Fill="White"
+                                                      Margin="10.501,8,10.499,8"
+                                                      Stretch="Fill" />
+                                                <Path Data="M1,1 L1,15 11,15 11,1 z M0,0 L12,0 12,16 0,16 z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Margin="10,7.5"
+                                                      Stretch="Fill" />
+                                                <Path Data="M0,8.999998
+                                                      L5.9989998,8.999998 5.9989998,9.9999981 0,9.9999981 z M3.1143421E-05,6.0010009 L5.9990079,6.0010009 5.9990079,7.001001 3.1143421E-05,7.001001 z M3.1143421E-05,3.0010009 L5.9990079,3.0010009 5.9990079,4.0010009 3.1143421E-05,4.0010009 z M3.1143421E-05,0 L5.9990079,0 5.9990079,1.0000005 3.1143421E-05,1.0000005 z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Margin="13,10.499,13.001,10.501"
+                                                      Stretch="Fill" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton SizeForm="Large" ToolTipService.ShowOnDisabled="True"
                                                                  Label="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=PrintLayout}"
                                                                  IconType="VectorImage"
@@ -2821,6 +3127,21 @@
                                     Header="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=Zoom}"
                                     IsEnabled="{Binding IsZoomEnabled}" 
                                     IsLauncherButtonVisible="False">
+                                    <tools_controls:RibbonBar.IconTemplate>
+                                        <DataTemplate>
+                                            <Grid x:Name="Collapse_Zoom"
+                                                  Height="31"
+                                                  Width="32">
+                                                <Path Data="M10,0 C15.52301,0 20,4.4769897 20,10 20,15.522003 15.52301,20 10,20 4.4780121,20 0,15.522003 0,10 0,4.4769897 4.4780121,0 10,0 z"
+                                                      Fill="White"
+                                                      Margin="0.5,0.5,8.354,8.353"
+                                                      Stretch="Fill" />
+                                                <Path Data="M10.5,1 C5.262001,1 1,5.2619991 1,10.499999 1,15.737999 5.262001,19.999999 10.5,19.999999 15.738001,19.999999 20.000001,15.737999 20.000001,10.499999 20.000001,5.2619991 15.738001,1 10.5,1 z M10.5,0 C16.290001,0 21.000001,4.7099991 21.000001,10.499999 21.000001,13.214061 19.965089,15.690819 18.269143,17.556394 L18.266851,17.558856 28.853999,28.146005 28.146998,28.853005 17.559885,18.265892 17.556396,18.269141 C15.690821,19.965087 13.214063,20.999999 10.5,20.999999 4.710001,20.999999 0,16.289999 0,10.499999 0,4.7099991 4.710001,0 10.5,0 z"
+                                                      Fill="{StaticResource SecondaryForeground}"
+                                                      Stretch="Fill"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tools_controls:RibbonBar.IconTemplate>
                                     <tools_controls:RibbonButton x:Name="PART_ZoomInButton" 
                                                                  ToolTipService.ShowOnDisabled="True"
                                                                  Label="{resources:RichTextRibbonLocalizationResourceExtension ResourceName=ZoomIn}"

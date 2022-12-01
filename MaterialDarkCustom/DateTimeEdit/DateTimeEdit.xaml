@@ -102,7 +102,6 @@
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="CalendarStyle" Value="{StaticResource SyncfusionCalendarStyle}" />
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="AllowDrop" Value="true" />
