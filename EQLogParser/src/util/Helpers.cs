@@ -99,23 +99,30 @@ namespace EQLogParser
     {
       if (window != null)
       {
-        var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
-        if (state == DockState.Hidden && window?.Tag as string != "Hide")
+        try
         {
-          (window.Content as IDisposable)?.Dispose();
+          var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
+          if (state == DockState.Hidden && window?.Tag as string != "Hide")
+          {
+            (window.Content as IDisposable)?.Dispose();
 
-          if (dockSite.Children.Contains(window))
-          {
-            dockSite.Children.Remove(window);
+            if (dockSite.Children.Contains(window))
+            {
+              dockSite.Children.Remove(window);
+            }
+            else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
+            {
+              dockSite.DocContainer.Items.Remove(window);
+            }
           }
-          else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
+          else
           {
-            dockSite.DocContainer.Items.Remove(window);
+            DockingManager.SetState(window, state);
           }
         }
-        else
+        catch (Exception _)
         {
-          DockingManager.SetState(window, state);
+          // ignore undocking and removing children causes an exception
         }
       }
     }
