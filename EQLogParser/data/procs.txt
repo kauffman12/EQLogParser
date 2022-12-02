@@ -4425,6 +4425,7 @@ Soothing Strike VII
 Soothing Strike VIII
 Soothing Strike IX
 Soothing Strike X
+Spectral Strike
 Spider's Bite Poison Strike I
 Spider's Bite Poison Strike II
 Spider's Bite Poison Strike III

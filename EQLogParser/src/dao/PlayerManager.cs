@@ -116,17 +116,16 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(pet) && !string.IsNullOrEmpty(player))
       {
-        if (!PetToPlayer.ContainsKey(pet) || PetToPlayer[pet] != player)
+        lock (LockObject)
         {
-          if (!IsVerifiedPlayer(pet))
+          if (!PetToPlayer.TryGetValue(pet, out string value) || value != player)
           {
-            lock (LockObject)
+            if (!IsVerifiedPlayer(pet))
             {
               PetToPlayer[pet] = player;
+              EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
+              PetMappingUpdated = !initialLoad;
             }
-
-            EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
-            PetMappingUpdated = !initialLoad;
           }
         }
       }
@@ -143,28 +142,31 @@ namespace EQLogParser
 
     internal void AddVerifiedPet(string name)
     {
-      if (!string.IsNullOrEmpty(name) && !VerifiedPets.ContainsKey(name))
+      if (!string.IsNullOrEmpty(name))
       {
-        name = string.Intern(name);
         lock (LockObject)
         {
-          if (VerifiedPlayers.TryRemove(name, out _))
+          if (!VerifiedPets.ContainsKey(name))
           {
-            PlayersUpdated = true;
+            name = string.Intern(name);
+            if (VerifiedPlayers.TryRemove(name, out _))
+            {
+              PlayersUpdated = true;
+            }
+
+            if (IsPossiblePlayerName(name) && !PetToPlayer.ContainsKey(name))
+            {
+              AddPetToPlayer(name, Labels.UNASSIGNED);
+            }
+
+            TakenPetOrPlayerAction.TryRemove(name, out _);
+
+            if (VerifiedPets.TryAdd(name, 1))
+            {
+              EventsNewVerifiedPet?.Invoke(this, name);
+              PlayersUpdated = true;
+            }
           }
-        }
-
-        if (IsPossiblePlayerName(name) && !PetToPlayer.ContainsKey(name))
-        {
-          AddPetToPlayer(name, Labels.UNASSIGNED);
-        }
-
-        TakenPetOrPlayerAction.TryRemove(name, out _);
-
-        if (VerifiedPets.TryAdd(name, 1))
-        {
-          EventsNewVerifiedPet?.Invoke(this, name);
-          PlayersUpdated = true;
         }
       }
     }
@@ -173,29 +175,29 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name))
       {
-        name = string.Intern(name);
-        if (VerifiedPlayers.TryGetValue(name, out double lastTime))
+        lock (LockObject)
         {
-          if (playerTime > lastTime)
+          name = string.Intern(name);
+          if (VerifiedPlayers.TryGetValue(name, out double lastTime))
           {
-            lock (LockObject)
+            if (playerTime > lastTime)
             {
               VerifiedPlayers[name] = playerTime;
             }
           }
-        }
-        else
-        {
-          lock (LockObject)
+          else
           {
             VerifiedPlayers[name] = playerTime;
+            EventsNewVerifiedPlayer?.Invoke(this, name);
           }
 
-          EventsNewVerifiedPlayer?.Invoke(this, name);
+          TakenPetOrPlayerAction.TryRemove(name, out _);
+          if (VerifiedPets.TryRemove(name, out _))
+          {
+            TryRemovePetMapping(name);
+            EventsRemoveVerifiedPet?.Invoke(this, name);
+          }
         }
-
-        TakenPetOrPlayerAction.TryRemove(name, out _);
-        VerifiedPets.TryRemove(name, out _);
       }
     }
 
@@ -327,23 +329,22 @@ namespace EQLogParser
 
     internal void RemoveVerifiedPet(string name)
     {
-      if (!string.IsNullOrEmpty(name) && VerifiedPets.TryRemove(name, out _))
+      if (!string.IsNullOrEmpty(name))
       {
-        if (PetToPlayer.ContainsKey(name))
+        lock (LockObject)
         {
-          lock (LockObject)
+          if (VerifiedPets.TryRemove(name, out _))
           {
-            PetToPlayer.TryRemove(name, out _);
+            TryRemovePetMapping(name);
           }
-        }
 
-        EventsRemoveVerifiedPet?.Invoke(this, name);
+          EventsRemoveVerifiedPet?.Invoke(this, name);
+        }
       }
     }
 
     internal void RemoveVerifiedPlayer(string name)
     {
-      bool updated = false;
       if (!string.IsNullOrEmpty(name))
       {
         lock (LockObject)
@@ -358,23 +359,15 @@ namespace EQLogParser
               {
                 found = keypair.Key;
               }
+
+              TryRemovePetMapping(found);
             }
 
-            if (!string.IsNullOrEmpty(found))
-            {
-              PetToPlayer.TryRemove(found, out _);
-              PetMappingUpdated = true;
-            }
-
-            updated = true;
             PlayersUpdated = true;
           }
-        }
-      }
 
-      if (updated)
-      {
-        EventsRemoveVerifiedPlayer?.Invoke(this, name);
+          EventsRemoveVerifiedPlayer?.Invoke(this, name);
+        }
       }
     }
 
@@ -579,6 +572,20 @@ namespace EQLogParser
               EventsUpdatePlayerClass?.Invoke(cast.Caster, ClassNames[theClass]);
               LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
             }
+          }
+        }
+      }
+    }
+
+    private void TryRemovePetMapping(string name)
+    {
+      if (!string.IsNullOrEmpty(name))
+      {
+        lock (LockObject)
+        {
+          if (PetToPlayer.TryRemove(name, out _))
+          {
+            PetMappingUpdated = true;
           }
         }
       }
