@@ -1,6 +1,7 @@
 ﻿using FontAwesome5;
 using log4net;
 using log4net.Core;
+using Microsoft.Win32;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -50,7 +51,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Hits", "# Twincasts" };
 
-    private const string VERSION = "2.0.35";
+    private const string VERSION = "2.0.36";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -208,11 +209,28 @@ namespace EQLogParser
 
         // cleanup downloads
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
+
+        SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
       }
       catch (Exception e)
       {
         LOG.Error(e);
         throw;
+      }
+    }
+
+    private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+      switch (e.Mode)
+      {
+        case PowerModes.Suspend:
+          LOG.Warn("Suspending");
+          OverlayUtil.CloseOverlay();
+          break;
+        case PowerModes.Resume:
+          LOG.Warn("Resume");
+          OverlayUtil.OpenIfEnabled();
+          break;
       }
     }
 

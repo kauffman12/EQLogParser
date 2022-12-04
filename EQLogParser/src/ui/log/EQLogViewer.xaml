@@ -40,13 +40,13 @@
     </StackPanel>
     <syncfusion:TabControlExt x:Name="tabControl" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
       <syncfusion:TabItemExt x:Name="resultsTab" Background="{DynamicResource ContentBackgroundAlt2}" Header="Search Results" FontSize="14" CloseButtonState="Hidden" CanClose="False">
-        <syncfusion:EditControl x:Name="logBox" SelectedTextChanged="SelectedTextChanged" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
+        <syncfusion:EditControl x:Name="logBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
       ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
             <ContextMenu>
               <MenuItem Command="Copy" />
               <Separator />
-              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Selected" Click="SelectedContext" />
+              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Row" Click="SelectedContext" />
               <Separator />
               <MenuItem Command="SelectAll" />
             </ContextMenu>

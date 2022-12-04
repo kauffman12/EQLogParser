@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -303,6 +302,7 @@ namespace EQLogParser
       if (!Running && Complete)
       {
         Running = true;
+        selectedContext.IsEnabled = false;
         progress.Visibility = Visibility.Visible;
         progress.Content = "Searching";
         searchIcon.Icon = EFontAwesomeIcon.Solid_TimesCircle;
@@ -439,6 +439,7 @@ namespace EQLogParser
                 if (!string.IsNullOrEmpty(allData))
                 {
                   logBox.Text = allData;
+                  selectedContext.IsEnabled = true;
                 }
 
                 // reset filter
@@ -634,26 +635,22 @@ namespace EQLogParser
       FilterTimer?.Start();
     }
 
-    private void SelectedTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-      selectedContext.IsEnabled = !string.IsNullOrEmpty(logBox.SelectedText);
-    }
-
     private void SelectedContext(object sender, RoutedEventArgs e)
     {
-      if (logBox.SelectedTextPointer != null && LinePositions.ContainsKey(logBox.SelectedTextPointer.StartLine))
+      if (logBox.LineNumber > 0)
       {
         long start;
-        if (FilteredLinePositionMap.ContainsKey(logBox.SelectedTextPointer.StartLine))
+        var line = logBox.LineNumber - 1;
+        if (FilteredLinePositionMap.ContainsKey(line))
         {
-          start = FilteredLinePositionMap[logBox.SelectedTextPointer.StartLine];
+          start = FilteredLinePositionMap[line];
         }
         else
         {
-          start = LinePositions[logBox.SelectedTextPointer.StartLine];
+          start = LinePositions[line];
         }
 
-        LoadContext(start, logBox.Lines[logBox.SelectedTextPointer.StartLine].Text);
+        LoadContext(start, logBox.Lines[line].Text);
       }
     }
 
