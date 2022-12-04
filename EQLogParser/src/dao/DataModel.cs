@@ -22,16 +22,20 @@ namespace EQLogParser
     public int ModifiersMask { get; set; }
     public long Total { get; set; }
     public string Type { get; set; }
+    public long FightTotal { get; set; }
+    public uint FightHits { get; set; }
+    public uint FightCritHits { get; set; }
+    public uint FightTcHits { get; set; }
     public long RollingTotal { get; set; }
-    public uint RollingHits { get; set; }
-    public uint RollingCritHits { get; set; }
     public long RollingDps { get; set; }
     public long CritsPerSecond { get; set; }
+    public long TcPerSecond { get; set; }
     public long AttemptsPerSecond { get; set; }
     public long HitsPerSecond { get; set; }
     public long TotalPerSecond { get; set; }
     public long ValuePerSecond { get; set; }
     public double CritRate { get; set; }
+    public double TcRate { get; set; }
     public double BeginTime { get; set; }
     public double CurrentTime { get; set; }
     public DateTime DateTime { get; set; }

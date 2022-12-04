@@ -199,6 +199,8 @@ namespace EQLogParser
             total += points[j].TotalPerSecond;
           }
 
+          points[i].RollingTotal = total;
+
           if (count > 0)
           {
             points[i].RollingDps = total / count;
@@ -309,6 +311,9 @@ namespace EQLogParser
         case "Aggregate Crit Rate":
           yPath = "CritRate";
           break;
+        case "Aggregate Twincast Rate":
+          yPath = "TcRate";
+          break;
         case "DPS":
         case "HPS":
           yPath = "TotalPerSecond";
@@ -316,6 +321,10 @@ namespace EQLogParser
         case "Rolling DPS":
         case "Rolling HPS":
           yPath = "RollingDps";
+          break;
+        case "Rolling Damage":
+        case "Rolling Healing":
+          yPath = "RollingTotal";
           break;
         case "# Attempts":
           yPath = "AttemptsPerSecond";
@@ -326,6 +335,9 @@ namespace EQLogParser
         case "# Hits":
         case "# Heals":
           yPath = "HitsPerSecond";
+          break;
+        case "# Twincasts":
+          yPath = "TcPerSecond";
           break;
       }
 
@@ -417,6 +429,9 @@ namespace EQLogParser
                   case "Aggregate Crit Rate":
                     chartValue = chartData.CritRate;
                     break;
+                  case "Aggregate Twincast Rate":
+                    chartValue = chartData.TcRate;
+                    break;
                   case "DPS":
                   case "HPS":
                     chartValue = chartData.TotalPerSecond;
@@ -424,6 +439,10 @@ namespace EQLogParser
                   case "Rolling DPS":
                   case "Rolling HPS":
                     chartValue = chartData.RollingDps;
+                    break;
+                  case "Rolling Damage":
+                  case "Rolling Healing":
+                    chartValue = chartData.RollingTotal;
                     break;
                   case "# Attempts":
                     chartValue = chartData.AttemptsPerSecond;
@@ -434,6 +453,9 @@ namespace EQLogParser
                   case "# Hits":
                   case "# Heals":
                     chartValue = chartData.HitsPerSecond;
+                    break;
+                  case "# Twincasts":
+                    chartValue = chartData.TcPerSecond;
                     break;
                 }
 
@@ -462,12 +484,14 @@ namespace EQLogParser
       if (diff > DataManager.FIGHTTIMEOUT)
       {
         aggregate.CritsPerSecond = 0;
+        aggregate.TcPerSecond = 0;
         aggregate.AttemptsPerSecond = 0;
         aggregate.HitsPerSecond = 0;
         aggregate.TotalPerSecond = 0;
-        aggregate.RollingTotal = 0;
-        aggregate.RollingCritHits = 0;
-        aggregate.RollingHits = 0;
+        aggregate.FightTotal = 0;
+        aggregate.FightCritHits = 0;
+        aggregate.FightTcHits = 0;
+        aggregate.FightHits = 0;
         aggregate.CurrentTime = lastTime + 6;
         aggregate.DateTime = DateUtil.FromDouble(aggregate.CurrentTime);
         Insert(aggregate, theValues);
@@ -482,6 +506,7 @@ namespace EQLogParser
 
         Insert(aggregate, theValues);
         aggregate.CritsPerSecond = 0;
+        aggregate.TcPerSecond = 0;
         aggregate.AttemptsPerSecond = 0;
         aggregate.HitsPerSecond = 0;
         aggregate.TotalPerSecond = 0;
@@ -493,13 +518,15 @@ namespace EQLogParser
 
       aggregate.CurrentTime = dataPoint.CurrentTime;
       aggregate.CritsPerSecond += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.TcPerSecond += LineModifiersParser.IsTwincast(dataPoint.ModifiersMask) ? (uint)1 : 0;
       aggregate.AttemptsPerSecond += 1;
       aggregate.HitsPerSecond += (MissTypes.ContainsKey(dataPoint.Type) ? 0 : 1);
       aggregate.TotalPerSecond += dataPoint.Total;
       aggregate.Total += dataPoint.Total;
-      aggregate.RollingTotal += dataPoint.Total;
-      aggregate.RollingHits += 1;
-      aggregate.RollingCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.FightTotal += dataPoint.Total;
+      aggregate.FightHits += 1;
+      aggregate.FightCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.FightTcHits += LineModifiersParser.IsTwincast(dataPoint.ModifiersMask) ? (uint)1 : 0;
       aggregate.BeginTime = firstTime;
     }
 
@@ -516,10 +543,12 @@ namespace EQLogParser
           {
             remaining.BeginTime = firstTime;
             remaining.Total = 0;
-            remaining.RollingTotal = 0;
-            remaining.RollingHits = 0;
-            remaining.RollingCritHits = 0;
+            remaining.FightTotal = 0;
+            remaining.FightHits = 0;
+            remaining.FightCritHits = 0;
+            remaining.FightTcHits = 0;
             remaining.CritsPerSecond = 0;
+            remaining.TcPerSecond = 0;
             remaining.AttemptsPerSecond = 0;
             remaining.HitsPerSecond = 0;
             remaining.TotalPerSecond = 0;
@@ -544,18 +573,20 @@ namespace EQLogParser
         DateTime = DateUtil.FromDouble(aggregate.CurrentTime),
         Total = aggregate.Total,
         CritsPerSecond = aggregate.CritsPerSecond,
+        TcPerSecond = aggregate.TcPerSecond,
         AttemptsPerSecond = aggregate.AttemptsPerSecond,
         HitsPerSecond = aggregate.HitsPerSecond,
         TotalPerSecond = aggregate.TotalPerSecond
       };
 
       var totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
-      newEntry.ValuePerSecond = (long)Math.Round(aggregate.RollingTotal / totalSeconds, 2);
+      newEntry.ValuePerSecond = (long)Math.Round(aggregate.FightTotal / totalSeconds, 2);
 
-      if (aggregate.RollingHits > 0)
+      if (aggregate.FightHits > 0)
       {
-        newEntry.Avg = (long)Math.Round(Convert.ToDecimal(aggregate.RollingTotal) / aggregate.RollingHits, 2);
-        newEntry.CritRate = Math.Round(Convert.ToDouble(aggregate.RollingCritHits) / aggregate.RollingHits * 100, 2);
+        newEntry.Avg = (long)Math.Round(Convert.ToDecimal(aggregate.FightTotal) / aggregate.FightHits, 2);
+        newEntry.CritRate = Math.Round(Convert.ToDouble(aggregate.FightCritHits) / aggregate.FightHits * 100, 2);
+        newEntry.TcRate = Math.Round(Convert.ToDouble(aggregate.FightTcHits) / aggregate.FightHits * 100, 2);
       }
 
       if (!chartValues.TryGetValue(aggregate.Name, out List<DataPoint> playerValues))
