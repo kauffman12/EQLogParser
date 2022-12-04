@@ -44,11 +44,11 @@ namespace EQLogParser
     private enum LogOption { OPEN, MONITOR };
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly List<string> DAMAGE_CHOICES = new List<string>()
-    { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damage", "Aggregate Crit Rate", "DPS", "# Attempts", "# Crits", "# Hits" };
+    { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damage", "Aggregate Crit Rate", "DPS", "Rolling DPS", "# Attempts", "# Crits", "# Hits" };
     private static readonly List<string> HEALING_CHOICES = new List<string>()
-    { "Aggregate HPS", "Aggregate Av Heal", "Aggregate Healing", "Aggregate Crit Rate", "HPS", "# Crits", "# Heals" };
+    { "Aggregate HPS", "Aggregate Av Heal", "Aggregate Healing", "Aggregate Crit Rate", "HPS", "Rolling HPS", "# Crits", "# Heals" };
     private static readonly List<string> TANKING_CHOICES = new List<string>()
-    { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "# Attempts", "# Hits" };
+    { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "Rolling DPS", "# Attempts", "# Hits" };
 
     private const string VERSION = "2.0.35";
 

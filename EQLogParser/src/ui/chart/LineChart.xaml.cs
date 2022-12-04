@@ -1,4 +1,5 @@
-﻿using Syncfusion.UI.Xaml.Charts;
+﻿using Syncfusion.Data.Extensions;
+using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -169,7 +170,41 @@ namespace EQLogParser
       UpdateRemaining(PlayerPetValues, needTotalAccounting, firstTimes, lastTimes);
       UpdateRemaining(PlayerValues, needPlayerAccounting, firstTimes, lastTimes);
       UpdateRemaining(PetValues, needPetAccounting, firstTimes, lastTimes);
+
+      PopulateRolling(RaidValues);
+      PopulateRolling(PlayerPetValues);
+      PopulateRolling(PlayerValues);
+      PopulateRolling(PetValues);
+
       Plot(selected);
+    }
+
+    private void PopulateRolling(Dictionary<string, List<DataPoint>> data)
+    {
+      foreach (ref var points in data.Values.ToArray().AsSpan())
+      {
+        for (int i = 0; i < points.Count; i++)
+        {
+          var count = 0;
+          var total = 0L;
+          var beginTime = points[i].CurrentTime;
+          for (int j = i; j >= 0; j--)
+          {
+            if ((beginTime - points[j].CurrentTime) > 5)
+            {
+              break;
+            }
+
+            count++;
+            total += points[j].TotalPerSecond;
+          }
+
+          if (count > 0)
+          {
+            points[i].RollingDps = total / count;
+          }
+        }
+      }
     }
 
     private void Plot(List<PlayerStats> selected = null)
@@ -278,6 +313,10 @@ namespace EQLogParser
         case "HPS":
           yPath = "TotalPerSecond";
           break;
+        case "Rolling DPS":
+        case "Rolling HPS":
+          yPath = "RollingDps";
+          break;
         case "# Attempts":
           yPath = "AttemptsPerSecond";
           break;
@@ -382,6 +421,10 @@ namespace EQLogParser
                   case "HPS":
                     chartValue = chartData.TotalPerSecond;
                     break;
+                  case "Rolling DPS":
+                  case "Rolling HPS":
+                    chartValue = chartData.RollingDps;
+                    break;
                   case "# Attempts":
                     chartValue = chartData.AttemptsPerSecond;
                     break;
@@ -436,6 +479,7 @@ namespace EQLogParser
       if (diff >= 1)
       {
         aggregate.DateTime = DateUtil.FromDouble(dataPoint.CurrentTime);
+
         Insert(aggregate, theValues);
         aggregate.CritsPerSecond = 0;
         aggregate.AttemptsPerSecond = 0;
