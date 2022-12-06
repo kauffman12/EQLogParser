@@ -28,6 +28,7 @@
                            AllowSorting="True"
                            AutoGenerateColumns="False"
                            ColumnSizer="AutoWithLastColumnFill"
+                           CurrentCellBorderThickness="0"
                            FrozenColumnCount="2"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
