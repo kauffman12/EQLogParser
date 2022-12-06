@@ -51,7 +51,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Hits", "# Twincasts" };
 
-    private const string VERSION = "2.0.36";
+    private const string VERSION = "2.0.37";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -981,7 +981,7 @@ namespace EQLogParser
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is ImageAwesome image && image.DataContext is ExpandoObject sortable)
+      if (sender is Border border && border.DataContext is ExpandoObject sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable)?.Name);
       }
@@ -989,7 +989,7 @@ namespace EQLogParser
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is ImageAwesome image && image.DataContext is ExpandoObject sortable)
+      if (sender is Border border && border.DataContext is ExpandoObject sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable)?.Name);
       }

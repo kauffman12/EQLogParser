@@ -32,6 +32,7 @@
                            AutoGenerateColumns="False"
                            ChildPropertyName="Children"
                            ColumnSizer="Auto"
+                           CurrentCellBorderThickness="0"
                            AutoExpandMode="None"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"

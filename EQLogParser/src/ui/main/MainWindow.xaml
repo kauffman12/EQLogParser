@@ -364,6 +364,7 @@
                                AutoGenerateColumns="False"
                                CellToolTipOpening="PlayerCellToolTipOpening"
                                ColumnSizer="AutoLastColumnFill"
+                               CurrentCellBorderThickness="0"
                                CurrentCellDropDownSelectionChanged="PlayerClassDropDownSelectionChanged"
                                EditTrigger="OnTap"
                                HeaderRowHeight="26"
@@ -377,9 +378,9 @@
               <Setter Property="Template">
                 <Setter.Value>
                   <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                    <Border PreviewMouseDown="RemovePlayerMouseDown" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                       <Grid>
-                        <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" PreviewMouseDown="RemovePlayerMouseDown"/>
+                        <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
                       </Grid>
                     </Border>
                   </ControlTemplate>
@@ -399,6 +400,7 @@
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
                                ColumnSizer="AutoLastColumnFill"
+                               CurrentCellBorderThickness="0"
                                HeaderRowHeight="26"
                                IsReadOnly="True"
                                RowHeaderWidth="25"
@@ -410,9 +412,9 @@
               <Setter Property="Template">
                 <Setter.Value>
                   <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                    <Border PreviewMouseDown="RemovePetMouseDown" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                       <Grid>
-                        <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" PreviewMouseDown="RemovePetMouseDown"/>
+                        <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
                       </Grid>
                     </Border>
                   </ControlTemplate>

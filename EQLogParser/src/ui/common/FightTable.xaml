@@ -55,6 +55,7 @@
                            ColumnSizer="AutoWithLastColumnFill"
                            ContextMenuClosing="RightClickClosed"
                            ContextMenuOpening="RightClickOpening"
+                           CurrentCellBorderThickness="0"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
