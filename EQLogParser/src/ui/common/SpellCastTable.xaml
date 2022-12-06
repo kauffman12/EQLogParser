@@ -44,6 +44,7 @@
                            AllowSorting="True"
                            AutoGenerateColumns="False"
                            ColumnSizer="Auto"
+                           CurrentCellBorderThickness="0"
                            FrozenColumnCount="2"
                            HeaderRowHeight="26"
                            Grid.Row="1"

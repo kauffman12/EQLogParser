@@ -1229,6 +1229,12 @@ Dissident Reinforced Strike 3
 Dissident Reinforced Strike 4
 Dissident Reinforced Strike 5
 Dissident Reinforced Strike 6
+Ecliptic Reinforced Strike 1
+Ecliptic Reinforced Strike 2
+Ecliptic Reinforced Strike 3
+Ecliptic Reinforced Strike 4
+Ecliptic Reinforced Strike 5
+Ecliptic Reinforced Strike 6
 
 # Enchanter Epic
 Aegis of Abstraction Trigger
@@ -1610,6 +1616,12 @@ Dissident Companion Strike 3
 Dissident Companion Strike 4
 Dissident Companion Strike 5
 Dissident Companion Strike 6
+Ecliptic Companion Strike 1
+Ecliptic Companion Strike 2
+Ecliptic Companion Strike 3
+Ecliptic Companion Strike 4
+Ecliptic Companion Strike 5
+Ecloptic Companion Strike 6
 
 # Mage Elemental Form
 Elemental Air I
@@ -2873,6 +2885,12 @@ Dissident Roar Strike 3
 Dissident Roar Strike 4
 Dissident Roar Strike 5
 Dissident Roar Strike 6
+Ecliptic Roar Strike 1
+Ecliptic Roar Strike 2
+Ecliptic Roar Strike 3
+Ecliptic Roar Strike 4
+Ecliptic Roar Strike 5
+Ecliptic Roar Strike 6
 
 # Shaman Feral Bite/Rabid Bear
 Feral Bite I

@@ -633,14 +633,6 @@ namespace EQLogParser
         result = range;
       }
 
-      if (result.TimeSegments.Count == 0)
-      {
-        if (true)
-        {
-
-        }
-      }
-
       return result;
     }
 

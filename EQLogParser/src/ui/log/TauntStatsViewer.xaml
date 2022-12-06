@@ -29,6 +29,7 @@
                            AutoGenerateColumns="False"
                            ChildPropertyName="Children"
                            ColumnSizer="Auto"
+                           CurrentCellBorderThickness="0"
                            AutoExpandMode="RootNodesExpanded"
                            FrozenColumnCount="1"
                            Grid.Row="1"

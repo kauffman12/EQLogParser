@@ -177,15 +177,23 @@ namespace EQLogParser
         }
 
         searchResult = DataManager.Instance.GetLandsOnOther(sList, out player);
-        if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player) && searchResult.SpellData[0].Target == (int)SpellTarget.PET
-          && PlayerManager.IsPossiblePlayerName(player))
+        if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player))
         {
-          foreach (var spell in PetSpells.Keys)
+          if (searchResult.SpellData[0].Target == (int)SpellTarget.PET && !PlayerManager.Instance.IsVerifiedPet(player) &&
+          PlayerManager.IsPossiblePlayerName(player) && !PlayerManager.Instance.IsVerifiedPlayer(player))
           {
-            if (searchResult.SpellData[0].Name.StartsWith(spell) && !PlayerManager.Instance.IsVerifiedPlayer(player))
+            foreach (var spell in PetSpells.Keys)
             {
-              PlayerManager.Instance.AddVerifiedPet(player);
+              if (searchResult.SpellData[0].Name.StartsWith(spell))
+              {
+                PlayerManager.Instance.AddVerifiedPet(player);
+              }
             }
+          }
+          else if (searchResult.SpellData[0].Target == (int)SpellTarget.PET2 && !PlayerManager.Instance.IsVerifiedPet(player) &&
+            PlayerManager.IsPossiblePlayerName(player) && !PlayerManager.Instance.IsVerifiedPlayer(player))
+          {
+            PlayerManager.Instance.AddVerifiedPet(player);
           }
         }
       }

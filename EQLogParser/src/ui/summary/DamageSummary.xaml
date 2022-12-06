@@ -51,6 +51,7 @@
                            AutoGenerateColumns="False"
                            ChildPropertyName="Children"
                            ColumnSizer="AutoFillColumn"
+                           CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"

@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -446,7 +447,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (sender is ImageAwesome image && image.DataContext is IDictionary<string, object> spr)
+        if (sender is Border border && border.DataContext is IDictionary<string, object> spr)
         {
           HiddenSpells[spr["Spell"] as string] = 1;
           dataGrid.View.Remove(spr);

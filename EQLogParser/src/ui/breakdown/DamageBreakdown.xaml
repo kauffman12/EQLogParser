@@ -35,6 +35,7 @@
                            AutoExpandMode="RootNodesExpanded"
                            AutoGenerateColumns="False"
                            ColumnSizer="Auto"
+                           CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
