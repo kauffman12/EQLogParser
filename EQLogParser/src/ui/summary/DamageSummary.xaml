@@ -149,7 +149,12 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showDamageLogIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
             </MenuItem.Icon>
-          </MenuItem>          
+          </MenuItem>
+          <MenuItem x:Name="menuItemShowDeathLog" IsEnabled="False" Header="Death Log" Click="DataGridDeathLogClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showDeathLogIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Skull" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="menuItemShowHitFreq" IsEnabled="False" Header="Hit Frequency" Click="DataGridHitFreqClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showHitFreqIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_ChartBar" />

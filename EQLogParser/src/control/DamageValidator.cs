@@ -5,6 +5,7 @@ namespace EQLogParser
   {
     private bool assassinateEnabled;
     private bool baneEnabled;
+    private bool dsEnabled;
     private bool finishingBlowEnabled;
     private bool headshotEnabled;
     private bool slayUndeadEnabled;
@@ -14,6 +15,7 @@ namespace EQLogParser
       // save this up front so we work with a constant state for their values
       assassinateEnabled = MainWindow.IsAssassinateDamageEnabled;
       baneEnabled = MainWindow.IsBaneDamageEnabled;
+      dsEnabled = MainWindow.IsDamageShieldDamageEnabled;
       finishingBlowEnabled = MainWindow.IsFinishingBlowDamageEnabled;
       headshotEnabled = MainWindow.IsHeadshotDamageEnabled;
       slayUndeadEnabled = MainWindow.IsSlayUndeadDamageEnabled;
@@ -27,6 +29,11 @@ namespace EQLogParser
       }
 
       if (record.Type == Labels.BANE && !baneEnabled)
+      {
+        return false;
+      }
+
+      if (record.Type == Labels.DS && !dsEnabled)
       {
         return false;
       }

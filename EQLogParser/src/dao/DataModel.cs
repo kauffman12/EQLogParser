@@ -465,7 +465,8 @@ namespace EQLogParser
 
   internal class PlayerStats : PlayerSubStats
   {
-    public List<PlayerStats> Children { get; } = new List<PlayerStats>();
+    public List<DeathRecord> Deaths { get; set; } = new List<DeathRecord>();
+    public ConcurrentDictionary<string, string> Specials { get; set; } = new ConcurrentDictionary<string, string>();
     public List<PlayerSubStats> SubStats { get; } = new List<PlayerSubStats>();
     public List<PlayerSubStats> SubStats2 { get; } = new List<PlayerSubStats>();
     public PlayerStats MoreStats { get; set; }

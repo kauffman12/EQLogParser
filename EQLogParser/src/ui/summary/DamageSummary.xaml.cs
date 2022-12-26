@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualBasic.Devices;
-using Syncfusion.UI.Xaml.Grid;
+﻿using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
@@ -99,11 +98,16 @@ namespace EQLogParser
           menuItemShowAdpsTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
           copyDamageParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
 
+          // default before making check
+          menuItemSetAsPet.IsEnabled = false;
+          menuItemShowDeathLog.IsEnabled = false;
+
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.UNK && playerStats.OrigName != Labels.RS &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
+            menuItemShowDeathLog.IsEnabled = (!string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X"));
           }
 
           EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
@@ -114,7 +118,7 @@ namespace EQLogParser
         {
           menuItemShowBreakdown.IsEnabled = menuItemShowDamageLog.IsEnabled =
             menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
-            copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled = false;
+            copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowDeathLog.IsEnabled = false;
         }
 
         menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Assign {0} as Pet to", selectedName);
@@ -223,6 +227,18 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "damageLogWindow", "Damage Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        }
+      }
+    }
+
+    private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems?.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        {
+          //(log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
       }
     }
