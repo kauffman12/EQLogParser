@@ -236,8 +236,6 @@ namespace EQLogParser
       {
         try
         {
-          Topmost = true; // possible workaround
-
           // people wanted shorter delays for damage updates but I don't want the indicator to change constantly
           // so this limits it to 1/2 the current time value
           ProcessDirection = ProcessDirection >= 3 ? 0 : ProcessDirection + 1;
@@ -611,8 +609,10 @@ namespace EQLogParser
     {
       base.OnSourceInitialized(e);
       var source = (HwndSource)PresentationSource.FromVisual(this);
+      // set to layered and topmost by xaml
       int exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
+      // add transparent
+      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
       NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
     }
   }

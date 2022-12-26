@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
@@ -62,42 +62,41 @@
 		<None Include="ThemeStudio.snk" />
 	</ItemGroup>
    <ItemGroup>
-		<PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.Shared.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfScheduler.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfGrid.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfInput.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.PivotTable.Wpf" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfChart.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfDiagram.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfGauge.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfKanban.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfTreeMap.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfMaps.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfSmithChart.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfSunburstChart.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfBulletGraph.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfHeatMap.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.Tools.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfColorPalette.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfTextInputLayout.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfRadialMenu.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfBusyIndicator.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfHubTile.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfAccordion.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfTreeView.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfNavigationDrawer.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfTreeNavigator.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.PdfViewer.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfRichTextRibbon.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.Edit.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfSpreadsheet.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfImageEditor.WPF" Version="20.3.0.47" />
-		<PackageReference Include="Syncfusion.SfDiagramRibbon.WPF" Version="20.3.0.47" />
+		<PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.Shared.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfScheduler.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfGrid.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfInput.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.PivotTable.Wpf" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfChart.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfDiagram.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfGauge.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfKanban.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfTreeMap.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfMaps.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfSmithChart.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfSunburstChart.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfBulletGraph.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfHeatMap.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.Tools.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfColorPalette.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfTextInputLayout.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfRadialMenu.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfBusyIndicator.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfHubTile.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfAccordion.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfTreeView.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfNavigationDrawer.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfTreeNavigator.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.PdfViewer.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfRichTextRibbon.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.Edit.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfSpreadsheet.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfImageEditor.WPF" Version="20.4.0.38" />
+		<PackageReference Include="Syncfusion.SfDiagramRibbon.WPF" Version="20.4.0.38" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MaterialDarkCustomSkinHelper.cs" />
@@ -839,6 +838,12 @@
 	</Page>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Syncfusion.Shared.WPF.Classic">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.4.0.38\ToolboxNuGetPackages\syncfusion.ui.wpf.net\20.4.0.38\lib\net6.0-windows7.0\Syncfusion.Shared.WPF.Classic.dll</HintPath>
+    </Reference>
+    <Reference Include="Syncfusion.Tools.Wpf.Classic">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.4.0.38\ToolboxNuGetPackages\syncfusion.ui.wpf.net\20.4.0.38\lib\net6.0-windows7.0\Syncfusion.Tools.WPF.Classic.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

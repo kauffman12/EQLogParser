@@ -534,7 +534,7 @@ namespace EQLogParser
 
             RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
             var resistCounts = Resists.Cast<ResistRecord>().GroupBy(x => x.Spell).ToDictionary(g => g.Key, g => g.ToList().Count);
-            var specials = StatsUtil.GetSpecials(RaidTotals);
+            StatsUtil.PopulateSpecials(RaidTotals);
             var expandedStats = new ConcurrentBag<PlayerStats>();
 
             individualStats.Values.AsParallel().Where(stats => topLevelStats.ContainsKey(stats.Name)).ForAll(stats =>
@@ -558,7 +558,7 @@ namespace EQLogParser
                     child.Percent = (float)Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                   }
 
-                  if (specials.TryGetValue(child.Name, out string special1))
+                  if (RaidTotals.Specials.TryGetValue(child.Name, out string special1))
                   {
                     child.Special = special1;
                   }
@@ -575,7 +575,7 @@ namespace EQLogParser
 
               StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
 
-              if (specials.TryGetValue(stats.OrigName, out string special2))
+              if (RaidTotals.Specials.TryGetValue(stats.OrigName, out string special2))
               {
                 stats.Special = special2;
               }

@@ -260,6 +260,11 @@
                 <fa:ImageAwesome x:Name="enableBaneDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
+            <MenuItem x:Name="enableDamageShieldDamage" Header="Include _Damage Shields" Click="ToggleDamageShieldDamageClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableDamageShieldDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
             <MenuItem x:Name="enableHeahshotDamage" Header="Include _Headshots" Click="ToggleHeadshotDamageClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableHeadshotDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />

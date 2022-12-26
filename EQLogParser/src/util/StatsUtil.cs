@@ -530,16 +530,15 @@ namespace EQLogParser
       }
     }
 
-    internal static ConcurrentDictionary<string, string> GetSpecials(PlayerStats raidStats)
+    internal static void PopulateSpecials(PlayerStats raidStats)
     {
-      ConcurrentDictionary<string, string> playerSpecials = new ConcurrentDictionary<string, string>();
       ConcurrentDictionary<object, bool> temp = new ConcurrentDictionary<object, bool>();
       var allSpecials = DataManager.Instance.GetSpecials();
       int specialStart = 0;
 
       foreach (ref var segment in raidStats.Ranges.TimeSegments.ToArray().AsSpan())
       {
-        double offsetBegin = segment.BeginTime - SPECIAL_OFFSET;
+        var offsetBegin = segment.BeginTime - SPECIAL_OFFSET;
         var actions = new List<IAction>();
 
         if (specialStart > -1 && specialStart < allSpecials.Count)
@@ -574,7 +573,9 @@ namespace EQLogParser
             {
               player = death.Killed;
               code = "X";
+              raidStats.Deaths.Add(death);
             }
+
             if (action is SpecialSpell spell)
             {
               player = spell.Player;
@@ -583,13 +584,13 @@ namespace EQLogParser
 
             if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(code))
             {
-              if (playerSpecials.TryGetValue(player, out string special))
+              if (raidStats.Specials.TryGetValue(player, out string special))
               {
-                playerSpecials[player] = special + code;
+                raidStats.Specials[player] = special + code;
               }
               else
               {
-                playerSpecials[player] = code;
+                raidStats.Specials[player] = code;
               }
             }
 
@@ -597,8 +598,6 @@ namespace EQLogParser
           }
         }
       }
-
-      return playerSpecials;
     }
 
     internal static TimeRange FilterTimeRange(TimeRange range, double minTime, double maxTime)

@@ -12,7 +12,8 @@ namespace EQLogParser
     {
       // ...
       WS_EX_TOOLWINDOW = 0x00000080,
-      WS_EX_TRANSPARENT = 0x00000020
+      WS_EX_TRANSPARENT = 0x00000020,
+      WS_EX_TOPMOST = 0x00000008,
       // ...
     }
 
@@ -22,6 +23,10 @@ namespace EQLogParser
       GWL_EXSTYLE = (-20),
       // ...
     }
+
+    const int SWP_NOSIZE = 0x0001;
+    const int SWP_NOMOVE = 0x0002;
+    const int SWP_NOACTIVATE = 0x0010;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Portability", "CA1901:PInvokeDeclarationsShouldBePortable", MessageId = "return")]
     [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
@@ -74,12 +79,20 @@ namespace EQLogParser
       return result;
     }
 
+    internal static void SetWindowTopMost(IntPtr hWnd)
+    {
+      SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+    }
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
     private static extern IntPtr IntSetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     [DllImport("user32.dll", EntryPoint = "SetWindowLong", SetLastError = true)]
     private static extern Int32 IntSetWindowLong(IntPtr hWnd, int nIndex, Int32 dwNewLong);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
     private static int IntPtrToInt32(IntPtr intPtr)
     {
