@@ -18,6 +18,9 @@
     <StartAction>Project</StartAction>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Update="src\ui\log\DeathLogViewer.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\log\RandomViewer.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -26,6 +29,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Page Update="src\ui\log\DeathLogViewer.xaml">
+      <SubType>Designer</SubType>
+    </Page>
     <Page Update="src\ui\log\RandomViewer.xaml">
       <SubType>Designer</SubType>
     </Page>

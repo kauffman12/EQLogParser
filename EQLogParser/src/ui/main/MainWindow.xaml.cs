@@ -33,6 +33,7 @@ namespace EQLogParser
     internal static bool IsAoEHealingEnabled = true;
     internal static bool IsAssassinateDamageEnabled = true;
     internal static bool IsBaneDamageEnabled = true;
+    internal static bool IsDamageShieldDamageEnabled = true;
     internal static bool IsFinishingBlowDamageEnabled = true;
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
@@ -51,7 +52,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Hits", "# Twincasts" };
 
-    private const string VERSION = "2.0.37";
+    private const string VERSION = "2.0.38";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -139,6 +140,10 @@ namespace EQLogParser
         // Bane Damage
         IsBaneDamageEnabled = ConfigUtil.IfSetOrElse("IncludeBaneDamage", IsBaneDamageEnabled);
         enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // Damage Shield Damage
+        IsDamageShieldDamageEnabled = ConfigUtil.IfSetOrElse("IncludeDamageShieldDamage", IsDamageShieldDamageEnabled);
+        enableDamageShieldDamageIcon.Visibility = IsDamageShieldDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Finishing Blow Damage
         IsFinishingBlowDamageEnabled = ConfigUtil.IfSetOrElse("IncludeFinishingBlowDamage", IsFinishingBlowDamageEnabled);
@@ -441,6 +446,12 @@ namespace EQLogParser
     {
       IsBaneDamageEnabled = !IsBaneDamageEnabled;
       UpdateDamageOption(enableBaneDamageIcon, IsBaneDamageEnabled, "IncludeBaneDamage");
+    }
+
+    private void ToggleDamageShieldDamageClick(object sender, RoutedEventArgs e)
+    {
+      IsDamageShieldDamageEnabled = !IsDamageShieldDamageEnabled;
+      UpdateDamageOption(enableDamageShieldDamageIcon, IsDamageShieldDamageEnabled, "IncludeDamageShieldDamage");
     }
 
     private void ToggleFinishingBlowDamageClick(object sender, RoutedEventArgs e)
