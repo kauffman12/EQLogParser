@@ -398,7 +398,15 @@ namespace EQLogParser
             });
 
             RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-            Parallel.ForEach(individualStats.Values, stats => UpdateStats(stats, HealerSpellTimeRanges, HealerHealedTimeRanges));
+            StatsUtil.PopulateSpecials(RaidTotals);
+            Parallel.ForEach(individualStats.Values, stats =>
+            {
+              UpdateStats(stats, HealerSpellTimeRanges, HealerHealedTimeRanges);
+              if (RaidTotals.Specials.TryGetValue(stats.OrigName, out string special2))
+              {
+                stats.Special = special2;
+              }
+            });
 
             combined = new CombinedStats
             {

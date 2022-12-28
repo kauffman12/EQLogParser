@@ -149,6 +149,12 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="menuItemShowDeathLog" IsEnabled="False" Header="Death Log" Click="DataGridDeathLogClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showDeathLogIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Skull" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
@@ -171,6 +177,7 @@
         <syncfusion:GridTextColumn Width="65" MappingName="MeleeAccRate" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
         <syncfusion:GridTextColumn Width="60" MappingName="MeleeHitRate" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
         <syncfusion:GridTextColumn Width="95" MappingName="RampageRate" DisplayBinding="{Binding Path=RampageRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderRampageTemplateToolTip}" TextAlignment="Right" HeaderText="% Rampage" />
+        <syncfusion:GridTextColumn MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
         <syncfusion:GridTextColumn MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

@@ -23,9 +23,9 @@
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
-                           ColumnSizer="AutoWithLastColumnFill"
+                           ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"
-                           FrozenColumnCount="2"
+                           FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
@@ -85,15 +85,8 @@
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
                                    Width="100" TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn MappingName="TimeSince" TextAlignment="Center" HeaderText="Since" />
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" />
-        <syncfusion:GridTextColumn MappingName="SubType" HeaderText="Action" />
-        <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="" />
-        <syncfusion:GridNumericColumn MappingName="OverTotal" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Over Healed" />
-        <!-- columns 5 to 12 added dynamically -->
-        <syncfusion:GridTextColumn MappingName="Actor" HeaderText="" />
-        <syncfusion:GridTextColumn MappingName="ActorClass" HeaderText="" />
-        <syncfusion:GridTextColumn MappingName="Acted" HeaderText="" />
+        <syncfusion:GridTextColumn MappingName="Damage" HeaderText="Received Damage" />
+        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Received Spells" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>

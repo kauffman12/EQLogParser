@@ -50,7 +50,7 @@ namespace EQLogParser
         Name = string.Intern(name),
         ClassName = string.Intern(className),
         OrigName = string.Intern(origName),
-        Percent = 100 // until something says otherwise
+        Percent = 100, // until something says otherwise
       };
     }
 
@@ -532,6 +532,9 @@ namespace EQLogParser
 
     internal static void PopulateSpecials(PlayerStats raidStats)
     {
+      raidStats.Specials.Clear();
+      raidStats.Deaths.Clear();
+
       ConcurrentDictionary<object, bool> temp = new ConcurrentDictionary<object, bool>();
       var allSpecials = DataManager.Instance.GetSpecials();
       int specialStart = 0;
@@ -557,9 +560,16 @@ namespace EQLogParser
           }
         }
 
-        foreach (var deaths in DataManager.Instance.GetDeathsDuring(offsetBegin, segment.EndTime + DEATH_OFFSET).Select(block => block.Actions))
+        foreach (var block in DataManager.Instance.GetDeathsDuring(offsetBegin, segment.EndTime + DEATH_OFFSET))
         {
-          actions.AddRange(deaths);
+          foreach (var death in block.Actions.Cast<DeathRecord>())
+          {
+            if (PlayerManager.Instance.IsVerifiedPlayer(death.Killed) || PlayerManager.Instance.IsMerc(death.Killed))
+            {
+              actions.Add(death);
+              raidStats.Deaths.Add(new DeathEvent { BeginTime = block.BeginTime, Killed = death.Killed, Killer = death.Killer, Message = death.Message });
+            }
+          }
         }
 
         foreach (ref var action in actions.ToArray().AsSpan())
@@ -569,14 +579,12 @@ namespace EQLogParser
             string code = null;
             string player = null;
 
-            if (action is DeathRecord death && (PlayerManager.Instance.IsVerifiedPlayer(death.Killed) || PlayerManager.Instance.IsMerc(death.Killed)))
+            if (action is DeathRecord death)
             {
               player = death.Killed;
               code = "X";
-              raidStats.Deaths.Add(death);
             }
-
-            if (action is SpecialSpell spell)
+            else if (action is SpecialSpell spell)
             {
               player = spell.Player;
               code = spell.Code;

@@ -186,6 +186,12 @@ namespace EQLogParser
   {
     public string Killed { get; set; }
     public string Killer { get; set; }
+    public string Message { get; set; }
+  }
+
+  internal class DeathEvent : DeathRecord
+  {
+    public double BeginTime { get; set; }
   }
 
   internal class MezBreakRecord : IAction
@@ -465,8 +471,8 @@ namespace EQLogParser
 
   internal class PlayerStats : PlayerSubStats
   {
-    public List<DeathRecord> Deaths { get; set; } = new List<DeathRecord>();
-    public ConcurrentDictionary<string, string> Specials { get; set; } = new ConcurrentDictionary<string, string>();
+    public List<DeathEvent> Deaths { get; } = new List<DeathEvent>();
+    public ConcurrentDictionary<string, string> Specials { get; } = new ConcurrentDictionary<string, string>();
     public List<PlayerSubStats> SubStats { get; } = new List<PlayerSubStats>();
     public List<PlayerSubStats> SubStats2 { get; } = new List<PlayerSubStats>();
     public PlayerStats MoreStats { get; set; }
