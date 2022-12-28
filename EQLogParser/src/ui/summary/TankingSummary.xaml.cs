@@ -105,11 +105,14 @@ namespace EQLogParser
             (dataGrid.SelectedItem as PlayerStats)?.MoreStats != null;
           menuItemShowDefensiveTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
 
+          menuItemShowDeathLog.IsEnabled = false;
+
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.UNK && playerStats.OrigName != Labels.RS &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
+            menuItemShowDeathLog.IsEnabled = (!string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X"));
           }
 
           EnableClassMenuItems(menuItemShowHealingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
@@ -186,6 +189,18 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
+        }
+      }
+    }
+
+    private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems?.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        {
+          (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
       }
     }

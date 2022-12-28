@@ -611,8 +611,7 @@ namespace EQLogParser
       var source = (HwndSource)PresentationSource.FromVisual(this);
       // set to layered and topmost by xaml
       int exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-      // add transparent
-      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
+      exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
       NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
     }
   }
