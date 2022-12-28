@@ -119,6 +119,12 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="menuItemShowDeathLog" IsEnabled="False" Header="Death Log" Click="DataGridDeathLogClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showDeathLogIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Skull" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
@@ -144,6 +150,7 @@
         <syncfusion:GridTextColumn Width="70" MappingName="ExtraRate" DisplayBinding="{Binding Path=ExtraRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealPercentTemplateToolTip}" TextAlignment="Right" HeaderText="% Over" />
         <syncfusion:GridTextColumn Width="60" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
         <syncfusion:GridTextColumn Width="75" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
+        <syncfusion:GridTextColumn MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
         <syncfusion:GridTextColumn MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

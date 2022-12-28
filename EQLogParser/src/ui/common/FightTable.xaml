@@ -90,7 +90,7 @@
           <Separator />          
           <MenuItem x:Name="menuItemRefresh" IsEnabled="False" Header="Refresh" Click="RefreshClick" ToolTip="Refresh the Selected Fights">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="refreshIcon" />
+              <fa:ImageAwesome x:Name="refreshIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_CircleNotch" />
             </MenuItem.Icon>
           </MenuItem>          
           <Separator />

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -533,51 +534,55 @@ namespace EQLogParser
             });
 
             RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-            var resistCounts = Resists.Cast<ResistRecord>().GroupBy(x => x.Spell).ToDictionary(g => g.Key, g => g.ToList().Count);
             StatsUtil.PopulateSpecials(RaidTotals);
+
+            var resistCounts = Resists.Cast<ResistRecord>().GroupBy(x => x.Spell).ToDictionary(g => g.Key, g => g.ToList().Count);
             var expandedStats = new ConcurrentBag<PlayerStats>();
 
-            individualStats.Values.AsParallel().Where(stats => topLevelStats.ContainsKey(stats.Name)).ForAll(stats =>
+            Parallel.ForEach(individualStats.Values, stats =>
             {
-              if (childrenStats.TryGetValue(stats.Name, out Dictionary<string, PlayerStats> children))
+              if (topLevelStats.ContainsKey(stats.Name))
               {
-                var timeRange = new TimeRange();
-                foreach (var child in children.Values)
+                if (childrenStats.TryGetValue(stats.Name, out Dictionary<string, PlayerStats> children))
                 {
-                  if (PlayerTimeRanges.TryGetValue(child.Name, out TimeRange range))
+                  var timeRange = new TimeRange();
+                  foreach (var child in children.Values)
                   {
-                    StatsUtil.UpdateAllStatsTimeRanges(child, PlayerTimeRanges, PlayerSubTimeRanges, startTime, stopTime);
-                    timeRange.Add(range.TimeSegments);
+                    if (PlayerTimeRanges.TryGetValue(child.Name, out TimeRange range))
+                    {
+                      StatsUtil.UpdateAllStatsTimeRanges(child, PlayerTimeRanges, PlayerSubTimeRanges, startTime, stopTime);
+                      timeRange.Add(range.TimeSegments);
+                    }
+
+                    expandedStats.Add(child);
+                    StatsUtil.UpdateCalculations(child, RaidTotals, resistCounts);
+
+                    if (stats.Total > 0)
+                    {
+                      child.Percent = (float)Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
+                    }
+
+                    if (RaidTotals.Specials.TryGetValue(child.Name, out string special1))
+                    {
+                      child.Special = special1;
+                    }
                   }
 
-                  expandedStats.Add(child);
-                  StatsUtil.UpdateCalculations(child, RaidTotals, resistCounts);
-
-                  if (stats.Total > 0)
-                  {
-                    child.Percent = (float)Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
-                  }
-
-                  if (RaidTotals.Specials.TryGetValue(child.Name, out string special1))
-                  {
-                    child.Special = special1;
-                  }
+                  var filteredTimeRange = StatsUtil.FilterTimeRange(timeRange, startTime, stopTime);
+                  stats.TotalSeconds = filteredTimeRange.GetTotal();
+                }
+                else
+                {
+                  expandedStats.Add(stats);
+                  StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges, startTime, stopTime);
                 }
 
-                var filteredTimeRange = StatsUtil.FilterTimeRange(timeRange, startTime, stopTime);
-                stats.TotalSeconds = filteredTimeRange.GetTotal();
-              }
-              else
-              {
-                expandedStats.Add(stats);
-                StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges, startTime, stopTime);
-              }
+                StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
 
-              StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
-
-              if (RaidTotals.Specials.TryGetValue(stats.OrigName, out string special2))
-              {
-                stats.Special = special2;
+                if (RaidTotals.Specials.TryGetValue(stats.OrigName, out string special2))
+                {
+                  stats.Special = special2;
+                }
               }
             });
 

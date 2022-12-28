@@ -58,6 +58,14 @@ namespace EQLogParser
           menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
           copyHealParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
           copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
+          
+          menuItemShowDeathLog.IsEnabled = false;
+
+          if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
+          {
+            menuItemShowDeathLog.IsEnabled = (!string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X"));
+          }
+
           EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
           EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
           EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats.UniqueClasses);
@@ -104,6 +112,18 @@ namespace EQLogParser
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+        }
+      }
+    }
+
+    private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItems?.Count > 0)
+      {
+        var main = Application.Current.MainWindow as MainWindow;
+        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        {
+          (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
       }
     }
