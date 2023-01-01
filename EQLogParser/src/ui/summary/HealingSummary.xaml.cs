@@ -58,7 +58,7 @@ namespace EQLogParser
           menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
           copyHealParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
           copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
-          
+
           menuItemShowDeathLog.IsEnabled = false;
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
