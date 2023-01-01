@@ -73,7 +73,7 @@ namespace EQLogParser
                     }
                     else
                     {
-                      damages[block.BeginTime] = new List<string>{ value };
+                      damages[block.BeginTime] = new List<string> { value };
                     }
 
                     times[block.BeginTime] = true;

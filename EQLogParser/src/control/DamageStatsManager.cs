@@ -55,7 +55,7 @@ namespace EQLogParser
       var playerTotals = new Dictionary<string, OverlayPlayerTotal>();
       var playerHasPet = new Dictionary<string, bool>();
       var fightCount = OverlayDeadFightCount;
-      
+
       // check incase pet mappings was updated while overlay is running
       foreach (var keypair in OverlayPetOwners)
       {

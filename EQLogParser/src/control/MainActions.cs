@@ -1,6 +1,5 @@
 ﻿using Microsoft.Win32;
 using Syncfusion.SfSkinManager;
-using Syncfusion.Themes.MaterialDark.WPF;
 using Syncfusion.Themes.MaterialLight.WPF;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;

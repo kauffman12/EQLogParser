@@ -120,7 +120,7 @@ namespace EQLogParser
           LOG.Error(e);
         }
       }
-      
+
       return record;
     }
 
