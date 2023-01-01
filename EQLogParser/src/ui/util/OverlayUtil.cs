@@ -30,7 +30,7 @@ namespace EQLogParser
 
     internal static void CloseOverlay()
     {
-     if (Overlay != null)
+      if (Overlay != null)
       {
         Overlay.Pause();
       }

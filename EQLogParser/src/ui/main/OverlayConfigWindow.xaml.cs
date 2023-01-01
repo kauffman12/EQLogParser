@@ -165,7 +165,7 @@ namespace EQLogParser
       NameBlockList[CurrentMaxRows - 1].Text = CurrentMaxRows + ". ...";
       NameBlockList[CurrentMaxRows - 1].FontStyle = FontStyles.Italic;
       NameBlockList[CurrentMaxRows - 1].FontWeight = FontWeights.Light;
-      NameIconList[CurrentMaxRows  - 1].Source = PlayerManager.WIZ_ICON;
+      NameIconList[CurrentMaxRows - 1].Source = PlayerManager.WIZ_ICON;
     }
 
     private void Resize(double height, double width)
