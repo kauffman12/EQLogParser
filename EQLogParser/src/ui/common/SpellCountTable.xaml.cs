@@ -1,6 +1,4 @@
-﻿using FontAwesome5;
-using Microsoft.Win32;
-using Newtonsoft.Json;
+﻿using Microsoft.Win32;
 using Syncfusion.Data.Extensions;
 using Syncfusion.UI.Xaml.Grid;
 using System;
@@ -293,7 +291,7 @@ namespace EQLogParser
           string json = reader?.ReadToEnd();
           reader?.Close();
 
-          var data = JsonConvert.DeserializeObject<SpellCountsSerialized>(json);
+          var data = System.Text.Json.JsonSerializer.Deserialize<SpellCountsSerialized>(json);
 
           // copy data
           PlayerList = PlayerList.Union(data.PlayerNames).ToList();
@@ -361,7 +359,7 @@ namespace EQLogParser
         var data = new SpellCountsSerialized { TheSpellData = TheSpellCounts };
         data.PlayerNames.AddRange(PlayerList);
 
-        var result = JsonConvert.SerializeObject(data);
+        var result = System.Text.Json.JsonSerializer.Serialize(data);
         SaveFileDialog saveFileDialog = new SaveFileDialog();
         string filter = "Spell Count File (*.scf.gz)|*.scf.gz";
         saveFileDialog.Filter = filter;
@@ -527,7 +525,7 @@ namespace EQLogParser
 
   internal class SpellCountsSerialized
   {
-    public List<string> PlayerNames { get; } = new List<string>();
+    public List<string> PlayerNames { get; set; } = new List<string>();
     public SpellCountData TheSpellData { get; set; }
   }
 

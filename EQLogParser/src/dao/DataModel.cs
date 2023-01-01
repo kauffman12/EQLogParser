@@ -388,12 +388,12 @@ namespace EQLogParser
 
   internal class SpellCountData
   {
-    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
-    public Dictionary<string, Dictionary<string, uint>> PlayerInterruptedCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
-    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; } = new Dictionary<string, Dictionary<string, uint>>();
-    public Dictionary<string, uint> MaxCastCounts { get; } = new Dictionary<string, uint>();
-    public Dictionary<string, uint> MaxReceivedCounts { get; } = new Dictionary<string, uint>();
-    public Dictionary<string, SpellData> UniqueSpells { get; } = new Dictionary<string, SpellData>();
+    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; set; } = new Dictionary<string, Dictionary<string, uint>>();
+    public Dictionary<string, Dictionary<string, uint>> PlayerInterruptedCounts { get; set; } = new Dictionary<string, Dictionary<string, uint>>();
+    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; set; } = new Dictionary<string, Dictionary<string, uint>>();
+    public Dictionary<string, uint> MaxCastCounts { get; set; } = new Dictionary<string, uint>();
+    public Dictionary<string, uint> MaxReceivedCounts { get; set; } = new Dictionary<string, uint>();
+    public Dictionary<string, SpellData> UniqueSpells { get; set; } = new Dictionary<string, SpellData>();
   }
 
   internal class OverlayPlayerTotal
