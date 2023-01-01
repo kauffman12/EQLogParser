@@ -910,6 +910,11 @@ namespace EQLogParser
       {
         var lineData = new LineData { Action = line.Substring(ACTION_INDEX), LineNumber = LineCount, BeginTime = dateTime };
 
+        if (EQLogReader.FileLoadComplete)
+        {
+          MainActions.CheckGina(lineData.Action, dateTime);
+        }
+
         // avoid having other things parse chat by accident
         if (ChatLineParser.Process(lineData, line) is ChatType chatType)
         {
