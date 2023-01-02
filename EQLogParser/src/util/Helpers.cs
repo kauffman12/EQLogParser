@@ -120,7 +120,7 @@ namespace EQLogParser
             DockingManager.SetState(window, state);
           }
         }
-        catch (Exception _)
+        catch (Exception)
         {
           // ignore undocking and removing children causes an exception
         }
