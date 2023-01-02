@@ -86,6 +86,7 @@
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
                                    Width="100" TextAlignment="Center" HeaderText="Time" />
         <syncfusion:GridTextColumn MappingName="Damage" HeaderText="Received Damage" />
+        <syncfusion:GridTextColumn MappingName="Healing" HeaderText="Received Healing" />
         <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Received Spells" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

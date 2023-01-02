@@ -52,7 +52,7 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Hits", "# Twincasts" };
 
-    private const string VERSION = "2.0.38";
+    private const string VERSION = "2.0.39";
 
     private static long LineCount = 0;
     private static long FilePosition = 0;
@@ -549,6 +549,11 @@ namespace EQLogParser
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         Helpers.OpenWindow(dockSite, opened, out _, typeof(LootViewer), playerLootIcon.Tag as string, "Looted Items");
       }
+      //else if (e.Source == triggersMenuItem)
+      //{
+      //  var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+      //  Helpers.OpenWindow(dockSite, opened, out _, typeof(AudioTriggers), triggersIcon.Tag as string, "Audio Triggers");
+      //}
       else if (e.Source == eqLogMenuItem)
       {
         int found = LogWindows.FindIndex(used => !used);

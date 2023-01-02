@@ -47,8 +47,10 @@ namespace EQLogParser
       var end = death.BeginTime;
       var start = end - 20;
       var allFights = (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetFights();
+      var allHeals = DataManager.Instance.GetHealsDuring(start, end + 1);
       var allSpells = DataManager.Instance.GetReceivedSpellsDuring(start, end + 1);
       var damages = new Dictionary<double, List<string>>();
+      var heals = new Dictionary<double, List<string>>();
       var spells = new Dictionary<double, List<string>>();
       var times = new Dictionary<double, bool>();
 
@@ -66,7 +68,7 @@ namespace EQLogParser
                 {
                   if (damage.Defender == CurrentPlayer.OrigName && damage.Total > 0)
                   {
-                    var value = damage.Attacker + " attacks " + CurrentPlayer.OrigName + " for " + damage.Total + " damage. (" + damage.SubType + ")";
+                    var value = damage.Attacker + " attacks " + CurrentPlayer.OrigName + " for " + damage.Total + " (" + damage.SubType + ")";
                     if (damages.TryGetValue(block.BeginTime, out List<string> values))
                     {
                       values.Add(value);
@@ -85,7 +87,28 @@ namespace EQLogParser
         }
       }
 
-      foreach (var block in allSpells)
+      allHeals.ForEach(block =>
+      {
+        block.Actions.Cast<HealRecord>().ForEach(heal =>
+        {
+          if (heal.Healed == CurrentPlayer.OrigName && heal.Total > 0)
+          {
+            var value = heal.Healer + " heals " + CurrentPlayer.OrigName + " for " + heal.Total + " (" + heal.SubType + ")";
+            if (heals.TryGetValue(block.BeginTime, out List<string> values))
+            {
+              values.Add(value);
+            }
+            else
+            {
+              heals[block.BeginTime] = new List<string> { value };
+            }
+
+            times[block.BeginTime] = true;
+          }
+        });
+      });
+
+      foreach (ref var block in allSpells.ToArray().AsSpan())
       {
         foreach (var spell in block.Actions.Cast<ReceivedSpell>())
         {
@@ -126,6 +149,25 @@ namespace EQLogParser
           });
         }
 
+        if (heals.TryGetValue(time, out List<string> healList))
+        {
+          int i = 0;
+          healList.ForEach(heal =>
+          {
+            if (sub.Count > i)
+            {
+              sub[i].Healing = heal;
+            }
+            else
+            {
+              var row = new ExpandoObject() as dynamic;
+              row.Time = time;
+              row.Healing = heal;
+              sub.Add(row);
+            }
+          });
+        }
+
         if (spells.TryGetValue(time, out List<string> spellList))
         {
           int i = 0;
@@ -148,19 +190,51 @@ namespace EQLogParser
         list.AddRange(sub);
       }
 
-      if (list.Count > 0 && list[list.Count - 1].Time == end && string.IsNullOrEmpty(list[list.Count - 1].Damage))
+      var combined = death.Message;
+      if (!string.IsNullOrEmpty(death.Previous))
       {
-        list[list.Count - 1].Damage = death.Message;
-      }
-      else
-      {
-        var row = new ExpandoObject() as dynamic;
-        row.Time = end;
-        row.Damage = death.Message;
-        list.Add(row);
+        bool found = false;
+        string[] split = death.Previous.Split(' ');
+        foreach (var value in split)
+        {
+          if (int.TryParse(value, out int result))
+          {
+            found = false;
+            break;
+          }
+
+          if (CurrentPlayer.OrigName == value)
+          {
+            found = true;
+          }
+        }
+
+        if (found)
+        {
+          combined += " (Previous? " + death.Previous + ")";
+        }
       }
 
+      AppendMessage(list, combined, end);
       dataGrid.ItemsSource = list;
+    }
+
+    private void AppendMessage(List<dynamic> list, string message, double end)
+    {
+      if (!string.IsNullOrEmpty(message))
+      {
+        if (list.Count > 0 && list[list.Count - 1].Time == end && string.IsNullOrEmpty(list[list.Count - 1].Damage))
+        {
+          list[list.Count - 1].Damage = message;
+        }
+        else
+        {
+          var row = new ExpandoObject() as dynamic;
+          row.Time = end;
+          row.Damage = message;
+          list.Add(row);
+        }
+      }
     }
 
     private void OptionsChanged(object sender, EventArgs e)
