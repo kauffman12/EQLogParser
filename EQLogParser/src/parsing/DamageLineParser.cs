@@ -15,6 +15,7 @@ namespace EQLogParser
     private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
     private static readonly List<string> SlainQueue = new List<string>();
     private static double SlainTime = double.NaN;
+    private static string PreviousAction = null;
 
     private static readonly Dictionary<string, string> HitMap = new Dictionary<string, string>
     {
@@ -86,6 +87,8 @@ namespace EQLogParser
             ParseLine(false, lineData, split, stop);
           }
         }
+
+        PreviousAction = lineData.Action;
       }
       catch (Exception e)
       {
@@ -777,7 +780,13 @@ namespace EQLogParser
           }
 
           killer = TextFormatUtils.ToUpper(killer);
+         
           var death = new DeathRecord { Killed = string.Intern(slain), Killer = string.Intern(killer), Message = string.Intern(lineData.Action) };
+          if (PreviousAction != null)
+          {
+            death.Previous = PreviousAction;
+          }
+
           DataManager.Instance.AddDeathRecord(death, currentTime);
         }
       }

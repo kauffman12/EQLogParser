@@ -187,6 +187,7 @@ namespace EQLogParser
     public string Killed { get; set; }
     public string Killer { get; set; }
     public string Message { get; set; }
+    public string Previous { get; set; }
   }
 
   internal class DeathEvent : DeathRecord
