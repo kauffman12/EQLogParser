@@ -45,86 +45,39 @@ namespace EQLogParser
         return;
       }
 
-      if ((e.DropPosition == DropPosition.DropAbove || e.DropPosition == DropPosition.DropBelow) &&
-        target.IsTrigger != source.IsTrigger)
-      {
-        e.Handled = true;
-        return;
-      }
-
       var targetParent = target.ParentNode as AudioTriggerTreeViewNode;
       var sourceParent = source.ParentNode as AudioTriggerTreeViewNode;
       
       if (e.DropPosition == DropPosition.DropAbove)
       {
-        if (source.IsTrigger)
-        {
-          sourceParent.SerializedData.Triggers.Remove(source.TriggerData);
-          int index = targetParent.SerializedData.Triggers.IndexOf(target.TriggerData) - 1;
-          index = (index >= 0 ? index : 0);
-          targetParent.SerializedData.Triggers.Insert(index, source.TriggerData);
-        }
-        else
-        {
-          sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
-          int index = targetParent.SerializedData.Nodes.IndexOf(target.SerializedData) - 1;
-          index = (index >= 0 ? index : 0);
-          targetParent.SerializedData.Nodes.Insert(index, source.SerializedData);
-        }
+        sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
+        int index = targetParent.SerializedData.Nodes.IndexOf(target.SerializedData) - 1;
+        index = (index >= 0 ? index : 0);
+        targetParent.SerializedData.Nodes.Insert(index, source.SerializedData);
       }
       if (e.DropPosition == DropPosition.DropBelow)
       {
-        if (source.IsTrigger)
+        sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
+        int index = targetParent.SerializedData.Nodes.IndexOf(target.SerializedData) + 1;
+        if (index >= targetParent.SerializedData.Nodes.Count)
         {
-          sourceParent.SerializedData.Triggers.Remove(source.TriggerData);
-          int index = targetParent.SerializedData.Triggers.IndexOf(target.TriggerData) + 1;
-          if (index >= targetParent.SerializedData.Triggers.Count)
-          {
-            targetParent.SerializedData.Triggers.Add(source.TriggerData);
-          }
-          else
-          {
-            targetParent.SerializedData.Triggers.Insert(index, source.TriggerData);
-          }
+          targetParent.SerializedData.Nodes.Add(source.SerializedData);
         }
         else
         {
-          sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
-          int index = targetParent.SerializedData.Nodes.IndexOf(target.SerializedData) + 1;
-          if (index >= targetParent.SerializedData.Nodes.Count)
-          {
-            targetParent.SerializedData.Nodes.Add(source.SerializedData);
-          }
-          else
-          {
-            targetParent.SerializedData.Nodes.Insert(index, source.SerializedData);
-          }
+          targetParent.SerializedData.Nodes.Insert(index, source.SerializedData);
         }
       }
       else if (e.DropPosition == DropPosition.DropAsChild)
       {
-        if (source.IsTrigger)
+        sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
+
+        if (target.SerializedData.Nodes == null)
         {
-          sourceParent.SerializedData.Triggers.Remove(source.TriggerData);
-              
-          if (target.SerializedData.Triggers == null)
-          {
-            target.SerializedData.Triggers = new List<AudioTrigger>();
-          }
-
-          target.SerializedData.Triggers.Add(source.TriggerData);
+          target.SerializedData.Nodes = new List<AudioTriggerData>();
         }
-        else
-        {
-          sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
 
-          if (target.SerializedData.Nodes == null)
-          {
-            target.SerializedData.Nodes = new List<AudioTriggerData>();
-          }
-
-          target.SerializedData.Nodes.Add(source.SerializedData);
-        }
+        target.SerializedData.Nodes.Add(source.SerializedData);
       }
 
       AudioTriggerManager.Instance.Update();
@@ -157,16 +110,7 @@ namespace EQLogParser
         info.Node is AudioTriggerTreeViewNode node)
       {
         parent.ChildNodes.Remove(node);
-
-        if (node.IsTrigger)
-        {
-          parent.SerializedData.Triggers.Remove(node.TriggerData);
-        }
-        else
-        {
-          parent.SerializedData.Nodes.Remove(node.SerializedData);
-        }
-
+        parent.SerializedData.Nodes.Remove(node.SerializedData);
         AudioTriggerManager.Instance.Update();
       }
     }
@@ -199,7 +143,7 @@ namespace EQLogParser
     {
       if (e.AddedItems.Count > 0 && e.AddedItems[0] is AudioTriggerTreeViewNode node)
       {
-        thePropertyGrid.SelectedObject = node.IsTrigger ? node.TriggerData : null;
+        thePropertyGrid.SelectedObject = node.IsTrigger ? node.SerializedData.TriggerData : null;
       }
     }
 
@@ -236,6 +180,19 @@ namespace EQLogParser
       }
     }
 
+    private void SaveExpanded(List<AudioTriggerTreeViewNode> nodes)
+    {
+      foreach (var node in nodes)
+      {
+        node.SerializedData.IsExpanded = node.IsExpanded;
+        
+        if (!node.IsTrigger)
+        {
+          SaveExpanded(node.ChildNodes.Cast<AudioTriggerTreeViewNode>().ToList());
+        }
+      }
+    }
+
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
 
@@ -243,7 +200,9 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        SaveExpanded(treeView.Nodes.Cast<AudioTriggerTreeViewNode>().ToList());
         AudioTriggerManager.Instance.EventsUpdateTree -= EventsUpdateTree;
+        AudioTriggerManager.Instance.Update();
         treeView.Dispose();
         disposedValue = true;
       }
