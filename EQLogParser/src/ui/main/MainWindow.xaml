@@ -143,13 +143,11 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerDataViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
             </MenuItem.Icon>
-            <!--
             <MenuItem x:Name="triggersMenuItem" Header="_Audio Triggers" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="triggersIcon" Tag="triggersWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            -->
             <MenuItem x:Name="playerLootMenuItem" Header="_Looted Items" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="playerLootIcon" Tag="lootWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />

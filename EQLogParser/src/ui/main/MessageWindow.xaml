@@ -14,7 +14,7 @@
         TitleTextAlignment="Left"
         Topmost="True"
         WindowStartupLocation="CenterScreen"
-        Height="150" Width="350">
+        Height="150" Width="375">
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="1*" />
@@ -27,7 +27,7 @@
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="3">
       <fa:ImageAwesome x:Name="iconImage" Height="32" Width="32" Margin="25,5,0,0" />
-      <TextBlock x:Name="textBlock" FontSize="14" Foreground="{DynamicResource PrimaryDarken}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20,24,0,6" Height="35" Width="250" />
+      <TextBlock x:Name="textBlock" FontSize="14" Foreground="{DynamicResource PrimaryDarken}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20,24,0,6" Height="35" Width="270" />
     </StackPanel>
     <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,0,10,2">
       <Button x:Name="yesButton" Foreground="{DynamicResource PrimaryDarken}" Height="24" Width="80" Margin="5" Content="Yes" IsEnabled="True" Visibility="Hidden" Click="ButtonYesClick"/>
