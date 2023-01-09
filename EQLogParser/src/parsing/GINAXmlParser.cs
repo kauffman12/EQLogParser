@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Syncfusion.Data.Extensions;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml;
 
 namespace EQLogParser
@@ -46,11 +48,10 @@ namespace EQLogParser
           data.Name = node.SelectSingleNode("Name").InnerText;
           audioTriggerNodes.Add(data);
 
+          var triggers = new List<AudioTriggerData>();
           var triggersList = node.SelectSingleNode("Triggers");
           if (triggersList != null)
           {
-            var triggers = new List<AudioTrigger>();
-            data.Triggers = triggers;
             foreach (XmlNode triggerNode in triggersList.SelectNodes("Trigger"))
             {
               // ignore anything that's not using text to voice
@@ -61,7 +62,7 @@ namespace EQLogParser
                 trigger.UseRegex = bool.Parse(triggerNode.SelectSingleNode("EnableRegex").InnerText);
                 trigger.Pattern = triggerNode.SelectSingleNode("TriggerText").InnerText;
                 trigger.Speak = triggerNode.SelectSingleNode("TextToVoiceText").InnerText;
-                triggers.Add(trigger);
+                triggers.Add(new AudioTriggerData { Name = trigger.Name, TriggerData = trigger });
                 added.Add(trigger);
               }
             }
@@ -69,6 +70,15 @@ namespace EQLogParser
 
           var moreGroups = node.SelectNodes("TriggerGroups");
           HandleTriggerGroups(moreGroups, data.Nodes, added);
+
+          // GINA UI sorts by default
+          data.Nodes = data.Nodes.OrderBy(n => n.Name).ToList();
+
+          if (triggers.Count > 0)
+          {
+            // GINA UI sorts by default
+            data.Nodes.AddRange(triggers.OrderBy(trigger => trigger.Name).ToList());
+          }
         }
         else if (node.Name == "TriggerGroups")
         {

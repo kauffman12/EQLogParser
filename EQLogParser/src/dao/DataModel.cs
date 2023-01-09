@@ -38,15 +38,15 @@ namespace EQLogParser
   internal class AudioTriggerData
   {
     public bool? IsEnabled { get; set; } = false;
+    public bool IsExpanded { get; set; } = false;
     public string Name { get; set; }
     public List<AudioTriggerData> Nodes { get; set; }
-    public List<AudioTrigger> Triggers { get; set; }
+    public AudioTrigger TriggerData { get; set; }
   }
 
   internal class AudioTriggerTreeViewNode : TreeViewNode
   {
     public bool IsTrigger { get; set; }
-    public AudioTrigger TriggerData { get; set; }
     public AudioTriggerData SerializedData{ get; set; }
   }
 
