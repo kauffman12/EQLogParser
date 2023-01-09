@@ -216,6 +216,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
 
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
+        AudioTriggerManager.Instance.Start();
       }
       catch (Exception e)
       {
@@ -549,11 +550,11 @@ namespace EQLogParser
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         Helpers.OpenWindow(dockSite, opened, out _, typeof(LootViewer), playerLootIcon.Tag as string, "Looted Items");
       }
-      //else if (e.Source == triggersMenuItem)
-      //{
-      //  var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      //  Helpers.OpenWindow(dockSite, opened, out _, typeof(AudioTriggers), triggersIcon.Tag as string, "Audio Triggers");
-      //}
+      else if (e.Source == triggersMenuItem)
+      {
+        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(AudioTriggersView), triggersIcon.Tag as string, "Audio Triggers");
+      }
       else if (e.Source == eqLogMenuItem)
       {
         int found = LogWindows.FindIndex(used => !used);
@@ -807,7 +808,7 @@ namespace EQLogParser
         else
         {
           // WPF doesn't have its own file chooser so use Win32 Version
-          Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog
+          OpenFileDialog dialog = new OpenFileDialog
           {
             // filter to txt files
             DefaultExt = ".txt",
@@ -917,7 +918,7 @@ namespace EQLogParser
 
         if (EQLogReader.FileLoadComplete)
         {
-          MainActions.CheckGina(lineData.Action, dateTime);
+          MainActions.CheckGina(Dispatcher, lineData.Action, dateTime);
         }
 
         // avoid having other things parse chat by accident

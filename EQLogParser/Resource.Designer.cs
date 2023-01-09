@@ -322,6 +322,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Shared GINA Triggers.
+        /// </summary>
+        internal static string RECEIVE_GINA {
+            get {
+                return ResourceManager.GetString("RECEIVE_GINA", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Restart Required.
         /// </summary>
         internal static string RESTART_NEEDED {

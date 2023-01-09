@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Diagram;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -205,6 +206,59 @@ namespace EQLogParser
         {
           result.AddRange(File.ReadAllLines(fileName));
         }
+      }
+      catch (IOException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
+      }
+
+      return result;
+    }
+
+    internal static string ReadConfigFile(string fileName)
+    {
+      string result = null;
+      var path = ConfigDir + fileName;
+
+      try
+      {
+        if (File.Exists(path))
+        {
+          result = File.ReadAllText(path);
+        }
+      }
+      catch (IOException ex)
+      {
+        LOG.Error(ex);
+      }
+      catch (UnauthorizedAccessException uax)
+      {
+        LOG.Error(uax);
+      }
+      catch (SecurityException se)
+      {
+        LOG.Error(se);
+      }
+
+      return result;
+    }
+
+    internal static string WriteConfigFile(string fileName, string contents)
+    {
+      string result = null;
+      var path = ConfigDir + fileName;
+
+      try
+      {
+        File.WriteAllText(path, contents);
       }
       catch (IOException ex)
       {
