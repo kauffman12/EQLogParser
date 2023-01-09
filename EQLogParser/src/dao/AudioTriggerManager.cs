@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Speech.Synthesis;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -22,7 +23,7 @@ namespace EQLogParser
     {
       LoadTriggers();
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 2000) };
-      UpdateTimer.Tick += (sender, e) => DoUpdate();
+      UpdateTimer.Tick += (sender, e) => SaveTriggers();
     }
 
     internal void Start()
@@ -37,6 +38,11 @@ namespace EQLogParser
       }
 
       ActiveTriggers = list.OrderByDescending(trigger => trigger.LastTriggered).ToList();
+
+      //var pat = "^Stones form from shadows in the {s} corners of the room\\.$";
+      //var pat = "^Stones form from shadows in the (?<s>.*) corners of the room\\.$";
+      //var regex = new Regex(pat, RegexOptions.Compiled);
+      //var matches = regex.Matches("Stones form from shadows in the north western corners of the room.");
 
       // Speak a string.  
       //Synth.Speak("Starting the TTS Service!");
@@ -55,13 +61,12 @@ namespace EQLogParser
 
     internal AudioTriggerTreeViewNode GetTreeView()
     {
-      var result = new AudioTriggerTreeViewNode { Content = "All Audio Triggers", IsChecked = Data.IsEnabled, IsTrigger = false };
+      var result = new AudioTriggerTreeViewNode { Content = "All Audio Triggers", IsChecked = Data.IsEnabled, IsTrigger = false, IsExpanded = Data.IsExpanded };
       result.SerializedData = Data;
 
       lock (Data)
       {
         AddTreeNodes(Data.Nodes, result);
-        AddAudioTriggers(Data.Triggers, result);
       }
 
       return result;
@@ -74,22 +79,10 @@ namespace EQLogParser
         lock (Data)
         {
           MergeNodes(newTriggers.Nodes, Data);
-          MergeTriggers(newTriggers.Triggers, Data);
+          SaveTriggers();
         }
 
         EventsUpdateTree?.Invoke(this, true);
-      }
-    }
-
-    private void AddAudioTriggers(List<AudioTrigger> triggers, AudioTriggerTreeViewNode treeNode)
-    {
-      if (triggers != null)
-      {
-        foreach (var trigger in triggers)
-        {
-          var child = new AudioTriggerTreeViewNode { Content = trigger.Name, IsTrigger = true, TriggerData = trigger };
-          treeNode.ChildNodes.Add(child);
-        }
       }
     }
 
@@ -99,26 +92,38 @@ namespace EQLogParser
       {
         foreach (var node in nodes)
         {
-          var child = new AudioTriggerTreeViewNode { Content = node.Name, IsChecked = node.IsEnabled, IsTrigger = false, SerializedData = node };
-          treeNode.ChildNodes.Add(child);
-          AddTreeNodes(node.Nodes, child);
-          AddAudioTriggers(node.Triggers, child);
+          var child = new AudioTriggerTreeViewNode { Content = node.Name, SerializedData = node };
+          if (node.TriggerData != null)
+          {
+            child.IsTrigger = true;
+            treeNode.ChildNodes.Add(child);
+          }
+          else
+          {
+            child.IsChecked = node.IsEnabled;
+            child.IsExpanded = node.IsExpanded;
+            child.IsTrigger = false;
+            treeNode.ChildNodes.Add(child);
+            AddTreeNodes(node.Nodes, child);
+          }
         }
       }
     }
 
     private void LoadActive(AudioTriggerData data, List<AudioTrigger> triggers)
     {
-      if (data.Triggers != null && data.IsEnabled != false)
-      {
-        data.Triggers.ForEach(trigger => triggers.Add(trigger));
-      }
-
-      if (data.Nodes != null)
+      if (data != null && data.Nodes != null && data.IsEnabled != false)
       {
         foreach (var node in data.Nodes)
         {
-          LoadActive(node, triggers);
+          if (node.TriggerData != null)
+          {
+            triggers.Add(node.TriggerData);
+          }
+          else
+          {
+            LoadActive(node, triggers);
+          }
         }
       }
     }
@@ -139,8 +144,14 @@ namespace EQLogParser
 
             if (found != null)
             {
-              MergeNodes(newNode.Nodes, found);
-              MergeTriggers(newNode.Triggers, found);
+              if (newNode.TriggerData != null && found.TriggerData != null)
+              {
+                found.TriggerData = newNode.TriggerData;
+              }
+              else
+              {
+                MergeNodes(newNode.Nodes, found);
+              }
             }
             else
             {
@@ -151,36 +162,7 @@ namespace EQLogParser
       }
     }
 
-    private void MergeTriggers(List<AudioTrigger> newTriggers, AudioTriggerData parent)
-    {
-      if (newTriggers != null)
-      {
-        if (parent.Triggers == null)
-        {
-          parent.Triggers = newTriggers;
-        }
-        else
-        {
-          foreach (var newTrigger in newTriggers)
-          {
-            var found = parent.Triggers.Find(trigger => trigger.Name == newTrigger.Name);
-
-            if (found != null)
-            {
-              found.Pattern = newTrigger.Pattern;
-              found.Speak = newTrigger.Speak;
-              found.UseRegex = newTrigger.UseRegex;
-            }
-            else
-            {
-              parent.Triggers.Add(newTrigger);
-            }
-          }
-        }
-      }
-    }
-
-    private void DoUpdate()
+    private void SaveTriggers()
     {
       lock (Data)
       {
@@ -194,7 +176,7 @@ namespace EQLogParser
       var jsonString = ConfigUtil.ReadConfigFile(TRIGGERS_FILE);
       if (jsonString != null)
       {
-        Data = JsonSerializer.Deserialize<AudioTriggerData>(jsonString);
+        Data = JsonSerializer.Deserialize<AudioTriggerData>(jsonString, new JsonSerializerOptions { IncludeFields = true });
       }
     }
   }
