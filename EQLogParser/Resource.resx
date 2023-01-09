@@ -204,6 +204,9 @@
   <data name="PAL" xml:space="preserve">
     <value>Paladin</value>
   </data>
+  <data name="RECEIVE_GINA" xml:space="preserve">
+    <value>Shared GINA Triggers</value>
+  </data>
   <data name="RESTART_NEEDED" xml:space="preserve">
     <value>Restart Required</value>
   </data>

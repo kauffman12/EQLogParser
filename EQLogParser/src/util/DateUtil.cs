@@ -104,7 +104,7 @@ namespace EQLogParser
         dateTime = ParseDate(line);
         if (!double.IsNaN(dateTime))
         {
-          TimeSpan diff = TimeSpan.FromSeconds(now - dateTime);
+          var diff = TimeSpan.FromSeconds(now - dateTime);
           found = (diff.TotalMinutes < lastMins);
         }
       }

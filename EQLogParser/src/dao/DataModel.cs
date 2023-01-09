@@ -1,7 +1,10 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.TreeView.Engine;
+using Syncfusion.Windows.Shared;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 
 namespace EQLogParser
@@ -10,6 +13,41 @@ namespace EQLogParser
   {
     StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, bool showTotals,
       bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
+  }
+
+  internal class AudioTrigger : NotificationObject
+  {
+    [Editable(false)]
+    public string Name { get; set; }
+    [Display(Name = "Use Regex")]
+    [Editable(false)]
+    public bool UseRegex { get; set; }
+    [Display(Name = "Text to Speak")]
+    [Editable(false)]
+    public string Speak { get; set; }
+    [Editable(false)]
+    public string Pattern { get; set; }
+    public double LastTriggered;
+  }
+
+  internal class AudioTriggerPropertyViewModel
+  {
+    public object SelectedAudioTrigger { get; set; }
+  }
+
+  internal class AudioTriggerData
+  {
+    public bool? IsEnabled { get; set; } = false;
+    public string Name { get; set; }
+    public List<AudioTriggerData> Nodes { get; set; }
+    public List<AudioTrigger> Triggers { get; set; }
+  }
+
+  internal class AudioTriggerTreeViewNode : TreeViewNode
+  {
+    public bool IsTrigger { get; set; }
+    public AudioTrigger TriggerData { get; set; }
+    public AudioTriggerData SerializedData{ get; set; }
   }
 
   internal interface IAction { }

@@ -21,6 +21,23 @@
       <Setter Property="Margin" Value="0" />
     </Style>
 
+    <DataTemplate x:Key="AudioTriggerFileTemplate">
+      <Grid>
+        <StackPanel Orientation="Horizontal">
+          <fa:ImageAwesome Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Regular_FileAudio" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+    <DataTemplate x:Key="AudioTriggerNodeTemplate">
+      <Grid>
+        <StackPanel Orientation="Horizontal">
+          <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+
     <DataTemplate x:Key="CurrencyTemplate">
       <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
     </DataTemplate>

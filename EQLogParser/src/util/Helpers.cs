@@ -99,13 +99,12 @@ namespace EQLogParser
     {
       if (window != null)
       {
+        var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
+        // delay so windows can be cleaned up before we manually try to do it
         try
         {
-          var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
           if (state == DockState.Hidden && window?.Tag as string != "Hide")
           {
-            (window.Content as IDisposable)?.Dispose();
-
             if (dockSite.Children.Contains(window))
             {
               dockSite.Children.Remove(window);
@@ -114,6 +113,8 @@ namespace EQLogParser
             {
               dockSite.DocContainer.Items.Remove(window);
             }
+
+            (window.Content as IDisposable)?.Dispose();
           }
           else
           {

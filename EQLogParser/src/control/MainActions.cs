@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -33,13 +34,26 @@ namespace EQLogParser
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static void CheckGina(string action, double dateTime)
+    internal static void CheckGina(Dispatcher dispatcher, string action, double dateTime)
     {
       // if GINA data is recent then try to handle it
       if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is int index && index > -1 && 
         (DateTime.Now - DateUtil.FromDouble(dateTime)).TotalSeconds <= 20 && action.IndexOf("}", index + 40) is int end && end > index)
       {
-        return;
+        string player = null;
+        string[] split = action.Split(' ');
+        if (split.Length > 0)
+        {
+          if (split[0] == ConfigUtil.PlayerName)
+          {
+            return;
+          }
+
+          if (PlayerManager.IsPossiblePlayerName(split[0]))
+          {
+            player = split[0];
+          }
+        }
 
         Task.Delay(1000).ContinueWith(task =>
         {
@@ -89,7 +103,47 @@ namespace EQLogParser
                           var entry = zip.Entries.First();
                           using (StreamReader sr = new StreamReader(entry.Open()))
                           {
-                            var triggers = sr.ReadToEnd();
+                            var triggerXml = sr.ReadToEnd();
+                            var audioTriggerData = GINAXmlParser.ConvertToJson(triggerXml);
+
+                            dispatcher.InvokeAsync(() =>
+                            {
+                              if (audioTriggerData == null)
+                              {
+                                string badMessage = "GINA Triggers received";
+                                if (!string.IsNullOrEmpty(player))
+                                {
+                                  badMessage += " from " + player;
+                                }
+
+                                badMessage += " but no Voice to Text Triggers found.";
+                                new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA, false).ShowDialog();
+                              }
+                              else
+                              {
+                                var message = "Accept GINA Triggers?\r\n";
+                                if (!string.IsNullOrEmpty(player))
+                                {
+                                  message = "Accept GINA Triggers from " + player + "?\r\n";
+                                }
+
+                                string includes = null;
+                                if (audioTriggerData.Nodes.Count > 0)
+                                {
+                                  includes = string.Join(",", audioTriggerData.Nodes.Select(node => node.Name).ToArray());
+                                }
+
+                                message = string.IsNullOrEmpty(includes) ? message : (message + "Includes: " + includes);
+
+                                var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, true);
+                                msgDialog.ShowDialog();
+
+                                if (msgDialog.IsYesClicked)
+                                {
+                                  AudioTriggerManager.Instance.MergeTriggers(audioTriggerData);
+                                }
+                              }
+                            });
                           }
                         }
                       }
