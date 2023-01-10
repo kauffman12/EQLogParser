@@ -918,7 +918,7 @@ namespace EQLogParser
 
         if (EQLogReader.FileLoadComplete)
         {
-          MainActions.CheckGina(Dispatcher, lineData.Action, dateTime);
+          AudioTriggerManager.Instance.AddAction(lineData.Action, dateTime);
         }
 
         // avoid having other things parse chat by accident
@@ -1073,6 +1073,7 @@ namespace EQLogParser
       StopProcessing();
       OverlayUtil.CloseOverlay();
       PlayerChatManager?.Dispose();
+      AudioTriggerManager.Instance.Stop();
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
       Application.Current.Shutdown();
