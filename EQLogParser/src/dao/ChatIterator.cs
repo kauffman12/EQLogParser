@@ -98,14 +98,15 @@ namespace EQLogParser
         string nextLine;
         while (result == END_RESULT && (nextLine = CurrentReader.ReadLine()) != null)
         {
-          string action = nextLine.Substring(MainWindow.ACTION_INDEX);
+          var timeString = nextLine.Substring(0, MainWindow.ACTION_INDEX - 1);
+          var action = nextLine.Substring(MainWindow.ACTION_INDEX);
           var chatType = ChatLineParser.ParseChatType(action);
           if (chatType != null)
           {
             // fix  % chars
             // workaround to set full line text
             chatType.Text = nextLine.Replace("PCT;", "%");
-            chatType.BeginTime = DateUtil.ParsePreciseDate(action);
+            chatType.BeginTime = DateUtil.ParsePreciseDate(timeString);
 
             if (CurrentChatFilter.PassFilter(chatType))
             {

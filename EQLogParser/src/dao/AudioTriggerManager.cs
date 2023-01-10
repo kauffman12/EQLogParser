@@ -1,10 +1,14 @@
 ﻿using Syncfusion.Data.Extensions;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Speech.Synthesis;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -15,29 +19,121 @@ namespace EQLogParser
     internal static AudioTriggerManager Instance = new AudioTriggerManager();
     private readonly string TRIGGERS_FILE = "audioTriggers.json";
     private readonly DispatcherTimer UpdateTimer;
-    private AudioTriggerData Data = new AudioTriggerData();
-    private SpeechSynthesizer Synth;
-    private List<AudioTrigger> ActiveTriggers;
-   
+    private readonly AudioTriggerData Data;
+    private Channel<string> LogChannel;
+    private bool Running = false;
+
     public AudioTriggerManager()
     {
-      LoadTriggers();
+      var jsonString = ConfigUtil.ReadConfigFile(TRIGGERS_FILE);
+      if (jsonString != null)
+      {
+        Data = JsonSerializer.Deserialize<AudioTriggerData>(jsonString, new JsonSerializerOptions { IncludeFields = true });
+      }
+
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 2000) };
       UpdateTimer.Tick += (sender, e) => SaveTriggers();
     }
 
+    internal void AddAction(string action, double dateTime)
+    {
+      if (Running && LogChannel != null)
+      {
+        LogChannel.Writer.WriteAsync(action);
+      }
+
+      GINAXmlParser.CheckGina(action, dateTime);
+    }
+
+    [MethodImpl(MethodImplOptions.Synchronized)]
     internal void Start()
     {
-      Synth = new SpeechSynthesizer();
-      Synth.SetOutputToDefaultAudioDevice();
-      var list = new List<AudioTrigger>();
+      if (LogChannel != null)
+      {
+        LogChannel.Writer.Complete();
+      }
+
+      var activeTriggers = new LinkedList<TriggerWrapper>();
+      var enabledTriggers = new List<AudioTrigger>();
 
       lock (Data)
       {
-        LoadActive(Data, list);
+        LoadActive(Data, enabledTriggers);
       }
 
-      ActiveTriggers = list.OrderByDescending(trigger => trigger.LastTriggered).ToList();
+      foreach (var trigger in enabledTriggers.OrderByDescending(trigger => trigger.LastTriggered))
+      {
+        if (!string.IsNullOrEmpty(trigger.Pattern))
+        {
+          var pattern = trigger.Pattern;
+          pattern = pattern.Replace("{c}", ConfigUtil.PlayerName);
+          pattern = pattern.Replace("{C}", ConfigUtil.PlayerName);
+
+          var wrapper = new TriggerWrapper { TriggerData = trigger };
+          if (trigger.UseRegex)
+          {
+            wrapper.TriggerRegex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+          }
+          else
+          {
+            wrapper.TriggerPattern = pattern;
+          }
+
+          activeTriggers.AddLast(new LinkedListNode<TriggerWrapper>(wrapper));
+        }
+      }
+
+      LogChannel = Channel.CreateUnbounded<string>();
+
+      Task.Run(async () =>
+      {
+        var synth = new SpeechSynthesizer();
+        synth.SetOutputToDefaultAudioDevice();
+
+        try
+        {
+          while (await LogChannel.Reader.WaitToReadAsync())
+          {
+            var action = await LogChannel.Reader.ReadAsync();
+            var node = activeTriggers.First;
+            while (node != null)
+            {
+              bool found = false;
+              if (node.Value.TriggerRegex != null)
+              {
+                if (node.Value.TriggerRegex.IsMatch(action))
+                {
+                  found = true;
+                  node.Value.TriggerData.LastTriggered = DateUtil.ToDouble(DateTime.Now);
+                }
+              }
+              else if (!string.IsNullOrEmpty(node.Value.TriggerPattern))
+              {
+                if (action.Contains(node.Value.TriggerPattern, StringComparison.OrdinalIgnoreCase))
+                {
+                  found = true;
+                  node.Value.TriggerData.LastTriggered = DateUtil.ToDouble(DateTime.Now);
+                }
+              }
+
+              if (found && !string.IsNullOrEmpty(node.Value.TriggerData.Speak))
+              {
+                synth.Speak(node.Value.TriggerData.Speak);
+              }
+
+              node = node.Next;
+            }
+          }
+        }
+        catch (Exception)
+        {
+          // channel closed
+        }
+
+        synth.Dispose();
+      });
+
+      Running = true;
 
       //var pat = "^Stones form from shadows in the {s} corners of the room\\.$";
       //var pat = "^Stones form from shadows in the (?<s>.*) corners of the room\\.$";
@@ -48,9 +144,18 @@ namespace EQLogParser
       //Synth.Speak("Starting the TTS Service!");
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     internal void Stop()
     {
-      Synth.Dispose();
+      Running = false;
+
+      if (LogChannel != null)
+      {
+        LogChannel.Writer.Complete();
+        LogChannel = null;
+      }
+
+      SaveTriggers();
     }
 
     internal void Update()
@@ -171,13 +276,11 @@ namespace EQLogParser
       }
     }
 
-    private void LoadTriggers()
+    private class TriggerWrapper
     {
-      var jsonString = ConfigUtil.ReadConfigFile(TRIGGERS_FILE);
-      if (jsonString != null)
-      {
-        Data = JsonSerializer.Deserialize<AudioTriggerData>(jsonString, new JsonSerializerOptions { IncludeFields = true });
-      }
+      public string TriggerPattern { get; set; }
+      public Regex TriggerRegex { get; set; }
+      public AudioTrigger TriggerData { get; set; }
     }
   }
 }
