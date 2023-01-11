@@ -27,6 +27,8 @@ namespace EQLogParser
     public string Speak { get; set; }
     [Editable(false)]
     public string Pattern { get; set; }
+    [Editable(false)]
+    public int Priority { get; set; } = 5;
     public double LastTriggered;
   }
 

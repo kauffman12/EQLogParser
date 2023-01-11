@@ -17,7 +17,7 @@
       <local:AudioTriggerTemplateSelector x:Key="audioTriggerTemplateSelector"/>
     </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Button x:Name="startButton" Margin="0" Height="24" Click="PlayButtonClick" Focusable="False" IsHitTestVisible="False" Background="{DynamicResource ContentBackgroundAlt2}">
+      <Button x:Name="startButton" Margin="0" Height="24" Width="165"  Click="PlayButtonClick" Focusable="False" IsHitTestVisible="False" Background="{DynamicResource ContentBackgroundAlt2}">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
           <fa:ImageAwesome x:Name="startIcon" Height="14" Width="14" Margin="6,0,0,0" HorizontalAlignment="Center" Style="{StaticResource EQIconStyle}"/>
           <Label x:Name="titleLabel" Height="24" FontSize="13" Style="{StaticResource EQTitleStyle}" Margin="0,-1,0,0" />

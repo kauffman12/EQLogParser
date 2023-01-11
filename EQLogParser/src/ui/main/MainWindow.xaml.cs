@@ -923,7 +923,7 @@ namespace EQLogParser
 
         if (EQLogReader.FileLoadComplete)
         {
-          AudioTriggerManager.Instance.AddAction(lineData.Action, dateTime);
+          AudioTriggerManager.Instance.AddAction(lineData);
         }
 
         // avoid having other things parse chat by accident
