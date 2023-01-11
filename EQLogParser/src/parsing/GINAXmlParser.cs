@@ -1,5 +1,6 @@
 ﻿using Syncfusion.Data.Extensions;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -16,13 +17,14 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private static ConcurrentDictionary<string, string> GinaCache = new ConcurrentDictionary<string, string>();
+
     internal static void CheckGina(string action, double dateTime)
-    {
+    {    
       // if GINA data is recent then try to handle it
       if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is int index && index > -1 &&
         (DateTime.Now - DateUtil.FromDouble(dateTime)).TotalSeconds <= 20 && action.IndexOf("}", index + 40) is int end && end > index)
       {
-        var dispatcher = Application.Current.Dispatcher;
         string player = null;
         string[] split = action.Split(' ');
         if (split.Length > 0)
@@ -38,96 +40,140 @@ namespace EQLogParser
           }
         }
 
-        Task.Delay(1000).ContinueWith(task =>
+        string ginaKey = null;
+        var start = index + 6;
+        var finish = end - index - 6;
+        if (start < finish)
         {
-          try
+          ginaKey = action.Substring(index + 6, end - index - 6);
+        }
+
+        if (string.IsNullOrEmpty(ginaKey))
+        {
+          return;
+        }
+
+        // ignore if we're still processing plus avoid spam
+        if (GinaCache.ContainsKey(ginaKey) || GinaCache.Count > 5)
+        {
+          return;
+        }
+
+        GinaCache[ginaKey] = player;
+
+        if (GinaCache.Count == 1)
+        {
+          RunGinaTask(ginaKey, player);
+        }
+      }
+    }
+
+    private static void NextGinaTask(string ginaKey)
+    {
+      GinaCache.TryRemove(ginaKey, out string _);
+
+      if (GinaCache.Count > 0)
+      {
+        var nextKey = GinaCache.Keys.First();
+        RunGinaTask(nextKey, GinaCache[nextKey]);
+      }
+    }
+
+    private static void RunGinaTask(string ginaKey, string player)
+    {
+      var dispatcher = Application.Current.Dispatcher;
+
+      Task.Delay(500).ContinueWith(task =>
+      {
+        var client = new HttpClient();
+
+        try
+        {
+          var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
+            ginaKey + "</sessionId><chunkNumber>0</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
+
+          var content = new StringContent(postData, UnicodeEncoding.UTF8, "text/xml");
+          content.Headers.Add("Content-Length", postData.Length.ToString());
+
+          var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
+          message.Content = content;
+          message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
+          message.Headers.Add("Accept-Encoding", "gzip, deflate");
+
+          var response = client.Send(message);
+          if (response.IsSuccessStatusCode)
           {
-            var ginaKey = action.Substring(index + 6, end - index - 6);
-            var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
-              ginaKey + "</sessionId><chunkNumber>0</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
-
-            var content = new StringContent(postData, UnicodeEncoding.UTF8, "text/xml");
-            content.Headers.Add("Content-Length", postData.Length.ToString());
-
-            var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
-            message.Content = content;
-            message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
-            message.Headers.Add("Accept-Encoding", "gzip, deflate");
-
-            var client = new HttpClient();
-            var response = client.Send(message);
-            if (response.IsSuccessStatusCode)
+            using (var data = response.Content.ReadAsStreamAsync())
             {
-              using (var data = response.Content.ReadAsStreamAsync())
+              data.Wait();
+
+              var buffer = new byte[data.Result.Length];
+              var read = data.Result.ReadAsync(buffer, 0, buffer.Length);
+              read.Wait();
+
+              using (var bufferStream = new MemoryStream(buffer))
               {
-                data.Wait();
-
-                var buffer = new byte[data.Result.Length];
-                var read = data.Result.ReadAsync(buffer, 0, buffer.Length);
-                read.Wait();
-
-                using (var bufferStream = new MemoryStream(buffer))
+                using (var gzip = new GZipStream(bufferStream, CompressionMode.Decompress))
                 {
-                  using (var gzip = new GZipStream(bufferStream, CompressionMode.Decompress))
+                  using (var memory = new MemoryStream())
                   {
-                    using (var memory = new MemoryStream())
+                    gzip.CopyTo(memory);
+                    var xml = Encoding.UTF8.GetString(memory.ToArray());
+
+                    if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1 && xml.IndexOf("</a:ChunkData>") is int end &&
+                      end > start)
                     {
-                      gzip.CopyTo(memory);
-                      var xml = Encoding.UTF8.GetString(memory.ToArray());
+                      var encoded = xml.Substring(start + 13, end - start - 13);
+                      var decoded = Convert.FromBase64String(encoded);
 
-                      if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1 && xml.IndexOf("</a:ChunkData>") is int end &&
-                        end > start)
+                      using (var zip = new ZipArchive(new MemoryStream(decoded), ZipArchiveMode.Read))
                       {
-                        var encoded = xml.Substring(start + 13, end - start - 13);
-                        var decoded = Convert.FromBase64String(encoded);
-
-                        using (var zip = new ZipArchive(new MemoryStream(decoded), ZipArchiveMode.Read))
+                        var entry = zip.Entries.First();
+                        using (StreamReader sr = new StreamReader(entry.Open()))
                         {
-                          var entry = zip.Entries.First();
-                          using (StreamReader sr = new StreamReader(entry.Open()))
+                          var triggerXml = sr.ReadToEnd();
+                          var audioTriggerData = ConvertToJson(triggerXml);
+
+                          dispatcher.InvokeAsync(() =>
                           {
-                            var triggerXml = sr.ReadToEnd();
-                            var audioTriggerData = ConvertToJson(triggerXml);
-
-                            dispatcher.InvokeAsync(() =>
+                            if (audioTriggerData == null)
                             {
-                              if (audioTriggerData == null)
+                              string badMessage = "GINA Triggers received";
+                              if (!string.IsNullOrEmpty(player))
                               {
-                                string badMessage = "GINA Triggers received";
-                                if (!string.IsNullOrEmpty(player))
-                                {
-                                  badMessage += " from " + player;
-                                }
-
-                                badMessage += " but no Voice to Text Triggers found.";
-                                new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA, false).ShowDialog();
+                                badMessage += " from " + player;
                               }
-                              else
+
+                              badMessage += " but no Voice to Text Triggers found.";
+                              new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA, false).ShowDialog();
+                            }
+                            else
+                            {
+                              var message = "Accept GINA Triggers?\r\n";
+                              if (!string.IsNullOrEmpty(player))
                               {
-                                var message = "Accept GINA Triggers?\r\n";
-                                if (!string.IsNullOrEmpty(player))
-                                {
-                                  message = "Accept GINA Triggers from " + player + "?\r\n";
-                                }
-
-                                string includes = null;
-                                if (audioTriggerData.Nodes.Count > 0)
-                                {
-                                  includes = string.Join(",", audioTriggerData.Nodes.Select(node => node.Name).ToArray());
-                                }
-
-                                message = string.IsNullOrEmpty(includes) ? message : (message + "Includes: " + includes);
-
-                                var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, true);
-                                msgDialog.ShowDialog();
-
-                                if (msgDialog.IsYesClicked)
-                                {
-                                  AudioTriggerManager.Instance.MergeTriggers(audioTriggerData);
-                                }
+                                message = "Accept GINA Triggers from " + player + "?\r\n";
                               }
-                            });
-                          }
+
+                              string includes = null;
+                              if (audioTriggerData.Nodes.Count > 0)
+                              {
+                                includes = string.Join(",", audioTriggerData.Nodes.Select(node => node.Name).ToArray());
+                              }
+
+                              message = string.IsNullOrEmpty(includes) ? message : (message + "Includes: " + includes);
+
+                              var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, true);
+                              msgDialog.ShowDialog();
+
+                              if (msgDialog.IsYesClicked)
+                              {
+                                AudioTriggerManager.Instance.MergeTriggers(audioTriggerData);
+                              }
+                            }
+
+                            NextGinaTask(ginaKey);
+                          });
                         }
                       }
                     }
@@ -135,27 +181,35 @@ namespace EQLogParser
                 }
               }
             }
-            else
-            {
-              LOG.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode.ToString());
-            }
-
-            client.Dispose();
           }
-          catch (Exception ex)
+          else
           {
-            if (ex.Message != null && ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
-            {
-              dispatcher.InvokeAsync(() =>
-              {
-                new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", EQLogParser.Resource.RECEIVE_GINA).ShowDialog();
-              });
-            }
-
-            LOG.Error("Error Downloading GINA Triggers", ex);
+            LOG.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode.ToString());
+            NextGinaTask(ginaKey);
           }
-        });
-      }
+        }
+        catch (Exception ex)
+        {
+          if (ex.Message != null && ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
+          {
+            dispatcher.InvokeAsync(() =>
+            {
+              new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", EQLogParser.Resource.RECEIVE_GINA).ShowDialog();
+              NextGinaTask(ginaKey);
+            });
+          }
+          else
+          {
+            NextGinaTask(ginaKey);
+          }
+
+          LOG.Error("Error Downloading GINA Triggers", ex);
+        }
+        finally
+        {
+          client.Dispose();
+        }
+      });
     }
 
     private static AudioTriggerData ConvertToJson(string xml)
