@@ -216,7 +216,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
 
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
-        AudioTriggerManager.Instance.Start();
+        AudioTriggerManager.Instance.Init();
       }
       catch (Exception e)
       {
@@ -248,6 +248,11 @@ namespace EQLogParser
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
+    }
+
+    internal void ShowAudioTriggers(bool active)
+    {
+      Dispatcher.InvokeAsync(() => statusAudioTriggersText.Visibility = active ? Visibility.Visible : Visibility.Collapsed);
     }
 
     private void DockSiteLoaded(object sender, RoutedEventArgs e)
@@ -1073,7 +1078,7 @@ namespace EQLogParser
       StopProcessing();
       OverlayUtil.CloseOverlay();
       PlayerChatManager?.Dispose();
-      AudioTriggerManager.Instance.Stop();
+      AudioTriggerManager.Instance.Stop(false);
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
       Application.Current.Shutdown();

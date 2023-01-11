@@ -328,8 +328,10 @@
           </MenuItem>
         </MenuItem>
       </Menu>
-      <TextBlock x:Name="statusText" Margin="40,0,4,0" VerticalAlignment="Center"/>
-      <TextBlock x:Name="fileText" Margin="4,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"/>
+      <TextBlock Margin="35,0,0,0" Visibility="Hidden" Text="" />
+      <TextBlock x:Name="statusAudioTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" Text="Audio Triggers Active | " Foreground="{StaticResource EQGoodForegroundBrush}"/>
+      <TextBlock x:Name="statusText" Margin="0,0,4,0" VerticalAlignment="Center"/>
+      <TextBlock x:Name="fileText" Margin="1,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"/>
     </listCollection:ArrayList>
   </syncfusion:ChromelessWindow.LeftHeaderItemsSource>
   <syncfusion:ChromelessWindow.RightHeaderItemsSource>

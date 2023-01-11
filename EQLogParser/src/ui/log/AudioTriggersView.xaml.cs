@@ -1,7 +1,10 @@
-﻿using Syncfusion.UI.Xaml.TreeView;
+﻿using FontAwesome5;
+using Syncfusion.UI.Xaml.TreeView;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -15,8 +18,36 @@ namespace EQLogParser
     public AudioTriggersView()
     {
       InitializeComponent();
+
+      if (ConfigUtil.IfSetOrElse("AudioTriggersWatchForGINA", false))
+      {
+        watchGina.IsChecked = true;
+      }
+
+      if (MainWindow.CurrentLogFile == null )
+      {
+        SetPlayer("Activate Triggers", "EQDisabledBrush", EFontAwesomeIcon.Solid_Play, false);
+      }
+      else
+      {
+        EventsLogLoadingComplete(this, true);
+      }
+
       treeView.Nodes.Add(AudioTriggerManager.Instance.GetTreeView());
       AudioTriggerManager.Instance.EventsUpdateTree += EventsUpdateTree;
+      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
+    }
+
+    private void EventsLogLoadingComplete(object sender, bool e)
+    {
+      if (AudioTriggerManager.Instance.IsActive())
+      {
+        SetPlayer("Deactivate Triggers", "EQStopForegroundBrush", EFontAwesomeIcon.Solid_Square);
+      }
+      else
+      {
+        SetPlayer("Activate Triggers", "EQMenuIconBrush", EFontAwesomeIcon.Solid_Play);
+      }
     }
 
     private void EventsUpdateTree(object sender, bool e)
@@ -26,6 +57,38 @@ namespace EQLogParser
         treeView.Nodes.Clear();
         treeView.Nodes.Add(AudioTriggerManager.Instance.GetTreeView());
       });
+    }
+
+    private void OptionsChanged(object sender, RoutedEventArgs e)
+    {
+      // one way to see if UI has been initialized
+      if (startIcon?.Icon != FontAwesome5.EFontAwesomeIcon.None)
+      {
+        ConfigUtil.SetSetting("AudioTriggersWatchForGINA", watchGina.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+      }
+    }
+
+    private void SetPlayer(string title, string brush, EFontAwesomeIcon icon, bool hitTest = true)
+    {
+      startIcon.Icon = icon;
+      startIcon.SetResourceReference(ImageAwesome.ForegroundProperty, brush);
+      titleLabel.SetResourceReference(Label.ForegroundProperty, brush);
+      titleLabel.Content = title;
+      startButton.IsHitTestVisible= hitTest;
+    }
+
+    private void PlayButtonClick(object sender, RoutedEventArgs e)
+    {
+      if (startIcon.Icon == EFontAwesomeIcon.Solid_Play)
+      {
+        SetPlayer("Deactivate Triggers", "EQStopForegroundBrush", EFontAwesomeIcon.Solid_Square);
+        AudioTriggerManager.Instance.Start();
+      }
+      else
+      {
+        SetPlayer("Activate Triggers", "EQMenuIconBrush", EFontAwesomeIcon.Solid_Play);
+        AudioTriggerManager.Instance.Stop();
+      }
     }
 
     private void ItemDropping(object sender, TreeViewItemDroppingEventArgs e)
@@ -200,6 +263,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         SaveExpanded(treeView.Nodes.Cast<AudioTriggerTreeViewNode>().ToList());
         AudioTriggerManager.Instance.EventsUpdateTree -= EventsUpdateTree;
         AudioTriggerManager.Instance.Update();
