@@ -19,11 +19,13 @@ namespace EQLogParser
 
     private static ConcurrentDictionary<string, string> GinaCache = new ConcurrentDictionary<string, string>();
 
-    internal static void CheckGina(string action, double dateTime)
-    {    
+    internal static void CheckGina(LineData lineData)
+    {
+      var action = lineData.Action;
+
       // if GINA data is recent then try to handle it
       if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is int index && index > -1 &&
-        (DateTime.Now - DateUtil.FromDouble(dateTime)).TotalSeconds <= 20 && action.IndexOf("}", index + 40) is int end && end > index)
+        (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}", index + 40) is int end && end > index)
       {
         string player = null;
         string[] split = action.Split(' ');
@@ -177,6 +179,11 @@ namespace EQLogParser
                         }
                       }
                     }
+                    else
+                    {
+                      // no chunk data in response. too old?
+                      NextGinaTask(ginaKey);
+                    }
                   }
                 }
               }
@@ -218,7 +225,7 @@ namespace EQLogParser
 
       try
       {
-        XmlDocument doc = new XmlDocument();
+        var doc = new XmlDocument();
         doc.LoadXml(xml);
 
         result.Nodes = new List<AudioTriggerData>();
@@ -261,9 +268,19 @@ namespace EQLogParser
               {
                 var trigger = new AudioTrigger();
                 trigger.Name = triggerNode.SelectSingleNode("Name").InnerText;
-                trigger.UseRegex = bool.Parse(triggerNode.SelectSingleNode("EnableRegex").InnerText);
                 trigger.Pattern = triggerNode.SelectSingleNode("TriggerText").InnerText;
                 trigger.Speak = triggerNode.SelectSingleNode("TextToVoiceText").InnerText;
+
+                if (bool.TryParse(triggerNode.SelectSingleNode("EnableRegex").InnerText, out bool regex))
+                {
+                  trigger.UseRegex = regex;
+                }
+                
+                if (bool.TryParse(triggerNode.SelectSingleNode("InterruptSpeech").InnerText, out bool interrupt))
+                {
+                  trigger.Priority = interrupt ? 1 : 5;
+                }
+
                 triggers.Add(new AudioTriggerData { Name = trigger.Name, TriggerData = trigger });
                 added.Add(trigger);
               }

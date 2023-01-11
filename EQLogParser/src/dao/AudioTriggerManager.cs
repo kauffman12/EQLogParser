@@ -11,6 +11,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using Windows.Foundation.Metadata;
 
 namespace EQLogParser
 {
@@ -21,7 +22,7 @@ namespace EQLogParser
     private readonly string TRIGGERS_FILE = "audioTriggers.json";
     private readonly DispatcherTimer UpdateTimer;
     private readonly AudioTriggerData Data;
-    private Channel<string> LogChannel = null;
+    private Channel<LineData> LogChannel = null;
     private static object LockObject = new object();
 
     public AudioTriggerManager()
@@ -30,6 +31,10 @@ namespace EQLogParser
       if (jsonString != null)
       {
         Data = JsonSerializer.Deserialize<AudioTriggerData>(jsonString, new JsonSerializerOptions { IncludeFields = true });
+      }
+      else
+      {
+        Data = new AudioTriggerData();
       }
 
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 2000) };
@@ -56,45 +61,47 @@ namespace EQLogParser
       }
     }
 
-    internal void AddAction(string action, double dateTime)
+    internal void AddAction(LineData lineData)
     {
       lock (LockObject)
       {
-        LogChannel?.Writer.WriteAsync(action);
+        LogChannel?.Writer.WriteAsync(lineData);
       }
 
-      if (!double.IsNaN(dateTime) && ConfigUtil.IfSetOrElse("AudioTriggersWatchForGINA", false))
+      if (!double.IsNaN(lineData.BeginTime) && ConfigUtil.IfSetOrElse("AudioTriggersWatchForGINA", false))
       {
-        GINAXmlParser.CheckGina(action, dateTime);
+        GINAXmlParser.CheckGina(lineData);
       }
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     internal void Start()
     {
-      Channel<string> channel;
+      Channel<LineData> channel;
 
       lock (LockObject)
       {
         LogChannel?.Writer.Complete();
-        channel = LogChannel = Channel.CreateUnbounded<string>();
+        channel = LogChannel = Channel.CreateUnbounded<LineData>();
       }
 
       Task.Run(async () =>
       {
         var synth = new SpeechSynthesizer();
         synth.SetOutputToDefaultAudioDevice();
-
+        
         try
         {
           var activeTriggers = GetActiveTriggers();
+          AudioTrigger previous = null;
 
           while (await channel.Reader.WaitToReadAsync())
           {
-            var action = await channel.Reader.ReadAsync();
+            var lineData = await channel.Reader.ReadAsync();
+            var action = lineData.Action;
 
             // reload triggers
-            if (action == "EQLogParser-Reload-Triggers")
+            if (lineData.BeginTime == 0 && action == "Reload-Triggers")
             {
               activeTriggers = GetActiveTriggers();
             }
@@ -104,12 +111,15 @@ namespace EQLogParser
               while (node != null)
               {
                 bool found = false;
+                MatchCollection matches = null;
                 if (node.Value.Regex != null)
                 {
-                  if (node.Value.Regex.IsMatch(action))
+                  matches = node.Value.Regex.Matches(action);
+                  if (matches != null && matches.Count > 0)
                   {
                     found = true;
                     node.Value.TriggerData.LastTriggered = DateUtil.ToDouble(DateTime.Now);
+                    UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
                   }
                 }
                 else if (!string.IsNullOrEmpty(node.Value.ModifiedPattern))
@@ -117,13 +127,34 @@ namespace EQLogParser
                   if (action.Contains(node.Value.ModifiedPattern, StringComparison.OrdinalIgnoreCase))
                   {
                     found = true;
-                    node.Value.TriggerData.LastTriggered = DateUtil.ToDouble(DateTime.Now);
+                    UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
                   }
                 }
 
                 if (found && !string.IsNullOrEmpty(node.Value.ModifiedSpeak))
                 {
-                  synth.SpeakAsync(node.Value.ModifiedSpeak);
+                  if (previous != null && node.Value.TriggerData.Priority < previous.Priority)
+                  {
+                    synth.SpeakAsyncCancelAll();
+                  }
+
+                  var speak = node.Value.ModifiedSpeak;
+                  if (matches != null)
+                  {
+                    matches.ForEach(match =>
+                    {
+                      for (int i = 1; i < match.Groups.Count; i++)
+                      {
+                        if (!string.IsNullOrEmpty(match.Groups[i].Name) && Regex.IsMatch(match.Groups[i].Name, @"s\d?", RegexOptions.IgnoreCase))
+                        {
+                          speak = speak.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+                        }
+                      }
+                    });
+                  }
+
+                  previous = node.Value.TriggerData;
+                  synth.SpeakAsync(speak);
                 }
 
                 node = node.Next;
@@ -231,8 +262,23 @@ namespace EQLogParser
       }
     }
 
+    private void UpdateTriggerTime(LinkedList<TriggerWrapper> activeTriggers, LinkedListNode<TriggerWrapper> node, double beginTime)
+    {
+      var previous = node.Value.TriggerData.LastTriggered;
+      node.Value.TriggerData.LastTriggered = beginTime;
+
+      // if no data yet then just move to front
+      // next client restart will re-order everything
+      if (previous == 0)
+      {
+        activeTriggers.Remove(node);
+        activeTriggers.AddFirst(node);
+      }
+    }
+
     private void DataUpdated(object sender, EventArgs e)
     {
+      UpdateTimer.Stop();
       RequestRefresh();
       SaveTriggers();
     }
@@ -241,7 +287,7 @@ namespace EQLogParser
     {
       lock (LockObject)
       {
-        LogChannel?.Writer.WriteAsync("EQLogParser-Reload-Triggers");
+        LogChannel?.Writer.WriteAsync(new LineData { Action = "Reload-Triggers" });
       }
     }
 
@@ -332,6 +378,7 @@ namespace EQLogParser
                 found.TriggerData.UseRegex = newNode.TriggerData.UseRegex;
                 found.TriggerData.Pattern = newNode.TriggerData.Pattern;
                 found.TriggerData.Speak = newNode.TriggerData.Speak;
+                found.TriggerData.Priority = newNode.TriggerData.Priority;
               }
               else
               {
