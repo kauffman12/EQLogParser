@@ -161,14 +161,17 @@
       <Version>2.0.15</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Syncfusion.Edit.WPF" Version="20.4.0.38" />
-    <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.4.0.38" />
-    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="20.4.0.38" />
-    <PackageReference Include="Syncfusion.SfInput.WPF" Version="20.4.0.38" />
-    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.4.0.38" />
-    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="20.4.0.38" />
-    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="20.4.0.38" />
-    <PackageReference Include="Syncfusion.Tools.WPF" Version="20.4.0.38" />
+    <PackageReference Include="Syncfusion.Edit.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.SfInput.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.Shared.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.Shared.WPF.Classic" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.Tools.WPF" Version="20.4.0.43" />
+    <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="20.4.0.43" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.1" />
   </ItemGroup>
@@ -177,17 +180,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.WPF.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Syncfusion.Shared.WPF">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.4.0.38\precompiledassemblies\net6.0\Syncfusion.Shared.WPF.dll</HintPath>
-    </Reference>
-    <Reference Include="Syncfusion.Shared.WPF.Classic">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.4.0.38\ToolboxNuGetPackages\syncfusion.ui.wpf.net\20.4.0.38\lib\net6.0-windows7.0\Syncfusion.Shared.WPF.Classic.dll</HintPath>
-    </Reference>
-    <Reference Include="Syncfusion.Tools.Wpf.Classic">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Syncfusion\Essential Studio\WPF\20.4.0.38\ToolboxNuGetPackages\syncfusion.ui.wpf.net\20.4.0.38\lib\net6.0-windows7.0\Syncfusion.Tools.WPF.Classic.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Resource.Designer.cs">
