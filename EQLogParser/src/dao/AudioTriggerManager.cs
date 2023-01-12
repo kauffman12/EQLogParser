@@ -11,12 +11,12 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
-using Windows.Foundation.Metadata;
 
 namespace EQLogParser
 {
   internal class AudioTriggerManager
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     internal event EventHandler<bool> EventsUpdateTree;
     internal static AudioTriggerManager Instance = new AudioTriggerManager();
     private readonly string TRIGGERS_FILE = "audioTriggers.json";
@@ -37,7 +37,7 @@ namespace EQLogParser
         Data = new AudioTriggerData();
       }
 
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 2000) };
+      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 2) };
       UpdateTimer.Tick += DataUpdated;
     }
 
@@ -89,7 +89,7 @@ namespace EQLogParser
       {
         var synth = new SpeechSynthesizer();
         synth.SetOutputToDefaultAudioDevice();
-        
+
         try
         {
           var activeTriggers = GetActiveTriggers();
@@ -192,10 +192,15 @@ namespace EQLogParser
       }
     }
 
-    internal void Update()
+    internal void Update(bool needRefresh = true)
     {
       UpdateTimer.Stop();
       UpdateTimer.Start();
+
+      if (needRefresh)
+      {
+        UpdateTimer.Tag = needRefresh;
+      }
     }
 
     internal AudioTriggerTreeViewNode GetTreeView()
@@ -279,7 +284,13 @@ namespace EQLogParser
     private void DataUpdated(object sender, EventArgs e)
     {
       UpdateTimer.Stop();
-      RequestRefresh();
+
+      if (UpdateTimer.Tag != null)
+      {
+        RequestRefresh();
+        UpdateTimer.Tag = null;
+      }
+
       SaveTriggers();
     }
 
@@ -306,32 +317,42 @@ namespace EQLogParser
       {
         if (!string.IsNullOrEmpty(trigger.Pattern))
         {
-          var pattern = trigger.Pattern;
-          pattern = pattern.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
-
-          if (trigger.UseRegex && Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is MatchCollection matches && matches.Count > 0)
+          try
           {
-            matches.ForEach(match =>
+            var pattern = trigger.Pattern;
+            pattern = pattern.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
+
+            if (trigger.UseRegex && Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is MatchCollection matches && matches.Count > 0)
             {
-              if (match.Groups.Count > 1)
+              matches.ForEach(match =>
               {
-                pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + ">.+)");
+                if (match.Groups.Count > 1)
+                {
+                  pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + ">.+)");
+                }
+              });
+            }
+
+            var modifiedSpeak = string.IsNullOrEmpty(trigger.Speak) ? null : trigger.Speak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
+            var wrapper = new TriggerWrapper { TriggerData = trigger, ModifiedSpeak = modifiedSpeak };
+            if (trigger.UseRegex)
+            {
+              if (trigger.Warnings != "Invalid Regex")
+              {
+                wrapper.Regex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                activeTriggers.AddLast(new LinkedListNode<TriggerWrapper>(wrapper));
               }
-            });
+            }
+            else
+            {
+              wrapper.ModifiedPattern = pattern;
+              activeTriggers.AddLast(new LinkedListNode<TriggerWrapper>(wrapper));
+            }
           }
-
-          var modifiedSpeak = string.IsNullOrEmpty(trigger.Speak) ? null : trigger.Speak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
-          var wrapper = new TriggerWrapper { TriggerData = trigger, ModifiedSpeak = modifiedSpeak };
-          if (trigger.UseRegex)
+          catch (Exception ex)
           {
-            wrapper.Regex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            LOG.Debug("Bad Audio Trigger?", ex); 
           }
-          else
-          {
-            wrapper.ModifiedPattern = pattern;
-          }
-
-          activeTriggers.AddLast(new LinkedListNode<TriggerWrapper>(wrapper));
         }
       }
 
