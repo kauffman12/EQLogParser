@@ -1,4 +1,5 @@
 ﻿using Syncfusion.UI.Xaml.TreeView.Engine;
+using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -6,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
+using System.Security.Policy;
 
 namespace EQLogParser
 {
@@ -17,18 +19,15 @@ namespace EQLogParser
 
   internal class AudioTrigger : NotificationObject
   {
-    [Editable(false)]
-    public string Name { get; set; }
     [Display(Name = "Use Regex")]
-    [Editable(false)]
     public bool UseRegex { get; set; }
     [Display(Name = "Text to Speak")]
-    [Editable(false)]
     public string Speak { get; set; }
-    [Editable(false)]
     public string Pattern { get; set; }
+    public long Priority { get; set; } = 5;
     [Editable(false)]
-    public int Priority { get; set; } = 5;
+    public string Warnings { get; set; } = "None";
+    public string Name;
     public double LastTriggered;
   }
 

@@ -41,7 +41,7 @@
            x:Name="treeView"
            Grid.Row="0"
            AllowDragging="True"
-           AllowEditing="False"
+           AllowEditing="True"
            BorderBrush="{DynamicResource ContentBackgroundAlt2}"
            BorderThickness="0"
            CheckBoxMode="Recursive"
@@ -81,6 +81,8 @@
             BorderBrush="{DynamicResource ContentBackgroundAlt2}"
             BorderThickness="1"
             Margin="0"
+            UpdateSourceMode="Immediately"
+            ValueChanged="ValueChanged"
             SelectedObject="{Binding SelectedAudioTrigger}">
           <syncfusion:PropertyGrid.PropertyNameColumnDefinition>
             <GridLength>150</GridLength> 
