@@ -1,10 +1,11 @@
 ﻿using FontAwesome5;
 using Syncfusion.UI.Xaml.TreeView;
+using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -33,6 +34,14 @@ namespace EQLogParser
         EventsLogLoadingComplete(this, true);
       }
 
+      CustomEditor editor = new CustomEditor
+      {
+        EditorType = typeof(PriorityEditor),
+        HasPropertyType = true,
+        PropertyType = typeof(long)
+      };
+
+      thePropertyGrid.CustomEditorCollection.Add(editor);
       treeView.Nodes.Add(AudioTriggerManager.Instance.GetTreeView());
       AudioTriggerManager.Instance.EventsUpdateTree += EventsUpdateTree;
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
@@ -148,22 +157,41 @@ namespace EQLogParser
 
     private void CreateNodeClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info)
+      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is AudioTriggerTreeViewNode node)
       {
-        if (info.Node != null)
+        var newNode = new AudioTriggerTreeViewNode { Content = "New Node", IsTrigger = false };
+        newNode.SerializedData = new AudioTriggerData { Name = "New Node" };
+
+        if (node.SerializedData.Nodes == null)
         {
-          info.Node.ChildNodes.Add(new AudioTriggerTreeViewNode { Content = "New Node", IsTrigger = false });
-          info.Node.IsExpanded = true;
+          node.SerializedData.Nodes = new List<AudioTriggerData>();
         }
+
+        node.SerializedData.Nodes.Add(newNode.SerializedData);
+
+        node.ChildNodes.Add(newNode);
+        node.HasChildNodes = true;
+        node.IsExpanded = true;
       }
     }
 
     private void CreateTriggerClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info)
+      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is AudioTriggerTreeViewNode node)
       {
-        info.Node.ChildNodes.Add(new AudioTriggerTreeViewNode { Content = "New Trigger", IsTrigger = true });
-        info.Node.IsExpanded = true;
+        var newNode = new AudioTriggerTreeViewNode { Content = "New Trigger", IsTrigger = true, IsChecked = true, HasChildNodes = false };
+        newNode.SerializedData = new AudioTriggerData { Name = "New Trigger", TriggerData = new AudioTrigger { Name = "New Trigger" } };
+
+        bool? previous = node.IsChecked;
+        node.ChildNodes.Add(newNode);
+        node.IsChecked = previous;
+        
+        if (node.SerializedData.Nodes == null)
+        {
+          node.SerializedData.Nodes = new List<AudioTriggerData>();
+        }
+
+        node.SerializedData.Nodes.Add(newNode.SerializedData);
       }
     }
 
@@ -188,7 +216,20 @@ namespace EQLogParser
 
     private void ItemEndEdit(object sender, TreeViewItemEndEditEventArgs e)
     {
+      if (!e.Cancel && e.Node is AudioTriggerTreeViewNode node)
+      {
+        // delay because node still shows old value
+        Dispatcher.InvokeAsync(() =>
+        {
+          node.SerializedData.Name = node.Content as string;
+          if (node.IsTrigger && node.SerializedData.TriggerData != null)
+          {
+            node.SerializedData.TriggerData.Name = node.Content as string;
+          }
 
+          AudioTriggerManager.Instance.Update(false);
+        }, System.Windows.Threading.DispatcherPriority.Background);
+      }
     }
 
     private void ItemContextMenuOpening(object sender, ItemContextMenuOpeningEventArgs e)
@@ -198,7 +239,7 @@ namespace EQLogParser
         addFolderMenuItem.IsEnabled = false; // !node.IsTrigger;
         addTriggerMenuItem.IsEnabled = false; // (!node.IsTrigger && node.Level > 0);
         deleteTriggerMenuItem.IsEnabled = (node.Level > 0);
-        renameMenuItem.IsEnabled = false; // (node.Level > 0);
+        renameMenuItem.IsEnabled = (node.Level > 0);
       }
     }
 
@@ -256,6 +297,48 @@ namespace EQLogParser
       }
     }
 
+    private void ValueChanged(object sender, ValueChangedEventArgs args)
+    {
+      if (args.Property.SelectedObject is AudioTrigger trigger)
+      {
+        if (trigger.UseRegex)
+        {
+          bool isValid = IsValidRegex(trigger.Pattern);
+          if (trigger.Warnings != "None" && isValid)
+          {
+            trigger.Warnings = "None";
+            ((PropertyItem)thePropertyGrid.Properties[4]).Value = "None";
+          }
+          else if (trigger.Warnings == "None" && !isValid)
+          {
+            trigger.Warnings = "Invalid Regex";
+            ((PropertyItem)thePropertyGrid.Properties[4]).Value = "Invalid Regex";
+          }
+        }
+        else if (trigger.Warnings != "None")
+        {
+          trigger.Warnings = "None";
+          ((PropertyItem)thePropertyGrid.Properties[4]).Value = "None";
+        }
+
+        AudioTriggerManager.Instance.Update();
+      }
+    }
+
+    private bool IsValidRegex(string pattern)
+    {
+      bool pass = true;
+      try
+      {
+        new Regex(pattern, RegexOptions.Compiled);
+      }
+      catch (Exception)
+      {
+        pass = false;
+      }
+      return pass;
+    }
+
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
 
@@ -263,10 +346,9 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         SaveExpanded(treeView.Nodes.Cast<AudioTriggerTreeViewNode>().ToList());
+        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         AudioTriggerManager.Instance.EventsUpdateTree -= EventsUpdateTree;
-        AudioTriggerManager.Instance.Update();
         treeView.Dispose();
         disposedValue = true;
       }
