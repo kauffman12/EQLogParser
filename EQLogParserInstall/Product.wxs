@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.39" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.40" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -144,58 +144,70 @@
         <File Id="EQLogParser.runtimeconfig.json" Name="EQLogParser.runtimeconfig.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.runtimeconfig.json" />
       </Component>      
       <Component Win64="yes" Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F">
-        <File Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser.TargetDir)log4net.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser.TargetDir)log4net.dll" />
       </Component>
       <Component Win64="yes" Id="FontAwesome5.dll" Guid="8416E883-7350-4D80-B3D1-2965E4C01DB8">
-        <File Id="FontAwesome5.dll" Name="FontAwesome5.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="FontAwesome5.dll" Name="FontAwesome5.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.dll" />
       </Component>
 	    <Component Win64="yes" Id="FontAwesome5.Net.dll" Guid="57EB460B-BA13-4DA0-9036-DC113FE8635B">
-	      <File Id="FontAwesome5.Net.dll" Name="FontAwesome5.Net.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.Net.dll" />
+	      <File CompanionFile="EQLogParser.dll" Id="FontAwesome5.Net.dll" Name="FontAwesome5.Net.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.Net.dll" />
 	    </Component>		  
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
-        <File Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Data.WPF.dll" Guid="29B0F002-C736-4787-A07A-4AD3C895CBF7">
-        <File Id="Syncfusion.Data.WPF.dll" Name="Syncfusion.Data.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Data.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Data.WPF.dll" Name="Syncfusion.Data.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Data.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Edit.WPF.dll" Guid="5089E626-B2D8-4B55-97D2-2AF59AC148E6">
-        <File Id="Syncfusion.Edit.WPF.dll" Name="Syncfusion.Edit.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Edit.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Edit.WPF.dll" Name="Syncfusion.Edit.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Edit.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.GridCommon.WPF.dll" Guid="CBDF14C6-F0D5-420D-88FF-0DD509AB3A36">
-        <File Id="Syncfusion.GridCommon.WPF.dll" Name="Syncfusion.GridCommon.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.GridCommon.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.GridCommon.WPF.dll" Name="Syncfusion.GridCommon.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.GridCommon.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Licensing.dll" Guid="508A0992-C1FC-4DE4-8551-98B69669BE43">
-        <File Id="Syncfusion.Licensing.dll" Name="Syncfusion.Licensing.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Licensing.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Licensing.dll" Name="Syncfusion.Licensing.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Licensing.dll" />
       </Component>
+      <Component Win64="yes" Id="Syncfusion.PropertyGrid.WPF.dll" Guid="6C4BB5A3-E674-496D-AEC3-7105338554FA">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.PropertyGrid.WPF.dll" Name="Syncfusion.PropertyGrid.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.PropertyGrid.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.SfBusyIndicator.WPF.dll" Guid="5C2CDF03-73B7-4A0A-9857-945EDB95B07E">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfBusyIndicator.WPF.dll" Name="Syncfusion.SfBusyIndicator.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfBusyIndicator.WPF.dll" />
+      </Component> 
       <Component Win64="yes" Id="Syncfusion.SfChart.WPF.dll" Guid="EB9F99E6-52B6-4CB0-BB4A-C18AEA3182B3">
-        <File Id="Syncfusion.SfChart.WPF.dll" Name="Syncfusion.SfChart.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfChart.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfChart.WPF.dll" Name="Syncfusion.SfChart.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfChart.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.SfGrid.WPF.dll" Guid="BFA467E9-11A2-408B-9316-8DB5A4AA1F0A">
-        <File Id="Syncfusion.SfGrid.WPF.dll" Name="Syncfusion.SfGrid.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfGrid.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfGrid.WPF.dll" Name="Syncfusion.SfGrid.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfGrid.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.SfGridCommon.WPF.dll" Guid="B87A4DAE-FA49-401C-A034-72466EA4D1FA">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfGridCommon.WPF.dll" Name="Syncfusion.SfGridCommon.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfGridCommon.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.SfInput.WPF.dll" Guid="478A6221-BB5D-410A-B421-2333CD771152">
-        <File Id="Syncfusion.SfInput.WPF.dll" Name="Syncfusion.SfInput.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfInput.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfInput.WPF.dll" Name="Syncfusion.SfInput.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfInput.WPF.dll" />
       </Component>      
       <Component Win64="yes" Id="Syncfusion.SfSkinManager.WPF.dll" Guid="33F08F96-DA5F-471D-88F0-C4E7A5A50621">
-        <File Id="Syncfusion.SfSkinManager.WPF.dll" Name="Syncfusion.SfSkinManager.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfSkinManager.WPF.dll" />
-      </Component>      
-      <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="197A0E8A-FAEC-41C1-BA86-F62C3B8E7947">
-        <File Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfSkinManager.WPF.dll" Name="Syncfusion.SfSkinManager.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfSkinManager.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.SfTreeView.WPF.dll" Guid="ADC30862-DF9C-4B73-BE80-3D2C8C8BCA65">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfTreeView.WPF.dll" Name="Syncfusion.SfTreeView.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfTreeView.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="AF0E3E2F-9188-4C7A-A7EB-11A04F3022D3">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
       </Component>   
       <Component Win64="yes" Id="Syncfusion.Themes.MaterialDark.WPF.dll" Guid="3993C944-FB4A-475B-B66A-AA6D15D6DCDD">
-        <File Id="Syncfusion.Themes.MaterialDark.WPF.dll" Name="Syncfusion.Themes.MaterialDark.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialDark.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Themes.MaterialDark.WPF.dll" Name="Syncfusion.Themes.MaterialDark.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialDark.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Guid="E3042628-C320-47CF-8069-6A85E7EA87FA">
-        <File Id="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Name="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialDarkCustom.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Name="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialDarkCustom.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Themes.MaterialLight.WPF.dll" Guid="108AA0E6-409D-4C49-9FEF-84DF04858DB5">
-        <File Id="Syncfusion.Themes.MaterialLight.WPF.dll" Name="Syncfusion.Themes.MaterialLight.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialLight.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Themes.MaterialLight.WPF.dll" Name="Syncfusion.Themes.MaterialLight.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialLight.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.Classic.dll" Guid="BDFC58AB-E906-42A5-B081-402299D84EE1">
-        <File Id="Syncfusion.Tools.WPF.Classic.dll" Name="Syncfusion.Tools.WPF.Classic.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.Classic.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Tools.WPF.Classic.dll" Name="Syncfusion.Tools.WPF.Classic.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.Classic.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
-        <File Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
       </Component>    
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
