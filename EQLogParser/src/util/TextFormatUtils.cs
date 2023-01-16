@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Media;
 
 namespace EQLogParser
@@ -209,6 +212,23 @@ namespace EQLogParser
       }
 
       return roman.ToString();
+    }
+
+    [DebuggerHidden]
+    internal static bool IsValidRegex(string pattern)
+    {
+      bool pass = true;
+
+      try
+      {
+        new Regex(pattern);
+      }
+      catch (Exception)
+      {
+        pass = false;
+      }
+
+      return pass;
     }
   }
 }

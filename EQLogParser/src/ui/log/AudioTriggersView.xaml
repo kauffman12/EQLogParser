@@ -25,7 +25,7 @@
       </Button>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="watchGina" IsChecked="False" Margin="0,1,8,0" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for Shared GINA Triggers</CheckBox>
+      <CheckBox x:Name="watchGina" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for Shared GINA Triggers</CheckBox>
     </StackPanel>
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
@@ -54,18 +54,23 @@
            ItemTemplateSelector="{StaticResource audioTriggerTemplateSelector}"
            Margin="0"
            NodeChecked="NodeChecked"
+           NodePopulationMode="OnDemand"
            Padding="0"
            SelectionMode="Single"
+           PreviewMouseRightButtonDown="PreviewMouseRightButtonDown"
            SelectionChanged="SelectionChanged"
            ShowRootLines="False">
           <syncfusion:SfTreeView.ItemContextMenu>
             <ContextMenu>
-              <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
-              <Separator />
-              <MenuItem x:Name="addFolderMenuItem" Header="Add Folder" Click="CreateNodeClick" />
-              <MenuItem x:Name="addTriggerMenuItem" Header="Add Trigger" Click="CreateTriggerClick" />
-              <Separator />
+              <MenuItem x:Name="newMenuItem" Header="New">
+                <MenuItem Header="Folder" Click="CreateNodeClick" />
+                <MenuItem Header="Trigger" Click="CreateTriggerClick" />
+              </MenuItem>
+              <Separator x:Name="newSeparator" />
               <MenuItem x:Name="deleteTriggerMenuItem" Header="Delete" Click="DeleteClick" />
+              <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
+              <Separator x:Name="importSeparator" />
+              <MenuItem x:Name="importMenuItem" Header="Import (+Merge)" Click="ImportClick" />
             </ContextMenu>
           </syncfusion:SfTreeView.ItemContextMenu>
         </syncfusion:SfTreeView>
@@ -75,22 +80,49 @@
         <Grid.RowDefinitions>
           <RowDefinition Height="300*"></RowDefinition>
         </Grid.RowDefinitions>
-        <syncfusion:PropertyGrid
+        <StackPanel Orientation="Vertical" Grid.Row="0">
+          <syncfusion:PropertyGrid
             x:Name="thePropertyGrid"
             Grid.Row="0"
             BorderBrush="{DynamicResource ContentBackgroundAlt2}"
             BorderThickness="1"
+            ButtonPanelVisibility="Collapsed"
+            EnableGrouping="True"
+            DescriptionPanelVisibility="Collapsed"
+            SearchBoxVisibility="Collapsed"
+            IsEnabled="False"
+            PropertyExpandMode="NestedMode"
             Margin="0"
+            SortDirection="{x:Null}"
+            EnableToolTip="False"
+            AutoGenerateItems="False"
             UpdateSourceMode="Immediately"
-            ValueChanged="ValueChanged"
-            SelectedObject="{Binding SelectedAudioTrigger}">
-          <syncfusion:PropertyGrid.PropertyNameColumnDefinition>
-            <GridLength>150</GridLength> 
-          </syncfusion:PropertyGrid.PropertyNameColumnDefinition>
-          <syncfusion:PropertyGrid.DataContext>
-            <local:AudioTriggerPropertyViewModel />
-          </syncfusion:PropertyGrid.DataContext>
-        </syncfusion:PropertyGrid>
+            ValueChanged="ValueChanged">
+            <syncfusion:PropertyGrid.PropertyNameColumnDefinition>
+              <GridLength>200</GridLength>
+            </syncfusion:PropertyGrid.PropertyNameColumnDefinition>
+            <syncfusion:PropertyGrid.Items>
+              <syncfusion:PropertyGridItem CategoryName="General" PropertyName="Comments" DisplayName="Comments" Description="Notes about this Trigger." />
+              <syncfusion:PropertyGridItem x:Name="patternItem" CategoryName="General" PropertyName="Pattern" DisplayName="Pattern" Description="Text to match on. The Text is not case sensitive. If {c} is specified within the Text Pattern it will be replaced with your character name. If {s}, {s1}, {s2}, etc are specified they will match any string. Both {c} and {s} options will be available to use in the Text to Speak field. Note that the {s} options are only available if using Regex while {c} works with both."/>
+              <syncfusion:PropertyGridItem x:Name="useRegexItem" CategoryName="General" PropertyName="UseRegex" DisplayName="Use Regex" Description="True if Regex is to be used for the specified Pattern."/>
+              <syncfusion:PropertyGridItem CategoryName="General" PropertyName="Priority" DisplayName="Priority" Description="Priority used to determine if an Audio Trigger may be interrupted. The highest priority is 1 and lowest is 5. Interruptions may happen any time a higher priority trigger needs to play while a lower priority trigger has not finished."/>
+              <syncfusion:PropertyGridItem CategoryName="General" PropertyName="TextToSpeak" DisplayName="Text to Speak" Description="The Phrase to be spoken. {c} and {s}, as defined by the Pattern, may also be included."/>
+              <syncfusion:PropertyGridItem x:Name="enableTimerItem" CategoryName="General" PropertyName="EnableTimer" DisplayName="Enable Timer" Description="True if a Timer is also started when this Trigger has been executed."/>
+              <syncfusion:PropertyGridItem x:Name="timerDurationItem" CategoryName="Timer Settings" PropertyName="DurationSeconds" DisplayName="Duration Seconds" Visibility="Collapsed" Description="Number of Seconds after the Trigger has been executed before the Timer completes." />
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndTextToSpeak" DisplayName="Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken at completion of the Timer. {c} may be included."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningSeconds" DisplayName="Warning Time" Visibility="Collapsed" Description="Seconds before Timer ending to warn the user with the Warning Text."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningTextToSpeak" DisplayName="Warning Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken at the Warning Time. {c} may be included."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndEarlyPattern" DisplayName="End Early Pattern" Visibility="Collapsed" Description="If this Text Pattern is matched it will cause the Timer to end even if there is time remaining."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndUseRegex" DisplayName="Use Regex" Visibility="Collapsed" Description="True if Regex is to be used for the specified End Early Pattern."/>
+              <syncfusion:PropertyGridItem x:Name="errorsItem" CategoryName="Status" PropertyName="Errors" DisplayName="Errors" IsReadOnly="True" Description="Any errors or warnings associated with the Trigger settings." />
+              <syncfusion:PropertyGridItem x:Name="evalTimeItem" CategoryName="Status" PropertyName="LongestEvalTime" DisplayName="Longest Eval Time (μs)" IsReadOnly="True" Description="The longest time recorded for checking the specified Pattern for a match. The time is in microseconds. If a change is made to the Pattern the value will be reset. This should help identify slow Triggers and ideally this value stays below 1000."/>
+            </syncfusion:PropertyGrid.Items>
+          </syncfusion:PropertyGrid>
+          <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Visibility="Collapsed">
+            <Button x:Name="saveButton" Margin="8,8,0,0" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
+            <Button x:Name="cancelButton" Margin="4,8,0,0" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+          </StackPanel>
+        </StackPanel>
       </Grid>
     </Grid>
   </Grid>

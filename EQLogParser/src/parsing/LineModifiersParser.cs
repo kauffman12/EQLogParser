@@ -308,6 +308,9 @@ namespace EQLogParser
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
               PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL);
               break;
+            case "Locked":
+              // do nothing for now
+              break;
           }
 
           temp = ""; // reset

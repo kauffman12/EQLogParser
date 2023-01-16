@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using System.Xml;
 
 namespace EQLogParser
@@ -127,57 +128,7 @@ namespace EQLogParser
                     {
                       var encoded = xml.Substring(start + 13, end - start - 13);
                       var decoded = Convert.FromBase64String(encoded);
-
-                      using (var zip = new ZipArchive(new MemoryStream(decoded), ZipArchiveMode.Read))
-                      {
-                        var entry = zip.Entries.First();
-                        using (StreamReader sr = new StreamReader(entry.Open()))
-                        {
-                          var triggerXml = sr.ReadToEnd();
-                          var audioTriggerData = ConvertToJson(triggerXml);
-
-                          dispatcher.InvokeAsync(() =>
-                          {
-                            if (audioTriggerData == null)
-                            {
-                              string badMessage = "GINA Triggers received";
-                              if (!string.IsNullOrEmpty(player))
-                              {
-                                badMessage += " from " + player;
-                              }
-
-                              badMessage += " but no Voice to Text Triggers found.";
-                              new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA, false).ShowDialog();
-                            }
-                            else
-                            {
-                              var message = "Accept GINA Triggers?\r\n";
-                              if (!string.IsNullOrEmpty(player))
-                              {
-                                message = "Accept GINA Triggers from " + player + "?\r\n";
-                              }
-
-                              string includes = null;
-                              if (audioTriggerData.Nodes.Count > 0)
-                              {
-                                includes = string.Join(",", audioTriggerData.Nodes.Select(node => node.Name).ToArray());
-                              }
-
-                              message = string.IsNullOrEmpty(includes) ? message : (message + "Includes: " + includes);
-
-                              var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, true);
-                              msgDialog.ShowDialog();
-
-                              if (msgDialog.IsYesClicked)
-                              {
-                                AudioTriggerManager.Instance.MergeTriggers(audioTriggerData);
-                              }
-                            }
-
-                            NextGinaTask(ginaKey);
-                          });
-                        }
-                      }
+                      Import(decoded, player, ginaKey);
                     }
                     else
                     {
@@ -217,6 +168,88 @@ namespace EQLogParser
           client.Dispose();
         }
       });
+    }
+
+    public static void Import(byte[] data, string player, string ginaKey)
+    {
+      var dispatcher = Application.Current.Dispatcher;
+
+      using (var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read))
+      {
+        var entry = zip.Entries.First();
+        using (StreamReader sr = new StreamReader(entry.Open()))
+        {
+          var triggerXml = sr.ReadToEnd();
+          var audioTriggerData = ConvertToJson(triggerXml);
+
+          dispatcher.InvokeAsync(() =>
+          {
+            if (audioTriggerData == null)
+            {
+              string badMessage = "GINA Triggers received";
+              if (!string.IsNullOrEmpty(player))
+              {
+                badMessage += " from " + player;
+              }
+
+              badMessage += " but no Voice to Text Triggers found.";
+              new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA, false).ShowDialog();
+            }
+            else
+            {
+              var message = "Import GINA Triggers?\r\n";
+              if (!string.IsNullOrEmpty(player))
+              {
+                message = "Import GINA Triggers from " + player + "?\r\n";
+              }
+
+              string includes = null;
+              if (audioTriggerData.Nodes.Count > 0)
+              {
+                includes = string.Join(",", audioTriggerData.Nodes.Select(node => node.Name).ToArray());
+              }
+
+              message = string.IsNullOrEmpty(includes) ? message : (message + "Includes: " + includes);
+
+              var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, true);
+              msgDialog.ShowDialog();
+
+              if (msgDialog.IsYesClicked)
+              {
+                AudioTriggerManager.Instance.MergeTriggers(audioTriggerData);
+              }
+            }
+
+            if (ginaKey != null)
+            {
+              NextGinaTask(ginaKey);
+            }
+          });
+        }
+      }
+    }
+
+    public static void Import(byte[] data, AudioTriggerData parent)
+    {
+      var dispatcher = Application.Current.Dispatcher;
+
+      using (var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read))
+      {
+        var entry = zip.Entries.First();
+        using (StreamReader sr = new StreamReader(entry.Open()))
+        {
+          var triggerXml = sr.ReadToEnd();
+          var audioTriggerData = ConvertToJson(triggerXml);
+
+          dispatcher.InvokeAsync(() =>
+          {
+            if (audioTriggerData != null)
+            {
+              AudioTriggerManager.Instance.MergeTriggers(audioTriggerData, parent);
+            }
+          });
+        }
+      }
     }
 
     private static AudioTriggerData ConvertToJson(string xml)
@@ -263,24 +296,75 @@ namespace EQLogParser
           {
             foreach (XmlNode triggerNode in triggersList.SelectNodes("Trigger"))
             {
-              // ignore anything that's not using text to voice
-              if (triggerNode.SelectSingleNode("UseTextToVoice").InnerText is string value && bool.TryParse(value, out bool result) && result)
+              bool goodTrigger = false;
+              var trigger = new AudioTrigger();
+              trigger.Name = GetText(triggerNode, "Name");
+              trigger.Pattern = GetText(triggerNode, "TriggerText");
+              trigger.Comments = GetText(triggerNode, "Comments");
+
+              if (bool.TryParse(GetText(triggerNode, "UseTextToVoice"), out bool useText))
               {
-                var trigger = new AudioTrigger();
-                trigger.Name = triggerNode.SelectSingleNode("Name").InnerText;
-                trigger.Pattern = triggerNode.SelectSingleNode("TriggerText").InnerText;
-                trigger.Speak = triggerNode.SelectSingleNode("TextToVoiceText").InnerText;
+                goodTrigger = true;
+                trigger.TextToSpeak = GetText(triggerNode, "TextToVoiceText");
+              }
 
-                if (bool.TryParse(triggerNode.SelectSingleNode("EnableRegex").InnerText, out bool regex))
-                {
-                  trigger.UseRegex = regex;
-                }
+              if (bool.TryParse(GetText(triggerNode, "EnableRegex"), out bool regex))
+              {
+                trigger.UseRegex = regex;
+              }
                 
-                if (bool.TryParse(triggerNode.SelectSingleNode("InterruptSpeech").InnerText, out bool interrupt))
+              if (bool.TryParse(GetText(triggerNode, "InterruptSpeech"), out bool interrupt))
+              {
+                trigger.Priority = interrupt ? 1 : 5;
+              }
+
+              if ("Timer".Equals(GetText(triggerNode, "TimerType")))
+              {
+                goodTrigger = true;
+                trigger.EnableTimer = true;
+                
+                if (int.TryParse(GetText(triggerNode, "TimerDuration"), out int duration))
                 {
-                  trigger.Priority = interrupt ? 1 : 5;
+                  trigger.DurationSeconds = duration;
                 }
 
+                if (int.TryParse(GetText(triggerNode, "TimerEndingTime"), out int endTime))
+                {
+                  trigger.WarningSeconds = endTime;
+                }
+
+                if (triggerNode.SelectSingleNode("TimerEndedTrigger") is XmlNode timerEndedNode)
+                {
+                  if (bool.TryParse(GetText(timerEndedNode, "UseTextToVoice"), out bool useText2))
+                  {
+                    trigger.EndTextToSpeak = GetText(timerEndedNode, "TextToVoiceText");
+                  }
+                }
+
+                if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
+                {
+                  if (bool.TryParse(GetText(timerEndingNode, "UseTextToVoice"), out bool useText2))
+                  {
+                    trigger.WarningTextToSpeak = GetText(timerEndingNode, "TextToVoiceText");
+                  }
+                }
+
+                if (triggerNode.SelectSingleNode("TimerEarlyEnders") is XmlNode endingEarlyNode)
+                {
+                  if (endingEarlyNode.SelectSingleNode("EarlyEnder") is XmlNode enderNode)
+                  {
+                    trigger.EndEarlyPattern = GetText(enderNode, "EarlyEndText");
+
+                    if (bool.TryParse(GetText(enderNode, "EnableRegex"), out bool regex2))
+                    {
+                      trigger.EndUseRegex = regex2;
+                    }
+                  }
+                }
+              }
+
+              if (goodTrigger)
+              {
                 triggers.Add(new AudioTriggerData { Name = trigger.Name, TriggerData = trigger });
                 added.Add(trigger);
               }
@@ -304,6 +388,16 @@ namespace EQLogParser
           HandleTriggerGroups(node.ChildNodes, audioTriggerNodes, added);
         }
       }
+    }
+
+    private static string GetText(XmlNode node, string value)
+    {
+      if (node.SelectSingleNode(value) is XmlNode selected)
+      {
+        return selected.InnerText?.Trim();
+      }
+
+      return "";
     }
   }
 }

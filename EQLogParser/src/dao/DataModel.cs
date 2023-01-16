@@ -19,21 +19,22 @@ namespace EQLogParser
 
   internal class AudioTrigger : NotificationObject
   {
-    [Display(Name = "Use Regex")]
-    public bool UseRegex { get; set; }
-    [Display(Name = "Text to Speak")]
-    public string Speak { get; set; }
+    public string Comments { get; set; }
+    public long DurationSeconds { get; set; }
+    public bool EnableTimer { get; set; }
+    public string EndEarlyPattern { get; set; }
+    public string EndTextToSpeak { get; set; }
+    public bool EndUseRegex { get; set; }
+    public string Errors { get; set; } = "None";
+    public double LastTriggered { get; set; }
+    public long LongestEvalTime { get; set; } = -1;
+    public string Name { get; set; }
     public string Pattern { get; set; }
     public long Priority { get; set; } = 5;
-    [Editable(false)]
-    public string Warnings { get; set; } = "None";
-    public string Name;
-    public double LastTriggered;
-  }
-
-  internal class AudioTriggerPropertyViewModel
-  {
-    public object SelectedAudioTrigger { get; set; }
+    public string TextToSpeak { get; set; }
+    public bool UseRegex { get; set; }
+    public long WarningSeconds { get; set; }
+    public string WarningTextToSpeak { get; set; }
   }
 
   internal class AudioTriggerData

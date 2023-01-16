@@ -1,19 +1,15 @@
-﻿
+﻿using Syncfusion.DocIO;
 using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
 using System.Reflection;
+using System.Windows.Controls;
 using System.Windows.Data;
 
 namespace EQLogParser
 {
-  public class PriorityEditor : ITypeEditor
+  internal class WrapTextEditor : ITypeEditor
   {
-    IntegerTextBox integerTextBox;
-
-    public PriorityEditor()
-    {
-
-    }
+    TextBox textBox;
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -26,31 +22,34 @@ namespace EQLogParser
           ValidatesOnExceptions = true,
           ValidatesOnDataErrors = true
         };
-        BindingOperations.SetBinding(integerTextBox, IntegerTextBox.ValueProperty, binding);
+
+        BindingOperations.SetBinding(textBox, TextBox.TextProperty, binding);
       }
       else
       {
-        integerTextBox.IsEnabled = false;
+        textBox.IsEnabled = false;
         var binding = new Binding("Value")
         {
           Source = info,
           ValidatesOnExceptions = true,
           ValidatesOnDataErrors = true
         };
-        BindingOperations.SetBinding(integerTextBox, IntegerTextBox.ValueProperty, binding);
+
+        BindingOperations.SetBinding(textBox, TextBox.TextProperty, binding);
       }
     }
+
     public object Create(PropertyInfo propertyInfo)
     {
-      integerTextBox = new IntegerTextBox()
+      textBox = new TextBox()
       {
-        ApplyZeroColor = false,
-        MinValue = 1,
-        MaxValue = 5,
-        ShowSpinButton = true,
+        TextWrapping = System.Windows.TextWrapping.Wrap,
+        Padding = new System.Windows.Thickness(2)
       };
-      return integerTextBox;
+    
+      return textBox;
     }
+
     public void Detach(PropertyViewItem property)
     {
 

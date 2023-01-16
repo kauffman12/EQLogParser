@@ -241,6 +241,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Import Failed.
+        /// </summary>
+        internal static string IMPORT_ERROR {
+            get {
+                return ResourceManager.GetString("IMPORT_ERROR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Types.
         /// </summary>
         internal static string LINE_TYPES_SELECTED {
