@@ -357,6 +357,13 @@ namespace EQLogParser
               }
 
               var s = Helpers.GetStreamReader(f, start);
+
+              if (!s.EndOfStream)
+              {
+                // since position is not the start of a line just read one as junk
+                s.ReadLine();
+              }
+
               var list = new List<string>();
               var lastPercent = -1;
 
