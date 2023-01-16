@@ -11,7 +11,7 @@ namespace EQLogParser
     public static event EventHandler<TauntEvent> EventsNewTaunt;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly Regex CheckEyeRegex = new Regex(@"^Eye of (\w+)", RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex CheckEyeRegex = new Regex(@"^Eye of (\w+)");
     private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
     private static readonly List<string> SlainQueue = new List<string>();
     private static double SlainTime = double.NaN;
