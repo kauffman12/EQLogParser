@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -12,32 +14,37 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  internal class AudioTriggerManager
+  internal class TriggerManager
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     internal event EventHandler<bool> EventsUpdateTree;
-    internal static AudioTriggerManager Instance = new AudioTriggerManager();
-    private readonly string TRIGGERS_FILE = "audioTriggers.json";
+    internal static TriggerManager Instance = new TriggerManager();
+    private readonly string TRIGGERS_FILE = "triggers.json";
     private readonly DispatcherTimer UpdateTimer;
-    private readonly AudioTriggerData Data;
+    private readonly TriggerNode Data;
     private Channel<dynamic> LogChannel = null;
     private Task RefreshTask = null;
     private static object LockObject = new object();
+    private ObservableCollection<dynamic> AlertLog = new ObservableCollection<dynamic>();
+    private object CollectionLock = new object();
 
-    public AudioTriggerManager()
+    public TriggerManager()
     {
+      BindingOperations.EnableCollectionSynchronization(AlertLog, CollectionLock);
+
       var jsonString = ConfigUtil.ReadConfigFile(TRIGGERS_FILE);
       if (jsonString != null)
       {
-        Data = JsonSerializer.Deserialize<AudioTriggerData>(jsonString, new JsonSerializerOptions { IncludeFields = true });
+        Data = JsonSerializer.Deserialize<TriggerNode>(jsonString, new JsonSerializerOptions { IncludeFields = true });
       }
       else
       {
-        Data = new AudioTriggerData();
+        Data = new TriggerNode();
       }
 
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
@@ -46,6 +53,8 @@ namespace EQLogParser
 
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
 
+    internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
+
     internal void AddAction(LineData lineData)
     {
       lock (LockObject)
@@ -53,20 +62,20 @@ namespace EQLogParser
         LogChannel?.Writer.WriteAsync(lineData);
       }
 
-      if (!double.IsNaN(lineData.BeginTime) && ConfigUtil.IfSetOrElse("AudioTriggersWatchForGINA", false))
+      if (!double.IsNaN(lineData.BeginTime) && ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
       {
         GINAXmlParser.CheckGina(lineData);
       }
     }
 
-    internal AudioTriggerTreeViewNode GetTreeView()
+    internal TriggerTreeViewNode GetTreeView()
     {
-      var result = new AudioTriggerTreeViewNode { Content = "All Audio Triggers", IsChecked = Data.IsEnabled, IsTrigger = false, IsExpanded = Data.IsExpanded };
+      var result = new TriggerTreeViewNode { Content = "All Triggers", IsChecked = Data.IsEnabled, IsTrigger = false, IsExpanded = Data.IsExpanded };
       result.SerializedData = Data;
 
       lock (Data)
       {
-        AudioTriggerUtil.AddTreeNodes(Data.Nodes, result);
+        TriggerUtil.AddTreeNodes(Data.Nodes, result);
       }
 
       return result;
@@ -84,7 +93,7 @@ namespace EQLogParser
       return active;
     }
 
-    internal void MergeTriggers(AudioTriggerData newTriggers, string newFolder)
+    internal void MergeTriggers(TriggerNode newTriggers, string newFolder)
     {
       newFolder += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
       newTriggers.Name = newFolder;
@@ -99,11 +108,11 @@ namespace EQLogParser
       EventsUpdateTree?.Invoke(this, true);
     }
 
-    internal void MergeTriggers(AudioTriggerData newTriggers, AudioTriggerData parent = null)
+    internal void MergeTriggers(TriggerNode newTriggers, TriggerNode parent = null)
     {
       lock (Data)
       {
-        AudioTriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? Data : parent);
+        TriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? Data : parent);
         SaveTriggers();
       }
 
@@ -203,8 +212,8 @@ namespace EQLogParser
         }
       });
 
-      (Application.Current.MainWindow as MainWindow).ShowAudioTriggers(true);
-      ConfigUtil.SetSetting("AudioTriggersEnabled", true.ToString(CultureInfo.CurrentCulture));
+      (Application.Current.MainWindow as MainWindow).ShowTriggersEnabled(true);
+      ConfigUtil.SetSetting("TriggersEnabled", true.ToString(CultureInfo.CurrentCulture));
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
@@ -217,11 +226,11 @@ namespace EQLogParser
       }
 
       SaveTriggers();
-      (Application.Current.MainWindow as MainWindow)?.ShowAudioTriggers(false);
+      (Application.Current.MainWindow as MainWindow)?.ShowTriggersEnabled(false);
 
       if (save)
       {
-        ConfigUtil.SetSetting("AudioTriggersEnabled", false.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("TriggersEnabled", false.ToString(CultureInfo.CurrentCulture));
       }
     }
 
@@ -275,25 +284,40 @@ namespace EQLogParser
         if (endEarly)
         {
           CleanupWrapper(wrapper);
-          speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = wrapper.ModifiedEndSpeak, Matches = earlyMatches });
+          speechChannel.Writer.WriteAsync(new Speak
+          {
+            TriggerData = wrapper.TriggerData,
+            Text = wrapper.ModifiedEndSpeak,
+            Matches = earlyMatches,
+            Action = lineData.Action,
+            Type = "Timer End Early"
+          });
         }
       }
+
+      var time = (long)((DateTime.Now.Ticks - start) / 10);
+      wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
 
       if (found)
       {
         var speak = wrapper.ModifiedSpeak;
         if (!string.IsNullOrEmpty(speak))
         {
-          speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = speak, Matches = matches });
+          speechChannel.Writer.WriteAsync(new Speak
+          {
+            TriggerData = wrapper.TriggerData,
+            Text = speak,
+            Matches = matches,
+            Action = lineData.Action,
+            Type = "Trigger",
+            Eval = time
+          });
         }
 
         if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0)
         {
-          StartTimer(wrapper, speechChannel);
+          StartTimer(wrapper, speechChannel, lineData.Action);
         }
-
-        var time = (long)((DateTime.Now.Ticks - start) / 10);
-        wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
       }
     }
 
@@ -307,7 +331,7 @@ namespace EQLogParser
           synth.Rate = 1;
           synth.SetOutputToDefaultAudioDevice();
           synth.SelectVoiceByHints(VoiceGender.Female);
-          AudioTrigger previous = null;
+          Trigger previous = null;
 
           while (await speechChannel.Reader.WaitToReadAsync())
           {
@@ -338,6 +362,19 @@ namespace EQLogParser
               }
 
               synth.SpeakAsync(speak);
+
+              Application.Current.Dispatcher.InvokeAsync(() =>
+              {
+                // update log
+                var log = new ExpandoObject() as dynamic;
+                log.Time = result.TriggerData.LastTriggered;
+                log.Line = result.Action;
+                log.Name = result.TriggerData.Name;
+                log.Type = result.Type;
+                log.Eval = result.Eval;
+                AlertLog.Insert(0, log);
+              });
+
               previous = result.TriggerData;
             }
           }
@@ -349,7 +386,7 @@ namespace EQLogParser
       });
     }
 
-    private void StartTimer(TriggerWrapper wrapper, Channel<Speak> speechChannel)
+    private void StartTimer(TriggerWrapper wrapper, Channel<Speak> speechChannel, string action)
     {
       Task.Run(() =>
       {
@@ -381,7 +418,13 @@ namespace EQLogParser
 
                 if (proceed)
                 {
-                  speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = wrapper.ModifiedWarningSpeak });
+                  speechChannel.Writer.WriteAsync(new Speak
+                  {
+                    TriggerData = wrapper.TriggerData,
+                    Text = wrapper.ModifiedWarningSpeak,
+                    Action = action,
+                    Type = "Timer Warning"
+                  });
                 }
               }, warningSource.Token);
             }
@@ -405,7 +448,13 @@ namespace EQLogParser
 
             if (proceed)
             {
-              speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = wrapper.ModifiedEndSpeak });
+              speechChannel.Writer.WriteAsync(new Speak
+              {
+                TriggerData = wrapper.TriggerData,
+                Text = wrapper.ModifiedEndSpeak,
+                Action = action,
+                Type = "Timer End"
+              });
             }
           }, timerSource.Token);
         }
@@ -472,7 +521,7 @@ namespace EQLogParser
     private LinkedList<TriggerWrapper> GetActiveTriggers()
     {
       var activeTriggers = new LinkedList<TriggerWrapper>();
-      var enabledTriggers = new List<AudioTrigger>();
+      var enabledTriggers = new List<Trigger>();
 
       lock (Data)
       {
@@ -501,7 +550,7 @@ namespace EQLogParser
               ModifiedEndSpeak = modifiedEndSpeak
             };
 
-            pattern = AudioTriggerUtil.UpdatePattern(trigger.UseRegex, playerName, pattern);
+            pattern = TriggerUtil.UpdatePattern(trigger.UseRegex, playerName, pattern);
 
             if (trigger.UseRegex)
             {
@@ -516,7 +565,7 @@ namespace EQLogParser
             {
               if (trigger.EndEarlyPattern is string endEarlyPattern && !string.IsNullOrEmpty(endEarlyPattern))
               {
-                endEarlyPattern = AudioTriggerUtil.UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern);
+                endEarlyPattern = TriggerUtil.UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern);
 
                 if (trigger.EndUseRegex)
                 {
@@ -533,7 +582,7 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
-            LOG.Debug("Bad Audio Trigger?", ex);
+            LOG.Debug("Bad Trigger?", ex);
           }
         }
       }
@@ -541,7 +590,7 @@ namespace EQLogParser
       return activeTriggers;
     }
 
-    private void LoadActive(AudioTriggerData data, List<AudioTrigger> triggers)
+    private void LoadActive(TriggerNode data, List<Trigger> triggers)
     {
       if (data != null && data.Nodes != null && data.IsEnabled != false)
       {
@@ -580,9 +629,12 @@ namespace EQLogParser
 
     private class Speak
     {
-      public AudioTrigger TriggerData { get; set; }
+      public Trigger TriggerData { get; set; }
       public string Text { get; set; }
       public MatchCollection Matches { get; set; }
+      public string Action { get; set; }
+      public string Type { get; set; }
+      public long Eval { get; set; }
     }
 
     private class LowPriData
@@ -604,7 +656,7 @@ namespace EQLogParser
       public string ModifiedEndEarlyPattern { get; set; }
       public Regex Regex { get; set; }
       public Regex EndEarlyRegex { get; set; }
-      public AudioTrigger TriggerData { get; set; }
+      public Trigger TriggerData { get; set; }
     }
   }
 }

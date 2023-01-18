@@ -208,12 +208,12 @@ namespace EQLogParser
 
               if (msgDialog.IsYes2Clicked)
               {
-                AudioTriggerManager.Instance.MergeTriggers(audioTriggerData);
+                TriggerManager.Instance.MergeTriggers(audioTriggerData);
               }
               else if (msgDialog.IsYes1Clicked)
               {
                 var folderName = (player == null) ? "New Folder" : "From " + player;
-                AudioTriggerManager.Instance.MergeTriggers(audioTriggerData, folderName);
+                TriggerManager.Instance.MergeTriggers(audioTriggerData, folderName);
               }
             }
 
@@ -226,7 +226,7 @@ namespace EQLogParser
       }
     }
 
-    public static void Import(byte[] data, AudioTriggerData parent)
+    public static void Import(byte[] data, TriggerNode parent)
     {
       var dispatcher = Application.Current.Dispatcher;
 
@@ -242,25 +242,25 @@ namespace EQLogParser
           {
             if (audioTriggerData != null)
             {
-              AudioTriggerManager.Instance.MergeTriggers(audioTriggerData, parent);
+              TriggerManager.Instance.MergeTriggers(audioTriggerData, parent);
             }
           });
         }
       }
     }
 
-    private static AudioTriggerData ConvertToJson(string xml)
+    private static TriggerNode ConvertToJson(string xml)
     {
-      AudioTriggerData result = new AudioTriggerData();
+      TriggerNode result = new TriggerNode();
 
       try
       {
         var doc = new XmlDocument();
         doc.LoadXml(xml);
 
-        result.Nodes = new List<AudioTriggerData>();
+        result.Nodes = new List<TriggerNode>();
         var nodeList = doc.DocumentElement.SelectSingleNode("/SharedData");
-        var added = new List<AudioTrigger>();
+        var added = new List<Trigger>();
         HandleTriggerGroups(nodeList.ChildNodes, result.Nodes, added);
 
         if (added.Count == 0)
@@ -276,25 +276,25 @@ namespace EQLogParser
       return result;
     }
 
-    internal static void HandleTriggerGroups(XmlNodeList nodeList, List<AudioTriggerData> audioTriggerNodes, List<AudioTrigger> added)
+    internal static void HandleTriggerGroups(XmlNodeList nodeList, List<TriggerNode> audioTriggerNodes, List<Trigger> added)
     {
       foreach (XmlNode node in nodeList)
       {
         if (node.Name == "TriggerGroup")
         {
-          var data = new AudioTriggerData();
-          data.Nodes = new List<AudioTriggerData>();
+          var data = new TriggerNode();
+          data.Nodes = new List<TriggerNode>();
           data.Name = node.SelectSingleNode("Name").InnerText;
           audioTriggerNodes.Add(data);
 
-          var triggers = new List<AudioTriggerData>();
+          var triggers = new List<TriggerNode>();
           var triggersList = node.SelectSingleNode("Triggers");
           if (triggersList != null)
           {
             foreach (XmlNode triggerNode in triggersList.SelectNodes("Trigger"))
             {
               bool goodTrigger = false;
-              var trigger = new AudioTrigger();
+              var trigger = new Trigger();
               trigger.Name = GetText(triggerNode, "Name");
               trigger.Pattern = GetText(triggerNode, "TriggerText");
               trigger.Comments = GetText(triggerNode, "Comments");
@@ -376,7 +376,7 @@ namespace EQLogParser
 
               if (goodTrigger)
               {
-                triggers.Add(new AudioTriggerData { Name = trigger.Name, TriggerData = trigger });
+                triggers.Add(new TriggerNode { Name = trigger.Name, TriggerData = trigger });
                 added.Add(trigger);
               }
             }

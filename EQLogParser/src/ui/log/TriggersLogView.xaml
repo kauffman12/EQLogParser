@@ -1,0 +1,55 @@
+﻿<UserControl x:Class="EQLogParser.TriggersLogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:local="clr-namespace:EQLogParser"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="300*"></RowDefinition>
+    </Grid.RowDefinitions>
+    <syncfusion:SfDataGrid x:Name="dataGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="False"
+                           AutoGenerateColumns="False"
+                           ColumnSizer="AutoWithLastColumnFill"
+                           CurrentCellBorderThickness="0"
+                           FrozenColumnCount="1"
+                           Grid.Row="0"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           GridLinesVisibility="Horizontal"
+                           HeaderRowHeight="26"
+                           IsReadOnly="True"
+                           RowHeaderWidth="30"
+                           SelectionMode="Extended"
+                           ShowRowHeader="True">
+      <syncfusion:SfDataGrid.Resources>
+        <local:DateTimeConverter x:Key="DateTimeConverter" />
+        <Style TargetType="syncfusion:GridRowHeaderCell">
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+                <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                  <Grid>
+                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                  </Grid>
+                </Border>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Style>
+      </syncfusion:SfDataGrid.Resources>
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
+                                   Width="100" TextAlignment="Center" HeaderText="Time" />
+        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" Width="120"/>
+        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" Width="100" />
+        <syncfusion:GridTextColumn MappingName="Eval" HeaderText="Eval Time (μs)" Width="100" />
+        <syncfusion:GridTextColumn MappingName="Line" HeaderText="Line Matched" />
+      </syncfusion:SfDataGrid.Columns>
+    </syncfusion:SfDataGrid>
+  </Grid>
+</UserControl>

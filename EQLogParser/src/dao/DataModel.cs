@@ -14,7 +14,7 @@ namespace EQLogParser
       bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
   }
 
-  internal class AudioTrigger : NotificationObject
+  internal class Trigger : NotificationObject
   {
     public string Comments { get; set; }
     public long DurationSeconds { get; set; }
@@ -35,19 +35,19 @@ namespace EQLogParser
     public string WarningTextToSpeak { get; set; }
   }
 
-  internal class AudioTriggerData
+  internal class TriggerNode
   {
     public bool? IsEnabled { get; set; } = false;
     public bool IsExpanded { get; set; } = false;
     public string Name { get; set; }
-    public List<AudioTriggerData> Nodes { get; set; }
-    public AudioTrigger TriggerData { get; set; }
+    public List<TriggerNode> Nodes { get; set; }
+    public Trigger TriggerData { get; set; }
   }
 
-  internal class AudioTriggerTreeViewNode : TreeViewNode
+  internal class TriggerTreeViewNode : TreeViewNode
   {
     public bool IsTrigger { get; set; }
-    public AudioTriggerData SerializedData{ get; set; }
+    public TriggerNode SerializedData{ get; set; }
   }
 
   internal interface IAction { }
