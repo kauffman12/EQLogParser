@@ -842,14 +842,14 @@ namespace EQLogParser
           StartLoadTime = DateTime.Now;
           FilePosition = LineCount = 0;
 
-          string name = "You";
-          string server = "Unknown";
+          var name = "You";
+          var server = "Unknown";
           if (theFile.Length > 0)
           {
             LOG.Info("Selected Log File: " + theFile);
 
-            string file = Path.GetFileName(theFile);
-            MatchCollection matches = ParseFileName.Matches(file);
+            var file = Path.GetFileName(theFile);
+            var matches = ParseFileName.Matches(file);
             if (matches.Count == 1)
             {
               if (matches[0].Groups.Count > 1)
