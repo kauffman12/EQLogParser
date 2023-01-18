@@ -125,6 +125,7 @@ namespace EQLogParser
     [MethodImpl(MethodImplOptions.Synchronized)]
     internal void Start()
     {
+      Channel<LowPriData> lowPriChannel = Channel.CreateUnbounded<LowPriData>();
       Channel<Speak> speechChannel = Channel.CreateUnbounded<Speak>();
       StartSpeechReader(speechChannel);
       Channel<dynamic> logChannel;
@@ -154,87 +155,24 @@ namespace EQLogParser
             }
             else if (result is LineData lineData)
             {
-              var action = lineData.Action;
               var node = activeTriggers.First;
-              long totalTime = 0;
               while (node != null)
               {
                 // save since the nodes may get reordered
                 var nextNode = node.Next;
-                bool found = false;
-                long start = DateTime.Now.Ticks;
-                MatchCollection matches = null;
-                var wrapper = node.Value;
 
-                if (wrapper.Regex != null)
+                // if within a month assume handle it right away
+                if ((DateUtil.ToDouble(DateTime.Now) - node.Value.TriggerData.LastTriggered) <= 2628000)
                 {
-                  matches = wrapper.Regex.Matches(action);
-                  if (matches != null && matches.Count > 0)
-                  {
-                    found = true;
-                    wrapper.TriggerData.LastTriggered = DateUtil.ToDouble(DateTime.Now);
-                    UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
-                  }
+                  HandleTrigger(activeTriggers, node, lineData, speechChannel);
                 }
-                else if (!string.IsNullOrEmpty(wrapper.ModifiedPattern))
+                else
                 {
-                  if (action.Contains(wrapper.ModifiedPattern, StringComparison.OrdinalIgnoreCase))
-                  {
-                    found = true;
-                    UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
-                  }
+                  lowPriChannel.Writer.WriteAsync(new LowPriData { ActiveTriggers= activeTriggers, LineData = lineData,
+                    Node = node, SpeechChannel = speechChannel});
                 }
 
-                if (wrapper.TimerCancellations.Count > 0)
-                {
-                  MatchCollection earlyMatches = null;
-                  bool endEarly = false;
-                  if (wrapper.EndEarlyRegex != null)
-                  {
-                    earlyMatches = wrapper.EndEarlyRegex.Matches(action);
-                    if (earlyMatches != null && earlyMatches.Count > 0)
-                    {
-                      endEarly = true;
-                    }
-                  }
-                  else if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlyPattern))
-                  {
-                    if (action.Contains(wrapper.ModifiedEndEarlyPattern, StringComparison.OrdinalIgnoreCase))
-                    {
-                      endEarly = true;
-                    }
-                  }
-
-                  if (endEarly)
-                  {
-                    CleanupWrapper(wrapper);
-                    speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = wrapper.ModifiedEndSpeak, Matches = earlyMatches });
-                  }
-                }
-
-                if (found)
-                {
-                  var speak = wrapper.ModifiedSpeak;
-                  if (!string.IsNullOrEmpty(speak))
-                  {
-                    speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = speak, Matches = matches });
-                  }
-
-                  if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0)
-                  {                
-                    StartTimer(wrapper, speechChannel);
-                  }
-                }
-
-                var time = (long)((DateTime.Now.Ticks - start) / 10);
-                totalTime += time;
-                wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
                 node = nextNode;
-              }
-
-              if (totalTime > 50000)
-              {
-                LOG.Warn("Warning. Slow Audio Trigger execution time of " + (totalTime / 1000) + " milliseconds.");
               }
             }
           }
@@ -244,8 +182,25 @@ namespace EQLogParser
           // channel closed
         }
 
+        lowPriChannel?.Writer.Complete();
         speechChannel?.Writer.Complete();
         activeTriggers?.ForEach(wrapper => CleanupWrapper(wrapper));
+      });
+
+      _ = Task.Run(async () =>
+      {
+        try
+        {
+          while (await lowPriChannel.Reader.WaitToReadAsync())
+          {
+            var result = await lowPriChannel.Reader.ReadAsync();
+            HandleTrigger(result.ActiveTriggers, result.Node, result.LineData, result.SpeechChannel);
+          }
+        }
+        catch (Exception)
+        {
+          // end channel
+        }
       });
 
       (Application.Current.MainWindow as MainWindow).ShowAudioTriggers(true);
@@ -270,9 +225,82 @@ namespace EQLogParser
       }
     }
 
+    private void HandleTrigger(LinkedList<TriggerWrapper> activeTriggers, LinkedListNode<TriggerWrapper> node,
+      LineData lineData, Channel<Speak> speechChannel)
+    {
+      long start = DateTime.Now.Ticks;
+      var action = lineData.Action;
+      var wrapper = node.Value;
+      MatchCollection matches = null;
+      bool found = false;
+
+      if (wrapper.Regex != null)
+      {
+        matches = wrapper.Regex.Matches(action);
+        if (matches != null && matches.Count > 0)
+        {
+          found = true;
+          UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
+        }
+      }
+      else if (!string.IsNullOrEmpty(wrapper.ModifiedPattern))
+      {
+        if (action.Contains(wrapper.ModifiedPattern, StringComparison.OrdinalIgnoreCase))
+        {
+          found = true;
+          UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
+        }
+      }
+
+      if (wrapper.TimerCancellations.Count > 0)
+      {
+        MatchCollection earlyMatches = null;
+        bool endEarly = false;
+        if (wrapper.EndEarlyRegex != null)
+        {
+          earlyMatches = wrapper.EndEarlyRegex.Matches(action);
+          if (earlyMatches != null && earlyMatches.Count > 0)
+          {
+            endEarly = true;
+          }
+        }
+        else if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlyPattern))
+        {
+          if (action.Contains(wrapper.ModifiedEndEarlyPattern, StringComparison.OrdinalIgnoreCase))
+          {
+            endEarly = true;
+          }
+        }
+
+        if (endEarly)
+        {
+          CleanupWrapper(wrapper);
+          speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = wrapper.ModifiedEndSpeak, Matches = earlyMatches });
+        }
+      }
+
+      if (found)
+      {
+        var speak = wrapper.ModifiedSpeak;
+        if (!string.IsNullOrEmpty(speak))
+        {
+          speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = speak, Matches = matches });
+        }
+
+        if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0)
+        {
+          StartTimer(wrapper, speechChannel);
+        }
+
+        var time = (long)((DateTime.Now.Ticks - start) / 10);
+        wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
+      }
+    }
+
     private void StartSpeechReader(Channel<Speak> speechChannel)
     {
-      _ = Task.Run(async () => {
+      _ = Task.Run(async () =>
+      {
         try
         {
           var synth = new SpeechSynthesizer();
@@ -555,6 +583,14 @@ namespace EQLogParser
       public AudioTrigger TriggerData { get; set; }
       public string Text { get; set; }
       public MatchCollection Matches { get; set; }
+    }
+
+    private class LowPriData
+    {
+      public LinkedList<TriggerWrapper> ActiveTriggers { get; set; }
+      public LinkedListNode<TriggerWrapper> Node { get; set; }
+      public LineData LineData { get; set; }
+      public Channel<Speak> SpeechChannel { get; set; }
     }
 
     private class TriggerWrapper
