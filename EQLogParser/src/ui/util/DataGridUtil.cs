@@ -184,7 +184,7 @@ namespace EQLogParser
 
           if (needHeightChange || needWidthChange)
           {
-            dialog = new MessageWindow("Please Wait while Image is Processed.", EQLogParser.Resource.COPY_LARGE_IMAGE, false, true);
+            dialog = new MessageWindow("Please Wait while Image is Processed.", EQLogParser.Resource.COPY_LARGE_IMAGE);
             dialog.Show();
 
             gridBase.Dispatcher.InvokeAsync(() =>

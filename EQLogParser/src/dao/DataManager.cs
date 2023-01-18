@@ -559,14 +559,17 @@ namespace EQLogParser
           // need to handle older spells and multiple rate values
           if (spellData != null)
           {
-            AdpsKeys.ForEach(key =>
+            lock (LockObject)
             {
-              if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+              AdpsKeys.ForEach(key =>
               {
-                AdpsActive[key][spellData.LandsOnYou] = value;
-                RecalculateAdps();
-              }
-            });
+                if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+                {
+                  AdpsActive[key][spellData.LandsOnYou] = value;
+                  RecalculateAdps();
+                }
+              });
+            }
           }
         }
       }
@@ -662,16 +665,20 @@ namespace EQLogParser
     internal void ZoneChanged()
     {
       bool updated = false;
-      foreach (var active in AdpsActive)
+
+      lock (LockObject)
       {
-        active.Value.Keys.ToList().ForEach(landsOn =>
+        foreach (var active in AdpsActive)
         {
-          if (AdpsLandsOn[landsOn].Any(spellData => spellData.SongWindow))
+          active.Value.Keys.ToList().ForEach(landsOn =>
           {
-            AdpsActive[active.Key].Remove(landsOn);
-            updated = true;
-          }
-        });
+            if (AdpsLandsOn[landsOn].Any(spellData => spellData.SongWindow))
+            {
+              AdpsActive[active.Key].Remove(landsOn);
+              updated = true;
+            }
+          });
+        }
       }
 
       if (updated)

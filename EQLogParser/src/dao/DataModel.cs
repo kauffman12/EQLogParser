@@ -1,13 +1,10 @@
 ﻿using Syncfusion.UI.Xaml.TreeView.Engine;
-using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
-using System.Security.Policy;
 
 namespace EQLogParser
 {
@@ -32,6 +29,7 @@ namespace EQLogParser
     public string Pattern { get; set; }
     public long Priority { get; set; } = 5;
     public string TextToSpeak { get; set; }
+    public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
     public long WarningSeconds { get; set; }
     public string WarningTextToSpeak { get; set; }

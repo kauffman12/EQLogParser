@@ -288,10 +288,10 @@ namespace EQLogParser
 
         item.Click += (object sender, RoutedEventArgs e) =>
         {
-          var msgDialog = new MessageWindow("Clear Chat Archive for " + player + "?", EQLogParser.Resource.CLEAR_CHAT, true);
+          var msgDialog = new MessageWindow("Clear Chat Archive for " + player + "?", EQLogParser.Resource.CLEAR_CHAT, MessageWindow.IconType.Question, "Yes");
           msgDialog.ShowDialog();
 
-          if (msgDialog.IsYesClicked && ChatManager.DeleteArchivedPlayer(player))
+          if (msgDialog.IsYes1Clicked && ChatManager.DeleteArchivedPlayer(player))
           {
             if (PlayerChatManager != null && PlayerChatManager.GetCurrentPlayer().Equals(player, StringComparison.Ordinal))
             {

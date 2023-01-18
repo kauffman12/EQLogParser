@@ -18,6 +18,7 @@ namespace EQLogParser
           if (node.TriggerData != null)
           {
             child.IsTrigger = true;
+            child.IsChecked = node.IsEnabled;
             treeNode.ChildNodes.Add(child);
           }
           else
@@ -45,6 +46,7 @@ namespace EQLogParser
       to.Pattern = from.Pattern;
       to.Priority = from.Priority;
       to.TextToSpeak = from.TextToSpeak;
+      to.TriggerAgainOption= from.TriggerAgainOption;
       to.UseRegex = from.UseRegex;
       to.WarningSeconds = from.WarningSeconds;
       to.WarningTextToSpeak = from.WarningTextToSpeak;

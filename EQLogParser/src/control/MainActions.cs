@@ -50,10 +50,10 @@ namespace EQLogParser
             dispatcher.InvokeAsync(() =>
             {
               var msg = new MessageWindow("Version " + updated + " is Available. Download and Install?",
-                EQLogParser.Resource.CHECK_VERSION, true);
+                EQLogParser.Resource.CHECK_VERSION, MessageWindow.IconType.Question, "Yes");
               msg.ShowDialog();
 
-              if (msg.IsYesClicked)
+              if (msg.IsYes1Clicked)
               {
                 var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + updated + ".msi";
 
@@ -66,7 +66,7 @@ namespace EQLogParser
                     var path = System.Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
                     if (!Directory.Exists(path))
                     {
-                      new MessageWindow("Unable to Access Downloads Folder. Need to Download Manually.",
+                      new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.",
                         EQLogParser.Resource.CHECK_VERSION).ShowDialog();
                       return;
                     }
@@ -392,7 +392,8 @@ namespace EQLogParser
 
       if (saveFileDialog.ShowDialog().Value)
       {
-        var dialog = new MessageWindow("Saving " + fights.Count + " Selected Fights.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS, false, true);
+        var dialog = new MessageWindow("Saving " + fights.Count + " Selected Fights.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS,
+          MessageWindow.IconType.Save);
 
         Task.Delay(150).ContinueWith(task =>
         {
@@ -465,7 +466,7 @@ namespace EQLogParser
             {
               Application.Current.Dispatcher.InvokeAsync(() =>
               {
-                new MessageWindow("Error Saving. Can not access export file.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS, false, false).Show();
+                new MessageWindow("Error Saving. Can not access save file.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS, MessageWindow.IconType.Save).Show();
               });
             }
           }

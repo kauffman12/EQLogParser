@@ -1,58 +1,45 @@
-﻿using Syncfusion.DocIO;
-using Syncfusion.Windows.PropertyGrid;
-using Syncfusion.Windows.Shared;
+﻿using Syncfusion.Windows.PropertyGrid;
+using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
-  internal class WrapTextEditor : ITypeEditor
+  internal class WrapTextEditor : TextBoxEditor
   {
-    TextBox textBox;
+    private TextBox TextBox;
 
-    public void Attach(PropertyViewItem property, PropertyItem info)
+    public void SetForeground(string foreground)
     {
-      if (info.CanWrite)
-      {
-        var binding = new Binding("Value")
-        {
-          Mode = BindingMode.TwoWay,
-          Source = info,
-          ValidatesOnExceptions = true,
-          ValidatesOnDataErrors = true
-        };
-
-        BindingOperations.SetBinding(textBox, TextBox.TextProperty, binding);
-      }
-      else
-      {
-        textBox.IsEnabled = false;
-        var binding = new Binding("Value")
-        {
-          Source = info,
-          ValidatesOnExceptions = true,
-          ValidatesOnDataErrors = true
-        };
-
-        BindingOperations.SetBinding(textBox, TextBox.TextProperty, binding);
-      }
+      TextBox.SetResourceReference(TextBox.ForegroundProperty, foreground);
     }
 
-    public object Create(PropertyInfo propertyInfo)
+    public override object Create(PropertyInfo propertyInfo)
     {
-      textBox = new TextBox()
-      {
-        TextWrapping = System.Windows.TextWrapping.Wrap,
-        Padding = new System.Windows.Thickness(2)
-      };
-    
-      return textBox;
+      TextBox = base.Create(propertyInfo) as TextBox;
+      TextBox.TextWrapping = System.Windows.TextWrapping.Wrap;
+      TextBox.Padding = new System.Windows.Thickness(2);
+      return TextBox;
     }
 
-    public void Detach(PropertyViewItem property)
+    public override object Create(PropertyDescriptor descriotor)
     {
+      TextBox = base.Create(descriotor) as TextBox;
+      TextBox.TextWrapping = System.Windows.TextWrapping.Wrap;
+      TextBox.Padding = new System.Windows.Thickness(2);
+      return TextBox;
+    }
 
+    public override void Detach(PropertyViewItem property)
+    {
+      if (TextBox != null)
+      {
+        BindingOperations.ClearAllBindings(TextBox);
+      }
+
+      TextBox = null;
     }
   }
 }
