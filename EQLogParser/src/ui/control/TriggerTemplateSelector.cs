@@ -3,19 +3,19 @@ using System.Windows.Controls;
 
 namespace EQLogParser
 {
-  internal class AudioTriggerTemplateSelector : DataTemplateSelector
+  internal class TriggerTemplateSelector : DataTemplateSelector
   {
     public override DataTemplate SelectTemplate(object item, DependencyObject container)
     {
-      if (item is AudioTriggerTreeViewNode node)
+      if (item is TriggerTreeViewNode node)
       {
         if (node.IsTrigger)
         {
-          return Application.Current.Resources["AudioTriggerFileTemplate"] as DataTemplate;
+          return Application.Current.Resources["TriggerFileTemplate"] as DataTemplate;
         }
         else
         {
-          return Application.Current.Resources["AudioTriggerNodeTemplate"] as DataTemplate;
+          return Application.Current.Resources["TriggerNodeTemplate"] as DataTemplate;
         }
       }
 

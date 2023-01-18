@@ -15,9 +15,9 @@ using System.Windows.Controls;
 namespace EQLogParser
 {
   /// <summary>
-  /// Interaction logic for AudioTriggers.xaml
+  /// Interaction logic for TriggersView.xaml
   /// </summary>
-  public partial class AudioTriggersView : UserControl, IDisposable
+  public partial class TriggersView : UserControl, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -26,11 +26,11 @@ namespace EQLogParser
     private WrapTextEditor ErrorEditor;
     private TimerResetEditor TimerResetOptions;
 
-    public AudioTriggersView()
+    public TriggersView()
     {
       InitializeComponent();
 
-      if (ConfigUtil.IfSetOrElse("AudioTriggersWatchForGINA", false))
+      if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
       {
         watchGina.IsChecked = true;
       }
@@ -82,21 +82,21 @@ namespace EQLogParser
       timeEditor.Properties.Add("Minutes");
       thePropertyGrid.CustomEditorCollection.Add(timeEditor);
 
-      treeView.Nodes.Add(AudioTriggerManager.Instance.GetTreeView());
-      AudioTriggerManager.Instance.EventsUpdateTree += EventsUpdateTree;
+      treeView.Nodes.Add(TriggerManager.Instance.GetTreeView());
+      TriggerManager.Instance.EventsUpdateTree += EventsUpdateTree;
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
 
-      (Application.Current.MainWindow as MainWindow).Closing += AudioTriggersViewClosing;
+      (Application.Current.MainWindow as MainWindow).Closing += TriggersViewClosing;
     }
 
-    private void AudioTriggersViewClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void TriggersViewClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-      SaveExpanded(treeView.Nodes.Cast<AudioTriggerTreeViewNode>().ToList());
+      SaveExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
     }
 
     private void EventsLogLoadingComplete(object sender, bool e)
     {
-      if (AudioTriggerManager.Instance.IsActive())
+      if (TriggerManager.Instance.IsActive())
       {
         SetPlayer("Deactivate Triggers", "EQStopForegroundBrush", EFontAwesomeIcon.Solid_Square);
       }
@@ -111,7 +111,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         treeView.Nodes.Clear();
-        treeView.Nodes.Add(AudioTriggerManager.Instance.GetTreeView());
+        treeView.Nodes.Add(TriggerManager.Instance.GetTreeView());
       });
     }
 
@@ -120,13 +120,13 @@ namespace EQLogParser
       // one way to see if UI has been initialized
       if (startIcon?.Icon != FontAwesome5.EFontAwesomeIcon.None)
       {
-        ConfigUtil.SetSetting("AudioTriggersWatchForGINA", watchGina.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("TriggersWatchForGINA", watchGina.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
       }
     }
 
     private void ImportClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is AudioTriggerTreeViewNode node)
+      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is TriggerTreeViewNode node)
       {
         try
         {
@@ -173,19 +173,19 @@ namespace EQLogParser
       if (startIcon.Icon == EFontAwesomeIcon.Solid_Play)
       {
         SetPlayer("Deactivate Triggers", "EQStopForegroundBrush", EFontAwesomeIcon.Solid_Square);
-        AudioTriggerManager.Instance.Start();
+        TriggerManager.Instance.Start();
       }
       else
       {
         SetPlayer("Activate Triggers", "EQMenuIconBrush", EFontAwesomeIcon.Solid_Play);
-        AudioTriggerManager.Instance.Stop();
+        TriggerManager.Instance.Stop();
       }
     }
 
     private void ItemDropping(object sender, TreeViewItemDroppingEventArgs e)
     {
-      var target = e.TargetNode as AudioTriggerTreeViewNode;
-      var source = e.DraggingNodes[0] as AudioTriggerTreeViewNode;
+      var target = e.TargetNode as TriggerTreeViewNode;
+      var source = e.DraggingNodes[0] as TriggerTreeViewNode;
 
       if (target.Level == 0 && e.DropPosition != DropPosition.DropAsChild)
       {
@@ -199,8 +199,8 @@ namespace EQLogParser
         return;
       }
 
-      var targetParent = target.ParentNode as AudioTriggerTreeViewNode;
-      var sourceParent = source.ParentNode as AudioTriggerTreeViewNode;
+      var targetParent = target.ParentNode as TriggerTreeViewNode;
+      var sourceParent = source.ParentNode as TriggerTreeViewNode;
 
       if (e.DropPosition == DropPosition.DropAbove)
       {
@@ -228,55 +228,55 @@ namespace EQLogParser
 
         if (target.SerializedData.Nodes == null)
         {
-          target.SerializedData.Nodes = new List<AudioTriggerData>();
+          target.SerializedData.Nodes = new List<TriggerNode>();
         }
 
         target.SerializedData.Nodes.Add(source.SerializedData);
       }
 
-      AudioTriggerManager.Instance.Update(true);
+      TriggerManager.Instance.Update(true);
     }
 
     private void CreateNodeClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is AudioTriggerTreeViewNode node)
+      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is TriggerTreeViewNode node)
       {
-        var newNode = new AudioTriggerData { Name = LABEL_NEW_FOLDER };
+        var newNode = new TriggerNode { Name = LABEL_NEW_FOLDER };
 
         if (node.SerializedData.Nodes == null)
         {
-          node.SerializedData.Nodes = new List<AudioTriggerData>();
+          node.SerializedData.Nodes = new List<TriggerNode>();
         }
 
         node.SerializedData.IsExpanded = true;
         node.SerializedData.Nodes.Add(newNode);
-        AudioTriggerManager.Instance.Update();
+        TriggerManager.Instance.Update();
         EventsUpdateTree(this, true);
       }
     }
 
     private void CreateTriggerClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is AudioTriggerTreeViewNode node)
+      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is TriggerTreeViewNode node)
       {
-        var newTrigger = new AudioTriggerData { Name = LABEL_NEW_TRIGGER, IsEnabled = true, TriggerData = new AudioTrigger { Name = LABEL_NEW_TRIGGER } };
+        var newTrigger = new TriggerNode { Name = LABEL_NEW_TRIGGER, IsEnabled = true, TriggerData = new Trigger { Name = LABEL_NEW_TRIGGER } };
 
         if (node.SerializedData.Nodes == null)
         {
-          node.SerializedData.Nodes = new List<AudioTriggerData>();
+          node.SerializedData.Nodes = new List<TriggerNode>();
         }
 
         node.SerializedData.IsExpanded = true;
         node.SerializedData.Nodes.Add(newTrigger);
-        AudioTriggerManager.Instance.Update();
+        TriggerManager.Instance.Update();
         EventsUpdateTree(this, true);
       }
     }
 
     private void DeleteClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node.ParentNode is AudioTriggerTreeViewNode parent &&
-        info.Node is AudioTriggerTreeViewNode node)
+      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node.ParentNode is TriggerTreeViewNode parent &&
+        info.Node is TriggerTreeViewNode node)
       {
         parent.SerializedData.Nodes.Remove(node.SerializedData);
         if (parent.SerializedData.Nodes.Count == 0)
@@ -288,7 +288,7 @@ namespace EQLogParser
         thePropertyGrid.IsEnabled = false;
         thePropertyGrid.DescriptionPanelVisibility = Visibility.Collapsed;
         EventsUpdateTree(this, true);
-        AudioTriggerManager.Instance.Update();
+        TriggerManager.Instance.Update();
       }
     }
 
@@ -302,7 +302,7 @@ namespace EQLogParser
 
     private void ItemEndEdit(object sender, TreeViewItemEndEditEventArgs e)
     {
-      if (!e.Cancel && e.Node is AudioTriggerTreeViewNode node)
+      if (!e.Cancel && e.Node is TriggerTreeViewNode node)
       {
         var previous = node.Content as string;
         // delay because node still shows old value
@@ -321,7 +321,7 @@ namespace EQLogParser
               node.SerializedData.TriggerData.Name = node.Content as string;
             }
 
-            AudioTriggerManager.Instance.Update(false);
+            TriggerManager.Instance.Update(false);
           }
         }, System.Windows.Threading.DispatcherPriority.Background);
       }
@@ -329,7 +329,7 @@ namespace EQLogParser
 
     private void ItemContextMenuOpening(object sender, ItemContextMenuOpeningEventArgs e)
     {
-      if (e.MenuInfo.Node is AudioTriggerTreeViewNode node)
+      if (e.MenuInfo.Node is TriggerTreeViewNode node)
       {
         deleteTriggerMenuItem.IsEnabled = (node.Level > 0);
         renameMenuItem.IsEnabled = (node.Level > 0);
@@ -342,20 +342,20 @@ namespace EQLogParser
 
     private void SelectionChanged(object sender, ItemSelectionChangedEventArgs e)
     {
-      if (e.AddedItems.Count > 0 && e.AddedItems[0] is AudioTriggerTreeViewNode node)
+      if (e.AddedItems.Count > 0 && e.AddedItems[0] is TriggerTreeViewNode node)
       {
         SelectionChanged(node);
       }
     }
 
-    private void SelectionChanged(AudioTriggerTreeViewNode node)
+    private void SelectionChanged(TriggerTreeViewNode node)
     {
-      AudioTriggerPropertyModel model = null;
+      TriggerPropertyModel model = null;
 
       if (node.IsTrigger)
       {
-        model = new AudioTriggerPropertyModel { Original = node.SerializedData.TriggerData };
-        AudioTriggerUtil.Copy(model, node.SerializedData.TriggerData);
+        model = new TriggerPropertyModel { Original = node.SerializedData.TriggerData };
+        TriggerUtil.Copy(model, node.SerializedData.TriggerData);
         saveButton.IsEnabled = false;
         cancelButton.IsEnabled = false;
       }
@@ -369,7 +369,7 @@ namespace EQLogParser
 
     private void NodeChecked(object sender, NodeCheckedEventArgs e)
     {
-      if (e.Node is AudioTriggerTreeViewNode node)
+      if (e.Node is TriggerTreeViewNode node)
       {
         node.SerializedData.IsEnabled = node.IsChecked;
 
@@ -379,13 +379,13 @@ namespace EQLogParser
           CheckChildren(node, node.IsChecked);
         }
 
-        AudioTriggerManager.Instance.Update();
+        TriggerManager.Instance.Update();
       }
     }
 
-    private void CheckChildren(AudioTriggerTreeViewNode node, bool? value)
+    private void CheckChildren(TriggerTreeViewNode node, bool? value)
     {
-      foreach (var child in node.ChildNodes.Cast<AudioTriggerTreeViewNode>())
+      foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
       {
         child.SerializedData.IsEnabled = value;
         if (!child.IsTrigger)
@@ -395,16 +395,16 @@ namespace EQLogParser
       }
     }
 
-    private void CheckParent(AudioTriggerTreeViewNode node)
+    private void CheckParent(TriggerTreeViewNode node)
     {
-      if (node.ParentNode is AudioTriggerTreeViewNode parent)
+      if (node.ParentNode is TriggerTreeViewNode parent)
       {
         parent.SerializedData.IsEnabled = parent.IsChecked;
         CheckParent(parent);
       }
     }
 
-    private void SaveExpanded(List<AudioTriggerTreeViewNode> nodes)
+    private void SaveExpanded(List<TriggerTreeViewNode> nodes)
     {
       foreach (var node in nodes)
       {
@@ -412,7 +412,7 @@ namespace EQLogParser
 
         if (!node.IsTrigger)
         {
-          SaveExpanded(node.ChildNodes.Cast<AudioTriggerTreeViewNode>().ToList());
+          SaveExpanded(node.ChildNodes.Cast<TriggerTreeViewNode>().ToList());
         }
       }
     }
@@ -420,7 +420,7 @@ namespace EQLogParser
     private void ValueChanged(object sender, ValueChangedEventArgs args)
     {
       if (args.Property.Name != errorsItem.PropertyName && args.Property.Name != evalTimeItem.PropertyName &&
-        args.Property.SelectedObject is AudioTrigger trigger)
+        args.Property.SelectedObject is Trigger trigger)
       {
         var collection = thePropertyGrid.Properties.ToObservableCollection();
         var errorsProp = FindProperty(collection, errorsItem.PropertyName);
@@ -459,7 +459,7 @@ namespace EQLogParser
       }
     }
 
-    private bool TestRegexProperty(AudioTrigger trigger, string pattern, PropertyItem errorsProp)
+    private bool TestRegexProperty(Trigger trigger, string pattern, PropertyItem errorsProp)
     {
       bool isValid = TextFormatUtils.IsValidRegex(pattern);
       if (trigger.Errors == "None" && !isValid)
@@ -474,21 +474,21 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      if (thePropertyGrid.SelectedObject is AudioTriggerPropertyModel model)
+      if (thePropertyGrid.SelectedObject is TriggerPropertyModel model)
       {
-        AudioTriggerUtil.Copy(model.Original, model);
+        TriggerUtil.Copy(model.Original, model);
       }
 
       cancelButton.IsEnabled = false;
       saveButton.IsEnabled = false;
-      AudioTriggerManager.Instance.Update();
+      TriggerManager.Instance.Update();
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
-      if (thePropertyGrid.SelectedObject is AudioTriggerPropertyModel model)
+      if (thePropertyGrid.SelectedObject is TriggerPropertyModel model)
       {
-        AudioTriggerUtil.Copy(model, model.Original);
+        TriggerUtil.Copy(model, model.Original);
         thePropertyGrid.RefreshPropertygrid();
         EnableCategory(timerDurationItem.CategoryName, model.Original.EnableTimer);
       }
@@ -499,7 +499,7 @@ namespace EQLogParser
 
     private new void PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-      if (e.OriginalSource is FrameworkElement element && element.DataContext is AudioTriggerTreeViewNode node)
+      if (e.OriginalSource is FrameworkElement element && element.DataContext is TriggerTreeViewNode node)
       {
         treeView.SelectedItems?.Clear();
         treeView.SelectedItem = node;
@@ -540,9 +540,9 @@ namespace EQLogParser
       return null;
     }
 
-    internal class AudioTriggerPropertyModel : AudioTrigger
+    internal class TriggerPropertyModel : Trigger
     {
-      public AudioTrigger Original { get; set; }
+      public Trigger Original { get; set; }
     }
 
     #region IDisposable Support
@@ -552,10 +552,10 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        SaveExpanded(treeView.Nodes.Cast<AudioTriggerTreeViewNode>().ToList());
+        SaveExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
-        (Application.Current.MainWindow as MainWindow).Closing -= AudioTriggersViewClosing;
-        AudioTriggerManager.Instance.EventsUpdateTree -= EventsUpdateTree;
+        (Application.Current.MainWindow as MainWindow).Closing -= TriggersViewClosing;
+        TriggerManager.Instance.EventsUpdateTree -= EventsUpdateTree;
         treeView.Dispose();
         disposedValue = true;
       }

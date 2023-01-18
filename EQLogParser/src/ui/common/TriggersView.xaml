@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="EQLogParser.AudioTriggersView"
+﻿<UserControl x:Class="EQLogParser.TriggersView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -14,7 +14,7 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <Grid.Resources>
-      <local:AudioTriggerTemplateSelector x:Key="audioTriggerTemplateSelector"/>
+      <local:TriggerTemplateSelector x:Key="triggerTemplateSelector"/>
       <local:ZeroConverter x:Key="ZeroConverter" />
     </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
@@ -52,7 +52,7 @@
            ItemDropping="ItemDropping"
            ItemEndEdit="ItemEndEdit"
            ItemTemplateDataContextType="Node"
-           ItemTemplateSelector="{StaticResource audioTriggerTemplateSelector}"
+           ItemTemplateSelector="{StaticResource triggerTemplateSelector}"
            Margin="0"
            NodeChecked="NodeChecked"
            NodePopulationMode="OnDemand"
@@ -106,7 +106,7 @@
               <syncfusion:PropertyGridItem CategoryName="General" PropertyName="Comments" DisplayName="Comments" Description="Notes about this Trigger." />
               <syncfusion:PropertyGridItem x:Name="patternItem" CategoryName="General" PropertyName="Pattern" DisplayName="Pattern" Description="Text to match on. The Text is not case sensitive. If {c} is specified within the Text Pattern it will be replaced with your character name. If {s}, {s1}, {s2}, etc are specified they will match any string. Both {c} and {s} options will be available to use in the Text to Speak field. Note that the {s} options are only available if using Regex while {c} works with both."/>
               <syncfusion:PropertyGridItem x:Name="useRegexItem" CategoryName="General" PropertyName="UseRegex" DisplayName="Use Regex" Description="True if Regex is to be used for the specified Pattern."/>
-              <syncfusion:PropertyGridItem CategoryName="General" PropertyName="Priority" DisplayName="Priority" Description="Priority used to determine if an Audio Trigger may be interrupted. The highest priority is 1 and lowest is 5. Interruptions may happen any time a higher priority trigger needs to play while a lower priority trigger has not finished."/>
+              <syncfusion:PropertyGridItem CategoryName="General" PropertyName="Priority" DisplayName="Priority" Description="Priority used to determine if an Trigger may be interrupted. The highest priority is 1 and lowest is 5. Interruptions may happen any time a higher priority trigger needs to play while a lower priority trigger has not finished."/>
               <syncfusion:PropertyGridItem CategoryName="General" PropertyName="TextToSpeak" DisplayName="Text to Speak" Description="The Phrase to be spoken. {c} and {s}, as defined by the Pattern, may also be included."/>
               <syncfusion:PropertyGridItem x:Name="enableTimerItem" CategoryName="General" PropertyName="EnableTimer" DisplayName="Enable Timer" Description="True if a Timer is also started when this Trigger has been executed."/>
               <syncfusion:PropertyGridItem x:Name="timerDurationItem" CategoryName="Timer Settings" PropertyName="DurationSeconds" DisplayName="Duration Seconds" Visibility="Collapsed" Description="Number of Seconds after the Trigger has been executed before the Timer completes." />
