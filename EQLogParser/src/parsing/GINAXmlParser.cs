@@ -192,31 +192,28 @@ namespace EQLogParser
                 badMessage += " from " + player;
               }
 
-              badMessage += " but no Voice to Text Triggers found.";
-              new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA, false).ShowDialog();
+              badMessage += " but no supported Triggers found.";
+              new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA).ShowDialog();
             }
             else
             {
-              var message = "Import GINA Triggers?\r\n";
+              var message = "Merge GINA Triggers or Import to New Folder?\r\n";
               if (!string.IsNullOrEmpty(player))
               {
-                message = "Import GINA Triggers from " + player + "?\r\n";
+                message = "Merge GINA Triggers from " + player + " or Import to New Folder?\r\n";
               }
 
-              string includes = null;
-              if (audioTriggerData.Nodes.Count > 0)
-              {
-                includes = string.Join(",", audioTriggerData.Nodes.Select(node => node.Name).ToArray());
-              }
-
-              message = string.IsNullOrEmpty(includes) ? message : (message + "Includes: " + includes);
-
-              var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, true);
+              var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, MessageWindow.IconType.Question, "New Folder", "Merge");
               msgDialog.ShowDialog();
 
-              if (msgDialog.IsYesClicked)
+              if (msgDialog.IsYes2Clicked)
               {
                 AudioTriggerManager.Instance.MergeTriggers(audioTriggerData);
+              }
+              else if (msgDialog.IsYes1Clicked)
+              {
+                var folderName = (player == null) ? "New Folder" : "From " + player;
+                AudioTriggerManager.Instance.MergeTriggers(audioTriggerData, folderName);
               }
             }
 
@@ -331,6 +328,20 @@ namespace EQLogParser
                 if (int.TryParse(GetText(triggerNode, "TimerEndingTime"), out int endTime))
                 {
                   trigger.WarningSeconds = endTime;
+                }
+
+                var behavior = GetText(triggerNode, "TimerStartBehavior");
+                if ("StartNewTimer".Equals(behavior))
+                {
+                  trigger.TriggerAgainOption = 0;
+                }
+                else if ("RestartTimer".Equals(behavior))
+                {
+                  trigger.TriggerAgainOption = 1;
+                }
+                else
+                {
+                  trigger.TriggerAgainOption = 2;
                 }
 
                 if (triggerNode.SelectSingleNode("TimerEndedTrigger") is XmlNode timerEndedNode)
