@@ -21,7 +21,7 @@
       <Setter Property="Margin" Value="0" />
     </Style>
 
-    <DataTemplate x:Key="AudioTriggerFileTemplate">
+    <DataTemplate x:Key="TriggerFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
           <fa:ImageAwesome Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Regular_FileAudio" />
@@ -29,7 +29,7 @@
         </StackPanel>
       </Grid>
     </DataTemplate>
-    <DataTemplate x:Key="AudioTriggerNodeTemplate">
+    <DataTemplate x:Key="TriggerNodeTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
           <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />

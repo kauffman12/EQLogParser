@@ -143,11 +143,6 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerDataViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
             </MenuItem.Icon>
-            <MenuItem x:Name="triggersMenuItem" Header="_Audio Triggers" Click="MenuItemWindowClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="triggersIcon" Tag="triggersWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-              </MenuItem.Icon>
-            </MenuItem>
             <MenuItem x:Name="playerLootMenuItem" Header="_Looted Items" Click="MenuItemWindowClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="playerLootIcon" Tag="lootWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
@@ -164,6 +159,22 @@
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
+          <MenuItem x:Name="triggers" Header="_Triggers" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="triggrsViewIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_FileAudio" />
+            </MenuItem.Icon>
+            <MenuItem x:Name="triggersMenuItem" Header="_Trigger Manager" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="triggersIcon" Tag="triggersWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="triggerLogMenuItem" Header="Trigger _Log" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="triggerLogIcon" Tag="triggerLogWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+          <Separator />
           <MenuItem x:Name="searchView" Header="_Search" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="searchViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Search" />
@@ -329,7 +340,7 @@
         </MenuItem>
       </Menu>
       <TextBlock Margin="35,0,0,0" Visibility="Hidden" Text="" />
-      <TextBlock x:Name="statusAudioTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" Text="Audio Triggers Active | " Foreground="{StaticResource EQGoodForegroundBrush}"/>
+      <TextBlock x:Name="statusTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" Text="Triggers Active | " Foreground="{StaticResource EQGoodForegroundBrush}"/>
       <TextBlock x:Name="statusText" Margin="0,0,4,0" VerticalAlignment="Center"/>
       <TextBlock x:Name="fileText" Margin="1,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"/>
     </listCollection:ArrayList>
@@ -346,7 +357,11 @@
       <ContentControl x:Name="playerParseTextWindow" Tag="Hide" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="150" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
         <local:ParsePreview />
-      </ContentControl>   
+      </ContentControl>
+      <ContentControl x:Name="triggerLogWindow" Tag="Hide" syncfusion:DockingManager.Header="Trigger Log" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
+                      syncfusion:DockingManager.DesiredHeightInDockedMode="300" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="100">
+        <local:TriggersLogView />
+      </ContentControl>
       <ContentControl x:Name="npcWindow" Tag="Hide" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="340" syncfusion:DockingManager.DesiredWidthInFloatingMode="340">
         <local:FightTable />

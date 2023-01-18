@@ -18,7 +18,10 @@
     <StartAction>Project</StartAction>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Update="src\ui\log\AudioTriggersView.xaml.cs">
+    <Compile Update="src\ui\common\TriggersView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="src\ui\log\TriggersLogView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="src\ui\log\DeathLogViewer.xaml.cs">
@@ -32,7 +35,10 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Page Update="src\ui\log\AudioTriggersView.xaml">
+    <Page Update="src\ui\common\TriggersView.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\log\TriggersLogView.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\log\DeathLogViewer.xaml">

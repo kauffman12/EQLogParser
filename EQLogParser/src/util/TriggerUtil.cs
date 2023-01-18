@@ -6,15 +6,15 @@ using System.Text.RegularExpressions;
 
 namespace EQLogParser
 {
-  internal class AudioTriggerUtil
+  internal class TriggerUtil
   {
-    internal static void AddTreeNodes(List<AudioTriggerData> nodes, AudioTriggerTreeViewNode treeNode)
+    internal static void AddTreeNodes(List<TriggerNode> nodes, TriggerTreeViewNode treeNode)
     {
       if (nodes != null)
       {
         foreach (var node in nodes)
         {
-          var child = new AudioTriggerTreeViewNode { Content = node.Name, SerializedData = node };
+          var child = new TriggerTreeViewNode { Content = node.Name, SerializedData = node };
           if (node.TriggerData != null)
           {
             child.IsTrigger = true;
@@ -33,7 +33,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void Copy(AudioTrigger to, AudioTrigger from)
+    internal static void Copy(Trigger to, Trigger from)
     {
       to.Comments = from.Comments;
       to.DurationSeconds = from.DurationSeconds;
@@ -52,7 +52,7 @@ namespace EQLogParser
       to.WarningTextToSpeak = from.WarningTextToSpeak;
     }
 
-    internal static void MergeNodes(List<AudioTriggerData> newNodes, AudioTriggerData parent)
+    internal static void MergeNodes(List<TriggerNode> newNodes, TriggerNode parent)
     {
       if (newNodes != null)
       {
@@ -62,7 +62,7 @@ namespace EQLogParser
         }
         else
         {
-          var needsSort = new List<AudioTriggerData>();
+          var needsSort = new List<TriggerNode>();
           foreach (var newNode in newNodes)
           {
             var found = parent.Nodes.Find(node => node.Name == newNode.Name);

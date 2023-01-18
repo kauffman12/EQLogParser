@@ -216,7 +216,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
 
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
-        AudioTriggerManager.Instance.Init();
+        TriggerManager.Instance.Init();
       }
       catch (Exception e)
       {
@@ -250,9 +250,9 @@ namespace EQLogParser
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
     }
 
-    internal void ShowAudioTriggers(bool active)
+    internal void ShowTriggersEnabled(bool active)
     {
-      Dispatcher.InvokeAsync(() => statusAudioTriggersText.Visibility = active ? Visibility.Visible : Visibility.Collapsed);
+      Dispatcher.InvokeAsync(() => statusTriggersText.Visibility = active ? Visibility.Visible : Visibility.Collapsed);
     }
 
     private void DockSiteLoaded(object sender, RoutedEventArgs e)
@@ -558,7 +558,7 @@ namespace EQLogParser
       else if (e.Source == triggersMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(AudioTriggersView), triggersIcon.Tag as string, "Audio Triggers");
+        Helpers.OpenWindow(dockSite, opened, out _, typeof(TriggersView), triggersIcon.Tag as string, "Trigger Manager");
       }
       else if (e.Source == eqLogMenuItem)
       {
@@ -923,7 +923,7 @@ namespace EQLogParser
 
         if (EQLogReader.FileLoadComplete)
         {
-          AudioTriggerManager.Instance.AddAction(lineData);
+          TriggerManager.Instance.AddAction(lineData);
         }
 
         // avoid having other things parse chat by accident
@@ -1078,7 +1078,7 @@ namespace EQLogParser
       StopProcessing();
       OverlayUtil.CloseOverlay();
       PlayerChatManager?.Dispose();
-      AudioTriggerManager.Instance.Stop(false);
+      TriggerManager.Instance.Stop(false);
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
       Application.Current.Shutdown();
