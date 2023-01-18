@@ -1,5 +1,6 @@
 ﻿using Syncfusion.Data.Extensions;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -83,19 +84,31 @@ namespace EQLogParser
       return active;
     }
 
+    internal void MergeTriggers(AudioTriggerData newTriggers, string newFolder)
+    {
+      newFolder += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
+      newTriggers.Name = newFolder;
+
+      lock (Data)
+      {
+        Data.Nodes.Add(newTriggers);
+        SaveTriggers();
+      }
+
+      RequestRefresh();
+      EventsUpdateTree?.Invoke(this, true);
+    }
+
     internal void MergeTriggers(AudioTriggerData newTriggers, AudioTriggerData parent = null)
     {
-      if (newTriggers != null)
+      lock (Data)
       {
-        lock (Data)
-        {
-          AudioTriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? Data : parent);
-          SaveTriggers();
-        }
-
-        RequestRefresh();
-        EventsUpdateTree?.Invoke(this, true);
+        AudioTriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? Data : parent);
+        SaveTriggers();
       }
+
+      RequestRefresh();
+      EventsUpdateTree?.Invoke(this, true);
     }
 
     internal void Update(bool needRefresh = true)
@@ -112,39 +125,31 @@ namespace EQLogParser
     [MethodImpl(MethodImplOptions.Synchronized)]
     internal void Start()
     {
-      Channel<dynamic> channel;
+      Channel<Speak> speechChannel = Channel.CreateUnbounded<Speak>();
+      StartSpeechReader(speechChannel);
+      Channel<dynamic> logChannel;
 
       lock (LockObject)
       {
         LogChannel?.Writer.Complete();
-        channel = LogChannel = Channel.CreateUnbounded<dynamic>();
+        logChannel = LogChannel = Channel.CreateUnbounded<dynamic>();
       }
 
       _ = Task.Run(async () =>
       {
         LinkedList<TriggerWrapper> activeTriggers = null;
-        var synth = new SpeechSynthesizer();
-        synth.SetOutputToDefaultAudioDevice();
 
         try
         {
           activeTriggers = GetActiveTriggers();
-          AudioTrigger previous = null;
 
-          while (await channel.Reader.WaitToReadAsync())
+          while (await logChannel.Reader.WaitToReadAsync())
           {
-            var result = await channel.Reader.ReadAsync();
+            var result = await logChannel.Reader.ReadAsync();
 
             if (result is LinkedList<TriggerWrapper> updatedTriggers)
             {
-              activeTriggers.ForEach(wrapper =>
-              {
-                lock (wrapper)
-                {
-                  CleanupWrapper(wrapper);
-                }
-              });
-
+              activeTriggers.ForEach(wrapper => CleanupWrapper(wrapper));
               activeTriggers = updatedTriggers;
             }
             else if (result is LineData lineData)
@@ -180,126 +185,45 @@ namespace EQLogParser
                   }
                 }
 
-                lock (wrapper)
+                if (wrapper.TimerCancellations.Count > 0)
                 {
-                  if (wrapper.TimerCancellation != null)
+                  MatchCollection earlyMatches = null;
+                  bool endEarly = false;
+                  if (wrapper.EndEarlyRegex != null)
                   {
-                    bool endEarly = false;
-                    if (wrapper.EndEarlyRegex != null)
+                    earlyMatches = wrapper.EndEarlyRegex.Matches(action);
+                    if (earlyMatches != null && earlyMatches.Count > 0)
                     {
-                      var earlyMatches = wrapper.EndEarlyRegex.Matches(action);
-                      if (earlyMatches != null && earlyMatches.Count > 0)
-                      {
-                        endEarly = true;
-                      }
+                      endEarly = true;
                     }
-                    else if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlyPattern))
+                  }
+                  else if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlyPattern))
+                  {
+                    if (action.Contains(wrapper.ModifiedEndEarlyPattern, StringComparison.OrdinalIgnoreCase))
                     {
-                      if (action.Contains(wrapper.ModifiedEndEarlyPattern, StringComparison.OrdinalIgnoreCase))
-                      {
-                        endEarly = true;
-                      }
+                      endEarly = true;
                     }
+                  }
 
-                    if (endEarly)
-                    {
-                      CleanupWrapper(wrapper);
-
-                      if (wrapper.TriggerData.Priority < previous?.Priority)
-                      {
-                        synth?.SpeakAsyncCancelAll();
-                      }
-
-                      synth?.SpeakAsync(wrapper.ModifiedEndSpeak);
-                    }
+                  if (endEarly)
+                  {
+                    CleanupWrapper(wrapper);
+                    speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = wrapper.ModifiedEndSpeak, Matches = earlyMatches });
                   }
                 }
 
-                if (found && !string.IsNullOrEmpty(wrapper.ModifiedSpeak))
+                if (found)
                 {
-                  if (wrapper.TriggerData.Priority < previous?.Priority)
-                  {
-                    synth.SpeakAsyncCancelAll();
-                  }
-
                   var speak = wrapper.ModifiedSpeak;
-                  if (matches != null)
+                  if (!string.IsNullOrEmpty(speak))
                   {
-                    matches.ForEach(match =>
-                    {
-                      for (int i = 1; i < match.Groups.Count; i++)
-                      {
-                        if (!string.IsNullOrEmpty(match.Groups[i].Name) && Regex.IsMatch(match.Groups[i].Name, @"s\d?", RegexOptions.IgnoreCase))
-                        {
-                          speak = speak.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
-                        }
-                      }
-                    });
+                    speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = speak, Matches = matches });
                   }
 
-                  previous = wrapper.TriggerData;
-                  synth.SpeakAsync(speak);
-
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                  if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0 &&
-                    !string.IsNullOrEmpty(wrapper.ModifiedEndSpeak))
-                  {
-                    lock (wrapper)
-                    {
-                      wrapper.TimerCancellation = new CancellationTokenSource();
-                      Task.Delay((int)wrapper.TriggerData.DurationSeconds * 1000).ContinueWith(task =>
-                      {
-                        var proceed = true;
-
-                        lock (wrapper)
-                        {
-                          proceed = !wrapper.TimerCancellation.Token.IsCancellationRequested;
-                          CleanupWrapper(wrapper, false);
-                        }
-
-                        if (proceed)
-                        {
-                          if (wrapper.TriggerData.Priority < previous?.Priority)
-                          {
-                            synth?.SpeakAsyncCancelAll();
-                          }
-
-                          synth?.SpeakAsync(wrapper.ModifiedEndSpeak);
-                        }
-                      }, wrapper.TimerCancellation.Token);
-                    }
-
-                    if (wrapper.TriggerData.WarningSeconds > 0 && !string.IsNullOrEmpty(wrapper.ModifiedWarningSpeak))
-                    {
-                      var diff = wrapper.TriggerData.DurationSeconds - wrapper.TriggerData.WarningSeconds;
-                      if (diff > 0)
-                      {
-                        wrapper.WarningCancellation = new CancellationTokenSource();
-                        Task.Delay((int)diff * 1000).ContinueWith(task =>
-                        {
-                          var proceed = true;
-
-                          lock (wrapper)
-                          {
-                            proceed = !wrapper.WarningCancellation.Token.IsCancellationRequested;
-                            wrapper.WarningCancellation?.Dispose();
-                            wrapper.WarningCancellation = null;
-                          }
-
-                          if (proceed)
-                          {
-                            if (wrapper.TriggerData.Priority < previous?.Priority)
-                            {
-                              synth?.SpeakAsyncCancelAll();
-                            }
-
-                            synth?.SpeakAsync(wrapper.ModifiedWarningSpeak);
-                          }
-                        }, wrapper.WarningCancellation.Token);
-                      }
-                    }
+                  if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0)
+                  {                
+                    StartTimer(wrapper, speechChannel);
                   }
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 }
 
                 var time = (long)((DateTime.Now.Ticks - start) / 10);
@@ -320,16 +244,8 @@ namespace EQLogParser
           // channel closed
         }
 
-        activeTriggers?.ForEach(wrapper =>
-        {
-          lock (wrapper)
-          {
-            CleanupWrapper(wrapper);
-          }
-        });
-
-        synth.Dispose();
-        synth = null;
+        speechChannel?.Writer.Complete();
+        activeTriggers?.ForEach(wrapper => CleanupWrapper(wrapper));
       });
 
       (Application.Current.MainWindow as MainWindow).ShowAudioTriggers(true);
@@ -352,6 +268,120 @@ namespace EQLogParser
       {
         ConfigUtil.SetSetting("AudioTriggersEnabled", false.ToString(CultureInfo.CurrentCulture));
       }
+    }
+
+    private void StartSpeechReader(Channel<Speak> speechChannel)
+    {
+      _ = Task.Run(async () => {
+        try
+        {
+          var synth = new SpeechSynthesizer();
+          synth.Rate = 1;
+          synth.SetOutputToDefaultAudioDevice();
+          synth.SelectVoiceByHints(VoiceGender.Female);
+          AudioTrigger previous = null;
+
+          while (await speechChannel.Reader.WaitToReadAsync())
+          {
+            var result = await speechChannel.Reader.ReadAsync();
+
+            if (!string.IsNullOrEmpty(result.Text))
+            {
+              if (result.TriggerData.Priority < previous?.Priority)
+              {
+                synth.SpeakAsyncCancelAll();
+              }
+
+              var speak = result.Text;
+              if (result.Matches != null)
+              {
+                result.Matches.ForEach(match =>
+                {
+                  for (int i = 1; i < match.Groups.Count; i++)
+                  {
+                    if (!string.IsNullOrEmpty(match.Groups[i].Name))
+                    {
+                      // try with and then without $ before {}
+                      speak = speak.Replace("${" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+                      speak = speak.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+                    }
+                  }
+                });
+              }
+
+              synth.SpeakAsync(speak);
+              previous = result.TriggerData;
+            }
+          }
+        }
+        catch (Exception)
+        {
+          // channel closed
+        }
+      });
+    }
+
+    private void StartTimer(TriggerWrapper wrapper, Channel<Speak> speechChannel)
+    {
+      Task.Run(() =>
+      {
+        // Restart Timer Option
+        if (wrapper.TriggerData.TriggerAgainOption == 1)
+        {
+          CleanupWrapper(wrapper);
+        }
+
+        // Start a New independent Timer as long as one is not already running when Option 2 is selected
+        // Option 2 is to Do Nothing when a 2nd timer is triggered so you onlu have the original timer running
+        if (!(wrapper.TriggerData.TriggerAgainOption == 2 && wrapper.TimerCancellations.Count > 0))
+        {
+          CancellationTokenSource warningSource = null;
+          if (wrapper.TriggerData.WarningSeconds > 0 && !string.IsNullOrEmpty(wrapper.ModifiedWarningSpeak))
+          {
+            var diff = wrapper.TriggerData.DurationSeconds - wrapper.TriggerData.WarningSeconds;
+            if (diff > 0)
+            {
+              warningSource = new CancellationTokenSource();
+              wrapper.WarningCancellations[warningSource] = true;
+              Task.Delay((int)diff * 1000).ContinueWith(task =>
+              {
+                var proceed = !warningSource.Token.IsCancellationRequested;
+                if (wrapper.WarningCancellations.TryRemove(warningSource, out bool _))
+                {
+                  warningSource?.Dispose();
+                }
+
+                if (proceed)
+                {
+                  speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = wrapper.ModifiedWarningSpeak });
+                }
+              }, warningSource.Token);
+            }
+          }
+
+          var timerSource = new CancellationTokenSource();
+          wrapper.TimerCancellations[timerSource] = true;
+          Task.Delay((int)wrapper.TriggerData.DurationSeconds * 1000).ContinueWith(task =>
+          {
+            if (wrapper.WarningCancellations.TryRemove(warningSource, out bool _))
+            {
+              warningSource?.Cancel();
+              warningSource?.Dispose();
+            }
+
+            var proceed = !timerSource.Token.IsCancellationRequested;
+            if (wrapper.TimerCancellations.TryRemove(timerSource, out bool _))
+            {
+              timerSource?.Dispose();
+            }
+
+            if (proceed)
+            {
+              speechChannel.Writer.WriteAsync(new Speak { TriggerData = wrapper.TriggerData, Text = wrapper.ModifiedEndSpeak });
+            }
+          }, timerSource.Token);
+        }
+      });
     }
 
     private void EventsLogLoadingComplete(object sender, bool e)
@@ -510,24 +540,27 @@ namespace EQLogParser
       }
     }
 
-    private void CleanupWrapper(TriggerWrapper wrapper, bool cancel = true)
+    private void CleanupWrapper(TriggerWrapper wrapper)
     {
-      if (cancel)
-      {
-        wrapper.TimerCancellation?.Cancel();
-        wrapper.WarningCancellation?.Cancel();
-      }
+      wrapper.TimerCancellations.Keys.ForEach(source => source.Cancel());
+      wrapper.WarningCancellations.Keys.ForEach(source => source.Cancel());
+      wrapper.TimerCancellations.Keys.ForEach(source => source.Dispose());
+      wrapper.WarningCancellations.Keys.ForEach(source => source.Dispose());
+      wrapper.TimerCancellations.Clear();
+      wrapper.WarningCancellations.Clear();
+    }
 
-      wrapper.TimerCancellation?.Dispose();
-      wrapper.WarningCancellation?.Dispose();
-      wrapper.TimerCancellation = null;
-      wrapper.WarningCancellation = null;
+    private class Speak
+    {
+      public AudioTrigger TriggerData { get; set; }
+      public string Text { get; set; }
+      public MatchCollection Matches { get; set; }
     }
 
     private class TriggerWrapper
     {
-      public CancellationTokenSource TimerCancellation { get; set; }
-      public CancellationTokenSource WarningCancellation { get; set; }
+      public ConcurrentDictionary<CancellationTokenSource, bool> TimerCancellations { get; } = new ConcurrentDictionary<CancellationTokenSource, bool>();
+      public ConcurrentDictionary<CancellationTokenSource, bool> WarningCancellations { get; } = new ConcurrentDictionary<CancellationTokenSource, bool>();
       public string ModifiedSpeak { get; set; }
       public string ModifiedPattern { get; set; }
       public string ModifiedEndSpeak { get; set; }

@@ -321,11 +321,6 @@ namespace EQLogParser
         }
       }
 
-      if (!string.IsNullOrEmpty(temp))
-      {
-        LOG.Debug("Unknown Modifiers: " + modifiers);
-      }
-
       return result;
     }
   }

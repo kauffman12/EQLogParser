@@ -7,7 +7,7 @@ namespace EQLogParser
 {
   public class RangeEditor : ITypeEditor
   {
-    IntegerTextBox integerTextBox;
+    private IntegerTextBox TheTextBox;
     readonly private long Min;
     readonly private long Max;
 
@@ -29,11 +29,11 @@ namespace EQLogParser
           ValidatesOnDataErrors = true
         };
 
-        BindingOperations.SetBinding(integerTextBox, IntegerTextBox.ValueProperty, binding);
+        BindingOperations.SetBinding(TheTextBox, IntegerTextBox.ValueProperty, binding);
       }
       else
       {
-        integerTextBox.IsEnabled = false;
+        TheTextBox.IsEnabled = false;
         var binding = new Binding("Value")
         {
           Source = info,
@@ -41,13 +41,13 @@ namespace EQLogParser
           ValidatesOnDataErrors = true
         };
 
-        BindingOperations.SetBinding(integerTextBox, IntegerTextBox.ValueProperty, binding);
+        BindingOperations.SetBinding(TheTextBox, IntegerTextBox.ValueProperty, binding);
       }
     }
 
     public object Create(PropertyInfo propertyInfo)
     {
-      integerTextBox = new IntegerTextBox()
+      TheTextBox = new IntegerTextBox()
       {
         ApplyZeroColor = false,
         MinValue = Min,
@@ -55,12 +55,17 @@ namespace EQLogParser
         ShowSpinButton = true
       };
 
-      return integerTextBox;
+      return TheTextBox;
     }
 
     public void Detach(PropertyViewItem property)
     {
+      if (TheTextBox != null)
+      {
+        BindingOperations.ClearAllBindings(TheTextBox);
+      }
 
+      TheTextBox = null;
     }
   }
 }

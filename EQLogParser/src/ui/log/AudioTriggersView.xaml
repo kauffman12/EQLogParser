@@ -15,6 +15,7 @@
     </Grid.RowDefinitions>
     <Grid.Resources>
       <local:AudioTriggerTemplateSelector x:Key="audioTriggerTemplateSelector"/>
+      <local:ZeroConverter x:Key="ZeroConverter" />
     </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Button x:Name="startButton" Margin="0" Height="24" Width="165"  Click="PlayButtonClick" Focusable="False" IsHitTestVisible="False" Background="{DynamicResource ContentBackgroundAlt2}">
@@ -114,6 +115,7 @@
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningTextToSpeak" DisplayName="Warning Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken at the Warning Time. {c} may be included."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndEarlyPattern" DisplayName="End Early Pattern" Visibility="Collapsed" Description="If this Text Pattern is matched it will cause the Timer to end even if there is time remaining."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndUseRegex" DisplayName="Use Regex" Visibility="Collapsed" Description="True if Regex is to be used for the specified End Early Pattern."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="TriggerAgainOption" DisplayName="If Triggered Again" Visibility="Collapsed" Description="What to do if the Trigger is matched a second time but the original Timer has not completed."/>
               <syncfusion:PropertyGridItem x:Name="errorsItem" CategoryName="Status" PropertyName="Errors" DisplayName="Errors" IsReadOnly="True" Description="Any errors or warnings associated with the Trigger settings." />
               <syncfusion:PropertyGridItem x:Name="evalTimeItem" CategoryName="Status" PropertyName="LongestEvalTime" DisplayName="Longest Eval Time (μs)" IsReadOnly="True" Description="The longest time recorded for checking the specified Pattern for a match. The time is in microseconds. If a change is made to the Pattern the value will be reset. This should help identify slow Triggers and ideally this value stays below 1000."/>
             </syncfusion:PropertyGrid.Items>
