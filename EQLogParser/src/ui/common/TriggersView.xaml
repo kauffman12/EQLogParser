@@ -46,9 +46,12 @@
            BorderBrush="{DynamicResource ContentBackgroundAlt2}"
            BorderThickness="0"
            CheckBoxMode="Recursive"
+           NodeExpanded="NodeExpanded"
+           NodeCollapsed="NodeExpanded"
            FullRowSelect="False"
            IsAnimationEnabled="False"
            ItemContextMenuOpening="ItemContextMenuOpening"
+           ItemDropped="ItemDropped"
            ItemDropping="ItemDropping"
            ItemEndEdit="ItemEndEdit"
            ItemTemplateDataContextType="Node"
@@ -57,8 +60,7 @@
            NodeChecked="NodeChecked"
            NodePopulationMode="OnDemand"
            Padding="0"
-           SelectionMode="Single"
-           PreviewMouseRightButtonDown="PreviewMouseRightButtonDown"
+           SelectionMode="Extended"
            SelectionChanged="SelectionChanged"
            ShowRootLines="False">
           <syncfusion:SfTreeView.ItemContextMenu>
@@ -68,9 +70,13 @@
                 <MenuItem Header="Trigger" Click="CreateTriggerClick" />
               </MenuItem>
               <Separator x:Name="newSeparator" />
+              <MenuItem x:Name="collapseMenuItem" Header="Collapse All" Click="CollapseAllClick" />
+              <MenuItem x:Name="expandMenuItem" Header="Expand All" Click="ExpandAllClick" />
+              <Separator x:Name="expandSeparator" />
               <MenuItem x:Name="deleteTriggerMenuItem" Header="Delete" Click="DeleteClick" />
               <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
               <Separator x:Name="importSeparator" />
+              <MenuItem x:Name="exportMenuItem" Header="Export" Click="ExportClick" />
               <MenuItem x:Name="importMenuItem" Header="Import (+Merge)" Click="ImportClick" />
             </ContextMenu>
           </syncfusion:SfTreeView.ItemContextMenu>
@@ -109,11 +115,11 @@
               <syncfusion:PropertyGridItem CategoryName="General" PropertyName="Priority" DisplayName="Priority" Description="Priority used to determine if an Trigger may be interrupted. The highest priority is 1 and lowest is 5. Interruptions may happen any time a higher priority trigger needs to play while a lower priority trigger has not finished."/>
               <syncfusion:PropertyGridItem CategoryName="General" PropertyName="TextToSpeak" DisplayName="Text to Speak" Description="The Phrase to be spoken. {c} and {s}, as defined by the Pattern, may also be included."/>
               <syncfusion:PropertyGridItem x:Name="enableTimerItem" CategoryName="General" PropertyName="EnableTimer" DisplayName="Enable Timer" Description="True if a Timer is also started when this Trigger has been executed."/>
-              <syncfusion:PropertyGridItem x:Name="timerDurationItem" CategoryName="Timer Settings" PropertyName="DurationSeconds" DisplayName="Duration Seconds" Visibility="Collapsed" Description="Number of Seconds after the Trigger has been executed before the Timer completes." />
+              <syncfusion:PropertyGridItem x:Name="timerDurationItem" CategoryName="Timer Settings" PropertyName="DurationSeconds" DisplayName="Duration (s)" Visibility="Collapsed" Description="Number of Seconds after the Trigger has been executed before the Timer completes." />
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndTextToSpeak" DisplayName="Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken at completion of the Timer. {c} may be included."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningSeconds" DisplayName="Warning Time" Visibility="Collapsed" Description="Seconds before Timer ending to warn the user with the Warning Text."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningTextToSpeak" DisplayName="Warning Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken at the Warning Time. {c} may be included."/>
-              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndEarlyPattern" DisplayName="End Early Pattern" Visibility="Collapsed" Description="If this Text Pattern is matched it will cause the Timer to end even if there is time remaining."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="CancelPattern" DisplayName="Cancel Pattern" Visibility="Collapsed" Description="If this Text Pattern is matched it will cause the Timer to end even if there is time remaining."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndUseRegex" DisplayName="Use Regex" Visibility="Collapsed" Description="True if Regex is to be used for the specified End Early Pattern."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="TriggerAgainOption" DisplayName="If Triggered Again" Visibility="Collapsed" Description="What to do if the Trigger is matched a second time but the original Timer has not completed."/>
               <syncfusion:PropertyGridItem x:Name="errorsItem" CategoryName="Status" PropertyName="Errors" DisplayName="Errors" IsReadOnly="True" Description="Any errors or warnings associated with the Trigger settings." />

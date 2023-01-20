@@ -223,6 +223,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Export Failed.
+        /// </summary>
+        internal static string EXPORT_ERROR {
+            get {
+                return ResourceManager.GetString("EXPORT_ERROR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Can Not Save Summary Data.
         /// </summary>
         internal static string FILEMENU_EXPORT_SUMMARY {

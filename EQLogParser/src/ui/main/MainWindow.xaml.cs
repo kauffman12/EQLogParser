@@ -52,8 +52,6 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Hits", "# Twincasts" };
 
-    private const string VERSION = "2.0.40";
-
     private static long LineCount = 0;
     private static long FilePosition = 0;
     private static ActionProcessor CastProcessor = null;
@@ -115,8 +113,11 @@ namespace EQLogParser
         // add tabs to the right
         ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
 
+        var version = Application.ResourceAssembly.GetName().Version.ToString();
+        version = version.Substring(0, version.Length - 2);
+
         // update titles
-        versionText.Text = "v" + VERSION;
+        versionText.Text = "v" + version;
 
         MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
@@ -174,7 +175,7 @@ namespace EQLogParser
         {
           // check version
           checkUpdatesIcon.Visibility = Visibility.Visible;
-          MainActions.CheckVersion(VERSION, errorText);
+          MainActions.CheckVersion(version, errorText);
         }
         else
         {
@@ -919,7 +920,7 @@ namespace EQLogParser
       string splitLine = null;
       if (!string.IsNullOrEmpty(line) && line.Length > 30)
       {
-        var lineData = new LineData { Action = line.Substring(ACTION_INDEX), LineNumber = LineCount, BeginTime = dateTime };
+        var lineData = new LineData { Line = line, Action = line.Substring(ACTION_INDEX), LineNumber = LineCount, BeginTime = dateTime };
 
         if (EQLogReader.FileLoadComplete)
         {
