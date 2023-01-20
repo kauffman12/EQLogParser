@@ -23,8 +23,9 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="26"
                            IsReadOnly="True"
+                           PreviewMouseLeftButtonDown="PreviewMouseLeftButtonDown"
                            RowHeaderWidth="30"
-                           SelectionMode="Extended"
+                           SelectionMode="Single"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.Resources>
         <local:DateTimeConverter x:Key="DateTimeConverter" />
@@ -45,10 +46,10 @@
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
                                    Width="100" TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" Width="120"/>
+        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" Width="150"/>
         <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" Width="100" />
         <syncfusion:GridTextColumn MappingName="Eval" HeaderText="Eval Time (μs)" Width="100" />
-        <syncfusion:GridTextColumn MappingName="Line" HeaderText="Line Matched" />
+        <syncfusion:GridTextColumn MappingName="Line" HeaderText="Line Matched / Previously Matched if Started Timer" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>

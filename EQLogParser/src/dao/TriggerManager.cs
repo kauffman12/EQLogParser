@@ -22,7 +22,9 @@ namespace EQLogParser
   internal class TriggerManager
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     internal event EventHandler<bool> EventsUpdateTree;
+    internal event EventHandler<Trigger> EventsSelectTrigger;
     internal static TriggerManager Instance = new TriggerManager();
     private readonly string TRIGGERS_FILE = "triggers.json";
     private readonly DispatcherTimer UpdateTimer;
@@ -70,8 +72,14 @@ namespace EQLogParser
 
     internal TriggerTreeViewNode GetTreeView()
     {
-      var result = new TriggerTreeViewNode { Content = "All Triggers", IsChecked = Data.IsEnabled, IsTrigger = false, IsExpanded = Data.IsExpanded };
-      result.SerializedData = Data;
+      var result = new TriggerTreeViewNode
+      {
+        Content = "All Triggers",
+        IsChecked = Data.IsEnabled,
+        IsTrigger = false,
+        IsExpanded = Data.IsExpanded,
+        SerializedData = Data
+      };
 
       lock (Data)
       {
@@ -91,6 +99,25 @@ namespace EQLogParser
       }
 
       return active;
+    }
+
+    internal void Select(Trigger trigger) => EventsSelectTrigger?.Invoke(this, trigger);
+
+    internal void MergeTriggers(List<TriggerNode> list, TriggerNode parent)
+    {
+      lock (Data)
+      {
+        foreach (var node in list)
+        {
+          DisableNodes(node);
+          TriggerUtil.MergeNodes(node.Nodes, parent);
+        }
+
+        SaveTriggers();
+      }
+
+      RequestRefresh();
+      EventsUpdateTree?.Invoke(this, true);
     }
 
     internal void MergeTriggers(TriggerNode newTriggers, string newFolder)
@@ -177,7 +204,7 @@ namespace EQLogParser
                 }
                 else
                 {
-                  lowPriChannel.Writer.WriteAsync(new LowPriData { ActiveTriggers= activeTriggers, LineData = lineData,
+                  _ = lowPriChannel.Writer.WriteAsync(new LowPriData { ActiveTriggers= activeTriggers, LineData = lineData,
                     Node = node, SpeechChannel = speechChannel});
                 }
 
@@ -237,6 +264,7 @@ namespace EQLogParser
     private void HandleTrigger(LinkedList<TriggerWrapper> activeTriggers, LinkedListNode<TriggerWrapper> node,
       LineData lineData, Channel<Speak> speechChannel)
     {
+      long time = long.MinValue;
       long start = DateTime.Now.Ticks;
       var action = lineData.Action;
       var wrapper = node.Value;
@@ -273,9 +301,9 @@ namespace EQLogParser
             endEarly = true;
           }
         }
-        else if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlyPattern))
+        else if (!string.IsNullOrEmpty(wrapper.ModifiedCancelPattern))
         {
-          if (action.Contains(wrapper.ModifiedEndEarlyPattern, StringComparison.OrdinalIgnoreCase))
+          if (action.Contains(wrapper.ModifiedCancelPattern, StringComparison.OrdinalIgnoreCase))
           {
             endEarly = true;
           }
@@ -283,20 +311,28 @@ namespace EQLogParser
 
         if (endEarly)
         {
+          time = (long)((DateTime.Now.Ticks - start) / 10);
+          wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
+
           CleanupWrapper(wrapper);
           speechChannel.Writer.WriteAsync(new Speak
           {
-            TriggerData = wrapper.TriggerData,
+            Trigger = wrapper.TriggerData,
             Text = wrapper.ModifiedEndSpeak,
             Matches = earlyMatches,
-            Action = lineData.Action,
-            Type = "Timer End Early"
-          });
+            Line = lineData.Line,
+            Type = "Timer Canceled",
+            Eval = time
+        });
         }
       }
 
-      var time = (long)((DateTime.Now.Ticks - start) / 10);
-      wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
+      // wasnt set by end early
+      if (time == long.MinValue)
+      {
+        time = (long)((DateTime.Now.Ticks - start) / 10);
+        wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
+      }
 
       if (found)
       {
@@ -305,10 +341,10 @@ namespace EQLogParser
         {
           speechChannel.Writer.WriteAsync(new Speak
           {
-            TriggerData = wrapper.TriggerData,
+            Trigger = wrapper.TriggerData,
             Text = speak,
             Matches = matches,
-            Action = lineData.Action,
+            Line = lineData.Line,
             Type = "Trigger",
             Eval = time
           });
@@ -316,7 +352,7 @@ namespace EQLogParser
 
         if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0)
         {
-          StartTimer(wrapper, speechChannel, lineData.Action);
+          StartTimer(wrapper, speechChannel, lineData.Line);
         }
       }
     }
@@ -339,7 +375,7 @@ namespace EQLogParser
 
             if (!string.IsNullOrEmpty(result.Text))
             {
-              if (result.TriggerData.Priority < previous?.Priority)
+              if (result.Trigger.Priority < previous?.Priority)
               {
                 synth.SpeakAsyncCancelAll();
               }
@@ -362,21 +398,26 @@ namespace EQLogParser
               }
 
               synth.SpeakAsync(speak);
-
-              Application.Current.Dispatcher.InvokeAsync(() =>
-              {
-                // update log
-                var log = new ExpandoObject() as dynamic;
-                log.Time = result.TriggerData.LastTriggered;
-                log.Line = result.Action;
-                log.Name = result.TriggerData.Name;
-                log.Type = result.Type;
-                log.Eval = result.Eval;
-                AlertLog.Insert(0, log);
-              });
-
-              previous = result.TriggerData;
+              previous = result.Trigger;
             }
+
+            _ = Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+              // update log
+              var log = new ExpandoObject() as dynamic;
+              log.Time = DateUtil.ToDouble(DateTime.Now);
+              log.Line = result.Line;
+              log.Name = result.Trigger.Name;
+              log.Type = result.Type;
+              log.Eval = result.Eval;
+              log.Trigger = result.Trigger;
+              AlertLog.Insert(0, log);
+
+              if (AlertLog.Count > 1000)
+              {
+                AlertLog.RemoveAt(AlertLog.Count - 1);
+              }
+            });
           }
         }
         catch (Exception)
@@ -386,7 +427,7 @@ namespace EQLogParser
       });
     }
 
-    private void StartTimer(TriggerWrapper wrapper, Channel<Speak> speechChannel, string action)
+    private void StartTimer(TriggerWrapper wrapper, Channel<Speak> speechChannel, string line)
     {
       Task.Run(() =>
       {
@@ -420,9 +461,9 @@ namespace EQLogParser
                 {
                   speechChannel.Writer.WriteAsync(new Speak
                   {
-                    TriggerData = wrapper.TriggerData,
+                    Trigger = wrapper.TriggerData,
                     Text = wrapper.ModifiedWarningSpeak,
-                    Action = action,
+                    Line = line,
                     Type = "Timer Warning"
                   });
                 }
@@ -434,7 +475,7 @@ namespace EQLogParser
           wrapper.TimerCancellations[timerSource] = true;
           Task.Delay((int)wrapper.TriggerData.DurationSeconds * 1000).ContinueWith(task =>
           {
-            if (wrapper.WarningCancellations.TryRemove(warningSource, out bool _))
+            if (warningSource != null && wrapper.WarningCancellations.TryRemove(warningSource, out bool _))
             {
               warningSource?.Cancel();
               warningSource?.Dispose();
@@ -450,9 +491,9 @@ namespace EQLogParser
             {
               speechChannel.Writer.WriteAsync(new Speak
               {
-                TriggerData = wrapper.TriggerData,
+                Trigger = wrapper.TriggerData,
                 Text = wrapper.ModifiedEndSpeak,
-                Action = action,
+                Line = line,
                 Type = "Timer End"
               });
             }
@@ -469,7 +510,7 @@ namespace EQLogParser
         {
           RequestRefresh();
         }
-        else if (ConfigUtil.IfSetOrElse("AudioTriggersEnabled", false))
+        else if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
         {
           Start();
         }
@@ -501,6 +542,22 @@ namespace EQLogParser
       }
 
       SaveTriggers();
+    }
+
+    private void DisableNodes(TriggerNode node)
+    {
+      if (node.TriggerData == null)
+      {
+        node.IsEnabled = false;
+        node.IsExpanded = false;
+        if (node.Nodes != null)
+        {
+          foreach (var child in node.Nodes)
+          {
+            DisableNodes(child);
+          }
+        }
+      }
     }
 
     private void RequestRefresh()
@@ -563,7 +620,7 @@ namespace EQLogParser
 
             if (trigger.EnableTimer)
             {
-              if (trigger.EndEarlyPattern is string endEarlyPattern && !string.IsNullOrEmpty(endEarlyPattern))
+              if (trigger.CancelPattern is string endEarlyPattern && !string.IsNullOrEmpty(endEarlyPattern))
               {
                 endEarlyPattern = TriggerUtil.UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern);
 
@@ -573,7 +630,7 @@ namespace EQLogParser
                 }
                 else
                 {
-                  wrapper.ModifiedEndEarlyPattern = endEarlyPattern;
+                  wrapper.ModifiedCancelPattern = endEarlyPattern;
                 }
               }
             }
@@ -629,10 +686,10 @@ namespace EQLogParser
 
     private class Speak
     {
-      public Trigger TriggerData { get; set; }
+      public Trigger Trigger { get; set; }
       public string Text { get; set; }
       public MatchCollection Matches { get; set; }
-      public string Action { get; set; }
+      public string Line { get; set; }
       public string Type { get; set; }
       public long Eval { get; set; }
     }
@@ -653,7 +710,7 @@ namespace EQLogParser
       public string ModifiedPattern { get; set; }
       public string ModifiedEndSpeak { get; set; }
       public string ModifiedWarningSpeak { get; set; }
-      public string ModifiedEndEarlyPattern { get; set; }
+      public string ModifiedCancelPattern { get; set; }
       public Regex Regex { get; set; }
       public Regex EndEarlyRegex { get; set; }
       public Trigger TriggerData { get; set; }

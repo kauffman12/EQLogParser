@@ -19,7 +19,7 @@ namespace EQLogParser
     public string Comments { get; set; }
     public long DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
-    public string EndEarlyPattern { get; set; }
+    public string CancelPattern { get; set; }
     public string EndTextToSpeak { get; set; }
     public bool EndUseRegex { get; set; }
     public string Errors { get; set; } = "None";
@@ -248,6 +248,7 @@ namespace EQLogParser
   {
     public string Action { get; set; }
     public double BeginTime { get; set; }
+    public string Line { get; set; }
     public long LineNumber { get; set; }
   }
 
