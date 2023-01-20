@@ -338,17 +338,10 @@ namespace EQLogParser
           UpdateOptions(true);
         }
       }
-      catch (IOException ex)
+      catch (Exception ex)
       {
+        new MessageWindow("Problem Importing Spell Counts Data. Check Error Log for details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
         LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
       }
     }
 
@@ -373,17 +366,10 @@ namespace EQLogParser
           writer?.Close();
         }
       }
-      catch (IOException ex)
+      catch (Exception ex)
       {
+        new MessageWindow("Problem Exporting Spell Counts Data. Check Error Log for details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
         LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
       }
     }
 

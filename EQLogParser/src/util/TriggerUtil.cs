@@ -38,7 +38,7 @@ namespace EQLogParser
       to.Comments = from.Comments;
       to.DurationSeconds = from.DurationSeconds;
       to.EnableTimer = from.EnableTimer;
-      to.EndEarlyPattern = from.EndEarlyPattern;
+      to.CancelPattern = from.CancelPattern;
       to.EndTextToSpeak = from.EndTextToSpeak;
       to.EndUseRegex = from.EndUseRegex;
       to.Errors = "None";

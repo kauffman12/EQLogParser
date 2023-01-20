@@ -171,6 +171,9 @@
   <data name="EVENT_TYPES_SELECTED" xml:space="preserve">
     <value>Event Types</value>
   </data>
+  <data name="EXPORT_ERROR" xml:space="preserve">
+    <value>Export Failed</value>
+  </data>
   <data name="FILEMENU_EXPORT_SUMMARY" xml:space="preserve">
     <value>Can Not Save Summary Data</value>
   </data>

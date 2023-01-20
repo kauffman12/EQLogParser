@@ -364,7 +364,7 @@ namespace EQLogParser
                 {
                   if (endingEarlyNode.SelectSingleNode("EarlyEnder") is XmlNode enderNode)
                   {
-                    trigger.EndEarlyPattern = GetText(enderNode, "EarlyEndText");
+                    trigger.CancelPattern = GetText(enderNode, "EarlyEndText");
 
                     if (bool.TryParse(GetText(enderNode, "EnableRegex"), out bool regex2))
                     {

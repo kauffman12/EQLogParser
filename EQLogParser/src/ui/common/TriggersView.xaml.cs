@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -25,6 +27,7 @@ namespace EQLogParser
     private const string LABEL_NEW_FOLDER = "New Folder";
     private WrapTextEditor ErrorEditor;
     private TimerResetEditor TimerResetOptions;
+    private List<TriggerNode> Removed;
 
     public TriggersView()
     {
@@ -58,7 +61,7 @@ namespace EQLogParser
       textWrapEditor.Properties.Add("Comments");
       textWrapEditor.Properties.Add("Pattern");
       textWrapEditor.Properties.Add("EndPattern");
-      textWrapEditor.Properties.Add("EndEarlyPattern");
+      textWrapEditor.Properties.Add("CancelPattern");
       textWrapEditor.Properties.Add("EndTextToSpeak");
       textWrapEditor.Properties.Add("TextToSpeak");
       textWrapEditor.Properties.Add("WarningToSpeak");
@@ -84,14 +87,30 @@ namespace EQLogParser
 
       treeView.Nodes.Add(TriggerManager.Instance.GetTreeView());
       TriggerManager.Instance.EventsUpdateTree += EventsUpdateTree;
+      TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
-
-      (Application.Current.MainWindow as MainWindow).Closing += TriggersViewClosing;
     }
 
-    private void TriggersViewClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void CollapseAllClick(object sender, RoutedEventArgs e)
     {
-      SaveExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
+      treeView.CollapseAll();
+      SaveNodeExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
+    }
+
+    private void ExpandAllClick(object sender, RoutedEventArgs e)
+    {
+      treeView.ExpandAll();
+      SaveNodeExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
+    }
+
+    private void EventsSelectTrigger(object sender, Trigger e)
+    {
+      if (e != null && (treeView.SelectedItem == null || (treeView.SelectedItem is TriggerTreeViewNode selected && selected.SerializedData?.TriggerData != e)))
+      {
+        var found = FindAndExpandNode(treeView.Nodes[0] as TriggerTreeViewNode, e);
+        treeView.SelectedItem = found;
+        SelectionChanged(found);
+      }
     }
 
     private void EventsLogLoadingComplete(object sender, bool e)
@@ -124,41 +143,6 @@ namespace EQLogParser
       }
     }
 
-    private void ImportClick(object sender, RoutedEventArgs e)
-    {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is TriggerTreeViewNode node)
-      {
-        try
-        {
-          // WPF doesn't have its own file chooser so use Win32 Version
-          OpenFileDialog dialog = new OpenFileDialog
-          {
-            // filter to txt files
-            DefaultExt = ".scf.gz",
-            Filter = "GINA Package File (*.gtp) | *.gtp"
-          };
-
-          // show dialog and read result
-          if (dialog.ShowDialog().Value)
-          {
-            // limit to 100 megs just incase
-            var fileInfo = new FileInfo(dialog.FileName);
-            if (fileInfo.Exists && fileInfo.Length < 100000000)
-            {
-              var data = new byte[fileInfo.Length];
-              fileInfo.OpenRead().Read(data);
-              GINAXmlParser.Import(data, node.SerializedData);
-            }
-          }
-        }
-        catch (Exception ex)
-        {
-          new MessageWindow("Problem Importing from GINA Package File. Check Error Log for details.", EQLogParser.Resource.IMPORT_ERROR).ShowDialog();
-          LOG.Error("Import Failure", ex);
-        }
-      }
-    }
-
     private void SetPlayer(string title, string brush, EFontAwesomeIcon icon, bool hitTest = true)
     {
       startIcon.Icon = icon;
@@ -185,7 +169,12 @@ namespace EQLogParser
     private void ItemDropping(object sender, TreeViewItemDroppingEventArgs e)
     {
       var target = e.TargetNode as TriggerTreeViewNode;
-      var source = e.DraggingNodes[0] as TriggerTreeViewNode;
+
+      if (e.DropPosition == DropPosition.None)
+      {
+        e.Handled = true;
+        return;
+      }
 
       if (target.Level == 0 && e.DropPosition != DropPosition.DropAsChild)
       {
@@ -193,53 +182,77 @@ namespace EQLogParser
         return;
       }
 
-      if (target.IsTrigger && e.DropPosition == DropPosition.DropAsChild)
-      {
-        e.Handled = true;
-        return;
-      }
+      // fix drag and drop that wants to reverse the order for some reason
+      var list = e.DraggingNodes.ToList();
+      list.Reverse();
+      e.DraggingNodes.Clear();
+      list.ForEach(node => e.DraggingNodes.Add(node));
 
-      var targetParent = target.ParentNode as TriggerTreeViewNode;
-      var sourceParent = source.ParentNode as TriggerTreeViewNode;
+      target = target.IsTrigger ? target.ParentNode as TriggerTreeViewNode : target;
 
-      if (e.DropPosition == DropPosition.DropAbove)
+      Removed = new List<TriggerNode>();
+      foreach (var node in e.DraggingNodes.Cast<TriggerTreeViewNode>())
       {
-        sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
-        int index = targetParent.SerializedData.Nodes.IndexOf(target.SerializedData) - 1;
-        index = (index >= 0 ? index : 0);
-        targetParent.SerializedData.Nodes.Insert(index, source.SerializedData);
-      }
-      if (e.DropPosition == DropPosition.DropBelow)
-      {
-        sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
-        int index = targetParent.SerializedData.Nodes.IndexOf(target.SerializedData) + 1;
-        if (index >= targetParent.SerializedData.Nodes.Count)
+        if (node.ParentNode != target)
         {
-          targetParent.SerializedData.Nodes.Add(source.SerializedData);
+          if (node.ParentNode is TriggerTreeViewNode parent && parent.SerializedData != null && parent.SerializedData.Nodes != null)
+          {
+            parent.SerializedData.Nodes.Remove(node.SerializedData);
+            Removed.Add(node.SerializedData);
+          }
+        }
+      }
+    }
+
+    private void ItemDropped(object sender, TreeViewItemDroppedEventArgs e)
+    {
+      var target = e.TargetNode as TriggerTreeViewNode;
+
+      target = target.IsTrigger ? target.ParentNode as TriggerTreeViewNode : target;
+
+      if (target.SerializedData != null)
+      {
+        if (target.SerializedData.Nodes == null || target.SerializedData.Nodes.Count == 0)
+        {
+          target.SerializedData.Nodes = e.DraggingNodes.Cast<TriggerTreeViewNode>().Select(node => node.SerializedData).ToList();
+          target.SerializedData.IsExpanded = true;
         }
         else
         {
-          targetParent.SerializedData.Nodes.Insert(index, source.SerializedData);
-        }
-      }
-      else if (e.DropPosition == DropPosition.DropAsChild)
-      {
-        sourceParent.SerializedData.Nodes.Remove(source.SerializedData);
+          var newList = new List<TriggerNode>();
+          var sources = target.SerializedData.Nodes.ToList();
 
-        if (target.SerializedData.Nodes == null)
-        {
-          target.SerializedData.Nodes = new List<TriggerNode>();
-        }
+          if (Removed != null)
+          {
+            sources.AddRange(Removed);
+          }
 
-        target.SerializedData.Nodes.Add(source.SerializedData);
+          foreach (var viewNode in target.ChildNodes.Cast<TriggerTreeViewNode>())
+          {
+            var found = sources.Find(source => source == viewNode.SerializedData);
+            if (found != null)
+            {
+              newList.Add(found);
+              sources.Remove(found);
+            }
+          }
+
+          if (sources.Count > 0)
+          {
+            newList.AddRange(sources);
+          }
+
+          target.SerializedData.Nodes = newList;
+        }
       }
 
       TriggerManager.Instance.Update(true);
+      EventsUpdateTree(this, true);
     }
 
     private void CreateNodeClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is TriggerTreeViewNode node)
+      if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
       {
         var newNode = new TriggerNode { Name = LABEL_NEW_FOLDER };
 
@@ -257,7 +270,7 @@ namespace EQLogParser
 
     private void CreateTriggerClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node is TriggerTreeViewNode node)
+      if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
       {
         var newTrigger = new TriggerNode { Name = LABEL_NEW_TRIGGER, IsEnabled = true, TriggerData = new Trigger { Name = LABEL_NEW_TRIGGER } };
 
@@ -275,28 +288,176 @@ namespace EQLogParser
 
     private void DeleteClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info && info.Node.ParentNode is TriggerTreeViewNode parent &&
-        info.Node is TriggerTreeViewNode node)
+      if (treeView.SelectedItems != null)
       {
-        parent.SerializedData.Nodes.Remove(node.SerializedData);
-        if (parent.SerializedData.Nodes.Count == 0)
+        bool updated = false;
+        foreach (var node in treeView.SelectedItems.Cast<TriggerTreeViewNode>())
         {
-          parent.SerializedData.IsEnabled = false;
+          if (node.ParentNode is TriggerTreeViewNode parent)
+          {
+            parent.SerializedData.Nodes.Remove(node.SerializedData);
+            if (parent.SerializedData.Nodes.Count == 0)
+            {
+              parent.SerializedData.IsEnabled = false;
+              parent.SerializedData.IsExpanded = false;
+            }
+
+            updated = true;
+          }
         }
 
-        thePropertyGrid.SelectedObject = null;
-        thePropertyGrid.IsEnabled = false;
-        thePropertyGrid.DescriptionPanelVisibility = Visibility.Collapsed;
-        EventsUpdateTree(this, true);
-        TriggerManager.Instance.Update();
+        if (updated)
+        {
+          thePropertyGrid.SelectedObject = null;
+          thePropertyGrid.IsEnabled = false;
+          thePropertyGrid.DescriptionPanelVisibility = Visibility.Collapsed;
+          EventsUpdateTree(this, true);
+          TriggerManager.Instance.Update();
+        }
       }
     }
 
     private void RenameClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source is MenuItem item && item.DataContext is TreeViewItemContextMenuInfo info)
+      if (treeView.SelectedItems?.Count == 1)
       {
-        treeView.BeginEdit(info.Node);
+        treeView.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
+      }
+    }
+
+    private void ExportClick(object sender, RoutedEventArgs e)
+    {
+      if (treeView.SelectedItems?.Count > 0)
+      {
+        try
+        {
+          var exportList = new List<TriggerNode>();
+          foreach (var selected in treeView.SelectedItems.Cast<TriggerTreeViewNode>())
+          {
+            // if the root is in there just use it
+            if (selected == treeView.Nodes[0])
+            {
+              exportList = new List<TriggerNode>() { selected.SerializedData };
+              break;
+            }
+
+            var start = selected.ParentNode as TriggerTreeViewNode;
+            var child = selected.SerializedData;
+            TriggerNode newNode = null;
+            while (start != null)
+            {
+              newNode = new TriggerNode
+              {
+                Name = start.SerializedData.Name,
+                IsEnabled = start.SerializedData.IsEnabled,
+                IsExpanded = start.SerializedData.IsExpanded,
+                Nodes = new List<TriggerNode>() { child }
+              };
+
+              child = newNode;
+              start = start.ParentNode as TriggerTreeViewNode;
+            }
+
+            if (newNode != null)
+            {
+              exportList.Add(newNode);
+            }
+          }
+
+          if (exportList.Count > 0)
+          {
+            var result = System.Text.Json.JsonSerializer.Serialize(exportList, new JsonSerializerOptions { IncludeFields = true });
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            string filter = "Triggers File (*.tgf.gz)|*.tgf.gz";
+            saveFileDialog.Filter = filter;
+            if (saveFileDialog.ShowDialog().Value)
+            {
+              FileInfo gzipFileName = new FileInfo(saveFileDialog.FileName);
+              FileStream gzipTargetAsStream = gzipFileName.Create();
+              GZipStream gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
+              var writer = new StreamWriter(gzipStream);
+              writer?.Write(result);
+              writer?.Close();
+            }
+          }
+        }
+        catch (Exception ex)
+        {
+          new MessageWindow("Problem Exporting Triggers. Check Error Log for details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
+          LOG.Error(ex);
+        }
+      }
+    }
+
+    private void ImportClick(object sender, RoutedEventArgs e)
+    {
+      if (treeView?.SelectedItem is TriggerTreeViewNode node)
+      {
+        try
+        {
+          // WPF doesn't have its own file chooser so use Win32 Version
+          OpenFileDialog dialog = new OpenFileDialog
+          {
+            // filter to txt files
+            DefaultExt = ".scf.gz",
+            Filter = "Triggers File|*.tgf.gz|GINA Package File|*.gtp|"
+              + "All Support Files|*.tgf.gz;*.gtp"
+          };
+
+          // show dialog and read result
+          if (dialog.ShowDialog().Value)
+          {
+            // limit to 100 megs just incase
+            var fileInfo = new FileInfo(dialog.FileName);
+            if (fileInfo.Exists && fileInfo.Length < 100000000)
+            {
+              if (dialog.FileName.EndsWith("tgf.gz"))
+              {
+                GZipStream decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
+                var reader = new StreamReader(decompressionStream);
+                string json = reader?.ReadToEnd();
+                reader?.Close();
+                var data = JsonSerializer.Deserialize<List<TriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
+                TriggerManager.Instance.MergeTriggers(data, node.SerializedData);
+              }
+              else if (dialog.FileName.EndsWith(".gtp"))
+              {
+                var data = new byte[fileInfo.Length];
+                fileInfo.OpenRead().Read(data);
+                GINAXmlParser.Import(data, node.SerializedData);
+              }
+            }
+          }
+        }
+        catch (Exception ex)
+        {
+          new MessageWindow("Problem Importing Triggers. Check Error Log for details.", EQLogParser.Resource.IMPORT_ERROR).ShowDialog();
+          LOG.Error("Import Failure", ex);
+        }
+      }
+    }
+
+    private void DisableNodes(TriggerNode node)
+    {
+      if (node.TriggerData == null)
+      {
+        node.IsEnabled = false;
+        node.IsExpanded = false;
+        if (node.Nodes != null)
+        {
+          foreach (var child in node.Nodes)
+          {
+            DisableNodes(child);
+          }
+        }
+      }
+    }
+
+    private void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e)
+    {
+      if (e.Node is TriggerTreeViewNode node)
+      {
+        node.SerializedData.IsExpanded = node.IsExpanded;
       }
     }
 
@@ -329,14 +490,24 @@ namespace EQLogParser
 
     private void ItemContextMenuOpening(object sender, ItemContextMenuOpeningEventArgs e)
     {
-      if (e.MenuInfo.Node is TriggerTreeViewNode node)
+      var node = treeView.SelectedItem as TriggerTreeViewNode;
+      var count = (treeView.SelectedItems != null) ? treeView.SelectedItems.Count : 0;
+
+      if (node != null)
       {
-        deleteTriggerMenuItem.IsEnabled = (node.Level > 0);
-        renameMenuItem.IsEnabled = (node.Level > 0);
-        newMenuItem.Visibility = node.IsTrigger ? Visibility.Collapsed : Visibility.Visible;
-        newSeparator.Visibility = node.IsTrigger ? Visibility.Collapsed : Visibility.Visible;
-        importMenuItem.Visibility = node.IsTrigger ? Visibility.Collapsed : Visibility.Visible;
-        importSeparator.Visibility = node.IsTrigger ? Visibility.Collapsed : Visibility.Visible;
+        deleteTriggerMenuItem.IsEnabled = (node != treeView.Nodes[0] || count > 1);
+        renameMenuItem.IsEnabled = (node != treeView.Nodes[0]) && count == 1;
+        importMenuItem.IsEnabled = (!node.IsTrigger && count == 1);
+        exportMenuItem.IsEnabled = true;
+        newMenuItem.IsEnabled = (!node.IsTrigger && count == 1);
+      }
+      else
+      {
+        deleteTriggerMenuItem.IsEnabled = false;
+        renameMenuItem.IsEnabled = false;
+        importMenuItem.IsEnabled = false;
+        exportMenuItem.IsEnabled = false;
+        newMenuItem.IsEnabled = false;
       }
     }
 
@@ -404,7 +575,7 @@ namespace EQLogParser
       }
     }
 
-    private void SaveExpanded(List<TriggerTreeViewNode> nodes)
+    private void SaveNodeExpanded(List<TriggerTreeViewNode> nodes)
     {
       foreach (var node in nodes)
       {
@@ -412,7 +583,7 @@ namespace EQLogParser
 
         if (!node.IsTrigger)
         {
-          SaveExpanded(node.ChildNodes.Cast<TriggerTreeViewNode>().ToList());
+          SaveNodeExpanded(node.ChildNodes.Cast<TriggerTreeViewNode>().ToList());
         }
       }
     }
@@ -434,7 +605,7 @@ namespace EQLogParser
         
         if (isValid && trigger.EndUseRegex)
         {
-          isValid = TestRegexProperty(trigger, trigger.EndEarlyPattern, errorsProp);
+          isValid = TestRegexProperty(trigger, trigger.CancelPattern, errorsProp);
         }
         
         if (isValid && trigger.Errors != "None")
@@ -497,16 +668,6 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
     }
 
-    private new void PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-      if (e.OriginalSource is FrameworkElement element && element.DataContext is TriggerTreeViewNode node)
-      {
-        treeView.SelectedItems?.Clear();
-        treeView.SelectedItem = node;
-        SelectionChanged(node);
-      }
-    }
-
     private void EnableCategory(string category, bool isEnabled)
     {
       foreach (var item in thePropertyGrid.Items)
@@ -540,6 +701,25 @@ namespace EQLogParser
       return null;
     }
 
+    private TriggerTreeViewNode FindAndExpandNode(TriggerTreeViewNode node, Trigger trigger)
+    {
+      if (node.SerializedData?.TriggerData == trigger)
+      {
+        return node;
+      }
+
+      foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
+      {
+        if (FindAndExpandNode(child, trigger) is TriggerTreeViewNode found)
+        {
+          treeView.ExpandNode(node);
+          return found;
+        }      
+      }
+
+      return null;
+    }
+
     internal class TriggerPropertyModel : Trigger
     {
       public Trigger Original { get; set; }
@@ -552,10 +732,10 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        SaveExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
-        (Application.Current.MainWindow as MainWindow).Closing -= TriggersViewClosing;
         TriggerManager.Instance.EventsUpdateTree -= EventsUpdateTree;
+        TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
+        treeView.DragDropController.Dispose();
         treeView.Dispose();
         disposedValue = true;
       }
