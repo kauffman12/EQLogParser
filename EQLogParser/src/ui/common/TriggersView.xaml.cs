@@ -188,7 +188,7 @@ namespace EQLogParser
       e.DraggingNodes.Clear();
       list.ForEach(node => e.DraggingNodes.Add(node));
 
-      target = target.IsTrigger ? target.ParentNode as TriggerTreeViewNode : target;
+      target = (!target.IsTrigger && e.DropPosition == DropPosition.DropAsChild) ? target : target.ParentNode as TriggerTreeViewNode;
 
       Removed = new List<TriggerNode>();
       foreach (var node in e.DraggingNodes.Cast<TriggerTreeViewNode>())
@@ -207,8 +207,7 @@ namespace EQLogParser
     private void ItemDropped(object sender, TreeViewItemDroppedEventArgs e)
     {
       var target = e.TargetNode as TriggerTreeViewNode;
-
-      target = target.IsTrigger ? target.ParentNode as TriggerTreeViewNode : target;
+      target = (!target.IsTrigger && e.DropPosition == DropPosition.DropAsChild) ? target : target.ParentNode as TriggerTreeViewNode;
 
       if (target.SerializedData != null)
       {
@@ -248,6 +247,7 @@ namespace EQLogParser
 
       TriggerManager.Instance.Update(true);
       EventsUpdateTree(this, true);
+      SelectionChanged(null);
     }
 
     private void CreateNodeClick(object sender, RoutedEventArgs e)
@@ -400,8 +400,7 @@ namespace EQLogParser
           {
             // filter to txt files
             DefaultExt = ".scf.gz",
-            Filter = "Triggers File|*.tgf.gz|GINA Package File|*.gtp|"
-              + "All Support Files|*.tgf.gz;*.gtp"
+            Filter = "All Supported Files|*.tgf.gz;*.gtp"
           };
 
           // show dialog and read result
@@ -509,6 +508,8 @@ namespace EQLogParser
         exportMenuItem.IsEnabled = false;
         newMenuItem.IsEnabled = false;
       }
+
+      importMenuItem.Header = importMenuItem.IsEnabled ? "Import to " + node.Content.ToString() : "Import";
     }
 
     private void SelectionChanged(object sender, ItemSelectionChangedEventArgs e)
@@ -522,8 +523,9 @@ namespace EQLogParser
     private void SelectionChanged(TriggerTreeViewNode node)
     {
       TriggerPropertyModel model = null;
+      var isTrigger = (node?.IsTrigger == true);
 
-      if (node.IsTrigger)
+      if (isTrigger)
       {
         model = new TriggerPropertyModel { Original = node.SerializedData.TriggerData };
         TriggerUtil.Copy(model, node.SerializedData.TriggerData);
@@ -533,9 +535,9 @@ namespace EQLogParser
 
       thePropertyGrid.SelectedObject = model;
       thePropertyGrid.IsEnabled = (thePropertyGrid.SelectedObject != null);
-      thePropertyGrid.DescriptionPanelVisibility = node.IsTrigger ? Visibility.Visible : Visibility.Collapsed;
-      buttonPanel.Visibility = node.IsTrigger ? Visibility.Visible : Visibility.Collapsed;
-      EnableCategory(timerDurationItem.CategoryName, node.IsTrigger ? node.SerializedData.TriggerData.EnableTimer : false);
+      thePropertyGrid.DescriptionPanelVisibility = isTrigger ? Visibility.Visible : Visibility.Collapsed;
+      buttonPanel.Visibility = isTrigger ? Visibility.Visible : Visibility.Collapsed;
+      EnableCategory(timerDurationItem.CategoryName, isTrigger ? node.SerializedData.TriggerData.EnableTimer : false);
     }
 
     private void NodeChecked(object sender, NodeCheckedEventArgs e)
