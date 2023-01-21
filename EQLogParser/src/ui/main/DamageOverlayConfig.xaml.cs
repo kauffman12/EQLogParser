@@ -12,12 +12,10 @@ using System.Windows.Shapes;
 namespace EQLogParser
 {
   /// <summary>
-  /// Interaction logic for OverlayConfigWindow.xaml
+  /// Interaction logic for DamageOverlayConfig.xaml
   /// </summary>
-  public partial class OverlayConfigWindow : ChromelessWindow
+  public partial class DamageOverlayConfig : ChromelessWindow
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     private readonly List<ColorPicker> ColorPickerList = new List<ColorPicker>();
     private readonly List<StackPanel> NamePanels = new List<StackPanel>();
     private readonly List<Image> NameIconList = new List<Image>();
@@ -28,7 +26,6 @@ namespace EQLogParser
     private readonly List<Rectangle> EmptyList = new List<Rectangle>();
     private readonly List<Rectangle> RectangleList = new List<Rectangle>();
     private readonly List<Color> ColorList = new List<Color>();
-
     private TextBlock TitleBlock;
     private StackPanel TitlePanel;
     private TextBlock TitleDamageBlock;
@@ -37,7 +34,7 @@ namespace EQLogParser
     private int CurrentMaxRows;
     private MainWindow Main = null;
 
-    public OverlayConfigWindow()
+    public DamageOverlayConfig()
     {
       InitializeComponent();
 
@@ -326,7 +323,7 @@ namespace EQLogParser
       }
     }
 
-    private void CancelClick(object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(false, true);
+    private void CancelClick(object sender, RoutedEventArgs e) => OverlayUtil.OpenDamageOverlay(false, true);
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
@@ -365,7 +362,7 @@ namespace EQLogParser
         });
       }
 
-      OverlayUtil.OpenOverlay(false, true);
+      OverlayUtil.OpenDamageOverlay(false, true);
     }
 
     private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)

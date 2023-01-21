@@ -20,19 +20,19 @@ namespace EQLogParser
     internal static readonly SolidColorBrush DOWNBRUSH = new SolidColorBrush(Colors.Red);
     internal static readonly SolidColorBrush TITLEBRUSH = new SolidColorBrush(Color.FromRgb(254, 156, 30));
     private static bool IsDamageOverlayEnabled = false;
-    private static OverlayWindow Overlay = null;
-    private static OverlayConfigWindow OverlayConfig = null;
+    private static DamageOverlay DamageOverlay = null;
+    private static DamageOverlayConfig OverlayConfig = null;
 
     private OverlayUtil()
     {
 
     }
 
-    internal static void CloseOverlay()
+    internal static void CloseDamageOverlay()
     {
-      if (Overlay != null)
+      if (DamageOverlay != null)
       {
-        Overlay.Pause();
+        DamageOverlay.Pause();
       }
     }
 
@@ -42,17 +42,17 @@ namespace EQLogParser
     {
       if (IsDamageOverlayEnabled)
       {
-        OpenOverlay();
+        OpenDamageOverlay();
       }
     }
 
-    internal static void OpenOverlay(bool configure = false, bool saveFirst = false)
+    internal static void OpenDamageOverlay(bool configure = false, bool saveFirst = false)
     {
       Application.Current.Dispatcher.Invoke(() =>
       {
         if (configure)
         {
-          CloseOverlay();
+          CloseDamageOverlay();
 
           if (OverlayConfig != null)
           {
@@ -60,7 +60,7 @@ namespace EQLogParser
           }
           else
           {
-            OverlayConfig = new OverlayConfigWindow();
+            OverlayConfig = new DamageOverlayConfig();
             OverlayConfig.Show();
           }
         }
@@ -71,15 +71,15 @@ namespace EQLogParser
             OverlayConfig.Visibility = Visibility.Hidden;
           }
 
-          if (Overlay != null)
+          if (DamageOverlay != null)
           {
-            Overlay.Visibility = Visibility.Visible;
-            Overlay.Resume();
+            DamageOverlay.Visibility = Visibility.Visible;
+            DamageOverlay.Resume();
           }
           else
           {
-            Overlay = new OverlayWindow();
-            Overlay.Show();
+            DamageOverlay = new DamageOverlay();
+            DamageOverlay.Show();
           }
         }
       }, System.Windows.Threading.DispatcherPriority.Send);
@@ -97,11 +97,11 @@ namespace EQLogParser
 
       if (IsDamageOverlayEnabled)
       {
-        OpenOverlay(true, false);
+        OpenDamageOverlay(true, false);
       }
       else
       {
-        CloseOverlay();
+        CloseDamageOverlay();
       }
 
       return IsDamageOverlayEnabled;
