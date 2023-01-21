@@ -75,6 +75,9 @@ namespace EQLogParser
     {
       try
       {
+        var domain = AppDomain.CurrentDomain;
+        domain.UnhandledException += DomainUnhandledException;
+
         // DPI and sizing
         var dpi = VisualTreeHelper.GetDpi(this);
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
@@ -224,6 +227,12 @@ namespace EQLogParser
         LOG.Error(e);
         throw;
       }
+    }
+
+    private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+      var exception = e.ExceptionObject as Exception;
+      LOG.Error(exception.Message, exception);
     }
 
     private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
