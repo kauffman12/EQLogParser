@@ -47,7 +47,7 @@ namespace EQLogParser
   internal class TriggerTreeViewNode : TreeViewNode
   {
     public bool IsTrigger { get; set; }
-    public TriggerNode SerializedData{ get; set; }
+    public TriggerNode SerializedData { get; set; }
   }
 
   internal interface IAction { }

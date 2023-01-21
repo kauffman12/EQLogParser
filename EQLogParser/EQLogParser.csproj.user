@@ -53,7 +53,7 @@
     <Page Update="src\ui\main\MessageWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="src\ui\main\OverlayConfigWindow.xaml">
+    <Page Update="src\ui\main\DamageOverlayConfig.xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>

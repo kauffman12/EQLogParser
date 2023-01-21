@@ -241,7 +241,7 @@ namespace EQLogParser
       {
         case PowerModes.Suspend:
           LOG.Warn("Suspending");
-          OverlayUtil.CloseOverlay();
+          OverlayUtil.CloseDamageOverlay();
           break;
         case PowerModes.Resume:
           LOG.Warn("Resume");
@@ -742,7 +742,7 @@ namespace EQLogParser
       {
         if (EQLogReader != null)
         {
-          OverlayUtil.CloseOverlay();
+          OverlayUtil.CloseDamageOverlay();
 
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
@@ -1086,7 +1086,7 @@ namespace EQLogParser
       }
 
       StopProcessing();
-      OverlayUtil.CloseOverlay();
+      OverlayUtil.CloseDamageOverlay();
       PlayerChatManager?.Dispose();
       TriggerManager.Instance.Stop(false);
       ConfigUtil.Save();

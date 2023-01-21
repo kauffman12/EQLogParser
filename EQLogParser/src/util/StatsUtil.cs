@@ -567,8 +567,14 @@ namespace EQLogParser
             if (PlayerManager.Instance.IsVerifiedPlayer(death.Killed) || PlayerManager.Instance.IsMerc(death.Killed))
             {
               actions.Add(death);
-              raidStats.Deaths.Add(new DeathEvent { BeginTime = block.BeginTime, Killed = death.Killed, Killer = death.Killer, 
-                Message = death.Message, Previous = death.Previous });
+              raidStats.Deaths.Add(new DeathEvent
+              {
+                BeginTime = block.BeginTime,
+                Killed = death.Killed,
+                Killer = death.Killer,
+                Message = death.Message,
+                Previous = death.Previous
+              });
             }
           }
         }

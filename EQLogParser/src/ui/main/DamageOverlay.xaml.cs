@@ -15,9 +15,9 @@ using System.Windows.Threading;
 namespace EQLogParser
 {
   /// <summary>
-  /// Interaction logic for OverlayWindow.xaml
+  /// Interaction logic for DamageOverlay.xaml
   /// </summary>
-  public partial class OverlayWindow : Window
+  public partial class DamageOverlay : Window
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -57,7 +57,7 @@ namespace EQLogParser
     private CancellationTokenSource CancelToken = null;
     private bool Active = false;
 
-    public OverlayWindow()
+    public DamageOverlay()
     {
       InitializeComponent();
       Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["OverlayActiveBrush"];
@@ -139,7 +139,7 @@ namespace EQLogParser
     }
 
     private void ClickRefresh(object sender, RoutedEventArgs e) => Reset(true);
-    private void ClickSettings(object sender, RoutedEventArgs e) => OverlayUtil.OpenOverlay(true, false);
+    private void ClickSettings(object sender, RoutedEventArgs e) => OverlayUtil.OpenDamageOverlay(true, false);
 
     private void ClickCopy(object sender, RoutedEventArgs e)
     {

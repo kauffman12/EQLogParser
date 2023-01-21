@@ -780,7 +780,7 @@ namespace EQLogParser
           }
 
           killer = TextFormatUtils.ToUpper(killer);
-         
+
           var death = new DeathRecord { Killed = string.Intern(slain), Killer = string.Intern(killer), Message = string.Intern(lineData.Action) };
           if (PreviousAction != null)
           {
