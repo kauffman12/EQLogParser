@@ -423,7 +423,7 @@ namespace EQLogParser
               {
                 var data = new byte[fileInfo.Length];
                 fileInfo.OpenRead().Read(data);
-                GINAXmlParser.Import(data, node.SerializedData);
+                TriggerUtil.ImportFromGina(data, node.SerializedData);
               }
             }
           }
@@ -562,7 +562,7 @@ namespace EQLogParser
       {
         child.SerializedData.IsEnabled = value;
         if (!child.IsTrigger)
-        {          
+        {
           CheckChildren(child, value);
         }
       }
@@ -604,12 +604,12 @@ namespace EQLogParser
         {
           isValid = TestRegexProperty(trigger, trigger.Pattern, errorsProp);
         }
-        
+
         if (isValid && trigger.EndUseRegex)
         {
           isValid = TestRegexProperty(trigger, trigger.CancelPattern, errorsProp);
         }
-        
+
         if (isValid && trigger.Errors != "None")
         {
           trigger.Errors = "None";
@@ -716,7 +716,7 @@ namespace EQLogParser
         {
           treeView.ExpandNode(node);
           return found;
-        }      
+        }
       }
 
       return null;

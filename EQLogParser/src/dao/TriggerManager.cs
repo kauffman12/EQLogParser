@@ -66,7 +66,7 @@ namespace EQLogParser
 
       if (!double.IsNaN(lineData.BeginTime) && ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
       {
-        GINAXmlParser.CheckGina(lineData);
+        TriggerUtil.CheckGina(lineData);
       }
     }
 
@@ -204,8 +204,13 @@ namespace EQLogParser
                 }
                 else
                 {
-                  _ = lowPriChannel.Writer.WriteAsync(new LowPriData { ActiveTriggers= activeTriggers, LineData = lineData,
-                    Node = node, SpeechChannel = speechChannel});
+                  _ = lowPriChannel.Writer.WriteAsync(new LowPriData
+                  {
+                    ActiveTriggers = activeTriggers,
+                    LineData = lineData,
+                    Node = node,
+                    SpeechChannel = speechChannel
+                  });
                 }
 
                 node = nextNode;
@@ -323,7 +328,7 @@ namespace EQLogParser
             Line = lineData.Line,
             Type = "Timer Canceled",
             Eval = time
-        });
+          });
         }
       }
 
