@@ -76,8 +76,8 @@
               <MenuItem x:Name="deleteTriggerMenuItem" Header="Delete" Click="DeleteClick" />
               <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
               <Separator x:Name="importSeparator" />
-              <MenuItem x:Name="exportMenuItem" Header="Export" Click="ExportClick" />
-              <MenuItem x:Name="importMenuItem" Header="Import (+Merge)" Click="ImportClick" />
+              <MenuItem x:Name="exportMenuItem" Header="Export" ToolTip="Exports Selected Folders" Click="ExportClick" />
+              <MenuItem x:Name="importMenuItem" Header="Import" ToolTip="Imports and Merges to the Selected Folder" Click="ImportClick" />
             </ContextMenu>
           </syncfusion:SfTreeView.ItemContextMenu>
         </syncfusion:SfTreeView>

@@ -105,16 +105,19 @@ namespace EQLogParser
         {
           if (state == DockState.Hidden && window?.Tag as string != "Hide")
           {
-            if (dockSite.Children.Contains(window))
+            Dispatcher.CurrentDispatcher.InvokeAsync(() =>
             {
-              dockSite.Children.Remove(window);
-            }
-            else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
-            {
-              dockSite.DocContainer.Items.Remove(window);
-            }
+              if (dockSite.Children.Contains(window))
+              {
+                dockSite.Children.Remove(window);
+              }
+              else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
+              {
+                dockSite.DocContainer.Items.Remove(window);
+              }
 
             (window.Content as IDisposable)?.Dispose();
+            }, DispatcherPriority.Background);
           }
           else
           {
