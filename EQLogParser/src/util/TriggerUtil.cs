@@ -1,5 +1,4 @@
-﻿using Syncfusion.Linq;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -108,13 +107,13 @@ namespace EQLogParser
 
       if (useRegex && Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is MatchCollection matches && matches.Count > 0)
       {
-        matches.ForEach(match =>
+        foreach (Match match in matches)
         {
           if (match.Groups.Count > 1)
           {
             pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + ">.+)");
           }
-        });
+        }
       }
 
       return pattern;

@@ -1,5 +1,4 @@
-﻿using Syncfusion.Data.Extensions;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -25,6 +24,9 @@ namespace EQLogParser
 
     internal event EventHandler<bool> EventsUpdateTree;
     internal event EventHandler<Trigger> EventsSelectTrigger;
+    internal event EventHandler<Trigger> EventsNewTimer;
+    internal event EventHandler<Trigger> EventsUpdateTimer;
+
     internal static TriggerManager Instance = new TriggerManager();
     private readonly string TRIGGERS_FILE = "triggers.json";
     private readonly DispatcherTimer UpdateTimer;
@@ -74,7 +76,7 @@ namespace EQLogParser
     {
       var result = new TriggerTreeViewNode
       {
-        Content = "All Triggers",
+        Content = "Triggers",
         IsChecked = Data.IsEnabled,
         IsTrigger = false,
         IsExpanded = Data.IsExpanded,
@@ -161,6 +163,7 @@ namespace EQLogParser
     [MethodImpl(MethodImplOptions.Synchronized)]
     internal void Start()
     {
+      LOG.Info("Starting Trigger Manager");
       Channel<LowPriData> lowPriChannel = Channel.CreateUnbounded<LowPriData>();
       Channel<Speak> speechChannel = Channel.CreateUnbounded<Speak>();
       StartSpeechReader(speechChannel);
@@ -186,12 +189,13 @@ namespace EQLogParser
 
             if (result is LinkedList<TriggerWrapper> updatedTriggers)
             {
-              activeTriggers.ForEach(wrapper => CleanupWrapper(wrapper));
+              activeTriggers.ToList().ForEach(wrapper => CleanupWrapper(wrapper));
               activeTriggers = updatedTriggers;
             }
             else if (result is LineData lineData)
             {
               var node = activeTriggers.First;
+
               while (node != null)
               {
                 // save since the nodes may get reordered
@@ -218,14 +222,15 @@ namespace EQLogParser
             }
           }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
           // channel closed
+          LOG.Debug(ex);
         }
 
         lowPriChannel?.Writer.Complete();
         speechChannel?.Writer.Complete();
-        activeTriggers?.ForEach(wrapper => CleanupWrapper(wrapper));
+        activeTriggers?.ToList().ForEach(wrapper => CleanupWrapper(wrapper));
       });
 
       _ = Task.Run(async () =>
@@ -251,6 +256,7 @@ namespace EQLogParser
     [MethodImpl(MethodImplOptions.Synchronized)]
     internal void Stop(bool save = true)
     {
+      LOG.Info("Shutting Down Trigger Manager");
       lock (LockObject)
       {
         LogChannel?.Writer.Complete();
@@ -364,14 +370,14 @@ namespace EQLogParser
 
     private void StartSpeechReader(Channel<Speak> speechChannel)
     {
-      _ = Task.Run(async () =>
+      var task = Task.Run(async () =>
       {
         try
         {
           var synth = new SpeechSynthesizer();
           synth.Rate = 1;
           synth.SetOutputToDefaultAudioDevice();
-          synth.SelectVoiceByHints(VoiceGender.Female);
+          //synth.SelectVoiceByHints(VoiceGender.Female);
           Trigger previous = null;
 
           while (await speechChannel.Reader.WaitToReadAsync())
@@ -388,7 +394,7 @@ namespace EQLogParser
               var speak = result.Text;
               if (result.Matches != null)
               {
-                result.Matches.ForEach(match =>
+                foreach (Match match in result.Matches)
                 {
                   for (int i = 1; i < match.Groups.Count; i++)
                   {
@@ -399,7 +405,7 @@ namespace EQLogParser
                       speak = speak.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
                     }
                   }
-                });
+                }
               }
 
               synth.SpeakAsync(speak);
@@ -425,9 +431,10 @@ namespace EQLogParser
             });
           }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
           // channel closed
+          LOG.Debug(ex);
         }
       });
     }
@@ -437,9 +444,12 @@ namespace EQLogParser
       Task.Run(() =>
       {
         // Restart Timer Option
+        bool timerUpdated = false;
         if (wrapper.TriggerData.TriggerAgainOption == 1)
         {
           CleanupWrapper(wrapper);
+          timerUpdated = true;
+          EventsUpdateTimer?.Invoke(this, wrapper.TriggerData);
         }
 
         // Start a New independent Timer as long as one is not already running when Option 2 is selected
@@ -474,6 +484,11 @@ namespace EQLogParser
                 }
               }, warningSource.Token);
             }
+          }
+
+          if (!timerUpdated)
+          {
+            EventsNewTimer?.Invoke(this, wrapper.TriggerData);
           }
 
           var timerSource = new CancellationTokenSource();
@@ -681,10 +696,10 @@ namespace EQLogParser
 
     private void CleanupWrapper(TriggerWrapper wrapper)
     {
-      wrapper.TimerCancellations.Keys.ForEach(source => source.Cancel());
-      wrapper.WarningCancellations.Keys.ForEach(source => source.Cancel());
-      wrapper.TimerCancellations.Keys.ForEach(source => source.Dispose());
-      wrapper.WarningCancellations.Keys.ForEach(source => source.Dispose());
+      wrapper.TimerCancellations.Keys.ToList().ForEach(source => source.Cancel());
+      wrapper.WarningCancellations.Keys.ToList().ForEach(source => source.Cancel());
+      wrapper.TimerCancellations.Keys.ToList().ForEach(source => source.Dispose());
+      wrapper.WarningCancellations.Keys.ToList().ForEach(source => source.Dispose());
       wrapper.TimerCancellations.Clear();
       wrapper.WarningCancellations.Clear();
     }

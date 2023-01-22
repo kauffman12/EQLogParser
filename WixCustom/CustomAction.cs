@@ -55,7 +55,7 @@ namespace WixCustom
           return ActionResult.Success;
         }
       }
-      catch (Exception e)
+      catch (Exception _)
       {
         session["DOTNET6INSTALLED"] = "0";
         return ActionResult.Success;

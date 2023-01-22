@@ -90,7 +90,6 @@
         <StackPanel Orientation="Vertical" Grid.Row="0">
           <syncfusion:PropertyGrid
             x:Name="thePropertyGrid"
-            Grid.Row="0"
             BorderBrush="{DynamicResource ContentBackgroundAlt2}"
             BorderThickness="1"
             ButtonPanelVisibility="Collapsed"
@@ -126,9 +125,9 @@
               <syncfusion:PropertyGridItem x:Name="evalTimeItem" CategoryName="Status" PropertyName="LongestEvalTime" DisplayName="Longest Eval Time (μs)" IsReadOnly="True" Description="The longest time recorded for checking the specified Pattern for a match. The time is in microseconds. If a change is made to the Pattern the value will be reset. This should help identify slow Triggers and ideally this value stays below 1000."/>
             </syncfusion:PropertyGrid.Items>
           </syncfusion:PropertyGrid>
-          <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Visibility="Collapsed">
-            <Button x:Name="saveButton" Margin="8,8,0,0" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
-            <Button x:Name="cancelButton" Margin="4,8,0,0" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+          <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Visibility="Visible">
+            <Button x:Name="saveButton" Margin="8,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
+            <Button x:Name="cancelButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           </StackPanel>
         </StackPanel>
       </Grid>

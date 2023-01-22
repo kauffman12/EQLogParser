@@ -87,8 +87,8 @@
     </StackPanel>
     <DockPanel x:Name="savePanel" HorizontalAlignment="Center">
       <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="110,0,0,0">
-        <Button Width="70" Margin="0,0,4,0" Height="24" Click="SaveClick" HorizontalAlignment="Center" Content="Save"/>
-        <Button Width="70" Click="CancelClick" Height="24" HorizontalAlignment="Center" Content="Cancel"/>
+        <Button Width="70" Margin="0,0,4,0" FontSize="12" Height="25" Click="SaveClick" HorizontalAlignment="Center" Content="Save"/>
+        <Button Width="70" Click="CancelClick" FontSize="12" Height="25" HorizontalAlignment="Center" Content="Cancel"/>
       </StackPanel>
     </DockPanel>
   </Canvas>

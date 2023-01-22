@@ -1,6 +1,5 @@
 ﻿using FontAwesome5;
 using Microsoft.Win32;
-using Syncfusion.Data.Extensions;
 using Syncfusion.UI.Xaml.TreeView;
 using Syncfusion.Windows.PropertyGrid;
 using System;
@@ -595,9 +594,9 @@ namespace EQLogParser
       if (args.Property.Name != errorsItem.PropertyName && args.Property.Name != evalTimeItem.PropertyName &&
         args.Property.SelectedObject is Trigger trigger)
       {
-        var collection = thePropertyGrid.Properties.ToObservableCollection();
-        var errorsProp = FindProperty(collection, errorsItem.PropertyName);
-        var longestProp = FindProperty(collection, evalTimeItem.PropertyName);
+        var list = thePropertyGrid.Properties.ToList();
+        var errorsProp = FindProperty(list, errorsItem.PropertyName);
+        var longestProp = FindProperty(list, evalTimeItem.PropertyName);
 
         bool isValid = true;
         if (trigger.UseRegex)
@@ -683,9 +682,9 @@ namespace EQLogParser
       thePropertyGrid.RefreshPropertygrid();
     }
 
-    private PropertyItem FindProperty(ObservableCollection<object> collection, string name)
+    private PropertyItem FindProperty(List<object> list, string name)
     {
-      foreach (var prop in collection)
+      foreach (var prop in list)
       {
         if (prop is PropertyItem item)
         {
@@ -694,7 +693,7 @@ namespace EQLogParser
             return item;
           }
         }
-        else if (prop is PropertyCategoryViewItemCollection sub && FindProperty(sub.Properties, name) is PropertyItem found)
+        else if (prop is PropertyCategoryViewItemCollection sub && FindProperty(sub.Properties.ToList(), name) is PropertyItem found)
         {
           return found;
         }

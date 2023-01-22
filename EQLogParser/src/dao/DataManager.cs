@@ -1,5 +1,4 @@
-﻿using Syncfusion.Data.Extensions;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -152,7 +151,7 @@ namespace EQLogParser
       ConfigUtil.ReadList(@"data\oldspells.txt").ForEach(line => OldSpellNamesDB[line] = true);
 
       var procCache = new Dictionary<string, bool>();
-      ConfigUtil.ReadList(@"data\procs.txt").Where(line => line.Length > 0 && line[0] != '#').ForEach(line => procCache[line] = true);
+      ConfigUtil.ReadList(@"data\procs.txt").Where(line => line.Length > 0 && line[0] != '#').ToList().ForEach(line => procCache[line] = true);
 
       ConfigUtil.ReadList(@"data\spells.txt").ForEach(line =>
       {

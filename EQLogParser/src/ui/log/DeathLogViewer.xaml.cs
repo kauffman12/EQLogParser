@@ -1,5 +1,4 @@
-﻿using Syncfusion.Data.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -64,7 +63,7 @@ namespace EQLogParser
             {
               if (block.BeginTime >= start && block.BeginTime <= end)
               {
-                block.Actions.Cast<DamageRecord>().ForEach(damage =>
+                block.Actions.Cast<DamageRecord>().ToList().ForEach(damage =>
                 {
                   if (damage.Defender == CurrentPlayer.OrigName && damage.Total > 0)
                   {
@@ -89,7 +88,7 @@ namespace EQLogParser
 
       allHeals.ForEach(block =>
       {
-        block.Actions.Cast<HealRecord>().ForEach(heal =>
+        block.Actions.Cast<HealRecord>().ToList().ForEach(heal =>
         {
           if (heal.Healed == CurrentPlayer.OrigName && heal.Total > 0)
           {

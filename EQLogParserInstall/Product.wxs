@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.41" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.42" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -17,6 +17,7 @@
 			<ComponentGroupRef Id="ProductComponents" />
       <ComponentGroupRef Id="ProductDataComponents" />
       <ComponentGroupRef Id="ProductHtmlDataComponents" />
+      <ComponentGroupRef Id="RuntimeComponents" />
       <ComponentRef Id="ApplicationShortcut" />
       <ComponentRef Id="ApplicationShortcutDesktop" />
       <ComponentRef Id="Logs" />
@@ -96,6 +97,13 @@
           <Directory Id="DATAFOLDER" Name="data">
             <Directory Id="HTMLDATAFOLDER" Name="html" />
           </Directory>
+          <Directory Id="RTOLDER" Name="runtimes">
+            <Directory Id="RTWINFOLDER" Name="win">
+              <Directory Id="RTWINLIBFOLDER" Name="lib">
+                <Directory Id="RTWINLIBNETFOLDER" Name="net6.0" />
+              </Directory>
+            </Directory>
+          </Directory>
         </Directory>
       </Directory>
       <Directory Id="AppDataFolder">
@@ -142,7 +150,10 @@
 	    </Component>
       <Component Win64="yes" Id="EQLogParser.runtimeconfig.json" Guid="1E4DF525-40F2-43E2-9481-AA5D8E84E07A">
         <File Id="EQLogParser.runtimeconfig.json" Name="EQLogParser.runtimeconfig.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.runtimeconfig.json" />
-      </Component>      
+      </Component>
+      <Component Win64="yes" Id="EQLogParser.deps.json" Guid="0F544A17-9D4F-4A62-B714-7FEC8174E175">
+        <File CompanionFile="EQLogParser.dll" Id="EQLogParser.deps.json" Name="EQLogParser.deps.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.deps.json" />
+      </Component>
       <Component Win64="yes" Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F">
         <File CompanionFile="EQLogParser.dll" Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser.TargetDir)log4net.dll" />
       </Component>
@@ -184,7 +195,10 @@
       </Component>
       <Component Win64="yes" Id="Syncfusion.SfInput.WPF.dll" Guid="478A6221-BB5D-410A-B421-2333CD771152">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfInput.WPF.dll" Name="Syncfusion.SfInput.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfInput.WPF.dll" />
-      </Component>      
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.SfProgressBar.WPF.dll" Guid="D1722B72-54C1-4F57-97E7-0A0D1C46DF6B">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfProgressBar.WPF.dll" Name="Syncfusion.SfProgressBar.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfProgressBar.WPF.dll" />
+      </Component>
       <Component Win64="yes" Id="Syncfusion.SfSkinManager.WPF.dll" Guid="33F08F96-DA5F-471D-88F0-C4E7A5A50621">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfSkinManager.WPF.dll" Name="Syncfusion.SfSkinManager.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfSkinManager.WPF.dll" />
       </Component>
@@ -243,6 +257,11 @@
       <Component Win64="yes" Id="footer.html" Guid="5BEC871D-91DA-436B-8D6E-656FDA973A33">
         <File Id="footer.html" Name="footer.html" Source="$(var.EQLogParser.TargetDir)\data\html\footer.html" />
       </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="RuntimeComponents" Directory="RTWINLIBNETFOLDER">
+      <Component Win64="yes" Id="System.Speech.dll" Guid="7BEDF909-C3DD-4B90-B172-56D880664C1A">
+        <File Id="System.Speech.dll" Name="System.Speech.dll" Source="$(var.EQLogParser.TargetDir)\runtimes\win\lib\net6.0\System.Speech.dll" />
+      </Component>  
     </ComponentGroup>
   </Fragment>
 </Wix>
