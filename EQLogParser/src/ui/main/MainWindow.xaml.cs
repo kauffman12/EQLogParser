@@ -178,7 +178,7 @@ namespace EQLogParser
         {
           // check version
           checkUpdatesIcon.Visibility = Visibility.Visible;
-          MainActions.CheckVersion(version, errorText);
+          MainActions.CheckVersion(errorText);
         }
         else
         {
@@ -221,6 +221,7 @@ namespace EQLogParser
 
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         TriggerManager.Instance.Init();
+        //OverlayManager.Instance.Init();
       }
       catch (Exception e)
       {

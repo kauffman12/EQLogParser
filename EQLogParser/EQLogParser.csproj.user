@@ -21,6 +21,9 @@
     <Compile Update="src\ui\common\TriggersView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\control\TimerBar.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\log\TriggersLogView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -33,9 +36,15 @@
     <Compile Update="src\ui\log\TauntStatsViewer.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\main\TimerOverlay.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Update="src\ui\common\TriggersView.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\control\TimerBar.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\log\TriggersLogView.xaml">
@@ -54,6 +63,9 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\DamageOverlayConfig.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\main\TimerOverlay.xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>

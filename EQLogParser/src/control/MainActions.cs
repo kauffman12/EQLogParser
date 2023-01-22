@@ -11,6 +11,7 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.Intrinsics;
 using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -32,33 +33,39 @@ namespace EQLogParser
     private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static void CheckVersion(string version, TextBlock errorText)
+    internal static void CheckVersion(TextBlock errorText)
     {
+      var version = Application.ResourceAssembly.GetName().Version;
       var dispatcher = Application.Current.Dispatcher;
       Task.Delay(2000).ContinueWith(task =>
       {
+        HttpClient client = null;
         try
         {
-          var client = new HttpClient();
+          client = new HttpClient();
           var request = client.GetStringAsync(@"https://github.com/kauffman12/EQLogParser/blob/master/README.md");
           request.Wait();
 
-          var matches = new Regex(@"EQLogParser-(.*).msi""").Match(request.Result);
-          if (matches.Success && matches.Groups.Count > 1 && !version.Equals(matches.Groups[1].Value) &&
-            matches.Groups[1].Value is string updated && new Regex(@"\d.\d.\d").Match(updated).Success)
+          var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d)).msi""").Match(request.Result);
+          if (matches.Success && matches.Groups.Count == 5 && int.TryParse(matches.Groups[2].Value, out int v1) &&
+            int.TryParse(matches.Groups[3].Value, out int v2) && int.TryParse(matches.Groups[4].Value, out int v3)
+            && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) || 
+            (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
           {
             dispatcher.InvokeAsync(() =>
             {
-              var msg = new MessageWindow("Version " + updated + " is Available. Download and Install?",
+              var msg = new MessageWindow("Version " + matches.Groups[1].Value + " is Available. Download and Install?",
                 EQLogParser.Resource.CHECK_VERSION, MessageWindow.IconType.Question, "Yes");
               msg.ShowDialog();
 
               if (msg.IsYes1Clicked)
               {
-                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + updated + ".msi";
+                HttpClient client = null;
+                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + matches.Groups[1].Value + ".msi";
 
                 try
                 {
+                  client = new HttpClient();
                   using (var download = client.GetStreamAsync(url))
                   {
                     download.Wait();
@@ -77,7 +84,7 @@ namespace EQLogParser
                       Directory.CreateDirectory(path);
                     }
 
-                    var fullPath = path + "\\EQLogParser-" + updated + ".msi";
+                    var fullPath = path + "\\EQLogParser-" + matches.Groups[1].Value + ".msi";
                     using (var fs = new FileStream(fullPath, FileMode.Create))
                     {
                       download.Result.CopyTo(fs);
@@ -101,11 +108,13 @@ namespace EQLogParser
                   new MessageWindow("Problem Install Updates. Check Error Log for Details.", EQLogParser.Resource.CHECK_VERSION).ShowDialog();
                   LOG.Error("Error Installing Updates", ex2);
                 }
+                finally
+                {
+                  client?.Dispose();
+                }
               }
             });
           }
-
-          client.Dispose();
         }
         catch (Exception ex)
         {
@@ -114,6 +123,10 @@ namespace EQLogParser
           {
             errorText.Text = "Update Check Failed. Firewall?";
           });
+        }
+        finally
+        {
+          client?.Dispose();
         }
       });
     }
@@ -212,6 +225,10 @@ namespace EQLogParser
       Application.Current.Resources["OverlayActiveBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF191919") };
       Application.Current.Resources["OverlayConfigBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
       Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["OverlayActiveBrush"];
+      Application.Current.Resources["OverlayDraggable"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
+      Application.Current.Resources["OverlayNotDraggable"] = new SolidColorBrush { Color = Colors.Transparent };
+      Application.Current.Resources["OverlayCurrentDraggable"] = Application.Current.Resources["OverlayNotDraggable"];
+
     }
 
     internal static void Clear(ContentControl petsWindow, ContentControl playersWindow)

@@ -230,7 +230,7 @@ namespace EQLogParser
         var colorPicker = new ColorPicker
         {
           Width = 35,
-          Height = 12,
+          Height = 20,
           Color = ColorList[i],
           IsGradientPropertyEnabled = false,
           EnableSolidToGradientSwitch = false,

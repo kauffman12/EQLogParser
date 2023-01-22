@@ -1,5 +1,4 @@
 ﻿using FontAwesome5;
-using Syncfusion.Data.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -324,7 +323,7 @@ namespace EQLogParser
           rtb.Render(content);
           var contentImage = BitmapFrame.Create(rtb);
 
-          var width = (int)labelsImage.Width + (int)content.Children.ToList<FrameworkElement>().ToList().Max(x => x.Margin.Left) + 5;
+          var width = (int)labelsImage.Width + (int)content.Children.Cast<FrameworkElement>().ToList().Max(x => x.Margin.Left) + 5;
           if (!everything)
           {
             width = Math.Min(width, (int)labelsScroller.ActualWidth + (int)contentScroller.ActualWidth + 5);
@@ -334,7 +333,7 @@ namespace EQLogParser
             }
           }
 
-          var last = contentLabels.Children.ToList<FrameworkElement>().LastOrDefault();
+          var last = contentLabels.Children.Cast<FrameworkElement>().LastOrDefault();
           var contentHeight = (last == null) ? 0 : (int)last.ActualHeight;
 
           var height = (int)titleImage.Height + (int)headerImage.Height;

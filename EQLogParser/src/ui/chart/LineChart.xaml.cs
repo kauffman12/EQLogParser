@@ -1,5 +1,4 @@
-﻿using Syncfusion.Data.Extensions;
-using Syncfusion.UI.Xaml.Charts;
+﻿using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Linq;

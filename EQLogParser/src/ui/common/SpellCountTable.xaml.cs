@@ -1,5 +1,4 @@
 ﻿using Microsoft.Win32;
-using Syncfusion.Data.Extensions;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
@@ -136,7 +135,7 @@ namespace EQLogParser
             SortDescs.Add(name);
           }
 
-          playerColumns.OrderBy(col => col.HeaderText, TotalColumnComparer).ForEach(col => dataGrid.Columns.Add(col));
+          playerColumns.OrderBy(col => col.HeaderText, TotalColumnComparer).ToList().ForEach(col => dataGrid.Columns.Add(col));
 
           var totalCol = new GridTextColumn
           {
@@ -471,7 +470,7 @@ namespace EQLogParser
       }
 
       int colIndex = 1;
-      playerColumns.OrderBy(key => key.HeaderText, TotalColumnComparer).ForEach(col => dataGrid.Columns[colIndex++] = col);
+      playerColumns.OrderBy(key => key.HeaderText, TotalColumnComparer).ToList().ForEach(col => dataGrid.Columns[colIndex++] = col);
     }
 
     private string GetHeaderValue(string name, double amount, double total)
