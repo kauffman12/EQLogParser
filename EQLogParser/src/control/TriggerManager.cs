@@ -32,6 +32,7 @@ namespace EQLogParser
     private readonly DispatcherTimer UpdateTimer;
     private readonly TriggerNode Data;
     private Channel<dynamic> LogChannel = null;
+    private int CurrentVoiceRate;
     private Task RefreshTask = null;
     private static object LockObject = new object();
     private ObservableCollection<dynamic> AlertLog = new ObservableCollection<dynamic>();
@@ -51,6 +52,7 @@ namespace EQLogParser
         Data = new TriggerNode();
       }
 
+      CurrentVoiceRate = TriggerUtil.GetVoiceRate();
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
       UpdateTimer.Tick += DataUpdated;
     }
@@ -58,6 +60,8 @@ namespace EQLogParser
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
 
     internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
+
+    internal void SetVoiceRate(int rate) => CurrentVoiceRate = rate;
 
     internal void AddAction(LineData lineData)
     {
@@ -167,7 +171,6 @@ namespace EQLogParser
       try
       {
         var synth = new SpeechSynthesizer();
-        synth.Rate = 1;
         synth.SetOutputToDefaultAudioDevice();
       }
       catch (Exception ex)
@@ -387,7 +390,6 @@ namespace EQLogParser
         try
         {
           var synth = new SpeechSynthesizer();
-          synth.Rate = 1;
           synth.SetOutputToDefaultAudioDevice();
           //synth.SelectVoiceByHints(VoiceGender.Female);
           Trigger previous = null;
@@ -418,6 +420,11 @@ namespace EQLogParser
                     }
                   }
                 }
+              }
+
+              if (CurrentVoiceRate != synth.Rate)
+              {
+                synth.Rate = CurrentVoiceRate;
               }
 
               synth.SpeakAsync(speak);
