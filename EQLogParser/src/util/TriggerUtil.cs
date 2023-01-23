@@ -63,6 +63,16 @@ namespace EQLogParser
       to.WarningTextToSpeak = from.WarningTextToSpeak;
     }
 
+    internal static int GetVoiceRate()
+    {
+      if (ConfigUtil.GetSettingAsInteger("TriggersVoiceRate") is int rate && rate != int.MaxValue)
+      {
+        return rate;
+      }
+
+      return 0;
+    }
+
     internal static void MergeNodes(List<TriggerNode> newNodes, TriggerNode parent)
     {
       if (newNodes != null)

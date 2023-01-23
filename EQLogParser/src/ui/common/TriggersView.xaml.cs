@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Speech.Synthesis;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -36,6 +37,8 @@ namespace EQLogParser
       {
         watchGina.IsChecked = true;
       }
+
+      rateOption.SelectedIndex = TriggerUtil.GetVoiceRate();
 
       if (MainWindow.CurrentLogFile == null)
       {
@@ -138,7 +141,28 @@ namespace EQLogParser
       // one way to see if UI has been initialized
       if (startIcon?.Icon != FontAwesome5.EFontAwesomeIcon.None)
       {
-        ConfigUtil.SetSetting("TriggersWatchForGINA", watchGina.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        if (sender == watchGina)
+        {
+          ConfigUtil.SetSetting("TriggersWatchForGINA", watchGina.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        }
+        else if (sender == rateOption)
+        {
+          ConfigUtil.SetSetting("TriggersVoiceRate", rateOption.SelectedIndex.ToString(CultureInfo.CurrentCulture));
+          TriggerManager.Instance.SetVoiceRate(rateOption.SelectedIndex);
+
+          try
+          {
+            var synth = new SpeechSynthesizer();
+            synth.Rate = rateOption.SelectedIndex;
+            synth.SetOutputToDefaultAudioDevice();
+            var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex.ToString();
+            synth.SpeakAsync(rateText);
+          }
+          catch (Exception)
+          {
+
+          }
+        }
       }
     }
 
