@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.42" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.43" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -222,7 +222,10 @@
       </Component>
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
-      </Component>    
+      </Component>
+      <Component Win64="yes" Id="System.Configuration.ConfigurationManager.dll" Guid="82999838-AE52-40E7-8BD7-9B0D7DAC19B3">
+        <File CompanionFile="EQLogParser.dll" Id="System.Configuration.ConfigurationManager.dll" Name="System.Configuration.ConfigurationManager.dll" Source="$(var.EQLogParser.TargetDir)System.Configuration.ConfigurationManager.dll" />
+      </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
