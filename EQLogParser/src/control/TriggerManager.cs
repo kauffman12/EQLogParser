@@ -32,6 +32,7 @@ namespace EQLogParser
     private readonly DispatcherTimer UpdateTimer;
     private readonly TriggerNode Data;
     private Channel<dynamic> LogChannel = null;
+    private string CurrentVoice;
     private int CurrentVoiceRate;
     private Task RefreshTask = null;
     private static object LockObject = new object();
@@ -52,6 +53,7 @@ namespace EQLogParser
         Data = new TriggerNode();
       }
 
+      CurrentVoice = TriggerUtil.GetSelectedVoice();
       CurrentVoiceRate = TriggerUtil.GetVoiceRate();
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
       UpdateTimer.Tick += DataUpdated;
@@ -60,6 +62,8 @@ namespace EQLogParser
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
 
     internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
+
+    internal void SetVoice(string voice) => CurrentVoice = voice;
 
     internal void SetVoiceRate(int rate) => CurrentVoiceRate = rate;
 
@@ -420,6 +424,11 @@ namespace EQLogParser
                     }
                   }
                 }
+              }
+
+              if (!string.IsNullOrEmpty(CurrentVoice) && synth.Voice.Name != CurrentVoice)
+              {
+                synth.SelectVoice(CurrentVoice);
               }
 
               if (CurrentVoiceRate != synth.Rate)

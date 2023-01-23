@@ -37,6 +37,7 @@ namespace EQLogParser
       {
         TestSynth = new SpeechSynthesizer();
         TestSynth.SetOutputToDefaultAudioDevice();
+        voices.ItemsSource = TestSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
       }
       catch (Exception)
       {
@@ -46,6 +47,12 @@ namespace EQLogParser
       if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
       {
         watchGina.IsChecked = true;
+      }
+
+      var selectedVoice = TriggerUtil.GetSelectedVoice();
+      if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is int found && found > -1)
+      {
+        voices.SelectedIndex = found;
       }
 
       rateOption.SelectedIndex = TriggerUtil.GetVoiceRate();
@@ -154,6 +161,20 @@ namespace EQLogParser
         if (sender == watchGina)
         {
           ConfigUtil.SetSetting("TriggersWatchForGINA", watchGina.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        }
+        else if (sender == voices)
+        {
+          if (voices.SelectedValue is string voiceName)
+          {
+            ConfigUtil.SetSetting("TriggersSelectedVoice", voiceName);
+            TriggerManager.Instance.SetVoice(voiceName);
+
+            if (TestSynth != null)
+            {
+              TestSynth.SelectVoice(voiceName);
+              TestSynth.SpeakAsync(voiceName);
+            }
+          }
         }
         else if (sender == rateOption)
         {
