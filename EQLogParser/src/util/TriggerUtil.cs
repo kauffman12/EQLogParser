@@ -63,6 +63,8 @@ namespace EQLogParser
       to.WarningTextToSpeak = from.WarningTextToSpeak;
     }
 
+    internal static string GetSelectedVoice() => ConfigUtil.GetSetting("TriggersSelectedVoice", "");
+
     internal static int GetVoiceRate()
     {
       if (ConfigUtil.GetSettingAsInteger("TriggersVoiceRate") is int rate && rate != int.MaxValue)
