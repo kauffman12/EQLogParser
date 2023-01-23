@@ -4,7 +4,6 @@ using Syncfusion.UI.Xaml.TreeView;
 using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -28,10 +27,21 @@ namespace EQLogParser
     private WrapTextEditor ErrorEditor;
     private TimerResetEditor TimerResetOptions;
     private List<TriggerNode> Removed;
+    private SpeechSynthesizer TestSynth = null;
 
     public TriggersView()
     {
       InitializeComponent();
+
+      try
+      {
+        TestSynth = new SpeechSynthesizer();
+        TestSynth.SetOutputToDefaultAudioDevice();
+      }
+      catch (Exception)
+      {
+        // may not initialize on all systems
+      }
 
       if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
       {
@@ -150,17 +160,11 @@ namespace EQLogParser
           ConfigUtil.SetSetting("TriggersVoiceRate", rateOption.SelectedIndex.ToString(CultureInfo.CurrentCulture));
           TriggerManager.Instance.SetVoiceRate(rateOption.SelectedIndex);
 
-          try
+          if (TestSynth != null)
           {
-            var synth = new SpeechSynthesizer();
-            synth.Rate = rateOption.SelectedIndex;
-            synth.SetOutputToDefaultAudioDevice();
+            TestSynth.Rate = rateOption.SelectedIndex;
             var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex.ToString();
-            synth.SpeakAsync(rateText);
-          }
-          catch (Exception)
-          {
-
+            TestSynth.SpeakAsync(rateText);
           }
         }
       }
@@ -762,6 +766,7 @@ namespace EQLogParser
         TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
         treeView.DragDropController.Dispose();
         treeView.Dispose();
+        TestSynth?.Dispose();
         disposedValue = true;
       }
     }
