@@ -164,6 +164,18 @@ namespace EQLogParser
     internal void Start()
     {
       LOG.Info("Starting Trigger Manager");
+      try
+      {
+        var synth = new SpeechSynthesizer();
+        synth.Rate = 1;
+        synth.SetOutputToDefaultAudioDevice();
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+        return;
+      }
+
       Channel<LowPriData> lowPriChannel = Channel.CreateUnbounded<LowPriData>();
       Channel<Speak> speechChannel = Channel.CreateUnbounded<Speak>();
       StartSpeechReader(speechChannel);
