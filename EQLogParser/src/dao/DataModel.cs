@@ -1,10 +1,12 @@
 ﻿using Syncfusion.UI.Xaml.TreeView.Engine;
 using Syncfusion.Windows.Shared;
+using Syncfusion.XPS;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Security.Policy;
 
 namespace EQLogParser
 {
@@ -14,9 +16,21 @@ namespace EQLogParser
       bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
   }
 
+  internal class Overlay : NotificationObject
+  {
+    public string OverlayComments { get; set; }
+    public string FontSize { get; set; } = "12pt";
+    public int SortBy { get; set; } = 0;
+    public string FontColor { get; set; }
+    public string PrimaryColor { get; set; }
+    public string SecondaryColor { get; set; }
+    public string Name { get; set; }
+    public string Id { get; set; }
+  }
+
   internal class Trigger : NotificationObject
   {
-    public string Comments { get; set; }
+    public string TriggerComments { get; set; }
     public long DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
     public string CancelPattern { get; set; }
@@ -42,11 +56,13 @@ namespace EQLogParser
     public string Name { get; set; }
     public List<TriggerNode> Nodes { get; set; }
     public Trigger TriggerData { get; set; }
+    public Overlay OverlayData { get; set; }
   }
 
   internal class TriggerTreeViewNode : TreeViewNode
   {
     public bool IsTrigger { get; set; }
+    public bool IsOverlay { get; set; }
     public TriggerNode SerializedData { get; set; }
   }
 

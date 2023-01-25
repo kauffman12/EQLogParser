@@ -26,9 +26,16 @@ namespace EQLogParser
         foreach (var node in nodes)
         {
           var child = new TriggerTreeViewNode { Content = node.Name, SerializedData = node };
+
           if (node.TriggerData != null)
           {
             child.IsTrigger = true;
+            child.IsChecked = node.IsEnabled;
+            treeNode.ChildNodes.Add(child);
+          }
+          else if (node.OverlayData != null)
+          {
+            child.IsOverlay = true;
             child.IsChecked = node.IsEnabled;
             treeNode.ChildNodes.Add(child);
           }
@@ -37,6 +44,7 @@ namespace EQLogParser
             child.IsChecked = node.IsEnabled;
             child.IsExpanded = node.IsExpanded;
             child.IsTrigger = false;
+            child.IsOverlay = false;
             treeNode.ChildNodes.Add(child);
             AddTreeNodes(node.Nodes, child);
           }
@@ -44,23 +52,36 @@ namespace EQLogParser
       }
     }
 
-    internal static void Copy(Trigger to, Trigger from)
+    internal static void Copy(object to, object from)
     {
-      to.Comments = from.Comments;
-      to.DurationSeconds = from.DurationSeconds;
-      to.EnableTimer = from.EnableTimer;
-      to.CancelPattern = from.CancelPattern;
-      to.EndTextToSpeak = from.EndTextToSpeak;
-      to.EndUseRegex = from.EndUseRegex;
-      to.Errors = "None";
-      to.LongestEvalTime = -1;
-      to.Pattern = from.Pattern;
-      to.Priority = from.Priority;
-      to.TextToSpeak = from.TextToSpeak;
-      to.TriggerAgainOption = from.TriggerAgainOption;
-      to.UseRegex = from.UseRegex;
-      to.WarningSeconds = from.WarningSeconds;
-      to.WarningTextToSpeak = from.WarningTextToSpeak;
+      if (to is Trigger toTrigger && from is Trigger fromTrigger)
+      {
+        toTrigger.TriggerComments = fromTrigger.TriggerComments;
+        toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
+        toTrigger.EnableTimer = fromTrigger.EnableTimer;
+        toTrigger.CancelPattern = fromTrigger.CancelPattern;
+        toTrigger.EndTextToSpeak = fromTrigger.EndTextToSpeak;
+        toTrigger.EndUseRegex = fromTrigger.EndUseRegex;
+        toTrigger.Errors = fromTrigger.Errors;
+        toTrigger.LongestEvalTime = fromTrigger.LongestEvalTime;
+        toTrigger.Pattern = fromTrigger.Pattern;
+        toTrigger.Priority = fromTrigger.Priority;
+        toTrigger.TextToSpeak = fromTrigger.TextToSpeak;
+        toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
+        toTrigger.UseRegex = fromTrigger.UseRegex;
+        toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
+        toTrigger.WarningTextToSpeak = fromTrigger.WarningTextToSpeak;
+      }
+      else if (to is Overlay toOverlay && from is Overlay fromOverlay)
+      {
+        toOverlay.OverlayComments = fromOverlay.OverlayComments;
+        toOverlay.FontColor= fromOverlay.FontColor;
+        toOverlay.PrimaryColor = fromOverlay.PrimaryColor;
+        toOverlay.SecondaryColor = fromOverlay.SecondaryColor;
+        toOverlay.FontSize = fromOverlay.FontSize;
+        toOverlay.SortBy = fromOverlay.SortBy;
+        toOverlay.Id = fromOverlay.Id;
+      }
     }
 
     internal static string GetSelectedVoice() => ConfigUtil.GetSetting("TriggersSelectedVoice", "");
@@ -73,6 +94,26 @@ namespace EQLogParser
       }
 
       return 0;
+    }
+
+    internal static TriggerTreeViewNode GetTreeView(TriggerNode nodes, string title)
+    {
+      var result = new TriggerTreeViewNode
+      {
+        Content = title,
+        IsChecked = nodes.IsEnabled,
+        IsTrigger = false,
+        IsOverlay = false,
+        IsExpanded = nodes.IsExpanded,
+        SerializedData = nodes
+      };
+
+      lock (nodes)
+      {
+        AddTreeNodes(nodes.Nodes, result);
+      }
+
+      return result;
     }
 
     internal static void MergeNodes(List<TriggerNode> newNodes, TriggerNode parent)
@@ -95,6 +136,10 @@ namespace EQLogParser
               if (newNode.TriggerData != null && found.TriggerData != null)
               {
                 Copy(found.TriggerData, newNode.TriggerData);
+              }
+              else if (newNode.OverlayData != null && found.OverlayData != null)
+              {
+                Copy(found.OverlayData, newNode.OverlayData);
               }
               else
               {
@@ -408,7 +453,7 @@ namespace EQLogParser
               var trigger = new Trigger();
               trigger.Name = GetText(triggerNode, "Name");
               trigger.Pattern = GetText(triggerNode, "TriggerText");
-              trigger.Comments = GetText(triggerNode, "Comments");
+              trigger.TriggerComments = GetText(triggerNode, "Comments");
 
               if (bool.TryParse(GetText(triggerNode, "UseTextToVoice"), out bool useText))
               {

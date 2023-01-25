@@ -1,26 +1,18 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
+using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Data;
 
 namespace EQLogParser
 {
-  public class RangeEditor : ITypeEditor
+  internal class ColorEditor : ITypeEditor
   {
-    private IntegerTextBox TheTextBox;
-    readonly private long Min;
-    readonly private long Max;
-
-    public RangeEditor(long min, long max)
-    {
-      Min = min;
-      Max = max;
-    }
+    private ColorPicker TheColorPicker;
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
       Binding binding;
-
       if (info.CanWrite)
       {
         binding = new Binding("Value")
@@ -29,12 +21,11 @@ namespace EQLogParser
           Source = info,
           ValidatesOnExceptions = true,
           ValidatesOnDataErrors = true
-        };
-       
+        };       
       }
       else
       {
-        TheTextBox.IsEnabled = false;
+        TheColorPicker.IsEnabled = false;
         binding = new Binding("Value")
         {
           Source = info,
@@ -43,30 +34,37 @@ namespace EQLogParser
         };
       }
 
-      BindingOperations.SetBinding(TheTextBox, IntegerTextBox.ValueProperty, binding);
+      BindingOperations.SetBinding(TheColorPicker, ColorPicker.BrushProperty, binding);
     }
 
     public object Create(PropertyInfo propertyInfo)
     {
-      TheTextBox = new IntegerTextBox()
+      TheColorPicker = new ColorPicker
       {
-        ApplyZeroColor = false,
-        MinValue = Min,
-        MaxValue = Max,
-        ShowSpinButton = true
+        EnableSolidToGradientSwitch = false
       };
 
-      return TheTextBox;
+      return TheColorPicker;
+    }
+
+    public object Create(PropertyDescriptor descriotor)
+    {
+      TheColorPicker = new ColorPicker
+      {
+        EnableSolidToGradientSwitch = false
+      };
+
+      return TheColorPicker;
     }
 
     public void Detach(PropertyViewItem property)
     {
-      if (TheTextBox != null)
+      if (TheColorPicker != null)
       {
-        BindingOperations.ClearAllBindings(TheTextBox);
+        BindingOperations.ClearAllBindings(TheColorPicker);
       }
 
-      TheTextBox = null;
+      TheColorPicker = null;
     }
   }
 }
