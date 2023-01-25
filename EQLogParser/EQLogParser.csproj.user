@@ -21,7 +21,7 @@
     <Compile Update="src\ui\common\TriggersView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="src\ui\control\TimerBar.xaml.cs">
+    <Compile Update="src\ui\common\TimerBar.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="src\ui\log\TriggersLogView.xaml.cs">
@@ -44,7 +44,7 @@
     <Page Update="src\ui\common\TriggersView.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="src\ui\control\TimerBar.xaml">
+    <Page Update="src\ui\common\TimerBar.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\log\TriggersLogView.xaml">
