@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -6,9 +7,10 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using System.Xml;
 
 namespace EQLogParser
@@ -18,6 +20,14 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private static ConcurrentDictionary<string, string> GinaCache = new ConcurrentDictionary<string, string>();
+
+    internal static string GetSelectedVoice() => ConfigUtil.GetSetting("TriggersSelectedVoice", "");
+
+    internal static int GetVoiceRate()
+    {
+      var rate = ConfigUtil.GetSettingAsInteger("TriggersVoiceRate");
+      return rate == int.MaxValue ? 0 : rate;
+    }
 
     internal static void AddTreeNodes(List<TriggerNode> nodes, TriggerTreeViewNode treeNode)
     {
@@ -56,7 +66,7 @@ namespace EQLogParser
     {
       if (to is Trigger toTrigger && from is Trigger fromTrigger)
       {
-        toTrigger.TriggerComments = fromTrigger.TriggerComments;
+        toTrigger.Comments = fromTrigger.Comments;
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
         toTrigger.EnableTimer = fromTrigger.EnableTimer;
         toTrigger.CancelPattern = fromTrigger.CancelPattern;
@@ -81,19 +91,59 @@ namespace EQLogParser
         toOverlay.FontSize = fromOverlay.FontSize;
         toOverlay.SortBy = fromOverlay.SortBy;
         toOverlay.Id = fromOverlay.Id;
+
+        if (toOverlay is OverlayPropertyModel toModel)
+        {
+          if (fromOverlay.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
+          {
+            toModel.FontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
+            Application.Current.Resources["TimerBarFontColor-" + toModel.Id] = toModel.FontBrush;
+          }
+
+          if (fromOverlay.PrimaryColor is string primary && !string.IsNullOrEmpty(primary))
+          {
+            toModel.PrimaryBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(primary) };
+            Application.Current.Resources["TimerBarProgressColor-" + toModel.Id] = toModel.PrimaryBrush;
+          }
+
+          if (fromOverlay.SecondaryColor is string secondary && !string.IsNullOrEmpty(secondary))
+          {
+            toModel.SecondaryBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(secondary) };
+            Application.Current.Resources["TimerBarTrackColor-" + toModel.Id] = toModel.SecondaryBrush;
+          }
+
+          if (fromOverlay.FontSize is string fontSize && !string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is string[] split && split.Length == 2
+           && double.TryParse(split[0], out double newFontSize))
+          {
+            Application.Current.Resources["TimerBarFontSize-" + toModel.Id] = newFontSize;
+            Application.Current.Resources["TimerBarHeight-" + toModel.Id] = GetTimerBarHeight(newFontSize);
+          }
+        }
+        else if (fromOverlay is OverlayPropertyModel fromModel)
+        {
+          toOverlay.FontColor = fromModel.FontBrush.Color.ToString();
+          toOverlay.PrimaryColor = fromModel.PrimaryBrush.Color.ToString();
+          toOverlay.SecondaryColor = fromModel.SecondaryBrush.ToString();
+        }
       }
     }
 
-    internal static string GetSelectedVoice() => ConfigUtil.GetSetting("TriggersSelectedVoice", "");
+    internal static double GetTimerBarHeight(double fontSize) => fontSize + 3;
 
-    internal static int GetVoiceRate()
+    internal static void DisableNodes(TriggerNode node)
     {
-      if (ConfigUtil.GetSettingAsInteger("TriggersVoiceRate") is int rate && rate != int.MaxValue)
+      if (node.TriggerData == null && node.OverlayData == null)
       {
-        return rate;
+        node.IsEnabled = false;
+        node.IsExpanded = false;
+        if (node.Nodes != null)
+        {
+          foreach (var child in node.Nodes)
+          {
+            DisableNodes(child);
+          }
+        }
       }
-
-      return 0;
     }
 
     internal static TriggerTreeViewNode GetTreeView(TriggerNode nodes, string title)
@@ -158,22 +208,119 @@ namespace EQLogParser
       }
     }
 
-    internal static string UpdatePattern(bool useRegex, string playerName, string pattern)
+    internal static void Import(TriggerTreeViewNode node)
     {
-      pattern = pattern.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
-
-      if (useRegex && Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is MatchCollection matches && matches.Count > 0)
+      if (node != null)
       {
-        foreach (Match match in matches)
+        try
         {
-          if (match.Groups.Count > 1)
+          // WPF doesn't have its own file chooser so use Win32 Version
+          OpenFileDialog dialog = new OpenFileDialog
           {
-            pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + ">.+)");
+            // filter to txt files
+            DefaultExt = ".scf.gz",
+            Filter = "All Supported Files|*.tgf.gz;*.gtp"
+          };
+
+          // show dialog and read result
+          if (dialog.ShowDialog().Value)
+          {
+            // limit to 100 megs just incase
+            var fileInfo = new FileInfo(dialog.FileName);
+            if (fileInfo.Exists && fileInfo.Length < 100000000)
+            {
+              if (dialog.FileName.EndsWith("tgf.gz"))
+              {
+                GZipStream decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
+                var reader = new StreamReader(decompressionStream);
+                string json = reader?.ReadToEnd();
+                reader?.Close();
+                var data = JsonSerializer.Deserialize<List<TriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
+                TriggerManager.Instance.MergeTriggers(data, node.SerializedData);
+              }
+              else if (dialog.FileName.EndsWith(".gtp"))
+              {
+                var data = new byte[fileInfo.Length];
+                fileInfo.OpenRead().Read(data);
+                TriggerUtil.ImportFromGina(data, node.SerializedData);
+              }
+            }
           }
         }
+        catch (Exception ex)
+        {
+          new MessageWindow("Problem Importing Triggers. Check Error Log for details.", EQLogParser.Resource.IMPORT_ERROR).ShowDialog();
+          LOG.Error("Import Failure", ex);
+        }
       }
+    }
 
-      return pattern;
+    internal static void Export(Syncfusion.UI.Xaml.TreeView.Engine.TreeViewNodeCollection collection, List<TriggerTreeViewNode> nodes)
+    {
+      if (nodes != null)
+      {
+        try
+        {
+          var exportList = new List<TriggerNode>();
+          foreach (var selected in nodes)
+          {
+            // if the root is in there just use it
+            if (selected == collection[0])
+            {
+              exportList = new List<TriggerNode>() { selected.SerializedData };
+              break;
+            }
+            else if (selected.IsOverlay || selected == collection[1])
+            {
+              break;
+            }
+
+            var start = selected.ParentNode as TriggerTreeViewNode;
+            var child = selected.SerializedData;
+            TriggerNode newNode = null;
+            while (start != null)
+            {
+              newNode = new TriggerNode
+              {
+                Name = start.SerializedData.Name,
+                IsEnabled = start.SerializedData.IsEnabled,
+                IsExpanded = start.SerializedData.IsExpanded,
+                Nodes = new List<TriggerNode>() { child }
+              };
+
+              child = newNode;
+              start = start.ParentNode as TriggerTreeViewNode;
+            }
+
+            if (newNode != null)
+            {
+              exportList.Add(newNode);
+            }
+          }
+
+          if (exportList.Count > 0)
+          {
+            var result = System.Text.Json.JsonSerializer.Serialize(exportList, new JsonSerializerOptions { IncludeFields = true });
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            string filter = "Triggers File (*.tgf.gz)|*.tgf.gz";
+            saveFileDialog.Filter = filter;
+            if (saveFileDialog.ShowDialog().Value)
+            {
+              FileInfo gzipFileName = new FileInfo(saveFileDialog.FileName);
+              FileStream gzipTargetAsStream = gzipFileName.Create();
+              GZipStream gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
+              var writer = new StreamWriter(gzipStream);
+              writer?.Write(result);
+              writer?.Close();
+            }
+          }
+        }
+        catch (Exception ex)
+        {
+          new MessageWindow("Problem Exporting Triggers. Check Error Log for details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
+          LOG.Error(ex);
+        }
+      }
     }
 
     internal static void CheckGina(LineData lineData)
@@ -451,42 +598,42 @@ namespace EQLogParser
             {
               bool goodTrigger = false;
               var trigger = new Trigger();
-              trigger.Name = GetText(triggerNode, "Name");
-              trigger.Pattern = GetText(triggerNode, "TriggerText");
-              trigger.TriggerComments = GetText(triggerNode, "Comments");
+              trigger.Name = Helpers.GetText(triggerNode, "Name");
+              trigger.Pattern = Helpers.GetText(triggerNode, "TriggerText");
+              trigger.Comments = Helpers.GetText(triggerNode, "Comments");
 
-              if (bool.TryParse(GetText(triggerNode, "UseTextToVoice"), out bool useText))
+              if (bool.TryParse(Helpers.GetText(triggerNode, "UseTextToVoice"), out bool useText))
               {
                 goodTrigger = true;
-                trigger.TextToSpeak = GetText(triggerNode, "TextToVoiceText");
+                trigger.TextToSpeak = Helpers.GetText(triggerNode, "TextToVoiceText");
               }
 
-              if (bool.TryParse(GetText(triggerNode, "EnableRegex"), out bool regex))
+              if (bool.TryParse(Helpers.GetText(triggerNode, "EnableRegex"), out bool regex))
               {
                 trigger.UseRegex = regex;
               }
 
-              if (bool.TryParse(GetText(triggerNode, "InterruptSpeech"), out bool interrupt))
+              if (bool.TryParse(Helpers.GetText(triggerNode, "InterruptSpeech"), out bool interrupt))
               {
                 trigger.Priority = interrupt ? 1 : 5;
               }
 
-              if ("Timer".Equals(GetText(triggerNode, "TimerType")))
+              if ("Timer".Equals(Helpers.GetText(triggerNode, "TimerType")))
               {
                 goodTrigger = true;
                 trigger.EnableTimer = true;
 
-                if (int.TryParse(GetText(triggerNode, "TimerDuration"), out int duration))
+                if (int.TryParse(Helpers.GetText(triggerNode, "TimerDuration"), out int duration))
                 {
                   trigger.DurationSeconds = duration;
                 }
 
-                if (int.TryParse(GetText(triggerNode, "TimerEndingTime"), out int endTime))
+                if (int.TryParse(Helpers.GetText(triggerNode, "TimerEndingTime"), out int endTime))
                 {
                   trigger.WarningSeconds = endTime;
                 }
 
-                var behavior = GetText(triggerNode, "TimerStartBehavior");
+                var behavior = Helpers.GetText(triggerNode, "TimerStartBehavior");
                 if ("StartNewTimer".Equals(behavior))
                 {
                   trigger.TriggerAgainOption = 0;
@@ -502,17 +649,17 @@ namespace EQLogParser
 
                 if (triggerNode.SelectSingleNode("TimerEndedTrigger") is XmlNode timerEndedNode)
                 {
-                  if (bool.TryParse(GetText(timerEndedNode, "UseTextToVoice"), out bool useText2))
+                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseTextToVoice"), out bool useText2))
                   {
-                    trigger.EndTextToSpeak = GetText(timerEndedNode, "TextToVoiceText");
+                    trigger.EndTextToSpeak = Helpers.GetText(timerEndedNode, "TextToVoiceText");
                   }
                 }
 
                 if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
                 {
-                  if (bool.TryParse(GetText(timerEndingNode, "UseTextToVoice"), out bool useText2))
+                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseTextToVoice"), out bool useText2))
                   {
-                    trigger.WarningTextToSpeak = GetText(timerEndingNode, "TextToVoiceText");
+                    trigger.WarningTextToSpeak = Helpers.GetText(timerEndingNode, "TextToVoiceText");
                   }
                 }
 
@@ -520,9 +667,9 @@ namespace EQLogParser
                 {
                   if (endingEarlyNode.SelectSingleNode("EarlyEnder") is XmlNode enderNode)
                   {
-                    trigger.CancelPattern = GetText(enderNode, "EarlyEndText");
+                    trigger.CancelPattern = Helpers.GetText(enderNode, "EarlyEndText");
 
-                    if (bool.TryParse(GetText(enderNode, "EnableRegex"), out bool regex2))
+                    if (bool.TryParse(Helpers.GetText(enderNode, "EnableRegex"), out bool regex2))
                     {
                       trigger.EndUseRegex = regex2;
                     }
@@ -555,16 +702,6 @@ namespace EQLogParser
           HandleGinaTriggerGroups(node.ChildNodes, audioTriggerNodes, added);
         }
       }
-    }
-
-    private static string GetText(XmlNode node, string value)
-    {
-      if (node.SelectSingleNode(value) is XmlNode selected)
-      {
-        return selected.InnerText?.Trim();
-      }
-
-      return "";
     }
   }
 }

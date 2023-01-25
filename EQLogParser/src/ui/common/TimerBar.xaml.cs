@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.ProgressBar;
+using System;
 using System.Windows.Controls;
 
 namespace EQLogParser
@@ -13,18 +14,28 @@ namespace EQLogParser
     private double Duration;
     private string BarName;
 
-    public TimerBar(string name, double endTime)
+    public TimerBar()
     {
       InitializeComponent();
-
-      StartTime = DateUtil.ToDouble(DateTime.Now);
-      EndTime = endTime;
-      Duration = EndTime - StartTime;
-      BarName = title.Text = name;
-      Tick();
     }
 
     public string GetBarName() => BarName;
+
+    public void InitOverlay(string overlayId, string barName, double endTime)
+    {
+      BarName = title.Text = barName;
+      progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarProgressColor-" + overlayId);
+      progress.SetResourceReference(SfLinearProgressBar.TrackColorProperty, "TimerBarTrackColor-" + overlayId);
+      progress.SetResourceReference(SfLinearProgressBar.HeightProperty, "TimerBarHeight-" + overlayId);
+      timeText.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + overlayId);
+      title.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + overlayId);
+      timeText.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + overlayId);
+      title.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + overlayId);
+      StartTime = DateUtil.ToDouble(DateTime.Now);
+      EndTime = endTime;
+      Duration = EndTime - StartTime;
+      Tick();
+    }
 
     public void Update(double endTime)
     {

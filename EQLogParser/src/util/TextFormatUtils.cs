@@ -31,7 +31,6 @@ namespace EQLogParser
     };
 
     internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
-    internal static string GetHexString(Color c) => "#" + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2");
     internal static string ToUpper(string name) => string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0]) + (name.Length > 1 ? name.Substring(1) : ""));
 
     internal static string BuildCsv(List<string> header, List<List<object>> data, string title = null)

@@ -51,7 +51,7 @@ namespace EQLogParser
       {
         if (OverlayWindow == null)
         {
-          OverlayWindow = new TimerOverlay();
+          OverlayWindow = new TimerOverlay("test");
           OverlayWindow.Show();
         }
 

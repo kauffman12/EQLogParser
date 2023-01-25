@@ -1,15 +1,11 @@
 ﻿using FontAwesome5;
-using Microsoft.Win32;
 using Syncfusion.UI.Xaml.TreeView;
 using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Speech.Synthesis;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -79,6 +75,7 @@ namespace EQLogParser
       var textWrapEditor = new CustomEditor();
       textWrapEditor.Editor = new WrapTextEditor();
       textWrapEditor.Properties.Add("Comments");
+      textWrapEditor.Properties.Add("OverlayComments");
       textWrapEditor.Properties.Add("Pattern");
       textWrapEditor.Properties.Add("EndPattern");
       textWrapEditor.Properties.Add("CancelPattern");
@@ -112,6 +109,11 @@ namespace EQLogParser
       timeEditor.Properties.Add("Minutes");
       thePropertyGrid.CustomEditorCollection.Add(timeEditor);
 
+      var exampleEditor = new CustomEditor();
+      exampleEditor.Editor = new ExampleTimerBar();
+      exampleEditor.Properties.Add("TimerBarPreview");
+      thePropertyGrid.CustomEditorCollection.Add(exampleEditor);
+
       treeView.Nodes.Add(TriggerManager.Instance.GetTriggerTreeView());
       treeView.Nodes.Add(TriggerManager.Instance.GetOverlayTreeView());
 
@@ -132,16 +134,10 @@ namespace EQLogParser
       SaveNodeExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
     }
 
-    private void EventsSelectTrigger(object sender, Trigger e)
-    {
-      if (e != null && (treeView.SelectedItem == null || (treeView.SelectedItem is TriggerTreeViewNode selected &&
-        selected.SerializedData.TriggerData != null && selected.SerializedData.TriggerData != e)))
-      {
-        var found = FindAndExpandNode(treeView.Nodes[0] as TriggerTreeViewNode, e);
-        treeView.SelectedItem = found;
-        SelectionChanged(found);
-      }
-    }
+    private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView.Nodes, treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
+    private void ImportClick(object sender, RoutedEventArgs e) => TriggerUtil.Import(treeView?.SelectedItem as TriggerTreeViewNode);
+    private void RenameClick(object sender, RoutedEventArgs e) => treeView.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
+    private void EventsSelectTrigger(object sender, Trigger e) => SelectFile(e);
 
     private void EventsLogLoadingComplete(object sender, bool e)
     {
@@ -155,22 +151,18 @@ namespace EQLogParser
       }
     }
 
-    private void EventsUpdateOverlayTree(object sender, bool e)
+    private void EventsUpdateTriggerTree(object sender, bool e) => Dispatcher.InvokeAsync(() => RefreshTriggerNode());
+
+    private void RefreshTriggerNode()
     {
-      Dispatcher.InvokeAsync(() =>
-      {
-        treeView.Nodes.Remove(treeView.Nodes[1]);
-        treeView.Nodes.Add(TriggerManager.Instance.GetOverlayTreeView());
-      });
+      treeView.Nodes.Remove(treeView.Nodes[0]);
+      treeView.Nodes.Insert(0, TriggerManager.Instance.GetTriggerTreeView());
     }
 
-    private void EventsUpdateTriggerTree(object sender, bool e)
+    private void RefreshOverlayNode()
     {
-      Dispatcher.InvokeAsync(() =>
-      {
-        treeView.Nodes.Remove(treeView.Nodes[0]);
-        treeView.Nodes.Insert(0, TriggerManager.Instance.GetTriggerTreeView());
-      });
+      treeView.Nodes.Remove(treeView.Nodes[1]);
+      treeView.Nodes.Add(TriggerManager.Instance.GetOverlayTreeView());
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
@@ -207,6 +199,38 @@ namespace EQLogParser
             var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex.ToString();
             TestSynth.SpeakAsync(rateText);
           }
+        }
+      }
+    }
+
+    private void SelectFile(object file)
+    {
+      if (file != null)
+      {
+        bool selectFile = false;
+        bool isTrigger = false;
+        if (treeView.SelectedItem == null)
+        {
+          selectFile = true;
+        }
+        else if (treeView.SelectedItem is TriggerTreeViewNode node && node.SerializedData != null)
+        {
+          if (node.SerializedData.TriggerData == null || node.SerializedData.TriggerData != file)
+          {
+            isTrigger = true;
+            selectFile = true;
+          }
+          else if (node.SerializedData.OverlayData == null || node.SerializedData.OverlayData != file)
+          {
+            selectFile = true;
+          }
+        }
+
+        if (selectFile)
+        {
+          var found = FindAndExpandNode((isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file);
+          treeView.SelectedItem = found;
+          SelectionChanged(found);
         }
       }
     }
@@ -251,11 +275,23 @@ namespace EQLogParser
       }
 
       // fix drag and drop that wants to reverse the order for some reason
-      var list = e.DraggingNodes.ToList();
+      var list = e.DraggingNodes.Cast<TriggerTreeViewNode>().ToList();
       list.Reverse();
+
+      if ((target == treeView.Nodes[1] || target.ParentNode == treeView.Nodes[1]) && list.Any(item => !item.IsOverlay))
+      {
+        e.Handled = true;
+        return;
+      }
+
+      if ((target != treeView.Nodes[1] && target.ParentNode != treeView.Nodes[1]) && list.Any(item => item.IsOverlay))
+      {
+        e.Handled = true;
+        return;
+      }
+
       e.DraggingNodes.Clear();
       list.ForEach(node => e.DraggingNodes.Add(node));
-
       target = ((!target.IsTrigger && !target.IsOverlay) && e.DropPosition == DropPosition.DropAsChild) ? target : target.ParentNode as TriggerTreeViewNode;
 
       Removed = new List<TriggerNode>();
@@ -313,8 +349,9 @@ namespace EQLogParser
         }
       }
 
-      TriggerManager.Instance.UpdateTriggers(true);
-      EventsUpdateTriggerTree(this, true);
+      TriggerManager.Instance.UpdateTriggers(false);
+      TriggerManager.Instance.UpdateOverlays();
+      RefreshTriggerNode();
       SelectionChanged(null);
     }
 
@@ -323,39 +360,31 @@ namespace EQLogParser
       if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
       {
         var newNode = new TriggerNode { Name = LABEL_NEW_FOLDER };
-
-        if (node.SerializedData.Nodes == null)
-        {
-          node.SerializedData.Nodes = new List<TriggerNode>();
-        }
-
+        node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
         node.SerializedData.Nodes.Add(newNode);
         TriggerManager.Instance.UpdateTriggers();
-        EventsUpdateTriggerTree(this, true);
+        RefreshTriggerNode();
       }
     }
 
-    private void CreateOverlayClick(object sender, RoutedEventArgs e)
+    private void CreateTimerOverlayClick(object sender, RoutedEventArgs e)
     {
       if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
       {
-        var newOverlay = new TriggerNode
+        var newNode = new TriggerNode
         {
           Name = LABEL_NEW_OVERLAY,
           IsEnabled = true,
-          OverlayData = new Overlay { Name = LABEL_NEW_OVERLAY, Id = Guid.NewGuid().ToString() }
+          OverlayData = new Overlay { Name = LABEL_NEW_OVERLAY, Id = Guid.NewGuid().ToString(), IsTimerOverlay = true }
         };
 
-        if (node.SerializedData.Nodes == null)
-        {
-          node.SerializedData.Nodes = new List<TriggerNode>();
-        }
-
+        node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
-        node.SerializedData.Nodes.Add(newOverlay);
+        node.SerializedData.Nodes.Add(newNode);
         TriggerManager.Instance.UpdateOverlays();
-        EventsUpdateOverlayTree(this, true);
+        RefreshOverlayNode();
+        SelectFile(newNode.OverlayData);
       }
     }
 
@@ -363,17 +392,13 @@ namespace EQLogParser
     {
       if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
       {
-        var newTrigger = new TriggerNode { Name = LABEL_NEW_TRIGGER, IsEnabled = true, TriggerData = new Trigger { Name = LABEL_NEW_TRIGGER } };
-
-        if (node.SerializedData.Nodes == null)
-        {
-          node.SerializedData.Nodes = new List<TriggerNode>();
-        }
-
+        var newNode = new TriggerNode { Name = LABEL_NEW_TRIGGER, IsEnabled = true, TriggerData = new Trigger { Name = LABEL_NEW_TRIGGER } };
+        node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
-        node.SerializedData.Nodes.Add(newTrigger);
+        node.SerializedData.Nodes.Add(newNode);
         TriggerManager.Instance.UpdateTriggers();
-        EventsUpdateTriggerTree(this, true);
+        RefreshTriggerNode();
+        SelectFile(newNode.TriggerData);
       }
     }
 
@@ -408,140 +433,18 @@ namespace EQLogParser
         thePropertyGrid.SelectedObject = null;
         thePropertyGrid.IsEnabled = false;
         thePropertyGrid.DescriptionPanelVisibility = Visibility.Collapsed;
+        buttonPanel.Visibility = Visibility.Collapsed;
 
         if (updateTriggers)
         {
-          EventsUpdateTriggerTree(this, true);
           TriggerManager.Instance.UpdateTriggers();
+          RefreshTriggerNode();
         }
 
         if (updateOverlays)
         {
-          EventsUpdateOverlayTree(this, true);
           TriggerManager.Instance.UpdateOverlays();
-        }
-      }
-    }
-
-    private void RenameClick(object sender, RoutedEventArgs e)
-    {
-      if (treeView.SelectedItems?.Count == 1)
-      {
-        treeView.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
-      }
-    }
-
-    private void ExportClick(object sender, RoutedEventArgs e)
-    {
-      if (treeView.SelectedItems?.Count > 0)
-      {
-        try
-        {
-          var exportList = new List<TriggerNode>();
-          foreach (var selected in treeView.SelectedItems.Cast<TriggerTreeViewNode>())
-          {
-            // if the root is in there just use it
-            if (selected == treeView.Nodes[0])
-            {
-              exportList = new List<TriggerNode>() { selected.SerializedData };
-              break;
-            }
-            else if (selected.IsOverlay || selected == treeView.Nodes[1])
-            {
-              break;
-            }
-
-            var start = selected.ParentNode as TriggerTreeViewNode;
-            var child = selected.SerializedData;
-            TriggerNode newNode = null;
-            while (start != null)
-            {
-              newNode = new TriggerNode
-              {
-                Name = start.SerializedData.Name,
-                IsEnabled = start.SerializedData.IsEnabled,
-                IsExpanded = start.SerializedData.IsExpanded,
-                Nodes = new List<TriggerNode>() { child }
-              };
-
-              child = newNode;
-              start = start.ParentNode as TriggerTreeViewNode;
-            }
-
-            if (newNode != null)
-            {
-              exportList.Add(newNode);
-            }
-          }
-
-          if (exportList.Count > 0)
-          {
-            var result = System.Text.Json.JsonSerializer.Serialize(exportList, new JsonSerializerOptions { IncludeFields = true });
-            SaveFileDialog saveFileDialog = new SaveFileDialog();
-            string filter = "Triggers File (*.tgf.gz)|*.tgf.gz";
-            saveFileDialog.Filter = filter;
-            if (saveFileDialog.ShowDialog().Value)
-            {
-              FileInfo gzipFileName = new FileInfo(saveFileDialog.FileName);
-              FileStream gzipTargetAsStream = gzipFileName.Create();
-              GZipStream gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
-              var writer = new StreamWriter(gzipStream);
-              writer?.Write(result);
-              writer?.Close();
-            }
-          }
-        }
-        catch (Exception ex)
-        {
-          new MessageWindow("Problem Exporting Triggers. Check Error Log for details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
-          LOG.Error(ex);
-        }
-      }
-    }
-
-    private void ImportClick(object sender, RoutedEventArgs e)
-    {
-      if (treeView?.SelectedItem is TriggerTreeViewNode node)
-      {
-        try
-        {
-          // WPF doesn't have its own file chooser so use Win32 Version
-          OpenFileDialog dialog = new OpenFileDialog
-          {
-            // filter to txt files
-            DefaultExt = ".scf.gz",
-            Filter = "All Supported Files|*.tgf.gz;*.gtp"
-          };
-
-          // show dialog and read result
-          if (dialog.ShowDialog().Value)
-          {
-            // limit to 100 megs just incase
-            var fileInfo = new FileInfo(dialog.FileName);
-            if (fileInfo.Exists && fileInfo.Length < 100000000)
-            {
-              if (dialog.FileName.EndsWith("tgf.gz"))
-              {
-                GZipStream decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
-                var reader = new StreamReader(decompressionStream);
-                string json = reader?.ReadToEnd();
-                reader?.Close();
-                var data = JsonSerializer.Deserialize<List<TriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
-                TriggerManager.Instance.MergeTriggers(data, node.SerializedData);
-              }
-              else if (dialog.FileName.EndsWith(".gtp"))
-              {
-                var data = new byte[fileInfo.Length];
-                fileInfo.OpenRead().Read(data);
-                TriggerUtil.ImportFromGina(data, node.SerializedData);
-              }
-            }
-          }
-        }
-        catch (Exception ex)
-        {
-          new MessageWindow("Problem Importing Triggers. Check Error Log for details.", EQLogParser.Resource.IMPORT_ERROR).ShowDialog();
-          LOG.Error("Import Failure", ex);
+          RefreshOverlayNode();
         }
       }
     }
@@ -596,6 +499,7 @@ namespace EQLogParser
             }
 
             TriggerManager.Instance.UpdateTriggers(false);
+            TriggerManager.Instance.UpdateOverlays();
           }
         }, System.Windows.Threading.DispatcherPriority.Background);
       }
@@ -627,9 +531,9 @@ namespace EQLogParser
       importMenuItem.Header = importMenuItem.IsEnabled ? "Import to " + node.Content.ToString() : "Import";
       if (newMenuItem.IsEnabled)
       {
-        newFolder.Visibility = node == treeView.Nodes[0] ? Visibility.Visible : Visibility.Collapsed;
-        newTrigger.Visibility = node == treeView.Nodes[0] ? Visibility.Visible : Visibility.Collapsed;
-        newOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
+        newFolder.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
+        newTrigger.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
+        newTimerOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
       }
     }
 
@@ -643,7 +547,7 @@ namespace EQLogParser
 
     private void SelectionChanged(TriggerTreeViewNode node)
     {
-      object model = null;
+      dynamic model = null;
       var isTrigger = (node?.IsTrigger == true);
       var isOverlay = (node?.IsOverlay == true);
 
@@ -658,21 +562,7 @@ namespace EQLogParser
         {
           model = new OverlayPropertyModel { Original = node.SerializedData.OverlayData };
           TriggerUtil.Copy(model, node.SerializedData.OverlayData);
-
-          if (node.SerializedData.OverlayData.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
-          {
-            (model as OverlayPropertyModel).FontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
-          }
-
-          if (node.SerializedData.OverlayData.PrimaryColor is string primary && !string.IsNullOrEmpty(primary))
-          {
-            (model as OverlayPropertyModel).PrimaryBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(primary) };
-          }
-
-          if (node.SerializedData.OverlayData.SecondaryColor is string secondary && !string.IsNullOrEmpty(secondary))
-          {
-            (model as OverlayPropertyModel).SecondaryBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(secondary) };
-          }
+          model.TimerBarPreview = model.Id;
         }
 
         saveButton.IsEnabled = false;
@@ -686,17 +576,23 @@ namespace EQLogParser
 
       if (isTrigger)
       {
-        EnableCategory(timerDurationItem.CategoryName, node.SerializedData.TriggerData.EnableTimer);
-        EnableCategory(patternItem.CategoryName, true);
-        EnableCategory(evalTimeItem.CategoryName, true);
-        EnableCategory(fontSizeItem.CategoryName, false);
+        PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
+        {
+          new { Name = timerDurationItem.CategoryName, IsEnabled = node.SerializedData.TriggerData.EnableTimer },
+          new { Name = patternItem.CategoryName, IsEnabled = true },
+          new { Name = evalTimeItem.CategoryName, IsEnabled = true },
+          new { Name = fontSizeItem.CategoryName, IsEnabled = false },
+        });
       }
       else if (isOverlay)
       {
-        EnableCategory(timerDurationItem.CategoryName, false);
-        EnableCategory(patternItem.CategoryName, false);
-        EnableCategory(evalTimeItem.CategoryName, false);
-        EnableCategory(fontSizeItem.CategoryName, true);
+        PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
+        {
+          new { Name = timerDurationItem.CategoryName, IsEnabled = false },
+          new { Name = patternItem.CategoryName, IsEnabled = false },
+          new { Name = evalTimeItem.CategoryName, IsEnabled = false },
+          new { Name = fontSizeItem.CategoryName, IsEnabled = true },
+        });
       }
     }
 
@@ -713,6 +609,7 @@ namespace EQLogParser
         }
 
         TriggerManager.Instance.UpdateTriggers();
+        TriggerManager.Instance.UpdateOverlays();
       }
     }
 
@@ -753,11 +650,11 @@ namespace EQLogParser
     private void ValueChanged(object sender, ValueChangedEventArgs args)
     {
       if (args.Property.Name != errorsItem.PropertyName && args.Property.Name != evalTimeItem.PropertyName &&
-        args.Property.SelectedObject is Trigger trigger)
+        args.Property.SelectedObject is TriggerPropertyModel trigger)
       {
         var list = thePropertyGrid.Properties.ToList();
-        var errorsProp = FindProperty(list, errorsItem.PropertyName);
-        var longestProp = FindProperty(list, evalTimeItem.PropertyName);
+        var errorsProp = PropertyGridUtil.FindProperty(list, errorsItem.PropertyName);
+        var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
         bool isValid = true;
         if (trigger.UseRegex)
@@ -784,16 +681,43 @@ namespace EQLogParser
         }
         else if (args.Property.Name == enableTimerItem.PropertyName)
         {
-          EnableCategory(timerDurationItem.CategoryName, (bool)args.Property.Value);
+          PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = timerDurationItem.CategoryName, IsEnabled = (bool)args.Property.Value } });
         }
 
         saveButton.IsEnabled = (trigger.Errors == "None");
         cancelButton.IsEnabled = true;
       }
-      else if (args.Property.SelectedObject is Overlay overlay)
+      else if (args.Property.SelectedObject is OverlayPropertyModel overlay)
       {
-        saveButton.IsEnabled = true;
-        cancelButton.IsEnabled = true;
+        var change = true;
+        if (args.Property.Name == primaryBrushItem.PropertyName)
+        {
+          change = !overlay.PrimaryBrush.ToString().Equals(overlay.Original.PrimaryColor);
+          Application.Current.Resources["TimerBarProgressColor-" + overlay.Id] = overlay.PrimaryBrush;
+        }
+        else if(args.Property.Name == secondaryBrushItem.PropertyName)
+        {
+          change = !overlay.SecondaryBrush.ToString().Equals(overlay.Original.SecondaryColor);
+          Application.Current.Resources["TimerBarTrackColor-" + overlay.Id] = overlay.SecondaryBrush;
+        }
+        else if (args.Property.Name == fontBrushItem.PropertyName)
+        {
+          change = !overlay.FontBrush.ToString().Equals(overlay.Original.FontColor);
+          Application.Current.Resources["TimerBarFontColor-" + overlay.Id] = overlay.FontBrush;
+        }
+        else if (args.Property.Name == fontSizeItem.PropertyName && overlay.FontSize.Split("pt") is string[] split && split.Length == 2
+         && double.TryParse(split[0], out double newFontSize))
+        {
+          change = overlay.FontSize != overlay.Original.FontSize;
+          Application.Current.Resources["TimerBarFontSize-" + overlay.Id] = newFontSize;
+          Application.Current.Resources["TimerBarHeight-" + overlay.Id] = TriggerUtil.GetTimerBarHeight(newFontSize);
+        }
+
+        if (change)
+        {
+          saveButton.IsEnabled = true;
+          cancelButton.IsEnabled = true;
+        }
       }
     }
 
@@ -819,9 +743,6 @@ namespace EQLogParser
       }
       else if (thePropertyGrid.SelectedObject is OverlayPropertyModel overlayModel)
       {
-        overlayModel.FontColor = TextFormatUtils.GetHexString(overlayModel.FontBrush.Color);
-        overlayModel.PrimaryColor = TextFormatUtils.GetHexString(overlayModel.PrimaryBrush.Color);
-        overlayModel.SecondaryColor = TextFormatUtils.GetHexString(overlayModel.SecondaryBrush.Color);
         TriggerUtil.Copy(overlayModel.Original, overlayModel);
         TriggerManager.Instance.UpdateOverlays();
       }
@@ -832,60 +753,31 @@ namespace EQLogParser
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
-      if (thePropertyGrid.SelectedObject is TriggerPropertyModel model)
+      if (thePropertyGrid.SelectedObject is TriggerPropertyModel triggerModel)
       {
-        TriggerUtil.Copy(model, model.Original);
-        thePropertyGrid.RefreshPropertygrid();
-        EnableCategory(timerDurationItem.CategoryName, model.Original.EnableTimer);
+        TriggerUtil.Copy(triggerModel, triggerModel.Original);
+        PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = timerDurationItem.CategoryName, IsEnabled = triggerModel.Original.EnableTimer } });
+      }
+      else if (thePropertyGrid.SelectedObject is OverlayPropertyModel overlayModel)
+      {
+        TriggerUtil.Copy(overlayModel, overlayModel.Original);
       }
 
+      thePropertyGrid.RefreshPropertygrid();
       cancelButton.IsEnabled = false;
       saveButton.IsEnabled = false;
     }
 
-    private void EnableCategory(string category, bool isEnabled)
+    private TriggerTreeViewNode FindAndExpandNode(TriggerTreeViewNode node, object file)
     {
-      foreach (var item in thePropertyGrid.Items)
-      {
-        if (item.CategoryName == category)
-        {
-          item.Visibility = isEnabled ? Visibility.Visible : Visibility.Collapsed;
-        }
-      }
-
-      thePropertyGrid.RefreshPropertygrid();
-    }
-
-    private PropertyItem FindProperty(List<object> list, string name)
-    {
-      foreach (var prop in list)
-      {
-        if (prop is PropertyItem item)
-        {
-          if (item.Name == name)
-          {
-            return item;
-          }
-        }
-        else if (prop is PropertyCategoryViewItemCollection sub && FindProperty(sub.Properties.ToList(), name) is PropertyItem found)
-        {
-          return found;
-        }
-      }
-
-      return null;
-    }
-
-    private TriggerTreeViewNode FindAndExpandNode(TriggerTreeViewNode node, Trigger trigger)
-    {
-      if (node.SerializedData?.TriggerData == trigger)
+      if (node.SerializedData?.TriggerData == file || node.SerializedData?.OverlayData == file)
       {
         return node;
       }
 
       foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
       {
-        if (FindAndExpandNode(child, trigger) is TriggerTreeViewNode found)
+        if (FindAndExpandNode(child, file) is TriggerTreeViewNode found)
         {
           treeView.ExpandNode(node);
           return found;
@@ -893,19 +785,6 @@ namespace EQLogParser
       }
 
       return null;
-    }
-
-    internal class OverlayPropertyModel : Overlay
-    {
-      public SolidColorBrush FontBrush { get; set; }
-      public SolidColorBrush PrimaryBrush { get; set; }
-      public SolidColorBrush SecondaryBrush { get; set; }
-      public Overlay Original { get; set; }
-    }
-
-    internal class TriggerPropertyModel : Trigger
-    {
-      public Trigger Original { get; set; }
     }
 
     #region IDisposable Support

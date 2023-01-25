@@ -99,7 +99,7 @@ namespace EQLogParser
       try
       {
         var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
-        var fgColor = ConfigUtil.GetSetting(colorSetting, TextFormatUtils.GetHexString(defaultColor));
+        var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
         colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
       }
       catch (FormatException)
@@ -392,7 +392,7 @@ namespace EQLogParser
     {
       chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
       var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
-      ConfigUtil.SetSetting(colorSetting, TextFormatUtils.GetHexString(colorPicker.Color));
+      ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString());
     }
 
     private void FontSizeChanged(object sender, SelectionChangedEventArgs e)
