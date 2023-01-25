@@ -28,9 +28,12 @@ namespace EQLogParser
     internal event EventHandler<Trigger> EventsUpdateTimer;
 
     internal static TriggerManager Instance = new TriggerManager();
+    private readonly string OVERLAY_FILE = "overlays.json";
     private readonly string TRIGGERS_FILE = "triggers.json";
-    private readonly DispatcherTimer UpdateTimer;
-    private readonly TriggerNode Data;
+    private readonly DispatcherTimer OverlayUpdateTimer;
+    private readonly DispatcherTimer TriggerUpdateTimer;
+    private readonly TriggerNode TriggerNodes;
+    private readonly TriggerNode OverlayNodes;
     private Channel<dynamic> LogChannel = null;
     private string CurrentVoice;
     private int CurrentVoiceRate;
@@ -43,25 +46,27 @@ namespace EQLogParser
     {
       BindingOperations.EnableCollectionSynchronization(AlertLog, CollectionLock);
 
-      var jsonString = ConfigUtil.ReadConfigFile(TRIGGERS_FILE);
-      if (jsonString != null)
-      {
-        Data = JsonSerializer.Deserialize<TriggerNode>(jsonString, new JsonSerializerOptions { IncludeFields = true });
-      }
-      else
-      {
-        Data = new TriggerNode();
-      }
+      var json = ConfigUtil.ReadConfigFile(TRIGGERS_FILE);
+      TriggerNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
+      json = ConfigUtil.ReadConfigFile(OVERLAY_FILE);
+      OverlayNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
 
       CurrentVoice = TriggerUtil.GetSelectedVoice();
       CurrentVoiceRate = TriggerUtil.GetVoiceRate();
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
-      UpdateTimer.Tick += DataUpdated;
+
+      TriggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
+      TriggerUpdateTimer.Tick += TriggerDataUpdated;
+      OverlayUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
+      OverlayUpdateTimer.Tick += OverlayDataUpdated;
     }
 
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
 
     internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
+
+    internal TriggerTreeViewNode GetTriggerTreeView() => TriggerUtil.GetTreeView(TriggerNodes, "Triggers");
+
+    internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
 
     internal void SetVoice(string voice) => CurrentVoice = voice;
 
@@ -80,25 +85,6 @@ namespace EQLogParser
       }
     }
 
-    internal TriggerTreeViewNode GetTreeView()
-    {
-      var result = new TriggerTreeViewNode
-      {
-        Content = "Triggers",
-        IsChecked = Data.IsEnabled,
-        IsTrigger = false,
-        IsExpanded = Data.IsExpanded,
-        SerializedData = Data
-      };
-
-      lock (Data)
-      {
-        TriggerUtil.AddTreeNodes(Data.Nodes, result);
-      }
-
-      return result;
-    }
-
     internal bool IsActive()
     {
       bool active = false;
@@ -115,7 +101,7 @@ namespace EQLogParser
 
     internal void MergeTriggers(List<TriggerNode> list, TriggerNode parent)
     {
-      lock (Data)
+      lock (TriggerNodes)
       {
         foreach (var node in list)
         {
@@ -135,9 +121,9 @@ namespace EQLogParser
       newFolder += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
       newTriggers.Name = newFolder;
 
-      lock (Data)
+      lock (TriggerNodes)
       {
-        Data.Nodes.Add(newTriggers);
+        TriggerNodes.Nodes.Add(newTriggers);
         SaveTriggers();
       }
 
@@ -147,9 +133,9 @@ namespace EQLogParser
 
     internal void MergeTriggers(TriggerNode newTriggers, TriggerNode parent = null)
     {
-      lock (Data)
+      lock (TriggerNodes)
       {
-        TriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? Data : parent);
+        TriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? TriggerNodes : parent);
         SaveTriggers();
       }
 
@@ -157,14 +143,20 @@ namespace EQLogParser
       EventsUpdateTree?.Invoke(this, true);
     }
 
-    internal void Update(bool needRefresh = true)
+    internal void UpdateOverlays()
     {
-      UpdateTimer.Stop();
-      UpdateTimer.Start();
+      OverlayUpdateTimer.Stop();
+      OverlayUpdateTimer.Start();
+    }
+
+    internal void UpdateTriggers(bool needRefresh = true)
+    {
+      TriggerUpdateTimer.Stop();
+      TriggerUpdateTimer.Start();
 
       if (needRefresh)
       {
-        UpdateTimer.Tag = needRefresh;
+        TriggerUpdateTimer.Tag = needRefresh;
       }
     }
 
@@ -282,6 +274,7 @@ namespace EQLogParser
         LogChannel = null;
       }
 
+      SaveOverlays();
       SaveTriggers();
       (Application.Current.MainWindow as MainWindow)?.ShowTriggersEnabled(false);
 
@@ -579,14 +572,20 @@ namespace EQLogParser
       }
     }
 
-    private void DataUpdated(object sender, EventArgs e)
+    private void OverlayDataUpdated(object sender, EventArgs e)
     {
-      UpdateTimer.Stop();
+      OverlayUpdateTimer.Stop();
+      SaveOverlays();
+    }
 
-      if (UpdateTimer.Tag != null)
+    private void TriggerDataUpdated(object sender, EventArgs e)
+    {
+      TriggerUpdateTimer.Stop();
+
+      if (TriggerUpdateTimer.Tag != null)
       {
         RequestRefresh();
-        UpdateTimer.Tag = null;
+        TriggerUpdateTimer.Tag = null;
       }
 
       SaveTriggers();
@@ -594,7 +593,7 @@ namespace EQLogParser
 
     private void DisableNodes(TriggerNode node)
     {
-      if (node.TriggerData == null)
+      if (node.TriggerData == null && node.OverlayData == null)
       {
         node.IsEnabled = false;
         node.IsExpanded = false;
@@ -628,9 +627,9 @@ namespace EQLogParser
       var activeTriggers = new LinkedList<TriggerWrapper>();
       var enabledTriggers = new List<Trigger>();
 
-      lock (Data)
+      lock (TriggerNodes)
       {
-        LoadActive(Data, enabledTriggers);
+        LoadActiveTriggers(TriggerNodes, enabledTriggers);
       }
 
       var playerName = ConfigUtil.PlayerName;
@@ -695,7 +694,7 @@ namespace EQLogParser
       return activeTriggers;
     }
 
-    private void LoadActive(TriggerNode data, List<Trigger> triggers)
+    private void LoadActiveTriggers(TriggerNode data, List<Trigger> triggers)
     {
       if (data != null && data.Nodes != null && data.IsEnabled != false)
       {
@@ -705,19 +704,28 @@ namespace EQLogParser
           {
             triggers.Add(node.TriggerData);
           }
-          else
+          else if (node.OverlayData == null)
           {
-            LoadActive(node, triggers);
+            LoadActiveTriggers(node, triggers);
           }
         }
       }
     }
 
+    private void SaveOverlays()
+    {
+      lock (OverlayNodes)
+      {
+        var json = JsonSerializer.Serialize(OverlayNodes, new JsonSerializerOptions { IncludeFields = true });
+        ConfigUtil.WriteConfigFile(OVERLAY_FILE, json);
+      }
+    }
+
     private void SaveTriggers()
     {
-      lock (Data)
+      lock (TriggerNodes)
       {
-        var json = JsonSerializer.Serialize(Data, new JsonSerializerOptions { IncludeFields = true });
+        var json = JsonSerializer.Serialize(TriggerNodes, new JsonSerializerOptions { IncludeFields = true });
         ConfigUtil.WriteConfigFile(TRIGGERS_FILE, json);
       }
     }

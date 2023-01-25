@@ -13,6 +13,10 @@ namespace EQLogParser
         {
           return Application.Current.Resources["TriggerFileTemplate"] as DataTemplate;
         }
+        else if (node.IsOverlay)
+        {
+          return Application.Current.Resources["OverlayFileTemplate"] as DataTemplate;
+        }
         else
         {
           return Application.Current.Resources["TriggerNodeTemplate"] as DataTemplate;
