@@ -13,14 +13,18 @@ namespace EQLogParser
   {
     private Dictionary<string, TimerBar> TimerBarCache = new Dictionary<string, TimerBar>();
 
-    public TimerOverlay()
+    private string OverlayId;
+
+    public TimerOverlay(string overlayId)
     {
       InitializeComponent();
+      OverlayId = overlayId;
     }
 
     internal void CreateTimer(string name, double endTime)
     {
-      var timerBar = new TimerBar(name, endTime);
+      var timerBar = new TimerBar();
+      timerBar.InitOverlay(OverlayId, name, endTime);
       TimerBarCache[name] = timerBar;
       content.Children.Add(timerBar);
     }

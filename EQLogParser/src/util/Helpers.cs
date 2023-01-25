@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Xml;
 
 namespace EQLogParser
 {
@@ -80,6 +81,16 @@ namespace EQLogParser
           content.Visibility = Visibility.Hidden;
         }
       }), TaskScheduler.Default);
+    }
+
+    internal static string GetText(XmlNode node, string value)
+    {
+      if (node.SelectSingleNode(value) is XmlNode selected)
+      {
+        return selected.InnerText?.Trim();
+      }
+
+      return "";
     }
 
     internal static void LoadDictionary(string path)

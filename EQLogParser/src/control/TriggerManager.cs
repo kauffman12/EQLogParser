@@ -61,15 +61,10 @@ namespace EQLogParser
     }
 
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
-
     internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
-
     internal TriggerTreeViewNode GetTriggerTreeView() => TriggerUtil.GetTreeView(TriggerNodes, "Triggers");
-
     internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
-
     internal void SetVoice(string voice) => CurrentVoice = voice;
-
     internal void SetVoiceRate(int rate) => CurrentVoiceRate = rate;
 
     internal void AddAction(LineData lineData)
@@ -105,7 +100,7 @@ namespace EQLogParser
       {
         foreach (var node in list)
         {
-          DisableNodes(node);
+          TriggerUtil.DisableNodes(node);
           TriggerUtil.MergeNodes(node.Nodes, parent);
         }
 
@@ -591,22 +586,6 @@ namespace EQLogParser
       SaveTriggers();
     }
 
-    private void DisableNodes(TriggerNode node)
-    {
-      if (node.TriggerData == null && node.OverlayData == null)
-      {
-        node.IsEnabled = false;
-        node.IsExpanded = false;
-        if (node.Nodes != null)
-        {
-          foreach (var child in node.Nodes)
-          {
-            DisableNodes(child);
-          }
-        }
-      }
-    }
-
     private void RequestRefresh()
     {
       if (RefreshTask == null || RefreshTask.IsCompleted)
@@ -654,7 +633,7 @@ namespace EQLogParser
               ModifiedEndSpeak = modifiedEndSpeak
             };
 
-            pattern = TriggerUtil.UpdatePattern(trigger.UseRegex, playerName, pattern);
+            pattern = UpdatePattern(trigger.UseRegex, playerName, pattern);
 
             if (trigger.UseRegex)
             {
@@ -669,7 +648,7 @@ namespace EQLogParser
             {
               if (trigger.CancelPattern is string endEarlyPattern && !string.IsNullOrEmpty(endEarlyPattern))
               {
-                endEarlyPattern = TriggerUtil.UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern);
+                endEarlyPattern = UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern);
 
                 if (trigger.EndUseRegex)
                 {
@@ -738,6 +717,24 @@ namespace EQLogParser
       wrapper.WarningCancellations.Keys.ToList().ForEach(source => source.Dispose());
       wrapper.TimerCancellations.Clear();
       wrapper.WarningCancellations.Clear();
+    }
+
+    private string UpdatePattern(bool useRegex, string playerName, string pattern)
+    {
+      pattern = pattern.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
+
+      if (useRegex && Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is MatchCollection matches && matches.Count > 0)
+      {
+        foreach (Match match in matches)
+        {
+          if (match.Groups.Count > 1)
+          {
+            pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + ">.+)");
+          }
+        }
+      }
+
+      return pattern;
     }
 
     private class Speak

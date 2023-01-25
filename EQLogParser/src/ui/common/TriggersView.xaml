@@ -77,7 +77,7 @@
               <MenuItem x:Name="newMenuItem" Header="New">
                 <MenuItem x:Name="newFolder" Header="Folder" Click="CreateNodeClick" />
                 <MenuItem x:Name="newTrigger" Header="Trigger" Click="CreateTriggerClick" />
-                <MenuItem x:Name="newOverlay" Header="Overlay" Click="CreateOverlayClick" />
+                <MenuItem x:Name="newTimerOverlay" Header="Timer Overlay" Click="CreateTimerOverlayClick" />
               </MenuItem>
               <Separator x:Name="newSeparator" />
               <MenuItem x:Name="collapseMenuItem" Header="Collapse All" Click="CollapseAllClick" />
@@ -118,7 +118,7 @@
               <GridLength>200</GridLength>
             </syncfusion:PropertyGrid.PropertyNameColumnDefinition>
             <syncfusion:PropertyGrid.Items>
-              <syncfusion:PropertyGridItem CategoryName="Trigger" PropertyName="TriggerComments" DisplayName="Comments" Description="Notes about this Trigger." />
+              <syncfusion:PropertyGridItem CategoryName="Trigger" PropertyName="Comments" DisplayName="Comments" Description="Notes about this Trigger." />
               <syncfusion:PropertyGridItem x:Name="patternItem" CategoryName="Trigger" PropertyName="Pattern" DisplayName="Pattern" Description="Text to match on. The Text is not case sensitive. If {c} is specified within the Text Pattern it will be replaced with your character name. If {s}, {s1}, {s2}, etc are specified they will match any string. Both {c} and {s} options will be available to use in the Text to Speak field. Note that the {s} options are only available if using Regex while {c} works with both."/>
               <syncfusion:PropertyGridItem x:Name="useRegexItem" CategoryName="Trigger" PropertyName="UseRegex" DisplayName="Use Regex" Description="True if Regex is to be used for the specified Pattern."/>
               <syncfusion:PropertyGridItem CategoryName="Trigger" PropertyName="Priority" DisplayName="Priority" Description="Priority used to determine if an Trigger may be interrupted. The highest priority is 1 and lowest is 5. Interruptions may happen any time a higher priority trigger needs to play while a lower priority trigger has not finished."/>
@@ -133,16 +133,17 @@
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="TriggerAgainOption" DisplayName="If Triggered Again" Visibility="Collapsed" Description="What to do if the Trigger is matched a second time but the original Timer has not completed."/>
               <syncfusion:PropertyGridItem x:Name="errorsItem" CategoryName="Status" PropertyName="Errors" DisplayName="Errors" IsReadOnly="True" Description="Any errors or warnings associated with the Trigger settings." />
               <syncfusion:PropertyGridItem x:Name="evalTimeItem" CategoryName="Status" PropertyName="LongestEvalTime" DisplayName="Longest Eval Time (μs)" IsReadOnly="True" Description="The longest time recorded for checking the specified Pattern for a match. The time is in microseconds. If a change is made to the Pattern the value will be reset. This should help identify slow Triggers and ideally this value stays below 1000."/>
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="OverlayComments" DisplayName="Comments" Description="Notes about this Overlay." />
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="FontBrush" DisplayName="Font Color" Description="Font Color used to display the Trigger Name for each Timer."/>
-              <syncfusion:PropertyGridItem x:Name="fontSizeItem" CategoryName="Overlay" PropertyName="FontSize" DisplayName="Font Size" Description="Font Size used to display the Trigger Name for each Timer."/>
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="PrimaryBrush" DisplayName="Primary Color" Description="Primary Color used for the Timer countdown bars representing the time left." />
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="SecondaryBrush" DisplayName="Secondary Color" Description="Secondary Color used for the Timer countdown bars representing the time used." />
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="SortBy" DisplayName="Sort By" Description="Sort the Timers on the Overlay by showing he Timers which will finish first or keep the order in which they were Triggered."/>
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Id" DisplayName="Id" IsReadOnly="True" Description="Unique ID for this Overlay. Assigned when it is created." />
+              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="TimerBarPreview" DisplayName="Preview" IsReadOnly="True" Visibility="Collapsed" Description="Example Timer Bar based on these settings." />
+              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="OverlayComments" DisplayName="Comments" Visibility="Collapsed" Description="Notes about this Overlay." />
+              <syncfusion:PropertyGridItem x:Name="fontBrushItem" CategoryName="Overlay" PropertyName="FontBrush" DisplayName="Font Color" Visibility="Collapsed" Description="Font Color used to display the Trigger Name for each Timer."/>
+              <syncfusion:PropertyGridItem x:Name="fontSizeItem" CategoryName="Overlay" PropertyName="FontSize" DisplayName="Font Size" Visibility="Collapsed" Description="Font Size used to display the Trigger Name for each Timer."/>
+              <syncfusion:PropertyGridItem x:Name="primaryBrushItem" CategoryName="Overlay" PropertyName="PrimaryBrush" DisplayName="Primary Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the time left." />
+              <syncfusion:PropertyGridItem x:Name="secondaryBrushItem" CategoryName="Overlay" PropertyName="SecondaryBrush" DisplayName="Secondary Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the time used." />
+              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="SortBy" DisplayName="Sort By" Visibility="Collapsed" Description="How to Sort the Timers on the Overlay. Either by the time they were initially triggered or by the time each one has remaining."/>
+              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Id" DisplayName="Id" IsReadOnly="True" Visibility="Collapsed" Description="Unique ID for this Overlay. Assigned when it is created." />
             </syncfusion:PropertyGrid.Items>
           </syncfusion:PropertyGrid>
-          <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Visibility="Visible">
+          <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Visibility="Collapsed">
             <Button x:Name="saveButton" Margin="8,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
             <Button x:Name="cancelButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           </StackPanel>

@@ -358,7 +358,7 @@ namespace EQLogParser
 
         ColorPickerList.ForEach(colorPicker =>
         {
-          ConfigUtil.SetSetting(colorPicker.Tag as string, TextFormatUtils.GetHexString(colorPicker.Color));
+          ConfigUtil.SetSetting(colorPicker.Tag as string, colorPicker.Color.ToString());
         });
       }
 

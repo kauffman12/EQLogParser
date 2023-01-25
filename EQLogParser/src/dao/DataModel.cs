@@ -1,12 +1,11 @@
 ﻿using Syncfusion.UI.Xaml.TreeView.Engine;
 using Syncfusion.Windows.Shared;
-using Syncfusion.XPS;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Security.Policy;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -21,16 +20,17 @@ namespace EQLogParser
     public string OverlayComments { get; set; }
     public string FontSize { get; set; } = "12pt";
     public int SortBy { get; set; } = 0;
-    public string FontColor { get; set; }
-    public string PrimaryColor { get; set; }
-    public string SecondaryColor { get; set; }
+    public string FontColor { get; set; } = "#FFFFFF";
+    public string PrimaryColor { get; set; } = "#FF1D397E";
+    public string SecondaryColor { get; set; } = "#00FFFFFF";
     public string Name { get; set; }
     public string Id { get; set; }
+    public bool IsTimerOverlay { get; set; }
   }
 
   internal class Trigger : NotificationObject
   {
-    public string TriggerComments { get; set; }
+    public string Comments { get; set; }
     public long DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
     public string CancelPattern { get; set; }
@@ -47,6 +47,20 @@ namespace EQLogParser
     public bool UseRegex { get; set; }
     public long WarningSeconds { get; set; }
     public string WarningTextToSpeak { get; set; }
+  }
+
+  internal class OverlayPropertyModel : Overlay
+  {
+    public SolidColorBrush FontBrush { get; set; }
+    public SolidColorBrush PrimaryBrush { get; set; }
+    public SolidColorBrush SecondaryBrush { get; set; }
+    public string TimerBarPreview { get; set; }
+    public Overlay Original { get; set; }
+  }
+
+  internal class TriggerPropertyModel : Trigger
+  {
+    public Trigger Original { get; set; }
   }
 
   internal class TriggerNode
