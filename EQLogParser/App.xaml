@@ -21,14 +21,24 @@
       <Setter Property="Margin" Value="0" />
     </Style>
 
-    <DataTemplate x:Key="TriggerFileTemplate">
+    <DataTemplate x:Key="OverlayFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <fa:ImageAwesome Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Regular_FileAudio" />
+          <fa:ImageAwesome Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Clock" />
           <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
         </StackPanel>
       </Grid>
     </DataTemplate>
+
+    <DataTemplate x:Key="TriggerFileTemplate">
+      <Grid>
+        <StackPanel Orientation="Horizontal">
+          <fa:ImageAwesome Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Tasks" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+
     <DataTemplate x:Key="TriggerNodeTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
