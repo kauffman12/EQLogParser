@@ -25,6 +25,7 @@ namespace EQLogParser
     public string SecondaryColor { get; set; } = "#00FFFFFF";
     public string Name { get; set; }
     public string Id { get; set; }
+    public bool UseStandardTime { get; set; } = false;
     public bool IsTimerOverlay { get; set; }
   }
 

@@ -91,6 +91,7 @@ namespace EQLogParser
         toOverlay.FontSize = fromOverlay.FontSize;
         toOverlay.SortBy = fromOverlay.SortBy;
         toOverlay.Id = fromOverlay.Id;
+        toOverlay.UseStandardTime= fromOverlay.UseStandardTime;
 
         if (toOverlay is OverlayPropertyModel toModel)
         {
