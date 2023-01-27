@@ -23,7 +23,8 @@ namespace EQLogParser
     {
       { "TriggerAgainOption", ComboBox.SelectedIndexProperty },
       { "FontSize", ComboBox.SelectedValueProperty },
-      { "SortBy", ComboBox.SelectedIndexProperty }
+      { "SortBy", ComboBox.SelectedIndexProperty },
+      { "SelectedTimerOverlay", ComboBox.SelectedValueProperty }
     };
 
 
@@ -59,9 +60,17 @@ namespace EQLogParser
     public object Create(PropertyInfo info)
     {
       ComboBox = new ComboBox();
-      foreach (var items in Options[info.Name])
+
+      if ("SelectedTimerOverlay".Equals(info.Name))
       {
-        ComboBox.Items.Add(items);
+        ComboBox.ItemsSource = TriggerOverlayManager.Instance.GetTimerOverlayItems();
+      }
+      else
+      {
+        foreach (var items in Options[info.Name])
+        {
+          ComboBox.Items.Add(items);
+        }
       }
 
       ComboBox.SelectedIndex = 0;

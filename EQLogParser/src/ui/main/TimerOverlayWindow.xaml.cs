@@ -7,15 +7,15 @@ using System.Windows.Interop;
 namespace EQLogParser
 {
   /// <summary>
-  /// Interaction logic for TimerOverlay.xaml
+  /// Interaction logic for TimerOverlayWindow.xaml
   /// </summary>
-  public partial class TimerOverlay : Window
+  public partial class TimerOverlayWindow : Window
   {
     private Dictionary<string, TimerBar> TimerBarCache = new Dictionary<string, TimerBar>();
 
     private string OverlayId;
 
-    public TimerOverlay(string overlayId)
+    public TimerOverlayWindow(string overlayId)
     {
       InitializeComponent();
       OverlayId = overlayId;

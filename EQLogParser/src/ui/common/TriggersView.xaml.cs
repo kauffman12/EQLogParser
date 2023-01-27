@@ -8,7 +8,6 @@ using System.Linq;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -101,6 +100,7 @@ namespace EQLogParser
       listEditor.Properties.Add("TriggerAgainOption");
       listEditor.Properties.Add("FontSize");
       listEditor.Properties.Add("SortBy");
+      listEditor.Properties.Add("SelectedTimerOverlay");
       thePropertyGrid.CustomEditorCollection.Add(listEditor);
 
       var timeEditor = new CustomEditor();
@@ -115,7 +115,7 @@ namespace EQLogParser
       thePropertyGrid.CustomEditorCollection.Add(exampleEditor);
 
       treeView.Nodes.Add(TriggerManager.Instance.GetTriggerTreeView());
-      treeView.Nodes.Add(TriggerManager.Instance.GetOverlayTreeView());
+      treeView.Nodes.Add(TriggerOverlayManager.Instance.GetOverlayTreeView());
 
       TriggerManager.Instance.EventsUpdateTree += EventsUpdateTriggerTree;
       TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
@@ -137,6 +137,7 @@ namespace EQLogParser
     private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView.Nodes, treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
     private void ImportClick(object sender, RoutedEventArgs e) => TriggerUtil.Import(treeView?.SelectedItem as TriggerTreeViewNode);
     private void RenameClick(object sender, RoutedEventArgs e) => treeView.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
+
     private void EventsSelectTrigger(object sender, Trigger e) => SelectFile(e);
 
     private void EventsLogLoadingComplete(object sender, bool e)
@@ -162,7 +163,7 @@ namespace EQLogParser
     private void RefreshOverlayNode()
     {
       treeView.Nodes.Remove(treeView.Nodes[1]);
-      treeView.Nodes.Add(TriggerManager.Instance.GetOverlayTreeView());
+      treeView.Nodes.Add(TriggerOverlayManager.Instance.GetOverlayTreeView());
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
@@ -229,8 +230,12 @@ namespace EQLogParser
         if (selectFile)
         {
           var found = FindAndExpandNode((isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file);
+          treeView.SelectedItems.Clear();
           treeView.SelectedItem = found;
-          SelectionChanged(found);
+          if (found != null)
+          {
+            SelectionChanged(found);
+          }
         }
       }
     }
@@ -350,7 +355,7 @@ namespace EQLogParser
       }
 
       TriggerManager.Instance.UpdateTriggers(false);
-      TriggerManager.Instance.UpdateOverlays();
+      TriggerOverlayManager.Instance.UpdateOverlays();
       RefreshTriggerNode();
       SelectionChanged(null);
     }
@@ -382,7 +387,7 @@ namespace EQLogParser
         node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
         node.SerializedData.Nodes.Add(newNode);
-        TriggerManager.Instance.UpdateOverlays();
+        TriggerOverlayManager.Instance.UpdateOverlays();
         RefreshOverlayNode();
         SelectFile(newNode.OverlayData);
       }
@@ -443,7 +448,7 @@ namespace EQLogParser
 
         if (updateOverlays)
         {
-          TriggerManager.Instance.UpdateOverlays();
+          TriggerOverlayManager.Instance.UpdateOverlays();
           RefreshOverlayNode();
         }
       }
@@ -499,7 +504,7 @@ namespace EQLogParser
             }
 
             TriggerManager.Instance.UpdateTriggers(false);
-            TriggerManager.Instance.UpdateOverlays();
+            TriggerOverlayManager.Instance.UpdateOverlays();
           }
         }, System.Windows.Threading.DispatcherPriority.Background);
       }
@@ -609,7 +614,7 @@ namespace EQLogParser
         }
 
         TriggerManager.Instance.UpdateTriggers();
-        TriggerManager.Instance.UpdateOverlays();
+        TriggerOverlayManager.Instance.UpdateOverlays();
       }
     }
 
@@ -744,7 +749,7 @@ namespace EQLogParser
       else if (thePropertyGrid.SelectedObject is OverlayPropertyModel overlayModel)
       {
         TriggerUtil.Copy(overlayModel.Original, overlayModel);
-        TriggerManager.Instance.UpdateOverlays();
+        TriggerOverlayManager.Instance.UpdateOverlays();
       }
 
       cancelButton.IsEnabled = false;
@@ -777,7 +782,7 @@ namespace EQLogParser
 
       foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
       {
-        if (FindAndExpandNode(child, file) is TriggerTreeViewNode found)
+        if (FindAndExpandNode(child, file) is TriggerTreeViewNode found && found != null)
         {
           treeView.ExpandNode(node);
           return found;

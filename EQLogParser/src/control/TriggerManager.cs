@@ -28,12 +28,9 @@ namespace EQLogParser
     internal event EventHandler<Trigger> EventsUpdateTimer;
 
     internal static TriggerManager Instance = new TriggerManager();
-    private readonly string OVERLAY_FILE = "overlays.json";
     private readonly string TRIGGERS_FILE = "triggers.json";
-    private readonly DispatcherTimer OverlayUpdateTimer;
     private readonly DispatcherTimer TriggerUpdateTimer;
     private readonly TriggerNode TriggerNodes;
-    private readonly TriggerNode OverlayNodes;
     private Channel<dynamic> LogChannel = null;
     private string CurrentVoice;
     private int CurrentVoiceRate;
@@ -48,22 +45,17 @@ namespace EQLogParser
 
       var json = ConfigUtil.ReadConfigFile(TRIGGERS_FILE);
       TriggerNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
-      json = ConfigUtil.ReadConfigFile(OVERLAY_FILE);
-      OverlayNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
 
       CurrentVoice = TriggerUtil.GetSelectedVoice();
       CurrentVoiceRate = TriggerUtil.GetVoiceRate();
 
       TriggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
       TriggerUpdateTimer.Tick += TriggerDataUpdated;
-      OverlayUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
-      OverlayUpdateTimer.Tick += OverlayDataUpdated;
     }
 
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
     internal TriggerTreeViewNode GetTriggerTreeView() => TriggerUtil.GetTreeView(TriggerNodes, "Triggers");
-    internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
     internal void SetVoice(string voice) => CurrentVoice = voice;
     internal void SetVoiceRate(int rate) => CurrentVoiceRate = rate;
 
@@ -136,12 +128,6 @@ namespace EQLogParser
 
       RequestRefresh();
       EventsUpdateTree?.Invoke(this, true);
-    }
-
-    internal void UpdateOverlays()
-    {
-      OverlayUpdateTimer.Stop();
-      OverlayUpdateTimer.Start();
     }
 
     internal void UpdateTriggers(bool needRefresh = true)
@@ -269,7 +255,7 @@ namespace EQLogParser
         LogChannel = null;
       }
 
-      SaveOverlays();
+      TriggerOverlayManager.Instance.SaveOverlays();
       SaveTriggers();
       (Application.Current.MainWindow as MainWindow)?.ShowTriggersEnabled(false);
 
@@ -567,12 +553,6 @@ namespace EQLogParser
       }
     }
 
-    private void OverlayDataUpdated(object sender, EventArgs e)
-    {
-      OverlayUpdateTimer.Stop();
-      SaveOverlays();
-    }
-
     private void TriggerDataUpdated(object sender, EventArgs e)
     {
       TriggerUpdateTimer.Stop();
@@ -688,15 +668,6 @@ namespace EQLogParser
             LoadActiveTriggers(node, triggers);
           }
         }
-      }
-    }
-
-    private void SaveOverlays()
-    {
-      lock (OverlayNodes)
-      {
-        var json = JsonSerializer.Serialize(OverlayNodes, new JsonSerializerOptions { IncludeFields = true });
-        ConfigUtil.WriteConfigFile(OVERLAY_FILE, json);
       }
     }
 
