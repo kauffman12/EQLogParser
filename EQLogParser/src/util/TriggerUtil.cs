@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -76,11 +77,35 @@ namespace EQLogParser
         toTrigger.LongestEvalTime = fromTrigger.LongestEvalTime;
         toTrigger.Pattern = fromTrigger.Pattern;
         toTrigger.Priority = fromTrigger.Priority;
+        toTrigger.SelectedTimerOverlay = fromTrigger.SelectedTimerOverlay;
         toTrigger.TextToSpeak = fromTrigger.TextToSpeak;
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
         toTrigger.UseRegex = fromTrigger.UseRegex;
         toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
         toTrigger.WarningTextToSpeak = fromTrigger.WarningTextToSpeak;
+
+        if (toTrigger is TriggerPropertyModel toModel && !"No Overlay".Equals(toTrigger.SelectedTimerOverlay))
+        {
+          var overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(toTrigger.SelectedTimerOverlay);
+          if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
+          {
+            toModel.SelectedTimerOverlay = overlay.Name + " (" + toTrigger.SelectedTimerOverlay + ")";
+          }
+          else
+          {
+            toModel.SelectedTimerOverlay = "No Overlay";
+          }
+        }
+        else if (fromTrigger is TriggerPropertyModel fromModel)
+        {
+          if (!string.IsNullOrEmpty(fromTrigger.SelectedTimerOverlay) && !"No Overlay".Equals(fromTrigger.SelectedTimerOverlay))
+          {
+            if (Regex.Match(fromTrigger.SelectedTimerOverlay, @".+\((.+)\)") is Match match && match.Success && match.Groups.Count > 1)
+            {
+              toTrigger.SelectedTimerOverlay = match.Groups[1].Value;
+            }
+          }
+        }
       }
       else if (to is Overlay toOverlay && from is Overlay fromOverlay)
       {
