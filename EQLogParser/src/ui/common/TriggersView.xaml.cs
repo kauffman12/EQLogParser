@@ -1,4 +1,5 @@
 ﻿using FontAwesome5;
+using Syncfusion.Data.Extensions;
 using Syncfusion.UI.Xaml.TreeView;
 using Syncfusion.Windows.PropertyGrid;
 using System;
@@ -523,10 +524,12 @@ namespace EQLogParser
 
       if (node != null)
       {
+        var anyTriggers = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && node != treeView.Nodes[1]);
+        assignTimerOverlaysMenuItem.IsEnabled = anyTriggers;
+        exportMenuItem.IsEnabled = anyTriggers;
         deleteTriggerMenuItem.IsEnabled = (node != treeView.Nodes[0] && node != treeView.Nodes[1]) || count > 1;
         renameMenuItem.IsEnabled = node != treeView.Nodes[0] && node != treeView.Nodes[1] && count == 1;
         importMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && node != treeView.Nodes[1] && count == 1;
-        exportMenuItem.IsEnabled = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && node != treeView.Nodes[1]);
         newMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1;
       }
       else
@@ -536,6 +539,7 @@ namespace EQLogParser
         importMenuItem.IsEnabled = false;
         exportMenuItem.IsEnabled = false;
         newMenuItem.IsEnabled = false;
+        assignTimerOverlaysMenuItem.IsEnabled = false;
       }
 
       importMenuItem.Header = importMenuItem.IsEnabled ? "Import to " + node.Content.ToString() : "Import";
@@ -544,6 +548,70 @@ namespace EQLogParser
         newFolder.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
         newTrigger.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
         newTimerOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
+      }
+
+      if (assignTimerOverlaysMenuItem.IsEnabled)
+      {
+        foreach (var previous in assignTimerOverlaysMenuItem.Items)
+        {
+          if (previous is MenuItem m)
+          {
+            m.Click -= AssignMenuItemClick;
+          }
+        }
+
+        assignTimerOverlaysMenuItem.Items.Clear();
+        foreach (var overlay in TriggerOverlayManager.Instance.GetTimerOverlays())
+        {
+          var menuItem = new MenuItem { Header = overlay.Name + " (" + overlay.Id + ")" };
+          menuItem.Click += AssignMenuItemClick;
+          menuItem.Tag = overlay.Id;
+          assignTimerOverlaysMenuItem.Items.Add(menuItem);
+        }
+      }
+    }
+
+    private void AssignMenuItemClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem menuItem)
+      {
+        var id = menuItem.Tag.ToString();
+        var anyFolders = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && !node.IsTrigger && node != treeView.Nodes[1]);
+        if (!anyFolders)
+        {
+          treeView.SelectedItems.Cast<TriggerTreeViewNode>().ForEach(node =>
+          {
+            if (node.IsTrigger && node.SerializedData != null)
+            {
+              node.SerializedData.TriggerData.SelectedTimerOverlay = id;
+            }
+          });
+        }
+        else
+        {
+          var msgDialog = new MessageWindow("Are you sure? This will Assign all selected Triggers and those in all sub folders.",
+            EQLogParser.Resource.ASSIGN_TIMER_OVERLAY, MessageWindow.IconType.Question, "Yes");
+          msgDialog.ShowDialog();
+          if (msgDialog.IsYes1Clicked)
+          {
+            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ForEach(node => AssignTimerOverlay(node.SerializedData, id));
+          }
+        }
+
+        TriggerManager.Instance.UpdateTriggers();
+        SelectionChanged(treeView.SelectedItem as TriggerTreeViewNode);
+      }
+    }
+
+    private void AssignTimerOverlay(TriggerNode node, string id)
+    {
+      if (node.TriggerData != null)
+      {
+        node.TriggerData.SelectedTimerOverlay = id;
+      }
+      else if (node.OverlayData == null)
+      {
+        node.Nodes.ForEach(node => AssignTimerOverlay(node, id));
       }
     }
 
@@ -706,7 +774,7 @@ namespace EQLogParser
           change = !overlay.PrimaryBrush.ToString().Equals(overlay.Original.PrimaryColor);
           Application.Current.Resources["TimerBarProgressColor-" + overlay.Id] = overlay.PrimaryBrush;
         }
-        else if(args.Property.Name == secondaryBrushItem.PropertyName)
+        else if (args.Property.Name == secondaryBrushItem.PropertyName)
         {
           change = !overlay.SecondaryBrush.ToString().Equals(overlay.Original.SecondaryColor);
           Application.Current.Resources["TimerBarTrackColor-" + overlay.Id] = overlay.SecondaryBrush;

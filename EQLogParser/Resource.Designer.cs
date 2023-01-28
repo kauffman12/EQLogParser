@@ -70,6 +70,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Assign Timer Overlay.
+        /// </summary>
+        internal static string ASSIGN_TIMER_OVERLAY {
+            get {
+                return ResourceManager.GetString("ASSIGN_TIMER_OVERLAY", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Berserker.
         /// </summary>
         internal static string BER {

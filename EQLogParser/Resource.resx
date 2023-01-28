@@ -120,6 +120,9 @@
   <data name="ANY_CLASS" xml:space="preserve">
     <value>All Classes</value>
   </data>
+  <data name="ASSIGN_TIMER_OVERLAY" xml:space="preserve">
+    <value>Assign Timer Overlay</value>
+  </data>
   <data name="BER" xml:space="preserve">
     <value>Berserker</value>
   </data>
