@@ -15,7 +15,7 @@ namespace EQLogParser
     private static Dictionary<string, List<string>> Options = new Dictionary<string, List<string>>()
     {
       { "TriggerAgainOption", new  List<string>() { "Start Additional Timer", "Restart Timer", "Do Nothing" } },
-      { "FontSize", new  List<string>() { "10pt", "12pt", "14pt", "16pt", "18pt" } },
+      { "FontSize", new  List<string>() { "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt", "18pt" } },
       { "SortBy", new List<string>() { "Trigger Time", "Remaining Time" } }
     };
 

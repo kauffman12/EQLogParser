@@ -5,25 +5,27 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         AllowsTransparency="True"
-        Background="#11000000"
+        Background="#00000000"
         ShowActivated="False"
         Icon="EQLogParser.ico"
-        ResizeMode="CanResizeWithGrip"
+        ResizeMode="NoResize"
         TextOptions.TextFormattingMode="Display"
         Title=""
         Margin="0"
         Padding="0"
-        BorderBrush="#33000000"
+        BorderBrush="#00000000"
         BorderThickness="1"
         Topmost="True"
         MaxWidth="1500"
         MaxHeight="1000"
         MinWidth="50"
         MinHeight="50"
-        Height="100"
+        Height="400"
         MouseLeftButtonDown="OverlayMouseLeftDown"
+        SizeChanged="WindowSizeChanged"
+        Loaded="WindowLoaded"
         Style="{x:Null}"
-        Width="500"
+        Width="300"
         WindowStyle="None"
         ShowInTaskbar="False">
   <Window.Resources>
@@ -46,8 +48,13 @@
       <RowDefinition Height="200*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Vertical">
-      <TextBlock x:Name="title" Text="My DoTs" Visibility="Collapsed" Foreground="White" Background="#33000000" TextAlignment="Center" Padding="5" FontSize="14" HorizontalAlignment="Stretch" />
+      <TextBlock x:Name="title" Text="My DoTs" Visibility="Collapsed" Foreground="White" Background="#55000000" TextAlignment="Center" Padding="5" FontSize="18" HorizontalAlignment="Stretch" />
       <StackPanel x:Name="content" Orientation="Vertical" />
+      <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button x:Name="saveButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="85" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save Position</Button>
+        <Button x:Name="cancelButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="88" Height="24" HorizontalAlignment="Left" Click="CancelClick">Reset Position</Button>
+        <Button x:Name="closeButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="True" Width="46" Height="24" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
+      </StackPanel>
     </StackPanel>
   </Grid>
 </Window>

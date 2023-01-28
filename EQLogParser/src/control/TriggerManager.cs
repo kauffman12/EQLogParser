@@ -156,6 +156,7 @@ namespace EQLogParser
         return;
       }
 
+      TriggerOverlayManager.Instance.Start();
       Channel<LowPriData> lowPriChannel = Channel.CreateUnbounded<LowPriData>();
       Channel<Speak> speechChannel = Channel.CreateUnbounded<Speak>();
       StartSpeechReader(speechChannel);
@@ -255,6 +256,7 @@ namespace EQLogParser
         LogChannel = null;
       }
 
+      TriggerOverlayManager.Instance.Stop();
       TriggerOverlayManager.Instance.SaveOverlays();
       SaveTriggers();
       (Application.Current.MainWindow as MainWindow)?.ShowTriggersEnabled(false);
@@ -369,7 +371,6 @@ namespace EQLogParser
         {
           var synth = new SpeechSynthesizer();
           synth.SetOutputToDefaultAudioDevice();
-          //synth.SelectVoiceByHints(VoiceGender.Female);
           Trigger previous = null;
 
           while (await speechChannel.Reader.WaitToReadAsync())
