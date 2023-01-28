@@ -74,7 +74,10 @@
            ShowRootLines="False">
           <syncfusion:SfTreeView.ItemContextMenu>
             <ContextMenu>
-              <MenuItem x:Name="assignTimerOverlaysMenuItem" Header="Assign Timer Overlay" />
+              <MenuItem x:Name="assignOverlayMenuItem" Header="Assign">
+                <MenuItem x:Name="assignTextOverlaysMenuItem" Header="Text Overlay" />
+                <MenuItem x:Name="assignTimerOverlaysMenuItem" Header="Timer Overlay" />
+              </MenuItem>
               <Separator />
               <MenuItem x:Name="collapseMenuItem" Header="Collapse All" Click="CollapseAllClick" />
               <MenuItem x:Name="expandMenuItem" Header="Expand All" Click="ExpandAllClick" />
@@ -82,6 +85,7 @@
               <MenuItem x:Name="newMenuItem" Header="New">
                 <MenuItem x:Name="newFolder" Header="Folder" Click="CreateNodeClick" />
                 <MenuItem x:Name="newTrigger" Header="Trigger" Click="CreateTriggerClick" />
+                <MenuItem x:Name="newTextOverlay" Header="Text Overlay" Click="CreateTextOverlayClick" />
                 <MenuItem x:Name="newTimerOverlay" Header="Timer Overlay" Click="CreateTimerOverlayClick" />
               </MenuItem>
               <Separator />
@@ -137,14 +141,15 @@
               <syncfusion:PropertyGridItem x:Name="errorsItem" CategoryName="Status" PropertyName="Errors" DisplayName="Errors" IsReadOnly="True" Description="Any errors or warnings associated with the Trigger settings." />
               <syncfusion:PropertyGridItem x:Name="evalTimeItem" CategoryName="Status" PropertyName="LongestEvalTime" DisplayName="Longest Eval Time (μs)" IsReadOnly="True" Description="The longest time recorded for checking the specified Pattern for a match. The time is in microseconds. If a change is made to the Pattern the value will be reset. This should help identify slow Triggers and ideally this value stays below 1000."/>
               <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Id" DisplayName="Id" IsReadOnly="True" Visibility="Collapsed" Description="Unique ID for this Overlay. Assigned when it is created." />
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="TimerBarPreview" DisplayName="Preview" IsReadOnly="True" Visibility="Collapsed" Description="Example Timer Bar based on these settings." />
               <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="OverlayComments" DisplayName="Comments" Visibility="Collapsed" Description="Notes about this Overlay." />
-              <syncfusion:PropertyGridItem x:Name="fontBrushItem" CategoryName="Overlay" PropertyName="FontBrush" DisplayName="Font Color" Visibility="Collapsed" Description="Font Color used to display the Trigger Name for each Timer."/>
-              <syncfusion:PropertyGridItem x:Name="fontSizeItem" CategoryName="Overlay" PropertyName="FontSize" DisplayName="Font Size" Visibility="Collapsed" Description="Font Size used to display the Trigger Name for each Timer."/>
-              <syncfusion:PropertyGridItem x:Name="primaryBrushItem" CategoryName="Overlay" PropertyName="PrimaryBrush" DisplayName="Primary Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the time left." />
-              <syncfusion:PropertyGridItem x:Name="secondaryBrushItem" CategoryName="Overlay" PropertyName="SecondaryBrush" DisplayName="Secondary Color" Visibility="Collapsed" Description="Color used for the Timer Bars representing the time used." />
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="SortBy" DisplayName="Sort By" Visibility="Collapsed" Description="Sort Option for Timer Bars on the Overlay. Either by the time they were initially triggered or by the time each one has remaining."/>
-              <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="UseStandardTime" DisplayName="Standardize Time" Visibility="Collapsed" Description="If using Standardized Time all Timer Bars will be based on the same/longest timeframe."/>
+              <syncfusion:PropertyGridItem x:Name="fontBrushItem" CategoryName="Overlay" PropertyName="FontBrush" DisplayName="Font Color" Visibility="Collapsed" Description="Font Color used to display the Text on this Overlay."/>
+              <syncfusion:PropertyGridItem x:Name="fontSizeItem" CategoryName="Overlay" PropertyName="FontSize" DisplayName="Font Size" Visibility="Collapsed" Description="Font Size used to display the Text on this Overlay."/>
+              <syncfusion:PropertyGridItem x:Name="overlayBrushItem" CategoryName="Overlay" PropertyName="OverlayBrush" DisplayName="Overlay Color" Visibility="Collapsed" Description="Font Color used for the background of this Overlay."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Overlay" PropertyName="TimerBarPreview" DisplayName="Preview" IsReadOnly="True" Visibility="Collapsed" Description="Example Timer Bar based on these settings." />
+              <syncfusion:PropertyGridItem x:Name="primaryBrushItem" CategoryName="Timer Overlay" PropertyName="PrimaryBrush" DisplayName="Primary Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the time left." />
+              <syncfusion:PropertyGridItem x:Name="secondaryBrushItem" CategoryName="Timer Overlay" PropertyName="SecondaryBrush" DisplayName="Secondary Color" Visibility="Collapsed" Description="Color used for the Timer Bars representing the time used." />
+              <syncfusion:PropertyGridItem CategoryName="Timer Overlay" PropertyName="SortBy" DisplayName="Sort By" Visibility="Collapsed" Description="Sort Option for Timer Bars on the Overlay. Either by the time they were initially triggered or by the time each one has remaining."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Overlay" PropertyName="UseStandardTime" DisplayName="Standardize Time" Visibility="Collapsed" Description="If using Standardized Time all Timer Bars will be based on the same/longest timeframe."/>
             </syncfusion:PropertyGrid.Items>
           </syncfusion:PropertyGrid>
           <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Visibility="Collapsed">

@@ -15,7 +15,14 @@ namespace EQLogParser
         }
         else if (node.IsOverlay)
         {
-          return Application.Current.Resources["OverlayFileTemplate"] as DataTemplate;
+          if (node.SerializedData?.OverlayData?.IsTimerOverlay == true)
+          {
+            return Application.Current.Resources["TimerOverlayFileTemplate"] as DataTemplate;
+          }
+          else
+          {
+            return Application.Current.Resources["TextOverlayFileTemplate"] as DataTemplate;
+          }
         }
         else
         {

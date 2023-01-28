@@ -9,6 +9,7 @@ using System.Linq;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Xps.Serialization;
 
 namespace EQLogParser
 {
@@ -19,7 +20,8 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private const string LABEL_NEW_OVERLAY = "New Overlay";
+    private const string LABEL_NEW_TEXT_OVERLAY = "New Text Overlay";
+    private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
     private const string LABEL_NEW_TRIGGER = "New Trigger";
     private const string LABEL_NEW_FOLDER = "New Folder";
     private WrapTextEditor ErrorEditor;
@@ -91,6 +93,7 @@ namespace EQLogParser
 
       var colorEditor = new CustomEditor();
       colorEditor.Editor = new ColorEditor();
+      colorEditor.Properties.Add("OverlayBrush");
       colorEditor.Properties.Add("FontBrush");
       colorEditor.Properties.Add("PrimaryBrush");
       colorEditor.Properties.Add("SecondaryBrush");
@@ -374,15 +377,19 @@ namespace EQLogParser
       }
     }
 
-    private void CreateTimerOverlayClick(object sender, RoutedEventArgs e)
+    private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
+    private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
+
+    private void CreateOverlay(bool isTimer)
     {
       if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
       {
+        var label = isTimer ? LABEL_NEW_TIMER_OVERLAY : LABEL_NEW_TEXT_OVERLAY;
         var newNode = new TriggerNode
         {
-          Name = LABEL_NEW_OVERLAY,
+          Name = label,
           IsEnabled = true,
-          OverlayData = new Overlay { Name = LABEL_NEW_OVERLAY, Id = Guid.NewGuid().ToString(), IsTimerOverlay = true }
+          OverlayData = new Overlay { Name = label, Id = Guid.NewGuid().ToString(), IsTimerOverlay = isTimer, IsTextOverlay = !isTimer }
         };
 
         node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
@@ -525,7 +532,7 @@ namespace EQLogParser
       if (node != null)
       {
         var anyTriggers = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && node != treeView.Nodes[1]);
-        assignTimerOverlaysMenuItem.IsEnabled = anyTriggers;
+        assignOverlayMenuItem.IsEnabled = anyTriggers;
         exportMenuItem.IsEnabled = anyTriggers;
         deleteTriggerMenuItem.IsEnabled = (node != treeView.Nodes[0] && node != treeView.Nodes[1]) || count > 1;
         renameMenuItem.IsEnabled = node != treeView.Nodes[0] && node != treeView.Nodes[1] && count == 1;
@@ -539,24 +546,44 @@ namespace EQLogParser
         importMenuItem.IsEnabled = false;
         exportMenuItem.IsEnabled = false;
         newMenuItem.IsEnabled = false;
-        assignTimerOverlaysMenuItem.IsEnabled = false;
+        assignOverlayMenuItem.IsEnabled = false;
       }
 
       importMenuItem.Header = importMenuItem.IsEnabled ? "Import to " + node.Content.ToString() : "Import";
+
       if (newMenuItem.IsEnabled)
       {
         newFolder.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
         newTrigger.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
         newTimerOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
+        //newTextOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
+        newTextOverlay.Visibility = Visibility.Collapsed;
       }
 
-      if (assignTimerOverlaysMenuItem.IsEnabled)
+      if (assignOverlayMenuItem.IsEnabled)
       {
+        foreach (var previous in assignTextOverlaysMenuItem.Items)
+        {
+          if (previous is MenuItem m)
+          {
+            m.Click -= AssignTextOverlayClick;
+          }
+        }
+
+        assignTextOverlaysMenuItem.Items.Clear();
+        foreach (var overlay in TriggerOverlayManager.Instance.GetTextOverlays())
+        {
+          var menuItem = new MenuItem { Header = overlay.Name + " (" + overlay.Id + ")" };
+          menuItem.Click += AssignTextOverlayClick;
+          menuItem.Tag = overlay.Id;
+          assignTextOverlaysMenuItem.Items.Add(menuItem);
+        }
+
         foreach (var previous in assignTimerOverlaysMenuItem.Items)
         {
           if (previous is MenuItem m)
           {
-            m.Click -= AssignMenuItemClick;
+            m.Click -= AssignTimerOverlayClick;
           }
         }
 
@@ -564,14 +591,18 @@ namespace EQLogParser
         foreach (var overlay in TriggerOverlayManager.Instance.GetTimerOverlays())
         {
           var menuItem = new MenuItem { Header = overlay.Name + " (" + overlay.Id + ")" };
-          menuItem.Click += AssignMenuItemClick;
+          menuItem.Click += AssignTimerOverlayClick;
           menuItem.Tag = overlay.Id;
           assignTimerOverlaysMenuItem.Items.Add(menuItem);
         }
       }
     }
 
-    private void AssignMenuItemClick(object sender, RoutedEventArgs e)
+    private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, true);
+
+    private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, false);
+
+    private void AssignOverlay(object sender, bool isTextOverlay)
     {
       if (sender is MenuItem menuItem)
       {
@@ -583,7 +614,14 @@ namespace EQLogParser
           {
             if (node.IsTrigger && node.SerializedData != null)
             {
-              node.SerializedData.TriggerData.SelectedTimerOverlay = id;
+              if (isTextOverlay)
+              {
+                node.SerializedData.TriggerData.SelectedTextOverlay = id;
+              }
+              else
+              {
+                node.SerializedData.TriggerData.SelectedTimerOverlay = id;
+              }
             }
           });
         }
@@ -594,7 +632,7 @@ namespace EQLogParser
           msgDialog.ShowDialog();
           if (msgDialog.IsYes1Clicked)
           {
-            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ForEach(node => AssignTimerOverlay(node.SerializedData, id));
+            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ForEach(node => AssignTimerOverlay(node.SerializedData, id, isTextOverlay));
           }
         }
 
@@ -603,15 +641,22 @@ namespace EQLogParser
       }
     }
 
-    private void AssignTimerOverlay(TriggerNode node, string id)
+    private void AssignTimerOverlay(TriggerNode node, string id, bool isTextOverlay)
     {
       if (node.TriggerData != null)
       {
-        node.TriggerData.SelectedTimerOverlay = id;
+        if (isTextOverlay)
+        {
+          node.TriggerData.SelectedTextOverlay = id;
+        }
+        else
+        {
+          node.TriggerData.SelectedTimerOverlay = id;
+        }
       }
       else if (node.OverlayData == null)
       {
-        node.Nodes.ForEach(node => AssignTimerOverlay(node, id));
+        node.Nodes.ForEach(node => AssignTimerOverlay(node, id, isTextOverlay));
       }
     }
 
@@ -628,6 +673,7 @@ namespace EQLogParser
       dynamic model = null;
       var isTrigger = (node?.IsTrigger == true);
       var isOverlay = (node?.IsOverlay == true);
+      var isTimerOverlay = (node?.SerializedData?.OverlayData?.IsTimerOverlay == true);
 
       if (isTrigger || isOverlay)
       {
@@ -638,9 +684,17 @@ namespace EQLogParser
         }
         else if (isOverlay)
         {
-          model = new OverlayPropertyModel { Original = node.SerializedData.OverlayData };
-          TriggerUtil.Copy(model, node.SerializedData.OverlayData);
-          model.TimerBarPreview = model.Id;
+          if (!isTimerOverlay)
+          {
+            model = new TextOverlayPropertyModel { Original = node.SerializedData.OverlayData };
+            TriggerUtil.Copy(model, node.SerializedData.OverlayData);
+          }
+          else if (isTimerOverlay)
+          {
+            model = new TimerOverlayPropertyModel { Original = node.SerializedData.OverlayData };
+            TriggerUtil.Copy(model, node.SerializedData.OverlayData);
+            model.TimerBarPreview = model.Id;
+          }
         }
 
         saveButton.IsEnabled = false;
@@ -661,17 +715,33 @@ namespace EQLogParser
           new { Name = patternItem.CategoryName, IsEnabled = true },
           new { Name = evalTimeItem.CategoryName, IsEnabled = true },
           new { Name = fontSizeItem.CategoryName, IsEnabled = false },
+          new { Name = primaryBrushItem.CategoryName, IsEnabled = false }
         });
       }
       else if (isOverlay)
       {
-        PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
+        if (isTimerOverlay)
         {
-          new { Name = timerDurationItem.CategoryName, IsEnabled = false },
-          new { Name = patternItem.CategoryName, IsEnabled = false },
-          new { Name = evalTimeItem.CategoryName, IsEnabled = false },
-          new { Name = fontSizeItem.CategoryName, IsEnabled = true },
-        });
+          PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
+          {
+            new { Name = timerDurationItem.CategoryName, IsEnabled = false },
+            new { Name = patternItem.CategoryName, IsEnabled = false },
+            new { Name = evalTimeItem.CategoryName, IsEnabled = false },
+            new { Name = fontSizeItem.CategoryName, IsEnabled = true },
+            new { Name = primaryBrushItem.CategoryName, IsEnabled = true }
+          });
+        }
+        else
+        {
+          PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
+          {
+            new { Name = timerDurationItem.CategoryName, IsEnabled = false },
+            new { Name = patternItem.CategoryName, IsEnabled = false },
+            new { Name = evalTimeItem.CategoryName, IsEnabled = false },
+            new { Name = fontSizeItem.CategoryName, IsEnabled = true },
+            new { Name = primaryBrushItem.CategoryName, IsEnabled = false }
+          });
+        }
       }
     }
 
@@ -766,10 +836,15 @@ namespace EQLogParser
         saveButton.IsEnabled = (trigger.Errors == "None");
         cancelButton.IsEnabled = true;
       }
-      else if (args.Property.SelectedObject is OverlayPropertyModel overlay)
+      else if (args.Property.SelectedObject is TimerOverlayPropertyModel overlay)
       {
         var change = true;
-        if (args.Property.Name == primaryBrushItem.PropertyName)
+        if (args.Property.Name == overlayBrushItem.PropertyName)
+        {
+          change = !overlay.OverlayBrush.ToString().Equals(overlay.Original.OverlayColor);
+          Application.Current.Resources["OverlayBrushColor-" + overlay.Id] = overlay.OverlayBrush;
+        }
+        else if (args.Property.Name == primaryBrushItem.PropertyName)
         {
           change = !overlay.PrimaryBrush.ToString().Equals(overlay.Original.PrimaryColor);
           Application.Current.Resources["TimerBarProgressColor-" + overlay.Id] = overlay.PrimaryBrush;
@@ -815,7 +890,7 @@ namespace EQLogParser
 
     private void ShowClick(object sender, RoutedEventArgs e)
     {
-      if (thePropertyGrid.SelectedObject is OverlayPropertyModel model)
+      if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel model)
       {
         TriggerOverlayManager.Instance.PreviewTimerOverlay(model.Id);
       }
@@ -828,7 +903,7 @@ namespace EQLogParser
         TriggerUtil.Copy(triggerModel.Original, triggerModel);
         TriggerManager.Instance.UpdateTriggers();
       }
-      else if (thePropertyGrid.SelectedObject is OverlayPropertyModel overlayModel)
+      else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel overlayModel)
       {
         TriggerUtil.Copy(overlayModel.Original, overlayModel);
         TriggerOverlayManager.Instance.UpdateOverlays();
@@ -845,7 +920,7 @@ namespace EQLogParser
         TriggerUtil.Copy(triggerModel, triggerModel.Original);
         PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = timerDurationItem.CategoryName, IsEnabled = triggerModel.Original.EnableTimer } });
       }
-      else if (thePropertyGrid.SelectedObject is OverlayPropertyModel overlayModel)
+      else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel overlayModel)
       {
         TriggerUtil.Copy(overlayModel, overlayModel.Original);
       }

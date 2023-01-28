@@ -257,7 +257,7 @@ namespace EQLogParser
       }
 
       TriggerOverlayManager.Instance.Stop();
-      TriggerOverlayManager.Instance.SaveOverlays();
+
       SaveTriggers();
       (Application.Current.MainWindow as MainWindow)?.ShowTriggersEnabled(false);
 

@@ -221,7 +221,6 @@ namespace EQLogParser
 
         SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         TriggerManager.Instance.Init();
-        //OverlayManager.Instance.Init();
       }
       catch (Exception e)
       {
