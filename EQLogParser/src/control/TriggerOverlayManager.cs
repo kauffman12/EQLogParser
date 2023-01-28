@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
@@ -24,7 +25,7 @@ namespace EQLogParser
       var json = ConfigUtil.ReadConfigFile(OVERLAY_FILE);
 
       OverlayNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
-      OverlayNodes.Nodes.ForEach(node =>
+      OverlayNodes.Nodes?.ForEach(node =>
       {
         Application.Current.Resources["TimerOverlayText-" + node.OverlayData.Id] = node.OverlayData.Name;
         // copy initializes other resources
@@ -92,7 +93,18 @@ namespace EQLogParser
       var list = new List<string> { "No Overlay" };
       lock (OverlayNodes)
       {
-        OverlayNodes.Nodes.ForEach(node => list.Add(node.OverlayData.Name + " (" + node.OverlayData.Id + ")"));
+        OverlayNodes.Nodes?.ForEach(node => list.Add(node.OverlayData.Name + " (" + node.OverlayData.Id + ")"));
+      }
+      return list;
+    }
+
+    internal List<Overlay> GetTimerOverlays()
+    {
+      var list = new List<Overlay>();
+      lock (OverlayNodes)
+      {
+        list.AddRange(OverlayNodes.Nodes?.ToList().Where(node => node.OverlayData?.IsTimerOverlay == true)
+          .Select(node => node.OverlayData).OrderBy(overlay => overlay.Name));
       }
       return list;
     }
@@ -103,7 +115,7 @@ namespace EQLogParser
       Overlay data = null;
       lock (OverlayNodes)
       {
-        if (OverlayNodes.Nodes.Find(node => node.OverlayData.Id == id && node.OverlayData.IsTimerOverlay) is TriggerNode node)
+        if (OverlayNodes.Nodes?.Find(node => node.OverlayData.Id == id && node.OverlayData.IsTimerOverlay) is TriggerNode node)
         {
           data = node.OverlayData;
           isEnabled = node.IsEnabled == true;
