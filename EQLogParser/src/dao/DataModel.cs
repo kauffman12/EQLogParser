@@ -22,11 +22,15 @@ namespace EQLogParser
     public int SortBy { get; set; } = 0;
     public string FontColor { get; set; } = "#FFFFFF";
     public string PrimaryColor { get; set; } = "#FF1D397E";
-    public string SecondaryColor { get; set; } = "#00FFFFFF";
+    public string SecondaryColor { get; set; } = "#5F000000";
     public string Name { get; set; }
     public string Id { get; set; }
     public bool UseStandardTime { get; set; } = false;
     public bool IsTimerOverlay { get; set; }
+    public double Height { get; set; } = 400.0;
+    public double Width { get; set; } = 300.0;
+    public double Top { get; set; } = 200.0;
+    public double Left { get; set; } = 100.0;
   }
 
   internal class Trigger : NotificationObject

@@ -13,15 +13,18 @@ namespace EQLogParser
     private double StartTime;
     private double Duration;
     private string BarName;
+    private double StandardTime = double.NaN;
 
     public TimerBar()
     {
       InitializeComponent();
     }
 
-    public string GetBarName() => BarName;
+    internal string GetBarName() => BarName;
+    internal double GetRemainingTime(double currentTime) => EndTime - currentTime;
+    internal double SetStandardTime(double standardTime) => StandardTime = standardTime;
 
-    public void InitOverlay(string overlayId, string barName, double endTime)
+    internal void Init(string overlayId, string barName, double endTime, bool preview = false)
     {
       BarName = title.Text = barName;
       progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarProgressColor-" + overlayId);
@@ -34,10 +37,10 @@ namespace EQLogParser
       StartTime = DateUtil.ToDouble(DateTime.Now);
       EndTime = endTime;
       Duration = EndTime - StartTime;
-      Tick();
+      Tick(preview);
     }
 
-    public void Update(double endTime)
+    internal void Update(double endTime)
     {
       StartTime = DateUtil.ToDouble(DateTime.Now);
       EndTime = endTime;
@@ -45,18 +48,19 @@ namespace EQLogParser
       Tick();
     }
 
-    public bool Tick()
+    internal bool Tick(bool preview = false)
     {
-      var updateTime = DateUtil.ToDouble(DateTime.Now);
+      var updateTime = preview ? DateUtil.ToDouble(DateTime.Now) + 30 : DateUtil.ToDouble(DateTime.Now);
       var secondsLeft = EndTime - updateTime;
       timeText.Text = DateUtil.FormatSimpleMS(secondsLeft < 0 ? 0 : secondsLeft);
 
       bool done;
       if (Duration > 0)
       {
-        var remaining = (secondsLeft / Duration) * 100;
+        var mod = double.IsNaN(StandardTime) ? Duration : StandardTime;
+        var remaining = (secondsLeft / mod) * 100;
         progress.Progress = remaining < 0 ? 0 : remaining;
-        done = remaining < 0;
+        done = secondsLeft < 0;
       }
       else
       {

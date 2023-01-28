@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Syncfusion.Data.Extensions;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -16,26 +16,76 @@ namespace EQLogParser
     private readonly TriggerNode OverlayNodes;
     private readonly DispatcherTimer CountdownTimer;
     private readonly DispatcherTimer OverlayUpdateTimer;
-    private TimerOverlayWindow OverlayWindow = null;
+    private readonly ConcurrentDictionary<string, TimerOverlayWindow> TimerWindows = new ConcurrentDictionary<string, TimerOverlayWindow>();
+    private readonly ConcurrentDictionary<string, TimerOverlayWindow> PreviewTimerWindows = new ConcurrentDictionary<string, TimerOverlayWindow>();
 
     public TriggerOverlayManager()
     {
       var json = ConfigUtil.ReadConfigFile(OVERLAY_FILE);
+
       OverlayNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
-      TriggerManager.Instance.EventsNewTimer += EventsNewTimer;
-      TriggerManager.Instance.EventsUpdateTimer += EventsUpdateTimer;
+      OverlayNodes.Nodes.ForEach(node =>
+      {
+        Application.Current.Resources["TimerOverlayText-" + node.OverlayData.Id] = node.OverlayData.Name;
+        // copy initializes other resources
+        TriggerUtil.Copy(new OverlayPropertyModel(), node.OverlayData);
+      });
+
       CountdownTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 250) };
-      CountdownTimer.Tick += CountdownTimerTick;
       OverlayUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
       OverlayUpdateTimer.Tick += OverlayDataUpdated;
     }
 
-    public void Init()
+    internal void Start()
     {
-
+      TriggerManager.Instance.EventsNewTimer += EventsNewTimer;
+      TriggerManager.Instance.EventsUpdateTimer += EventsUpdateTimer;
+      CountdownTimer.Tick += CountdownTimerTick;
     }
 
+    internal void Stop()
+    {
+      TriggerManager.Instance.EventsNewTimer -= EventsNewTimer;
+      TriggerManager.Instance.EventsUpdateTimer -= EventsUpdateTimer;
+      CountdownTimer.Stop();
+      CountdownTimer.Tick -= CountdownTimerTick;
+      TimerWindows.ForEach(keypair => keypair.Value.Close());
+      TimerWindows.Clear();
+    }
+
+
     internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
+    private void EventsNewTimer(object sender, Trigger e) => StartTimer(e, false);
+    private void EventsUpdateTimer(object sender, Trigger e) => StartTimer(e, true);
+
+    internal void PreviewTimerOverlay(string id)
+    {
+      if (!PreviewTimerWindows.ContainsKey(id))
+      {
+        var beginTime = DateUtil.ToDouble(DateTime.Now);
+        PreviewTimerWindows[id] = new TimerOverlayWindow(id, true);
+        PreviewTimerWindows[id].CreateTimer("Trigger Name #1", beginTime + 200, true);
+        PreviewTimerWindows[id].CreateTimer("Trigger Name #2", beginTime + 100, true);
+        PreviewTimerWindows[id].CreateTimer("Trigger Name #3", beginTime + 250, true);
+        PreviewTimerWindows[id].CreateTimer("Trigger Name #4", beginTime + 60, true);
+        PreviewTimerWindows[id].CreateTimer("Trigger Name #5", beginTime + 180, true);
+        PreviewTimerWindows[id].Show();
+      }
+      else
+      {
+        PreviewTimerWindows[id].Close();
+        PreviewTimerWindows.TryRemove(id, out _);
+      }
+    }
+
+    internal void ClosePreviewTimerOverlay(string id)
+    {
+      if (PreviewTimerWindows.TryGetValue(id, out TimerOverlayWindow window))
+      {
+        window.Close();
+        PreviewTimerWindows.TryRemove(id, out _);
+      }
+    }
 
     internal List<string> GetTimerOverlayItems()
     {
@@ -47,14 +97,16 @@ namespace EQLogParser
       return list;
     }
 
-    internal Overlay GetTimerOverlayById(string id)
+    internal Overlay GetTimerOverlayById(string id, out bool isEnabled)
     {
+      isEnabled = false;
       Overlay data = null;
       lock (OverlayNodes)
       {
         if (OverlayNodes.Nodes.Find(node => node.OverlayData.Id == id && node.OverlayData.IsTimerOverlay) is TriggerNode node)
         {
           data = node.OverlayData;
+          isEnabled = node.IsEnabled == true;
         }
       }
       return data;
@@ -83,47 +135,67 @@ namespace EQLogParser
 
     private void CountdownTimerTick(object sender, EventArgs e)
     {
-      if (OverlayWindow.Tick())
+      var removed = new List<string>();
+      foreach (var keypair in TimerWindows)
+      {
+        if (keypair.Value.Tick())
+        {
+          CountdownTimer.Stop();
+          removed.Add(keypair.Key);
+        }
+      }
+
+      foreach (var id in removed)
+      {
+        if (TimerWindows.TryRemove(id, out var timer))
+        {
+          timer.Close();
+        }
+      }
+
+      if (TimerWindows.Count == 0)
       {
         CountdownTimer.Stop();
-        OverlayWindow.Close();
-        OverlayWindow = null;
       }
     }
 
-    private void EventsNewTimer(object sender, Trigger e)
+    private void StartTimer(Trigger trigger,  bool update)
     {
-      StartTimer(e.Name, e.DurationSeconds, false);
-    }
-
-    private void EventsUpdateTimer(object sender, Trigger e)
-    {
-      StartTimer(e.Name, e.DurationSeconds, true);
-    }
-
-    private void StartTimer(string name, long seconds, bool update)
-    {
-      var endTime = DateUtil.ToDouble(DateTime.Now) + seconds;
+      var endTime = DateUtil.ToDouble(DateTime.Now) + trigger.DurationSeconds;
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
-        if (OverlayWindow == null)
+        if (!string.IsNullOrEmpty(trigger.SelectedTimerOverlay) && !"No Overlay".Equals(trigger.SelectedTimerOverlay))
         {
-          OverlayWindow = new TimerOverlayWindow("test");
-          OverlayWindow.Show();
-        }
+          // check if it's even enabled
+          if (GetTimerOverlayById(trigger.SelectedTimerOverlay, out bool isEnabled) != null && isEnabled)
+          {
+            var needShow = false;
+            if (!TimerWindows.TryGetValue(trigger.SelectedTimerOverlay, out var window))
+            {
+              window = new TimerOverlayWindow(trigger.SelectedTimerOverlay);
+              TimerWindows[trigger.SelectedTimerOverlay] = window;
+              needShow = true;
+            }
 
-        if (update)
-        {
-          OverlayWindow.ResetTimer(name, endTime);
-        }
-        else
-        {
-          OverlayWindow.CreateTimer(name, endTime);
-        }
+            if (needShow || !update)
+            {
+              window.CreateTimer(trigger.Name, endTime);
+            }
+            else
+            {
+              window.ResetTimer(trigger.Name, endTime);
+            }
 
-        if (!CountdownTimer.IsEnabled)
-        {
-          CountdownTimer.Start();
+            if (needShow)
+            {
+              window.Show();
+            }
+
+            if (!CountdownTimer.IsEnabled)
+            {
+              CountdownTimer.Start();
+            }
+          }
         }
       });
     }

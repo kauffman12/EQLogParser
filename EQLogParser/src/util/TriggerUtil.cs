@@ -86,7 +86,7 @@ namespace EQLogParser
 
         if (toTrigger is TriggerPropertyModel toModel && !"No Overlay".Equals(toTrigger.SelectedTimerOverlay))
         {
-          var overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(toTrigger.SelectedTimerOverlay);
+          var overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(toTrigger.SelectedTimerOverlay, out _);
           if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
           {
             toModel.SelectedTimerOverlay = overlay.Name + " (" + toTrigger.SelectedTimerOverlay + ")";
@@ -116,10 +116,13 @@ namespace EQLogParser
         toOverlay.FontSize = fromOverlay.FontSize;
         toOverlay.SortBy = fromOverlay.SortBy;
         toOverlay.Id = fromOverlay.Id;
-        toOverlay.UseStandardTime= fromOverlay.UseStandardTime;
+        toOverlay.UseStandardTime = fromOverlay.UseStandardTime;
+        toOverlay.Name = fromOverlay.Name;
 
         if (toOverlay is OverlayPropertyModel toModel)
         {
+          Application.Current.Resources["TimerOverlayText-" + toModel.Id] = toModel.Name;
+
           if (fromOverlay.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
           {
             toModel.FontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
@@ -154,7 +157,7 @@ namespace EQLogParser
       }
     }
 
-    internal static double GetTimerBarHeight(double fontSize) => fontSize + 3;
+    internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
 
     internal static void DisableNodes(TriggerNode node)
     {

@@ -146,7 +146,8 @@
             </syncfusion:PropertyGrid.Items>
           </syncfusion:PropertyGrid>
           <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Visibility="Collapsed">
-            <Button x:Name="saveButton" Margin="8,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
+            <Button x:Name="showButton" Visibility="Collapsed" Margin="8,8,0,0" VerticalAlignment="Top" IsEnabled="True" Width="106" Height="24" HorizontalAlignment="Left" Click="ShowClick">Position Overlay</Button>
+            <Button x:Name="saveButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
             <Button x:Name="cancelButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           </StackPanel>
         </StackPanel>

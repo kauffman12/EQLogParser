@@ -427,6 +427,10 @@ namespace EQLogParser
             if (parent == treeView.Nodes[1])
             {
               updateOverlays = true;
+              if (node.SerializedData?.OverlayData != null)
+              {
+                TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(node.SerializedData.OverlayData.Id);
+              }
             }
             else
             {
@@ -501,6 +505,7 @@ namespace EQLogParser
             else if (node.IsOverlay && node.SerializedData.OverlayData != null)
             {
               node.SerializedData.OverlayData.Name = node.Content as string;
+              Application.Current.Resources["TimerOverlayText-" + node.SerializedData.OverlayData.Id] = node.SerializedData.OverlayData.Name;
             }
 
             TriggerManager.Instance.UpdateTriggers(false);
@@ -578,6 +583,7 @@ namespace EQLogParser
       thePropertyGrid.IsEnabled = (thePropertyGrid.SelectedObject != null);
       thePropertyGrid.DescriptionPanelVisibility = (isTrigger || isOverlay) ? Visibility.Visible : Visibility.Collapsed;
       buttonPanel.Visibility = (isTrigger || isOverlay) ? Visibility.Visible : Visibility.Collapsed;
+      showButton.Visibility = isOverlay ? Visibility.Visible : Visibility.Collapsed;
 
       if (isTrigger)
       {
@@ -739,6 +745,14 @@ namespace EQLogParser
       return isValid;
     }
 
+    private void ShowClick(object sender, RoutedEventArgs e)
+    {
+      if (thePropertyGrid.SelectedObject is OverlayPropertyModel model)
+      {
+        TriggerOverlayManager.Instance.PreviewTimerOverlay(model.Id);
+      }
+    }
+
     private void SaveClick(object sender, RoutedEventArgs e)
     {
       if (thePropertyGrid.SelectedObject is TriggerPropertyModel triggerModel)
@@ -769,8 +783,11 @@ namespace EQLogParser
       }
 
       thePropertyGrid.RefreshPropertygrid();
-      cancelButton.IsEnabled = false;
-      saveButton.IsEnabled = false;
+      Dispatcher.InvokeAsync(() =>
+      {
+        cancelButton.IsEnabled = false;
+        saveButton.IsEnabled = false;
+      }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private TriggerTreeViewNode FindAndExpandNode(TriggerTreeViewNode node, object file)
