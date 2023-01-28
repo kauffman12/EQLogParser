@@ -21,7 +21,17 @@
       <Setter Property="Margin" Value="0" />
     </Style>
 
-    <DataTemplate x:Key="OverlayFileTemplate">
+    <DataTemplate x:Key="TextOverlayFileTemplate">
+      <Grid>
+        <StackPanel Orientation="Horizontal">
+          <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Font" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="TimerOverlayFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
           <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />

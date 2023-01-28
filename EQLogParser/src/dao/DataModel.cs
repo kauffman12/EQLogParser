@@ -23,10 +23,12 @@ namespace EQLogParser
     public string FontColor { get; set; } = "#FFFFFF";
     public string PrimaryColor { get; set; } = "#FF1D397E";
     public string SecondaryColor { get; set; } = "#5F000000";
+    public string OverlayColor { get; set; } = "#00000000";
     public string Name { get; set; }
     public string Id { get; set; }
     public bool UseStandardTime { get; set; } = false;
     public bool IsTimerOverlay { get; set; }
+    public bool IsTextOverlay { get; set; }
     public double Height { get; set; } = 400.0;
     public double Width { get; set; } = 300.0;
     public double Top { get; set; } = 200.0;
@@ -50,17 +52,26 @@ namespace EQLogParser
     public string TextToSpeak { get; set; }
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
+    public string SelectedTextOverlay { get; set; } = "No Overlay";
     public string SelectedTimerOverlay { get; set; } = "No Overlay";
     public long WarningSeconds { get; set; }
     public string WarningTextToSpeak { get; set; }
   }
 
-  internal class OverlayPropertyModel : Overlay
+  internal class TimerOverlayPropertyModel : Overlay
   {
     public SolidColorBrush FontBrush { get; set; }
     public SolidColorBrush PrimaryBrush { get; set; }
     public SolidColorBrush SecondaryBrush { get; set; }
+    public SolidColorBrush OverlayBrush { get; set; }
     public string TimerBarPreview { get; set; }
+    public Overlay Original { get; set; }
+  }
+
+  internal class TextOverlayPropertyModel : Overlay
+  {
+    public SolidColorBrush FontBrush { get; set; }
+    public SolidColorBrush OverlayBrush { get; set; }
     public Overlay Original { get; set; }
   }
 

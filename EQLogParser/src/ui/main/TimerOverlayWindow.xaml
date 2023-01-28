@@ -43,18 +43,18 @@
       <Setter Property="Visibility" Value="Visible"/>
     </Style>
   </Window.Resources>
-  <Grid>
+  <Grid x:Name="parentGrid">
     <Grid.RowDefinitions>
       <RowDefinition Height="200*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Vertical">
-      <TextBlock x:Name="title" Text="My DoTs" Visibility="Collapsed" Foreground="White" Background="#55000000" TextAlignment="Center" Padding="5" FontSize="18" HorizontalAlignment="Stretch" />
       <StackPanel x:Name="content" Orientation="Vertical" />
-      <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Left">
+      <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center">
         <Button x:Name="saveButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="85" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save Position</Button>
         <Button x:Name="cancelButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="88" Height="24" HorizontalAlignment="Left" Click="CancelClick">Reset Position</Button>
         <Button x:Name="closeButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="True" Width="46" Height="24" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
       </StackPanel>
+      <TextBlock x:Name="title" Visibility="Collapsed" Text="My DoTs" Foreground="White" Background="#55000000" Margin="0,8,0,0" TextAlignment="Center" Padding="5" FontSize="18" />
     </StackPanel>
   </Grid>
 </Window>

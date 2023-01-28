@@ -15,7 +15,8 @@ namespace EQLogParser
   /// </summary>
   public partial class TimerOverlayWindow : Window
   {
-    private static SolidColorBrush BarelyVisible = new SolidColorBrush { Color = (Color) ColorConverter.ConvertFromString("#33000000") };
+    private static SolidColorBrush BarelyVisible = new SolidColorBrush { Color = (Color) ColorConverter.ConvertFromString("#01000000") };
+    private static SolidColorBrush BorderColor = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
     private Dictionary<string, TimerBar> TimerBarCache = new Dictionary<string, TimerBar>();
     private List<TimerBar> TimerBarCreateOrder = new List<TimerBar>();
     private Overlay Overlay;
@@ -31,6 +32,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       Preview = preview;
+      this.SetResourceReference(TimerOverlayWindow.BackgroundProperty, "OverlayBrushColor-" + overlayId);
       title.SetResourceReference(TextBlock.TextProperty, "TimerOverlayText-" + overlayId);
       Overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(overlayId, out _);
       CurrentOrder = Overlay.SortBy;
@@ -45,9 +47,9 @@ namespace EQLogParser
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         this.ResizeMode = ResizeMode.CanResizeWithGrip;
-        this.Background = BarelyVisible;
-        this.BorderBrush = BarelyVisible;
-        this.title.Visibility = Visibility.Visible;
+        this.parentGrid.Background = BarelyVisible;
+        this.BorderBrush = BorderColor;
+        title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
       }
     }

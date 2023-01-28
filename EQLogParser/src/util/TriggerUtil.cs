@@ -113,13 +113,14 @@ namespace EQLogParser
         toOverlay.FontColor= fromOverlay.FontColor;
         toOverlay.PrimaryColor = fromOverlay.PrimaryColor;
         toOverlay.SecondaryColor = fromOverlay.SecondaryColor;
+        toOverlay.OverlayColor = fromOverlay.OverlayColor;
         toOverlay.FontSize = fromOverlay.FontSize;
         toOverlay.SortBy = fromOverlay.SortBy;
         toOverlay.Id = fromOverlay.Id;
         toOverlay.UseStandardTime = fromOverlay.UseStandardTime;
         toOverlay.Name = fromOverlay.Name;
 
-        if (toOverlay is OverlayPropertyModel toModel)
+        if (toOverlay is TimerOverlayPropertyModel toModel)
         {
           Application.Current.Resources["TimerOverlayText-" + toModel.Id] = toModel.Name;
 
@@ -148,11 +149,36 @@ namespace EQLogParser
             Application.Current.Resources["TimerBarHeight-" + toModel.Id] = GetTimerBarHeight(newFontSize);
           }
         }
-        else if (fromOverlay is OverlayPropertyModel fromModel)
+        else if (fromOverlay is TimerOverlayPropertyModel fromModel)
         {
           toOverlay.FontColor = fromModel.FontBrush.Color.ToString();
           toOverlay.PrimaryColor = fromModel.PrimaryBrush.Color.ToString();
           toOverlay.SecondaryColor = fromModel.SecondaryBrush.ToString();
+        }
+        else if (toOverlay is TextOverlayPropertyModel toTextModel)
+        {
+          if (fromOverlay.OverlayColor is string primary && !string.IsNullOrEmpty(primary))
+          {
+            toTextModel.OverlayBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(primary) };
+            Application.Current.Resources["OverlayBrushColor-" + toTextModel.Id] = toTextModel.OverlayBrush;
+          }
+
+          if (fromOverlay.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
+          {
+            toTextModel.FontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
+            Application.Current.Resources["TextOverlayFontColor-" + toTextModel.Id] = toTextModel.FontBrush;
+          }
+
+          if (fromOverlay.FontSize is string fontSize && !string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is string[] split && split.Length == 2
+           && double.TryParse(split[0], out double newFontSize))
+          {
+            Application.Current.Resources["TextOverlayFontSize-" + toTextModel.Id] = newFontSize;
+          }
+        }
+        else if (fromOverlay is TextOverlayPropertyModel fromTextModel)
+        {
+          toOverlay.FontColor = fromTextModel.FontBrush.Color.ToString();
+          toOverlay.OverlayColor = fromTextModel.OverlayBrush.Color.ToString();
         }
       }
     }
