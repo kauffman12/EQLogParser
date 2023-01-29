@@ -883,43 +883,43 @@ namespace EQLogParser
           saveButton.IsEnabled = true;
           cancelButton.IsEnabled = true;
         }
-        else if (args.Property.SelectedObject is TimerOverlayPropertyModel timerOverlay)
+      }
+      else if (args.Property.SelectedObject is TimerOverlayPropertyModel timerOverlay)
+      {
+        var timerChange = true;
+
+        if (args.Property.Name == overlayBrushItem.PropertyName)
         {
-          var timerChange = true;
+          timerChange = !timerOverlay.OverlayBrush.ToString().Equals(timerOverlay.Original.OverlayColor);
+          Application.Current.Resources["OverlayBrushColor-" + timerOverlay.Id] = timerOverlay.OverlayBrush;
+        }
+        else if (args.Property.Name == primaryBrushItem.PropertyName)
+        {
+          timerChange = !timerOverlay.PrimaryBrush.ToString().Equals(timerOverlay.Original.PrimaryColor);
+          Application.Current.Resources["TimerBarProgressColor-" + timerOverlay.Id] = timerOverlay.PrimaryBrush;
+        }
+        else if (args.Property.Name == secondaryBrushItem.PropertyName)
+        {
+          timerChange = !timerOverlay.SecondaryBrush.ToString().Equals(timerOverlay.Original.SecondaryColor);
+          Application.Current.Resources["TimerBarTrackColor-" + timerOverlay.Id] = timerOverlay.SecondaryBrush;
+        }
+        else if (args.Property.Name == fontBrushItem.PropertyName)
+        {
+          timerChange = !timerOverlay.FontBrush.ToString().Equals(timerOverlay.Original.FontColor);
+          Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Id] = timerOverlay.FontBrush;
+        }
+        else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
+         && double.TryParse(split[0], out double newFontSize))
+        {
+          timerChange = timerOverlay.FontSize != timerOverlay.Original.FontSize;
+          Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Id] = newFontSize;
+          Application.Current.Resources["TimerBarHeight-" + timerOverlay.Id] = TriggerUtil.GetTimerBarHeight(newFontSize);
+        }
 
-          if (args.Property.Name == overlayBrushItem.PropertyName)
-          {
-            timerChange = !timerOverlay.OverlayBrush.ToString().Equals(timerOverlay.Original.OverlayColor);
-            Application.Current.Resources["OverlayBrushColor-" + timerOverlay.Id] = timerOverlay.OverlayBrush;
-          }
-          else if (args.Property.Name == primaryBrushItem.PropertyName)
-          {
-            timerChange = !timerOverlay.PrimaryBrush.ToString().Equals(timerOverlay.Original.PrimaryColor);
-            Application.Current.Resources["TimerBarProgressColor-" + timerOverlay.Id] = timerOverlay.PrimaryBrush;
-          }
-          else if (args.Property.Name == secondaryBrushItem.PropertyName)
-          {
-            timerChange = !timerOverlay.SecondaryBrush.ToString().Equals(timerOverlay.Original.SecondaryColor);
-            Application.Current.Resources["TimerBarTrackColor-" + timerOverlay.Id] = timerOverlay.SecondaryBrush;
-          }
-          else if (args.Property.Name == fontBrushItem.PropertyName)
-          {
-            timerChange = !timerOverlay.FontBrush.ToString().Equals(timerOverlay.Original.FontColor);
-            Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Id] = timerOverlay.FontBrush;
-          }
-          else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
-           && double.TryParse(split[0], out double newFontSize))
-          {
-            timerChange = timerOverlay.FontSize != timerOverlay.Original.FontSize;
-            Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Id] = newFontSize;
-            Application.Current.Resources["TimerBarHeight-" + timerOverlay.Id] = TriggerUtil.GetTimerBarHeight(newFontSize);
-          }
-
-          if (timerChange)
-          {
-            saveButton.IsEnabled = true;
-            cancelButton.IsEnabled = true;
-          }
+        if (timerChange)
+        {
+          saveButton.IsEnabled = true;
+          cancelButton.IsEnabled = true;
         }
       }
     }
