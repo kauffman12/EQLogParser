@@ -9,7 +9,6 @@ using System.Linq;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Xps.Serialization;
 
 namespace EQLogParser
 {
@@ -115,7 +114,7 @@ namespace EQLogParser
       thePropertyGrid.CustomEditorCollection.Add(timeEditor);
 
       timeEditor = new CustomEditor();
-      timeEditor.Editor = new RangeEditor(1, 30);
+      timeEditor.Editor = new RangeEditor(1, 60);
       timeEditor.Properties.Add("FadeDelay");
       thePropertyGrid.CustomEditorCollection.Add(timeEditor);
 
@@ -978,9 +977,13 @@ namespace EQLogParser
         TriggerUtil.Copy(triggerModel, triggerModel.Original);
         PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = timerDurationItem.CategoryName, IsEnabled = triggerModel.Original.EnableTimer } });
       }
-      else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel overlayModel)
+      else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel)
       {
-        TriggerUtil.Copy(overlayModel, overlayModel.Original);
+        TriggerUtil.Copy(timerModel, timerModel.Original);
+      }
+      else if (thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel)
+      {
+        TriggerUtil.Copy(textModel, textModel.Original);
       }
 
       thePropertyGrid.RefreshPropertygrid();

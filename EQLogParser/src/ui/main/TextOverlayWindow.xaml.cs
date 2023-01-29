@@ -54,7 +54,7 @@ namespace EQLogParser
       {
         Text = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text),
         TextAlignment = TextAlignment.Center,
-        Padding = new Thickness(0),
+        Padding = new Thickness(6,0,6,2),
         Margin = new Thickness(0),
         Tag = beginTime + Overlay.FadeDelay,
         FontWeight = FontWeights.Bold,
