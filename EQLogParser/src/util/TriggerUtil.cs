@@ -152,6 +152,12 @@ namespace EQLogParser
         {
           Application.Current.Resources["OverlayText-" + toModel.Id] = toModel.Name;
 
+          if (fromOverlay.OverlayColor is string overlayColor && !string.IsNullOrEmpty(overlayColor))
+          {
+            toModel.OverlayBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(overlayColor) };
+            Application.Current.Resources["OverlayBrushColor-" + toModel.Id] = toModel.OverlayBrush;
+          }
+
           if (fromOverlay.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
           {
             toModel.FontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
@@ -179,6 +185,7 @@ namespace EQLogParser
         }
         else if (fromOverlay is TimerOverlayPropertyModel fromModel)
         {
+          toOverlay.OverlayColor = fromModel.OverlayBrush.Color.ToString();
           toOverlay.FontColor = fromModel.FontBrush.Color.ToString();
           toOverlay.PrimaryColor = fromModel.PrimaryBrush.Color.ToString();
           toOverlay.SecondaryColor = fromModel.SecondaryBrush.ToString();
@@ -187,9 +194,9 @@ namespace EQLogParser
         {
           Application.Current.Resources["OverlayText-" + toTextModel.Id] = toTextModel.Name;
 
-          if (fromOverlay.OverlayColor is string primary && !string.IsNullOrEmpty(primary))
+          if (fromOverlay.OverlayColor is string overlayColor && !string.IsNullOrEmpty(overlayColor))
           {
-            toTextModel.OverlayBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(primary) };
+            toTextModel.OverlayBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(overlayColor) };
             Application.Current.Resources["OverlayBrushColor-" + toTextModel.Id] = toTextModel.OverlayBrush;
           }
 

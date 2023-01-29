@@ -14,7 +14,7 @@
       <RowDefinition Height="2*" />
       <RowDefinition Height="1" />
     </Grid.RowDefinitions>
-    <syncfusion:SfLinearProgressBar Grid.Row="1" x:Name="progress" Height="16" Margin="2,0,2,0" IndicatorCornerRadius="3" Progress="60">
+    <syncfusion:SfLinearProgressBar Grid.Row="1" x:Name="progress" Height="16" Margin="0,0,2,0" IndicatorCornerRadius="2" Progress="60">
       <syncfusion:SfLinearProgressBar.Effect>
         <DropShadowEffect ShadowDepth="2" Direction="280" Color="Black" Opacity="0.3" BlurRadius="1"/>
       </syncfusion:SfLinearProgressBar.Effect>

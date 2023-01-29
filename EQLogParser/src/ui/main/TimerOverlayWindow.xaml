@@ -47,6 +47,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="200*"></RowDefinition>
     </Grid.RowDefinitions>
+    <TextBlock x:Name="title" Grid.Row="0" Visibility="Collapsed" Text="Overlay Title" VerticalAlignment="Bottom" Foreground="White" Background="#55000000" Margin="0,0,0,0" TextAlignment="Center" Padding="5" FontSize="16" />
     <StackPanel Grid.Row="0" Orientation="Vertical">
       <Border x:Name="border" CornerRadius="5">
         <StackPanel x:Name="content" Orientation="Vertical" />
@@ -56,7 +57,6 @@
         <Button x:Name="cancelButton" Margin="4,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="88" Height="24" HorizontalAlignment="Left" Click="CancelClick">Reset Position</Button>
         <Button x:Name="closeButton" Margin="4,6,0,0" VerticalAlignment="Top" IsEnabled="True" Width="46" Height="24" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
       </StackPanel>
-      <TextBlock x:Name="title" Visibility="Collapsed" Text="My DoTs" Foreground="White" Background="#55000000" Margin="0,6,0,0" TextAlignment="Center" Padding="5" FontSize="16" />
     </StackPanel>
   </Grid>
 </Window>
