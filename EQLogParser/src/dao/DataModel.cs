@@ -24,6 +24,7 @@ namespace EQLogParser
     public string PrimaryColor { get; set; } = "#FF1D397E";
     public string SecondaryColor { get; set; } = "#5F000000";
     public string OverlayColor { get; set; } = "#00000000";
+    public long FadeDelay { get; set; } = 10;
     public string Name { get; set; }
     public string Id { get; set; }
     public bool UseStandardTime { get; set; } = false;

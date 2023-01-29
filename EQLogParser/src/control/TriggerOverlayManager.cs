@@ -145,6 +145,24 @@ namespace EQLogParser
       return list;
     }
 
+    internal Overlay GetTextOverlayById(string id, out bool isEnabled)
+    {
+      isEnabled = false;
+      Overlay data = null;
+      lock (OverlayNodes)
+      {
+        if (OverlayNodes.Nodes != null)
+        {
+          if (OverlayNodes.Nodes?.Find(node => node.OverlayData.Id == id && node.OverlayData.IsTextOverlay) is TriggerNode node)
+          {
+            data = node.OverlayData;
+            isEnabled = node.IsEnabled == true;
+          }
+        }
+      }
+      return data;
+    }
+
     internal Overlay GetTimerOverlayById(string id, out bool isEnabled)
     {
       isEnabled = false;
