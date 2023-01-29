@@ -15,9 +15,12 @@ namespace EQLogParser
 
     private readonly string OVERLAY_FILE = "triggerOverlays.json";
     private readonly TriggerNode OverlayNodes;
-    private readonly DispatcherTimer CountdownTimer;
+    private readonly DispatcherTimer TextOverlayTimer;
+    private readonly DispatcherTimer TimerOverlayTimer;
     private readonly DispatcherTimer OverlayUpdateTimer;
-    private readonly ConcurrentDictionary<string, TimerOverlayWindow> TimerWindows = new ConcurrentDictionary<string, TimerOverlayWindow>();
+    private readonly ConcurrentDictionary<string, Window> TextWindows = new ConcurrentDictionary<string, Window>();
+    private readonly ConcurrentDictionary<string, Window> TimerWindows = new ConcurrentDictionary<string, Window>();
+    private readonly ConcurrentDictionary<string, TextOverlayWindow> PreviewTextWindows = new ConcurrentDictionary<string, TextOverlayWindow>();
     private readonly ConcurrentDictionary<string, TimerOverlayWindow> PreviewTimerWindows = new ConcurrentDictionary<string, TimerOverlayWindow>();
 
     public TriggerOverlayManager()
@@ -27,12 +30,20 @@ namespace EQLogParser
       OverlayNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
       OverlayNodes.Nodes?.ForEach(node =>
       {
-        Application.Current.Resources["TimerOverlayText-" + node.OverlayData.Id] = node.OverlayData.Name;
+        Application.Current.Resources["OverlayText-" + node.OverlayData.Id] = node.OverlayData.Name;
         // copy initializes other resources
-        TriggerUtil.Copy(new TimerOverlayPropertyModel(), node.OverlayData);
+        if (node.OverlayData.IsTextOverlay)
+        {
+          TriggerUtil.Copy(new TextOverlayPropertyModel(), node.OverlayData);
+        }
+        else
+        {
+          TriggerUtil.Copy(new TimerOverlayPropertyModel(), node.OverlayData);
+        }
       });
 
-      CountdownTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 250) };
+      TextOverlayTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
+      TimerOverlayTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 250) };
       OverlayUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
       OverlayUpdateTimer.Tick += OverlayDataUpdated;
     }
@@ -41,15 +52,22 @@ namespace EQLogParser
     {
       TriggerManager.Instance.EventsNewTimer += EventsNewTimer;
       TriggerManager.Instance.EventsUpdateTimer += EventsUpdateTimer;
-      CountdownTimer.Tick += CountdownTimerTick;
+      TriggerManager.Instance.EventsAddText += EventsAddText;
+      TextOverlayTimer.Tick += TextTick;
+      TimerOverlayTimer.Tick += TimerTick;
     }
 
     internal void Stop()
     {
       TriggerManager.Instance.EventsNewTimer -= EventsNewTimer;
       TriggerManager.Instance.EventsUpdateTimer -= EventsUpdateTimer;
-      CountdownTimer.Stop();
-      CountdownTimer.Tick -= CountdownTimerTick;
+      TriggerManager.Instance.EventsAddText -= EventsAddText;
+      TextOverlayTimer.Stop();
+      TimerOverlayTimer.Stop();
+      TextOverlayTimer.Tick -= TextTick;
+      TimerOverlayTimer.Tick -= TimerTick;
+      TextWindows.ForEach(keypair => keypair.Value.Close());
+      TextWindows.Clear();
       TimerWindows.ForEach(keypair => keypair.Value.Close());
       TimerWindows.Clear();
       SaveOverlays();
@@ -60,23 +78,50 @@ namespace EQLogParser
     private void EventsNewTimer(object sender, Trigger e) => StartTimer(e, false);
     private void EventsUpdateTimer(object sender, Trigger e) => StartTimer(e, true);
 
+    internal void PreviewTextOverlay(string id)
+    {
+      if (!PreviewTextWindows.ContainsKey(id))
+      {
+        var beginTime = DateUtil.ToDouble(DateTime.Now);
+        PreviewTextWindows[id] = new TextOverlayWindow(id, true);
+        PreviewTextWindows[id].AddTriggerText("Example Trigger Message #1", beginTime);
+        PreviewTextWindows[id].AddTriggerText("Example Trigger Message #2", beginTime);
+        PreviewTextWindows[id].AddTriggerText("Example Trigger Message #3", beginTime);
+        PreviewTextWindows[id].Show();
+      }
+      else
+      {
+        PreviewTextWindows[id].Close();
+        PreviewTextWindows.TryRemove(id, out _);
+      }
+    }
+
     internal void PreviewTimerOverlay(string id)
     {
       if (!PreviewTimerWindows.ContainsKey(id))
       {
         var beginTime = DateUtil.ToDouble(DateTime.Now);
         PreviewTimerWindows[id] = new TimerOverlayWindow(id, true);
-        PreviewTimerWindows[id].CreateTimer("Trigger Name #1", beginTime + 200, true);
-        PreviewTimerWindows[id].CreateTimer("Trigger Name #2", beginTime + 100, true);
-        PreviewTimerWindows[id].CreateTimer("Trigger Name #3", beginTime + 250, true);
-        PreviewTimerWindows[id].CreateTimer("Trigger Name #4", beginTime + 60, true);
-        PreviewTimerWindows[id].CreateTimer("Trigger Name #5", beginTime + 180, true);
+        PreviewTimerWindows[id].CreateTimer("Example Trigger Name #1", beginTime + 200, true);
+        PreviewTimerWindows[id].CreateTimer("Example Trigger Name #2", beginTime + 100, true);
+        PreviewTimerWindows[id].CreateTimer("Example Trigger Name #3", beginTime + 250, true);
+        PreviewTimerWindows[id].CreateTimer("Example Trigger Name #4", beginTime + 60, true);
+        PreviewTimerWindows[id].CreateTimer("Example Trigger Name #5", beginTime + 180, true);
         PreviewTimerWindows[id].Show();
       }
       else
       {
         PreviewTimerWindows[id].Close();
         PreviewTimerWindows.TryRemove(id, out _);
+      }
+    }
+
+    internal void ClosePreviewTextOverlay(string id)
+    {
+      if (PreviewTextWindows.TryGetValue(id, out TextOverlayWindow window))
+      {
+        window.Close();
+        PreviewTextWindows.TryRemove(id, out _);
       }
     }
 
@@ -196,39 +241,94 @@ namespace EQLogParser
       }
     }
 
-    private void OverlayDataUpdated(object sender, EventArgs e)
-    {
-      OverlayUpdateTimer.Stop();
-      SaveOverlays();
-    }
+    private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
+    private void TimerTick(object sender, EventArgs e) => WindowTick(TimerWindows, TimerOverlayTimer);
 
-    private void CountdownTimerTick(object sender, EventArgs e)
+    private void WindowTick(ConcurrentDictionary<string, Window> windows, DispatcherTimer dispatchTimer)
     {
       var removed = new List<string>();
-      foreach (var keypair in TimerWindows)
+      foreach (var keypair in windows)
       {
-        if (keypair.Value.Tick())
+        var done = false;
+        if (keypair.Value is TextOverlayWindow textWindow)
         {
-          CountdownTimer.Stop();
+          done = textWindow.Tick();
+        }
+        else if (keypair.Value is TimerOverlayWindow timerWindow)
+        {
+          done = timerWindow.Tick();
+        }
+
+        if (done)
+        {
+          dispatchTimer.Stop();
           removed.Add(keypair.Key);
         }
       }
 
       foreach (var id in removed)
       {
-        if (TimerWindows.TryRemove(id, out var timer))
+        if (windows.TryRemove(id, out var window))
         {
-          timer.Close();
+          window.Close();
         }
       }
 
-      if (TimerWindows.Count == 0)
+      if (windows.Count == 0)
       {
-        CountdownTimer.Stop();
+        dispatchTimer.Stop();
       }
     }
 
-    private void StartTimer(Trigger trigger,  bool update)
+    private void OverlayDataUpdated(object sender, EventArgs e)
+    {
+      OverlayUpdateTimer.Stop();
+      SaveOverlays();
+    }
+
+    private void EventsAddText(object sender, dynamic e)
+    {
+      var beginTime = DateUtil.ToDouble(DateTime.Now);
+      Application.Current.Dispatcher.InvokeAsync(() =>
+      {
+        if (!string.IsNullOrEmpty(e.Trigger.SelectedTextOverlay) && !"No Overlay".Equals(e.Trigger.SelectedTextOverlay))
+        {
+          // check if it's even enabled
+          if (GetTextOverlayById(e.Trigger.SelectedTextOverlay, out bool isEnabled) != null)
+          {
+            if (isEnabled)
+            {
+              var needShow = false;
+              if (!TextWindows.TryGetValue(e.Trigger.SelectedTextOverlay, out Window window))
+              {
+                window = new TextOverlayWindow(e.Trigger.SelectedTextOverlay);
+                TextWindows[e.Trigger.SelectedTextOverlay] = window;
+                needShow = true;
+              }
+
+              (window as TextOverlayWindow).AddTriggerText(e.Text, beginTime);
+
+              if (needShow)
+              {
+                window.Show();
+              }
+
+              if (!TextOverlayTimer.IsEnabled)
+              {
+                TextOverlayTimer.Start();
+              }
+            }
+          }
+          else
+          {
+            // overlay no longer exists?
+            e.Trigger.SelectedTextOverlay = "No Overlay";
+          }
+        }
+      });
+    }
+
+    private void StartTimer(Trigger trigger, bool update)
     {
       var endTime = DateUtil.ToDouble(DateTime.Now) + trigger.DurationSeconds;
       Application.Current.Dispatcher.InvokeAsync(() =>
@@ -241,7 +341,7 @@ namespace EQLogParser
             if (isEnabled)
             {
               var needShow = false;
-              if (!TimerWindows.TryGetValue(trigger.SelectedTimerOverlay, out var window))
+              if (!TimerWindows.TryGetValue(trigger.SelectedTimerOverlay, out Window window))
               {
                 window = new TimerOverlayWindow(trigger.SelectedTimerOverlay);
                 TimerWindows[trigger.SelectedTimerOverlay] = window;
@@ -250,11 +350,11 @@ namespace EQLogParser
 
               if (needShow || !update)
               {
-                window.CreateTimer(trigger.Name, endTime);
+                (window as TimerOverlayWindow).CreateTimer(trigger.Name, endTime);
               }
               else
               {
-                window.ResetTimer(trigger.Name, endTime);
+                (window as TimerOverlayWindow).ResetTimer(trigger.Name, endTime);
               }
 
               if (needShow)
@@ -262,9 +362,9 @@ namespace EQLogParser
                 window.Show();
               }
 
-              if (!CountdownTimer.IsEnabled)
+              if (!TimerOverlayTimer.IsEnabled)
               {
-                CountdownTimer.Start();
+                TimerOverlayTimer.Start();
               }
             }
           }
@@ -272,7 +372,6 @@ namespace EQLogParser
           {
             // overlay no longer exists?
             trigger.SelectedTimerOverlay = "No Overlay";
-            TriggerManager.Instance.UpdateTriggers();
           }
         }
       });

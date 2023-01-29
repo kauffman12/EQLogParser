@@ -32,7 +32,7 @@
     <Style TargetType="{x:Type ResizeGrip}">
       <Setter Property="MinWidth" Value="12"/>
       <Setter Property="MinHeight" Value="12"/>
-      <Setter Property="Background" Value="{DynamicResource OverlayDraggable}"/>
+      <Setter Property="Background" Value="#AA000000"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="{x:Type ResizeGrip}">
@@ -54,7 +54,7 @@
         <Button x:Name="cancelButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="88" Height="24" HorizontalAlignment="Left" Click="CancelClick">Reset Position</Button>
         <Button x:Name="closeButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="True" Width="46" Height="24" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
       </StackPanel>
-      <TextBlock x:Name="title" Visibility="Collapsed" Text="My DoTs" Foreground="White" Background="#55000000" Margin="0,8,0,0" TextAlignment="Center" Padding="5" FontSize="18" />
+      <TextBlock x:Name="title" Visibility="Collapsed" Text="My DoTs" Foreground="White" Background="#55000000" Margin="0,8,0,0" TextAlignment="Center" Padding="5" FontSize="16" />
     </StackPanel>
   </Grid>
 </Window>

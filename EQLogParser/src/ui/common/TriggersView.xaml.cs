@@ -519,7 +519,7 @@ namespace EQLogParser
             else if (node.IsOverlay && node.SerializedData.OverlayData != null)
             {
               node.SerializedData.OverlayData.Name = node.Content as string;
-              Application.Current.Resources["TimerOverlayText-" + node.SerializedData.OverlayData.Id] = node.SerializedData.OverlayData.Name;
+              Application.Current.Resources["OverlayText-" + node.SerializedData.OverlayData.Id] = node.SerializedData.OverlayData.Name;
             }
 
             TriggerManager.Instance.UpdateTriggers(false);
@@ -939,9 +939,13 @@ namespace EQLogParser
 
     private void ShowClick(object sender, RoutedEventArgs e)
     {
-      if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel model)
+      if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel)
       {
-        TriggerOverlayManager.Instance.PreviewTimerOverlay(model.Id);
+        TriggerOverlayManager.Instance.PreviewTimerOverlay(timerModel.Id);
+      }
+      else if (thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel)
+      {
+        TriggerOverlayManager.Instance.PreviewTextOverlay(textModel.Id);
       }
     }
 

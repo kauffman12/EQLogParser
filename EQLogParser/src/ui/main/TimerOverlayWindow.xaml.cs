@@ -33,7 +33,7 @@ namespace EQLogParser
       InitializeComponent();
       Preview = preview;
       this.SetResourceReference(TimerOverlayWindow.BackgroundProperty, "OverlayBrushColor-" + overlayId);
-      title.SetResourceReference(TextBlock.TextProperty, "TimerOverlayText-" + overlayId);
+      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + overlayId);
       Overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(overlayId, out _);
       CurrentOrder = Overlay.SortBy;
       CurrentUseStandardTime = Overlay.UseStandardTime;
