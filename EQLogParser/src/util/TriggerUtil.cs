@@ -77,6 +77,7 @@ namespace EQLogParser
         toTrigger.LongestEvalTime = fromTrigger.LongestEvalTime;
         toTrigger.Pattern = fromTrigger.Pattern;
         toTrigger.Priority = fromTrigger.Priority;
+        toTrigger.SelectedTextOverlay = fromTrigger.SelectedTextOverlay;
         toTrigger.SelectedTimerOverlay = fromTrigger.SelectedTimerOverlay;
         toTrigger.TextToSpeak = fromTrigger.TextToSpeak;
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
@@ -84,20 +85,44 @@ namespace EQLogParser
         toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
         toTrigger.WarningTextToSpeak = fromTrigger.WarningTextToSpeak;
 
-        if (toTrigger is TriggerPropertyModel toModel && !"No Overlay".Equals(toTrigger.SelectedTimerOverlay))
+        if (toTrigger is TriggerPropertyModel toModel)
         {
-          var overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(toTrigger.SelectedTimerOverlay, out _);
-          if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
+          if (!"No Overlay".Equals(toTrigger.SelectedTextOverlay))
           {
-            toModel.SelectedTimerOverlay = overlay.Name + " (" + toTrigger.SelectedTimerOverlay + ")";
+            var overlay = TriggerOverlayManager.Instance.GetTextOverlayById(toTrigger.SelectedTextOverlay, out _);
+            if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
+            {
+              toModel.SelectedTextOverlay = overlay.Name + " (" + toTrigger.SelectedTextOverlay + ")";
+            }
+            else
+            {
+              toModel.SelectedTextOverlay = "No Overlay";
+            }
           }
-          else
+          
+          if (!"No Overlay".Equals(toTrigger.SelectedTimerOverlay))
           {
-            toModel.SelectedTimerOverlay = "No Overlay";
+            var overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(toTrigger.SelectedTimerOverlay, out _);
+            if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
+            {
+              toModel.SelectedTimerOverlay = overlay.Name + " (" + toTrigger.SelectedTimerOverlay + ")";
+            }
+            else
+            {
+              toModel.SelectedTimerOverlay = "No Overlay";
+            }
           }
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
+          if (!string.IsNullOrEmpty(fromTrigger.SelectedTextOverlay) && !"No Overlay".Equals(fromTrigger.SelectedTextOverlay))
+          {
+            if (Regex.Match(fromTrigger.SelectedTextOverlay, @".+\((.+)\)") is Match match && match.Success && match.Groups.Count > 1)
+            {
+              toTrigger.SelectedTextOverlay = match.Groups[1].Value;
+            }
+          }
+          
           if (!string.IsNullOrEmpty(fromTrigger.SelectedTimerOverlay) && !"No Overlay".Equals(fromTrigger.SelectedTimerOverlay))
           {
             if (Regex.Match(fromTrigger.SelectedTimerOverlay, @".+\((.+)\)") is Match match && match.Success && match.Groups.Count > 1)
@@ -110,7 +135,7 @@ namespace EQLogParser
       else if (to is Overlay toOverlay && from is Overlay fromOverlay)
       {
         toOverlay.OverlayComments = fromOverlay.OverlayComments;
-        toOverlay.FontColor= fromOverlay.FontColor;
+        toOverlay.FontColor = fromOverlay.FontColor;
         toOverlay.PrimaryColor = fromOverlay.PrimaryColor;
         toOverlay.SecondaryColor = fromOverlay.SecondaryColor;
         toOverlay.OverlayColor = fromOverlay.OverlayColor;
@@ -119,6 +144,9 @@ namespace EQLogParser
         toOverlay.Id = fromOverlay.Id;
         toOverlay.UseStandardTime = fromOverlay.UseStandardTime;
         toOverlay.Name = fromOverlay.Name;
+        toOverlay.FadeDelay = fromOverlay.FadeDelay;
+        toOverlay.IsTimerOverlay = fromOverlay.IsTimerOverlay;
+        toOverlay.IsTextOverlay = fromOverlay.IsTextOverlay;
 
         if (toOverlay is TimerOverlayPropertyModel toModel)
         {

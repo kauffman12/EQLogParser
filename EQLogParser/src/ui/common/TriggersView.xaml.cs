@@ -104,6 +104,7 @@ namespace EQLogParser
       listEditor.Properties.Add("TriggerAgainOption");
       listEditor.Properties.Add("FontSize");
       listEditor.Properties.Add("SortBy");
+      listEditor.Properties.Add("SelectedTextOverlay");
       listEditor.Properties.Add("SelectedTimerOverlay");
       thePropertyGrid.CustomEditorCollection.Add(listEditor);
 
@@ -111,6 +112,11 @@ namespace EQLogParser
       timeEditor.Editor = new RangeEditor(0, 60);
       timeEditor.Properties.Add("Seconds");
       timeEditor.Properties.Add("Minutes");
+      thePropertyGrid.CustomEditorCollection.Add(timeEditor);
+
+      timeEditor = new CustomEditor();
+      timeEditor.Editor = new RangeEditor(1, 30);
+      timeEditor.Properties.Add("FadeDelay");
       thePropertyGrid.CustomEditorCollection.Add(timeEditor);
 
       var exampleEditor = new CustomEditor();
@@ -549,15 +555,14 @@ namespace EQLogParser
         assignOverlayMenuItem.IsEnabled = false;
       }
 
-      importMenuItem.Header = importMenuItem.IsEnabled ? "Import to " + node.Content.ToString() : "Import";
+      importMenuItem.Header = importMenuItem.IsEnabled ? "Import to Folder (" + node.Content.ToString() + ")" : "Import";
 
       if (newMenuItem.IsEnabled)
       {
         newFolder.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
         newTrigger.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
         newTimerOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
-        //newTextOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
-        newTextOverlay.Visibility = Visibility.Collapsed;
+        newTextOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
       }
 
       if (assignOverlayMenuItem.IsEnabled)
@@ -579,6 +584,11 @@ namespace EQLogParser
           assignTextOverlaysMenuItem.Items.Add(menuItem);
         }
 
+        var noTextOverlayMenuItem = new MenuItem { Header = "No Overlay" };
+        noTextOverlayMenuItem.Click += AssignTextOverlayClick;
+        noTextOverlayMenuItem.Tag = "No Overlay";
+        assignTextOverlaysMenuItem.Items.Add(noTextOverlayMenuItem);
+
         foreach (var previous in assignTimerOverlaysMenuItem.Items)
         {
           if (previous is MenuItem m)
@@ -595,6 +605,11 @@ namespace EQLogParser
           menuItem.Tag = overlay.Id;
           assignTimerOverlaysMenuItem.Items.Add(menuItem);
         }
+
+        var noTimerOverlayMenuItem = new MenuItem { Header = "No Overlay" };
+        noTimerOverlayMenuItem.Click += AssignTimerOverlayClick;
+        noTimerOverlayMenuItem.Tag = "No Overlay";
+        assignTimerOverlaysMenuItem.Items.Add(noTimerOverlayMenuItem);
       }
     }
 
@@ -715,7 +730,9 @@ namespace EQLogParser
           new { Name = patternItem.CategoryName, IsEnabled = true },
           new { Name = evalTimeItem.CategoryName, IsEnabled = true },
           new { Name = fontSizeItem.CategoryName, IsEnabled = false },
-          new { Name = primaryBrushItem.CategoryName, IsEnabled = false }
+          new { Name = primaryBrushItem.CategoryName, IsEnabled = false },
+          new { Name = assignedOverlaysItem.CategoryName, IsEnabled = true },
+          new { Name = fadeDelayItem.CategoryName, IsEnabled = false }
         });
       }
       else if (isOverlay)
@@ -728,7 +745,9 @@ namespace EQLogParser
             new { Name = patternItem.CategoryName, IsEnabled = false },
             new { Name = evalTimeItem.CategoryName, IsEnabled = false },
             new { Name = fontSizeItem.CategoryName, IsEnabled = true },
-            new { Name = primaryBrushItem.CategoryName, IsEnabled = true }
+            new { Name = primaryBrushItem.CategoryName, IsEnabled = true },
+            new { Name = assignedOverlaysItem.CategoryName, IsEnabled = false },
+            new { Name = fadeDelayItem.CategoryName, IsEnabled = false }
           });
         }
         else
@@ -739,7 +758,9 @@ namespace EQLogParser
             new { Name = patternItem.CategoryName, IsEnabled = false },
             new { Name = evalTimeItem.CategoryName, IsEnabled = false },
             new { Name = fontSizeItem.CategoryName, IsEnabled = true },
-            new { Name = primaryBrushItem.CategoryName, IsEnabled = false }
+            new { Name = primaryBrushItem.CategoryName, IsEnabled = false },
+            new { Name = assignedOverlaysItem.CategoryName, IsEnabled = false },
+            new { Name = fadeDelayItem.CategoryName, IsEnabled = true }
           });
         }
       }
@@ -836,41 +857,69 @@ namespace EQLogParser
         saveButton.IsEnabled = (trigger.Errors == "None");
         cancelButton.IsEnabled = true;
       }
-      else if (args.Property.SelectedObject is TimerOverlayPropertyModel overlay)
+      else if (args.Property.SelectedObject is TextOverlayPropertyModel textOverlay)
       {
-        var change = true;
+        var textChange = true;
+
         if (args.Property.Name == overlayBrushItem.PropertyName)
         {
-          change = !overlay.OverlayBrush.ToString().Equals(overlay.Original.OverlayColor);
-          Application.Current.Resources["OverlayBrushColor-" + overlay.Id] = overlay.OverlayBrush;
-        }
-        else if (args.Property.Name == primaryBrushItem.PropertyName)
-        {
-          change = !overlay.PrimaryBrush.ToString().Equals(overlay.Original.PrimaryColor);
-          Application.Current.Resources["TimerBarProgressColor-" + overlay.Id] = overlay.PrimaryBrush;
-        }
-        else if (args.Property.Name == secondaryBrushItem.PropertyName)
-        {
-          change = !overlay.SecondaryBrush.ToString().Equals(overlay.Original.SecondaryColor);
-          Application.Current.Resources["TimerBarTrackColor-" + overlay.Id] = overlay.SecondaryBrush;
+          textChange = !textOverlay.OverlayBrush.ToString().Equals(textOverlay.Original.OverlayColor);
+          Application.Current.Resources["OverlayBrushColor-" + textOverlay.Id] = textOverlay.OverlayBrush;
         }
         else if (args.Property.Name == fontBrushItem.PropertyName)
         {
-          change = !overlay.FontBrush.ToString().Equals(overlay.Original.FontColor);
-          Application.Current.Resources["TimerBarFontColor-" + overlay.Id] = overlay.FontBrush;
+          textChange = !textOverlay.FontBrush.ToString().Equals(textOverlay.Original.FontColor);
+          Application.Current.Resources["TextOverlayFontColor-" + textOverlay.Id] = textOverlay.FontBrush;
         }
-        else if (args.Property.Name == fontSizeItem.PropertyName && overlay.FontSize.Split("pt") is string[] split && split.Length == 2
+        else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
          && double.TryParse(split[0], out double newFontSize))
         {
-          change = overlay.FontSize != overlay.Original.FontSize;
-          Application.Current.Resources["TimerBarFontSize-" + overlay.Id] = newFontSize;
-          Application.Current.Resources["TimerBarHeight-" + overlay.Id] = TriggerUtil.GetTimerBarHeight(newFontSize);
+          textChange = textOverlay.FontSize != textOverlay.Original.FontSize;
+          Application.Current.Resources["TextOverlayFontSize-" + textOverlay.Id] = newFontSize;
         }
 
-        if (change)
+        if (textChange)
         {
           saveButton.IsEnabled = true;
           cancelButton.IsEnabled = true;
+        }
+        else if (args.Property.SelectedObject is TimerOverlayPropertyModel timerOverlay)
+        {
+          var timerChange = true;
+
+          if (args.Property.Name == overlayBrushItem.PropertyName)
+          {
+            timerChange = !timerOverlay.OverlayBrush.ToString().Equals(timerOverlay.Original.OverlayColor);
+            Application.Current.Resources["OverlayBrushColor-" + timerOverlay.Id] = timerOverlay.OverlayBrush;
+          }
+          else if (args.Property.Name == primaryBrushItem.PropertyName)
+          {
+            timerChange = !timerOverlay.PrimaryBrush.ToString().Equals(timerOverlay.Original.PrimaryColor);
+            Application.Current.Resources["TimerBarProgressColor-" + timerOverlay.Id] = timerOverlay.PrimaryBrush;
+          }
+          else if (args.Property.Name == secondaryBrushItem.PropertyName)
+          {
+            timerChange = !timerOverlay.SecondaryBrush.ToString().Equals(timerOverlay.Original.SecondaryColor);
+            Application.Current.Resources["TimerBarTrackColor-" + timerOverlay.Id] = timerOverlay.SecondaryBrush;
+          }
+          else if (args.Property.Name == fontBrushItem.PropertyName)
+          {
+            timerChange = !timerOverlay.FontBrush.ToString().Equals(timerOverlay.Original.FontColor);
+            Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Id] = timerOverlay.FontBrush;
+          }
+          else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
+           && double.TryParse(split[0], out double newFontSize))
+          {
+            timerChange = timerOverlay.FontSize != timerOverlay.Original.FontSize;
+            Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Id] = newFontSize;
+            Application.Current.Resources["TimerBarHeight-" + timerOverlay.Id] = TriggerUtil.GetTimerBarHeight(newFontSize);
+          }
+
+          if (timerChange)
+          {
+            saveButton.IsEnabled = true;
+            cancelButton.IsEnabled = true;
+          }
         }
       }
     }
@@ -903,9 +952,14 @@ namespace EQLogParser
         TriggerUtil.Copy(triggerModel.Original, triggerModel);
         TriggerManager.Instance.UpdateTriggers();
       }
-      else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel overlayModel)
+      else if (thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel)
       {
-        TriggerUtil.Copy(overlayModel.Original, overlayModel);
+        TriggerUtil.Copy(textModel.Original, textModel);
+        TriggerOverlayManager.Instance.UpdateOverlays();
+      }
+      else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel)
+      {
+        TriggerUtil.Copy(timerModel.Original, timerModel);
         TriggerOverlayManager.Instance.UpdateOverlays();
       }
 
