@@ -42,8 +42,8 @@ namespace EQLogParser
         }
       });
 
-      TextOverlayTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      TimerOverlayTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 250) };
+      TextOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      TimerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       OverlayUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
       OverlayUpdateTimer.Tick += OverlayDataUpdated;
     }
@@ -75,8 +75,8 @@ namespace EQLogParser
 
 
     internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
-    private void EventsNewTimer(object sender, Trigger e) => StartTimer(e, false);
-    private void EventsUpdateTimer(object sender, Trigger e) => StartTimer(e, true);
+    private void EventsNewTimer(object sender, dynamic e) => StartTimer(e, false);
+    private void EventsUpdateTimer(object sender, dynamic e) => StartTimer(e, true);
 
     internal void PreviewTextOverlay(string id)
     {
@@ -261,7 +261,6 @@ namespace EQLogParser
 
         if (done)
         {
-          dispatchTimer.Stop();
           removed.Add(keypair.Key);
         }
       }
@@ -328,9 +327,12 @@ namespace EQLogParser
       });
     }
 
-    private void StartTimer(Trigger trigger, bool update)
+    private void StartTimer(dynamic e, bool update)
     {
+      var trigger = e.Trigger;
+      var timerName = e.Name;
       var endTime = DateUtil.ToDouble(DateTime.Now) + trigger.DurationSeconds;
+
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
         if (!string.IsNullOrEmpty(trigger.SelectedTimerOverlay) && !"No Overlay".Equals(trigger.SelectedTimerOverlay))
@@ -350,11 +352,11 @@ namespace EQLogParser
 
               if (needShow || !update)
               {
-                (window as TimerOverlayWindow).CreateTimer(trigger.Name, endTime);
+                (window as TimerOverlayWindow).CreateTimer(timerName, endTime);
               }
               else
               {
-                (window as TimerOverlayWindow).ResetTimer(trigger.Name, endTime);
+                (window as TimerOverlayWindow).ResetTimer(timerName, endTime);
               }
 
               if (needShow)

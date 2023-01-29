@@ -25,8 +25,8 @@ namespace EQLogParser
     internal event EventHandler<bool> EventsUpdateTree;
     internal event EventHandler<Trigger> EventsSelectTrigger;
     internal event EventHandler<dynamic> EventsAddText;
-    internal event EventHandler<Trigger> EventsNewTimer;
-    internal event EventHandler<Trigger> EventsUpdateTimer;
+    internal event EventHandler<dynamic> EventsNewTimer;
+    internal event EventHandler<dynamic> EventsUpdateTimer;
 
     internal static TriggerManager Instance = new TriggerManager();
     private readonly string TRIGGERS_FILE = "triggers.json";
@@ -359,7 +359,7 @@ namespace EQLogParser
 
         if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0)
         {
-          StartTimer(wrapper, speechChannel, lineData.Line);
+          StartTimer(wrapper, speechChannel, lineData.Line, matches);
         }
       }
     }
@@ -385,22 +385,7 @@ namespace EQLogParser
                 synth.SpeakAsyncCancelAll();
               }
 
-              var speak = result.Text;
-              if (result.Matches != null)
-              {
-                foreach (Match match in result.Matches)
-                {
-                  for (int i = 1; i < match.Groups.Count; i++)
-                  {
-                    if (!string.IsNullOrEmpty(match.Groups[i].Name))
-                    {
-                      // try with and then without $ before {}
-                      speak = speak.Replace("${" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
-                      speak = speak.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
-                    }
-                  }
-                }
-              }
+              var speak = ProcessSpeakDisplayText(result.Text, result.Matches);
 
               if (!string.IsNullOrEmpty(CurrentVoice) && synth.Voice.Name != CurrentVoice)
               {
@@ -444,7 +429,28 @@ namespace EQLogParser
       });
     }
 
-    private void StartTimer(TriggerWrapper wrapper, Channel<Speak> speechChannel, string line)
+    private string ProcessSpeakDisplayText(string text, MatchCollection matches)
+    {
+      if (matches != null && !string.IsNullOrEmpty(text))
+      {
+        foreach (Match match in matches)
+        {
+          for (int i = 1; i < match.Groups.Count; i++)
+          {
+            if (!string.IsNullOrEmpty(match.Groups[i].Name))
+            {
+              // try with and then without $ before {}
+              text = text.Replace("${" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+              text = text.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+            }
+          }
+        }
+      }
+
+      return text;
+    }
+
+    private void StartTimer(TriggerWrapper wrapper, Channel<Speak> speechChannel, string line, MatchCollection matches)
     {
       Task.Run(() =>
       {
@@ -454,7 +460,7 @@ namespace EQLogParser
         {
           CleanupWrapper(wrapper);
           timerUpdated = true;
-          EventsUpdateTimer?.Invoke(this, wrapper.TriggerData);
+          EventsUpdateTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, Name = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
         }
 
         // Start a New independent Timer as long as one is not already running when Option 2 is selected
@@ -493,7 +499,7 @@ namespace EQLogParser
 
           if (!timerUpdated)
           {
-            EventsNewTimer?.Invoke(this, wrapper.TriggerData);
+            EventsNewTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, Name = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
           }
 
           var timerSource = new CancellationTokenSource();
@@ -607,13 +613,16 @@ namespace EQLogParser
               trigger.EndTextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
             var modifiedWarningSpeak = string.IsNullOrEmpty(trigger.WarningTextToSpeak) ? null :
               trigger.WarningTextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
+            var modifiedTimerName = string.IsNullOrEmpty(trigger.AltTimerName) ? trigger.Name :
+              trigger.AltTimerName.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
 
             var wrapper = new TriggerWrapper
             {
               TriggerData = trigger,
               ModifiedSpeak = modifiedSpeak,
               ModifiedWarningSpeak = modifiedWarningSpeak,
-              ModifiedEndSpeak = modifiedEndSpeak
+              ModifiedEndSpeak = modifiedEndSpeak,
+              ModifiedTimerName = modifiedTimerName
             };
 
             pattern = UpdatePattern(trigger.UseRegex, playerName, pattern);
@@ -738,6 +747,7 @@ namespace EQLogParser
       public string ModifiedEndSpeak { get; set; }
       public string ModifiedWarningSpeak { get; set; }
       public string ModifiedCancelPattern { get; set; }
+      public string ModifiedTimerName { get; set; }
       public Regex Regex { get; set; }
       public Regex EndEarlyRegex { get; set; }
       public Trigger TriggerData { get; set; }
