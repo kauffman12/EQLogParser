@@ -84,9 +84,8 @@ namespace EQLogParser
       {
         var beginTime = DateUtil.ToDouble(DateTime.Now);
         PreviewTextWindows[id] = new TextOverlayWindow(id, true);
-        PreviewTextWindows[id].AddTriggerText("Example Trigger Message #1", beginTime);
-        PreviewTextWindows[id].AddTriggerText("Example Trigger Message #2", beginTime);
-        PreviewTextWindows[id].AddTriggerText("Example Trigger Message #3", beginTime);
+        PreviewTextWindows[id].AddTriggerText("Example Message", beginTime);
+        PreviewTextWindows[id].AddTriggerText("Example Message #2", beginTime);
         PreviewTextWindows[id].Show();
       }
       else
@@ -102,11 +101,9 @@ namespace EQLogParser
       {
         var beginTime = DateUtil.ToDouble(DateTime.Now);
         PreviewTimerWindows[id] = new TimerOverlayWindow(id, true);
-        PreviewTimerWindows[id].CreateTimer("Example Trigger Name #1", beginTime + 200, true);
+        PreviewTimerWindows[id].CreateTimer("Example Trigger Name", beginTime + 200, true);
         PreviewTimerWindows[id].CreateTimer("Example Trigger Name #2", beginTime + 100, true);
         PreviewTimerWindows[id].CreateTimer("Example Trigger Name #3", beginTime + 250, true);
-        PreviewTimerWindows[id].CreateTimer("Example Trigger Name #4", beginTime + 60, true);
-        PreviewTimerWindows[id].CreateTimer("Example Trigger Name #5", beginTime + 180, true);
         PreviewTimerWindows[id].Show();
       }
       else

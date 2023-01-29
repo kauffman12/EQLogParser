@@ -47,12 +47,15 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="200*"></RowDefinition>
     </Grid.RowDefinitions>
-    <TextBlock x:Name="title" Grid.Row="0" Visibility="Collapsed" VerticalAlignment="Top" Text="Overlay Title" Foreground="White" Background="#55000000" Margin="0,0,0,0" TextAlignment="Center" Padding="5" FontSize="16" />
+    <Viewbox StretchDirection="Both" Stretch="Fill">
+      <TextBlock x:Name="title" Grid.Row="0" Visibility="Collapsed" Margin="0,0,0,0" Text="Overlay Title"
+      Foreground="#33FFFFFF" Background="#55000000" TextWrapping="WrapWithOverflow" FontFamily="Consolas" Padding="3,5,3,20" />
+    </Viewbox>
     <StackPanel Grid.Row="0" Orientation="Vertical" VerticalAlignment="Bottom" HorizontalAlignment="Center">
       <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
-        <Button x:Name="saveButton" Margin="4,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="85" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save Position</Button>
-        <Button x:Name="cancelButton" Margin="4,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="88" Height="24" HorizontalAlignment="Left" Click="CancelClick">Reset Position</Button>
-        <Button x:Name="closeButton" Margin="4,6,0,0" VerticalAlignment="Top" IsEnabled="True" Width="46" Height="24" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
+        <Button x:Name="saveButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="80" MinWidth="80" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save Position</Button>
+        <Button x:Name="cancelButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="48" MinWidth="48" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+        <Button x:Name="closeButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="True" Width="48" MinWidth="48" Height="24" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
       </StackPanel>
       <Border x:Name="border" CornerRadius="5">
         <StackPanel x:Name="content" Orientation="Vertical" />
