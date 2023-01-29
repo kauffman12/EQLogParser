@@ -199,7 +199,7 @@ namespace EQLogParser
           enableAutoMonitorIcon.Visibility = Visibility.Hidden;
         }
 
-        ComputeStatsTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+        ComputeStatsTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
         ComputeStatsTimer.Tick += (sender, e) =>
         {
           ComputeStats();

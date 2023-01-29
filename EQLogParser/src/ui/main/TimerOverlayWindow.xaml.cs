@@ -56,6 +56,7 @@ namespace EQLogParser
 
     internal void CreateTimer(string name, double endTime, bool preview = false)
     {
+      name = string.IsNullOrEmpty(name) ? "Unknown Timer" : name;
       var timerBar = new TimerBar();
       timerBar.Init(Overlay.Id, name, endTime, preview);
       TimerBarCache[name] = timerBar;
@@ -80,6 +81,7 @@ namespace EQLogParser
 
     internal void ResetTimer(string name, double endTime)
     {
+      name = string.IsNullOrEmpty(name) ? "Unknown Timer" : name;
       if (TimerBarCache.TryGetValue(name, out TimerBar timerBar))
       {
         timerBar.Update(endTime);

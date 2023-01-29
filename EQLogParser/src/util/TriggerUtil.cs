@@ -67,6 +67,7 @@ namespace EQLogParser
     {
       if (to is Trigger toTrigger && from is Trigger fromTrigger)
       {
+        toTrigger.AltTimerName = fromTrigger.AltTimerName;
         toTrigger.Comments = fromTrigger.Comments;
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
         toTrigger.EnableTimer = fromTrigger.EnableTimer;
@@ -694,6 +695,12 @@ namespace EQLogParser
               trigger.Pattern = Helpers.GetText(triggerNode, "TriggerText");
               trigger.Comments = Helpers.GetText(triggerNode, "Comments");
 
+              var timerName = Helpers.GetText(triggerNode, "TimerName");
+              if (!string.IsNullOrEmpty(timerName) && timerName != trigger.Name)
+              {
+                trigger.AltTimerName = timerName;
+              }
+
               if (bool.TryParse(Helpers.GetText(triggerNode, "UseTextToVoice"), out bool useText))
               {
                 goodTrigger = true;
@@ -720,9 +727,21 @@ namespace EQLogParser
                   trigger.DurationSeconds = duration;
                 }
 
+                if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
+                {
+                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseTextToVoice"), out bool useText2))
+                  {
+                    trigger.WarningTextToSpeak = Helpers.GetText(timerEndingNode, "TextToVoiceText");
+                  }
+                }
+
                 if (int.TryParse(Helpers.GetText(triggerNode, "TimerEndingTime"), out int endTime))
                 {
-                  trigger.WarningSeconds = endTime;
+                  // GINA defaults to 1 even if there's no text?
+                  if (!string.IsNullOrEmpty(trigger.WarningTextToSpeak) || endTime > 1)
+                  {
+                    trigger.WarningSeconds = endTime;
+                  }
                 }
 
                 var behavior = Helpers.GetText(triggerNode, "TimerStartBehavior");
@@ -744,14 +763,6 @@ namespace EQLogParser
                   if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseTextToVoice"), out bool useText2))
                   {
                     trigger.EndTextToSpeak = Helpers.GetText(timerEndedNode, "TextToVoiceText");
-                  }
-                }
-
-                if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
-                {
-                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseTextToVoice"), out bool useText2))
-                  {
-                    trigger.WarningTextToSpeak = Helpers.GetText(timerEndingNode, "TextToVoiceText");
                   }
                 }
 

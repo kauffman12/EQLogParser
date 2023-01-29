@@ -38,6 +38,7 @@ namespace EQLogParser
 
   internal class Trigger : NotificationObject
   {
+    public string AltTimerName { get; set; }
     public string Comments { get; set; }
     public long DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
