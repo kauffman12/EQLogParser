@@ -193,6 +193,7 @@ namespace EQLogParser
 
             if (TestSynth != null)
             {
+              TestSynth.Rate = TriggerUtil.GetVoiceRate();
               TestSynth.SelectVoice(voiceName);
               TestSynth.SpeakAsync(voiceName);
             }
@@ -206,6 +207,7 @@ namespace EQLogParser
           if (TestSynth != null)
           {
             TestSynth.Rate = rateOption.SelectedIndex;
+            TestSynth.SelectVoice(TriggerUtil.GetSelectedVoice());
             var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex.ToString();
             TestSynth.SpeakAsync(rateText);
           }
@@ -396,6 +398,12 @@ namespace EQLogParser
           IsEnabled = true,
           OverlayData = new Overlay { Name = label, Id = Guid.NewGuid().ToString(), IsTimerOverlay = isTimer, IsTextOverlay = !isTimer }
         };
+
+        if (!isTimer)
+        {
+          // give a better default for text overlays
+          newNode.OverlayData.FontSize = "20pt";
+        }
 
         node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
