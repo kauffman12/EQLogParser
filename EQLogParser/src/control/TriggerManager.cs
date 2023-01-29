@@ -24,6 +24,7 @@ namespace EQLogParser
 
     internal event EventHandler<bool> EventsUpdateTree;
     internal event EventHandler<Trigger> EventsSelectTrigger;
+    internal event EventHandler<dynamic> EventsAddText;
     internal event EventHandler<Trigger> EventsNewTimer;
     internal event EventHandler<Trigger> EventsUpdateTimer;
 
@@ -412,6 +413,7 @@ namespace EQLogParser
               }
 
               synth.SpeakAsync(speak);
+              EventsAddText?.Invoke(this, new { Text = speak, result.Trigger });
               previous = result.Trigger;
             }
 

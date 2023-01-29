@@ -150,7 +150,7 @@ namespace EQLogParser
 
         if (toOverlay is TimerOverlayPropertyModel toModel)
         {
-          Application.Current.Resources["TimerOverlayText-" + toModel.Id] = toModel.Name;
+          Application.Current.Resources["OverlayText-" + toModel.Id] = toModel.Name;
 
           if (fromOverlay.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
           {
@@ -185,6 +185,8 @@ namespace EQLogParser
         }
         else if (toOverlay is TextOverlayPropertyModel toTextModel)
         {
+          Application.Current.Resources["OverlayText-" + toTextModel.Id] = toTextModel.Name;
+
           if (fromOverlay.OverlayColor is string primary && !string.IsNullOrEmpty(primary))
           {
             toTextModel.OverlayBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(primary) };

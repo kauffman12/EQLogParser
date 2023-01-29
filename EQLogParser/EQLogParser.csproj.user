@@ -36,6 +36,9 @@
     <Compile Update="src\ui\log\TauntStatsViewer.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\main\TextOverlayWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\main\TimerOverlayWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -63,6 +66,9 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\DamageOverlayConfig.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\main\TextOverlayWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\TimerOverlayWindow.xaml">

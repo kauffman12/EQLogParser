@@ -224,10 +224,6 @@ namespace EQLogParser
       Application.Current.Resources["OverlayActiveBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF191919") };
       Application.Current.Resources["OverlayConfigBrush"] = Application.Current.Resources["ContentBackgroundAlt2"];
       Application.Current.Resources["OverlayCurrentBrush"] = Application.Current.Resources["OverlayActiveBrush"];
-      Application.Current.Resources["OverlayDraggable"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
-      Application.Current.Resources["OverlayNotDraggable"] = new SolidColorBrush { Color = Colors.Transparent };
-      Application.Current.Resources["OverlayCurrentDraggable"] = Application.Current.Resources["OverlayNotDraggable"];
-
     }
 
     internal static void Clear(ContentControl petsWindow, ContentControl playersWindow)
