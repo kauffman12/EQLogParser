@@ -32,7 +32,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       Preview = preview;
-      this.SetResourceReference(TimerOverlayWindow.BackgroundProperty, "OverlayBrushColor-" + overlayId);
+      this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + overlayId);
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + overlayId);
       Overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(overlayId, out _);
       CurrentOrder = Overlay.SortBy;
@@ -47,7 +47,7 @@ namespace EQLogParser
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         this.ResizeMode = ResizeMode.CanResizeWithGrip;
-        this.parentGrid.Background = BarelyVisible;
+        this.Background = BarelyVisible;
         this.BorderBrush = BorderColor;
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;

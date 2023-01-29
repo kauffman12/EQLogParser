@@ -28,7 +28,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       Preview = preview;
-      this.SetResourceReference(TextOverlayWindow.BackgroundProperty, "OverlayBrushColor-" + overlayId);
+      this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + overlayId);
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + overlayId);
       Overlay = TriggerOverlayManager.Instance.GetTextOverlayById(overlayId, out _);
 
@@ -41,7 +41,7 @@ namespace EQLogParser
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         this.ResizeMode = ResizeMode.CanResizeWithGrip;
-        this.parentGrid.Background = BarelyVisible;
+        this.Background = BarelyVisible;
         this.BorderBrush = BorderColor;
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
@@ -54,7 +54,8 @@ namespace EQLogParser
       {
         Text = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text),
         TextAlignment = TextAlignment.Center,
-        Padding = new Thickness(5),
+        Padding = new Thickness(0),
+        Margin = new Thickness(0),
         Tag = beginTime + Overlay.FadeDelay,
         FontWeight = FontWeights.Bold,
         TextWrapping = TextWrapping.Wrap
@@ -70,8 +71,8 @@ namespace EQLogParser
 
     internal bool Tick()
     {
-      double currentTime = DateUtil.ToDouble(DateTime.Now);
-      List<TextBlock> removeList = new List<TextBlock>();
+      var currentTime = DateUtil.ToDouble(DateTime.Now);
+      var removeList = new List<TextBlock>();
 
       foreach (var child in content.Children)
       {
