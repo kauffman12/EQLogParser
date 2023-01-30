@@ -56,8 +56,8 @@ namespace EQLogParser
     public string TextToSpeak { get; set; }
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
-    public string SelectedTextOverlay { get; set; } = "No Overlay";
-    public string SelectedTimerOverlay { get; set; } = "No Overlay";
+    public string SelectedTextOverlay { get; set; } = TriggerOverlayManager.NO_OVERLAY;
+    public string SelectedTimerOverlay { get; set; } = TriggerOverlayManager.NO_OVERLAY;
     public long WarningSeconds { get; set; }
     public string WarningTextToSpeak { get; set; }
   }

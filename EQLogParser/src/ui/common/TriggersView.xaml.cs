@@ -592,9 +592,9 @@ namespace EQLogParser
           assignTextOverlaysMenuItem.Items.Add(menuItem);
         }
 
-        var noTextOverlayMenuItem = new MenuItem { Header = "No Overlay" };
+        var noTextOverlayMenuItem = new MenuItem { Header = TriggerOverlayManager.NO_OVERLAY };
         noTextOverlayMenuItem.Click += AssignTextOverlayClick;
-        noTextOverlayMenuItem.Tag = "No Overlay";
+        noTextOverlayMenuItem.Tag = TriggerOverlayManager.NO_OVERLAY;
         assignTextOverlaysMenuItem.Items.Add(noTextOverlayMenuItem);
 
         foreach (var previous in assignTimerOverlaysMenuItem.Items)
@@ -614,9 +614,9 @@ namespace EQLogParser
           assignTimerOverlaysMenuItem.Items.Add(menuItem);
         }
 
-        var noTimerOverlayMenuItem = new MenuItem { Header = "No Overlay" };
+        var noTimerOverlayMenuItem = new MenuItem { Header = TriggerOverlayManager.NO_OVERLAY };
         noTimerOverlayMenuItem.Click += AssignTimerOverlayClick;
-        noTimerOverlayMenuItem.Tag = "No Overlay";
+        noTimerOverlayMenuItem.Tag = TriggerOverlayManager.NO_OVERLAY;
         assignTimerOverlaysMenuItem.Items.Add(noTimerOverlayMenuItem);
       }
     }

@@ -13,6 +13,7 @@ namespace EQLogParser
   {
     internal static TriggerOverlayManager Instance = new TriggerOverlayManager();
 
+    internal static string NO_OVERLAY = "No Overlay";
     private readonly string OVERLAY_FILE = "triggerOverlays.json";
     private readonly TriggerNode OverlayNodes;
     private readonly DispatcherTimer TextOverlayTimer;
@@ -133,7 +134,7 @@ namespace EQLogParser
 
     internal List<string> GetTextOverlayItems()
     {
-      var list = new List<string> { "No Overlay" };
+      var list = new List<string> { NO_OVERLAY };
       lock (OverlayNodes)
       {
         if (OverlayNodes.Nodes != null)
@@ -147,7 +148,7 @@ namespace EQLogParser
 
     internal List<string> GetTimerOverlayItems()
     {
-      var list = new List<string> { "No Overlay" };
+      var list = new List<string> { NO_OVERLAY };
       lock (OverlayNodes)
       {
         if (OverlayNodes.Nodes != null)
@@ -287,7 +288,7 @@ namespace EQLogParser
       var beginTime = DateUtil.ToDouble(DateTime.Now);
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
-        if (!string.IsNullOrEmpty(e.Trigger.SelectedTextOverlay) && !"No Overlay".Equals(e.Trigger.SelectedTextOverlay))
+        if (!string.IsNullOrEmpty(e.Trigger.SelectedTextOverlay) && !NO_OVERLAY.Equals(e.Trigger.SelectedTextOverlay))
         {
           // check if it's even enabled
           if (GetTextOverlayById(e.Trigger.SelectedTextOverlay, out bool isEnabled) != null)
@@ -318,7 +319,7 @@ namespace EQLogParser
           else
           {
             // overlay no longer exists?
-            e.Trigger.SelectedTextOverlay = "No Overlay";
+            e.Trigger.SelectedTextOverlay = NO_OVERLAY;
           }
         }
       });
@@ -332,7 +333,7 @@ namespace EQLogParser
 
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
-        if (!string.IsNullOrEmpty(trigger.SelectedTimerOverlay) && !"No Overlay".Equals(trigger.SelectedTimerOverlay))
+        if (!string.IsNullOrEmpty(trigger.SelectedTimerOverlay) && !NO_OVERLAY.Equals(trigger.SelectedTimerOverlay))
         {
           // check if it's even enabled
           if (GetTimerOverlayById(trigger.SelectedTimerOverlay, out bool isEnabled) != null)
@@ -370,7 +371,7 @@ namespace EQLogParser
           else
           {
             // overlay no longer exists?
-            trigger.SelectedTimerOverlay = "No Overlay";
+            trigger.SelectedTimerOverlay = NO_OVERLAY;
           }
         }
       });
