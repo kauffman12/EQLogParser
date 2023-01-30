@@ -11,7 +11,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Xml;
 
@@ -91,7 +90,7 @@ namespace EQLogParser
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
-          if (!"No Overlay".Equals(toTrigger.SelectedTextOverlay))
+          if (!TriggerOverlayManager.NO_OVERLAY.Equals(toTrigger.SelectedTextOverlay))
           {
             var overlay = TriggerOverlayManager.Instance.GetTextOverlayById(toTrigger.SelectedTextOverlay, out _);
             if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
@@ -100,11 +99,11 @@ namespace EQLogParser
             }
             else
             {
-              toModel.SelectedTextOverlay = "No Overlay";
+              toModel.SelectedTextOverlay = TriggerOverlayManager.NO_OVERLAY;
             }
           }
           
-          if (!"No Overlay".Equals(toTrigger.SelectedTimerOverlay))
+          if (!TriggerOverlayManager.NO_OVERLAY.Equals(toTrigger.SelectedTimerOverlay))
           {
             var overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(toTrigger.SelectedTimerOverlay, out _);
             if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
@@ -113,13 +112,13 @@ namespace EQLogParser
             }
             else
             {
-              toModel.SelectedTimerOverlay = "No Overlay";
+              toModel.SelectedTimerOverlay = TriggerOverlayManager.NO_OVERLAY;
             }
           }
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
-          if (!string.IsNullOrEmpty(fromTrigger.SelectedTextOverlay) && !"No Overlay".Equals(fromTrigger.SelectedTextOverlay))
+          if (!string.IsNullOrEmpty(fromTrigger.SelectedTextOverlay) && !TriggerOverlayManager.NO_OVERLAY.Equals(fromTrigger.SelectedTextOverlay))
           {
             if (Regex.Match(fromTrigger.SelectedTextOverlay, @".+\((.+)\)") is Match match && match.Success && match.Groups.Count > 1)
             {
@@ -127,7 +126,7 @@ namespace EQLogParser
             }
           }
           
-          if (!string.IsNullOrEmpty(fromTrigger.SelectedTimerOverlay) && !"No Overlay".Equals(fromTrigger.SelectedTimerOverlay))
+          if (!string.IsNullOrEmpty(fromTrigger.SelectedTimerOverlay) && !TriggerOverlayManager.NO_OVERLAY.Equals(fromTrigger.SelectedTimerOverlay))
           {
             if (Regex.Match(fromTrigger.SelectedTimerOverlay, @".+\((.+)\)") is Match match && match.Success && match.Groups.Count > 1)
             {
@@ -450,13 +449,8 @@ namespace EQLogParser
           ginaKey = action.Substring(index + 6, end - index - 6);
         }
 
-        if (string.IsNullOrEmpty(ginaKey))
-        {
-          return;
-        }
-
         // ignore if we're still processing plus avoid spam
-        if (GinaCache.ContainsKey(ginaKey) || GinaCache.Count > 5)
+        if (string.IsNullOrEmpty(ginaKey) || GinaCache.ContainsKey(ginaKey) || GinaCache.Count > 5)
         {
           return;
         }
@@ -601,8 +595,8 @@ namespace EQLogParser
                     gzip.CopyTo(memory);
                     var xml = Encoding.UTF8.GetString(memory.ToArray());
 
-                    if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1 && xml.IndexOf("</a:ChunkData>") is int end &&
-                      end > start)
+                    if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1 
+                      && xml.IndexOf("</a:ChunkData>") is int end && end > start)
                     {
                       var encoded = xml.Substring(start + 13, end - start - 13);
                       var decoded = Convert.FromBase64String(encoded);
