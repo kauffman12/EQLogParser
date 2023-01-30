@@ -298,22 +298,12 @@ namespace EQLogParser
 
       if (wrapper.TimerCancellations.Count > 0)
       {
-        MatchCollection earlyMatches = null;
-        bool endEarly = false;
-        if (wrapper.EndEarlyRegex != null)
+        bool endEarly = CheckEndEarly(wrapper.EndEarlyRegex, wrapper.ModifiedCancelPattern, action, out MatchCollection earlyMatches);
+        
+        // try 2nd
+        if (!endEarly)
         {
-          earlyMatches = wrapper.EndEarlyRegex.Matches(action);
-          if (earlyMatches != null && earlyMatches.Count > 0)
-          {
-            endEarly = true;
-          }
-        }
-        else if (!string.IsNullOrEmpty(wrapper.ModifiedCancelPattern))
-        {
-          if (action.Contains(wrapper.ModifiedCancelPattern, StringComparison.OrdinalIgnoreCase))
-          {
-            endEarly = true;
-          }
+          endEarly = CheckEndEarly(wrapper.EndEarlyRegex2, wrapper.ModifiedCancelPattern2, action, out earlyMatches);
         }
 
         if (endEarly)
@@ -362,6 +352,30 @@ namespace EQLogParser
           StartTimer(wrapper, speechChannel, lineData.Line, matches);
         }
       }
+    }
+
+    private bool CheckEndEarly(Regex endEarlyRegex, string cancelPattern, string action, out MatchCollection earlyMatches)
+    {
+      earlyMatches = null;
+      bool endEarly = false;
+
+      if (endEarlyRegex != null)
+      {
+        earlyMatches = endEarlyRegex.Matches(action);
+        if (earlyMatches != null && earlyMatches.Count > 0)
+        {
+          endEarly = true;
+        }
+      }
+      else if (!string.IsNullOrEmpty(cancelPattern))
+      {
+        if (action.Contains(cancelPattern, StringComparison.OrdinalIgnoreCase))
+        {
+          endEarly = true;
+        }
+      }
+
+      return endEarly;
     }
 
     private void StartSpeechReader(Channel<Speak> speechChannel)
@@ -651,6 +665,20 @@ namespace EQLogParser
                   wrapper.ModifiedCancelPattern = endEarlyPattern;
                 }
               }
+
+              if (trigger.CancelPattern2 is string endEarlyPattern2 && !string.IsNullOrEmpty(endEarlyPattern2))
+              {
+                endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, playerName, endEarlyPattern2);
+
+                if (trigger.EndUseRegex2)
+                {
+                  wrapper.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase);
+                }
+                else
+                {
+                  wrapper.ModifiedCancelPattern2 = endEarlyPattern2;
+                }
+              }
             }
 
             activeTriggers.AddLast(new LinkedListNode<TriggerWrapper>(wrapper));
@@ -747,9 +775,11 @@ namespace EQLogParser
       public string ModifiedEndSpeak { get; set; }
       public string ModifiedWarningSpeak { get; set; }
       public string ModifiedCancelPattern { get; set; }
+      public string ModifiedCancelPattern2 { get; set; }
       public string ModifiedTimerName { get; set; }
       public Regex Regex { get; set; }
       public Regex EndEarlyRegex { get; set; }
+      public Regex EndEarlyRegex2 { get; set; }
       public Trigger TriggerData { get; set; }
     }
   }

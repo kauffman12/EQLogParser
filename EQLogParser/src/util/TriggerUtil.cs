@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Xml;
 
@@ -72,8 +73,10 @@ namespace EQLogParser
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
         toTrigger.EnableTimer = fromTrigger.EnableTimer;
         toTrigger.CancelPattern = fromTrigger.CancelPattern;
+        toTrigger.CancelPattern2 = fromTrigger.CancelPattern2;
         toTrigger.EndTextToSpeak = fromTrigger.EndTextToSpeak;
         toTrigger.EndUseRegex = fromTrigger.EndUseRegex;
+        toTrigger.EndUseRegex2 = fromTrigger.EndUseRegex2;
         toTrigger.Errors = fromTrigger.Errors;
         toTrigger.LongestEvalTime = fromTrigger.LongestEvalTime;
         toTrigger.Pattern = fromTrigger.Pattern;
@@ -768,13 +771,25 @@ namespace EQLogParser
 
                 if (triggerNode.SelectSingleNode("TimerEarlyEnders") is XmlNode endingEarlyNode)
                 {
-                  if (endingEarlyNode.SelectSingleNode("EarlyEnder") is XmlNode enderNode)
+                  if (endingEarlyNode.SelectNodes("EarlyEnder") is XmlNodeList enderNodes)
                   {
-                    trigger.CancelPattern = Helpers.GetText(enderNode, "EarlyEndText");
-
-                    if (bool.TryParse(Helpers.GetText(enderNode, "EnableRegex"), out bool regex2))
+                    // only take 2 cancel patterns
+                    if (enderNodes.Count > 0)
                     {
-                      trigger.EndUseRegex = regex2;
+                      trigger.CancelPattern = Helpers.GetText(enderNodes[0], "EarlyEndText");
+                      if (bool.TryParse(Helpers.GetText(enderNodes[0], "EnableRegex"), out bool regex2))
+                      {
+                        trigger.EndUseRegex = regex2;
+                      }
+                    }
+
+                    if (enderNodes.Count > 1)
+                    {
+                      trigger.CancelPattern2 = Helpers.GetText(enderNodes[1], "EarlyEndText");
+                      if (bool.TryParse(Helpers.GetText(enderNodes[1], "EnableRegex"), out bool regex2))
+                      {
+                        trigger.EndUseRegex2 = regex2;
+                      }
                     }
                   }
                 }
