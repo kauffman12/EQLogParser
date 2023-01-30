@@ -731,46 +731,33 @@ namespace EQLogParser
 
       if (isTrigger)
       {
-        PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
-        {
-          new { Name = timerDurationItem.CategoryName, IsEnabled = node.SerializedData.TriggerData.EnableTimer },
-          new { Name = patternItem.CategoryName, IsEnabled = true },
-          new { Name = evalTimeItem.CategoryName, IsEnabled = true },
-          new { Name = fontSizeItem.CategoryName, IsEnabled = false },
-          new { Name = primaryBrushItem.CategoryName, IsEnabled = false },
-          new { Name = assignedOverlaysItem.CategoryName, IsEnabled = true },
-          new { Name = fadeDelayItem.CategoryName, IsEnabled = false }
-        });
+        EnableCategories(true, node.SerializedData.TriggerData.EnableTimer, true, false, false, true, false);
       }
       else if (isOverlay)
       {
         if (isTimerOverlay)
         {
-          PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
-          {
-            new { Name = timerDurationItem.CategoryName, IsEnabled = false },
-            new { Name = patternItem.CategoryName, IsEnabled = false },
-            new { Name = evalTimeItem.CategoryName, IsEnabled = false },
-            new { Name = fontSizeItem.CategoryName, IsEnabled = true },
-            new { Name = primaryBrushItem.CategoryName, IsEnabled = true },
-            new { Name = assignedOverlaysItem.CategoryName, IsEnabled = false },
-            new { Name = fadeDelayItem.CategoryName, IsEnabled = false }
-          });
+          EnableCategories(false, false, false, true, true, false, false);
         }
         else
         {
-          PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
-          {
-            new { Name = timerDurationItem.CategoryName, IsEnabled = false },
-            new { Name = patternItem.CategoryName, IsEnabled = false },
-            new { Name = evalTimeItem.CategoryName, IsEnabled = false },
-            new { Name = fontSizeItem.CategoryName, IsEnabled = true },
-            new { Name = primaryBrushItem.CategoryName, IsEnabled = false },
-            new { Name = assignedOverlaysItem.CategoryName, IsEnabled = false },
-            new { Name = fadeDelayItem.CategoryName, IsEnabled = true }
-          });
+          EnableCategories(false, false, false, true, false, false, true);
         }
       }
+    }
+
+    private void EnableCategories(bool trigger, bool triggerTimer, bool status, bool overlay, bool overlayTimer, bool overlayAssigned, bool overlayText)
+    {
+      PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
+      {
+        new { Name = patternItem.CategoryName, IsEnabled = trigger },
+        new { Name = timerDurationItem.CategoryName, IsEnabled = triggerTimer },
+        new { Name = evalTimeItem.CategoryName, IsEnabled = status },
+        new { Name = fontSizeItem.CategoryName, IsEnabled = overlay },
+        new { Name = primaryBrushItem.CategoryName, IsEnabled = overlayTimer },
+        new { Name = assignedOverlaysItem.CategoryName, IsEnabled = overlayAssigned },
+        new { Name = fadeDelayItem.CategoryName, IsEnabled = overlayText }
+      });
     }
 
     private void NodeChecked(object sender, NodeCheckedEventArgs e)
@@ -841,12 +828,12 @@ namespace EQLogParser
 
         if (isValid && trigger.EndUseRegex)
         {
-          isValid = TestRegexProperty(trigger, trigger.CancelPattern, errorsProp);
+          isValid = TestRegexProperty(trigger, trigger.EndEarlyPattern, errorsProp);
         }
 
         if (isValid && trigger.EndUseRegex2)
         {
-          isValid = TestRegexProperty(trigger, trigger.CancelPattern2, errorsProp);
+          isValid = TestRegexProperty(trigger, trigger.EndEarlyPattern2, errorsProp);
         }
 
         if (isValid && trigger.Errors != "None")
@@ -988,7 +975,8 @@ namespace EQLogParser
       if (thePropertyGrid.SelectedObject is TriggerPropertyModel triggerModel)
       {
         TriggerUtil.Copy(triggerModel, triggerModel.Original);
-        PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = timerDurationItem.CategoryName, IsEnabled = triggerModel.Original.EnableTimer } });
+        PropertyGridUtil.EnableCategories(thePropertyGrid,
+          new[] { new { Name = timerDurationItem.CategoryName, IsEnabled = triggerModel.Original.EnableTimer } });
       }
       else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel)
       {

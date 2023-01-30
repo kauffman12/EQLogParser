@@ -13,7 +13,7 @@ namespace EQLogParser
   {
     internal static TriggerOverlayManager Instance = new TriggerOverlayManager();
 
-    internal static string NO_OVERLAY = "No Overlay";
+    internal const string NO_OVERLAY = "No Overlay";
     private readonly string OVERLAY_FILE = "triggerOverlays.json";
     private readonly TriggerNode OverlayNodes;
     private readonly DispatcherTimer TextOverlayTimer;

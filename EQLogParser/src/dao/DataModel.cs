@@ -42,8 +42,8 @@ namespace EQLogParser
     public string Comments { get; set; }
     public long DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
-    public string CancelPattern { get; set; }
-    public string CancelPattern2 { get; set; }
+    public string EndEarlyPattern { get; set; }
+    public string EndEarlyPattern2 { get; set; }
     public string EndTextToSpeak { get; set; }
     public bool EndUseRegex { get; set; }
     public bool EndUseRegex2 { get; set; }

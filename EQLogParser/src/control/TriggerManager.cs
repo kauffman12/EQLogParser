@@ -652,7 +652,7 @@ namespace EQLogParser
 
             if (trigger.EnableTimer)
             {
-              if (trigger.CancelPattern is string endEarlyPattern && !string.IsNullOrEmpty(endEarlyPattern))
+              if (trigger.EndEarlyPattern is string endEarlyPattern && !string.IsNullOrEmpty(endEarlyPattern))
               {
                 endEarlyPattern = UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern);
 
@@ -666,7 +666,7 @@ namespace EQLogParser
                 }
               }
 
-              if (trigger.CancelPattern2 is string endEarlyPattern2 && !string.IsNullOrEmpty(endEarlyPattern2))
+              if (trigger.EndEarlyPattern2 is string endEarlyPattern2 && !string.IsNullOrEmpty(endEarlyPattern2))
               {
                 endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, playerName, endEarlyPattern2);
 
