@@ -71,8 +71,8 @@ namespace EQLogParser
         toTrigger.Comments = fromTrigger.Comments;
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
         toTrigger.EnableTimer = fromTrigger.EnableTimer;
-        toTrigger.CancelPattern = fromTrigger.CancelPattern;
-        toTrigger.CancelPattern2 = fromTrigger.CancelPattern2;
+        toTrigger.EndEarlyPattern = fromTrigger.EndEarlyPattern;
+        toTrigger.EndEarlyPattern2 = fromTrigger.EndEarlyPattern2;
         toTrigger.EndTextToSpeak = fromTrigger.EndTextToSpeak;
         toTrigger.EndUseRegex = fromTrigger.EndUseRegex;
         toTrigger.EndUseRegex2 = fromTrigger.EndUseRegex2;
@@ -770,7 +770,7 @@ namespace EQLogParser
                     // only take 2 cancel patterns
                     if (enderNodes.Count > 0)
                     {
-                      trigger.CancelPattern = Helpers.GetText(enderNodes[0], "EarlyEndText");
+                      trigger.EndEarlyPattern = Helpers.GetText(enderNodes[0], "EarlyEndText");
                       if (bool.TryParse(Helpers.GetText(enderNodes[0], "EnableRegex"), out bool regex2))
                       {
                         trigger.EndUseRegex = regex2;
@@ -779,7 +779,7 @@ namespace EQLogParser
 
                     if (enderNodes.Count > 1)
                     {
-                      trigger.CancelPattern2 = Helpers.GetText(enderNodes[1], "EarlyEndText");
+                      trigger.EndEarlyPattern2 = Helpers.GetText(enderNodes[1], "EarlyEndText");
                       if (bool.TryParse(Helpers.GetText(enderNodes[1], "EnableRegex"), out bool regex2))
                       {
                         trigger.EndUseRegex2 = regex2;
