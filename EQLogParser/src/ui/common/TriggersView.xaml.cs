@@ -9,6 +9,7 @@ using System.Linq;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -143,10 +144,9 @@ namespace EQLogParser
       SaveNodeExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
     }
 
-    private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView.Nodes, treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
+    private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView?.Nodes, treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
     private void ImportClick(object sender, RoutedEventArgs e) => TriggerUtil.Import(treeView?.SelectedItem as TriggerTreeViewNode);
-    private void RenameClick(object sender, RoutedEventArgs e) => treeView.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
-
+    private void RenameClick(object sender, RoutedEventArgs e) => treeView?.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
     private void EventsSelectTrigger(object sender, Trigger e) => SelectFile(e);
 
     private void EventsLogLoadingComplete(object sender, bool e)
@@ -220,19 +220,15 @@ namespace EQLogParser
       if (file != null)
       {
         bool selectFile = false;
-        bool isTrigger = false;
+        bool isTrigger = file is Trigger;
+
         if (treeView.SelectedItem == null)
         {
           selectFile = true;
         }
         else if (treeView.SelectedItem is TriggerTreeViewNode node && node.SerializedData != null)
         {
-          if (node.SerializedData.TriggerData == null || node.SerializedData.TriggerData != file)
-          {
-            isTrigger = true;
-            selectFile = true;
-          }
-          else if (node.SerializedData.OverlayData == null || node.SerializedData.OverlayData != file)
+          if (node.SerializedData.TriggerData != file && node.SerializedData.OverlayData != file)
           {
             selectFile = true;
           }
@@ -241,10 +237,15 @@ namespace EQLogParser
         if (selectFile)
         {
           var found = FindAndExpandNode((isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file);
-          treeView.SelectedItems.Clear();
-          treeView.SelectedItem = found;
+
           if (found != null)
           {
+            if (treeView.SelectedItems != null)
+            {
+              treeView.SelectedItems.Clear();
+            }
+
+            treeView.SelectedItem = found;
             SelectionChanged(found);
           }
         }
@@ -408,6 +409,7 @@ namespace EQLogParser
         node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
         node.SerializedData.Nodes.Add(newNode);
+        node.ChildNodes.Add(new TriggerTreeViewNode { Content = newNode.Name, IsChecked = true, IsOverlay = true, SerializedData = newNode });
         TriggerOverlayManager.Instance.UpdateOverlays();
         RefreshOverlayNode();
         SelectFile(newNode.OverlayData);
@@ -422,6 +424,7 @@ namespace EQLogParser
         node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
         node.SerializedData.Nodes.Add(newNode);
+        node.ChildNodes.Add(new TriggerTreeViewNode { Content = newNode.Name, IsChecked = true, IsTrigger = true, SerializedData = newNode });
         TriggerManager.Instance.UpdateTriggers();
         RefreshTriggerNode();
         SelectFile(newNode.TriggerData);
@@ -462,8 +465,6 @@ namespace EQLogParser
 
         thePropertyGrid.SelectedObject = null;
         thePropertyGrid.IsEnabled = false;
-        thePropertyGrid.DescriptionPanelVisibility = Visibility.Collapsed;
-        buttonPanel.Visibility = Visibility.Collapsed;
 
         if (updateTriggers)
         {
@@ -532,7 +533,7 @@ namespace EQLogParser
             TriggerManager.Instance.UpdateTriggers(false);
             TriggerOverlayManager.Instance.UpdateOverlays();
           }
-        }, System.Windows.Threading.DispatcherPriority.Background);
+        }, System.Windows.Threading.DispatcherPriority.Normal);
       }
     }
 
@@ -726,7 +727,6 @@ namespace EQLogParser
       thePropertyGrid.SelectedObject = model;
       thePropertyGrid.IsEnabled = (thePropertyGrid.SelectedObject != null);
       thePropertyGrid.DescriptionPanelVisibility = (isTrigger || isOverlay) ? Visibility.Visible : Visibility.Collapsed;
-      buttonPanel.Visibility = (isTrigger || isOverlay) ? Visibility.Visible : Visibility.Collapsed;
       showButton.Visibility = isOverlay ? Visibility.Visible : Visibility.Collapsed;
 
       if (isTrigger)
@@ -844,6 +844,11 @@ namespace EQLogParser
           isValid = TestRegexProperty(trigger, trigger.CancelPattern, errorsProp);
         }
 
+        if (isValid && trigger.EndUseRegex2)
+        {
+          isValid = TestRegexProperty(trigger, trigger.CancelPattern2, errorsProp);
+        }
+
         if (isValid && trigger.Errors != "None")
         {
           trigger.Errors = "None";
@@ -870,12 +875,12 @@ namespace EQLogParser
 
         if (args.Property.Name == overlayBrushItem.PropertyName)
         {
-          textChange = !textOverlay.OverlayBrush.ToString().Equals(textOverlay.Original.OverlayColor);
+          textChange = !(textOverlay.OverlayBrush.Color == (Color)ColorConverter.ConvertFromString(textOverlay.Original.OverlayColor));
           Application.Current.Resources["OverlayBrushColor-" + textOverlay.Id] = textOverlay.OverlayBrush;
         }
         else if (args.Property.Name == fontBrushItem.PropertyName)
         {
-          textChange = !textOverlay.FontBrush.ToString().Equals(textOverlay.Original.FontColor);
+          textChange = !(textOverlay.FontBrush.Color == (Color)ColorConverter.ConvertFromString(textOverlay.Original.FontColor));
           Application.Current.Resources["TextOverlayFontColor-" + textOverlay.Id] = textOverlay.FontBrush;
         }
         else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
@@ -897,22 +902,22 @@ namespace EQLogParser
 
         if (args.Property.Name == overlayBrushItem.PropertyName)
         {
-          timerChange = !timerOverlay.OverlayBrush.ToString().Equals(timerOverlay.Original.OverlayColor);
+          timerChange = !(timerOverlay.OverlayBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.OverlayColor));
           Application.Current.Resources["OverlayBrushColor-" + timerOverlay.Id] = timerOverlay.OverlayBrush;
         }
         else if (args.Property.Name == primaryBrushItem.PropertyName)
         {
-          timerChange = !timerOverlay.PrimaryBrush.ToString().Equals(timerOverlay.Original.PrimaryColor);
+          timerChange = !(timerOverlay.PrimaryBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.PrimaryColor));
           Application.Current.Resources["TimerBarProgressColor-" + timerOverlay.Id] = timerOverlay.PrimaryBrush;
         }
         else if (args.Property.Name == secondaryBrushItem.PropertyName)
         {
-          timerChange = !timerOverlay.SecondaryBrush.ToString().Equals(timerOverlay.Original.SecondaryColor);
+          timerChange = !(timerOverlay.SecondaryBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.SecondaryColor));
           Application.Current.Resources["TimerBarTrackColor-" + timerOverlay.Id] = timerOverlay.SecondaryBrush;
         }
         else if (args.Property.Name == fontBrushItem.PropertyName)
         {
-          timerChange = !timerOverlay.FontBrush.ToString().Equals(timerOverlay.Original.FontColor);
+          timerChange = !(timerOverlay.FontBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.FontColor));
           Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Id] = timerOverlay.FontBrush;
         }
         else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
@@ -1019,6 +1024,25 @@ namespace EQLogParser
       }
 
       return null;
+    }
+
+    private void TreeViewPreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+      if (e.OriginalSource is FrameworkElement element && element.DataContext is TriggerTreeViewNode node)
+      {
+        if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftCtrl) ||
+          System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightCtrl))
+        {
+          return;
+        }
+
+        if (treeView.SelectedItems != null)
+        {
+          treeView.SelectedItems.Clear();
+        }
+
+        treeView.SelectedItem = node;
+      }
     }
 
     #region IDisposable Support

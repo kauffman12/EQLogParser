@@ -43,8 +43,10 @@ namespace EQLogParser
     public long DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
     public string CancelPattern { get; set; }
+    public string CancelPattern2 { get; set; }
     public string EndTextToSpeak { get; set; }
     public bool EndUseRegex { get; set; }
+    public bool EndUseRegex2 { get; set; }
     public string Errors { get; set; } = "None";
     public double LastTriggered { get; set; }
     public long LongestEvalTime { get; set; } = -1;

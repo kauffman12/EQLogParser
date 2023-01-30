@@ -68,6 +68,7 @@
            Margin="0"
            NodeChecked="NodeChecked"
            NodePopulationMode="OnDemand"
+           PreviewMouseRightButtonDown="TreeViewPreviewMouseRightButtonDown"
            Padding="0"
            SelectionMode="Extended"
            SelectionChanged="SelectionChanged"
@@ -100,10 +101,10 @@
       <GridSplitter Grid.Column="1" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
       <Grid Grid.Column="2">
         <Grid.RowDefinitions>
-          <RowDefinition Height="300*"></RowDefinition>
+          <RowDefinition Height="30"></RowDefinition>
+          <RowDefinition Height="100*"></RowDefinition>
         </Grid.RowDefinitions>
-        <StackPanel Orientation="Vertical" Grid.Row="0">
-          <syncfusion:PropertyGrid
+        <syncfusion:PropertyGrid
             x:Name="thePropertyGrid"
             BorderBrush="{DynamicResource ContentBackgroundAlt2}"
             BorderThickness="1"
@@ -114,6 +115,7 @@
             IsEnabled="False"
             PropertyExpandMode="NestedMode"
             Margin="0"
+            Grid.Row="1"
             SortDirection="{x:Null}"
             EnableToolTip="False"
             AutoGenerateItems="False"
@@ -135,7 +137,9 @@
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningSeconds" DisplayName="Warning Time" Visibility="Collapsed" Description="Seconds before Timer ending to warn the user with the Warning Text."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningTextToSpeak" DisplayName="Warning Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken at the Warning Time. {c} and {s}, as defined by the Pattern, may also be included."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="CancelPattern" DisplayName="Cancel Pattern" Visibility="Collapsed" Description="If this Text Pattern is matched it will cause the Timer to end even if there is time remaining."/>
-              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndUseRegex" DisplayName="Use Regex" Visibility="Collapsed" Description="True if Regex is to be used for the specified Cancel Pattern."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndUseRegex" DisplayName="Cancel Pattern Use Regex" Visibility="Collapsed" Description="True if Regex is to be used for the specified Cancel Pattern."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="CancelPattern2" DisplayName="Cancel Pattern 2" Visibility="Collapsed" Description="If this Text Pattern is matched it will cause the Timer to end even if there is time remaining."/>
+              <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndUseRegex2" DisplayName="Cancel Pattern 2 Use Regex" Visibility="Collapsed" Description="True if Regex is to be used for the specified Cancel Pattern."/>
               <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="TriggerAgainOption" DisplayName="If Triggered Again" Visibility="Collapsed" Description="What to do if the Trigger is matched a second time but the original Timer has not completed."/>
               <syncfusion:PropertyGridItem CategoryName="Assigned Overlays" PropertyName="SelectedTextOverlay" DisplayName="Text Overlay" Visibility="Collapsed" Description="Overlay used to display any spoken Text associated with this Trigger."/>
               <syncfusion:PropertyGridItem x:Name="assignedOverlaysItem" CategoryName="Assigned Overlays" PropertyName="SelectedTimerOverlay" DisplayName="Timer Overlay" Visibility="Collapsed" Description="Overlay used to display Timer progress."/>
@@ -154,12 +158,11 @@
               <syncfusion:PropertyGridItem x:Name="fadeDelayItem" CategoryName="Text Overlay" PropertyName="FadeDelay" DisplayName="Fade Delay (s)" Visibility="Collapsed" Description="Seconds before Text fades from screen."/>
             </syncfusion:PropertyGrid.Items>
           </syncfusion:PropertyGrid>
-          <StackPanel x:Name="buttonPanel" Orientation="Horizontal" Visibility="Collapsed">
-            <Button x:Name="showButton" Visibility="Collapsed" Margin="8,8,0,0" VerticalAlignment="Top" IsEnabled="True" Width="106" Height="24" HorizontalAlignment="Left" Click="ShowClick">Position Overlay</Button>
-            <Button x:Name="saveButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
-            <Button x:Name="cancelButton" Margin="4,8,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+          <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <Button x:Name="showButton" Visibility="Collapsed" Margin="8,2,0,0" VerticalAlignment="Top" IsEnabled="True" Width="106" Height="24" HorizontalAlignment="Left" Click="ShowClick">Position Overlay</Button>
+            <Button x:Name="saveButton" Margin="4,2,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
+            <Button x:Name="cancelButton" Margin="4,2,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           </StackPanel>
-        </StackPanel>
       </Grid>
     </Grid>
   </Grid>
