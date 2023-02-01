@@ -1,4 +1,5 @@
 ﻿using Microsoft.Win32;
+using Syncfusion.UI.Xaml.TreeView;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -270,6 +271,25 @@ namespace EQLogParser
           needsSort.ForEach(parent => parent.Nodes = parent.Nodes.OrderBy(node => node.Name).ToList());
         }
       }
+    }
+
+    internal static TriggerTreeViewNode FindAndExpandNode(SfTreeView treeView, TriggerTreeViewNode node, object file)
+    {
+      if (node.SerializedData?.TriggerData == file || node.SerializedData?.OverlayData == file)
+      {
+        return node;
+      }
+
+      foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
+      {
+        if (FindAndExpandNode(treeView, child, file) is TriggerTreeViewNode found && found != null)
+        {
+          treeView.ExpandNode(node);
+          return found;
+        }
+      }
+
+      return null;
     }
 
     internal static void Import(TriggerTreeViewNode node)
