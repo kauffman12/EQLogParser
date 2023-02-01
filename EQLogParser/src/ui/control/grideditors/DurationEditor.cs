@@ -8,9 +8,9 @@ using System.Windows.Data;
 
 namespace EQLogParser
 {
-  internal class ColorEditor : ITypeEditor
+  internal class DurationEditor : ITypeEditor
   {
-    private readonly List<ColorPicker> TheColorPickers = new List<ColorPicker>();
+    private readonly List<TimeSpanEdit> TheTimeSpans = new List<TimeSpanEdit>();
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -22,7 +22,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheColorPickers.Last(), ColorPicker.BrushProperty, binding);
+      BindingOperations.SetBinding(TheTimeSpans.Last(), TimeSpanEdit.ValueProperty, binding);
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();
@@ -30,20 +30,25 @@ namespace EQLogParser
 
     private object Create()
     {
-      var colorPicker = new ColorPicker { EnableSolidToGradientSwitch = false };
-      TheColorPickers.Add(colorPicker);
-      return colorPicker;
+      var timeSpan = new TimeSpanEdit
+      {
+        MinValue = new System.TimeSpan(0, 0, 0),
+        Format = "mm:ss"
+      };
+
+      TheTimeSpans.Add(timeSpan);
+      return timeSpan;
     }
 
     public void Detach(PropertyViewItem property)
     {
-      TheColorPickers.ForEach(colorPicker =>
+      TheTimeSpans.ForEach(timeSpan =>
       {
-        BindingOperations.ClearAllBindings(colorPicker);
-        colorPicker?.Dispose();
+        BindingOperations.ClearAllBindings(timeSpan);
+        timeSpan?.Dispose();
       });
 
-      TheColorPickers.Clear();
+      TheTimeSpans.Clear();
     }
   }
 }

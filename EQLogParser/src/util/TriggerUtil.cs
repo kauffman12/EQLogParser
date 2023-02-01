@@ -78,6 +78,7 @@ namespace EQLogParser
         toTrigger.EndUseRegex2 = fromTrigger.EndUseRegex2;
         toTrigger.Errors = fromTrigger.Errors;
         toTrigger.LongestEvalTime = fromTrigger.LongestEvalTime;
+        toTrigger.ResetDurationSeconds = fromTrigger.ResetDurationSeconds;
         toTrigger.Pattern = fromTrigger.Pattern;
         toTrigger.Priority = fromTrigger.Priority;
         toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays;
@@ -91,12 +92,16 @@ namespace EQLogParser
         {
           toModel.SelectedTextOverlays = TriggerOverlayManager.Instance.GetTextOverlayItems(toModel.SelectedOverlays);
           toModel.SelectedTimerOverlays = TriggerOverlayManager.Instance.GetTimerOverlayItems(toModel.SelectedOverlays);
+          toModel.DurationTimeSpan = new TimeSpan(0, 0, (int)toModel.DurationSeconds);
+          toModel.ResetDurationTimeSpan = new TimeSpan(0, 0, (int)toModel.ResetDurationSeconds);
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
           toTrigger.SelectedOverlays = selectedOverlays;
+          toTrigger.DurationSeconds = fromModel.DurationTimeSpan.TotalSeconds;
+          toTrigger.ResetDurationSeconds = fromModel.ResetDurationTimeSpan.TotalSeconds;
         }
       }
       else if (to is Overlay toOverlay && from is Overlay fromOverlay)

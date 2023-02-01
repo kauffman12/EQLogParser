@@ -1,4 +1,5 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace EQLogParser
 {
   internal class CheckComboBoxEditor : ITypeEditor
   {
-    private ComboBox TheComboBox;
+    private readonly List<ComboBox> TheComboBoxes = new List<ComboBox>();
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -23,23 +24,24 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheComboBox, ComboBox.ItemsSourceProperty, binding);
+      BindingOperations.SetBinding(TheComboBoxes.Last(), ComboBox.ItemsSourceProperty, binding);
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();
-    public object Create(PropertyDescriptor descriotor) => Create();
+    public object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
-      TheComboBox = new ComboBox
+      var comboBox = new ComboBox
       {
         ItemTemplateSelector = new ComboBoxItemTemplateSelector()
       };
 
-      TheComboBox.DropDownClosed += TheComboBoxDropDownClosed;
-      TheComboBox.DataContextChanged += TheComboBoxDataContextChanged;
+      comboBox.DropDownClosed += TheComboBoxDropDownClosed;
+      comboBox.DataContextChanged += TheComboBoxDataContextChanged;
 
-      return TheComboBox;
+      TheComboBoxes.Add(comboBox);
+      return comboBox;
     }
 
     private void TheComboBoxDataContextChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e) => UpdateTitle(sender);
@@ -85,14 +87,14 @@ namespace EQLogParser
 
     public void Detach(PropertyViewItem property)
     {
-      if (TheComboBox != null)
+      TheComboBoxes.ForEach(comboBox =>
       {
-        TheComboBox.DropDownClosed -= TheComboBoxDropDownClosed;
-        TheComboBox.DataContextChanged -= TheComboBoxDataContextChanged;
-        BindingOperations.ClearAllBindings(TheComboBox);
-      }
+        comboBox.DropDownClosed -= TheComboBoxDropDownClosed;
+        comboBox.DataContextChanged -= TheComboBoxDataContextChanged;
+        BindingOperations.ClearAllBindings(comboBox);
+      });
 
-      TheComboBox = null;
+      TheComboBoxes.Clear();
     }
   }
 }

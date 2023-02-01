@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography.Xml;
 using System.Windows.Media;
 
 namespace EQLogParser
@@ -42,7 +41,7 @@ namespace EQLogParser
   {
     public string AltTimerName { get; set; }
     public string Comments { get; set; }
-    public long DurationSeconds { get; set; }
+    public double DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
     public string EndEarlyPattern { get; set; }
     public string EndEarlyPattern2 { get; set; }
@@ -59,6 +58,7 @@ namespace EQLogParser
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
     public List<string> SelectedOverlays { get; set; } = new List<string>();
+    public double ResetDurationSeconds { get; set; }
     public long WarningSeconds { get; set; }
     public string WarningTextToSpeak { get; set; }
   }
@@ -84,6 +84,8 @@ namespace EQLogParser
   {
     public ObservableCollection<ComboBoxItemDetails> SelectedTextOverlays { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTimerOverlays { get; set; }
+    public TimeSpan DurationTimeSpan { get; set; }
+    public TimeSpan ResetDurationTimeSpan { get; set; }
     public Trigger Original { get; set; }
   }
 

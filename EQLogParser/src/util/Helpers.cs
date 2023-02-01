@@ -1,6 +1,7 @@
 ﻿using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -33,6 +34,8 @@ namespace EQLogParser
         blockList.Add(newSegment);
       }
     }
+
+    internal static void AddToCollection(ObservableCollection<string> props, params string[] values) => values.ToList().ForEach(value => props.Add(value));
 
     internal static void CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
     {

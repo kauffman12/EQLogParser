@@ -1,6 +1,7 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,7 +11,7 @@ namespace EQLogParser
 {
   internal class TriggerListsEditor : ITypeEditor
   {
-    private ComboBox ComboBox;
+    private readonly List<ComboBox> TheComboBoxes = new List<ComboBox>();
     
     private static Dictionary<string, List<string>> Options = new Dictionary<string, List<string>>()
     {
@@ -38,45 +39,38 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      ComboBox.IsEnabled = info.CanWrite;
-      BindingOperations.SetBinding(ComboBox, Props[info.Name], binding);
+      TheComboBoxes.Last().IsEnabled = info.CanWrite;
+      BindingOperations.SetBinding(TheComboBoxes.Last(), Props[info.Name], binding);
     }
 
     // Create a custom editor for a normal property
     public object Create(PropertyInfo info)
     {
-      ComboBox = new ComboBox();
-
-      foreach (var items in Options[info.Name])
-      {
-        ComboBox.Items.Add(items);
-      }
-
-      ComboBox.SelectedIndex = 0;
-      return ComboBox;
+      var comboBox = new ComboBox();
+      Options[info.Name].ForEach(item => comboBox.Items.Add(item));
+      comboBox.SelectedIndex = 0;
+      TheComboBoxes.Add(comboBox);
+      return comboBox;
     }
 
     // Create a custom editor for a dynamic property
     public object Create(PropertyDescriptor desc)
     {
-      ComboBox = new ComboBox();
-      foreach (var items in Options[desc.Name])
-      {
-        ComboBox.Items.Add(items);
-      }
-
-      ComboBox.SelectedIndex = 0;
-      return ComboBox;
+      var comboBox = new ComboBox();
+      Options[desc.Name].ForEach(item => comboBox.Items.Add(item));
+      comboBox.SelectedIndex = 0;
+      TheComboBoxes.Add(comboBox);
+      return comboBox;
     }
 
     public void Detach(PropertyViewItem property)
     {
-      if (ComboBox != null)
+      TheComboBoxes.ForEach(comboBox =>
       {
-        BindingOperations.ClearAllBindings(ComboBox);
-      }
+        BindingOperations.ClearAllBindings(comboBox);
+      });
 
-      ComboBox = null;
+      TheComboBoxes.Clear();
     }
   }
 }
