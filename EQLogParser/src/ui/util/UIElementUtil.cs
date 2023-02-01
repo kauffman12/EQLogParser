@@ -22,16 +22,28 @@ namespace EQLogParser
 
     internal static void SetComboBoxTitle(ComboBox columns, int count, string value, bool hasSelectAll = false)
     {
-      if (!(columns.SelectedItem is ComboBoxItemDetails selected))
+      if (columns.Items.Count == 0)
       {
-        selected = hasSelectAll ? columns.Items[2] as ComboBoxItemDetails : columns.Items[0] as ComboBoxItemDetails;
+        columns.SelectedIndex = -1;
       }
+      else
+      {
+        if (!(columns.SelectedItem is ComboBoxItemDetails selected))
+        {
+          selected = hasSelectAll ? columns.Items[2] as ComboBoxItemDetails : columns.Items[0] as ComboBoxItemDetails;
+        }
 
-      var total = hasSelectAll ? columns.Items.Count - 2 : columns.Items.Count;
-      string countString = total == count ? "All" : count.ToString();
-      selected.SelectedText = countString + " " + value + ((total == count) ? "" : " Selected");
-      columns.SelectedIndex = -1;
-      columns.SelectedItem = selected;
+        var total = hasSelectAll ? columns.Items.Count - 2 : columns.Items.Count;
+        string countString = total == count ? "All" : count.ToString();
+        var text = countString + " " + value + ((total == count) ? "" : " Selected");
+        if (text[0] == '0')
+        {
+          text = "No" + text.Substring(1);
+        }
+        selected.SelectedText = text;
+        columns.SelectedIndex = -1;
+        columns.SelectedItem = selected;
+      }
     }
 
     internal static void SetEnabled(UIElementCollection collection, bool isEnabled)

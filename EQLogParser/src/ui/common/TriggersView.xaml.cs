@@ -99,13 +99,17 @@ namespace EQLogParser
       colorEditor.Properties.Add("SecondaryBrush");
       thePropertyGrid.CustomEditorCollection.Add(colorEditor);
 
+      var overlayEditor = new CustomEditor();
+      overlayEditor.Editor = new CheckComboBoxEditor();
+      overlayEditor.Properties.Add("SelectedTextOverlays");
+      overlayEditor.Properties.Add("SelectedTimerOverlays");
+      thePropertyGrid.CustomEditorCollection.Add(overlayEditor);
+
       var listEditor = new CustomEditor();
       listEditor.Editor = new TriggerListsEditor();
       listEditor.Properties.Add("TriggerAgainOption");
       listEditor.Properties.Add("FontSize");
       listEditor.Properties.Add("SortBy");
-      listEditor.Properties.Add("SelectedTextOverlay");
-      listEditor.Properties.Add("SelectedTimerOverlay");
       thePropertyGrid.CustomEditorCollection.Add(listEditor);
 
       var timeEditor = new CustomEditor();
@@ -451,9 +455,11 @@ namespace EQLogParser
             if (parent == treeView.Nodes[1])
             {
               updateOverlays = true;
+              updateTriggers = true;
               if (node.SerializedData?.OverlayData != null)
               {
                 TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(node.SerializedData.OverlayData.Id);
+                RemoveOverlayFromTriggers(treeView.Nodes[0] as TriggerTreeViewNode, node.SerializedData.OverlayData.Id);
               }
             }
             else
@@ -476,6 +482,24 @@ namespace EQLogParser
         {
           TriggerOverlayManager.Instance.UpdateOverlays();
           RefreshOverlayNode();
+        }
+      }
+    }
+
+    private void RemoveOverlayFromTriggers(TriggerTreeViewNode node, string id)
+    {
+      if (node.IsTrigger)
+      {
+        if (node.SerializedData != null && node.SerializedData.TriggerData != null)
+        {
+          node.SerializedData.TriggerData.SelectedOverlays.Remove(id);
+        }
+      }
+      else if (!node.IsOverlay && node.ChildNodes != null)
+      {
+        foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
+        {
+          RemoveOverlayFromTriggers(child, id);
         }
       }
     }
@@ -592,11 +616,6 @@ namespace EQLogParser
           assignTextOverlaysMenuItem.Items.Add(menuItem);
         }
 
-        var noTextOverlayMenuItem = new MenuItem { Header = TriggerOverlayManager.NO_OVERLAY };
-        noTextOverlayMenuItem.Click += AssignTextOverlayClick;
-        noTextOverlayMenuItem.Tag = TriggerOverlayManager.NO_OVERLAY;
-        assignTextOverlaysMenuItem.Items.Add(noTextOverlayMenuItem);
-
         foreach (var previous in assignTimerOverlaysMenuItem.Items)
         {
           if (previous is MenuItem m)
@@ -613,11 +632,6 @@ namespace EQLogParser
           menuItem.Tag = overlay.Id;
           assignTimerOverlaysMenuItem.Items.Add(menuItem);
         }
-
-        var noTimerOverlayMenuItem = new MenuItem { Header = TriggerOverlayManager.NO_OVERLAY };
-        noTimerOverlayMenuItem.Click += AssignTimerOverlayClick;
-        noTimerOverlayMenuItem.Tag = TriggerOverlayManager.NO_OVERLAY;
-        assignTimerOverlaysMenuItem.Items.Add(noTimerOverlayMenuItem);
       }
     }
 
@@ -637,13 +651,9 @@ namespace EQLogParser
           {
             if (node.IsTrigger && node.SerializedData != null)
             {
-              if (isTextOverlay)
+              if (!node.SerializedData.TriggerData.SelectedOverlays.Contains(id))
               {
-                node.SerializedData.TriggerData.SelectedTextOverlay = id;
-              }
-              else
-              {
-                node.SerializedData.TriggerData.SelectedTimerOverlay = id;
+                node.SerializedData.TriggerData.SelectedOverlays.Add(id);
               }
             }
           });
@@ -655,7 +665,7 @@ namespace EQLogParser
           msgDialog.ShowDialog();
           if (msgDialog.IsYes1Clicked)
           {
-            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ForEach(node => AssignTimerOverlay(node.SerializedData, id, isTextOverlay));
+            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ForEach(node => AssignOverlay(node.SerializedData, id));
           }
         }
 
@@ -664,22 +674,18 @@ namespace EQLogParser
       }
     }
 
-    private void AssignTimerOverlay(TriggerNode node, string id, bool isTextOverlay)
+    private void AssignOverlay(TriggerNode node, string id)
     {
       if (node.TriggerData != null)
       {
-        if (isTextOverlay)
+        if (!node.TriggerData.SelectedOverlays.Contains(id))
         {
-          node.TriggerData.SelectedTextOverlay = id;
-        }
-        else
-        {
-          node.TriggerData.SelectedTimerOverlay = id;
+          node.TriggerData.SelectedOverlays.Add(id);
         }
       }
       else if (node.OverlayData == null)
       {
-        node.Nodes.ForEach(node => AssignTimerOverlay(node, id, isTextOverlay));
+        node.Nodes.ForEach(node => AssignOverlay(node, id));
       }
     }
 

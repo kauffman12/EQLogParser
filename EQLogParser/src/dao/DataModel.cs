@@ -3,8 +3,10 @@ using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.Xml;
 using System.Windows.Media;
 
 namespace EQLogParser
@@ -56,8 +58,7 @@ namespace EQLogParser
     public string TextToSpeak { get; set; }
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
-    public string SelectedTextOverlay { get; set; } = TriggerOverlayManager.NO_OVERLAY;
-    public string SelectedTimerOverlay { get; set; } = TriggerOverlayManager.NO_OVERLAY;
+    public List<string> SelectedOverlays { get; set; } = new List<string>();
     public long WarningSeconds { get; set; }
     public string WarningTextToSpeak { get; set; }
   }
@@ -81,6 +82,8 @@ namespace EQLogParser
 
   internal class TriggerPropertyModel : Trigger
   {
+    public ObservableCollection<ComboBoxItemDetails> SelectedTextOverlays { get; set; }
+    public ObservableCollection<ComboBoxItemDetails> SelectedTimerOverlays { get; set; }
     public Trigger Original { get; set; }
   }
 
@@ -89,7 +92,7 @@ namespace EQLogParser
     public bool? IsEnabled { get; set; } = false;
     public bool IsExpanded { get; set; } = false;
     public string Name { get; set; }
-    public List<TriggerNode> Nodes { get; set; }
+    public List<TriggerNode> Nodes { get; set; } = new List<TriggerNode>();
     public Trigger TriggerData { get; set; }
     public Overlay OverlayData { get; set; }
   }
@@ -130,7 +133,7 @@ namespace EQLogParser
     public DateTime DateTime { get; set; }
   }
 
-  internal class ComboBoxItemDetails
+  internal class ComboBoxItemDetails : NotificationObject
   {
     public string Text { get; set; }
     public string SelectedText { get; set; }
