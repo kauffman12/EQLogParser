@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
@@ -13,7 +14,6 @@ namespace EQLogParser
   {
     internal static TriggerOverlayManager Instance = new TriggerOverlayManager();
 
-    internal const string NO_OVERLAY = "No Overlay";
     private readonly string OVERLAY_FILE = "triggerOverlays.json";
     private readonly TriggerNode OverlayNodes;
     private readonly DispatcherTimer TextOverlayTimer;
@@ -49,6 +49,10 @@ namespace EQLogParser
       OverlayUpdateTimer.Tick += OverlayDataUpdated;
     }
 
+    internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
+    internal ObservableCollection<ComboBoxItemDetails> GetTextOverlayItems(List<string> overlayIds) => GetOverlayItems(overlayIds, true);
+    internal ObservableCollection<ComboBoxItemDetails> GetTimerOverlayItems(List<string> overlayIds) => GetOverlayItems(overlayIds, false);
+
     internal void Start()
     {
       TriggerManager.Instance.EventsNewTimer += EventsNewTimer;
@@ -73,11 +77,6 @@ namespace EQLogParser
       TimerWindows.Clear();
       SaveOverlays();
     }
-
-
-    internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
-    private void EventsNewTimer(object sender, dynamic e) => StartTimer(e, false);
-    private void EventsUpdateTimer(object sender, dynamic e) => StartTimer(e, true);
 
     internal void PreviewTextOverlay(string id)
     {
@@ -130,34 +129,6 @@ namespace EQLogParser
         window.Close();
         PreviewTimerWindows.TryRemove(id, out _);
       }
-    }
-
-    internal List<string> GetTextOverlayItems()
-    {
-      var list = new List<string> { NO_OVERLAY };
-      lock (OverlayNodes)
-      {
-        if (OverlayNodes.Nodes != null)
-        {
-          OverlayNodes.Nodes?.Where(node => node.OverlayData?.IsTextOverlay == true)
-            .ForEach(node => list.Add(node.OverlayData.Name + " (" + node.OverlayData.Id + ")"));
-        }
-      }
-      return list;
-    }
-
-    internal List<string> GetTimerOverlayItems()
-    {
-      var list = new List<string> { NO_OVERLAY };
-      lock (OverlayNodes)
-      {
-        if (OverlayNodes.Nodes != null)
-        {
-          OverlayNodes.Nodes?.Where(node => node.OverlayData?.IsTimerOverlay == true)
-            .ForEach(node => list.Add(node.OverlayData.Name + " (" + node.OverlayData.Id + ")"));
-        }
-      }
-      return list;
     }
 
     internal List<Overlay> GetTextOverlays()
@@ -239,6 +210,8 @@ namespace EQLogParser
       }
     }
 
+    private void EventsNewTimer(object sender, dynamic e) => StartTimer(e, false);
+    private void EventsUpdateTimer(object sender, dynamic e) => StartTimer(e, true);
     private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
     private void TimerTick(object sender, EventArgs e) => WindowTick(TimerWindows, TimerOverlayTimer);
 
@@ -285,94 +258,111 @@ namespace EQLogParser
 
     private void EventsAddText(object sender, dynamic e)
     {
+      var trigger = e.Trigger as Trigger;
       var beginTime = DateUtil.ToDouble(DateTime.Now);
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
-        if (!string.IsNullOrEmpty(e.Trigger.SelectedTextOverlay) && !NO_OVERLAY.Equals(e.Trigger.SelectedTextOverlay))
+        if (trigger.SelectedOverlays != null)
         {
-          // check if it's even enabled
-          if (GetTextOverlayById(e.Trigger.SelectedTextOverlay, out bool isEnabled) != null)
+          trigger.SelectedOverlays.ForEach(overlayId =>
           {
-            if (isEnabled)
+            // check if it's even enabled
+            if (GetTextOverlayById(overlayId, out bool isEnabled) != null)
             {
-              var needShow = false;
-              if (!TextWindows.TryGetValue(e.Trigger.SelectedTextOverlay, out Window window))
+              if (isEnabled)
               {
-                window = new TextOverlayWindow(e.Trigger.SelectedTextOverlay);
-                TextWindows[e.Trigger.SelectedTextOverlay] = window;
-                needShow = true;
-              }
+                var needShow = false;
+                if (!TextWindows.TryGetValue(overlayId, out Window window))
+                {
+                  window = new TextOverlayWindow(overlayId);
+                  TextWindows[overlayId] = window;
+                  needShow = true;
+                }
 
-              (window as TextOverlayWindow).AddTriggerText(e.Text, beginTime);
+                (window as TextOverlayWindow).AddTriggerText(e.Text, beginTime);
 
-              if (needShow)
-              {
-                window.Show();
-              }
+                if (needShow)
+                {
+                  window.Show();
+                }
 
-              if (!TextOverlayTimer.IsEnabled)
-              {
-                TextOverlayTimer.Start();
+                if (!TextOverlayTimer.IsEnabled)
+                {
+                  TextOverlayTimer.Start();
+                }
               }
             }
-          }
-          else
-          {
-            // overlay no longer exists?
-            e.Trigger.SelectedTextOverlay = NO_OVERLAY;
-          }
+          });
         }
       });
     }
 
+    private ObservableCollection<ComboBoxItemDetails> GetOverlayItems(List<string> overlayIds, bool isTextOverlay)
+    {
+      var list = new ObservableCollection<ComboBoxItemDetails>();
+      lock (OverlayNodes)
+      {
+        if (OverlayNodes.Nodes != null)
+        {
+          OverlayNodes.Nodes?.Where(node => node.OverlayData != null && node.OverlayData.IsTextOverlay == isTextOverlay)
+            .ForEach(node =>
+            {
+              var id = node.OverlayData.Id;
+              var name = node.OverlayData.Name + " (" + id + ")";
+              var isChecked = overlayIds == null ? false : overlayIds.Contains(id);
+              list.Add(new ComboBoxItemDetails { IsChecked = isChecked, Text = name, Value = id });
+            });
+        }
+      }
+      return list;
+    }
+
     private void StartTimer(dynamic e, bool update)
     {
-      var trigger = e.Trigger;
+      var trigger = e.Trigger as Trigger;
       var timerName = e.Name;
       var endTime = DateUtil.ToDouble(DateTime.Now) + trigger.DurationSeconds;
 
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
-        if (!string.IsNullOrEmpty(trigger.SelectedTimerOverlay) && !NO_OVERLAY.Equals(trigger.SelectedTimerOverlay))
+        if (trigger.SelectedOverlays != null)
         {
-          // check if it's even enabled
-          if (GetTimerOverlayById(trigger.SelectedTimerOverlay, out bool isEnabled) != null)
+          trigger.SelectedOverlays.ForEach(overlayId =>
           {
-            if (isEnabled)
+            // check if it's even enabled
+            if (GetTimerOverlayById(overlayId, out bool isEnabled) != null)
             {
-              var needShow = false;
-              if (!TimerWindows.TryGetValue(trigger.SelectedTimerOverlay, out Window window))
+              if (isEnabled)
               {
-                window = new TimerOverlayWindow(trigger.SelectedTimerOverlay);
-                TimerWindows[trigger.SelectedTimerOverlay] = window;
-                needShow = true;
-              }
+                var needShow = false;
+                if (!TimerWindows.TryGetValue(overlayId, out Window window))
+                {
+                  window = new TimerOverlayWindow(overlayId);
+                  TimerWindows[overlayId] = window;
+                  needShow = true;
+                }
 
-              if (needShow || !update)
-              {
-                (window as TimerOverlayWindow).CreateTimer(timerName, endTime);
-              }
-              else
-              {
-                (window as TimerOverlayWindow).ResetTimer(timerName, endTime);
-              }
+                if (needShow || !update)
+                {
+                  (window as TimerOverlayWindow).CreateTimer(timerName, endTime);
+                }
+                else
+                {
+                  (window as TimerOverlayWindow).ResetTimer(timerName, endTime);
+                }
 
-              if (needShow)
-              {
-                window.Show();
-              }
+                if (needShow)
+                {
+                  window.Show();
+                }
 
-              if (!TimerOverlayTimer.IsEnabled)
-              {
-                TimerOverlayTimer.Start();
+                if (!TimerOverlayTimer.IsEnabled)
+                {
+                  TimerOverlayTimer.Start();
+                }
               }
             }
-          }
-          else
-          {
-            // overlay no longer exists?
-            trigger.SelectedTimerOverlay = NO_OVERLAY;
-          }
+          });
         }
       });
     }

@@ -80,8 +80,7 @@ namespace EQLogParser
         toTrigger.LongestEvalTime = fromTrigger.LongestEvalTime;
         toTrigger.Pattern = fromTrigger.Pattern;
         toTrigger.Priority = fromTrigger.Priority;
-        toTrigger.SelectedTextOverlay = fromTrigger.SelectedTextOverlay;
-        toTrigger.SelectedTimerOverlay = fromTrigger.SelectedTimerOverlay;
+        toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays;
         toTrigger.TextToSpeak = fromTrigger.TextToSpeak;
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
         toTrigger.UseRegex = fromTrigger.UseRegex;
@@ -90,49 +89,14 @@ namespace EQLogParser
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
-          if (!TriggerOverlayManager.NO_OVERLAY.Equals(toTrigger.SelectedTextOverlay))
-          {
-            var overlay = TriggerOverlayManager.Instance.GetTextOverlayById(toTrigger.SelectedTextOverlay, out _);
-            if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
-            {
-              toModel.SelectedTextOverlay = overlay.Name + " (" + toTrigger.SelectedTextOverlay + ")";
-            }
-            else
-            {
-              toModel.SelectedTextOverlay = TriggerOverlayManager.NO_OVERLAY;
-            }
-          }
-          
-          if (!TriggerOverlayManager.NO_OVERLAY.Equals(toTrigger.SelectedTimerOverlay))
-          {
-            var overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(toTrigger.SelectedTimerOverlay, out _);
-            if (overlay != null && !string.IsNullOrEmpty(overlay.Name))
-            {
-              toModel.SelectedTimerOverlay = overlay.Name + " (" + toTrigger.SelectedTimerOverlay + ")";
-            }
-            else
-            {
-              toModel.SelectedTimerOverlay = TriggerOverlayManager.NO_OVERLAY;
-            }
-          }
+          toModel.SelectedTextOverlays = TriggerOverlayManager.Instance.GetTextOverlayItems(toModel.SelectedOverlays);
+          toModel.SelectedTimerOverlays = TriggerOverlayManager.Instance.GetTimerOverlayItems(toModel.SelectedOverlays);
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
-          if (!string.IsNullOrEmpty(fromTrigger.SelectedTextOverlay) && !TriggerOverlayManager.NO_OVERLAY.Equals(fromTrigger.SelectedTextOverlay))
-          {
-            if (Regex.Match(fromTrigger.SelectedTextOverlay, @".+\((.+)\)") is Match match && match.Success && match.Groups.Count > 1)
-            {
-              toTrigger.SelectedTextOverlay = match.Groups[1].Value;
-            }
-          }
-          
-          if (!string.IsNullOrEmpty(fromTrigger.SelectedTimerOverlay) && !TriggerOverlayManager.NO_OVERLAY.Equals(fromTrigger.SelectedTimerOverlay))
-          {
-            if (Regex.Match(fromTrigger.SelectedTimerOverlay, @".+\((.+)\)") is Match match && match.Success && match.Groups.Count > 1)
-            {
-              toTrigger.SelectedTimerOverlay = match.Groups[1].Value;
-            }
-          }
+          var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
+          selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
+          toTrigger.SelectedOverlays = selectedOverlays;
         }
       }
       else if (to is Overlay toOverlay && from is Overlay fromOverlay)

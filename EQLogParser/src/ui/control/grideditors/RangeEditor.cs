@@ -19,29 +19,13 @@ namespace EQLogParser
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
-      Binding binding;
-
-      if (info.CanWrite)
+      Binding binding = new Binding("Value")
       {
-        binding = new Binding("Value")
-        {
-          Mode = BindingMode.TwoWay,
-          Source = info,
-          ValidatesOnExceptions = true,
-          ValidatesOnDataErrors = true
-        };
-       
-      }
-      else
-      {
-        TheTextBox.IsEnabled = false;
-        binding = new Binding("Value")
-        {
-          Source = info,
-          ValidatesOnExceptions = true,
-          ValidatesOnDataErrors = true
-        };
-      }
+        Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
+        Source = info,
+        ValidatesOnExceptions = true,
+        ValidatesOnDataErrors = true
+      };
 
       BindingOperations.SetBinding(TheTextBox, IntegerTextBox.ValueProperty, binding);
     }
@@ -66,6 +50,7 @@ namespace EQLogParser
         BindingOperations.ClearAllBindings(TheTextBox);
       }
 
+      TheTextBox?.Dispose();
       TheTextBox = null;
     }
   }

@@ -24,37 +24,21 @@ namespace EQLogParser
     {
       { "TriggerAgainOption", ComboBox.SelectedIndexProperty },
       { "FontSize", ComboBox.SelectedValueProperty },
-      { "SortBy", ComboBox.SelectedIndexProperty },
-      { "SelectedTextOverlay", ComboBox.SelectedValueProperty },
-      { "SelectedTimerOverlay", ComboBox.SelectedValueProperty }
+      { "SortBy", ComboBox.SelectedIndexProperty }
     };
 
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
-      Binding binding;
-      if (info.CanWrite)
+      var binding = new Binding("Value")
       {
-        binding = new Binding("Value")
-        {
-          Mode = BindingMode.TwoWay,
-          Source = info,
-          ValidatesOnExceptions = true,
-          ValidatesOnDataErrors = true
-        };
-      }
-      else
-      {
-        ComboBox.IsEnabled = false;
-        binding = new Binding("Value")
-        {
-          Source = info,
-          ValidatesOnExceptions = true,
-          ValidatesOnDataErrors = true
-        };
-      }
+        Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
+        Source = info,
+        ValidatesOnExceptions = true,
+        ValidatesOnDataErrors = true
+      };
 
-
+      ComboBox.IsEnabled = info.CanWrite;
       BindingOperations.SetBinding(ComboBox, Props[info.Name], binding);
     }
 
@@ -63,20 +47,9 @@ namespace EQLogParser
     {
       ComboBox = new ComboBox();
 
-      if ("SelectedTextOverlay".Equals(info.Name))
+      foreach (var items in Options[info.Name])
       {
-        ComboBox.ItemsSource = TriggerOverlayManager.Instance.GetTextOverlayItems();
-      }
-      else if ("SelectedTimerOverlay".Equals(info.Name))
-      {
-        ComboBox.ItemsSource = TriggerOverlayManager.Instance.GetTimerOverlayItems();
-      }
-      else
-      {
-        foreach (var items in Options[info.Name])
-        {
-          ComboBox.Items.Add(items);
-        }
+        ComboBox.Items.Add(items);
       }
 
       ComboBox.SelectedIndex = 0;
