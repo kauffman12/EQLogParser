@@ -1,5 +1,7 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -8,37 +10,41 @@ namespace EQLogParser
 {
   internal class WrapTextEditor : TextBoxEditor
   {
-    private TextBox TextBox;
+    private readonly List<TextBox> TheTextBoxes = new List<TextBox>();
 
     public void SetForeground(string foreground)
     {
-      TextBox.SetResourceReference(TextBox.ForegroundProperty, foreground);
+      // this only works if there's one reference to this editor...
+      // TODO figure out better way
+      TheTextBoxes.Last().SetResourceReference(TextBox.ForegroundProperty, foreground);
     }
 
     public override object Create(PropertyInfo propertyInfo)
     {
-      TextBox = base.Create(propertyInfo) as TextBox;
-      TextBox.TextWrapping = System.Windows.TextWrapping.Wrap;
-      TextBox.Padding = new System.Windows.Thickness(2);
-      return TextBox;
+      var textBox = base.Create(propertyInfo) as TextBox;
+      textBox.TextWrapping = System.Windows.TextWrapping.Wrap;
+      textBox.Padding = new System.Windows.Thickness(2);
+      TheTextBoxes.Add(textBox);
+      return textBox;
     }
 
-    public override object Create(PropertyDescriptor descriotor)
+    public override object Create(PropertyDescriptor descriptor)
     {
-      TextBox = base.Create(descriotor) as TextBox;
-      TextBox.TextWrapping = System.Windows.TextWrapping.Wrap;
-      TextBox.Padding = new System.Windows.Thickness(2);
-      return TextBox;
+      var textBox = base.Create(descriptor) as TextBox;
+      textBox.TextWrapping = System.Windows.TextWrapping.Wrap;
+      textBox.Padding = new System.Windows.Thickness(2);
+      TheTextBoxes.Add(textBox);
+      return textBox;
     }
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TextBox != null)
+      TheTextBoxes.ForEach(textBox =>
       {
-        BindingOperations.ClearAllBindings(TextBox);
-      }
+        BindingOperations.ClearAllBindings(textBox);
+      });
 
-      TextBox = null;
+      TheTextBoxes.Clear();
     }
   }
 }

@@ -1,5 +1,4 @@
 ﻿using FontAwesome5;
-using Syncfusion.Data.Extensions;
 using Syncfusion.UI.Xaml.TreeView;
 using Syncfusion.Windows.PropertyGrid;
 using System;
@@ -71,32 +70,29 @@ namespace EQLogParser
 
       var priorityEditor = new CustomEditor();
       priorityEditor.Editor = new RangeEditor(1, 5);
-      priorityEditor.Properties.Add("Priority");
+      Helpers.AddToCollection(priorityEditor.Properties, "Priority");
       thePropertyGrid.CustomEditorCollection.Add(priorityEditor);
 
       var textWrapEditor = new CustomEditor();
       textWrapEditor.Editor = new WrapTextEditor();
-      textWrapEditor.Properties.Add("Comments");
-      textWrapEditor.Properties.Add("OverlayComments");
-      textWrapEditor.Properties.Add("Pattern");
-      textWrapEditor.Properties.Add("EndPattern");
-      textWrapEditor.Properties.Add("CancelPattern");
-      textWrapEditor.Properties.Add("EndTextToSpeak");
-      textWrapEditor.Properties.Add("TextToSpeak");
-      textWrapEditor.Properties.Add("WarningToSpeak");
+      Helpers.AddToCollection(textWrapEditor.Properties, "Comments", "OverlayComments", "Pattern", "EndPattern",
+        "CancelPattern", "EndTextToSpeak", "TextToSpeak", "WarningToSpeak");
       thePropertyGrid.CustomEditorCollection.Add(textWrapEditor);
 
+      // Need to only have one ErrorEditor since the background is updated
       var errorEditor = new CustomEditor();
       errorEditor.Editor = ErrorEditor = new WrapTextEditor();
-      errorEditor.Properties.Add("Errors");
+      Helpers.AddToCollection(errorEditor.Properties, "Errors");
       thePropertyGrid.CustomEditorCollection.Add(errorEditor);
+
+      var durationEditor = new CustomEditor();
+      durationEditor.Editor = new DurationEditor();
+      Helpers.AddToCollection(durationEditor.Properties, "DurationTimeSpan", "ResetDurationTimeSpan");
+      thePropertyGrid.CustomEditorCollection.Add(durationEditor);
 
       var colorEditor = new CustomEditor();
       colorEditor.Editor = new ColorEditor();
-      colorEditor.Properties.Add("OverlayBrush");
-      colorEditor.Properties.Add("FontBrush");
-      colorEditor.Properties.Add("PrimaryBrush");
-      colorEditor.Properties.Add("SecondaryBrush");
+      Helpers.AddToCollection(colorEditor.Properties, "OverlayBrush", "FontBrush", "PrimaryBrush", "SecondaryBrush");
       thePropertyGrid.CustomEditorCollection.Add(colorEditor);
 
       var overlayEditor = new CustomEditor();
@@ -107,18 +103,10 @@ namespace EQLogParser
 
       var listEditor = new CustomEditor();
       listEditor.Editor = new TriggerListsEditor();
-      listEditor.Properties.Add("TriggerAgainOption");
-      listEditor.Properties.Add("FontSize");
-      listEditor.Properties.Add("SortBy");
+      Helpers.AddToCollection(listEditor.Properties, "TriggerAgainOption", "FontSize", "SortBy");
       thePropertyGrid.CustomEditorCollection.Add(listEditor);
 
       var timeEditor = new CustomEditor();
-      timeEditor.Editor = new RangeEditor(0, 60);
-      timeEditor.Properties.Add("Seconds");
-      timeEditor.Properties.Add("Minutes");
-      thePropertyGrid.CustomEditorCollection.Add(timeEditor);
-
-      timeEditor = new CustomEditor();
       timeEditor.Editor = new RangeEditor(1, 60);
       timeEditor.Properties.Add("FadeDelay");
       thePropertyGrid.CustomEditorCollection.Add(timeEditor);
@@ -647,7 +635,7 @@ namespace EQLogParser
         var anyFolders = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && !node.IsTrigger && node != treeView.Nodes[1]);
         if (!anyFolders)
         {
-          treeView.SelectedItems.Cast<TriggerTreeViewNode>().ForEach(node =>
+          treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList().ForEach(node =>
           {
             if (node.IsTrigger && node.SerializedData != null)
             {
@@ -665,7 +653,7 @@ namespace EQLogParser
           msgDialog.ShowDialog();
           if (msgDialog.IsYes1Clicked)
           {
-            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ForEach(node => AssignOverlay(node.SerializedData, id));
+            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList().ForEach(node => AssignOverlay(node.SerializedData, id));
           }
         }
 
@@ -1051,6 +1039,7 @@ namespace EQLogParser
         TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
         treeView.DragDropController.Dispose();
         treeView.Dispose();
+        thePropertyGrid?.Dispose();
         TestSynth?.Dispose();
         disposedValue = true;
       }
