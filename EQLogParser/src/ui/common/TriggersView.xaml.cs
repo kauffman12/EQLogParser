@@ -124,6 +124,16 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     }
 
+    private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender);
+    private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender);
+    private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
+    private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
+    private void EventsSelectTrigger(object sender, Trigger e) => SelectFile(e);
+    private void EventsUpdateTriggerTree(object sender, bool e) => Dispatcher.InvokeAsync(() => RefreshTriggerNode());
+    private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView?.Nodes, treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
+    private void ImportClick(object sender, RoutedEventArgs e) => TriggerUtil.Import(treeView?.SelectedItem as TriggerTreeViewNode);
+    private void RenameClick(object sender, RoutedEventArgs e) => treeView?.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
+
     private void CollapseAllClick(object sender, RoutedEventArgs e)
     {
       treeView.CollapseAll();
@@ -136,10 +146,17 @@ namespace EQLogParser
       SaveNodeExpanded(treeView.Nodes.Cast<TriggerTreeViewNode>().ToList());
     }
 
-    private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView?.Nodes, treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
-    private void ImportClick(object sender, RoutedEventArgs e) => TriggerUtil.Import(treeView?.SelectedItem as TriggerTreeViewNode);
-    private void RenameClick(object sender, RoutedEventArgs e) => treeView?.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
-    private void EventsSelectTrigger(object sender, Trigger e) => SelectFile(e);
+    private void RefreshTriggerNode()
+    {
+      treeView.Nodes.Remove(treeView.Nodes[0]);
+      treeView.Nodes.Insert(0, TriggerManager.Instance.GetTriggerTreeView());
+    }
+
+    private void RefreshOverlayNode()
+    {
+      treeView.Nodes.Remove(treeView.Nodes[1]);
+      treeView.Nodes.Add(TriggerOverlayManager.Instance.GetOverlayTreeView());
+    }
 
     private void EventsLogLoadingComplete(object sender, bool e)
     {
@@ -151,20 +168,6 @@ namespace EQLogParser
       {
         SetPlayer("Activate Triggers", "EQMenuIconBrush", EFontAwesomeIcon.Solid_Play);
       }
-    }
-
-    private void EventsUpdateTriggerTree(object sender, bool e) => Dispatcher.InvokeAsync(() => RefreshTriggerNode());
-
-    private void RefreshTriggerNode()
-    {
-      treeView.Nodes.Remove(treeView.Nodes[0]);
-      treeView.Nodes.Insert(0, TriggerManager.Instance.GetTriggerTreeView());
-    }
-
-    private void RefreshOverlayNode()
-    {
-      treeView.Nodes.Remove(treeView.Nodes[1]);
-      treeView.Nodes.Add(TriggerOverlayManager.Instance.GetOverlayTreeView());
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
@@ -226,20 +229,12 @@ namespace EQLogParser
           }
         }
 
-        if (selectFile)
+        if (selectFile && 
+          TriggerUtil.FindAndExpandNode(treeView, (isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file) is TriggerTreeViewNode found)
         {
-          var found = FindAndExpandNode((isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file);
-
-          if (found != null)
-          {
-            if (treeView.SelectedItems != null)
-            {
-              treeView.SelectedItems.Clear();
-            }
-
-            treeView.SelectedItem = found;
-            SelectionChanged(found);
-          }
+          treeView.SelectedItems?.Clear();
+          treeView.SelectedItem = found;
+          SelectionChanged(found);
         }
       }
     }
@@ -376,9 +371,6 @@ namespace EQLogParser
         RefreshTriggerNode();
       }
     }
-
-    private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
-    private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
 
     private void CreateOverlay(bool isTimer)
     {
@@ -623,11 +615,7 @@ namespace EQLogParser
       }
     }
 
-    private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, true);
-
-    private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, false);
-
-    private void AssignOverlay(object sender, bool isTextOverlay)
+    private void AssignOverlay(object sender)
     {
       if (sender is MenuItem menuItem)
       {
@@ -814,21 +802,9 @@ namespace EQLogParser
         var errorsProp = PropertyGridUtil.FindProperty(list, errorsItem.PropertyName);
         var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
-        bool isValid = true;
-        if (trigger.UseRegex)
-        {
-          isValid = TestRegexProperty(trigger, trigger.Pattern, errorsProp);
-        }
-
-        if (isValid && trigger.EndUseRegex)
-        {
-          isValid = TestRegexProperty(trigger, trigger.EndEarlyPattern, errorsProp);
-        }
-
-        if (isValid && trigger.EndUseRegex2)
-        {
-          isValid = TestRegexProperty(trigger, trigger.EndEarlyPattern2, errorsProp);
-        }
+        bool isValid = trigger.UseRegex ? TestRegexProperty(trigger, trigger.Pattern, errorsProp) : true;
+        isValid = (isValid && trigger.EndUseRegex) ? TestRegexProperty(trigger, trigger.EndEarlyPattern, errorsProp) : isValid;
+        isValid = (isValid && trigger.EndUseRegex2) ? TestRegexProperty(trigger, trigger.EndEarlyPattern2, errorsProp) : isValid;
 
         if (isValid && trigger.Errors != "None")
         {
@@ -926,7 +902,6 @@ namespace EQLogParser
         errorsProp.Value = "Invalid Regex";
         ErrorEditor.SetForeground("EQWarnForegroundBrush");
       }
-
       return isValid;
     }
 
@@ -989,25 +964,6 @@ namespace EQLogParser
       }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
-    private TriggerTreeViewNode FindAndExpandNode(TriggerTreeViewNode node, object file)
-    {
-      if (node.SerializedData?.TriggerData == file || node.SerializedData?.OverlayData == file)
-      {
-        return node;
-      }
-
-      foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
-      {
-        if (FindAndExpandNode(child, file) is TriggerTreeViewNode found && found != null)
-        {
-          treeView.ExpandNode(node);
-          return found;
-        }
-      }
-
-      return null;
-    }
-
     private void TreeViewPreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
       if (e.OriginalSource is FrameworkElement element && element.DataContext is TriggerTreeViewNode node)
@@ -1018,11 +974,7 @@ namespace EQLogParser
           return;
         }
 
-        if (treeView.SelectedItems != null)
-        {
-          treeView.SelectedItems.Clear();
-        }
-
+        treeView.SelectedItems?.Clear();
         treeView.SelectedItem = node;
       }
     }
