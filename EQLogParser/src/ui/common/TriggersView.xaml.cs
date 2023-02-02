@@ -92,7 +92,7 @@ namespace EQLogParser
 
       var colorEditor = new CustomEditor();
       colorEditor.Editor = new ColorEditor();
-      Helpers.AddToCollection(colorEditor.Properties, "OverlayBrush", "FontBrush", "PrimaryBrush", "SecondaryBrush");
+      Helpers.AddToCollection(colorEditor.Properties, "OverlayBrush", "FontBrush", "PrimaryBrush", "SecondaryBrush", "BackgroundBrush");
       thePropertyGrid.CustomEditorCollection.Add(colorEditor);
 
       var overlayEditor = new CustomEditor();
@@ -103,7 +103,7 @@ namespace EQLogParser
 
       var listEditor = new CustomEditor();
       listEditor.Editor = new TriggerListsEditor();
-      Helpers.AddToCollection(listEditor.Properties, "TriggerAgainOption", "FontSize", "SortBy");
+      Helpers.AddToCollection(listEditor.Properties, "TriggerAgainOption", "FontSize", "SortBy", "TimerMode");
       thePropertyGrid.CustomEditorCollection.Add(listEditor);
 
       var timeEditor = new CustomEditor();
@@ -753,6 +753,10 @@ namespace EQLogParser
           CheckParent(node);
           CheckChildren(node, node.IsChecked);
         }
+        else if (node.IsOverlay && node.IsChecked == false)
+        {
+          TriggerOverlayManager.Instance.CloseOverlay(node.SerializedData.OverlayData?.Id);
+        }
 
         TriggerManager.Instance.UpdateTriggers();
         TriggerOverlayManager.Instance.UpdateOverlays();
@@ -870,7 +874,12 @@ namespace EQLogParser
         else if (args.Property.Name == secondaryBrushItem.PropertyName)
         {
           timerChange = !(timerOverlay.SecondaryBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.SecondaryColor));
-          Application.Current.Resources["TimerBarTrackColor-" + timerOverlay.Id] = timerOverlay.SecondaryBrush;
+          Application.Current.Resources["TimerBarResetColor-" + timerOverlay.Id] = timerOverlay.SecondaryBrush;
+        }
+        else if (args.Property.Name == backgroundBrushItem.PropertyName)
+        {
+          timerChange = !(timerOverlay.BackgroundBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.BackgroundColor));
+          Application.Current.Resources["TimerBarTrackColor-" + timerOverlay.Id] = timerOverlay.BackgroundBrush;
         }
         else if (args.Property.Name == fontBrushItem.PropertyName)
         {
@@ -909,11 +918,11 @@ namespace EQLogParser
     {
       if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel)
       {
-        TriggerOverlayManager.Instance.PreviewTimerOverlay(timerModel.Id);
+        TriggerOverlayManager.Instance.PreviewTimerOverlay(timerModel);
       }
       else if (thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel)
       {
-        TriggerOverlayManager.Instance.PreviewTextOverlay(textModel.Id);
+        TriggerOverlayManager.Instance.PreviewTextOverlay(textModel);
       }
     }
 
