@@ -17,25 +17,25 @@ namespace EQLogParser
   {
     private static SolidColorBrush BarelyVisible = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#01000000") };
     private static SolidColorBrush BorderColor = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
-    private Overlay Overlay;
+    private Overlay TheOverlay;
     private bool Preview = false;
     private double SavedHeight;
     private double SavedWidth;
     private double SavedTop = double.NaN;
     private double SavedLeft = double.NaN;
 
-    public TextOverlayWindow(string overlayId, bool preview = false)
+    internal TextOverlayWindow(Overlay overlay, bool preview = false)
     {
       InitializeComponent();
       Preview = preview;
-      this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + overlayId);
-      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + overlayId);
-      Overlay = TriggerOverlayManager.Instance.GetTextOverlayById(overlayId, out _);
+      TheOverlay = overlay;
+      this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
 
-      this.Height = Overlay.Height;
-      this.Width = Overlay.Width;
-      this.Top = Overlay.Top;
-      this.Left = Overlay.Left;
+      this.Height = TheOverlay.Height;
+      this.Width = TheOverlay.Width;
+      this.Top = TheOverlay.Top;
+      this.Left = TheOverlay.Left;
 
       if (preview)
       {
@@ -56,7 +56,7 @@ namespace EQLogParser
         TextAlignment = TextAlignment.Center,
         Padding = new Thickness(6,0,6,2),
         Margin = new Thickness(0),
-        Tag = beginTime + Overlay.FadeDelay,
+        Tag = beginTime + TheOverlay.FadeDelay,
         FontWeight = FontWeights.Bold,
         TextWrapping = TextWrapping.Wrap
       };
@@ -64,8 +64,8 @@ namespace EQLogParser
       var effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.4, BlurRadius = 2 };
       block.Effect= effect;
 
-      block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + Overlay.Id);
-      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + Overlay.Id);
+      block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + TheOverlay.Id);
+      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + TheOverlay.Id);
       content.Children.Add(block);
     }
 
@@ -99,7 +99,7 @@ namespace EQLogParser
       return content.Children.Count == 0;
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTextOverlay(Overlay.Id);
+    private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTextOverlay(TheOverlay.Id);
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
@@ -128,10 +128,10 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      Overlay.Height = SavedHeight = this.Height;
-      Overlay.Width = SavedWidth = this.Width;
-      Overlay.Top = SavedTop = this.Top;
-      Overlay.Left = SavedLeft = this.Left;
+      TheOverlay.Height = SavedHeight = this.Height;
+      TheOverlay.Width = SavedWidth = this.Width;
+      TheOverlay.Top = SavedTop = this.Top;
+      TheOverlay.Left = SavedLeft = this.Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;

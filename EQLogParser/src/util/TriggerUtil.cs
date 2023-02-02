@@ -111,9 +111,11 @@ namespace EQLogParser
         toOverlay.FontColor = fromOverlay.FontColor;
         toOverlay.PrimaryColor = fromOverlay.PrimaryColor;
         toOverlay.SecondaryColor = fromOverlay.SecondaryColor;
+        toOverlay.BackgroundColor = fromOverlay.BackgroundColor;
         toOverlay.OverlayColor = fromOverlay.OverlayColor;
         toOverlay.FontSize = fromOverlay.FontSize;
         toOverlay.SortBy = fromOverlay.SortBy;
+        toOverlay.TimerMode = fromOverlay.TimerMode;
         toOverlay.Id = fromOverlay.Id;
         toOverlay.UseStandardTime = fromOverlay.UseStandardTime;
         toOverlay.Name = fromOverlay.Name;
@@ -146,7 +148,13 @@ namespace EQLogParser
           if (fromOverlay.SecondaryColor is string secondary && !string.IsNullOrEmpty(secondary))
           {
             toModel.SecondaryBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(secondary) };
-            Application.Current.Resources["TimerBarTrackColor-" + toModel.Id] = toModel.SecondaryBrush;
+            Application.Current.Resources["TimerBarResetColor-" + toModel.Id] = toModel.SecondaryBrush;
+          }
+
+          if (fromOverlay.BackgroundColor is string background && !string.IsNullOrEmpty(background))
+          {
+            toModel.BackgroundBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(background) };
+            Application.Current.Resources["TimerBarTrackColor-" + toModel.Id] = toModel.BackgroundBrush;
           }
 
           if (fromOverlay.FontSize is string fontSize && !string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is string[] split && split.Length == 2
@@ -161,7 +169,8 @@ namespace EQLogParser
           toOverlay.OverlayColor = fromModel.OverlayBrush.Color.ToString();
           toOverlay.FontColor = fromModel.FontBrush.Color.ToString();
           toOverlay.PrimaryColor = fromModel.PrimaryBrush.Color.ToString();
-          toOverlay.SecondaryColor = fromModel.SecondaryBrush.ToString();
+          toOverlay.BackgroundColor = fromModel.BackgroundBrush.Color.ToString();
+          toOverlay.SecondaryColor = fromModel.SecondaryBrush.Color.ToString();
         }
         else if (toOverlay is TextOverlayPropertyModel toTextModel)
         {

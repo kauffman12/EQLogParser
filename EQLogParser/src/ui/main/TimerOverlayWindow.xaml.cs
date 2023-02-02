@@ -19,7 +19,7 @@ namespace EQLogParser
     private static SolidColorBrush BorderColor = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
     private Dictionary<string, TimerBar> TimerBarCache = new Dictionary<string, TimerBar>();
     private List<TimerBar> TimerBarCreateOrder = new List<TimerBar>();
-    private Overlay Overlay;
+    private Overlay TheOverlay;
     private bool Preview = false;
     private double SavedHeight;
     private double SavedWidth;
@@ -28,20 +28,20 @@ namespace EQLogParser
     private int CurrentOrder;
     private bool CurrentUseStandardTime;
 
-    public TimerOverlayWindow(string overlayId, bool preview = false)
+    internal TimerOverlayWindow(Overlay overlay, bool preview = false)
     {
       InitializeComponent();
       Preview = preview;
-      this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + overlayId);
-      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + overlayId);
-      Overlay = TriggerOverlayManager.Instance.GetTimerOverlayById(overlayId, out _);
-      CurrentOrder = Overlay.SortBy;
-      CurrentUseStandardTime = Overlay.UseStandardTime;
+      TheOverlay = overlay;
+      this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
+      CurrentOrder = TheOverlay.SortBy;
+      CurrentUseStandardTime = TheOverlay.UseStandardTime;
 
-      this.Height = Overlay.Height;
-      this.Width = Overlay.Width;
-      this.Top = Overlay.Top;
-      this.Left = Overlay.Left;
+      this.Height = TheOverlay.Height;
+      this.Width = TheOverlay.Width;
+      this.Top = TheOverlay.Top;
+      this.Left = TheOverlay.Left;
 
       if (preview)
       {
@@ -54,11 +54,11 @@ namespace EQLogParser
       }
     }
 
-    internal void CreateTimer(string name, double endTime, bool preview = false)
+    internal void CreateTimer(string name, double endTime, Trigger trigger, bool preview = false)
     {
       name = string.IsNullOrEmpty(name) ? "Unknown Timer" : name;
       var timerBar = new TimerBar();
-      timerBar.Init(Overlay.Id, name, endTime, preview);
+      timerBar.Init(TheOverlay.Id, name, endTime, trigger, preview);
       TimerBarCache[name] = timerBar;
       TimerBarCreateOrder.Add(timerBar);
 
@@ -79,7 +79,7 @@ namespace EQLogParser
       }
     }
 
-    internal void ResetTimer(string name, double endTime)
+    internal void ResetTimer(string name, double endTime, Trigger trigger)
     {
       name = string.IsNullOrEmpty(name) ? "Unknown Timer" : name;
       if (TimerBarCache.TryGetValue(name, out TimerBar timerBar))
@@ -98,15 +98,15 @@ namespace EQLogParser
       }
       else
       {
-        CreateTimer(name, endTime);
+        CreateTimer(name, endTime, trigger);
       }
     }
 
     internal bool Tick()
     {
-      if (CurrentOrder != Overlay.SortBy)
+      if (CurrentOrder != TheOverlay.SortBy)
       {
-        CurrentOrder = Overlay.SortBy;
+        CurrentOrder = TheOverlay.SortBy;
         content.Children.Clear();
         if (CurrentOrder == 0)
         {
@@ -118,9 +118,9 @@ namespace EQLogParser
         }
       }
 
-      if (CurrentUseStandardTime != Overlay.UseStandardTime)
+      if (CurrentUseStandardTime != TheOverlay.UseStandardTime)
       {
-        CurrentUseStandardTime = Overlay.UseStandardTime;
+        CurrentUseStandardTime = TheOverlay.UseStandardTime;
         if (CurrentUseStandardTime)
         {
           double currentTime = DateUtil.ToDouble(DateTime.Now);
@@ -142,7 +142,19 @@ namespace EQLogParser
         {
           if (bar.Tick())
           {
-            removeList.Add(bar);
+            if (TheOverlay.TimerMode == 0)
+            {
+              removeList.Add(bar);
+            }
+            else
+            {
+              if (!bar.IsCooldown())
+              {
+                bar.SetCooldown(true);
+              }
+
+              remaining = true;
+            }
           }
           else
           {
@@ -161,7 +173,7 @@ namespace EQLogParser
       return !remaining;
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(Overlay.Id);
+    private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(TheOverlay.Id);
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
@@ -216,10 +228,10 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      Overlay.Height = SavedHeight = this.Height;
-      Overlay.Width = SavedWidth = this.Width;
-      Overlay.Top = SavedTop = this.Top;
-      Overlay.Left = SavedLeft = this.Left;
+      TheOverlay.Height = SavedHeight = this.Height;
+      TheOverlay.Width = SavedWidth = this.Width;
+      TheOverlay.Top = SavedTop = this.Top;
+      TheOverlay.Left = SavedLeft = this.Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;

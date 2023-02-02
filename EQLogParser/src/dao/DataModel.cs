@@ -23,7 +23,8 @@ namespace EQLogParser
     public int SortBy { get; set; } = 0;
     public string FontColor { get; set; } = "#FFFFFF";
     public string PrimaryColor { get; set; } = "#FF1D397E";
-    public string SecondaryColor { get; set; } = "#5F000000";
+    public string BackgroundColor { get; set; } = "#5F000000";
+    public string SecondaryColor { get; set; } = "#FF8f1515";
     public string OverlayColor { get; set; } = "#00000000";
     public long FadeDelay { get; set; } = 10;
     public string Name { get; set; }
@@ -31,6 +32,7 @@ namespace EQLogParser
     public bool UseStandardTime { get; set; } = false;
     public bool IsTimerOverlay { get; set; }
     public bool IsTextOverlay { get; set; }
+    public int TimerMode { get; set; } = 0;
     public double Height { get; set; } = 400.0;
     public double Width { get; set; } = 300.0;
     public double Top { get; set; } = 200.0;
@@ -68,7 +70,9 @@ namespace EQLogParser
     public SolidColorBrush FontBrush { get; set; }
     public SolidColorBrush PrimaryBrush { get; set; }
     public SolidColorBrush SecondaryBrush { get; set; }
+    public SolidColorBrush BackgroundBrush { get; set; }
     public SolidColorBrush OverlayBrush { get; set; }
+    // referenced dynamically
     public string TimerBarPreview { get; set; }
     public Overlay Original { get; set; }
   }
