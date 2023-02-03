@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -25,7 +26,7 @@
                            IsReadOnly="True"
                            PreviewMouseLeftButtonDown="PreviewMouseLeftButtonDown"
                            RowHeaderWidth="30"
-                           SelectionMode="Single"
+                           SelectionMode="Extended"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.Resources>
         <local:DateTimeConverter x:Key="DateTimeConverter" />
@@ -51,6 +52,23 @@
         <syncfusion:GridTextColumn MappingName="Eval" HeaderText="Eval Time (μs)" Width="100" />
         <syncfusion:GridTextColumn MappingName="Line" HeaderText="Line Matched / Previously Matched if Started Timer" />
       </syncfusion:SfDataGrid.Columns>
+      <syncfusion:SfDataGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </ContextMenu>
+      </syncfusion:SfDataGrid.ContextMenu>
     </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

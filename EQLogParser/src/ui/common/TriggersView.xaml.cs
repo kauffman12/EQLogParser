@@ -772,6 +772,10 @@ namespace EQLogParser
         {
           CheckChildren(child, value);
         }
+        else if (child.IsOverlay && value == false)
+        {
+          TriggerOverlayManager.Instance.CloseOverlay(child.SerializedData.OverlayData?.Id);
+        }
       }
     }
 

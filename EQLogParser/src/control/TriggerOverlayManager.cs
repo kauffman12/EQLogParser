@@ -83,13 +83,16 @@ namespace EQLogParser
 
     internal void CloseOverlay(string overlayId)
     {
-      if (TimerWindows.TryRemove(overlayId, out var timerWindow))
+      if (!string.IsNullOrEmpty(overlayId))
       {
-        timerWindow.Close();
-      }
-      else if (TextWindows.TryRemove(overlayId, out var textWindow))
-      {
-        textWindow.Close();
+        if (TimerWindows.TryRemove(overlayId, out var timerWindow))
+        {
+          timerWindow.Close();
+        }
+        else if (TextWindows.TryRemove(overlayId, out var textWindow))
+        {
+          textWindow.Close();
+        }
       }
     }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Diagram;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -318,10 +319,9 @@ namespace EQLogParser
             Trigger = wrapper.TriggerData,
             Text = wrapper.ModifiedEndSpeak,
             Matches = earlyMatches,
-            Line = lineData.Line,
-            Type = "Timer Canceled",
-            Eval = time
           });
+
+          AddEntry(lineData.Line, wrapper.TriggerData, "Timer End Early", time);
         }
       }
 
@@ -342,11 +342,10 @@ namespace EQLogParser
             Trigger = wrapper.TriggerData,
             Text = speak,
             Matches = matches,
-            Line = lineData.Line,
-            Type = "Trigger",
-            Eval = time
           });
         }
+
+        AddEntry(lineData.Line, wrapper.TriggerData, "Trigger", time);
 
         if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0)
         {
@@ -416,30 +415,33 @@ namespace EQLogParser
               EventsAddText?.Invoke(this, new { Text = speak, result.Trigger });
               previous = result.Trigger;
             }
-
-            _ = Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-              // update log
-              var log = new ExpandoObject() as dynamic;
-              log.Time = DateUtil.ToDouble(DateTime.Now);
-              log.Line = result.Line;
-              log.Name = result.Trigger.Name;
-              log.Type = result.Type;
-              log.Eval = result.Eval;
-              log.Trigger = result.Trigger;
-              AlertLog.Insert(0, log);
-
-              if (AlertLog.Count > 1000)
-              {
-                AlertLog.RemoveAt(AlertLog.Count - 1);
-              }
-            });
           }
         }
         catch (Exception ex)
         {
           // channel closed
           LOG.Debug(ex);
+        }
+      });
+    }
+
+    private void AddEntry(string line, Trigger trigger, string type, long eval = 0)
+    {
+      _ = Application.Current.Dispatcher.InvokeAsync(() =>
+      {
+        // update log
+        var log = new ExpandoObject() as dynamic;
+        log.Time = DateUtil.ToDouble(DateTime.Now);
+        log.Line = line;
+        log.Name = trigger.Name;
+        log.Type = type;
+        log.Eval = eval;
+        log.Trigger = trigger;
+        AlertLog.Insert(0, log);
+
+        if (AlertLog.Count > 1000)
+        {
+          AlertLog.RemoveAt(AlertLog.Count - 1);
         }
       });
     }
@@ -514,9 +516,9 @@ namespace EQLogParser
                   {
                     Trigger = wrapper.TriggerData,
                     Text = wrapper.ModifiedWarningSpeak,
-                    Line = line,
-                    Type = "Timer Warning"
                   });
+
+                  AddEntry(line, wrapper.TriggerData, "Timer Warning");
                 }
               }, warningSource.Token);
             }
@@ -560,9 +562,9 @@ namespace EQLogParser
               {
                 Trigger = wrapper.TriggerData,
                 Text = wrapper.ModifiedEndSpeak,
-                Line = line,
-                Type = "Timer End"
               });
+
+              AddEntry(line, wrapper.TriggerData, "Timer End");
             }
           }, timerSource.Token);
         }
@@ -800,9 +802,6 @@ namespace EQLogParser
       public Trigger Trigger { get; set; }
       public string Text { get; set; }
       public MatchCollection Matches { get; set; }
-      public string Line { get; set; }
-      public string Type { get; set; }
-      public long Eval { get; set; }
     }
 
     private class LowPriData
