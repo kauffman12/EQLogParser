@@ -1,4 +1,5 @@
 ﻿using Syncfusion.Data.Extensions;
+using Syncfusion.Windows.Controls.Input;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -57,6 +58,7 @@ namespace EQLogParser
     {
       TriggerManager.Instance.EventsNewTimer += EventsNewTimer;
       TriggerManager.Instance.EventsUpdateTimer += EventsUpdateTimer;
+      TriggerManager.Instance.EventsEndTimer += EventsEndTimer;
       TriggerManager.Instance.EventsAddText += EventsAddText;
       TextOverlayTimer.Tick += TextTick;
       TimerOverlayTimer.Tick += TimerTick;
@@ -66,6 +68,7 @@ namespace EQLogParser
     {
       TriggerManager.Instance.EventsNewTimer -= EventsNewTimer;
       TriggerManager.Instance.EventsUpdateTimer -= EventsUpdateTimer;
+      TriggerManager.Instance.EventsEndTimer -= EventsEndTimer;
       TriggerManager.Instance.EventsAddText -= EventsAddText;
       TextOverlayTimer.Stop();
       TimerOverlayTimer.Stop();
@@ -118,9 +121,9 @@ namespace EQLogParser
         {
           var beginTime = DateUtil.ToDouble(DateTime.Now);
           PreviewTimerWindows[overlay.Id] = new TimerOverlayWindow(overlay, true);
-          PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name", beginTime + 200, new Trigger(), true);
-          PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name #2", beginTime + 100, new Trigger(), true);
-          PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name #3", beginTime + 250, new Trigger(),true);
+          PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name", beginTime + 200, new Trigger { Name = "Trigger Name" }, true);
+          PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name #2", beginTime + 100, new Trigger { Name = "Trigger Name 2" }, true);
+          PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name #3", beginTime + 250, new Trigger { Name = "Trigger Name 3" } ,true);
           PreviewTimerWindows[overlay.Id].Show();
         }
         else
@@ -315,30 +318,31 @@ namespace EQLogParser
       });
     }
 
-    private ObservableCollection<ComboBoxItemDetails> GetOverlayItems(List<string> overlayIds, bool isTextOverlay)
+    private void EventsEndTimer(object sender, Trigger trigger)
     {
-      var list = new ObservableCollection<ComboBoxItemDetails>();
-      lock (OverlayNodes)
+      Application.Current.Dispatcher.InvokeAsync(() =>
       {
-        if (OverlayNodes.Nodes != null)
+        if (trigger.SelectedOverlays != null)
         {
-          OverlayNodes.Nodes?.Where(node => node.OverlayData != null && node.OverlayData.IsTextOverlay == isTextOverlay)
-            .ForEach(node =>
+          trigger.SelectedOverlays.ForEach(overlayId =>
+          {
+            // check if it's even enabled
+            if (GetTimerOverlayById(overlayId, out bool isEnabled) is Overlay overlay)
             {
-              var id = node.OverlayData.Id;
-              var name = node.OverlayData.Name + " (" + id + ")";
-              var isChecked = overlayIds == null ? false : overlayIds.Contains(id);
-              list.Add(new ComboBoxItemDetails { IsChecked = isChecked, Text = name, Value = id });
-            });
+              if (TimerWindows.TryGetValue(overlayId, out Window window))
+              {
+                (window as TimerOverlayWindow).EndTimer(trigger);
+              }
+            }
+          });
         }
-      }
-      return list;
+      });
     }
 
     private void StartTimer(dynamic e, bool update)
     {
       var trigger = e.Trigger as Trigger;
-      var timerName = e.Name;
+      var displayName = e.DisplayName;
       var endTime = DateUtil.ToDouble(DateTime.Now) + trigger.DurationSeconds;
 
       Application.Current.Dispatcher.InvokeAsync(() =>
@@ -362,11 +366,11 @@ namespace EQLogParser
 
                 if (needShow || (!update && overlay.TimerMode == 0))
                 {
-                  (window as TimerOverlayWindow).CreateTimer(timerName, endTime, trigger);
+                  (window as TimerOverlayWindow).CreateTimer(displayName, endTime, trigger);
                 }
                 else
                 {
-                  (window as TimerOverlayWindow).ResetTimer(timerName, endTime, trigger);
+                  (window as TimerOverlayWindow).ResetTimer(displayName, endTime, trigger);
                 }
 
                 if (needShow)
@@ -383,6 +387,26 @@ namespace EQLogParser
           });
         }
       });
+    }
+
+    private ObservableCollection<ComboBoxItemDetails> GetOverlayItems(List<string> overlayIds, bool isTextOverlay)
+    {
+      var list = new ObservableCollection<ComboBoxItemDetails>();
+      lock (OverlayNodes)
+      {
+        if (OverlayNodes.Nodes != null)
+        {
+          OverlayNodes.Nodes?.Where(node => node.OverlayData != null && node.OverlayData.IsTextOverlay == isTextOverlay)
+            .ForEach(node =>
+            {
+              var id = node.OverlayData.Id;
+              var name = node.OverlayData.Name + " (" + id + ")";
+              var isChecked = overlayIds == null ? false : overlayIds.Contains(id);
+              list.Add(new ComboBoxItemDetails { IsChecked = isChecked, Text = name, Value = id });
+            });
+        }
+      }
+      return list;
     }
   }
 }

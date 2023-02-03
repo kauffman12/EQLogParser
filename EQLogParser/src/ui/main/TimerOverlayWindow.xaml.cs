@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,9 +16,11 @@ namespace EQLogParser
   /// </summary>
   public partial class TimerOverlayWindow : Window
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
     private static SolidColorBrush BarelyVisible = new SolidColorBrush { Color = (Color) ColorConverter.ConvertFromString("#01000000") };
     private static SolidColorBrush BorderColor = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
-    private Dictionary<string, TimerBar> TimerBarCache = new Dictionary<string, TimerBar>();
+    private Dictionary<string, List<TimerBar>> TimerBarCache = new Dictionary<string, List<TimerBar>>();
     private List<TimerBar> TimerBarCreateOrder = new List<TimerBar>();
     private Overlay TheOverlay;
     private bool Preview = false;
@@ -54,54 +57,80 @@ namespace EQLogParser
       }
     }
 
-    internal void CreateTimer(string name, double endTime, Trigger trigger, bool preview = false)
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    internal void CreateTimer(string displayName, double endTime, Trigger trigger, bool preview = false)
     {
-      name = string.IsNullOrEmpty(name) ? "Unknown Timer" : name;
-      var timerBar = new TimerBar();
-      timerBar.Init(TheOverlay.Id, name, endTime, trigger, preview);
-      TimerBarCache[name] = timerBar;
-      TimerBarCreateOrder.Add(timerBar);
+      if (!string.IsNullOrEmpty(trigger.Name))
+      {
+        var timerBar = new TimerBar();
+        timerBar.Init(TheOverlay.Id, trigger.Name, displayName, endTime, trigger, preview);
 
-      if (CurrentUseStandardTime)
-      {
-        double currentTime = DateUtil.ToDouble(DateTime.Now);
-        double max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime(currentTime)).Max();
-        TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
-      }
+        if (!TimerBarCache.TryGetValue(trigger.Name, out List<TimerBar> timerList))
+        {
+          timerList = new List<TimerBar>();
+          TimerBarCache[trigger.Name] = timerList;
+        }
 
-      if (CurrentOrder == 0)
-      {
-        content.Children.Add(timerBar);
-      }
-      else
-      {
-        InsertTimerBar(timerBar);
-      }
-    }
-
-    internal void ResetTimer(string name, double endTime, Trigger trigger)
-    {
-      name = string.IsNullOrEmpty(name) ? "Unknown Timer" : name;
-      if (TimerBarCache.TryGetValue(name, out TimerBar timerBar))
-      {
-        timerBar.Update(endTime);
-        content.Children.Remove(timerBar);
+        timerList.Add(timerBar);
+        TimerBarCreateOrder.Add(timerBar);
 
         if (CurrentUseStandardTime)
         {
-          double currentTime = DateUtil.ToDouble(DateTime.Now);
-          double max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime(currentTime)).Max();
+          var currentTime = DateUtil.ToDouble(DateTime.Now);
+          var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime(currentTime)).Max();
           TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
         }
 
-        InsertTimerBar(timerBar);
-      }
-      else
-      {
-        CreateTimer(name, endTime, trigger);
+        if (CurrentOrder == 0)
+        {
+          content.Children.Add(timerBar);
+        }
+        else
+        {
+          InsertTimerBar(timerBar);
+        }
       }
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    internal void ResetTimer(string displayName, double endTime, Trigger trigger)
+    {
+      if (TimerBarCache.TryGetValue(trigger.Name, out List<TimerBar> timerList))
+      {
+        timerList.ForEach(timerBar =>
+        {
+          timerBar.Update(endTime);
+          content.Children.Remove(timerBar);
+
+          if (CurrentUseStandardTime)
+          {
+            var currentTime = DateUtil.ToDouble(DateTime.Now);
+            var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime(currentTime)).Max();
+            TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
+          }
+
+          InsertTimerBar(timerBar);
+        });
+      }
+      else
+      {
+        CreateTimer(displayName, endTime, trigger);
+      }
+    }
+
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    internal void EndTimer(Trigger trigger)
+    {
+      if (TimerBarCache.TryGetValue(trigger.Name, out List<TimerBar> timerList))
+      {
+        if (timerList.Count > 0)
+        {
+          timerList[0].EndTimer();
+        }
+      }
+   }
+
+    [MethodImpl(MethodImplOptions.Synchronized)]
     internal bool Tick()
     {
       if (CurrentOrder != TheOverlay.SortBy)
@@ -123,8 +152,8 @@ namespace EQLogParser
         CurrentUseStandardTime = TheOverlay.UseStandardTime;
         if (CurrentUseStandardTime)
         {
-          double currentTime = DateUtil.ToDouble(DateTime.Now);
-          double max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime(currentTime)).Max();
+          var currentTime = DateUtil.ToDouble(DateTime.Now);
+          var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime(currentTime)).Max();
           TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
         }
         else
@@ -142,7 +171,7 @@ namespace EQLogParser
         {
           if (bar.Tick())
           {
-            if (TheOverlay.TimerMode == 0)
+            if (TheOverlay.TimerMode == 0 || !bar.CanCooldown())
             {
               removeList.Add(bar);
             }
@@ -166,8 +195,16 @@ namespace EQLogParser
       removeList.ForEach(timerBar =>
       {
         content.Children.Remove(timerBar);
-        TimerBarCache.Remove(timerBar.GetBarName());
         TimerBarCreateOrder.Remove(timerBar);
+        if (TimerBarCache.TryGetValue(timerBar.GetBarKey(), out List<TimerBar> timerList))
+        {
+          timerList.Remove(timerBar);
+
+          if (timerList.Count == 0)
+          {
+            TimerBarCache.Remove(timerBar.GetBarKey());
+          }
+        }
       });
 
       return !remaining;
@@ -265,6 +302,13 @@ namespace EQLogParser
           closeButton.IsEnabled = false;
         }
       }
+    }
+
+    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+      TimerBarCache.Clear();
+      TimerBarCreateOrder.Clear();
+      content.Children.Clear();
     }
 
     protected override void OnSourceInitialized(EventArgs e)

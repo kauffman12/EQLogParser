@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -48,6 +49,7 @@ namespace EQLogParser
       }
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     internal void AddTriggerText(string text, double beginTime)
     {
       var block = new TextBlock
@@ -69,6 +71,7 @@ namespace EQLogParser
       content.Children.Add(block);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     internal bool Tick()
     {
       var currentTime = DateUtil.ToDouble(DateTime.Now);

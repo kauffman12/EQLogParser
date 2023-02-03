@@ -27,6 +27,7 @@ namespace EQLogParser
     internal event EventHandler<dynamic> EventsAddText;
     internal event EventHandler<dynamic> EventsNewTimer;
     internal event EventHandler<dynamic> EventsUpdateTimer;
+    internal event EventHandler<Trigger> EventsEndTimer;
 
     internal static TriggerManager Instance = new TriggerManager();
     private readonly string TRIGGERS_FILE = "triggers.json";
@@ -310,8 +311,8 @@ namespace EQLogParser
         {
           time = (long)((DateTime.Now.Ticks - start) / 10);
           wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
-
-          CleanupWrapper(wrapper);
+          EventsEndTimer?.Invoke(this, wrapper.TriggerData);
+          CleanupFirstTimer(wrapper);
           speechChannel.Writer.WriteAsync(new Speak
           {
             Trigger = wrapper.TriggerData,
@@ -474,7 +475,7 @@ namespace EQLogParser
         {
           CleanupWrapper(wrapper);
           timerUpdated = true;
-          EventsUpdateTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, Name = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
+          EventsUpdateTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
         }
 
         // Start a New independent Timer as long as one is not already running when Option 2 is selected
@@ -488,13 +489,23 @@ namespace EQLogParser
             if (diff > 0)
             {
               warningSource = new CancellationTokenSource();
-              wrapper.WarningCancellations[warningSource] = true;
+
+              lock (wrapper)
+              {
+                wrapper.WarningCancellations.Add(warningSource);
+              }
+
               Task.Delay((int)diff * 1000).ContinueWith(task =>
               {
                 var proceed = !warningSource.Token.IsCancellationRequested;
-                if (wrapper.WarningCancellations.TryRemove(warningSource, out bool _))
+
+                lock (wrapper)
                 {
-                  warningSource?.Dispose();
+                  if (wrapper.WarningCancellations.Contains(warningSource))
+                  {
+                    wrapper.WarningCancellations.Remove(warningSource);
+                    warningSource?.Dispose();
+                  }
                 }
 
                 if (proceed)
@@ -513,23 +524,34 @@ namespace EQLogParser
 
           if (!timerUpdated)
           {
-            EventsNewTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, Name = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
+            EventsNewTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
           }
 
           var timerSource = new CancellationTokenSource();
-          wrapper.TimerCancellations[timerSource] = true;
+
+          lock (wrapper)
+          {
+            wrapper.TimerCancellations.Add(timerSource);
+          }
+
           Task.Delay((int)wrapper.TriggerData.DurationSeconds * 1000).ContinueWith(task =>
           {
-            if (warningSource != null && wrapper.WarningCancellations.TryRemove(warningSource, out bool _))
-            {
-              warningSource?.Cancel();
-              warningSource?.Dispose();
-            }
-
             var proceed = !timerSource.Token.IsCancellationRequested;
-            if (wrapper.TimerCancellations.TryRemove(timerSource, out bool _))
+
+            lock (wrapper)
             {
-              timerSource?.Dispose();
+              if (wrapper.WarningCancellations.Contains(warningSource))
+              {
+                wrapper.WarningCancellations.Remove(warningSource);
+                warningSource?.Cancel();
+                warningSource?.Dispose();
+              }
+
+              if (wrapper.TimerCancellations.Contains(timerSource))
+              {
+                wrapper.TimerCancellations.Remove(timerSource);
+                timerSource?.Dispose();
+              }
             }
 
             if (proceed)
@@ -720,14 +742,39 @@ namespace EQLogParser
       }
     }
 
+    private void CleanupFirstTimer(TriggerWrapper wrapper)
+    {
+      lock (wrapper)
+      {
+        if (wrapper.TimerCancellations.Count > 0)
+        {
+          var firstTimerCancel = wrapper.TimerCancellations.First();
+          firstTimerCancel.Cancel();
+          firstTimerCancel.Dispose();
+          wrapper.TimerCancellations.RemoveAt(0);
+        }
+
+        if (wrapper.WarningCancellations.Count > 0)
+        {
+          var firstWarningCancel = wrapper.WarningCancellations.First();
+          firstWarningCancel.Cancel();
+          firstWarningCancel.Dispose();
+          wrapper.WarningCancellations.RemoveAt(0);
+        }
+      }
+    }
+
     private void CleanupWrapper(TriggerWrapper wrapper)
     {
-      wrapper.TimerCancellations.Keys.ToList().ForEach(source => source.Cancel());
-      wrapper.WarningCancellations.Keys.ToList().ForEach(source => source.Cancel());
-      wrapper.TimerCancellations.Keys.ToList().ForEach(source => source.Dispose());
-      wrapper.WarningCancellations.Keys.ToList().ForEach(source => source.Dispose());
-      wrapper.TimerCancellations.Clear();
-      wrapper.WarningCancellations.Clear();
+      lock (wrapper)
+      {
+        wrapper.TimerCancellations.ForEach(source => source.Cancel());
+        wrapper.WarningCancellations.ForEach(source => source.Cancel());
+        wrapper.TimerCancellations.ForEach(source => source.Dispose());
+        wrapper.WarningCancellations.ForEach(source => source.Dispose());
+        wrapper.TimerCancellations.Clear();
+        wrapper.WarningCancellations.Clear();
+      }
     }
 
     private string UpdatePattern(bool useRegex, string playerName, string pattern)
@@ -768,8 +815,8 @@ namespace EQLogParser
 
     private class TriggerWrapper
     {
-      public ConcurrentDictionary<CancellationTokenSource, bool> TimerCancellations { get; } = new ConcurrentDictionary<CancellationTokenSource, bool>();
-      public ConcurrentDictionary<CancellationTokenSource, bool> WarningCancellations { get; } = new ConcurrentDictionary<CancellationTokenSource, bool>();
+      public List<CancellationTokenSource> TimerCancellations { get; } = new List<CancellationTokenSource>();
+      public List<CancellationTokenSource> WarningCancellations { get; } = new List<CancellationTokenSource>();
       public string ModifiedSpeak { get; set; }
       public string ModifiedPattern { get; set; }
       public string ModifiedEndSpeak { get; set; }

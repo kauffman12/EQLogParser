@@ -12,9 +12,10 @@ namespace EQLogParser
     private double EndTime;
     private double StartTime;
     private double Duration;
-    private string BarName;
+    private string Key;
     private Trigger Trigger;
     private string OverlayId;
+    private bool EndEarly;
     private double StandardTime = double.NaN;
     private bool CurrentIsCooldown = false;
     private bool CurrentIsWaiting = false;
@@ -27,20 +28,23 @@ namespace EQLogParser
     internal void SetCooldown(bool isCooldown)
     {
       CurrentIsCooldown = isCooldown;
-      EndTime = DateUtil.ToDouble(DateTime.Now) + Trigger.ResetDurationSeconds;
+      EndTime = StartTime + Trigger.ResetDurationSeconds;
       progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarResetColor-" + OverlayId);
     }
 
+    internal bool CanCooldown() => Trigger.ResetDurationSeconds > 0;
     internal bool IsCooldown() => CurrentIsCooldown;
-    internal string GetBarName() => BarName;
+    internal string GetBarKey() => Key;
     internal double GetRemainingTime(double currentTime) => EndTime - currentTime;
     internal double SetStandardTime(double standardTime) => StandardTime = standardTime;
 
-    internal void Init(string overlayId, string barName, double endTime, Trigger trigger, bool preview = false)
+    internal void Init(string overlayId, string key, string displayName, double endTime, Trigger trigger, bool preview = false)
     {
-      BarName = title.Text = barName;
+      title.Text = displayName;
+      Key = key;
       Trigger = trigger;
       OverlayId = overlayId;
+      EndEarly = false;
       progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarProgressColor-" + OverlayId);
       progress.SetResourceReference(SfLinearProgressBar.TrackColorProperty, "TimerBarTrackColor-" + OverlayId);
       progress.SetResourceReference(SfLinearProgressBar.HeightProperty, "TimerBarHeight-" + OverlayId);
@@ -54,6 +58,8 @@ namespace EQLogParser
       Tick(preview);
     }
 
+    internal void EndTimer() => EndEarly = true;
+
     internal void Update(double endTime)
     {
       if (CurrentIsCooldown)
@@ -66,6 +72,7 @@ namespace EQLogParser
       StartTime = DateUtil.ToDouble(DateTime.Now);
       EndTime = endTime;
       Duration = EndTime - StartTime;
+      EndEarly = false;
       Tick();
     }
 
@@ -75,7 +82,7 @@ namespace EQLogParser
 
       if (!CurrentIsCooldown)
       {
-        if (Duration > 0)
+        if (Duration > 0 && !EndEarly)
         {
           var updateTime = preview ? DateUtil.ToDouble(DateTime.Now) + 30 : DateUtil.ToDouble(DateTime.Now);
           var secondsLeft = EndTime - updateTime;
