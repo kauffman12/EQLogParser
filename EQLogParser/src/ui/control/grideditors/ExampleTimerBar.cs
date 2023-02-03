@@ -13,7 +13,7 @@ namespace EQLogParser
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
-      TheTimerBars.Last().Init(info.Value as string, "Trigger Name #1", DateUtil.ToDouble(DateTime.Now) + 80, new Trigger(), true);
+      TheTimerBars.Last().Init(info.Value as string, "timerKey", "Trigger Name #1", DateUtil.ToDouble(DateTime.Now) + 80, new Trigger(), true);
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();
