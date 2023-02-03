@@ -1,6 +1,7 @@
 ﻿using System.Dynamic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -17,6 +18,10 @@ namespace EQLogParser
 
     private new void PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+      if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+      {
+        return;
+      }
       // case where click happened but selection event doesn't fire
       if (e.OriginalSource is FrameworkElement element && element.DataContext is ExpandoObject data)
       {
