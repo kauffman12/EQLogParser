@@ -2,6 +2,7 @@
 using log4net;
 using log4net.Core;
 using Microsoft.Win32;
+using Syncfusion.UI.Xaml.Diagram;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -39,7 +40,7 @@ namespace EQLogParser
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static bool IsMapSendToEQEnabled = false;
-    internal static readonly int ACTION_INDEX = 27;
+    internal const int ACTION_INDEX = 27;
     internal static string CurrentTheme = "MaterialDark";
 
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -1029,6 +1030,29 @@ namespace EQLogParser
       if (sender is Border border && border.DataContext is ExpandoObject sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable)?.Name);
+      }
+    }
+
+    private void TestTriggersClick(object sender, RoutedEventArgs e)
+    {
+      if (!string.IsNullOrEmpty(testTriggersBox.Text))
+      {
+        foreach (string line in testTriggersBox.Text.Split("\r\n"))
+        {
+          if (!string.IsNullOrEmpty(line))
+          {
+            if (line.Length > ACTION_INDEX)
+            {
+              DateTime dateTime = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+
+              if (dateTime != DateTime.MinValue)
+              {
+                string action = line.Substring(ACTION_INDEX);
+                TriggerManager.Instance.AddAction(new LineData { Action = action, BeginTime = DateUtil.ToDouble(dateTime), Line = line });
+              }
+            }
+          }
+        }
       }
     }
 
